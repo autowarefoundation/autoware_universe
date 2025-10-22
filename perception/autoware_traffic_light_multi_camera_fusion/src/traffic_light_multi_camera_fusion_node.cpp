@@ -144,14 +144,13 @@ void MultiCameraFusion::mapCallback(
 }
 
 void MultiCameraFusion::convertOutputMsg(
-  const std::map<MultiCameraFusion::IdType, utils::FusionRecord> & grouped_record_map,
-  MultiCameraFusion::NewSignalArrayType & msg_out)
+  const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
 {
   msg_out.traffic_light_groups.clear();
   for (const auto & p : grouped_record_map) {
-    MultiCameraFusion::IdType reg_ele_id = p.first;
-    const MultiCameraFusion::SignalType & signal = p.second.signal;
-    MultiCameraFusion::NewSignalType signal_out;
+    IdType reg_ele_id = p.first;
+    const SignalType & signal = p.second.signal;
+    NewSignalType signal_out;
     signal_out.traffic_light_group_id = reg_ele_id;
     for (const auto & ele : signal.elements) {
       signal_out.elements.push_back(utils::convertT4toAutoware(ele));
@@ -160,8 +159,7 @@ void MultiCameraFusion::convertOutputMsg(
   }
 }
 
-void MultiCameraFusion::multiCameraFusion(
-  std::map<MultiCameraFusion::IdType, utils::FusionRecord> & fused_record_map)
+void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   fused_record_map.clear();
   /*
@@ -187,12 +185,10 @@ void MultiCameraFusion::multiCameraFusion(
       */
       const utils::FusionRecordArr & record_arr = *it;
       for (size_t i = 0; i < record_arr.rois.rois.size(); i++) {
-        const MultiCameraFusion::RoiType & roi = record_arr.rois.rois[i];
+        const RoiType & roi = record_arr.rois.rois[i];
         auto signal_it = std::find_if(
           record_arr.signals.signals.begin(), record_arr.signals.signals.end(),
-          [roi](const MultiCameraFusion::SignalType & s1) {
-            return roi.traffic_light_id == s1.traffic_light_id;
-          });
+          [roi](const SignalType & s1) { return roi.traffic_light_id == s1.traffic_light_id; });
         /*
         failed to find corresponding signal. skip it
         */
@@ -216,17 +212,25 @@ void MultiCameraFusion::multiCameraFusion(
 }
 
 void MultiCameraFusion::groupFusion(
-  const std::map<MultiCameraFusion::IdType, utils::FusionRecord> & fused_record_map,
-  std::map<MultiCameraFusion::IdType, utils::FusionRecord> & grouped_record_map)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
   grouped_record_map.clear();
 
-  std::map<MultiCameraFusion::IdType, GroupFusionInfo> group_fusion_info_map;
+  // Stage 1: Accumulate evidence from all fused records
+  const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
+    accumulateGroupEvidence(fused_record_map);
+
+  // Stage 2: Determine the best state for each group from the accumulated evidence
+  determineBestGroupState(group_fusion_info_map, grouped_record_map);
+}
+
+std::map<MultiCameraFusion::IdType, GroupFusionInfo> MultiCameraFusion::accumulateGroupEvidence(
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
+{
+  std::map<IdType, GroupFusionInfo> group_fusion_info_map;
   for (const auto & p : fused_record_map) {
-    MultiCameraFusion::IdType roi_id = p.second.roi.traffic_light_id;
-    /*
-    this should not happen
-    */
+    IdType roi_id = p.second.roi.traffic_light_id;
     if (traffic_light_id_to_regulatory_ele_id_.count(roi_id) == 0) {
       RCLCPP_WARN_STREAM(
         get_logger(), "Found Traffic Light Id = " << roi_id << " which is not defined in Map");
@@ -247,16 +251,6 @@ void MultiCameraFusion::groupFusion(
         traffic_light_id_to_regulatory_ele_id_.at(p.second.roi.traffic_light_id);
 
       for (const auto & reg_ele_id : reg_ele_id_vec) {
-        /*
-         * Design decision: We convert the observation's confidence into the strength of evidence
-         * (log-odds) that the observation is “correct”. Here, we explicitly assume that the
-         * confidence value directly represents probability (i.e., confidence ∈ [0,1] is the
-         * probability that the observation is correct). Note: This assumption may not hold for all
-         * confidence scoring systems. If the confidence metric is not a true probability, this
-         * conversion may be invalid. Future maintainers should verify that the confidence values
-         * used here are indeed probabilities, or update this logic if the scoring system changes.
-         */
-
         // Get a reference to the log-odds map for the current regulatory element ID.
         auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
         // The prior should only be applied once. try_emplace efficiently inserts the prior
@@ -278,9 +272,15 @@ void MultiCameraFusion::groupFusion(
       }
     }
   }
+  return group_fusion_info_map;
+}
 
+void MultiCameraFusion::determineBestGroupState(
+  const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+{
   for (const auto & pair : group_fusion_info_map) {
-    const MultiCameraFusion::IdType reg_ele_id = pair.first;
+    const IdType reg_ele_id = pair.first;
     const auto & group_info = pair.second;
 
     if (group_info.accumulated_log_odds.empty()) {

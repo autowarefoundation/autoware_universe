@@ -85,6 +85,19 @@ private:
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
+  /**
+   * @brief Accumulates log-odds evidence for each traffic light group from individual fused records.
+   */
+  std::map<IdType, GroupFusionInfo> accumulateGroupEvidence(
+    const std::map<IdType, utils::FusionRecord> & fused_record_map);
+
+  /**
+   * @brief Determines the best state for each group based on accumulated evidence.
+   */
+  void determineBestGroupState(
+    const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
   using ApproximateSyncPolicy =
@@ -100,31 +113,23 @@ private:
 
   rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
   /*
-  the mapping from traffic light id (instance id) to regulatory element id (group id)
+  Mapping from traffic light instance id to regulatory element id (group id)
   */
   std::map<lanelet::Id, std::vector<lanelet::Id>> traffic_light_id_to_regulatory_ele_id_;
   /*
-  save record arrays by increasing timestamp order.
-  use multiset in case there are multiple cameras publishing images at exactly the same time
+  Store record arrays in increasing timestamp order.
+  Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
   bool is_approximate_sync_;
   /*
-  for every input message input_m, if the timestamp difference between input_m and the latest
+  For every input message input_m, if the timestamp difference between input_m and the latest
   message is smaller than message_lifespan_, then input_m would be used for the fusion. Otherwise,
-  it would be discarded
+  it would be discarded.
   */
   double message_lifespan_;
   /**
    * @brief The prior log-odds for a traffic light state.
-   *
-   * This corresponds to a prior probability of 0.5, representing a state of
-   * complete uncertainty before any evidence is considered.
-   *
-   * Example of a biased prior: If we wanted to assume a slight bias
-   * towards "Red" by default (e.g., 60% probability), we would set this
-   * to log(0.6 / 0.4) ≈ 0.405.
-   * double prior_log_odds_; = 0.405;
    */
   double prior_log_odds_;
 };
