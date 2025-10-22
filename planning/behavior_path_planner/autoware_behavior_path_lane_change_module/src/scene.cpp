@@ -355,6 +355,10 @@ TurnSignalInfo NormalLaneChange::get_current_turn_signal_info() const
     return get_terminal_turn_signal_info();
   }
 
+  if (!status_.is_valid_path) {
+    return get_turn_signal(getEgoPose(), prev_module_output_.path.points.back().point.pose);
+  }
+
   set_signal_activation_time();
 
   return get_turn_signal(getEgoPose(), getLaneChangePath().info.lane_changing_end);
