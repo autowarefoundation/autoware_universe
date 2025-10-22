@@ -514,6 +514,9 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 Generate smooth paths using clothoid curves that provide continuous curvature transitions. The clothoid path consists of three segments: entry clothoid, circular arc, and exit clothoid, ensuring smooth steering transitions.
 
+![clothoid_pull_out](./images/clothoid_pullout.drawio.svg)
+
+
 #### Path Generation Flow
 
 The path is generated with following flow.
