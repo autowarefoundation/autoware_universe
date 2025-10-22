@@ -20255,15 +20255,15 @@ Metrics are calculated and published when a trajectory is received.</p>
 </ul>
 <h4 id="implemented-metrics_3">Implemented metrics<a class="headerlink" href="#implemented-metrics_3" title="Permanent link">#</a></h4>
 <ul>
-<li><strong><code>obstacle_distance</code></strong>: Statistics of the distance between the centroid of each object and the closest trajectory point.<ul>
+<li><strong><code>obstacle_distance</code></strong>: Statistics of the distance between each object and the closest trajectory point.<ul>
 <li>Sub-metrics to publish: <code>/mean</code>, <code>/min</code>, <code>/max</code>.</li>
 <li>Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.</li>
 </ul>
 </li>
 </ul>
 <ul>
-<li><strong><code>obstacle_ttc</code></strong>: Statistics of the time-to-collision (TTC) for those objects near the trajectory.<ul>
-<li>Parameters: <code>obstacle.dist_thr_m</code> (distance threshold to consider the object as close to the trajectory).</li>
+<li><strong><code>obstacle_ttc</code></strong>: Statistics of the time-to-collision (TTC) of objects and ego. Predicted path of objects and ego trajectory are considered.<ul>
+<li>Parameters: <code>obstacle.dist_thr_m</code> (distance margin to consider a collision occurs between object footprints and ego trajectory footprints).</li>
 <li>Sub-metrics to publish: <code>/mean</code>, <code>/min</code>, <code>/max</code>.</li>
 <li>Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.</li>
 </ul>
@@ -20554,7 +20554,7 @@ Metrics are calculated and published when a trajectory is received.</p>
 <td>obstacle.dist_thr_m</td>
 <td>float</td>
 <td>distance between ego and the obstacle below which a collision is considered</td>
-<td>1.0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
