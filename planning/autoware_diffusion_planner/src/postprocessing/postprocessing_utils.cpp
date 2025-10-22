@@ -315,8 +315,7 @@ Trajectory get_trajectory_from_prediction_matrix(
       const float threshold_velocity = static_cast<float>(stopping_threshold);
       if (prev_velocity > threshold_velocity && curr_velocity <= threshold_velocity) {
         p.longitudinal_velocity_mps = 0.0f;
-        p.pose.position.x = prev_x;
-        p.pose.position.y = prev_y;
+        p.pose = trajectory.points[row - 1].pose;
       }
     }
 
