@@ -35,6 +35,7 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -62,18 +63,6 @@ double calcInterpolatedZ(
       ? next_z
       : closest_z + (next_z - closest_z) * closest_to_target_dist / seg_dist;
   return interpolated_z;
-}
-
-double calcInterpolatedVelocity(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & input, const size_t seg_idx)
-{
-  const double seg_dist =
-    autoware::motion_utils::calcSignedArcLength(input.points, seg_idx, seg_idx + 1);
-
-  const double closest_vel = input.points.at(seg_idx).point.longitudinal_velocity_mps;
-  const double next_vel = input.points.at(seg_idx + 1).point.longitudinal_velocity_mps;
-  const double interpolated_vel = std::abs(seg_dist) < 1e-06 ? next_vel : closest_vel;
-  return interpolated_vel;
 }
 }  // namespace
 
@@ -250,11 +239,67 @@ std::optional<size_t> findIndexOutOfGoalSearchRange(
   return min_dist_out_of_range_index;
 }
 
+template <typename Iterator>
+lanelet::ConstLanelets getUniqueLaneletsFromPath(
+  Iterator begin, Iterator end,
+  const std::function<lanelet::ConstLanelet(int64_t)> get_lanelet_by_id)
+{
+  std::set<int64_t> lanelet_ids;
+  for (auto it = begin; it != end; ++it) {
+    for (const auto & lane_id : it->lane_ids) {
+      lanelet_ids.insert(lane_id);
+    }
+  }
+  lanelet::ConstLanelets lanelets;
+  for (const auto & lane_id : lanelet_ids) {
+    lanelets.push_back(get_lanelet_by_id(lane_id));
+  }
+  return lanelets;
+}
+
+template <typename Iterator>
+void fillLaneIdsFromMap(Iterator begin, Iterator end, const lanelet::ConstLanelets & lanelets)
+{
+  for (auto it = begin; it != end; ++it) {
+    const auto point = it->point;
+    lanelet::ConstLanelet lanelet;
+    if (lanelet::utils::query::getClosestLanelet(lanelets, point.pose, &lanelet)) {
+      // TODO(hisaki): Writing "it->lane_ids = {lanelet.id()}" may cause a segmentation fault.
+      // I'm not sure of the reason. (╥﹏╥)
+      auto & ids = it->lane_ids;
+      ids.clear();
+      ids.push_back(lanelet.id());
+    }
+  }
+}
+
+template <typename Iterator>
+void fillLongitudinalVelocityFromInputPath(Iterator begin, Iterator end, PathWithLaneId input)
+{
+  if (input.points.size() < 2) {
+    return;
+  }
+  input.points.pop_back();  // remove the last point because its velocity is 0.0
+  // refine lane_ids and longitudinal velocity from input path
+  for (auto it = begin; it != end; ++it) {
+    auto idx = autoware::motion_utils::findNearestIndex(input.points, it->point.pose, 3.0, M_PI_4);
+    if (idx) {
+      const auto & input_point = input.points.at(idx.value());
+      it->point.longitudinal_velocity_mps = input_point.point.longitudinal_velocity_mps;
+    } else {
+      const auto & input_point = input.points.back();
+      it->point.longitudinal_velocity_mps = input_point.point.longitudinal_velocity_mps;
+    }
+  }
+}
+
 // goal does not have z
 bool set_goal(
   const double search_radius_range, [[maybe_unused]] const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, PathWithLaneId * output_ptr)
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id,
+  PathWithLaneId * output_ptr)
 {
   try {
     if (input.points.empty()) {
@@ -269,7 +314,6 @@ bool set_goal(
     refined_goal.point.pose = goal;
     refined_goal.point.pose.position.z =
       calcInterpolatedZ(input, goal.position, closest_seg_idx_for_goal);
-    refined_goal.point.longitudinal_velocity_mps = 0.0;
 
     // Lambda function to create a refined goal point with interpolated z and velocity
     auto create_refined_goal_point = [&input,
@@ -280,8 +324,6 @@ bool set_goal(
         findNearestSegmentIndex(input.points, refined_point.point.pose, 3.0, M_PI_4);
       refined_point.point.pose.position.z =
         calcInterpolatedZ(input, refined_point.point.pose.position, closest_seg_idx);
-      refined_point.point.longitudinal_velocity_mps =
-        calcInterpolatedVelocity(input, closest_seg_idx);
       return refined_point;
     };
 
@@ -312,35 +354,12 @@ bool set_goal(
     output_ptr->points.push_back(pre_refined_mid_goal);
     output_ptr->points.push_back(refined_goal);
 
-    {  // fill skipped lane ids
-      // pre refined goal
-      auto & pre_goal = output_ptr->points.at(output_ptr->points.size() - 3);
-      for (size_t i = min_dist_out_of_circle_index + 1; i < input.points.size(); ++i) {
-        for (const auto target_lane_id : input.points.at(i).lane_ids) {
-          const bool is_lane_id_found =
-            std::find(pre_goal.lane_ids.begin(), pre_goal.lane_ids.end(), target_lane_id) !=
-            pre_goal.lane_ids.end();
-          if (!is_lane_id_found) {
-            pre_goal.lane_ids.push_back(target_lane_id);
-          }
-        }
-      }
-
-      // pre mid refined goal
-      auto & pre_mid_goal = output_ptr->points.at(output_ptr->points.size() - 2);
-      for (size_t i = min_dist_out_of_circle_index + 1; i < input.points.size(); ++i) {
-        for (const auto target_lane_id : input.points.at(i).lane_ids) {
-          const bool is_lane_id_found =
-            std::find(pre_mid_goal.lane_ids.begin(), pre_mid_goal.lane_ids.end(), target_lane_id) !=
-            pre_mid_goal.lane_ids.end();
-          if (!is_lane_id_found) {
-            pre_mid_goal.lane_ids.push_back(target_lane_id);
-          }
-        }
-      }
-
-      // goal
-      output_ptr->points.back().lane_ids = input.points.back().lane_ids;
+    // NOTE: this lane ids and longitudinal velocity will be overwritten by the input path in the
+    // next step
+    for (size_t i = output_ptr->points.size() - 3; i < output_ptr->points.size(); ++i) {
+      output_ptr->points.at(i).lane_ids = input.points.back().lane_ids;
+      output_ptr->points.at(i).point.longitudinal_velocity_mps =
+        input.points.back().point.longitudinal_velocity_mps;
     }
 
     output_ptr->left_bound = input.left_bound;
@@ -356,6 +375,17 @@ bool set_goal(
     // NOTE: remove the first point to keep the original path length
     output_ptr->points.erase(output_ptr->points.begin());
 
+    const auto lanelets = getUniqueLaneletsFromPath(
+      input.points.begin() + min_dist_out_of_circle_index + 1, input.points.end(),
+      get_lanelet_by_id);
+    fillLaneIdsFromMap(
+      output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
+      lanelets);
+    fillLongitudinalVelocityFromInputPath(
+      output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
+      input);
+
+    output_ptr->points.back().point.longitudinal_velocity_mps = 0.0;
     return true;
   } catch (std::out_of_range & ex) {
     RCLCPP_ERROR_STREAM(
@@ -407,7 +437,8 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
 PathWithLaneId refinePathForGoal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id)
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id)
 {
   PathWithLaneId filtered_path = input;
   PathWithLaneId path_with_goal;
@@ -420,7 +451,7 @@ PathWithLaneId refinePathForGoal(
 
   if (set_goal(
         search_radius_range, search_rad_range, output_path_interval, filtered_path, goal,
-        goal_lane_id, &path_with_goal)) {
+        goal_lane_id, get_lanelet_by_id, &path_with_goal)) {
     return path_with_goal;
   }
   return filtered_path;
