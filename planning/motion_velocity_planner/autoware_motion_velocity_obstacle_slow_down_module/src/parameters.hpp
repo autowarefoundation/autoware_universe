@@ -151,7 +151,7 @@ struct SlowDownPlanningParam
   double slow_down_min_jerk{};
 
   double lpf_gain_slow_down_vel{};
-  double lpf_gain_lat_dist{};
+  double lpf_gain_lateral_distance{};
   double lpf_gain_dist_to_slow_down{};
 
   double time_margin_on_target_velocity{};
@@ -172,8 +172,8 @@ struct SlowDownPlanningParam
 
     lpf_gain_slow_down_vel = get_or_declare_parameter<double>(
       node, "obstacle_slow_down.slow_down_planning.lpf_gain_slow_down_vel");
-    lpf_gain_lat_dist = get_or_declare_parameter<double>(
-      node, "obstacle_slow_down.slow_down_planning.lpf_gain_lat_dist");
+    lpf_gain_lateral_distance = get_or_declare_parameter<double>(
+      node, "obstacle_slow_down.slow_down_planning.lpf_gain_lateral_distance");
     lpf_gain_dist_to_slow_down = get_or_declare_parameter<double>(
       node, "obstacle_slow_down.slow_down_planning.lpf_gain_dist_to_slow_down");
     time_margin_on_target_velocity = get_or_declare_parameter<double>(
