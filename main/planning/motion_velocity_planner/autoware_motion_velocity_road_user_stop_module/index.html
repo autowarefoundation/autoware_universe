@@ -19887,6 +19887,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#stopped-object-tracking-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stopped Object Tracking Parameters
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -20296,6 +20305,48 @@
 <td align="left">double</td>
 <td align="left">Distance to expand object polygon outward from centroid when object was previously inside detection area</td>
 <td align="left">0.5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="stopped-object-tracking-parameters">Stopped Object Tracking Parameters<a class="headerlink" href="#stopped-object-tracking-parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Unit</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">stopped_velocity_threshold</td>
+<td align="left">[m/s]</td>
+<td align="left">double</td>
+<td align="left">Velocity threshold to consider object as stopped</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left">stopped_position_tolerance</td>
+<td align="left">[m]</td>
+<td align="left">double</td>
+<td align="left">Distance threshold for stopped position movement</td>
+<td align="left">0.3</td>
+</tr>
+<tr>
+<td align="left">ego_reached_wall_distance_threshold</td>
+<td align="left">[m]</td>
+<td align="left">double</td>
+<td align="left">Distance threshold to consider ego reached virtual wall</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left">stopped_duration_after_ego_arrival</td>
+<td align="left">[s]</td>
+<td align="left">double</td>
+<td align="left">Duration threshold for stopped object after ego reaches virtual wall</td>
+<td align="left">3.0</td>
 </tr>
 </tbody>
 </table>
