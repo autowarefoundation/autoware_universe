@@ -2321,13 +2321,8 @@ std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
         if (!first_turn_signal_trigger_position && select_blinker_decel) {
           first_turn_signal_trigger_position = point_it->point.pose;
         }
-        if (point_it == path.points.end()) {
-          break;
-        }
-        point_it++;
-      } else {
-        point_it++;
       }
+      break;
     }
   }
 
