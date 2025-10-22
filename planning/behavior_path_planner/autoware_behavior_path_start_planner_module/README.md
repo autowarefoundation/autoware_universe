@@ -557,6 +557,7 @@ flowchart TD
     H --> I[Is the path valid?]
     I -->|No| D
     I -->|Yes| J[End: Return Path]
+    D -->|No More Candidate| K[Path Generation Failure]
 ```
 
 #### parameters for clothoid pull out
