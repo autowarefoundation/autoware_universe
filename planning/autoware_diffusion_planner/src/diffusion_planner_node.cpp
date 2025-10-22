@@ -567,6 +567,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 {
   CandidateTrajectories candidate_trajectories;
 
+  // when ego is moving, enable force stop
   const bool enable_force_stop =
     ego_kinematic_state_.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
 
