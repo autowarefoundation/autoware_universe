@@ -69,6 +69,7 @@ protected:
     options.arguments(
       {"--ros-args", "-p", "output_metrics:=true", "--params-file",
        share_dir + "/config/planning_evaluator.param.yaml", "--params-file",
+       autoware_test_utils_dir + "/config/test_common.param.yaml", "--params-file",
        autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml"});
 
     dummy_node = std::make_shared<rclcpp::Node>("planning_evaluator_test_node");
@@ -516,38 +517,41 @@ TEST_F(EvalTest, TestFrechet)
 
 TEST_F(EvalTest, TestObstacleDistance)
 {
-  setTargetMetric(planning_diagnostics::Metric::obstacle_distance);
+  setTargetMetric(planning_diagnostics::Metric::obstacle_distance, "/min");
   Objects objs;
   autoware_perception_msgs::msg::PredictedObject obj;
-  obj.kinematics.initial_pose_with_covariance.pose.position.x = 0.0;
+  obj.kinematics.initial_pose_with_covariance.pose.position.x = 4.0;
   obj.kinematics.initial_pose_with_covariance.pose.position.y = 0.0;
   objs.objects.push_back(obj);
   publishObjects(objs);
 
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 0.5);
-  Trajectory t2 = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}, {2.0, 0.0}});
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t2), 1.0);  // (0.0 + 1.0 + 2.0) / 3
+  EXPECT_LE(publishTrajectoryAndGetMetric(t), 3.0);  // considering the vehicle and object shape, <
+                                                     // the distance is smaller than 4-1=3
+
+  Trajectory t2 = makeTrajectory({{0.0, 0.0}, {2.0, 0.0}, {4.0, 0.0}, {6.0, 0.0}});
+  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t2), 0.0);
 }
 
 TEST_F(EvalTest, TestObstacleTTC)
 {
   setTargetMetric(planning_diagnostics::Metric::obstacle_ttc);
+  publishEgoPose(0.001, 0.0, 0.0, 1.0, 0.0);  // start nearly from the second traj point
   Objects objs;
   autoware_perception_msgs::msg::PredictedObject obj;
-  obj.kinematics.initial_pose_with_covariance.pose.position.x = 0.0;
+  obj.kinematics.initial_pose_with_covariance.pose.position.x = 5.0;
   obj.kinematics.initial_pose_with_covariance.pose.position.y = 0.0;
   objs.objects.push_back(obj);
   publishObjects(objs);
 
-  Trajectory t = makeTrajectory({{3.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0}});
+  Trajectory t = makeTrajectory({{-5.0, 0.0}, {0.0, 0.0}, {5.0, 0.0}, {10.0, 0.0}});
   for (TrajectoryPoint & p : t.points) {
     p.longitudinal_velocity_mps = 1.0;
   }
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 3.0);
-  // if no exact collision point, last point before collision is used
-  t.points[1].pose.position.x = 1.0;
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 2.0);
+  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 5.0);
+
+  t.points[2].pose.position.x = 4.0;
+  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 4.0);
 }
 
 TEST_F(EvalTest, TestModifiedGoalLongitudinalDeviation)

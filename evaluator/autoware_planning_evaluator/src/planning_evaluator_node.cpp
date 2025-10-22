@@ -54,6 +54,7 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     this, get_clock(), 100ms, std::bind(&PlanningEvaluatorNode::onTimer, this));
 
   // Parameters for metrics_calculator
+  metrics_calculator_.setVehicleInfo(vehicle_info_);
   metrics_calculator_.parameters.trajectory.min_point_dist_m =
     declare_parameter<double>("trajectory.min_point_dist_m");
   metrics_calculator_.parameters.trajectory.lookahead.max_dist_m =
@@ -64,6 +65,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     declare_parameter<double>("trajectory.evaluation_time_s");
   metrics_calculator_.parameters.obstacle.dist_thr_m =
     declare_parameter<double>("obstacle.dist_thr_m");
+  metrics_calculator_.parameters.obstacle.limit_min_accel =
+    declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
 
   // Parameters for metrics_accumulator
   metrics_accumulator_.planning_factor_accumulator.parameters.time_count_threshold_s =
@@ -356,8 +359,7 @@ void PlanningEvaluatorNode::onTrajectory(
   auto start = now();
 
   for (Metric metric : metrics_for_publish_) {
-    const auto metric_stat =
-      metrics_calculator_.calculate(Metric(metric), *traj_msg, vehicle_info_.vehicle_length_m);
+    const auto metric_stat = metrics_calculator_.calculate(Metric(metric), *traj_msg);
     if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }

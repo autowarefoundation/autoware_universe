@@ -167,12 +167,12 @@ The following information are used to calculate metrics:
 
 #### Implemented metrics
 
-- **`obstacle_distance`**: Statistics of the distance between the centroid of each object and the closest trajectory point.
+- **`obstacle_distance`**: Statistics of the distance between each object and the closest trajectory point.
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
-- **`obstacle_ttc`**: Statistics of the time-to-collision (TTC) for those objects near the trajectory.
-  - Parameters: `obstacle.dist_thr_m` (distance threshold to consider the object as close to the trajectory).
+- **`obstacle_ttc`**: Statistics of the time-to-collision (TTC) of objects and ego. Predicted path of objects and ego trajectory are considered.
+  - Parameters: `obstacle.dist_thr_m` (distance margin to consider a collision occurs between object footprints and ego trajectory footprints).
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 

@@ -24,7 +24,7 @@
 namespace planning_diagnostics
 {
 std::optional<Accumulator<double>> MetricsCalculator::calculate(
-  const Metric metric, const Trajectory & traj, const double vehicle_length_m) const
+  const Metric metric, const Trajectory & traj) const
 {
   // Functions to calculate trajectory metrics
   switch (metric) {
@@ -35,7 +35,7 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
     case Metric::relative_angle:
       return metrics::calcTrajectoryRelativeAngle(traj, parameters.trajectory.min_point_dist_m);
     case Metric::resampled_relative_angle:
-      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_length_m);
+      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_info_.vehicle_length_m);
     case Metric::length:
       return metrics::calcTrajectoryLength(traj);
     case Metric::duration:
@@ -74,9 +74,11 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
           traj, ego_pose_, parameters.trajectory.lookahead.max_dist_m,
           parameters.trajectory.lookahead.max_time_s));
     case Metric::obstacle_distance:
-      return metrics::calcDistanceToObstacle(dynamic_objects_, traj);
+      return metrics::calcDistanceToObstacle(dynamic_objects_, traj, vehicle_info_);
     case Metric::obstacle_ttc:
-      return metrics::calcTimeToCollision(dynamic_objects_, traj, parameters.obstacle.dist_thr_m);
+      return metrics::calcTimeToCollision(
+        ego_odometry_, dynamic_objects_, traj, vehicle_info_, parameters.obstacle.dist_thr_m,
+        parameters.obstacle.limit_min_accel);
     default:
       return {};
   }
@@ -96,6 +98,11 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
     default:
       return {};
   }
+}
+
+void MetricsCalculator::setVehicleInfo(const VehicleInfo & vehicle_info)
+{
+  vehicle_info_ = vehicle_info;
 }
 
 void MetricsCalculator::setReferenceTrajectory(const Trajectory & traj)
