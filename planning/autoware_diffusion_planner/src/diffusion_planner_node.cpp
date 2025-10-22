@@ -388,6 +388,7 @@ InputDataMap DiffusionPlanner::create_input_data()
   auto temp_route_ptr = route_subscriber_.take_data();
 
   route_ptr_ = (!route_ptr_ || temp_route_ptr) ? temp_route_ptr : route_ptr_;
+  ego_kinematic_state_ = *ego_kinematic_state;
 
   TrackedObjects empty_object_list;
 
@@ -565,10 +566,13 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 {
   CandidateTrajectories candidate_trajectories;
 
+  const bool enable_force_stop =
+    ego_kinematic_state_.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
+
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
       predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
-      params_.stopping_threshold);
+      enable_force_stop, params_.stopping_threshold);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
