@@ -410,13 +410,13 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
 
   std::unordered_map<lanelet::Id, size_t> valid_id2idx_map;  // detected traffic light
   for (size_t i = 0; i < msg.traffic_light_groups.size(); ++i) {
-    auto signal = msg.traffic_light_groups[i];
+    const auto & signal = msg.traffic_light_groups[i];
     valid_id2idx_map[signal.traffic_light_group_id] = i;
   }
 
   std::unordered_map<lanelet::Id, size_t> output_id2idx_map;  // to check duplicate
   for (size_t i = 0; i < output.traffic_light_groups.size(); ++i) {
-    auto signal = output.traffic_light_groups[i];
+    const auto & signal = output.traffic_light_groups[i];
     output_id2idx_map[signal.traffic_light_group_id] = i;
   }
 
