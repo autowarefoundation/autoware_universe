@@ -571,6 +571,12 @@ flowchart TD
 | clothoid_collision_check_distance_from_end | [m]     | double | collision check distance from end for clothoid planner            | 0.0               |
 | check_clothoid_path_lane_departure         | [-]     | bool   | flag whether to check if clothoid path footprints are out of lane | true              |
 
+#### Limitation
+
+- **Violation of the max curvature**: During the rigid transformation of the approximated clothoid path to align with the original circular arc path, the scaling factor may cause the maximum steering angle constraint to be violated. When the scale factor is smaller than 1.0, the curvature of the transformed clothoid path may exceed the maximum curvature corresponding to the specified maximum steering angle.
+
+- **Yaw Angle Deviation at Path Endpoints**: The rigid transformation process introduces yaw angle deviations at the start and end points of the clothoid path. As shown in the figure above, note that the yaw angles at the start and end points differ between the original circular arc path (red dotted line) and the transformed clothoid path (black solid line).
+
 ## **backward pull out start point search**
 
 If a safe path cannot be generated from the current position, search backwards for a pull out start point at regular intervals(default: `2.0`).
