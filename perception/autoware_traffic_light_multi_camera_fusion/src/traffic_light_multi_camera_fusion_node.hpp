@@ -20,9 +20,12 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <lanelet2_core/Forward.h>
@@ -42,33 +45,12 @@ namespace autoware::traffic_light
 {
 namespace mf = message_filters;
 
-struct FusionRecord
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoi roi;
-  tier4_perception_msgs::msg::TrafficLight signal;
-};
-
-struct FusionRecordArr
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoiArray rois;
-  tier4_perception_msgs::msg::TrafficLightArray signals;
-};
-
-bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
-{
-  return rclcpp::Time(r1.header.stamp) < rclcpp::Time(r2.header.stamp);
-}
-
 using StateKey = std::pair<uint8_t, uint8_t>;
 
 struct GroupFusionInfo
 {
   std::map<StateKey, double> accumulated_log_odds;
-  std::map<StateKey, FusionRecord> best_record_for_state;
+  std::map<StateKey, utils::FusionRecord> best_record_for_state;
 };
 
 class MultiCameraFusion : public rclcpp::Node
