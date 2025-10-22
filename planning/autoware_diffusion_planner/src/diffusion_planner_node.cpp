@@ -388,7 +388,6 @@ InputDataMap DiffusionPlanner::create_input_data()
   auto temp_route_ptr = route_subscriber_.take_data();
 
   route_ptr_ = (!route_ptr_ || temp_route_ptr) ? temp_route_ptr : route_ptr_;
-  ego_kinematic_state_ = *ego_kinematic_state;
 
   TrackedObjects empty_object_list;
 
@@ -402,6 +401,8 @@ InputDataMap DiffusionPlanner::create_input_data()
       "No tracked objects or ego kinematic state or route data received");
     return {};
   }
+
+  ego_kinematic_state_ = *ego_kinematic_state;
 
   if (params_.update_traffic_light_group_info) {
     const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
