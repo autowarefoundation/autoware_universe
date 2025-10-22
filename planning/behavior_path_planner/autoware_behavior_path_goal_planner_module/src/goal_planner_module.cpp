@@ -1646,13 +1646,6 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
   current_drivable_area_info.drivable_lanes = target_drivable_lanes;
   output.drivable_area_info = utils::combineDrivableAreaInfo(
     current_drivable_area_info, getPreviousModuleOutput().drivable_area_info);
-
-  if (!context_data.pull_over_path_opt) {
-    return output;
-  }
-
-  setDebugData(context_data);
-
   return output;
 }
 
@@ -2667,9 +2660,11 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
   };
   if (utils::isAllowedGoalModification(planner_data_->route_handler)) {
     // Visualize pull over areas
-    const auto color = path_decision_controller_.get_current_state().state ==
-                           PathDecisionState::DecisionKind::DECIDED
-                         ? create_marker_color(1.0, 1.0, 0.0, 0.999)   // yellow
+    const auto state = path_decision_controller_.get_current_state().state;
+    const auto color = state == PathDecisionState::DecisionKind::DECIDED
+                         ? create_marker_color(1.0, 1.0, 0.0, 0.999)  // yellow
+                       : state == PathDecisionState::DecisionKind::DECIDING
+                         ? create_marker_color(1.0, 0.5, 0.0, 0.999)   // orange
                          : create_marker_color(0.0, 1.0, 0.0, 0.999);  // green
     const double z = planner_data_->route_handler->getGoalPose().position.z;
     add_info_marker(
