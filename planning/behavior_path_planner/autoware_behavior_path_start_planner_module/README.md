@@ -516,7 +516,6 @@ Generate smooth paths using clothoid curves that provide continuous curvature tr
 
 ![clothoid_pull_out](./images/clothoid_pullout.drawio.svg)
 
-
 #### Path Generation Flow
 
 The path is generated with following flow.
@@ -540,9 +539,9 @@ The path is generated with following flow.
    - Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path (**black dotted line in the following figure**).
    - Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path (**black line in the following figure**).
 
-2. **Lane Departure Check and Path Validation**
+1. **Lane Departure Check and Path Validation**
 
-3. **Collision Check**
+1. **Collision Check**
 
 ![clothoid_pullout_path_generation_flow](./images/clothoid_flow.drawio.svg)
 
