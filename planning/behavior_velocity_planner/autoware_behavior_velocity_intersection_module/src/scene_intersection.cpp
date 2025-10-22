@@ -388,7 +388,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   if (!is_occlusion_state && has_collision_with_margin) {
     if (collision_stop_tolerable) {
       if (!collision_stop_feasible) {
-        RCLCPP_INFO_THROTTLE(
+        RCLCPP_WARN_THROTTLE(
           logger_, *clock_, 5000,
           "keep non-occluded collision (infeasible) stop from previous iteration");
       }
