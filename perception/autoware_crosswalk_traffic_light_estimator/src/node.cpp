@@ -426,43 +426,57 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   base_traffic_signal_element.confidence = 1.0;
 
   for (const auto & tl_reg_elem : tl_reg_elems) {
-    auto id = tl_reg_elem->id();
-    if (crosswalk_traffic_signal_overrides.count(id)) {
-      TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
-      output_traffic_signal_element.color = crosswalk_traffic_signal_overrides.at(id);
+    const lanelet::Id id = tl_reg_elem->id();
+
+    // helper lambda to get or create output signal
+    auto get_or_create_output_signal = [&](lanelet::Id id) -> TrafficSignal & {
       if (output_id2idx_map.count(id)) {
-        const size_t idx = output_id2idx_map[id];
-        output.traffic_light_groups[idx].elements.clear();
-        output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
+        return output.traffic_light_groups[output_id2idx_map[id]];
       } else {
-        TrafficSignal output_traffic_signal;
-        output_traffic_signal.elements.push_back(output_traffic_signal_element);
-        output_traffic_signal.traffic_light_group_id = id;
-        output.traffic_light_groups.push_back(output_traffic_signal);
+        // element need to be added in later
+        TrafficSignal new_signal;
+        new_signal.traffic_light_group_id = id;
+        output.traffic_light_groups.push_back(new_signal);
         output_id2idx_map[id] = output.traffic_light_groups.size() - 1;
+        return output.traffic_light_groups.back();
       }
-    } else if (valid_id2idx_map.count(id)) {
-      const size_t idx = valid_id2idx_map[id];
-      auto signal = msg.traffic_light_groups[idx];
-      // if invalid perception result exists or disable camera recognition, overwrite the estimation
-      if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(signal)) {
-        TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
-        output.traffic_light_groups[idx].elements.clear();
-        output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
+    };
+
+    TrafficSignal & out_signal = get_or_create_output_signal(id);
+
+    auto replace_out_signal_elements = [&](const TrafficSignalElement & element) {
+      out_signal.elements.clear();
+      out_signal.elements.push_back(element);
+    };
+
+    // 1. Map-based override (highest priority)
+    if (auto it = crosswalk_traffic_signal_overrides.find(id);
+        it != crosswalk_traffic_signal_overrides.end()) {
+      replace_out_signal_elements(base_traffic_signal_element);
+      out_signal.elements[0].color = it->second;  // override color
+      continue;
+    }
+    // 2. Use detected pedestrian signal if valid
+    if (auto it = valid_id2idx_map.find(id); it != valid_id2idx_map.end()) {
+      const auto & detected = msg.traffic_light_groups[it->second];
+
+      if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(detected)) {
+        // Replace detection with estimated base color
+        replace_out_signal_elements(base_traffic_signal_element);
         continue;
       }
-      // if flashing, update output msg according to flashing and current state
-      updateFlashingState(signal);
-      output.traffic_light_groups[idx].elements[0].color = updateAndGetColorState(signal);
-    } else {
-      // if perception result does not exist, add it estimated by vehicle traffic signals
-      TrafficSignal output_traffic_signal;
-      TrafficSignalElement output_traffic_signal_element = base_traffic_signal_element;
-      output_traffic_signal.elements.push_back(output_traffic_signal_element);
-      output_traffic_signal.traffic_light_group_id = id;
-      output.traffic_light_groups.push_back(output_traffic_signal);
-      output_id2idx_map[id] = output.traffic_light_groups.size() - 1;
+
+      // Update flashing state and apply the most recent color
+      updateFlashingState(detected);
+      if (out_signal.elements.empty()) {  // unnecessary check because msg has detection but for safety
+        out_signal.elements.push_back(base_traffic_signal_element);
+      }
+      out_signal.elements[0].color = updateAndGetColorState(detected);  // TODO: determine what value is good for confidence
+      continue;
     }
+
+    // 3. No detection available → use estimated vehicle-based color
+    replace_out_signal_elements(base_traffic_signal_element);
   }
 }
 
