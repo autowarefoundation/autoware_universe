@@ -84,6 +84,11 @@
           "minimum": 1,
           "description": "Window size for velocity smoothing. Set to 1 to disable smoothing."
         },
+        "stopping_threshold": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Threshold for keeping the stopping state [m/s]"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
@@ -109,6 +114,9 @@
         "update_traffic_light_group_info",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
+        "temperature",
+        "velocity_smoothing_window",
+        "stopping_threshold",
         "debug_params"
       ]
     }

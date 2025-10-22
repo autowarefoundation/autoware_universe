@@ -117,6 +117,7 @@ struct DiffusionPlannerParams
   int batch_size;
   std::vector<double> temperature_list;
   int64_t velocity_smoothing_window;
+  double stopping_threshold;
 };
 struct DiffusionPlannerDebugParams
 {

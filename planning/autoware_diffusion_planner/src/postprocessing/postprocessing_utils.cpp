@@ -71,11 +71,13 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param stamp The ROS time stamp for the message.
  * @param velocity_smoothing_window The window size for velocity smoothing.
+ * @param stopping_threshold The threshold for keeping the stopping state [m/s].
  * @return A Trajectory message in map coordinates.
  */
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window);
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const double stopping_threshold);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -124,7 +126,7 @@ PredictedObjects create_predicted_objects(
 
     constexpr int64_t velocity_smoothing_window = 1;
     const Trajectory trajectory_points_in_map_reference = get_trajectory_from_prediction_matrix(
-      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
+      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, 0.0);
 
     PredictedObject object;
     const TrackedObject & object_info =
@@ -160,7 +162,7 @@ PredictedObjects create_predicted_objects(
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window)
+  const int64_t velocity_smoothing_window, const double stopping_threshold)
 {
   const int64_t ego_index = 0;
 
@@ -183,7 +185,7 @@ Trajectory create_ego_trajectory(
   prediction_matrix.transposeInPlace();
 
   return get_trajectory_from_prediction_matrix(
-    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
+    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, stopping_threshold);
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
@@ -282,7 +284,8 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
 
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window)
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const double stopping_threshold)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -304,6 +307,18 @@ Trajectory get_trajectory_from_prediction_matrix(
     p.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
     auto distance = std::hypot(p.pose.position.x - prev_x, p.pose.position.y - prev_y);
     p.longitudinal_velocity_mps = static_cast<float>(distance / dt);
+
+    // stopping logic
+    if (row > 0) {
+      const float prev_velocity = trajectory.points[row - 1].longitudinal_velocity_mps;
+      const float curr_velocity = p.longitudinal_velocity_mps;
+      const float threshold_velocity = static_cast<float>(stopping_threshold);
+      if (prev_velocity > threshold_velocity && curr_velocity <= threshold_velocity) {
+        p.longitudinal_velocity_mps = 0.0f;
+        p.pose.position.x = prev_x;
+        p.pose.position.y = prev_y;
+      }
+    }
 
     prev_x = p.pose.position.x;
     prev_y = p.pose.position.y;
