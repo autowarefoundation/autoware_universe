@@ -166,8 +166,8 @@ PredictedObjects create_predicted_objects(
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window, const double stopping_threshold,
-  const double current_velocity)
+  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold)
 {
   const int64_t ego_index = 0;
 
@@ -190,8 +190,8 @@ Trajectory create_ego_trajectory(
   prediction_matrix.transposeInPlace();
 
   return get_trajectory_from_prediction_matrix(
-    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, stopping_threshold,
-    current_velocity);
+    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
