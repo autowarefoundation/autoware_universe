@@ -20182,11 +20182,18 @@
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.constrain_last_point</td>
-<td>boolean</td>
-<td>Fix last point as hard constraint (if false, only first point fixed)</td>
-<td>0</td>
-<td>N/A</td>
+<td>trajectory_qp_smoother.num_constrained_points_start</td>
+<td>integer</td>
+<td>Number of points from the start of the trajectory to constrain as hard constraints (preserves initial state)</td>
+<td>3</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_qp_smoother.num_constrained_points_end</td>
+<td>integer</td>
+<td>Number of points from the end of the trajectory to constrain as hard constraints</td>
+<td>3</td>
+<td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.nearest_dist_threshold_m</td>
