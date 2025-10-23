@@ -173,7 +173,7 @@ PidLongitudinalController::PidLongitudinalController(
   // parameters for acceleration limit
   m_velocity_thresholds = node.declare_parameter<std::vector<double>>("velocity_thresholds");
   m_max_acc = node.declare_parameter<std::vector<double>>("max_acc");  // [m/s^2]
-  m_min_acc = node.declare_parameter<double>("min_acc");  // [m/s^2]
+  m_min_acc = node.declare_parameter<double>("min_acc");               // [m/s^2]
 
   // parameters for jerk limit
   m_max_jerk = node.declare_parameter<double>("max_jerk");                  // [m/s^3]
@@ -274,7 +274,9 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     return false;
   };
 
-  auto update_param_vector= [&](const std::vector<rclcpp::Parameter> & p, const std::string & name, std::vector<double> & value) {
+  auto update_param_vector = [&](
+                               const std::vector<rclcpp::Parameter> & p, const std::string & name,
+                               std::vector<double> & value) {
     auto it = std::find_if(p.cbegin(), p.cend(), [&name](const rclcpp::Parameter & parameter) {
       return parameter.get_name() == name;
     });
@@ -598,7 +600,8 @@ PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCm
     longitudinal_utils::applyDiffLimitFilter(raw_ctrl_cmd.vel, m_prev_raw_ctrl_cmd.vel, dt, p.acc);
 
   // use max_acc of 0m/ss when calculate emergency_ctrl_cmd
-  const auto current_max_acc = longitudinal_utils::getCurrentMaxAcc(0.0, m_velocity_thresholds, m_max_acc);
+  const auto current_max_acc =
+    longitudinal_utils::getCurrentMaxAcc(0.0, m_velocity_thresholds, m_max_acc);
   raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, current_max_acc);
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, raw_ctrl_cmd.acc);
   raw_ctrl_cmd.acc =
@@ -873,7 +876,8 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
           raw_ctrl_cmd.acc);
       }
 
-      const auto current_max_acc = longitudinal_utils::getCurrentMaxAcc(control_data.current_motion.vel, m_velocity_thresholds, m_max_acc);
+      const auto current_max_acc = longitudinal_utils::getCurrentMaxAcc(
+        control_data.current_motion.vel, m_velocity_thresholds, m_max_acc);
       raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, current_max_acc);
       m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, raw_ctrl_cmd.acc);
       raw_ctrl_cmd.acc = longitudinal_utils::applyDiffLimitFilter(

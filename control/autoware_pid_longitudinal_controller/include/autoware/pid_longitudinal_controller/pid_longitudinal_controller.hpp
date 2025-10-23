@@ -197,7 +197,7 @@ private:
   std::shared_ptr<LowpassFilter1d> m_lpf_acc_error{nullptr};
 
   // acceleration limit
-  std::vector<double> m_velocity_thresholds; 
+  std::vector<double> m_velocity_thresholds;
   std::vector<double> m_max_acc;
   double m_min_acc;
 
