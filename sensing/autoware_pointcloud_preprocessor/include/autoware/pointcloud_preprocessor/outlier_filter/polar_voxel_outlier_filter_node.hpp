@@ -16,6 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__POLAR_VOXEL_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/pointcloud_preprocessor/outlier_filter/hysteresis_state_machine.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -239,6 +240,7 @@ protected:
   std::optional<double> visibility_;
   std::optional<double> filter_ratio_;
   std::mutex mutex_;
+  std::shared_ptr<custom_diagnostic_tasks::HysteresisStateMachine> hysteresis_state_machine_;
 
   // Publishers and diagnostics
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;

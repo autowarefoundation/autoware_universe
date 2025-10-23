@@ -82,7 +82,10 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     static_cast<int>(declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count"));
   visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only");
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud");
-  bool publish_area_marker= declare_parameter<bool>("publish_area_marker");
+  bool publish_area_marker = declare_parameter<bool>("publish_area_marker");
+  int num_frames_hysteresis_transition = declare_parameter<int>("num_frames_hysteresis_transition");
+  bool immediate_report_error = declare_parameter<bool>("immediate_report_error");
+  bool immediate_relax_state = declare_parameter<bool>("immediate_relax_state");
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
   primary_return_types_.clear();
@@ -99,6 +102,8 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   intensity_threshold_ = declare_parameter<uint8_t>("intensity_threshold");
 
   // Initialize diagnostics
+  hysteresis_state_machine_ = std::make_shared<custom_diagnostic_tasks::HysteresisStateMachine>(
+      num_frames_hysteresis_transition, immediate_report_error, immediate_relax_state);
   updater_.setHardwareID("polar_voxel_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
@@ -915,16 +920,23 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   double visibility_value = visibility_.value();
 
   if (visibility_value < visibility_error_threshold_) {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-      "Low visibility detected - potential adverse weather conditions");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::ERROR);
   } else if (visibility_value < visibility_warn_threshold_) {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "Reduced visibility detected - monitor environmental conditions");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::WARN);
   } else {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::OK);
   }
+
+  auto visibility_state = hysteresis_state_machine_->get_current_state_level();
+  std::unordered_map<custom_diagnostic_tasks::DiagnosticStatus_t, std::string> message_str {
+    {diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+     "Low visibility detected - potential adverse weather conditions"},
+    {diagnostic_msgs::msg::DiagnosticStatus::WARN,
+     "Reduced visibility detected - monitor environmental conditions"},
+    {diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range"},
+    {diagnostic_msgs::msg::DiagnosticStatus::STALE, "No visibility data available"}
+  };
+  stat.summary(visibility_state, message_str[visibility_state]);
 
   stat.add("Visibility", visibility_value);
   stat.add("Error Threshold", visibility_error_threshold_);
@@ -935,6 +947,20 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   stat.add("Estimation Minimum Elevation (rad)", visibility_estimation_min_elevation_rad_);
   stat.add("Estimation Maximum Elevation (rad)", visibility_estimation_max_elevation_rad_);
   stat.add("Max Secondary Voxels", visibility_estimation_max_secondary_voxel_count_);
+  stat.add("Effectife state", custom_diagnostic_tasks::get_level_string(visibility_state));
+  stat.add(
+    "Candidate state",
+    custom_diagnostic_tasks::get_level_string(hysteresis_state_machine_->get_candidate_level()));
+  stat.add(
+    "Candidate state observed frames", hysteresis_state_machine_->get_candidate_num_observation());
+  stat.add(
+    "Observed frames transition threshold", hysteresis_state_machine_->get_num_frame_transition());
+  stat.add(
+    "Immediate error report",
+    hysteresis_state_machine_->get_immediate_error_report_param() ? "true" : "false");
+  stat.add(
+    "Immediate relax state",
+    hysteresis_state_machine_->get_immediate_relax_state_param() ? "true" : "false");
 }
 
 void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
