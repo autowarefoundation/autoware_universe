@@ -311,13 +311,6 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;
 
-  // Safety check: ensure we have at least 3 points for first acceleration preservation
-  if (N < 3) {
-    RCLCPP_ERROR(
-      get_node_ptr()->get_logger(),
-      "QP Smoother: Cannot preserve first acceleration with N=%d points (need at least 3)", N);
-  }
-
   H = Eigen::MatrixXd::Zero(num_variables, num_variables);
   std::fill(f_vec.begin(), f_vec.end(), 0.0);
 
