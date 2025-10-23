@@ -186,10 +186,35 @@ private:
         desired_start_distance <= 0.0 && desired_end_distance >= 0.0);
     }
   };
+
+  /**
+   * @brief Determines the required turn signal command and range based when intersection exist
+   * nearby.
+   *
+   * The turn signal is required if:
+   * 1. The lane is explicitly designated as a turn lane (e.g., attribute is "left").
+   * 2. The vehicle is stopped (current_vel < 0.1 m/s) AND is near the next intersection OR is in a
+   * known turn direction lane.
+   *
+   * @param path The current planned PathWithLaneId.
+   * @param current_pose The ego vehicle's current pose.
+   * @param current_vel The ego vehicle's current linear velocity [m/s].
+   * @param current_seg_idx The index of the path segment closest to the ego pose.
+   * @param route_handler The route handler for map and route information.
+   * @param nearest_dist_threshold Distance threshold for proximity calculation [m].
+   * @param nearest_yaw_threshold Yaw threshold for proximity calculation [rad].
+   * @param th_search_dist_to_turn_direction_lane Search distance threshold to next turn direction
+   * lane [m].
+   * @param turn_indicator_command The expected turn direction command (e.g.,
+   * TurnIndicatorsCommand::ENABLE_LEFT).
+   * @return std::optional<TurnSignalInfo> The calculated turn signal information (start/end points,
+   * command), or std::nullopt if no relevant turn features are found within the search distance.
+   */
   std::optional<TurnSignalInfo> getIntersectionTurnSignalInfo(
     const PathWithLaneId & path, const Pose & current_pose, const double current_vel,
     const size_t current_seg_idx, const RouteHandler & route_handler,
-    const double nearest_dist_threshold, const double nearest_yaw_threshold);
+    const double nearest_dist_threshold, const double nearest_yaw_threshold,
+    const double th_search_dist_to_turn_direction_lane, const uint8_t turn_indicator_command);
 
   std::optional<TurnSignalInfo> getRoundaboutTurnSignalInfo(
     const PathWithLaneId & path, const Pose & current_pose, const double current_vel,

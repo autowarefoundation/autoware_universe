@@ -224,6 +224,8 @@ struct TransientData
     current_dist_buffer;  // distance buffer computed backward from current lanes' terminal end
   MinMaxValue
     next_dist_buffer;  // distance buffer computed backward  from target lanes' terminal end
+  MinMaxValue ego_to_terminal_end_proximity;
+
   double dist_to_terminal_end{
     std::numeric_limits<double>::min()};  // distance from ego base link to the current lanes'
                                           // terminal end
@@ -308,6 +310,23 @@ struct CommonData
   }
 };
 using CommonDataPtr = std::shared_ptr<CommonData>;
+
+struct EgoObjectProximity
+{
+  bool is_ahead_of_ego{false};
+  std::optional<MinMaxValue> ego_dist_to_terminal_end;
+  std::optional<MinMaxValue> object_dist_to_terminal_end;
+
+  [[nodiscard]] bool is_overlapping() const
+  {
+    if (!ego_dist_to_terminal_end || !object_dist_to_terminal_end) {
+      return false;
+    }
+
+    return ego_dist_to_terminal_end->max >= object_dist_to_terminal_end->min &&
+           ego_dist_to_terminal_end->min <= object_dist_to_terminal_end->max;
+  }
+};
 }  // namespace autoware::behavior_path_planner::lane_change
 
 namespace autoware::behavior_path_planner

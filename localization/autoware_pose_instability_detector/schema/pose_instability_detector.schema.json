@@ -56,7 +56,7 @@
         },
         "pose_estimator_vertical_tolerance": {
           "type": "number",
-          "default": 0.11,
+          "default": 0.5,
           "minimum": 0.0,
           "description": "The tolerance of vertical position of pose estimator (m)."
         },
