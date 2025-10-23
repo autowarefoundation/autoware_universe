@@ -57,6 +57,30 @@
           "default": "20.0",
           "minimum": 0
         },
+        "visibility_estimation_min_azimuth_rad": {
+          "type": "number",
+          "description": "The miminum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "0.78",
+          "minimum": 0
+        },
+        "visibility_estimation_max_azimuth_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "2.35",
+          "minimum": 0
+        },
+        "visibility_estimation_min_elevation_rad": {
+          "type": "number",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "-0.26",
+          "minimum": -1.57
+        },
+        "visibility_estimation_max_elevation_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "1.04",
+          "minimum": 1.57
+        },
         "use_return_type_classification": {
           "type": "boolean",
           "description": "Whether to use return type classification (if false, all returns are processed).",
@@ -137,6 +161,10 @@
         "max_radius_m",
         "intensity_threshold",
         "visibility_estimation_max_range_m",
+        "visibility_estimation_min_azimuth_m",
+        "visibility_estimation_max_azimuth_m",
+        "visibility_estimation_min_elevation_m",
+        "visibility_estimation_max_elevation_m",
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
