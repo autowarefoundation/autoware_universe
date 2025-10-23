@@ -19963,9 +19963,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#endpoint-constraints" class="md-nav__link">
+  <a href="#point-constraints" class="md-nav__link">
     <span class="md-ellipsis">
-      Endpoint Constraints
+      Point Constraints
     </span>
   </a>
   
@@ -20041,9 +20041,27 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#example-5-allow-last-point-to-move" class="md-nav__link">
+  <a href="#example-5-constrain-only-first-point" class="md-nav__link">
     <span class="md-ellipsis">
-      Example 5: Allow Last Point to Move
+      Example 5: Constrain Only First Point
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-6-constrain-last-2-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example 6: Constrain Last 2 Points
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-7-preserve-larger-initial-region" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example 7: Preserve Larger Initial Region
     </span>
   </a>
   
@@ -20158,8 +20176,8 @@
 <p>where <code>w_i</code> is the per-point fidelity weight (see Velocity-Based Fidelity section).</p>
 <h3 id="constraints">Constraints<a class="headerlink" href="#constraints" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>First point</strong>: Always fixed to original position (hard constraint)</li>
-<li><strong>Last point</strong>: Optionally fixed (controlled by <code>constrain_last_point</code> parameter)</li>
+<li><strong>Start points</strong>: Configurable number of points from trajectory start are fixed (controlled by <code>num_constrained_points_start</code> parameter, default: 3)</li>
+<li><strong>End points</strong>: Configurable number of points from trajectory end are fixed (controlled by <code>num_constrained_points_end</code> parameter, default: 0)</li>
 </ul>
 <h2 id="velocity-based-fidelity-weighting">Velocity-Based Fidelity Weighting<a class="headerlink" href="#velocity-based-fidelity-weighting" title="Permanent link">#</a></h2>
 <h3 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">#</a></h3>
@@ -20258,11 +20276,20 @@ where σ(x) = 1 / (1 + exp(-x))
 </ul>
 </li>
 </ul>
-<h3 id="endpoint-constraints">Endpoint Constraints<a class="headerlink" href="#endpoint-constraints" title="Permanent link">#</a></h3>
+<h3 id="point-constraints">Point Constraints<a class="headerlink" href="#point-constraints" title="Permanent link">#</a></h3>
 <ul>
-<li><code>constrain_last_point</code> (default: false)<ul>
-<li><code>true</code>: Both first and last points fixed as hard constraints</li>
-<li><code>false</code>: Only first point fixed, allows last point to move for additional smoothness</li>
+<li><code>num_constrained_points_start</code> (default: 3)<ul>
+<li>Number of points from trajectory start to fix as hard constraints</li>
+<li>Recommended: 3 to preserve initial acceleration</li>
+<li>Set to 0 to allow all points to be optimized (may cause initial state discontinuities)</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><code>num_constrained_points_end</code> (default: 3)<ul>
+<li>Number of points from trajectory end to fix as hard constraints</li>
+<li>Set to 0 for maximum smoothness at trajectory end</li>
+<li>Increase if you need to preserve goal state and acceleration</li>
 </ul>
 </li>
 </ul>
@@ -20321,9 +20348,17 @@ where σ(x) = 1 / (1 + exp(-x))
 <p>To make the velocity-based transition more step-like:</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.sigmoid_sharpness<span class="w"> </span><span class="m">80</span>.0
 </code></pre></div>
-<h3 id="example-5-allow-last-point-to-move">Example 5: Allow Last Point to Move<a class="headerlink" href="#example-5-allow-last-point-to-move" title="Permanent link">#</a></h3>
-<p>For maximum smoothness at trajectory endpoints:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.constrain_last_point<span class="w"> </span><span class="nb">false</span>
+<h3 id="example-5-constrain-only-first-point">Example 5: Constrain Only First Point<a class="headerlink" href="#example-5-constrain-only-first-point" title="Permanent link">#</a></h3>
+<p>For maximum smoothness (only preserve initial position):</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">1</span>
+</code></pre></div>
+<h3 id="example-6-constrain-last-2-points">Example 6: Constrain Last 2 Points<a class="headerlink" href="#example-6-constrain-last-2-points" title="Permanent link">#</a></h3>
+<p>To preserve the goal state exactly:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end<span class="w"> </span><span class="m">2</span>
+</code></pre></div>
+<h3 id="example-7-preserve-larger-initial-region">Example 7: Preserve Larger Initial Region<a class="headerlink" href="#example-7-preserve-larger-initial-region" title="Permanent link">#</a></h3>
+<p>To preserve the first 5 points (useful for very noisy planners):</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start<span class="w"> </span><span class="m">5</span>
 </code></pre></div>
 <h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">#</a></h2>
 <h3 id="view-debug-logs">View Debug Logs<a class="headerlink" href="#view-debug-logs" title="Permanent link">#</a></h3>
@@ -20337,6 +20372,10 @@ ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </s
 <span class="c1"># Check weight configuration</span>
 ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.min_fidelity_weight
 ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.max_fidelity_weight
+
+<span class="c1"># Check constraint configuration</span>
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_start
+ros2<span class="w"> </span>param<span class="w"> </span>get<span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.num_constrained_points_end
 </code></pre></div>
 <h3 id="monitor-performance">Monitor Performance<a class="headerlink" href="#monitor-performance" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># View processing time metrics</span>
