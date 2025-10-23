@@ -372,18 +372,8 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     f_vec[y_i] = -w_i * y_orig;
   }
 
-  // Validate constraint parameters
-  const int num_points_start = std::max(0, std::min(qp_params_.num_constrained_points_start, N));
-  const int num_points_end = std::max(0, std::min(qp_params_.num_constrained_points_end, N));
-
-  // Ensure start and end constraints don't overlap
-  if (num_points_start + num_points_end > N) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "QP Smoother: Constraint overlap detected (start=%d, end=%d, N=%d). "
-      "Reducing end constraints.",
-      num_points_start, num_points_end, N);
-  }
+  const int num_points_start = std::max(0, qp_params_.num_constrained_points_start);
+  const int num_points_end = std::max(0, qp_params_.num_constrained_points_end);
 
   // Constraints: fix points from start and end
   // Each point has 2 constraints (x, y)
@@ -413,9 +403,8 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   }
 
   // Fix last num_points_end points
-  const int actual_end_points = std::min(num_points_end, N - num_points_start);
-  for (int i = 0; i < actual_end_points; ++i) {
-    const int point_idx = N - actual_end_points + i;
+  for (int i = 0; i < num_points_end; ++i) {
+    const int point_idx = N - num_points_end + i;
     const int x_idx = 2 * point_idx;
     const int y_idx = 2 * point_idx + 1;
 

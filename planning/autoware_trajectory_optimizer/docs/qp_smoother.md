@@ -109,6 +109,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Core Optimization Weights
 
 - `weight_smoothness` (default: 10.0)
+
   - Controls smoothness penalty
   - Higher values → smoother but more deviation from original path
 
@@ -119,18 +120,22 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Velocity-Based Fidelity
 
 - `use_velocity_based_fidelity` (default: true)
+
   - Master switch for velocity-dependent weighting
   - Set to `true` to enable feature
 
 - `velocity_threshold_mps` (default: 0.3)
+
   - Speed at which sigmoid transitions (midpoint)
   - Lower values → earlier transition to high fidelity
 
 - `sigmoid_sharpness` (default: 50.0)
+
   - Controls transition steepness
   - Range: [1, 100], higher = sharper step-like transition
 
 - `min_fidelity_weight` (default: 0.01)
+
   - Weight applied at very low speeds
   - Lower values → more aggressive smoothing when stopped/slow
 
@@ -141,14 +146,15 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Point Constraints
 
 - `num_constrained_points_start` (default: 3)
+
   - Number of points from trajectory start to fix as hard constraints
   - Recommended: 3 to preserve initial acceleration
   - Set to 0 to allow all points to be optimized (may cause initial state discontinuities)
 
-- `num_constrained_points_end` (default: 0)
+- `num_constrained_points_end` (default: 3)
   - Number of points from trajectory end to fix as hard constraints
   - Set to 0 for maximum smoothness at trajectory end
-  - Increase if you need to preserve goal state exactly
+  - Increase if you need to preserve goal state and acceleration
 
 ### Solver Settings
 
@@ -170,6 +176,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Orientation Correction
 
 - `fix_orientation` (default: true)
+
   - Apply orientation correction post-solve
 
 - `orientation_correction_threshold_deg` (default: 5.0)
