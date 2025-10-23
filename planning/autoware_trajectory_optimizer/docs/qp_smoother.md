@@ -46,8 +46,8 @@ where `w_i` is the per-point fidelity weight (see Velocity-Based Fidelity sectio
 
 ### Constraints
 
-- **First point**: Always fixed to original position (hard constraint)
-- **Last point**: Optionally fixed (controlled by `constrain_last_point` parameter)
+- **Start points**: Configurable number of points from trajectory start are fixed (controlled by `num_constrained_points_start` parameter, default: 3)
+- **End points**: Configurable number of points from trajectory end are fixed (controlled by `num_constrained_points_end` parameter, default: 0)
 
 ## Velocity-Based Fidelity Weighting
 
@@ -109,6 +109,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Core Optimization Weights
 
 - `weight_smoothness` (default: 10.0)
+
   - Controls smoothness penalty
   - Higher values → smoother but more deviation from original path
 
@@ -119,18 +120,22 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Velocity-Based Fidelity
 
 - `use_velocity_based_fidelity` (default: true)
+
   - Master switch for velocity-dependent weighting
   - Set to `true` to enable feature
 
 - `velocity_threshold_mps` (default: 0.3)
+
   - Speed at which sigmoid transitions (midpoint)
   - Lower values → earlier transition to high fidelity
 
 - `sigmoid_sharpness` (default: 50.0)
+
   - Controls transition steepness
   - Range: [1, 100], higher = sharper step-like transition
 
 - `min_fidelity_weight` (default: 0.01)
+
   - Weight applied at very low speeds
   - Lower values → more aggressive smoothing when stopped/slow
 
@@ -138,21 +143,31 @@ After QP optimization solves for smoothed positions, the following are recalcula
   - Weight applied at high speeds
   - Higher values → stronger preservation of planner path
 
-### Endpoint Constraints
+### Point Constraints
 
-- `constrain_last_point` (default: false)
-  - `true`: Both first and last points fixed as hard constraints
-  - `false`: Only first point fixed, allows last point to move for additional smoothness
+- `num_constrained_points_start` (default: 3)
+
+  - Number of points from trajectory start to fix as hard constraints
+  - Recommended: 3 to preserve initial acceleration
+  - Set to 0 to allow all points to be optimized (may cause initial state discontinuities)
+
+- `num_constrained_points_end` (default: 0)
+  - Number of points from trajectory end to fix as hard constraints
+  - Set to 0 for maximum smoothness at trajectory end
+  - Increase if you need to preserve goal state exactly
 
 ### Solver Settings
 
 - `time_step_s` (default: 0.1)
+
   - Time discretization for velocity/acceleration calculations
 
 - `osqp_eps_abs` / `osqp_eps_rel` (default: 1e-4)
+
   - OSQP solver convergence tolerances
 
 - `osqp_max_iter` (default: 100)
+
   - Maximum solver iterations
 
 - `osqp_verbose` (default: false)
@@ -161,6 +176,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 ### Orientation Correction
 
 - `fix_orientation` (default: true)
+
   - Apply orientation correction post-solve
 
 - `orientation_correction_threshold_deg` (default: 5.0)
@@ -200,12 +216,28 @@ To make the velocity-based transition more step-like:
 ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.sigmoid_sharpness 80.0
 ```
 
-### Example 5: Allow Last Point to Move
+### Example 5: Constrain Only First Point
 
-For maximum smoothness at trajectory endpoints:
+For maximum smoothness (only preserve initial position):
 
 ```bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.constrain_last_point false
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start 1
+```
+
+### Example 6: Constrain Last 2 Points
+
+To preserve the goal state exactly:
+
+```bash
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_end 2
+```
+
+### Example 7: Preserve Larger Initial Region
+
+To preserve the first 5 points (useful for very noisy planners):
+
+```bash
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start 5
 ```
 
 ## Debugging
@@ -227,6 +259,10 @@ ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.use_velocit
 # Check weight configuration
 ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.min_fidelity_weight
 ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.max_fidelity_weight
+
+# Check constraint configuration
+ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_start
+ros2 param get /planning/trajectory_optimizer trajectory_qp_smoother.num_constrained_points_end
 ```
 
 ### Monitor Performance
