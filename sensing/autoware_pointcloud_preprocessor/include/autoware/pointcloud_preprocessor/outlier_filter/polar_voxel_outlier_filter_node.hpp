@@ -255,7 +255,7 @@ protected:
   void calculate_filter_ratio_metric(const ValidPointsMask & valid_points_mask);
   void publish_visibility_metric();
   void publish_filter_ratio_metric();
-  void publish_area_marker(const std_msgs::msg::Header& input_header);
+  void publish_area_marker(const std_msgs::msg::Header & input_header);
 
   // Filter pipeline helper methods
   void validate_filter_inputs(const PointCloud2 & input, const IndicesPtr & indices);

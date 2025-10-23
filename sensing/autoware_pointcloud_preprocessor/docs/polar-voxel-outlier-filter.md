@@ -264,7 +264,6 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | `publish_noise_cloud`        | bool | Generate and publish noise cloud for debugging (ignored in visibility-only mode)           | true    |
 | `publish_area_marker`        | bool | Publish visualization_msgs::Marker for visualizing the area used for visibility estimation | false   |
 
-
 ### Diagnostics Parameters
 
 | Parameter                          | Type   | Description                                                                                               | Default |
@@ -276,8 +275,6 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | `num_frames_hysteresis_transition` | int    | The number of frames to transition reported state                                                         | 1       |
 | `immediate_report_error`           | bool   | If true, report error immediately once error is observed                                                  | false   |
 | `immediate_relax_state`            | bool   | If true, relax reported state immediately if the observed state is better (improved) than the current one | false   |
-
-
 
 ### Parameter Interactions
 

@@ -70,10 +70,14 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   max_radius_m_ = declare_parameter<double>("max_radius_m");
   visibility_estimation_max_range_m_ =
     declare_parameter<double>("visibility_estimation_max_range_m");
-  visibility_estimation_min_azimuth_rad_ = declare_parameter<double>("visibility_estimation_min_azimuth_rad");
-  visibility_estimation_max_azimuth_rad_ = declare_parameter<double>("visibility_estimation_max_azimuth_rad");
-  visibility_estimation_min_elevation_rad_ = declare_parameter<double>("visibility_estimation_min_elevation_rad");
-  visibility_estimation_max_elevation_rad_ = declare_parameter<double>("visibility_estimation_max_elevation_rad");
+  visibility_estimation_min_azimuth_rad_ =
+    declare_parameter<double>("visibility_estimation_min_azimuth_rad");
+  visibility_estimation_max_azimuth_rad_ =
+    declare_parameter<double>("visibility_estimation_max_azimuth_rad");
+  visibility_estimation_min_elevation_rad_ =
+    declare_parameter<double>("visibility_estimation_min_elevation_rad");
+  visibility_estimation_max_elevation_rad_ =
+    declare_parameter<double>("visibility_estimation_max_elevation_rad");
   use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification");
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
@@ -103,7 +107,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
 
   // Initialize diagnostics
   hysteresis_state_machine_ = std::make_shared<custom_diagnostic_tasks::HysteresisStateMachine>(
-      num_frames_hysteresis_transition, immediate_report_error, immediate_relax_state);
+    num_frames_hysteresis_transition, immediate_report_error, immediate_relax_state);
   updater_.setHardwareID("polar_voxel_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
@@ -133,7 +137,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   // Create area marker publisher if enabled
   if (publish_area_marker) {
     area_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
-        "polar_voxel_outlier_filter/debug/visibility_estimation_area", 10);
+      "polar_voxel_outlier_filter/debug/visibility_estimation_area", 10);
   }
 
   using std::placeholders::_1;
@@ -788,7 +792,7 @@ bool PolarVoxelOutlierFilterComponent::validate_zero_to_two_pi(
 }
 
 bool PolarVoxelOutlierFilterComponent::validate_negative_half_pi_to_half_pi(
-const rclcpp::Parameter & param, std::string & reason)
+  const rclcpp::Parameter & param, std::string & reason)
 {
   double val = param.as_double();
   if (val < -HALF_PI || val > HALF_PI) {
@@ -840,18 +844,24 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
       [this](const rclcpp::Parameter & p) { visibility_estimation_max_range_m_ = p.as_double(); }}},
     {"visibility_estimation_min_azimuth_rad",
      {validate_zero_to_two_pi,
-      [this](const rclcpp::Parameter & p) { visibility_estimation_min_azimuth_rad_ = p.as_double();
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_min_azimuth_rad_ = p.as_double();
       }}},
     {"visibility_estimation_max_azimuth_rad",
      {validate_zero_to_two_pi,
-      [this](const rclcpp::Parameter & p) { visibility_estimation_max_azimuth_rad_ = p.as_double();
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_max_azimuth_rad_ = p.as_double();
       }}},
     {"visibility_estimation_min_elevation_rad",
      {validate_negative_half_pi_to_half_pi,
-      [this](const rclcpp::Parameter & p) { visibility_estimation_min_elevation_rad_ = p.as_double(); }}},
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_min_elevation_rad_ = p.as_double();
+      }}},
     {"visibility_estimation_max_elevation_rad",
      {validate_negative_half_pi_to_half_pi,
-      [this](const rclcpp::Parameter & p) { visibility_estimation_max_elevation_rad_ = p.as_double(); }}},
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_max_elevation_rad_ = p.as_double();
+      }}},
     {"use_return_type_classification",
      {nullptr,
       [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }}},
@@ -928,14 +938,13 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   }
 
   auto visibility_state = hysteresis_state_machine_->get_current_state_level();
-  std::unordered_map<custom_diagnostic_tasks::DiagnosticStatus_t, std::string> message_str {
+  std::unordered_map<custom_diagnostic_tasks::DiagnosticStatus_t, std::string> message_str{
     {diagnostic_msgs::msg::DiagnosticStatus::ERROR,
      "Low visibility detected - potential adverse weather conditions"},
     {diagnostic_msgs::msg::DiagnosticStatus::WARN,
      "Reduced visibility detected - monitor environmental conditions"},
     {diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range"},
-    {diagnostic_msgs::msg::DiagnosticStatus::STALE, "No visibility data available"}
-  };
+    {diagnostic_msgs::msg::DiagnosticStatus::STALE, "No visibility data available"}};
   stat.summary(visibility_state, message_str[visibility_state]);
 
   stat.add("Visibility", visibility_value);

@@ -14,8 +14,8 @@
 
 // Copied from https://github.com/tier4/ros2_v4l2_camera/pull/37
 
-#ifndef HYSTERESIS_STATE_MACHINE_HPP_
-#define HYSTERESIS_STATE_MACHINE_HPP_
+#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__HYSTERESIS_STATE_MACHINE_HPP_
+#define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__HYSTERESIS_STATE_MACHINE_HPP_
 
 #include <tracetools/utils.hpp>
 
@@ -75,7 +75,7 @@ static inline StateHolder generate_state(const DiagnosticStatus_t & state)
   }
 }
 
-[[maybe_unused]]static std::string get_level_string(DiagnosticStatus_t level)
+[[maybe_unused]] static std::string get_level_string(DiagnosticStatus_t level)
 {
   switch (level) {
     case diagnostic_msgs::msg::DiagnosticStatus::OK:
@@ -192,4 +192,4 @@ protected:
 
 }  // namespace custom_diagnostic_tasks
 
-#endif  // HYSTERESIS_STATE_MACHINE_HPP_
+#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__HYSTERESIS_STATE_MACHINE_HPP_
