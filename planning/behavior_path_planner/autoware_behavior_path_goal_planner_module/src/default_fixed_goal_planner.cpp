@@ -95,7 +95,10 @@ PathWithLaneId DefaultFixedGoalPlanner::modifyPathForSmoothGoalConnection(
   autoware_internal_planning_msgs::msg::PathWithLaneId refined_path;
   while (goal_search_radius >= 0 && !is_valid_path) {
     refined_path = utils::refinePathForGoal(
-      goal_search_radius, M_PI * 0.5, output_path_interval, path, refined_goal, goal_lane_id);
+      goal_search_radius, M_PI * 0.5, output_path_interval, path, refined_goal, goal_lane_id,
+      [&](int64_t lane_id) -> lanelet::ConstLanelet {
+        return planner_data->route_handler->getLaneletMapPtr()->laneletLayer.get(lane_id);
+      });
     if (isPathValid(refined_path, planner_data)) {
       is_valid_path = true;
     }

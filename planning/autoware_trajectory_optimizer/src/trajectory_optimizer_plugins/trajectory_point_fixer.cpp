@@ -16,12 +16,16 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  [[maybe_unused]] const TrajectoryOptimizerData & data)
 {
   if (!params.fix_invalid_points) {
     return;
@@ -31,11 +35,22 @@ void TrajectoryPointFixer::optimize_trajectory(
 
 void TrajectoryPointFixer::set_up_params()
 {
+  auto node_ptr = get_node_ptr();
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+
+  fixer_params_.orientation_threshold_deg =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.orientation_threshold_deg");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
+  using autoware_utils_rclcpp::update_param;
+
+  update_param<double>(
+    parameters, "trajectory_point_fixer.orientation_threshold_deg",
+    fixer_params_.orientation_threshold_deg);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";

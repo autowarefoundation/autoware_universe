@@ -44,7 +44,7 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   rclcpp::Time stamp(123, 0);
 
   auto expected_points = prediction_shape[2];
-  const int64_t velocity_smoothing_window = 1;
+  const int64_t velocity_smoothing_window = 8;
   auto traj =
     postprocess::create_ego_trajectory(data, stamp, transform, 0, velocity_smoothing_window);
   ASSERT_EQ(traj.points.size(), expected_points);

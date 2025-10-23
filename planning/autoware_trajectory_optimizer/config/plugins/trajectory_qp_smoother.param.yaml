@@ -1,0 +1,33 @@
+/**:
+  ros__parameters:
+    trajectory_qp_smoother:
+      # QP Smoother Parameters
+      # Path-only optimization: smooths geometric path (x,y positions)
+      # Velocity/acceleration are derived from smoothed positions in post-processing
+
+      # Optimization weights
+      weight_smoothness: 10.0                 # Weight for path curvature minimization
+      weight_fidelity: 1.0                    # Baseline fidelity (used when velocity-based disabled)
+
+      # Time discretization
+      time_step_s: 0.1                        # Fixed time step for velocity/acceleration calculations [s]
+
+      # OSQP solver settings (tuned for real-time performance)
+      osqp_eps_abs: 1.0e-4                    # Absolute tolerance for convergence
+      osqp_eps_rel: 1.0e-4                    # Relative tolerance for convergence
+      osqp_max_iter: 100                      # Maximum solver iterations
+      osqp_verbose: false                     # Print solver output to console
+
+      # Orientation correction
+      fix_orientation: true                   # Enable orientation correction
+      orientation_correction_threshold_deg: 5.0  # Yaw threshold for correcting QP output orientation [deg]
+
+      # Velocity-based fidelity weighting
+      use_velocity_based_fidelity: true      # Enable velocity-dependent fidelity (low weight at slow speeds)
+      velocity_threshold_mps: 0.3             # Speed at which sigmoid transitions (midpoint) [m/s]
+      sigmoid_sharpness: 50.0                 # Sigmoid steepness (higher = sharper transition)
+      min_fidelity_weight: 0.01                # Minimum fidelity at very low speeds
+      max_fidelity_weight: 1.0                # Maximum fidelity at high speeds
+
+      # Endpoint constraints
+      constrain_last_point: false              # Fix last point as hard constraint (if false, only first point fixed)

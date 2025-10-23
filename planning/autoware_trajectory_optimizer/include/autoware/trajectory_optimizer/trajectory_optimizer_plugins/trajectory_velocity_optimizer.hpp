@@ -35,6 +35,20 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware::velocity_smoother::JerkFilteredSmoother;
 
+struct TrajectoryVelocityOptimizerParams
+{
+  double nearest_dist_threshold_m{1.5};
+  double nearest_yaw_threshold_deg{60.0};
+  double target_pull_out_speed_mps{1.0};
+  double target_pull_out_acc_mps2{1.0};
+  double max_speed_mps{8.33};
+  double max_lateral_accel_mps2{1.5};
+  bool set_engage_speed{false};
+  bool limit_speed{true};
+  bool limit_lateral_acceleration{false};
+  bool smooth_velocities{false};
+};
+
 class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
 {
 public:
@@ -47,13 +61,15 @@ public:
   void set_up_velocity_smoother(
     rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
 
 private:
   std::shared_ptr<JerkFilteredSmoother> jerk_filtered_smoother_{nullptr};
+  TrajectoryVelocityOptimizerParams velocity_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

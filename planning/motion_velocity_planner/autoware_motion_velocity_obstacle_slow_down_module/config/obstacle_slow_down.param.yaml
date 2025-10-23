@@ -5,8 +5,8 @@
         slow_down_min_acc: -1.0         # slow down min deceleration [m/ss]
         slow_down_min_jerk: -1.0        # slow down min jerk [m/sss]
 
-        lpf_gain_slow_down_vel: 0.99 # low-pass filter gain for slow down velocity
-        lpf_gain_lat_dist: 0.999 # low-pass filter gain for lateral distance from obstacle to ego's path
+        lpf_gain_slow_down_vel: 0.9 # low-pass filter gain for slow down velocity
+        lpf_gain_lateral_distance: 0.7 # low-pass filter gain for lateral distance from obstacle to ego's path
         lpf_gain_dist_to_slow_down: 0.7 # low-pass filter gain for distance to slow down start
 
         time_margin_on_target_velocity: 1.5 # [s]
@@ -60,6 +60,8 @@
         min_lat_margin: -10.0  # lateral margin between obstacle and trajectory band with ego's width to avoid the conflict with the obstacle_stop
         max_lat_margin: 1.1  # lateral margin between obstacle and trajectory band with ego's width
         lat_hysteresis_margin: 0.2
+
+        max_lat_velocity: 3.0  # [m/s] max lateral velocity of obstacle to be considered
 
         successive_num_to_entry_slow_down_condition: 5
         successive_num_to_exit_slow_down_condition: 5

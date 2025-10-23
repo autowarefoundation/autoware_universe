@@ -144,7 +144,7 @@ TEST_F(PlanningFactorTest, TestWithPredictedObjects)
     module_->plan(trajectory_.points, trajectory_.points, planner_data);
   }
 
-  const auto planning_factors = module_->get_planning_factors();
+  auto planning_factors = module_->get_planning_factors();
   ASSERT_EQ(planning_factors.size(), 1);
   const auto & planning_factor = planning_factors.front();
   EXPECT_EQ(
@@ -161,4 +161,14 @@ TEST_F(PlanningFactorTest, TestWithPredictedObjects)
   EXPECT_NEAR(safety_factor.points.front().x, initial_pose.position.x, 1.0);
   EXPECT_NEAR(safety_factor.points.front().y, initial_pose.position.y, 1.0);
   EXPECT_NEAR(safety_factor.points.front().z, initial_pose.position.z, 1.0);
+
+  // TODO(takagi): split the following test into another TEST_F
+  predicted_objects.objects.front().kinematics.initial_twist_with_covariance.twist.linear.y = -10.0;
+  planner_data->process_predicted_objects(predicted_objects);
+  for (size_t i = 0; i < count + 5; ++i) {
+    module_->publish_planning_factor();
+    module_->plan(trajectory_.points, trajectory_.points, planner_data);
+  }
+  planning_factors = module_->get_planning_factors();
+  ASSERT_EQ(planning_factors.size(), 0);
 }
