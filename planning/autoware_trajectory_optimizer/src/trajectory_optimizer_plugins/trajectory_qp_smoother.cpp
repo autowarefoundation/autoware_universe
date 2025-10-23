@@ -157,9 +157,11 @@ void TrajectoryQPSmoother::optimize_trajectory(
   }
 
   // Minimum points needed: base requirement (5) or total constrained points + 1 free point
+  constexpr size_t base_min_points = 5;
   const size_t total_constrained_points =
     qp_params_.num_constrained_points_start + qp_params_.num_constrained_points_end;
-  const size_t min_points_for_optimization = std::max(size_t(5), total_constrained_points + 1);
+  const size_t min_points_for_optimization =
+    std::max(base_min_points, total_constrained_points + 1);
 
   if (traj_points.size() < min_points_for_optimization) {
     RCLCPP_DEBUG_THROTTLE(
