@@ -202,7 +202,7 @@
             },
             "num_constrained_points_end": {
               "type": "integer",
-              "default": 0,
+              "default": 3,
               "minimum": 0,
               "description": "Number of points from the end of the trajectory to constrain as hard constraints"
             }
