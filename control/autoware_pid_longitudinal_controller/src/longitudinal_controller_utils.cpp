@@ -30,6 +30,8 @@
 
 #include <algorithm>
 #include <limits>
+#include <iostream>
+#include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
@@ -192,7 +194,7 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
 }
 
 double getCurrentMaxAcc(
-  double current_velocity, std::vector<double> vel_th_vec, std::vector<double> max_acc_vec)
+  double current_velocity, const std::vector<double>& vel_th_vec, const std::vector<double>& max_acc_vec)
 {
   // If the speed is out of range of the reference, apply zero-order hold.
   if (current_velocity <= vel_th_vec.front()) {
