@@ -251,10 +251,21 @@
           "description": "acceleration feedback gain",
           "default": "0.0"
         },
+        "velocity_thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "velocity thresholds in maps for max_acc [m/s]",
+          "default": "[[0.1, 1.388, 2.778, 4.167, 5.556, 6.944, 8.333, 9.722, 11.11]"
+        },
         "max_acc": {
-          "type": "number",
-          "description": "max value of output acceleration [m/s^2]",
-          "default": "3.0"
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "max value of output acceleration at varying velocity limits [m/s^2]",
+          "default": "[10.0, 3.0, 3.0, 1.5, 1.0, 0.8, 0.6, 0.6, 0.5]"
         },
         "min_acc": {
           "type": "number",
