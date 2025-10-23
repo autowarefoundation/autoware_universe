@@ -161,7 +161,7 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
  * @param [in] max_acc_vec max_acc vector
  */
 double getCurrentMaxAcc(
-  double current_velocity, std::vector<double> vel_th_vec, std::vector<double> max_acc_vec);
+  double current_velocity, const std::vector<double>& vel_th_vec, const std::vector<double>& max_acc_vec);
 
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
