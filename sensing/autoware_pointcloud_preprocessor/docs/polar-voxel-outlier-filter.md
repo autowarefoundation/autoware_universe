@@ -267,12 +267,17 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Diagnostics Parameters
 
-| Parameter                      | Type   | Description                             | Default |
-| ------------------------------ | ------ | --------------------------------------- | ------- |
-| `filter_ratio_error_threshold` | double | Error threshold for filter ratio        | 0.5     |
-| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio      | 0.7     |
-| `visibility_error_threshold`   | double | Error threshold for visibility metric   | 0.8     |
-| `visibility_warn_threshold`    | double | Warning threshold for visibility metric | 0.9     |
+| Parameter                          | Type   | Description                                                                                               | Default |
+| ---------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- | ------- |
+| `filter_ratio_error_threshold`     | double | Error threshold for filter ratio                                                                          | 0.5     |
+| `filter_ratio_warn_threshold`      | double | Warning threshold for filter ratio                                                                        | 0.7     |
+| `visibility_error_threshold`       | double | Error threshold for visibility metric                                                                     | 0.8     |
+| `visibility_warn_threshold`        | double | Warning threshold for visibility metric                                                                   | 0.9     |
+| `num_frames_hysteresis_transition` | int    | The number of frames to transition reported state                                                         | 1       |
+| `immediate_report_error`           | bool   | If true, report error immediately once error is observed                                                  | false   |
+| `immediate_relax_state`            | bool   | If true, relax reported state immediately if the observed state is better (improved) than the current one | false   |
+
+
 
 ### Parameter Interactions
 
