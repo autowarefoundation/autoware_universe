@@ -171,7 +171,8 @@ PidLongitudinalController::PidLongitudinalController(
   }
 
   // parameters for acceleration limit
-  m_max_acc = node.declare_parameter<double>("max_acc");  // [m/s^2]
+  m_velocity_thresholds = node.declare_parameter<std::vector<double>>("velocity_thresholds");
+  m_max_acc = node.declare_parameter<std::vector<double>>("max_acc");  // [m/s^2]
   m_min_acc = node.declare_parameter<double>("min_acc");  // [m/s^2]
 
   // parameters for jerk limit
@@ -268,6 +269,17 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
       [&name](const rclcpp::Parameter & parameter) { return parameter.get_name() == name; });
     if (it != parameters.cend()) {
       v = it->as_double();
+      return true;
+    }
+    return false;
+  };
+
+  auto update_param_vector= [&](const std::vector<rclcpp::Parameter> & p, const std::string & name, std::vector<double> & value) {
+    auto it = std::find_if(p.cbegin(), p.cend(), [&name](const rclcpp::Parameter & parameter) {
+      return parameter.get_name() == name;
+    });
+    if (it != p.cend()) {
+      value = it->template get_value<std::vector<double>>();
       return true;
     }
     return false;
@@ -382,6 +394,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
   m_lpf_acc_error->setGain(lpf_acc_error_gain);
 
   // acceleration limit
+  update_param_vector(parameters, "velocity_thresholds", m_velocity_thresholds);
+  update_param_vector(parameters, "max_acc", m_max_acc);
   update_param("min_acc", m_min_acc);
 
   // jerk limit
@@ -582,7 +596,10 @@ PidLongitudinalController::Motion PidLongitudinalController::calcEmergencyCtrlCm
 
   raw_ctrl_cmd.vel =
     longitudinal_utils::applyDiffLimitFilter(raw_ctrl_cmd.vel, m_prev_raw_ctrl_cmd.vel, dt, p.acc);
-  raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, m_max_acc);
+
+  // use max_acc of 0m/ss when calculate emergency_ctrl_cmd
+  const auto current_max_acc = longitudinal_utils::getCurrentMaxAcc(0.0, m_velocity_thresholds, m_max_acc);
+  raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, current_max_acc);
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, raw_ctrl_cmd.acc);
   raw_ctrl_cmd.acc =
     longitudinal_utils::applyDiffLimitFilter(raw_ctrl_cmd.acc, m_prev_raw_ctrl_cmd.acc, dt, p.jerk);
@@ -855,7 +872,9 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
           logger_, "[smooth stop]: Smooth stopping. vel: %3.3f, acc: %3.3f", raw_ctrl_cmd.vel,
           raw_ctrl_cmd.acc);
       }
-      raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, m_max_acc);
+
+      const auto current_max_acc = longitudinal_utils::getCurrentMaxAcc(control_data.current_motion.vel, m_velocity_thresholds, m_max_acc);
+      raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, current_max_acc);
       m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, raw_ctrl_cmd.acc);
       raw_ctrl_cmd.acc = longitudinal_utils::applyDiffLimitFilter(
         raw_ctrl_cmd.acc, m_prev_raw_ctrl_cmd.acc, control_data.dt, m_max_jerk, m_min_jerk);

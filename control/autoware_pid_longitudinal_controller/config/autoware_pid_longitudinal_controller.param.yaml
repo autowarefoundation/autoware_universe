@@ -64,7 +64,8 @@
     acc_feedback_gain: 0.0
 
     # acceleration limit
-    max_acc: 3.0
+    velocity_thresholds: [0.1, 1.388, 2.778, 4.167, 5.556, 6.944, 8.333, 9.722, 11.11]
+    max_acc: [10.0, 3.0, 3.0, 1.5, 1.0, 0.8, 0.6, 0.6, 0.5]
     min_acc: -5.0
 
     # jerk limit
