@@ -623,7 +623,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **For lenient visibility estimation**: Allow higher secondary voxel counts (several hundred)
 - **For primary-only output**: Enable `filter_secondary_returns`
 - **For sensor-specific optimization**: Adjust `primary_return_types` based on sensor characteristics
-- **For range-specific visibility**: Set `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_extimation_(min|max)_elevation_rad` based on sensor effective range and application requirements
+- **For range-specific visibility**: Set `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_estimation_(min|max)_elevation_rad` based on sensor effective range and application requirements
 
 #### Mode Selection Guidelines
 

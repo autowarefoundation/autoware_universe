@@ -59,7 +59,7 @@
         },
         "visibility_estimation_min_azimuth_rad": {
           "type": "number",
-          "description": "The miminum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
           "default": "0.78",
           "minimum": 0
         },

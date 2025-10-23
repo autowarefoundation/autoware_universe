@@ -956,7 +956,7 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   stat.add("Estimation Minimum Elevation (rad)", visibility_estimation_min_elevation_rad_);
   stat.add("Estimation Maximum Elevation (rad)", visibility_estimation_max_elevation_rad_);
   stat.add("Max Secondary Voxels", visibility_estimation_max_secondary_voxel_count_);
-  stat.add("Effectife state", custom_diagnostic_tasks::get_level_string(visibility_state));
+  stat.add("Effective state", custom_diagnostic_tasks::get_level_string(visibility_state));
   stat.add(
     "Candidate state",
     custom_diagnostic_tasks::get_level_string(hysteresis_state_machine_->get_candidate_level()));
@@ -1134,7 +1134,7 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
     return p;
   };
 
-  // Break azimuth and eleveation into discrete steps to approximate the volume
+  // Break azimuth and elevation into discrete steps to approximate the volume
   double azimuth_portion =
     (visibility_estimation_max_azimuth_rad_ - visibility_estimation_min_azimuth_rad_) /
     marker_resolution;
@@ -1151,7 +1151,7 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
       double r1 = 0;
       double r2 = visibility_estimation_max_range_m_;
 
-      // points for two radii sclices and two elevation slices
+      // points for two radii slices and two elevation slices
       auto p1 = polar_to_xyz(r1, az1, el1);  // near, left, lower
       auto p2 = polar_to_xyz(r2, az1, el1);  // far, left, lower
 
