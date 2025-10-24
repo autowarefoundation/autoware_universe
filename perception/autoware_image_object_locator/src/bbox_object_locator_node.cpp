@@ -298,21 +298,47 @@ void BboxObjectLocatorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr 
     // determine truncation border
     //
     // image
-    //    +------------ image boarder -- ...   --|
-    //    |  truncated ROI (bbox) area           | <-- vertical margin
-    //    |                                      |
-    //    |    --------- margin border -- ...  --|
-    //    |    |
-    //    |    |  non truncated ROI (bbox) area
-    //    ...
-    //    |----|
+    //    +--------- image boarder ----------+  ---
+    //    | truncated ROI (bbox) area        |    |<-- vertical margin
+    //    |   +----- margin border ------+   |  ---
+    //    |   |                          |   |
+    //    |   | non-truncated ROI (bbox) |   |
+    //    |   | area                     |   |
+    //    |   |                          |   |
+    //    |   +--------------------------+   |
+    //    |                                  |
+    //    +----------------------------------+
+    //
+    //    |---|
     //      ^
     //      |
     //     horizontal margin
     //
-    // if the bottom center point of bounding box is at margin border pixel,
-    // it will be considered as truncated ROI.
+    // image
+    //    +----------------------------------+
+    //    |                 +-----+          |
+    //    |   +-------------|ROI E|------+   |
+    //    |   |     +-----+ |     | +-----+  |
+    //    |   |     |ROI A| +-----+ |ROI B|  |
+    //    | +-----+ |     |         |     |  |
+    //    | |ROI D| +-----+ +-----+ +-----+  |
+    //    | |     |---------|ROI C|------+   |
+    //    | +-----+         +-----+          |
+    //    +----------------------------------+
     //
+    // considered as truncated:
+    //    ROI B: bottom-right point of the ROI is in the truncation area.
+    //    ROI C: bottom-center point of the ROI is in the truncation area.
+    //    ROI D: bottom-left point and bottom-center point of the ROI are in the truncation area.
+    //
+    // considered as NOT truncated:
+    //    ROI A: bottom-center, left, and right points are in the non-truncated area.
+    //    ROI E: bottom-center, left, and right points are in the non-truncated area.
+    //
+    // if any of the bottom center, left, or right points of an ROI's bounding box
+    // is at the margin border pixel, it will be considered a truncated ROI.
+    //
+
     roi_validator.pixel_truncated_top = truncation_vertical_margin;
     roi_validator.pixel_truncated_bottom = camera_info.height > (truncation_vertical_margin + 1)
                                              ? camera_info.height - (truncation_vertical_margin + 1)
