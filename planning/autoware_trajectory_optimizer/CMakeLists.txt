@@ -10,6 +10,7 @@ ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
   src/trajectory_optimizer_plugins/trajectory_extender.cpp
   src/trajectory_optimizer_plugins/trajectory_point_fixer.cpp
+  src/trajectory_optimizer_plugins/trajectory_qp_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_spline_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_velocity_optimizer.cpp
 )

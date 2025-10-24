@@ -15,6 +15,7 @@
   <!-- planning evaluator -->
   <group>
     <node name="planning_evaluator" exec="planning_evaluator" pkg="autoware_planning_evaluator">
+      <param from="$(var common_param_path)"/>
       <param from="$(find-pkg-share autoware_planning_evaluator)/config/planning_evaluator.param.yaml"/>
       <param name="output_metrics" value="$(var output_metrics)"/>
       <remap from="~/input/odometry" to="$(var input/odometry)"/>
