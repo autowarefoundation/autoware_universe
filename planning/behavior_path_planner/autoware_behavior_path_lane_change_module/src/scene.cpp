@@ -347,12 +347,20 @@ TurnSignalInfo NormalLaneChange::get_current_turn_signal_info() const
     return original_turn_signal_info;
   }
 
-  const auto & path = prev_module_output_.path;
+  const auto & prev_path = prev_module_output_.path.points;
+  if (prev_path.empty()) {
+    return original_turn_signal_info;
+  }
+
   const auto & original_command = original_turn_signal_info.turn_signal.command;
   if (
-    !path.points.empty() && original_command != TurnIndicatorsCommand::DISABLE &&
+    original_command != TurnIndicatorsCommand::DISABLE &&
     original_command != TurnIndicatorsCommand::NO_COMMAND) {
     return get_terminal_turn_signal_info();
+  }
+
+  if (!status_.is_valid_path) {
+    return get_turn_signal(getEgoPose(), prev_path.back().point.pose);
   }
 
   set_signal_activation_time();
