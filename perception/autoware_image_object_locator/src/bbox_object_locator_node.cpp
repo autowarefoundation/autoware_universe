@@ -151,10 +151,10 @@ inline cv::Matx22d radialTangentialToXY(double sigma_r, double sigma_t, double a
   const double cos_sin = c * s;
 
   // sigma = R * diag(sigma_r^2, sigma_t^2) * R^T
-  // sigma[0, 0] = simga_r^2 * cos^2 + simga_t^2 * sin^2
+  // sigma[0, 0] = sigma_r^2 * cos^2 + sigma_t^2 * sin^2
   // sigma[0, 1] = (sigma_t^2 - sigma_r^2) * cos * sin
   //             = sigma[1, 0]
-  // sigma[1, 1] = simga_r^2 * sin^2 + simga_t^2 * cos^2
+  // sigma[1, 1] = sigma_r^2 * sin^2 + sigma_t^2 * cos^2
   const double cxx = sr2 * cos2 + st2 * sin2;
   const double cxy = (sr2 - st2) * cos_sin;
   const double cyy = sr2 * sin2 + st2 * cos2;
