@@ -17,6 +17,7 @@
 #include "utils/command_conversion.hpp"
 
 #include <string>
+#include <memory>
 
 namespace autoware::default_adapi
 {
