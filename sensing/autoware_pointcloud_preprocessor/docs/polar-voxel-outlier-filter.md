@@ -229,52 +229,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, please refer [README](../README.md).
 
-### Core Filtering Parameters
-
-| Parameter                                         | Type   | Description                                             | Default        |
-| ------------------------------------------------- | ------ | ------------------------------------------------------- | -------------- |
-| `radial_resolution_m`                             | double | Resolution in radial direction (meters)                 | 0.5            |
-| `azimuth_resolution_rad`                          | double | Resolution in azimuth direction (radians)               | 0.0175 (~1.0°) |
-| `elevation_resolution_rad`                        | double | Resolution in elevation direction (radians)             | 0.0175 (~1.0°) |
-| `voxel_points_threshold`                          | int    | Minimum points required per voxel                       | 2              |
-| `min_radius_m`                                    | double | Minimum radius to consider (meters)                     | 0.5            |
-| `max_radius_m`                                    | double | Maximum radius to consider (meters)                     | 300.0          |
-| `intensity_threshold`                             | int    | Maximum intensity threshold for secondary returns       | 2              |
-| `visibility_estimation_max_range_m`               | double | Maximum range for visibility estimation (meters)        | 20.0           |
-| `visibility_estimation_min_azimuth_rad`           | double | Minimum azimuth for visibility estimation (rad)         | 0.78 (45deg)   |
-| `visibility_estimation_max_azimuth_rad`           | double | Maximum azimuth for visibility estimation (rad)         | 2.35 (135deg)  |
-| `visibility_estimation_min_elevation_rad`         | double | Minimum elevation for visibility estimation (rad)       | -0.26 (-10deg) |
-| `visibility_estimation_max_elevation_rad`         | double | Maximum elevation for visibility estimation (rad)       | 1.04 (60deg)   |
-| `visibility_estimation_max_secondary_voxel_count` | int    | Maximum secondary voxel count for visibility estimation | 500            |
-
-### Return Type Classification Parameters
-
-| Parameter                        | Type  | Description                                 | Default    |
-| -------------------------------- | ----- | ------------------------------------------- | ---------- |
-| `use_return_type_classification` | bool  | Enable advanced two-criteria filtering      | true       |
-| `filter_secondary_returns`       | bool  | Keep only primary returns in output         | false      |
-| `secondary_noise_threshold`      | int   | Maximum secondary returns allowed per voxel | 4          |
-| `primary_return_types`           | int[] | Return types considered as primary returns  | [1,6,8,10] |
-
-### Performance and Debug Control
-
-| Parameter                    | Type | Description                                                                                | Default |
-| ---------------------------- | ---- | ------------------------------------------------------------------------------------------ | ------- |
-| `visibility_estimation_only` | bool | Run filter for visibility estimation only (no point cloud output)                          | false   |
-| `publish_noise_cloud`        | bool | Generate and publish noise cloud for debugging (ignored in visibility-only mode)           | true    |
-| `publish_area_marker`        | bool | Publish visualization_msgs::Marker for visualizing the area used for visibility estimation | false   |
-
-### Diagnostics Parameters
-
-| Parameter                          | Type   | Description                                                                                               | Default |
-| ---------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- | ------- |
-| `filter_ratio_error_threshold`     | double | Error threshold for filter ratio                                                                          | 0.5     |
-| `filter_ratio_warn_threshold`      | double | Warning threshold for filter ratio                                                                        | 0.7     |
-| `visibility_error_threshold`       | double | Error threshold for visibility metric                                                                     | 0.8     |
-| `visibility_warn_threshold`        | double | Warning threshold for visibility metric                                                                   | 0.9     |
-| `num_frames_hysteresis_transition` | int    | The number of frames to transition reported state                                                         | 1       |
-| `immediate_report_error`           | bool   | If true, report error immediately once error is observed                                                  | false   |
-| `immediate_relax_state`            | bool   | If true, relax reported state immediately if the observed state is better (improved) than the current one | false   |
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/polar_voxel_outlier_filter_node.schema.json") }}
 
 ### Parameter Interactions
 
