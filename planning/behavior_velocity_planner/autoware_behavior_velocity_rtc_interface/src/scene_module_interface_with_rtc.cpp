@@ -47,11 +47,13 @@ SceneModuleManagerInterfaceWithRTC::SceneModuleManagerInterfaceWithRTC(
 }
 
 void SceneModuleManagerInterfaceWithRTC::plan(
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
+  Trajectory & path, const std_msgs::msg::Header & header,
+  const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
   setActivation();
-  modifyPathVelocity(path);
-  sendRTC(path->header.stamp);
+  modifyPathVelocity(path, header, left_bound, right_bound, planner_data);
+  sendRTC(header.stamp);
   publishObjectsOfInterestMarker();
 }
 
@@ -112,9 +114,9 @@ void SceneModuleManagerInterfaceWithRTC::publishObjectsOfInterestMarker()
 }
 
 void SceneModuleManagerInterfaceWithRTC::deleteExpiredModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
-  const auto isModuleExpired = getModuleExpiredFunction(path);
+  const auto isModuleExpired = getModuleExpiredFunction(path, planner_data);
 
   auto itr = scene_modules_.begin();
   while (itr != scene_modules_.end()) {
@@ -132,13 +134,13 @@ void SceneModuleManagerInterfaceWithRTC::deleteExpiredModules(
   }
 }
 
-template size_t SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::findEgoSegmentIndex(
-  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & points) const;
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::updateSceneModuleInstances(
-  const std::shared_ptr<const PlannerData> & planner_data,
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
+  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data);
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::modifyPathVelocity(
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path);
+  Trajectory & path, const std_msgs::msg::Header & header,
+  const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data);
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::registerModule(
-  const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module);
+  const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module,
+  const PlannerData & planner_data);
 }  // namespace autoware::behavior_velocity_planner
