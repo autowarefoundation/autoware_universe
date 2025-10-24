@@ -14,6 +14,7 @@
     batch_size: 1
     temperature: [0.5]
     velocity_smoothing_window: 8
+    stopping_threshold: 0.0
     debug_params:
       publish_debug_route: true
       publish_debug_map: false
