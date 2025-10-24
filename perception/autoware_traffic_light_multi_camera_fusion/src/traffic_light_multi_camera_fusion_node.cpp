@@ -18,11 +18,40 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+namespace
+{
+
+double probabilityToLogOdds(double prob)
+{
+  /**
+   * @brief Converts a probability value to log-odds.
+   *
+   * Log-odds is the logarithm of the odds ratio, i.e., log(p / (1-p)).
+   * This function is essential for Bayesian updating in log-space, as it allows
+   * evidence to be additively combined.
+   *
+   * The function handles edge cases where the probability `p` is very close to
+   * 0 or 1. As `p` -> 1, log-odds -> +inf. As `p` -> 0, log-odds -> -inf.
+   * To prevent floating-point divergence (infinity), the input probability is
+   * "clamped" to a safe range slightly away from the boundaries. The bounds
+   * [1e-9, 1.0 - 1e-9] are chosen as a small epsilon to ensure numerical
+   * stability while having a negligible impact on non-extreme probability values.
+   *
+   * @param prob The input probability, expected to be in the range [0.0, 1.0].
+   * @return The corresponding log-odds value.
+   */
+  prob = std::clamp(prob, 1e-9, 1.0 - 1e-9);
+  return std::log(prob / (1.0 - prob));
+}
+
+}  // namespace
 
 namespace autoware::traffic_light
 {
@@ -38,6 +67,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
+  prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
     std::string roi_topic = camera_ns + "/detection/rois";
@@ -65,7 +95,9 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
 
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&MultiCameraFusion::mapCallback, this, _1));
+    [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
+      this->mapCallback(msg);
+    });
   signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 }
 
@@ -184,29 +216,84 @@ void MultiCameraFusion::groupFusion(
   std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
   grouped_record_map.clear();
+
+  // Stage 1: Accumulate evidence from all fused records
+  const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
+    accumulateGroupEvidence(fused_record_map);
+
+  // Stage 2: Determine the best state for each group from the accumulated evidence
+  determineBestGroupState(group_fusion_info_map, grouped_record_map);
+}
+
+std::map<MultiCameraFusion::IdType, GroupFusionInfo> MultiCameraFusion::accumulateGroupEvidence(
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
+{
+  std::map<IdType, GroupFusionInfo> group_fusion_info_map;
   for (const auto & p : fused_record_map) {
     IdType roi_id = p.second.roi.traffic_light_id;
-    /*
-    this should not happen
-    */
     if (traffic_light_id_to_regulatory_ele_id_.count(roi_id) == 0) {
       RCLCPP_WARN_STREAM(
         get_logger(), "Found Traffic Light Id = " << roi_id << " which is not defined in Map");
       continue;
     }
 
-    /*
-    keep the best record for every regulatory element id
-    */
-    const auto reg_ele_id_vec =
-      traffic_light_id_to_regulatory_ele_id_[p.second.roi.traffic_light_id];
-    for (const auto & reg_ele_id : reg_ele_id_vec) {
-      if (
-        grouped_record_map.count(reg_ele_id) == 0 ||
-        utils::compareRecord(p.second, grouped_record_map[reg_ele_id]) >= 0) {
-        grouped_record_map[reg_ele_id] = p.second;
+    const auto & record = p.second;
+    if (record.signal.elements.empty()) {
+      continue;
+    }
+
+    for (const auto & element : record.signal.elements) {
+      const uint8_t color = element.color;
+      const uint8_t shape = element.shape;
+      const StateKey state_key = {color, shape};
+      const double confidence = element.confidence;
+      const auto reg_ele_id_vec =
+        traffic_light_id_to_regulatory_ele_id_.at(p.second.roi.traffic_light_id);
+
+      for (const auto & reg_ele_id : reg_ele_id_vec) {
+        // Get a reference to the log-odds map for the current regulatory element ID.
+        auto & log_odds_map = group_fusion_info_map[reg_ele_id].accumulated_log_odds;
+        // The prior should only be applied once. try_emplace efficiently inserts the prior
+        // only if the state_key does not already exist.
+        log_odds_map.try_emplace(state_key, 0.0);
+
+        double evidence_log_odds = probabilityToLogOdds(confidence);
+
+        // We assume the prior probability (with no information) is 0.5, meaning the log odds = 0,
+        // and then add evidence to it.
+        log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
+
+        auto & best_record_for_map = group_fusion_info_map[reg_ele_id].best_record_for_state;
+        if (
+          best_record_for_map.find(state_key) == best_record_for_map.end() ||
+          confidence > best_record_for_map.at(state_key).signal.elements[0].confidence) {
+          best_record_for_map[state_key] = record;
+        }
       }
     }
+  }
+  return group_fusion_info_map;
+}
+
+void MultiCameraFusion::determineBestGroupState(
+  const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+{
+  for (const auto & pair : group_fusion_info_map) {
+    const IdType reg_ele_id = pair.first;
+    const auto & group_info = pair.second;
+
+    if (group_info.accumulated_log_odds.empty()) {
+      continue;
+    }
+
+    // The color with the highest logarithmic odds is the most probable one.
+    auto best_element = std::max_element(
+      group_info.accumulated_log_odds.begin(), group_info.accumulated_log_odds.end(),
+      [](const auto & a, const auto & b) { return a.second < b.second; });
+
+    const StateKey best_state_key = best_element->first;
+    grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
   }
 }
 

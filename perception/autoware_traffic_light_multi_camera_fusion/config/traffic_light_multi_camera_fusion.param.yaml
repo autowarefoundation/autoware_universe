@@ -2,3 +2,4 @@
   ros__parameters:
     message_lifespan: 0.09
     approximate_sync: false
+    prior_log_odds: 0.0
