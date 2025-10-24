@@ -28,6 +28,7 @@ Currently, this algorithm can sometimes give unnatural (not wrong) blinkers in c
 | turn_signal_search_time                            | [s]  | double | search time for to decide activation of blinkers                                                                                                                                                       | 3.0           |
 | turn_signal_shift_length_threshold                 | [m]  | double | shift length threshold to decide activation of blinkers                                                                                                                                                | 0.3           |
 | turn_signal_remaining_shift_length_threshold       | [m]  | double | When the ego's current shift length minus its end shift length is less than this threshold, the turn signal will be turned off.                                                                        | 0.1           |
+| turn_signal_remaining_distance_to_bound_threshold  | [m]  | double | Distance from ego vehicle's front edge to the far-side boundary of the target merging lane. The turn signal will be turned off when the value is less than the threshold.                              | 1.3           |
 | turn_signal_on_swerving                            | [-]  | bool   | flag to activate blinkers when swerving                                                                                                                                                                | true          |
 | turn_signal_roundabout_on_entry                    | [-]  | string | turn signal on entry to roundabout. "None", "Left", "Right"                                                                                                                                            | "None"        |
 | turn_signal_roundabout_entry_indicator_persistence | [-]  | bool   | whether to keep the indicator on after entering the roundabout. If true, the indicator will be kept on until the exit point. If false, the indicator will be turned off after entering the roundabout. | false         |
@@ -132,7 +133,7 @@ Second section
 
 ![section_lane_change](../images/turn_signal_decider/lane_change.drawio.svg)
 
-#### 4. Pull out
+#### 4. Pull out (Start Planner)
 
 - desired start point
   Start point of the path of pull out.
@@ -147,6 +148,12 @@ Second section
   Terminal point of the path of pull out.
 
 ![section_pull_out](../images/turn_signal_decider/pull_out.drawio.svg)
+
+!!! note
+
+    The blinker also deactivate based on the remaining lateral distance to the target lane boundary.
+
+    If this distance is smaller than the configurable parameter `turn_signal_remaining_distance_to_bound_threshold`, the blinker will turn off immediately.
 
 #### 5. Goal Planner
 

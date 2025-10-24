@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
@@ -921,51 +922,8 @@ std::optional<Pose> calcRefinedGoal(
 std::optional<double> calcSignedLateralDistanceToBoundary(
   const lanelet::ConstLineString3d boundary, const Pose & reference_pose)
 {
-  if (boundary.size() < 2) {
-    return std::nullopt;
-  }
-
-  const double yaw = tf2::getYaw(reference_pose.orientation);
-  const Eigen::Vector2d y_axis_direction(-std::sin(yaw), std::cos(yaw));
-  const Eigen::Vector2d reference_point(reference_pose.position.x, reference_pose.position.y);
-
-  double min_distance = std::numeric_limits<double>::max();
-  std::optional<double> signed_lateral_distance;
-
-  for (size_t i = 0; i < boundary.size() - 1; ++i) {
-    const auto & p1 = boundary[i];
-    const auto & p2 = boundary[i + 1];
-
-    const Eigen::Vector2d segment_start(p1.x(), p1.y());
-    const Eigen::Vector2d segment_end(p2.x(), p2.y());
-    const Eigen::Vector2d segment_direction = segment_end - segment_start;
-
-    // Calculate intersection between Y-axis line and boundary segment
-    const double det = y_axis_direction.x() * (-segment_direction.y()) -
-                       y_axis_direction.y() * (-segment_direction.x());
-
-    if (std::abs(det) < 1e-10) {
-      // this segment and the Y-axis are parallel
-      continue;
-    }
-
-    const Eigen::Vector2d rhs = segment_start - reference_point;
-    const double t =
-      ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
-    const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
-
-    // Check if intersection is within segment bounds
-    if (s >= 0.0 && s <= 1.0) {
-      const double distance = std::abs(t);
-
-      if (distance < min_distance) {
-        min_distance = distance;
-        signed_lateral_distance = t;
-      }
-    }
-  }
-
-  return signed_lateral_distance;
+  return boundary_departure_checker::utils::calc_signed_lateral_distance_to_boundary(
+    boundary, reference_pose);
 }
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
