@@ -563,17 +563,11 @@ void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_va
   debug_optimised_steering_pub_->publish(msg);
 }
 
-geometry_msgs::msg::Point getCorner(
-  const geometry_msgs::msg::Pose & ego_pose,
-  double dx, double dy)
+geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, double dx, double dy)
 {
   // Convert quaternion to roll, pitch, yaw
   tf2::Quaternion q(
-    ego_pose.orientation.x,
-    ego_pose.orientation.y,
-    ego_pose.orientation.z,
-    ego_pose.orientation.w
-  );
+    ego_pose.orientation.x, ego_pose.orientation.y, ego_pose.orientation.z, ego_pose.orientation.w);
 
   double roll, pitch, yaw;
   tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
@@ -651,40 +645,42 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   std::cerr << "vehicle dimensions (LxW): " << vehicle_info.vehicle_length_m << " x "
             << vehicle_info.vehicle_width_m << std::endl;
   std::cerr << "vehicle overhangs (front, rear, left, right): " << vehicle_info.front_overhang_m
-            << ", " << vehicle_info.rear_overhang_m << ", " << vehicle_info.left_overhang_m
-            << ", " << vehicle_info.right_overhang_m << std::endl;
+            << ", " << vehicle_info.rear_overhang_m << ", " << vehicle_info.left_overhang_m << ", "
+            << vehicle_info.right_overhang_m << std::endl;
 
-  const double half_width = (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) / 2.0;
+  const double half_width =
+    (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) /
+    2.0;
   const double front = (vehicle_info.vehicle_length_m / 2.0 + vehicle_info.front_overhang_m);
   const double rear = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.rear_overhang_m;
 
-  const std::array<geometry_msgs::msg::Point, 4> corner_points_body_frame = { 
-    getCorner(ego_pose, front,  half_width),  // front-left
+  const std::array<geometry_msgs::msg::Point, 4> corner_points_body_frame = {
+    getCorner(ego_pose, front, half_width),   // front-left
     getCorner(ego_pose, front, -half_width),  // front-right
-    getCorner(ego_pose, rear,  -half_width),  // rear-right
-    getCorner(ego_pose, rear,   half_width)   // rear-left
+    getCorner(ego_pose, rear, -half_width),   // rear-right
+    getCorner(ego_pose, rear, half_width)     // rear-left
   };
 
   std::array<geometry_msgs::msg::Point, 4> corner_points_curvilinear;
   std::transform(
     corner_points_body_frame.begin(), corner_points_body_frame.end(),
-    corner_points_curvilinear.begin(),
-    [&ref_points_spline](const geometry_msgs::msg::Point &p) {
+    corner_points_curvilinear.begin(), [&ref_points_spline](const geometry_msgs::msg::Point & p) {
       const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
       geometry_msgs::msg::Point projected;
       projected.x = s;
       projected.y = e_y;
       projected.z = 0.0;
       return projected;
-    }
-  );
+    });
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
   for (const auto & corner_point_curvilinear : corner_points_curvilinear) {
     msg.body_points.push_back(corner_point_curvilinear);
   }
 
-  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: " << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size() << ", " << msg_curvatures.data.size() << std::endl;
+  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: "
+            << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size()
+            << ", " << msg_curvatures.data.size() << std::endl;
 
   msg.knots = msg_knots;
   msg.x_coeffs = msg_x;
