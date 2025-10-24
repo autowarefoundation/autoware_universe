@@ -17,7 +17,7 @@
  * @brief GPU monitor class
  */
 
-#include "system_monitor/gpu_monitor/gpu_monitor_base.hpp"
+#include "gpu_monitor_base.hpp"
 
 #include <unistd.h>
 
