@@ -67,8 +67,10 @@ struct QPSmootherParams
   double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
   double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
 
-  // Endpoint constraints
-  bool constrain_last_point{true};  // Fix last point as hard constraint
+  // Point constraints
+  // Number of points from start to constrain (preserve initial state)
+  int num_constrained_points_start{3};
+  int num_constrained_points_end{3};  // Number of points from end to constrain
 };
 
 /**

@@ -29,5 +29,6 @@
       min_fidelity_weight: 0.01                # Minimum fidelity at very low speeds
       max_fidelity_weight: 1.0                # Maximum fidelity at high speeds
 
-      # Endpoint constraints
-      constrain_last_point: false              # Fix last point as hard constraint (if false, only first point fixed)
+      # Point constraints
+      num_constrained_points_start: 3        # Number of points from start to constrain (preserves initial state)
+      num_constrained_points_end: 3          # Number of points from end to constrain
