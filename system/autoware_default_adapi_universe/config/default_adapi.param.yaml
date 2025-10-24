@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    diag_timeout_warn_duration: 1.0
+    diag_timeout_error_duration: 2.0
     diagnostic_updater:
       period: 1.0
       use_fqn: true
