@@ -120,17 +120,17 @@ private:
     static constexpr double sigma_bearing_deg = 2.5;
 
     // radial sigma settings
-    static constexpr double range_sigma_bias = 0.8;
-    static constexpr double range_sigma_slope = 0.30;
+    static constexpr double range_sigma_bias = 0.7;
+    static constexpr double range_sigma_slope = 0.10;
 
-    // coefficient for giving an andditinal sigma values when ROI is truncated
+    // coefficient for adding additional sigma values when the ROI is truncated
     static constexpr double horizontal_bias_coeff = 2;
     static constexpr double vertical_bias_coeff = 2;
 
     // SPD floor
     static constexpr double eps_spd = 1e-6;
 
-    // tentative sigma value for the point that is too close to the camera
+    // tentative sigma value for points that are too close to the camera.
     static constexpr double sigma_close_to_camera_2 = 0.2 * 0.2;
   };  // struct CovarianceControlParams
 

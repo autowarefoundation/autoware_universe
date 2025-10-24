@@ -439,7 +439,7 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
   std::vector<cv::Point2f> pixel_for_sampling = {bottom_center};
   RoiValidator roi_validator = roi_validator_[rois_id];
 
-  // if ROI truncation detected, set some coefficient to larger the covariance
+  // if ROI truncation is detected, increase the covariance by applying a larger coefficient
   double horizontal_bias_coeff = 1.0;
   double vertical_bias_coeff = 1.0;
 
