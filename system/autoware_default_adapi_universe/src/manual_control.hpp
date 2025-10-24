@@ -16,6 +16,8 @@
 #define MANUAL_CONTROL_HPP_
 
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <autoware_utils_diagnostics/timeout_diagnostics.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/acceleration_command.hpp>
@@ -98,6 +100,8 @@ private:
   uint8_t target_operation_mode_;
   std::string ns_;
   ManualControlMode current_mode_;
+  std::unique_ptr<diagnostic_updater::Updater> diag_updater_;
+  std::unique_ptr<autoware_utils_diagnostics::TimeoutDiag> diag_heartbeat_;
 };
 
 }  // namespace autoware::default_adapi

@@ -22,7 +22,7 @@ namespace autoware::default_adapi
 {
 
 ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
-: Node("manual_control", options)
+: Node("manual_control", options), diag_updater_(std::make_unique<diagnostic_updater::Updater>(this))
 {
   // NOTE: Do not enable interfaces for velocity and acceleration mode in the constructor.
   //       Enable the comment out process and enable interface when the service is called.
@@ -40,6 +40,15 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
     };
     ns_ = "/api/manual/" + mode_name;
     target_operation_mode_ = convert_operation_mode(mode_name);
+  }
+
+  // Initialize diagnostics.
+  {
+    autoware_utils_diagnostics::TimeoutDiag::Params params;
+    params.warn_duration_ = declare_parameter<double>("diag_timeout_warn_duration");
+    params.error_duration_ = declare_parameter<double>("diag_timeout_error_duration");
+    diag_heartbeat_ = std::make_unique<autoware_utils_diagnostics::TimeoutDiag>(params, *get_clock(), "heartbeat");
+    diag_updater_->add(*diag_heartbeat_);
   }
 
   // Interfaces for internal.
@@ -161,7 +170,10 @@ void ManualControlNode::enable_pedals_commands()
 {
   sub_pedals_ = create_subscription<PedalsCommand>(
     ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(),
-    [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
+    [this](const PedalsCommand & msg) {
+      pub_pedals_->publish(msg);
+      diag_heartbeat_->update();
+    });
 }
 
 // TODO(isamu-takagi): This function is reserved for future support.
