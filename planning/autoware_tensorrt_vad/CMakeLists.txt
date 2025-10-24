@@ -5,6 +5,9 @@ project(autoware_tensorrt_vad)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
+
 add_compile_options(-Wno-deprecated-declarations)
 
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
@@ -46,9 +49,6 @@ else()
 endif()
 
 if(TRT_AVAIL AND CUDA_AVAIL)
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-
   # Find additional dependencies
   find_package(eigen3_cmake_module REQUIRED)
   find_package(Eigen3 REQUIRED)
@@ -67,6 +67,10 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  # Generate both binary and PTX for sm_90 for forward compatibility with newer architectures (e.g., Blackwell)
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_90,code=sm_90")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_90,code=compute_90")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/networks/preprocess/multi_camera_preprocess_kernel.cu
@@ -133,20 +137,43 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     DESTINATION lib
   )
 
-  ament_auto_package(
-    USE_SCOPED_HEADER_INSTALL_DIR
-    INSTALL_TO_SHARE
-        launch
-        config
-  )
-
-else()
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-
-  ament_auto_package(
-    INSTALL_TO_SHARE
-        launch
-        config
-  )
 endif()
+
+ament_auto_add_library(${PROJECT_NAME}_state_component SHARED
+  src/carla_state_publisher.cpp
+)
+
+ament_target_dependencies(${PROJECT_NAME}_state_component
+  geometry_msgs
+  nav_msgs
+  rclcpp
+  rclcpp_components
+  tf2_ros
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_state_component
+  PLUGIN "autoware::tensorrt_vad::CarlaStatePublisher"
+  EXECUTABLE carla_state_publisher
+)
+
+ament_auto_add_library(${PROJECT_NAME}_operation_mode_component SHARED
+  src/carla_operation_mode_publisher.cpp
+)
+
+ament_target_dependencies(${PROJECT_NAME}_operation_mode_component
+  autoware_adapi_v1_msgs
+  rclcpp
+  rclcpp_components
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_operation_mode_component
+  PLUGIN "autoware::tensorrt_vad::CarlaOperationModePublisher"
+  EXECUTABLE carla_operation_mode_publisher
+)
+
+ament_auto_package(
+  USE_SCOPED_HEADER_INSTALL_DIR
+  INSTALL_TO_SHARE
+      launch
+      config
+)
