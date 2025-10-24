@@ -125,7 +125,7 @@ geometry_msgs::msg::Pose MotionEvaluatorNode::getCurrentEgoPose() const
   geometry_msgs::msg::Pose p;
   try {
     tf_current_pose = tf_buffer_ptr_->lookupTransform(
-      "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(1.0));
+      "map", "base_link", tf2::TimePointZero, tf2::durationFromSec(1.0));
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR(get_logger(), "%s", ex.what());
     return p;
