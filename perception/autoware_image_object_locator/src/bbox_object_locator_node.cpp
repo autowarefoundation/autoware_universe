@@ -15,6 +15,7 @@
 #include "bbox_object_locator_node.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/qos.hpp>
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
@@ -39,9 +40,8 @@
 
 namespace autoware::image_object_locator
 {
-using autoware::image_object_locator::grid_pixel_sampler::AdaptiveGridPixelSampler;
-using autoware::image_object_locator::grid_pixel_sampler::FixedGridPixelSampler;
 using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_math::deg2rad;
 
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
 {
@@ -138,67 +138,26 @@ double computeHeight(
   return projected_top_point[2];
 }
 
-// compute 2x2 covariance over (x,y) of the final object pose center
-cv::Matx22d computeCovarianceXY(
-  const cv::Point2f & bottom_center_px, const cv::Point2f & bottom_left_px,
-  const cv::Point2f & bottom_right_px, const std::vector<cv::Point2f> & sampled_points_for_cov,
-  const cv::Matx33d & K, const cv::Mat & D, const cv::Matx33d & R, const cv::Vec3d & t,
-  uint8_t label, const cv::Vec3d & camera_optical_axis_world)
+// build sigma_xy from radial / tangential sigmas and azimuth
+inline cv::Matx22d radialTangentialToXY(double sigma_r, double sigma_t, double azimuth_rad)
 {
-  const size_t sample_num = sampled_points_for_cov.size();
+  const double c = std::cos(azimuth_rad);
+  const double s = std::sin(azimuth_rad);
 
-  if (sample_num < 2) return cv::Matx22d::eye() * 1e-6;
+  const double sr2 = sigma_r * sigma_r;
+  const double st2 = sigma_t * sigma_t;
+  const double cos2 = c * c;
+  const double sin2 = s * s;
+  const double cos_sin = c * s;
 
-  // accumulators
-  double mx = 0.0;
-  double my = 0.0;
-
-  // First pass: compute means of sampled (x,y)
-  std::vector<cv::Vec2d> pos_xy;
-  pos_xy.reserve(sample_num);
-  for (size_t i = 0; i < sample_num; ++i) {
-    cv::Vec3d pos = projectUndistortedToGround(sampled_points_for_cov[i], K, D, R, t);
-
-    if (label == Label::PEDESTRIAN) {
-      // apply same delta to left/right to keep footprint consistent with the points
-      const cv::Point2f diff = sampled_points_for_cov[i] - bottom_center_px;
-      const cv::Point2f bl = bottom_left_px + diff;
-      const cv::Point2f br = bottom_right_px + diff;
-
-      // width for pedestrian bias
-      const cv::Vec3d ped_left = projectUndistortedToGround(bl, K, D, R, t);
-      const cv::Vec3d ped_right = projectUndistortedToGround(br, K, D, R, t);
-      const double width = cv::norm(ped_left - ped_right);
-
-      // bias toward optical axis by 0.5 * width
-      cv::Vec3d bias = camera_optical_axis_world * (0.5 * width);
-      pos += bias;
-    }
-
-    pos_xy.emplace_back(pos[0], pos[1]);
-    mx += pos[0];
-    my += pos[1];
-  }
-
-  mx /= static_cast<double>(sample_num);
-  my /= static_cast<double>(sample_num);
-
-  // unbiased covariance
-  double cxx = 0.0;
-  double cxy = 0.0;
-  double cyy = 0.0;
-  for (const auto & p : pos_xy) {
-    const double dx = p[0] - mx;
-    const double dy = p[1] - my;
-    cxx += dx * dx;
-    cxy += dx * dy;
-    cyy += dy * dy;
-  }
-
-  const double denom = static_cast<double>(sample_num - 1);
-  cxx /= denom;
-  cxy /= denom;
-  cyy /= denom;
+  // sigma = R * diag(sigma_r^2, sigma_t^2) * R^T
+  // sigma[0, 0] = simga_r^2 * cos^2 + simga_t^2 * sin^2
+  // sigma[0, 1] = (sigma_t^2 - sigma_r^2) * cos * sin
+  //             = sigma[1, 0]
+  // sigma[1, 1] = simga_r^2 * sin^2 + simga_t^2 * cos^2
+  const double cxx = sr2 * cos2 + st2 * sin2;
+  const double cxy = (sr2 - st2) * cos_sin;
+  const double cyy = sr2 * sin2 + st2 * cos2;
 
   return cv::Matx22d(cxx, cxy, cxy, cyy);
 }
@@ -263,15 +222,6 @@ BboxObjectLocatorNode::BboxObjectLocatorNode(const rclcpp::NodeOptions & node_op
     roi_validator.image_border_truncation_vertical_margin_ratio =
       image_border_truncation_vertical_margin_ratio;
     roi_validator_[rois_id] = roi_validator;
-
-    // sampler to calculate covariance
-    if (covariance_control_param_.use_adaptive_sampler) {
-      pixel_sampler_[rois_id] = std::make_unique<AdaptiveGridPixelSampler>(
-        covariance_control_param_.half_grid_size_, covariance_control_param_.bbox_fraction_);
-    } else {
-      pixel_sampler_[rois_id] = std::make_unique<FixedGridPixelSampler>(
-        covariance_control_param_.half_grid_size_, covariance_control_param_.grid_cell_size_);
-    }
 
     // subscriber: camera info
     const std::string camera_info_topic_name = declare_parameter<std::string>(
@@ -372,18 +322,6 @@ void BboxObjectLocatorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr 
                                             ? camera_info.width - (truncation_horizontal_margin + 1)
                                             : 0;
 
-    // add biased pixel points outside the image when the ROI bounding box touches the image edge
-    // used to model truncated objects in the covariance
-    const float pixel_offset_x =
-      camera_info.height * covariance_control_param_.truncation_out_of_bounds_sampling_ratio_width_;
-    const float pixel_offset_y =
-      camera_info.height *
-      covariance_control_param_.truncation_out_of_bounds_sampling_ratio_height_;
-    roi_validator.out_of_bounds_object_sampling_top = -pixel_offset_y;
-    roi_validator.out_of_bounds_object_sampling_bottom = camera_info.height + pixel_offset_y;
-    roi_validator.out_of_bounds_object_sampling_left = -pixel_offset_x;
-    roi_validator.out_of_bounds_object_sampling_right = camera_info.width + pixel_offset_x;
-
     // K is row-major 3x3
     cv::Matx33d K(
       camera_info.k[0], camera_info.k[1], camera_info.k[2], camera_info.k[3], camera_info.k[4],
@@ -397,6 +335,55 @@ void BboxObjectLocatorNode::cameraInfoCallback(const CameraInfo::ConstSharedPtr 
     cam_intrinsics_[rois_id] = CameraIntrinsics{K, D};
     is_camera_info_arrived_[rois_id] = true;
   }
+}
+
+/**
+ * @brief compute covariance using bearing-range model.
+ */
+cv::Matx22d BboxObjectLocatorNode::computeCovarianceXY(
+  const cv::Vec3d & object_ground_point, const cv::Vec3d & cam_t, const double object_width,
+  const double horizontal_bias_coeff, const double vertical_bias_coeff)
+{
+  // vector from camera to point
+  cv::Vec2d vec_cam2point(object_ground_point[0] - cam_t[0], object_ground_point[1] - cam_t[1]);
+
+  const double dist_cam2point = cv::norm(vec_cam2point);
+  // when it is too close to the camera,
+  // return the tentative covariance for stability
+  if (dist_cam2point < 1e-3) {
+    const double var =
+      covariance_config_.sigma_close_to_camera_2 + (object_width * object_width) / 12.0;
+
+    return cv::Matx22d(var, 0.0, 0.0, var);
+  }
+
+  // azimuth in XY (rotation of ellipse)
+  const double theta = std::atan2(vec_cam2point[1], vec_cam2point[0]);
+
+  // tangential sigma from bearing (ring-like growth with range)
+  double sigma_t =
+    deg2rad(covariance_config_.sigma_bearing_deg * horizontal_bias_coeff) * dist_cam2point;
+
+  // add uniform under-feet footprint uncertainty tangentially
+  // Var[uniform dist(a, b)] = (b-a)^2 / 12
+  // we take + and - of the width * 0.5 of the object
+  // then, Var[uniform dist(-width/2, +width/2)] = width^2 / 12
+  const double var_uniform = ((object_width * object_width) / 12.0);
+  sigma_t = std::sqrt(sigma_t * sigma_t + var_uniform) * horizontal_bias_coeff;
+
+  // radial sigma
+  double sigma_r =
+    (covariance_config_.range_sigma_bias * vertical_bias_coeff +
+     covariance_config_.range_sigma_slope * dist_cam2point);
+
+  // build sigma_xy rotated by azimuth
+  cv::Matx22d S = radialTangentialToXY(sigma_r, sigma_t, theta);
+
+  // SPD floor
+  S(0, 0) = std::max(S(0, 0), covariance_config_.eps_spd);
+  S(1, 1) = std::max(S(1, 1), covariance_config_.eps_spd);
+
+  return S;
 }
 
 /**
@@ -426,29 +413,29 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
   std::vector<cv::Point2f> pixel_for_sampling = {bottom_center};
   RoiValidator roi_validator = roi_validator_[rois_id];
 
+  // if ROI truncation detected, set some coefficient to larger the covariance
+  double horizontal_bias_coeff = 1.0;
+  double vertical_bias_coeff = 1.0;
+
   // check ROI is touching the edge with margin
   if (roi_validator.enable_validation) {
     bool roi_truncated = false;
 
     // check top and bottom sides
     if (bottom_center.y >= roi_validator.pixel_truncated_bottom) {
-      pixel_for_sampling.emplace_back(
-        bottom_center.x, roi_validator.out_of_bounds_object_sampling_bottom);
+      vertical_bias_coeff = covariance_config_.vertical_bias_coeff;
       roi_truncated = true;
     } else if (bottom_center.y <= roi_validator.pixel_truncated_top) {
-      pixel_for_sampling.emplace_back(
-        bottom_center.x, roi_validator.out_of_bounds_object_sampling_top);
+      vertical_bias_coeff = covariance_config_.vertical_bias_coeff;
       roi_truncated = true;
     }
 
     // check left and right sides
     if (bottom_left.x <= roi_validator.pixel_truncated_left) {
-      pixel_for_sampling.emplace_back(
-        roi_validator.out_of_bounds_object_sampling_left, bottom_center.y);
+      horizontal_bias_coeff = covariance_config_.horizontal_bias_coeff;
       roi_truncated = true;
     } else if (bottom_right.x >= roi_validator.pixel_truncated_right) {
-      pixel_for_sampling.emplace_back(
-        roi_validator.out_of_bounds_object_sampling_right, bottom_center.y);
+      horizontal_bias_coeff = covariance_config_.horizontal_bias_coeff;
       roi_truncated = true;
     }
 
@@ -538,14 +525,8 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
     object.shape.footprint.points.push_back(p4);
   }
 
-  // sample some ground point for calculating a covariance
-  std::vector<cv::Point2f> sampled_ground_points = pixel_sampler_[rois_id]->samplePoints(
-    pixel_for_sampling, static_cast<float>(roi_width), static_cast<float>(roi_height));
-
-  // sigma_xy from bottom sampling
-  const cv::Matx22d sigma_xy = computeCovarianceXY(
-    bottom_center, bottom_left, bottom_right, sampled_ground_points, K, D, R, t, label,
-    world_opt_axis);
+  const cv::Matx22d sigma_xy =
+    computeCovarianceXY(bottom_point_in_3d, t, dim_xy, horizontal_bias_coeff, vertical_bias_coeff);
 
   object.kinematics.has_position_covariance = true;
   object.kinematics.orientation_availability =
@@ -554,16 +535,17 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
 
   // write into PoseWithCovariance (6x6, row-major: x y z roll pitch yaw)
   // add small floors for Symmetric Positive Definite (SPD) matrix
-  constexpr double eps = 1e-6;
-  pwc.covariance[XYZRPY_COV_IDX::X_X] = std::max(eps, static_cast<double>(sigma_xy(0, 0)));
+  pwc.covariance[XYZRPY_COV_IDX::X_X] =
+    std::max(covariance_config_.eps_spd, static_cast<double>(sigma_xy(0, 0)));
   pwc.covariance[XYZRPY_COV_IDX::X_Y] = sigma_xy(0, 1);
   pwc.covariance[XYZRPY_COV_IDX::Y_X] = sigma_xy(1, 0);
-  pwc.covariance[XYZRPY_COV_IDX::Y_Y] = std::max(eps, static_cast<double>(sigma_xy(1, 1)));
+  pwc.covariance[XYZRPY_COV_IDX::Y_Y] =
+    std::max(covariance_config_.eps_spd, static_cast<double>(sigma_xy(1, 1)));
   // keep others small but non-zero (so the matrix stays positive-definite)
-  pwc.covariance[XYZRPY_COV_IDX::Z_Z] = eps;
-  pwc.covariance[XYZRPY_COV_IDX::ROLL_ROLL] = eps;
-  pwc.covariance[XYZRPY_COV_IDX::PITCH_PITCH] = eps;
-  pwc.covariance[XYZRPY_COV_IDX::YAW_YAW] = eps;
+  pwc.covariance[XYZRPY_COV_IDX::Z_Z] = covariance_config_.eps_spd;
+  pwc.covariance[XYZRPY_COV_IDX::ROLL_ROLL] = covariance_config_.eps_spd;
+  pwc.covariance[XYZRPY_COV_IDX::PITCH_PITCH] = covariance_config_.eps_spd;
+  pwc.covariance[XYZRPY_COV_IDX::YAW_YAW] = covariance_config_.eps_spd;
 
   return true;
 }

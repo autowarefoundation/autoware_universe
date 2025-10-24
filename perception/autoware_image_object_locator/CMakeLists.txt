@@ -20,14 +20,9 @@ set(${PROJECT_NAME}_src
   src/bbox_object_locator_node.cpp
 )
 
-set(${PROJECT_NAME}_lib
-  lib/sampler/grid_pixel_sampler.cpp
-)
-
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}
-  ${${PROJECT_NAME}_lib}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

@@ -15,8 +15,6 @@
 #ifndef BBOX_OBJECT_LOCATOR_NODE_HPP_
 #define BBOX_OBJECT_LOCATOR_NODE_HPP_
 
-#include "sampler/grid_pixel_sampler.hpp"
-
 #include <autoware/universe_utils/ros/transform_listener.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -45,9 +43,10 @@
 #include <unordered_map>
 #include <vector>
 
+// cspell: ignore Matx
+
 namespace autoware::image_object_locator
 {
-using autoware::image_object_locator::grid_pixel_sampler::GridPixelSamplerBase;
 using autoware::universe_utils::TransformListener;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
@@ -96,7 +95,6 @@ private:
 
   struct CameraIntrinsics
   {
-    // cspell: ignore Matx
     cv::Matx33d K;
     cv::Mat D;
   };  // struct CameraIntrinsics
@@ -114,25 +112,26 @@ private:
     uint32_t pixel_truncated_bottom;
     uint32_t pixel_truncated_left;
     uint32_t pixel_truncated_right;
-
-    float out_of_bounds_object_sampling_top;
-    float out_of_bounds_object_sampling_bottom;
-    float out_of_bounds_object_sampling_left;
-    float out_of_bounds_object_sampling_right;
   };  // struct RoiValidator
 
   struct CovarianceControlParams
   {
-    // covariance calculation related variables
-    // pixel offset from the image edge used when sampling an object partially outside the image
-    // the offset is computed as a ratio of the image size.
-    static constexpr float truncation_out_of_bounds_sampling_ratio_width_ = 0.1;
-    static constexpr float truncation_out_of_bounds_sampling_ratio_height_ = 0.1;
-    // sampler settings
-    static constexpr int half_grid_size_ = 5;
-    static constexpr int grid_cell_size_ = 30;
-    static constexpr float bbox_fraction_ = 0.15;
-    static constexpr bool use_adaptive_sampler = true;
+    // tangential (bearing) settings
+    static constexpr double sigma_bearing_deg = 2.5;
+
+    // radial sigma settings
+    static constexpr double range_sigma_bias = 0.8;
+    static constexpr double range_sigma_slope = 0.30;
+
+    // coefficient for giving an andditinal sigma values when ROI is truncated
+    static constexpr double horizontal_bias_coeff = 2;
+    static constexpr double vertical_bias_coeff = 2;
+
+    // SPD floor
+    static constexpr double eps_spd = 1e-6;
+
+    // tentative sigma value for the point that is too close to the camera
+    static constexpr double sigma_close_to_camera_2 = 0.2 * 0.2;
   };  // struct CovarianceControlParams
 
   bool isRoiValidationParamValid(
@@ -140,6 +139,9 @@ private:
     const std::vector<bool> & remove_truncated);
   void roiCallback(const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id);
   void cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id);
+  cv::Matx22d computeCovarianceXY(
+    const cv::Vec3d & object_ground_point, const cv::Vec3d & cam_t, const double object_width,
+    const double horizontal_bias_coeff, const double vertical_bias_coeff);
   bool generateROIBasedObject(
     const sensor_msgs::msg::RegionOfInterest & roi, const int & rois_id,
     const geometry_msgs::msg::TransformStamped & tf, const uint8_t & label,
@@ -152,7 +154,7 @@ private:
   // publisher
   std::unordered_map<int, rclcpp::Publisher<DetectedObjects>::SharedPtr> objects_pubs_;
 
-  CovarianceControlParams covariance_control_param_;
+  CovarianceControlParams covariance_config_;
 
   std::string target_frame_;
   LabelSettings label_settings_;
@@ -169,7 +171,6 @@ private:
   std::unordered_map<int, CameraInfo> camera_info_;
   std::unordered_map<int, CameraIntrinsics> cam_intrinsics_;
   std::unordered_map<int, bool> is_camera_info_arrived_;
-  std::unordered_map<int, std::unique_ptr<GridPixelSamplerBase>> pixel_sampler_;
 
   std::shared_ptr<TransformListener> transform_listener_;
   geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_;
