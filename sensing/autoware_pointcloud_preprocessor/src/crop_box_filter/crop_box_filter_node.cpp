@@ -81,12 +81,12 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
   // set initial parameters
   {
     auto & p = param_;
-    p.min_x = declare_parameter<double>("min_x");
-    p.min_y = declare_parameter<double>("min_y");
-    p.min_z = declare_parameter<double>("min_z");
-    p.max_x = declare_parameter<double>("max_x");
-    p.max_y = declare_parameter<double>("max_y");
-    p.max_z = declare_parameter<double>("max_z");
+    p.box.min_x = declare_parameter<double>("min_x");
+    p.box.min_y = declare_parameter<double>("min_y");
+    p.box.min_z = declare_parameter<double>("min_z");
+    p.box.max_x = declare_parameter<double>("max_x");
+    p.box.max_y = declare_parameter<double>("max_y");
+    p.box.max_z = declare_parameter<double>("max_z");
     p.negative = declare_parameter<bool>("negative");
     p.processing_time_threshold_sec = declare_parameter<double>("processing_time_threshold_sec");
     if (tf_input_frame_.empty()) {
@@ -163,9 +163,9 @@ void CropBoxFilterComponent::faster_filter(
       point = transform_info.eigen_transform * point;
     }
 
-    bool point_is_inside = point[2] > param_.min_z && point[2] < param_.max_z &&
-                           point[1] > param_.min_y && point[1] < param_.max_y &&
-                           point[0] > param_.min_x && point[0] < param_.max_x;
+    bool point_is_inside = point[2] > param_.box.min_z && point[2] < param_.box.max_z &&
+                           point[1] > param_.box.min_y && point[1] < param_.box.max_y &&
+                           point[0] > param_.box.min_x && point[0] < param_.box.max_x;
     if ((!param_.negative && point_is_inside) || (param_.negative && !point_is_inside)) {
       memcpy(&output.data[output_size], &input->data[global_offset], input->point_step);
 
@@ -265,18 +265,18 @@ void CropBoxFilterComponent::publish_crop_box_polygon()
     return point;
   };
 
-  const double x1 = param_.max_x;
-  const double x2 = param_.min_x;
-  const double x3 = param_.min_x;
-  const double x4 = param_.max_x;
+  const double x1 = param_.box.max_x;
+  const double x2 = param_.box.min_x;
+  const double x3 = param_.box.min_x;
+  const double x4 = param_.box.max_x;
 
-  const double y1 = param_.max_y;
-  const double y2 = param_.max_y;
-  const double y3 = param_.min_y;
-  const double y4 = param_.min_y;
+  const double y1 = param_.box.max_y;
+  const double y2 = param_.box.max_y;
+  const double y3 = param_.box.min_y;
+  const double y4 = param_.box.min_y;
 
-  const double z1 = param_.min_z;
-  const double z2 = param_.max_z;
+  const double z1 = param_.box.min_z;
+  const double z2 = param_.box.max_z;
 
   geometry_msgs::msg::PolygonStamped polygon_msg;
   polygon_msg.header.frame_id = tf_input_frame_;
@@ -314,21 +314,21 @@ rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
   CropBoxParam new_param{};
 
   if (
-    get_param(p, "min_x", new_param.min_x) && get_param(p, "min_y", new_param.min_y) &&
-    get_param(p, "min_z", new_param.min_z) && get_param(p, "max_x", new_param.max_x) &&
-    get_param(p, "max_y", new_param.max_y) && get_param(p, "max_z", new_param.max_z) &&
+    get_param(p, "min_x", new_param.box.min_x) && get_param(p, "min_y", new_param.box.min_y) &&
+    get_param(p, "min_z", new_param.box.min_z) && get_param(p, "max_x", new_param.box.max_x) &&
+    get_param(p, "max_y", new_param.box.max_y) && get_param(p, "max_z", new_param.box.max_z) &&
     get_param(p, "negative", new_param.negative)) {
     if (
-      param_.min_x != new_param.min_x || param_.max_x != new_param.max_x ||
-      param_.min_y != new_param.min_y || param_.max_y != new_param.max_y ||
-      param_.min_z != new_param.min_z || param_.max_z != new_param.max_z ||
+      param_.box.min_x != new_param.box.min_x || param_.box.max_x != new_param.box.max_x ||
+      param_.box.min_y != new_param.box.min_y || param_.box.max_y != new_param.box.max_y ||
+      param_.box.min_z != new_param.box.min_z || param_.box.max_z != new_param.box.max_z ||
       param_.negative != new_param.negative) {
       RCLCPP_DEBUG(
         get_logger(), "[%s::param_callback] Setting the minimum point to: %f %f %f.", get_name(),
-        new_param.min_x, new_param.min_y, new_param.min_z);
+        new_param.box.min_x, new_param.box.min_y, new_param.box.min_z);
       RCLCPP_DEBUG(
         get_logger(), "[%s::param_callback] Setting the minimum point to: %f %f %f.", get_name(),
-        new_param.max_x, new_param.max_y, new_param.max_z);
+        new_param.box.max_x, new_param.box.max_y, new_param.box.max_z);
       RCLCPP_DEBUG(
         get_logger(), "[%s::param_callback] Setting the filter negative flag to: %s.", get_name(),
         new_param.negative ? "true" : "false");

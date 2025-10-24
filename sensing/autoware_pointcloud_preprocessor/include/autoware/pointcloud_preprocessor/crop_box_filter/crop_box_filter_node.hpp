@@ -69,6 +69,35 @@
 
 namespace autoware::pointcloud_preprocessor
 {
+
+struct CropBox
+{
+  float min_x;
+  float max_x;
+  float min_y;
+  float max_y;
+  float min_z;
+  float max_z;
+};
+
+/** \brief Return whether the point is inside the crop box.
+ *
+ * @param point The point to check, in the crop box frame.
+ * @param box The crop box to check against.
+ * @return Whether the point is inside the crop box.
+ */
+bool is_point_inside_crop_box(const Eigen::Vector4f & point, const CropBox & box);
+
+/** \brief Return whether the line segment intersects the crop box.
+ *
+ * @param from_point The point from which the line segment starts, in the crop box frame.
+ * @param to_point The point to which the line segment ends, in the crop box frame.
+ * @param box The crop box to check against.
+ * @return Whether the line segment intersects the crop box.
+ */
+bool does_line_segment_intersect_crop_box(
+  const Eigen::Vector4f & from_point, const Eigen::Vector4f & to_point, const CropBox & box);
+
 class CropBoxFilterComponent : public autoware::pointcloud_preprocessor::Filter
 {
 protected:
@@ -86,12 +115,7 @@ protected:
 private:
   struct CropBoxParam
   {
-    double min_x{0.0};
-    double max_x{0.0};
-    double min_y{0.0};
-    double max_y{0.0};
-    double min_z{0.0};
-    double max_z{0.0};
+    CropBox box;
     bool negative{false};
     double processing_time_threshold_sec{0.0};
   } param_;
