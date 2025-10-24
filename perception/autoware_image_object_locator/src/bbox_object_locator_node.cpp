@@ -445,27 +445,28 @@ bool BboxObjectLocatorNode::generateROIBasedObject(
 
   // check ROI is touching the edge with margin
   if (roi_validator.enable_validation) {
-    bool roi_truncated = false;
+    bool is_truncated = false;
 
-    // check top and bottom sides
-    if (bottom_center.y >= roi_validator.pixel_truncated_bottom) {
+    // vertical truncation check
+    // top side is checked with the bottom center pixel
+    const bool vertically_truncated = (bottom_center.y >= roi_validator.pixel_truncated_bottom) ||
+                                      (bottom_center.y <= roi_validator.pixel_truncated_top);
+
+    if (vertically_truncated) {
       vertical_bias_coeff = covariance_config_.vertical_bias_coeff;
-      roi_truncated = true;
-    } else if (bottom_center.y <= roi_validator.pixel_truncated_top) {
-      vertical_bias_coeff = covariance_config_.vertical_bias_coeff;
-      roi_truncated = true;
+      is_truncated = true;
     }
 
-    // check left and right sides
-    if (bottom_left.x <= roi_validator.pixel_truncated_left) {
+    // horizontal truncation check
+    const bool horizontally_truncated = (bottom_left.x <= roi_validator.pixel_truncated_left) ||
+                                        (bottom_right.x >= roi_validator.pixel_truncated_right);
+
+    if (horizontally_truncated) {
       horizontal_bias_coeff = covariance_config_.horizontal_bias_coeff;
-      roi_truncated = true;
-    } else if (bottom_right.x >= roi_validator.pixel_truncated_right) {
-      horizontal_bias_coeff = covariance_config_.horizontal_bias_coeff;
-      roi_truncated = true;
+      is_truncated = true;
     }
 
-    if (roi_validator.remove_object_might_be_truncated && roi_truncated) {
+    if (roi_validator.remove_object_might_be_truncated && is_truncated) {
       // truncated ROI removal
       return false;
     }
