@@ -61,6 +61,8 @@ void TrajectoryOptimizer::initialize_optimizers()
     "eb_smoother_optimizer", this, time_keeper_, params_);
   trajectory_extender_ptr_ = std::make_shared<plugin::TrajectoryExtender>(
     "trajectory_extender", this, time_keeper_, params_);
+  trajectory_mpt_optimizer_ptr_ = std::make_shared<plugin::TrajectoryMPTOptimizer>(
+    "trajectory_mpt_optimizer", this, time_keeper_, params_);
   trajectory_point_fixer_ptr_ = std::make_shared<plugin::TrajectoryPointFixer>(
     "trajectory_point_fixer", this, time_keeper_, params_);
   trajectory_qp_smoother_ptr_ = std::make_shared<plugin::TrajectoryQPSmoother>(
@@ -82,6 +84,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
   update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
+  update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
   update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
@@ -93,6 +96,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   }
   if (trajectory_extender_ptr_) {
     trajectory_extender_ptr_->on_parameter(parameters);
+  }
+  if (trajectory_mpt_optimizer_ptr_) {
+    trajectory_mpt_optimizer_ptr_->on_parameter(parameters);
   }
   if (trajectory_point_fixer_ptr_) {
     trajectory_point_fixer_ptr_->on_parameter(parameters);
@@ -121,6 +127,7 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "use_akima_spline_interpolation");
   params_.use_eb_smoother = get_or_declare_parameter<bool>(*this, "use_eb_smoother");
   params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
+  params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
   params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
   params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
   params_.extend_trajectory_backward =
@@ -150,6 +157,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     // Apply optimizations
     trajectory_point_fixer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_qp_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
+    trajectory_mpt_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     eb_smoother_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_spline_smoother_ptr_->optimize_trajectory(trajectory.points, params_, data);
     trajectory_velocity_optimizer_ptr_->optimize_trajectory(trajectory.points, params_, data);

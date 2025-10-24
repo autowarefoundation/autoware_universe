@@ -78,12 +78,12 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
 
   if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
     utils::clamp_velocities(
-      traj_points, static_cast<float>(initial_motion_speed),
+      traj_points, current_odometry, static_cast<float>(initial_motion_speed),
       static_cast<float>(initial_motion_acc));
   }
 
   if (velocity_params_.limit_speed) {
-    utils::set_max_velocity(traj_points, static_cast<float>(max_speed_mps));
+    utils::set_max_velocity(traj_points, current_odometry, static_cast<float>(max_speed_mps));
   }
 
   if (velocity_params_.smooth_velocities) {
