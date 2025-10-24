@@ -29,7 +29,9 @@
 #endif
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
+#include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
@@ -189,6 +191,34 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
     remain_dist -= dist;
   }
   return p;
+}
+
+double getCurrentMaxAcc(
+  double current_velocity, const std::vector<double> & vel_th_vec,
+  const std::vector<double> & max_acc_vec)
+{
+  // If the speed is out of range of the reference, apply zero-order hold.
+  if (current_velocity <= vel_th_vec.front()) {
+    return max_acc_vec.front();
+  }
+  if (current_velocity >= vel_th_vec.back()) {
+    return max_acc_vec.back();
+  }
+
+  // Apply linear interpolation
+  for (size_t i = 0; i < vel_th_vec.size() - 1; ++i) {
+    if (vel_th_vec.at(i) <= current_velocity && current_velocity <= vel_th_vec.at(i + 1)) {
+      auto ratio = (current_velocity - vel_th_vec.at(i)) /
+                   std::max(vel_th_vec.at(i + 1) - vel_th_vec.at(i), 1.0e-5);
+      ratio = std::clamp(ratio, 0.0, 1.0);
+      const auto interp = max_acc_vec.at(i) + ratio * (max_acc_vec.at(i + 1) - max_acc_vec.at(i));
+      return interp;
+    }
+  }
+
+  std::cerr << "PID longitudinal controller -> getCurrentMaxAcc failed. use max value instead."
+            << std::endl;
+  return max_acc_vec.back();
 }
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
