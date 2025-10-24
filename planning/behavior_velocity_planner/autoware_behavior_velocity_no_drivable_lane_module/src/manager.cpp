@@ -33,11 +33,14 @@ NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 }
 
 void NoDrivableLaneModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   for (const auto & ll : planning_utils::getLaneletsOnPath(
-         path, planner_data_->route_handler_->getLaneletMapPtr(),
-         planner_data_->current_odometry->pose)) {
+         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
+         planner_data.current_odometry->pose)) {
     const auto lane_id = ll.id();
     const auto module_id = lane_id;
 
@@ -53,16 +56,20 @@ void NoDrivableLaneModuleManager::launchNewModules(
     registerModule(
       std::make_shared<NoDrivableLaneModule>(
         module_id, lane_id, planner_param_, logger_.get_child("no_drivable_lane_module"), clock_,
-        time_keeper_, planning_factor_interface_));
+        time_keeper_, planning_factor_interface_),
+      planner_data);
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 NoDrivableLaneModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
-    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
+    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
