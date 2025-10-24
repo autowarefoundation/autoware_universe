@@ -13,6 +13,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_tensorrt_plugins</depend>
   <depend>autoware_utils</depend>
