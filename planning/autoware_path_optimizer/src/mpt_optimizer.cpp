@@ -495,6 +495,8 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
+  std::cerr << "ref_points size: " << ref_points.size() << std::endl;
+
   // 2. calculate B and W matrices where x = B u + W
   const auto mpt_mat = state_equation_generator_.calcMatrix(ref_points);
 
@@ -561,8 +563,35 @@ void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_va
   debug_optimised_steering_pub_->publish(msg);
 }
 
+geometry_msgs::msg::Point getCorner(
+  const geometry_msgs::msg::Pose & ego_pose,
+  double dx, double dy)
+{
+  // Convert quaternion to roll, pitch, yaw
+  tf2::Quaternion q(
+    ego_pose.orientation.x,
+    ego_pose.orientation.y,
+    ego_pose.orientation.z,
+    ego_pose.orientation.w
+  );
+
+  double roll, pitch, yaw;
+  tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+
+  geometry_msgs::msg::Point p;
+  p.x = ego_pose.position.x + dx * cos_yaw - dy * sin_yaw;
+  p.y = ego_pose.position.y + dx * sin_yaw + dy * cos_yaw;
+  p.z = ego_pose.position.z;
+  return p;
+}
+
 void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
-  const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
+  const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info) const
 {
   std::cerr << "publishSplineCoefficientsAndCurvatures" << std::endl;
   // Get spline coefficients for x and y
@@ -617,11 +646,46 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
     msg_curvatures.data.push_back(curvatures[i]);
   }
 
-  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: "
-            << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size()
-            << ", " << msg_curvatures.data.size() << std::endl;
+  // Populate corner points
+  // tangent and normal from body frame
+  std::cerr << "vehicle dimensions (LxW): " << vehicle_info.vehicle_length_m << " x "
+            << vehicle_info.vehicle_width_m << std::endl;
+  std::cerr << "vehicle overhangs (front, rear, left, right): " << vehicle_info.front_overhang_m
+            << ", " << vehicle_info.rear_overhang_m << ", " << vehicle_info.left_overhang_m
+            << ", " << vehicle_info.right_overhang_m << std::endl;
+
+  const double half_width = (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) / 2.0;
+  const double front = (vehicle_info.vehicle_length_m / 2.0 + vehicle_info.front_overhang_m);
+  const double rear = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.rear_overhang_m;
+
+  const std::array<geometry_msgs::msg::Point, 4> corner_points_body_frame = { 
+    getCorner(ego_pose, front,  half_width),  // front-left
+    getCorner(ego_pose, front, -half_width),  // front-right
+    getCorner(ego_pose, rear,  -half_width),  // rear-right
+    getCorner(ego_pose, rear,   half_width)   // rear-left
+  };
+
+  std::array<geometry_msgs::msg::Point, 4> corner_points_curvilinear;
+  std::transform(
+    corner_points_body_frame.begin(), corner_points_body_frame.end(),
+    corner_points_curvilinear.begin(),
+    [&ref_points_spline](const geometry_msgs::msg::Point &p) {
+      const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
+      geometry_msgs::msg::Point projected;
+      projected.x = s;
+      projected.y = e_y;
+      projected.z = 0.0;
+      return projected;
+    }
+  );
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
+  for (const auto & corner_point_curvilinear : corner_points_curvilinear) {
+    msg.body_points.push_back(corner_point_curvilinear);
+  }
+
+  std::cerr << "knots size, x_coeffs size, y_coeffs size, curvatures size: " << msg_knots.data.size() << ", " << msg_x.data.size() << ", " << msg_y.data.size() << ", " << msg_curvatures.data.size() << std::endl;
+
   msg.knots = msg_knots;
   msg.x_coeffs = msg_x;
   msg.y_coeffs = msg_y;
@@ -668,8 +732,6 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   updateOrientation(ref_points, ref_points_spline);
   updateCurvature(ref_points, ref_points_spline);
 
-  publishSplineCoefficientsAndCurvatures(ref_points_spline);
-
   // 4. crop backward
   // NOTE: Start point may change. Spline calculation is required.
   ref_points = autoware::motion_utils::cropPoints(
@@ -702,7 +764,11 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   //   ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
   if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
     ref_points.resize(mpt_param_.num_points);
+    ref_points_spline.resize(mpt_param_.num_points);
   }
+
+  std::cerr << "Final ref_points size: " << ref_points.size() << std::endl;
+  publishSplineCoefficientsAndCurvatures(ref_points_spline, p.ego_pose, vehicle_info_);
 
   return ref_points;
 }
@@ -1556,6 +1622,8 @@ std::optional<Eigen::VectorXd> MPTOptimizer::calcOptimizedSteerAngles(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  std::cerr << "ref_points size in calcOptimizedSteerAngles: " << ref_points.size() << std::endl;
+
   const size_t D_x = state_equation_generator_.getDimX();
   const size_t D_u = state_equation_generator_.getDimU();
 
@@ -1656,6 +1724,8 @@ Eigen::VectorXd MPTOptimizer::calcInitialSolutionForManualWarmStart(
   const size_t D_v = D_x + N_u;
   const size_t N_slack = getNumberOfSlackVariables();
   const size_t D_un = D_v + N_ref * N_slack;
+
+  std::cerr << "N_ref * N_slack: " << N_ref * N_slack << std::endl;
 
   Eigen::VectorXd u0 = Eigen::VectorXd::Zero(D_un);
 
