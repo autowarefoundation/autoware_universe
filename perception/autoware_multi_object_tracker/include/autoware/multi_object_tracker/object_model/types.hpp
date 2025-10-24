@@ -45,6 +45,7 @@ namespace types
 constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
 constexpr int NUM_LABELS = 8;
+constexpr double diameter_coefficient = 1.1283791670955126;  // = sqrt(4/pi);
 
 // channel configuration
 struct InputChannel
