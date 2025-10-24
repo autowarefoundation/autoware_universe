@@ -15,8 +15,8 @@
 #ifndef MANUAL_CONTROL_HPP_
 #define MANUAL_CONTROL_HPP_
 
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_utils_diagnostics/timeout_diagnostics.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
