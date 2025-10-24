@@ -11,7 +11,7 @@
         path_interpolation_ds: 0.1
         max_accel: -2.8
         max_jerk: -5.0
-        delay_response_time: 0.5
+        delay_response_time: 0.0
 
       stuck_vehicle:
         target_type:
