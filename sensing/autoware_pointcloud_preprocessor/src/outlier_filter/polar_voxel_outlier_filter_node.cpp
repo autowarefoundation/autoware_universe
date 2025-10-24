@@ -40,6 +40,8 @@ namespace autoware::pointcloud_preprocessor
 static constexpr double diagnostics_update_period_sec = 0.1;
 static constexpr size_t point_cloud_height_organized = 1;
 static constexpr double TWO_PI = 2.0 * M_PI;
+static constexpr double HALF_PI = M_PI / 2.0;
+static constexpr int marker_resolution = 50;
 
 template <typename... T>
 bool all_finite(T... values)
@@ -68,6 +70,14 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   max_radius_m_ = declare_parameter<double>("max_radius_m");
   visibility_estimation_max_range_m_ =
     declare_parameter<double>("visibility_estimation_max_range_m");
+  visibility_estimation_min_azimuth_rad_ =
+    declare_parameter<double>("visibility_estimation_min_azimuth_rad");
+  visibility_estimation_max_azimuth_rad_ =
+    declare_parameter<double>("visibility_estimation_max_azimuth_rad");
+  visibility_estimation_min_elevation_rad_ =
+    declare_parameter<double>("visibility_estimation_min_elevation_rad");
+  visibility_estimation_max_elevation_rad_ =
+    declare_parameter<double>("visibility_estimation_max_elevation_rad");
   use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification");
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
@@ -76,6 +86,10 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     static_cast<int>(declare_parameter<int64_t>("visibility_estimation_max_secondary_voxel_count"));
   visibility_estimation_only_ = declare_parameter<bool>("visibility_estimation_only");
   publish_noise_cloud_ = declare_parameter<bool>("publish_noise_cloud");
+  bool publish_area_marker = declare_parameter<bool>("publish_area_marker");
+  int num_frames_hysteresis_transition = declare_parameter<int>("num_frames_hysteresis_transition");
+  bool immediate_report_error = declare_parameter<bool>("immediate_report_error");
+  bool immediate_relax_state = declare_parameter<bool>("immediate_relax_state");
 
   auto primary_return_types_param = declare_parameter<std::vector<int64_t>>("primary_return_types");
   primary_return_types_.clear();
@@ -92,6 +106,8 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   intensity_threshold_ = declare_parameter<uint8_t>("intensity_threshold");
 
   // Initialize diagnostics
+  hysteresis_state_machine_ = std::make_shared<custom_diagnostic_tasks::HysteresisStateMachine>(
+    num_frames_hysteresis_transition, immediate_report_error, immediate_relax_state);
   updater_.setHardwareID("polar_voxel_outlier_filter");
   updater_.add(
     std::string(this->get_namespace()) + ": visibility_validation", this,
@@ -116,6 +132,12 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
     RCLCPP_INFO(get_logger(), "Noise cloud publishing enabled");
   } else {
     RCLCPP_INFO(get_logger(), "Noise cloud publishing disabled for performance optimization");
+  }
+
+  // Create area marker publisher if enabled
+  if (publish_area_marker) {
+    area_marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(
+      "polar_voxel_outlier_filter/debug/visibility_estimation_area", 10);
   }
 
   using std::placeholders::_1;
@@ -174,6 +196,11 @@ void PolarVoxelOutlierFilterComponent::filter(
 
   // Phase 7: Publish diagnostics (always run for visibility estimation)
   publish_diagnostics(voxel_point_counts, valid_points_mask);
+
+  // (optional) Phase 8: Publish marker to visualize area to be used for visibility estimation
+  if (area_marker_pub_) {
+    publish_area_marker(input->header);
+  }
 }
 
 PolarVoxelOutlierFilterComponent::PointVoxelInfoVector
@@ -524,8 +551,16 @@ PolarVoxelOutlierFilterComponent::count_voxel_points(
   for (const auto & [voxel_idx, counts] : voxel_point_counts) {
     // Calculate the maximum radius for this voxel
     double voxel_max_radius = (voxel_idx.radius_idx + 1) * radial_resolution_m_;
+    double voxel_min_azimuth = (voxel_idx.azimuth_idx) * azimuth_resolution_rad_;
+    double voxel_max_azimuth = (voxel_idx.azimuth_idx + 1) * azimuth_resolution_rad_;
+    double voxel_min_elevation = (voxel_idx.elevation_idx) * elevation_resolution_rad_;
+    double voxel_max_elevation = (voxel_idx.elevation_idx + 1) * elevation_resolution_rad_;
     voxel_point_counts[voxel_idx].is_in_visibility_range =
-      voxel_max_radius <= visibility_estimation_max_range_m_;
+      voxel_max_radius <= visibility_estimation_max_range_m_ &&
+      visibility_estimation_min_azimuth_rad_ <= voxel_min_azimuth &&
+      voxel_max_azimuth <= visibility_estimation_max_azimuth_rad_ &&
+      visibility_estimation_min_elevation_rad_ <= voxel_min_elevation &&
+      voxel_max_elevation <= visibility_estimation_max_elevation_rad_;
   }
   return voxel_point_counts;
 }
@@ -561,6 +596,14 @@ void PolarVoxelOutlierFilterComponent::update_parameter(const rclcpp::Parameter 
     {"max_radius_m", [this](const auto & p) { max_radius_m_ = p.as_double(); }},
     {"visibility_estimation_max_range_m",
      [this](const auto & p) { visibility_estimation_max_range_m_ = p.as_double(); }},
+    {"visibility_estimation_min_azimuth_rad",
+     [this](const auto & p) { visibility_estimation_min_azimuth_rad_ = p.as_double(); }},
+    {"visibility_estimation_max_azimuth_rad",
+     [this](const auto & p) { visibility_estimation_max_azimuth_rad_ = p.as_double(); }},
+    {"visibility_estimation_min_elevation_rad",
+     [this](const auto & p) { visibility_estimation_min_elevation_rad_ = p.as_double(); }},
+    {"visibility_estimation_max_elevation_rad",
+     [this](const auto & p) { visibility_estimation_max_elevation_rad_ = p.as_double(); }},
     {"visibility_error_threshold",
      [this](const auto & p) { visibility_error_threshold_ = p.as_double(); }},
     {"visibility_warn_threshold",
@@ -737,6 +780,28 @@ bool PolarVoxelOutlierFilterComponent::validate_normalized(
   return true;
 }
 
+bool PolarVoxelOutlierFilterComponent::validate_zero_to_two_pi(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  double val = param.as_double();
+  if (val < 0.0 || val > TWO_PI) {
+    reason = param.get_name() + " must be between 0.0 and 2*PI";
+    return false;
+  }
+  return true;
+}
+
+bool PolarVoxelOutlierFilterComponent::validate_negative_half_pi_to_half_pi(
+  const rclcpp::Parameter & param, std::string & reason)
+{
+  double val = param.as_double();
+  if (val < -HALF_PI || val > HALF_PI) {
+    reason = param.get_name() + " must be between -PI/2 and PI/2";
+    return false;
+  }
+  return true;
+}
+
 rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & params)
 {
@@ -777,6 +842,26 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelOutlierFilterComponent::param
     {"visibility_estimation_max_range_m",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { visibility_estimation_max_range_m_ = p.as_double(); }}},
+    {"visibility_estimation_min_azimuth_rad",
+     {validate_zero_to_two_pi,
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_min_azimuth_rad_ = p.as_double();
+      }}},
+    {"visibility_estimation_max_azimuth_rad",
+     {validate_zero_to_two_pi,
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_max_azimuth_rad_ = p.as_double();
+      }}},
+    {"visibility_estimation_min_elevation_rad",
+     {validate_negative_half_pi_to_half_pi,
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_min_elevation_rad_ = p.as_double();
+      }}},
+    {"visibility_estimation_max_elevation_rad",
+     {validate_negative_half_pi_to_half_pi,
+      [this](const rclcpp::Parameter & p) {
+        visibility_estimation_max_elevation_rad_ = p.as_double();
+      }}},
     {"use_return_type_classification",
      {nullptr,
       [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }}},
@@ -845,22 +930,46 @@ void PolarVoxelOutlierFilterComponent::on_visibility_check(
   double visibility_value = visibility_.value();
 
   if (visibility_value < visibility_error_threshold_) {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-      "Low visibility detected - potential adverse weather conditions");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::ERROR);
   } else if (visibility_value < visibility_warn_threshold_) {
-    stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "Reduced visibility detected - monitor environmental conditions");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::WARN);
   } else {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range");
+    hysteresis_state_machine_->update_state(diagnostic_msgs::msg::DiagnosticStatus::OK);
   }
+
+  auto visibility_state = hysteresis_state_machine_->get_current_state_level();
+  std::unordered_map<custom_diagnostic_tasks::DiagnosticStatus_t, std::string> message_str{
+    {diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+     "Low visibility detected - potential adverse weather conditions"},
+    {diagnostic_msgs::msg::DiagnosticStatus::WARN,
+     "Reduced visibility detected - monitor environmental conditions"},
+    {diagnostic_msgs::msg::DiagnosticStatus::OK, "Visibility within normal range"},
+    {diagnostic_msgs::msg::DiagnosticStatus::STALE, "No visibility data available"}};
+  stat.summary(visibility_state, message_str[visibility_state]);
 
   stat.add("Visibility", visibility_value);
   stat.add("Error Threshold", visibility_error_threshold_);
   stat.add("Warning Threshold", visibility_warn_threshold_);
   stat.add("Estimation Range (m)", visibility_estimation_max_range_m_);
+  stat.add("Estimation Minimum Azimuth (rad)", visibility_estimation_min_azimuth_rad_);
+  stat.add("Estimation Maximum Azimuth (rad)", visibility_estimation_max_azimuth_rad_);
+  stat.add("Estimation Minimum Elevation (rad)", visibility_estimation_min_elevation_rad_);
+  stat.add("Estimation Maximum Elevation (rad)", visibility_estimation_max_elevation_rad_);
   stat.add("Max Secondary Voxels", visibility_estimation_max_secondary_voxel_count_);
+  stat.add("Effective state", custom_diagnostic_tasks::get_level_string(visibility_state));
+  stat.add(
+    "Candidate state",
+    custom_diagnostic_tasks::get_level_string(hysteresis_state_machine_->get_candidate_level()));
+  stat.add(
+    "Candidate state observed frames", hysteresis_state_machine_->get_candidate_num_observation());
+  stat.add(
+    "Observed frames transition threshold", hysteresis_state_machine_->get_num_frame_transition());
+  stat.add(
+    "Immediate error report",
+    hysteresis_state_machine_->get_immediate_error_report_param() ? "true" : "false");
+  stat.add(
+    "Immediate relax state",
+    hysteresis_state_machine_->get_immediate_relax_state_param() ? "true" : "false");
 }
 
 void PolarVoxelOutlierFilterComponent::on_filter_ratio_check(
@@ -993,6 +1102,107 @@ PolarVoxelOutlierFilterComponent::extract_polar_from_xyz(float x, float y, float
   return polar;
 }
 
+void PolarVoxelOutlierFilterComponent::publish_area_marker(
+  const std_msgs::msg::Header & input_header)
+{
+  auto marker = visualization_msgs::msg::Marker();
+  marker.header = input_header;
+  marker.ns = "visibility_estimation_area";
+  marker.id = 0;
+  marker.type = visualization_msgs::msg::Marker::TRIANGLE_LIST;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.scale.x = 1.0;
+  marker.scale.y = 1.0;
+  marker.scale.z = 1.0;
+  marker.color.a = 0.1;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;  // transparent green
+  marker.color.b = 0.0;
+  marker.pose.orientation.w = 1.0;
+
+  auto polar_to_xyz = [](auto r, auto az, auto el) {
+    // NOTE: This conversion assumes the following angular definitions
+    // some LiDAR may not fit this definition:
+    // - azimuth: starts from the y-axis, increasing in counter-corkscrew rule around the z-axis
+    //   domain: [0, 2pi]
+    // - elevation: starts from the x-axis, increasing in counter-corkscrew rule around the y-axis
+    //   domain: [-pi/2, pi/2]
+    geometry_msgs::msg::Point p;
+    p.x = r * std::cos(el) * std::sin(az);
+    p.y = r * std::cos(el) * std::cos(az);
+    p.z = r * std::sin(el);
+    return p;
+  };
+
+  // Break azimuth and elevation into discrete steps to approximate the volume
+  double azimuth_portion =
+    (visibility_estimation_max_azimuth_rad_ - visibility_estimation_min_azimuth_rad_) /
+    marker_resolution;
+  double elevation_portion =
+    (visibility_estimation_max_elevation_rad_ - visibility_estimation_min_elevation_rad_) /
+    marker_resolution;
+  for (int az_idx = 0; az_idx < marker_resolution; az_idx++) {
+    for (int el_idx = 0; el_idx < marker_resolution; el_idx++) {
+      double az1 = visibility_estimation_min_azimuth_rad_ + az_idx * azimuth_portion;
+      double az2 = visibility_estimation_min_azimuth_rad_ + (az_idx + 1) * azimuth_portion;
+      double el1 = visibility_estimation_min_elevation_rad_ + el_idx * elevation_portion;
+      double el2 = visibility_estimation_min_elevation_rad_ + (el_idx + 1) * elevation_portion;
+
+      double r1 = 0;
+      double r2 = visibility_estimation_max_range_m_;
+
+      // points for two radii slices and two elevation slices
+      auto p1 = polar_to_xyz(r1, az1, el1);  // near, left, lower
+      auto p2 = polar_to_xyz(r2, az1, el1);  // far, left, lower
+
+      auto p3 = polar_to_xyz(r1, az2, el1);  // near, right, lower
+      auto p4 = polar_to_xyz(r2, az2, el1);  // far, right, lower
+
+      auto p5 = polar_to_xyz(r1, az1, el2);  // near, left, upper
+      auto p6 = polar_to_xyz(r2, az1, el2);  // far, left, upper
+
+      auto p7 = polar_to_xyz(r1, az2, el2);  // near, right, upper
+      auto p8 = polar_to_xyz(r2, az2, el2);  // far, right, upper
+
+      // Bottom surface triangles
+      marker.points.push_back(p1);
+      marker.points.push_back(p3);
+      marker.points.push_back(p2);
+
+      marker.points.push_back(p2);
+      marker.points.push_back(p3);
+      marker.points.push_back(p4);
+
+      // Top surface triangles
+      marker.points.push_back(p5);
+      marker.points.push_back(p6);
+      marker.points.push_back(p7);
+
+      marker.points.push_back(p6);
+      marker.points.push_back(p8);
+      marker.points.push_back(p7);
+
+      // Vertical sides between min and max radius
+      marker.points.push_back(p1);
+      marker.points.push_back(p2);
+      marker.points.push_back(p5);
+
+      marker.points.push_back(p2);
+      marker.points.push_back(p6);
+      marker.points.push_back(p5);
+
+      marker.points.push_back(p3);
+      marker.points.push_back(p4);
+      marker.points.push_back(p7);
+
+      marker.points.push_back(p4);
+      marker.points.push_back(p8);
+      marker.points.push_back(p7);
+    }
+  }
+
+  area_marker_pub_->publish(marker);
+}
 }  // namespace autoware::pointcloud_preprocessor
 
 #include <rclcpp_components/register_node_macro.hpp>

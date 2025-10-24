@@ -16,6 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__POLAR_VOXEL_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/pointcloud_preprocessor/outlier_filter/hysteresis_state_machine.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -23,6 +24,7 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include <memory>
 #include <mutex>
@@ -215,6 +217,10 @@ protected:
   double min_radius_m_{};
   double max_radius_m_{};
   double visibility_estimation_max_range_m_{};
+  double visibility_estimation_min_azimuth_rad_{};
+  double visibility_estimation_max_azimuth_rad_{};
+  double visibility_estimation_min_elevation_rad_{};
+  double visibility_estimation_max_elevation_rad_{};
   bool use_return_type_classification_{};
   bool enable_secondary_return_filtering_{};
   int secondary_noise_threshold_{};
@@ -234,11 +240,13 @@ protected:
   std::optional<double> visibility_;
   std::optional<double> filter_ratio_;
   std::mutex mutex_;
+  std::shared_ptr<custom_diagnostic_tasks::HysteresisStateMachine> hysteresis_state_machine_;
 
   // Publishers and diagnostics
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr ratio_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr area_marker_pub_;
   diagnostic_updater::Updater updater_;
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
@@ -247,6 +255,7 @@ protected:
   void calculate_filter_ratio_metric(const ValidPointsMask & valid_points_mask);
   void publish_visibility_metric();
   void publish_filter_ratio_metric();
+  void publish_area_marker(const std_msgs::msg::Header & input_header);
 
   // Filter pipeline helper methods
   void validate_filter_inputs(const PointCloud2 & input, const IndicesPtr & indices);
@@ -281,6 +290,9 @@ private:
   static bool validate_intensity_threshold(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_normalized(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_zero_to_two_pi(const rclcpp::Parameter & param, std::string & reason);
+  static bool validate_negative_half_pi_to_half_pi(
+    const rclcpp::Parameter & param, std::string & reason);
 };
 
 }  // namespace autoware::pointcloud_preprocessor
