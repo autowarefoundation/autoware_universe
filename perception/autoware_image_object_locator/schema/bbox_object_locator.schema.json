@@ -86,16 +86,16 @@
             "image_border_truncation_horizontal_margin_ratio": {
               "type": "number",
               "description": "Margin ratio used to detect whether the ROI is truncated based on the image width.",
-              "default": 0.05,
+              "default": 0.0,
               "minimum": 0.0,
-              "maximum": 1.0
+              "maximum": 0.5
             },
             "image_border_truncation_vertical_margin_ratio": {
               "type": "number",
               "description": "Margin ratio used to detect whether the ROI is truncated based on the image height.",
-              "default": 0.05,
+              "default": 0.0,
               "minimum": 0.0,
-              "maximum": 1.0
+              "maximum": 0.5
             }
           }
         },
@@ -123,7 +123,7 @@
             "width_max": {
               "type": "number",
               "description": "If the estimated width is larger than this value, it will be clamped to this value [m].",
-              "width_max": 0.8,
+              "default": 0.8,
               "minimum": 0.3
             }
           }
