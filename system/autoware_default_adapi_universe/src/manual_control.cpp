@@ -42,7 +42,7 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
     target_operation_mode_ = convert_operation_mode(mode_name);
   }
 
-  // Initialize diagnostics.
+  // Initialize diagnostics to monitor the heartbeat.
   {
     autoware_utils_diagnostics::TimeoutDiag::Params params;
     params.warn_duration_ = declare_parameter<double>("diag_timeout_warn_duration");
@@ -172,6 +172,8 @@ void ManualControlNode::enable_pedals_commands()
     ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(),
     [this](const PedalsCommand & msg) {
       pub_pedals_->publish(msg);
+
+      // Update last heartbeat received time.
       diag_heartbeat_->update();
     });
 }
