@@ -37,8 +37,8 @@
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 
-#include <string>
 #include <memory>
+#include <string>
 
 namespace autoware::default_adapi
 {
