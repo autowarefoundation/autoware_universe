@@ -44,10 +44,11 @@ public:
 private:
   NoDrivableLaneModule::PlannerParam planner_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+    const Trajectory & path, const PlannerData & planner_data) override;
 };
 
 class NoDrivableLaneModulePlugin : public PluginWrapper<NoDrivableLaneModuleManager>
