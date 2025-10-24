@@ -48,12 +48,17 @@ public:
 private:
   VirtualTrafficLightModule::PlannerParam planner_param_;
 
-  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
+  void modifyPathVelocity(
+    Trajectory & path, const std_msgs::msg::Header & header,
+    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<VirtualTrafficLightModule> &)> getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+    const Trajectory & path, const PlannerData & planner_data) override;
 
   autoware_utils::InterProcessPollingSubscriber<
     tier4_v2x_msgs::msg::VirtualTrafficLightStateArray>::SharedPtr

@@ -66,16 +66,19 @@ VirtualTrafficLightModuleManager::VirtualTrafficLightModuleManager(rclcpp::Node 
 }
 
 void VirtualTrafficLightModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   autoware_utils::LineString2d ego_path_linestring;
-  for (const auto & path_point : path.points) {
+  for (const auto & path_point : path_msg.points) {
     ego_path_linestring.push_back(autoware_utils::from_msg(path_point.point.pose.position).to_2d());
   }
 
   for (const auto & m : planning_utils::getRegElemMapOnPath<VirtualTrafficLight>(
-         path, planner_data_->route_handler_->getLaneletMapPtr(),
-         planner_data_->current_odometry->pose)) {
+         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
+         planner_data.current_odometry->pose)) {
     const auto stop_line_opt = m.first->getStopLine();
     if (!stop_line_opt) {
       RCLCPP_FATAL(
@@ -95,17 +98,21 @@ void VirtualTrafficLightModuleManager::launchNewModules(
         std::make_shared<VirtualTrafficLightModule>(
           module_id, lane_id, *m.first, m.second, planner_param_,
           logger_.get_child("virtual_traffic_light_module"), clock_, time_keeper_,
-          planning_factor_interface_));
+          planning_factor_interface_),
+        planner_data);
     }
   }
 }
 
 std::function<bool(const std::shared_ptr<VirtualTrafficLightModule> &)>
 VirtualTrafficLightModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   const auto id_set = planning_utils::getLaneletIdSetOnPath<VirtualTrafficLight>(
-    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
+    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return [id_set](const std::shared_ptr<VirtualTrafficLightModule> & scene_module) {
     return id_set.count(scene_module->getModuleId()) == 0;
@@ -113,7 +120,9 @@ VirtualTrafficLightModuleManager::getModuleExpiredFunction(
 }
 
 void VirtualTrafficLightModuleManager::modifyPathVelocity(
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
+  Trajectory & path, const std_msgs::msg::Header & header,
+  const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
   // NOTE: virtual traffic light specific implementation
   //       Since the argument of modifyPathVelocity cannot be changed, the specific information
@@ -123,7 +132,8 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
     scene_module->setCorrespondingVirtualTrafficLightState(virtual_traffic_light_states);
   }
 
-  SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(path);
+  SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(
+    path, header, left_bound, right_bound, planner_data);
 
   // NOTE: virtual traffic light specific implementation
   //       publish infrastructure_command_array
