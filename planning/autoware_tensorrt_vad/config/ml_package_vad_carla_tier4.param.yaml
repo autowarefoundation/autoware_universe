@@ -1,0 +1,107 @@
+/**:
+  ros__parameters:
+    node_params:
+      num_cameras: 6
+    interface_params:
+      # CARLA/B2D image dimensions
+      input_image_width: 1600
+      input_image_height: 900
+      target_image_width: 640
+      target_image_height: 384
+      # CARLA Tier4 detection range with origin at rear axis center
+      detection_range: [-30.0, -16.0, -0.355, 30.0, 16.0, 4.645]
+      # CARLA Tier4 BEV dimensions
+      bev_h: 106
+      bev_w: 200
+      default_patch_angle: 0.0
+      default_shift: [0.0, 0.0]
+      # default_can_bus[0:3] x, y, z in_map_coordinate
+      # default_can_bus[3:7] quaternion(x, y, z, w)
+      # default_can_bus[7:10] ax, ay, az
+      # default_can_bus[10:13] angular velocity(vx, vy, vz)
+      # default_can_bus[13:16] linear velocity(vx, vy, vz)
+      # default_can_bus[16] yaw[rad]
+      # default_can_bus[17] patch_angle(difference between yaw and prev_yaw)[deg]
+      default_can_bus: [-42274.0312, 89140.4531, 6.92498255, -0.00156072155, -0.0132345976, -0.475291312, 0.879727542, 0.158691406, -2.24609375, -9.72595215, 0.0, 0.0, 0.00481297961, 0.0, 2.15303349, 0.0, 5.19237747, 303.230896]
+      # Identity mapping since launch file already provides cameras in correct VAD/training order
+      # Training order (from B2D_vad_dataset_tier4.py): FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
+      autoware_to_vad_camera_mapping: [0, 0, # camera0 (FRONT) -> VAD 0 (FRONT)
+                                       1, 1, # camera1 (BACK) -> VAD 1 (BACK)
+                                       2, 2, # camera2 (FRONT_LEFT) -> VAD 2 (FRONT_LEFT)
+                                       3, 3, # camera3 (BACK_LEFT) -> VAD 3 (BACK_LEFT)
+                                       4, 4, # camera4 (FRONT_RIGHT) -> VAD 4 (FRONT_RIGHT)
+                                       5, 5] # camera5 (BACK_RIGHT) -> VAD 5 (BACK_RIGHT)
+      # Identity matrix - NO transformation needed
+      # The carla_tier4 model already inputs and outputs in Tier4 coordinates
+      vad2base: [1.0, 0.0, 0.0, 0.0,   # X = X (no change)
+                 0.0, 1.0, 0.0, 0.0,    # Y = Y (no change)
+                 0.0, 0.0, 1.0, 0.0,    # Z = Z (no change)
+                 0.0, 0.0, 0.0, 1.0]
+      # params for output
+      trajectory_timestep: 1.0 # [s]
+    model_params:
+      # CARLA Tier4 normalization (from VAD_tiny_carla_tier4.py with to_rgb=True)
+      image_normalization_param_mean: [123.675, 116.28, 103.53]
+      image_normalization_param_std: [58.395, 57.12, 57.375]
+      # Engine paths with hierarchical structure
+      # CARLA Tier4 map classes
+      map_class_names: ["Broken", "Solid", "SolidSolid", "Center", "TrafficLight", "StopSign"]
+      # CARLA Tier4 object classes (9 classes, no traffic_cone)
+      object_class_names: ["car", "van", "truck", "bicycle", "traffic_sign", "traffic_cone", "traffic_light", "pedestrian", "others"]
+      nets:
+        backbone:
+          name: "backbone"
+          onnx_path: "$(var model_path)/sim_vadv1.extract_img_feat.onnx"
+          engine_path: "$(var model_path)/vad-carla-tier4_backbone.engine"
+          precision: "fp16"
+        head:
+          name: "head"
+          onnx_path: "$(var model_path)/sim_vadv1_prev.pts_bbox_head.forward.onnx"
+          engine_path: "$(var model_path)/vad-carla-tier4_head.engine"
+          precision: "fp32"
+          inputs:
+            "input_feature": "mlvl_feats.0"
+            "net": "backbone"
+            "name": "out.0"
+        head_no_prev:
+          name: "head_no_prev"
+          onnx_path: "$(var model_path)/sim_vadv1.pts_bbox_head.forward.onnx"
+          engine_path: "$(var model_path)/vad-carla-tier4_head_no_prev.engine"
+          precision: "fp32"
+          inputs:
+            "input_feature": "mlvl_feats.0"
+            "net": "backbone"
+            "name": "out.0"
+      network_io_params:
+        num_cameras: 6                    # Number of cameras
+        
+        # BEV (Bird's Eye View) related parameters for CARLA Tier4
+        bev_h: 106                        # BEV grid height (Tier4 specific)
+        bev_w: 200                        # BEV grid width (Tier4 specific)
+        bev_feature_dim: 256              # Feature dimension
+        
+        # Image processing related parameters
+        target_image_width: 640           # Target image width  
+        target_image_height: 384          # Target image height (model expects 384)
+        downsample_factor: 32             # Downsampling factor for image features
+        
+        num_decoder_layers: 3             # Number of Transformer decoder layers
+
+        # Trajectory prediction related parameters
+        prediction_num_queries: 300       # Number of detection queries (maximum objects)
+        prediction_num_classes: 9         # Number of object classes (CARLA Tier4)
+        prediction_bbox_pred_dim: 10      # 3D box prediction dimension (cx,cy,w,l,cz,h,sin,cos,vx,vy)
+        prediction_trajectory_modes: 6    # Number of trajectory prediction modes per object
+        prediction_timesteps: 6           # Number of prediction timesteps
+
+        # planning
+        planning_ego_commands: 6          # Number of trajectory prediction modes (model outputs 6 modes)
+        planning_timesteps: 6
+        
+        # Map element detection
+        map_num_queries: 100              # Number of map element detection queries
+        map_num_class: 6                  # Number of map element classes (CARLA Tier4)
+        map_points_per_polylines: 20      # Number of points per polyline
+              
+        # can_bus
+        can_bus_dim: 18                   # CAN bus data dimension

@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    # Object class mapping from CARLA Tier4 VAD model output to Autoware standard classification
+    # Values should be Autoware ObjectClassification string constants
+    # CARLA Tier4 classes: ["car", "van", "truck", "bicycle", "traffic_sign", "traffic_cone", "traffic_light", "pedestrian", "others"]
+    class_mapping: ["CAR", "CAR", "TRUCK", "BICYCLE", "UNKNOWN", "UNKNOWN", "UNKNOWN", "PEDESTRIAN", "UNKNOWN"]
+    # 0: car -> CAR
+    # 1: van -> CAR (vans are classified as cars in Autoware)
+    # 2: truck -> TRUCK  
+    # 3: bicycle -> BICYCLE
+    # 4: traffic_sign -> UNKNOWN (static object, not tracked)
+    # 5: traffic_cone -> UNKNOWN (could be mapped to UNKNOWN or a specific class if needed)
+    # 6: traffic_light -> UNKNOWN (static infrastructure)
+    # 7: pedestrian -> PEDESTRIAN
+    # 8: others -> UNKNOWN
