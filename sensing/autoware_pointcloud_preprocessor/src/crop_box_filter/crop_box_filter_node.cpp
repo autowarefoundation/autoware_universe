@@ -65,6 +65,49 @@
 
 namespace autoware::pointcloud_preprocessor
 {
+bool is_point_inside_crop_box(const Eigen::Vector4f & point, const CropBox & box)
+{
+  return (point[0] > box.min_x && point[0] < box.max_x) &&
+         (point[1] > box.min_y && point[1] < box.max_y) &&
+         (point[2] > box.min_z && point[2] < box.max_z);
+}
+
+bool does_line_segment_intersect_crop_box(
+  const Eigen::Vector4f & from_point, const Eigen::Vector4f & to_point, const CropBox & box)
+{
+  // The below algorithm is known as the Slab Method.
+  // Further reading: https://tavianator.com/2022/ray_box_boundary.html
+
+  Eigen::Vector3f ray_origin = from_point.head<3>();
+  Eigen::Vector3f ray_direction = to_point.head<3>() - from_point.head<3>();
+  Eigen::Vector3f ray_direction_inv = {
+    1.0f / ray_direction.x(), 1.0f / ray_direction.y(), 1.0f / ray_direction.z()};
+
+  Eigen::Vector3f box_min = {box.min_x, box.min_y, box.min_z};
+  Eigen::Vector3f box_max = {box.max_x, box.max_y, box.max_z};
+
+  // A line is represented as `l(t) = ray_origin + t * ray_direction`.
+  // A line segment is represented as `l(t) = ray_origin + t * ray_direction`, where `t` is in [0,
+  // 1], given that `ray_direction = (to_point - from_point)` (not normalized). We start with the
+  // full line segment.
+  float t_min = 0;  // from_point
+  float t_max = 1;  // to_point
+
+  // For each axis, we intersect the line segment with the min and max planes of the box,
+  // keeping only the part of the line segment that is within the box.
+  for (int axis = 0 /* x */; axis < 3 /* z */; ++axis) {
+    float t1 = (box_min[axis] - ray_origin[axis]) * ray_direction_inv[axis];
+    float t2 = (box_max[axis] - ray_origin[axis]) * ray_direction_inv[axis];
+
+    t_min = std::max(t_min, std::min(t1, t2));
+    t_max = std::min(t_max, std::max(t1, t2));
+  }
+
+  // If, after intersecting with all three pairs of planes, the line segment is still valid,
+  // then the line segment intersects the box.
+  return t_min < t_max;
+}
+
 CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("CropBoxFilter", options)
 {
