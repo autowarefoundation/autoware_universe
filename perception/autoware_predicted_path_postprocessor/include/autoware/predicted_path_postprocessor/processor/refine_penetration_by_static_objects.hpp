@@ -56,9 +56,6 @@ private:
 
   double speed_threshold_;         //!< Speed threshold to determine static objects.
   interpolation_fn interpolator_;  //!< Interpolation function for path refinement.
-
-  static constexpr double waypoint_radius_ =
-    0.5;  //!< Radius of a waypoint to check collision with static objects.
 };
 }  // namespace autoware::predicted_path_postprocessor::processor
 #endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_PENETRATION_BY_STATIC_OBJECTS_HPP_
