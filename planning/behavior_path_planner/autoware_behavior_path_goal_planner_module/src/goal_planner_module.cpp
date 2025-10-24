@@ -2314,6 +2314,7 @@ std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
       }
       point_it++;
     } else {
+      const auto distance = std::distance(path.points.begin(), point_it);
       const auto idx =
         insertDecelPoint(current_pose.position, *min_decel_distance, decel_vel, path.points);
       if (idx) {
@@ -2322,7 +2323,7 @@ std::optional<Pose> GoalPlannerModule::decelerateForTurnSignal(
           first_turn_signal_trigger_position = decel_point_it->point.pose;
         }
       }
-      point_it++;
+      point_it = path.points.begin() + distance + 1;
     }
   }
 
