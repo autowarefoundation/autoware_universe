@@ -1,0 +1,31 @@
+/**:
+  ros__parameters:
+    node_params:
+      use_raw: [true, true, true, true, true, true] # per camera: if true, use raw image data, otherwise use compressed images
+    interface_params:
+      # CARLA Tier4 map element colors
+      # Map classes: Broken, Solid, SolidSolid, Center, TrafficLight, StopSign
+      map_colors: [1.0, 0.5, 0.0,         # Broken: orange
+                   0.3922, 0.5843, 0.9294, # Solid: cornflowerblue
+                   0.0, 0.0, 1.0,          # SolidSolid: blue
+                   1.0, 1.0, 0.0,          # Center: yellow
+                   1.0, 0.0, 0.0,          # TrafficLight: red
+                   0.7, 0.0, 0.0]          # StopSign: dark red
+    model_params:
+      plugins_path: "$(var plugins_path)/plugins/libautoware_tensorrt_plugins.so"
+      # CARLA navigation commands (for 6-mode model):
+      # Mode 0: LEFT (turn left at intersection)
+      # Mode 1: RIGHT (turn right at intersection)  
+      # Mode 2: STRAIGHT (go straight at intersection)
+      # Mode 3: LANEFOLLOW (follow current lane)
+      # Mode 4: CHANGELANELEFT (change to left lane)
+      # Mode 5: CHANGELANERIGHT (change to right lane)
+      default_command: 3  # Default to LANEFOLLOW mode for normal driving
+      # Map confidence thresholds for 6 CARLA Tier4 classes
+      map_confidence_thresholds: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+      # Object confidence thresholds for 9 CARLA Tier4 classes
+      # car, van, truck, bicycle, traffic_sign, traffic_cone, traffic_light, pedestrian, others
+      object_confidence_thresholds: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.3]
+    sync_params:
+      front_camera_id: 0  # ID of the front camera (anchor camera) for synchronization
+      sync_tolerance_ms: 500.0  # Synchronization tolerance in milliseconds (increased for CARLA)

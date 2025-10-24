@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="log_level" default="info"/>
+  <arg name="rviz" default="false" description="launch rviz"/>
+  <arg name="rviz_respawn" default="true" description="respawn rviz"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="model_path" default="$(var data_path)/vad"/>
+  <arg name="plugins_path" default="$(find-pkg-share autoware_tensorrt_plugins)"/>
+
+  <!-- Camera info topics - MUST match training order from B2D_vad_dataset_tier4.py -->
+  <!-- Training order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT -->
+  <arg name="camera_info0" default="/sensing/camera/CAM_FRONT/camera_info"/>
+  <arg name="camera_info1" default="/sensing/camera/CAM_BACK/camera_info"/>
+  <arg name="camera_info2" default="/sensing/camera/CAM_FRONT_LEFT/camera_info"/>
+  <arg name="camera_info3" default="/sensing/camera/CAM_BACK_LEFT/camera_info"/>
+  <arg name="camera_info4" default="/sensing/camera/CAM_FRONT_RIGHT/camera_info"/>
+  <arg name="camera_info5" default="/sensing/camera/CAM_BACK_RIGHT/camera_info"/>
+
+  <!-- Image topics - MUST match training order from B2D_vad_dataset_tier4.py -->
+  <!-- Training order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT -->
+  <arg name="image0" default="/sensing/camera/CAM_FRONT/image_raw"/>
+  <arg name="image1" default="/sensing/camera/CAM_BACK/image_raw"/>
+  <arg name="image2" default="/sensing/camera/CAM_FRONT_LEFT/image_raw"/>
+  <arg name="image3" default="/sensing/camera/CAM_BACK_LEFT/image_raw"/>
+  <arg name="image4" default="/sensing/camera/CAM_FRONT_RIGHT/image_raw"/>
+  <arg name="image5" default="/sensing/camera/CAM_BACK_RIGHT/image_raw"/>
+
+  <!-- Vehicle state topics -->
+  <arg name="kinematic_state" default="/localization/kinematic_state"/>
+  <arg name="acceleration" default="/localization/acceleration"/>
+
+  <!-- Output topics -->
+  <arg name="output/objects" default="perception/object_recognition/vad_carla_tier4/objects"/>
+  <arg name="output/trajectory" default="planning/vad_carla_tier4/trajectory"/>
+  <arg name="output/trajectories" default="planning/vad_carla_tier4/trajectories"/>
+  <arg name="output/map" default="debug/vad_carla_tier4/map"/>
+
+  <node pkg="autoware_tensorrt_vad" exec="vad_node" name="vad_carla_tier4" output="screen" args="--ros-args --log-level $(var log_level)">
+    <!-- Load CARLA Tier4 specific configuration -->
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/vad_carla_tier4.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/ml_package_vad_carla_tier4.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper_carla_tier4.param.yaml" allow_substs="true"/>
+
+    <!-- Output remapping -->
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <remap from="~/output/trajectory" to="$(var output/trajectory)"/>
+    <remap from="~/output/trajectories" to="$(var output/trajectories)"/>
+    <remap from="~/output/map" to="$(var output/map)"/>
+
+    <!-- Camera info remapping -->
+    <remap from="~/input/camera_info0" to="$(var camera_info0)"/>
+    <remap from="~/input/camera_info1" to="$(var camera_info1)"/>
+    <remap from="~/input/camera_info2" to="$(var camera_info2)"/>
+    <remap from="~/input/camera_info3" to="$(var camera_info3)"/>
+    <remap from="~/input/camera_info4" to="$(var camera_info4)"/>
+    <remap from="~/input/camera_info5" to="$(var camera_info5)"/>
+    
+    <!-- Image remapping -->
+    <remap from="~/input/image0" to="$(var image0)"/>
+    <remap from="~/input/image1" to="$(var image1)"/>
+    <remap from="~/input/image2" to="$(var image2)"/>
+    <remap from="~/input/image3" to="$(var image3)"/>
+    <remap from="~/input/image4" to="$(var image4)"/>
+    <remap from="~/input/image5" to="$(var image5)"/>
+    
+    <!-- Vehicle state remapping -->
+    <remap from="~/input/kinematic_state" to="$(var kinematic_state)"/>
+    <remap from="~/input/acceleration" to="$(var acceleration)"/>
+  </node>
+
+  <!-- RViz -->
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen" args="-d $(find-pkg-share autoware_launch)/rviz/autoware.rviz" if="$(var rviz)" respawn="$(var rviz_respawn)">
+    <param name="use_sim_time" value="true"/>
+  </node>
+</launch>
