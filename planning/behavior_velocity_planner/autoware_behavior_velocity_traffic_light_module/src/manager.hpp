@@ -47,20 +47,26 @@ public:
 private:
   TrafficLightModule::PlannerParam planner_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
-  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
+  void modifyPathVelocity(
+    Trajectory & path, const std_msgs::msg::Header & header,
+    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   bool isModuleRegisteredFromRegElement(const lanelet::Id & id, const size_t module_id) const;
 
-  std::shared_ptr<TrafficLightModule> getRegisteredAssociatedModule(const lanelet::Id & id) const;
+  std::shared_ptr<TrafficLightModule> getRegisteredAssociatedModule(
+    const lanelet::Id & id, const PlannerData & planner_data) const;
 
   bool hasAssociatedTrafficLight(
-    const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id) const;
+    const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id,
+    const PlannerData & planner_data) const;
 
   std::shared_ptr<TrafficLightModule> findModuleById(const lanelet::Id & module_id) const;
 

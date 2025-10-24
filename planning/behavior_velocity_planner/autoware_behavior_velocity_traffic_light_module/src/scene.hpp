@@ -85,7 +85,10 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -102,21 +105,24 @@ public:
   void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
 private:
-  bool isStopSignal();
+  bool isStopSignal(const PlannerData & planner_data);
 
-  bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
+  bool willTrafficLightTurnRedBeforeReachingStopLine(
+    const double & distance_to_stop_line, const PlannerData & planner_data) const;
 
   autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
-    const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point);
+    const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point,
+    const PlannerData & planner_data);
 
-  bool isPassthrough(const double & signed_arc_length) const;
+  bool isPassthrough(const double & signed_arc_length, const PlannerData & planner_data) const;
 
-  bool findValidTrafficSignal(TrafficSignalStamped & valid_traffic_signal) const;
+  bool findValidTrafficSignal(
+    TrafficSignalStamped & valid_traffic_signal, const PlannerData & planner_data) const;
 
   bool isTrafficSignalTimedOut() const;
 
-  void updateTrafficSignal();
+  void updateTrafficSignal(const PlannerData & planner_data);
 
   // Lane id
   const int64_t lane_id_;
