@@ -92,7 +92,10 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -162,25 +165,28 @@ private:
 
   void updateInfrastructureCommand();
 
-  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine();
+  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine(
+    const PlannerData & planner_data);
 
-  bool isBeforeStartLine(const size_t end_line_idx);
+  bool isBeforeStartLine(const size_t end_line_idx, const PlannerData & planner_data);
 
-  bool isBeforeStopLine(const size_t end_line_idx);
+  bool isBeforeStopLine(const size_t end_line_idx, const PlannerData & planner_data);
 
-  bool isAfterAnyEndLine(const size_t end_line_idx);
+  bool isAfterAnyEndLine(const size_t end_line_idx, const PlannerData & planner_data);
 
-  bool isNearAnyEndLine(const size_t end_line_idx);
+  bool isNearAnyEndLine(const size_t end_line_idx, const PlannerData & planner_data);
 
   bool isStateTimeout(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
   bool hasRightOfWay(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
   void insertStopVelocityAtStopLine(
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx,
+    const PlannerData & planner_data);
 
   void insertStopVelocityAtEndLine(
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx,
+    const PlannerData & planner_data);
 
   std::string stateToString(State state) const;
 };

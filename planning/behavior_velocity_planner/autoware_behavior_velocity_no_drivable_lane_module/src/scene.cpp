@@ -19,12 +19,37 @@
 #include "util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 
 namespace autoware::behavior_velocity_planner
 {
+namespace
+{
+PathWithLaneId fromTrajectory(
+  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
+  std::vector<geometry_msgs::msg::Point> right_bound)
+{
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+  path_msg.left_bound = left_bound;
+  path_msg.right_bound = right_bound;
+  return path_msg;
+}
+
+void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
+{
+  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
+  if (!path_opt) {
+    RCLCPP_ERROR(logger_, "Failed to build trajectory");
+    return;
+  }
+  path = *path_opt;
+}
+}  // namespace
+
 using autoware_utils::create_point;
 
 NoDrivableLaneModule::NoDrivableLaneModule(
@@ -41,20 +66,20 @@ NoDrivableLaneModule::NoDrivableLaneModule(
 {
 }
 
-bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
+bool NoDrivableLaneModule::modifyPathVelocity(
+  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  if (path->points.empty()) {
-    return false;
-  }
+  auto path_msg = fromTrajectory(path, left_bound, right_bound);
 
-  const auto & ego_pos = planner_data_->current_odometry->pose.position;
-  const auto & lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
+  const auto & ego_pos = planner_data.current_odometry->pose.position;
+  const auto & lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
   const auto & no_drivable_lane = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto & no_drivable_lane_polygon =
     lanelet::utils::to2D(no_drivable_lane).polygon2d().basicPolygon();
 
   path_no_drivable_lane_polygon_intersection =
-    getPathIntersectionWithNoDrivableLanePolygon(*path, no_drivable_lane_polygon, ego_pos, 2);
+    getPathIntersectionWithNoDrivableLanePolygon(path_msg, no_drivable_lane_polygon, ego_pos, 2);
 
   distance_ego_first_intersection = 0.0;
 
@@ -62,11 +87,11 @@ bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
     first_intersection_point =
       path_no_drivable_lane_polygon_intersection.first_intersection_point.value();
     distance_ego_first_intersection = autoware::motion_utils::calcSignedArcLength(
-      path->points, planner_data_->current_odometry->pose.position, first_intersection_point);
-    distance_ego_first_intersection -= planner_data_->vehicle_info_.max_longitudinal_offset_m;
+      path_msg.points, planner_data.current_odometry->pose.position, first_intersection_point);
+    distance_ego_first_intersection -= planner_data.vehicle_info_.max_longitudinal_offset_m;
   }
 
-  initialize_debug_data(no_drivable_lane, ego_pos);
+  initialize_debug_data(no_drivable_lane, ego_pos, planner_data);
 
   switch (state_) {
     case State::INIT: {
@@ -84,7 +109,7 @@ bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
         RCLCPP_INFO(logger_, "Approaching ");
       }
 
-      handle_approaching_state(path);
+      handle_approaching_state(&path_msg, planner_data);
 
       break;
     }
@@ -94,7 +119,7 @@ bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
         RCLCPP_INFO(logger_, "INSIDE_NO_DRIVABLE_LANE");
       }
 
-      handle_inside_no_drivable_lane_state(path);
+      handle_inside_no_drivable_lane_state(&path_msg, planner_data);
 
       break;
     }
@@ -104,7 +129,7 @@ bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
         RCLCPP_INFO(logger_, "STOPPED");
       }
 
-      handle_stopped_state(path);
+      handle_stopped_state(&path_msg, planner_data);
 
       break;
     }
@@ -114,6 +139,8 @@ bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
       return false;
     }
   }
+
+  toTrajectory(path_msg, path, logger_);
   return true;
 }
 
@@ -133,10 +160,11 @@ void NoDrivableLaneModule::handle_init_state()
   }
 }
 
-void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
+void NoDrivableLaneModule::handle_approaching_state(
+  PathWithLaneId * path, const PlannerData & planner_data)
 {
   const double longitudinal_offset =
-    -1.0 * (planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m);
+    -1.0 * (planner_param_.stop_margin + planner_data.vehicle_info_.max_longitudinal_offset_m);
 
   const auto op_target_point = autoware::motion_utils::calcLongitudinalOffsetPoint(
     path->points, first_intersection_point, longitudinal_offset);
@@ -167,7 +195,7 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
   {
     const auto & stop_pose = op_stop_pose.value();
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose,
+      path->points, planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "");
@@ -178,19 +206,19 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
     debug_data_.stop_pose = virtual_wall_pose.value();
   }
 
-  const size_t current_seg_idx = findEgoSegmentIndex(path->points);
+  const size_t current_seg_idx = findEgoSegmentIndex(path->points, planner_data);
   const auto intersection_segment_idx =
     autoware::motion_utils::findNearestSegmentIndex(path->points, first_intersection_point);
   const double signed_arc_dist_to_intersection_point =
     autoware::motion_utils::calcSignedArcLength(
-      path->points, planner_data_->current_odometry->pose.position, current_seg_idx,
+      path->points, planner_data.current_odometry->pose.position, current_seg_idx,
       first_intersection_point, intersection_segment_idx) -
-    planner_data_->vehicle_info_.max_longitudinal_offset_m;
+    planner_data.vehicle_info_.max_longitudinal_offset_m;
 
   // Move to stopped state if stopped
   if (
     (signed_arc_dist_to_intersection_point <= planner_param_.stop_margin) &&
-    (planner_data_->isVehicleStopped())) {
+    (planner_data.isVehicleStopped())) {
     if (planner_param_.print_debug_info) {
       RCLCPP_INFO(logger_, "APPROACHING -> STOPPED");
       RCLCPP_INFO_STREAM(
@@ -206,10 +234,11 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
   }
 }
 
-void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId * path)
+void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(
+  PathWithLaneId * path, const PlannerData & planner_data)
 {
-  const auto & current_point = planner_data_->current_odometry->pose.position;
-  const size_t current_seg_idx = findEgoSegmentIndex(path->points);
+  const auto & current_point = planner_data.current_odometry->pose.position;
+  const size_t current_seg_idx = findEgoSegmentIndex(path->points, planner_data);
 
   // Insert stop point
   planning_utils::insertStopPoint(current_point, current_seg_idx, *path);
@@ -218,7 +247,7 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId *
   {
     const auto & stop_pose = autoware_utils::get_pose(path->points.at(0));
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose,
+      path->points, planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "");
@@ -230,7 +259,7 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId *
   }
 
   // Move to stopped state if stopped
-  if (planner_data_->isVehicleStopped()) {
+  if (planner_data.isVehicleStopped()) {
     if (planner_param_.print_debug_info) {
       RCLCPP_INFO(logger_, "APPROACHING -> STOPPED");
     }
@@ -238,10 +267,11 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId *
   }
 }
 
-void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
+void NoDrivableLaneModule::handle_stopped_state(
+  PathWithLaneId * path, const PlannerData & planner_data)
 {
   const auto & stopped_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
-    path->points, planner_data_->current_odometry->pose.position, 0.0);
+    path->points, planner_data.current_odometry->pose.position, 0.0);
 
   if (!stopped_pose) {
     state_ = State::INIT;
@@ -250,7 +280,7 @@ void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
 
   SegmentIndexWithPose ego_pos_on_path;
   ego_pos_on_path.pose = stopped_pose.value();
-  ego_pos_on_path.index = findEgoSegmentIndex(path->points);
+  ego_pos_on_path.index = findEgoSegmentIndex(path->points, planner_data);
 
   // Insert stop pose
   planning_utils::insertStopPoint(ego_pos_on_path.pose.position, ego_pos_on_path.index, *path);
@@ -259,7 +289,7 @@ void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
   {
     const auto & stop_pose = ego_pos_on_path.pose;
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose,
+      path->points, planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "");
@@ -272,10 +302,11 @@ void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
 }
 
 void NoDrivableLaneModule::initialize_debug_data(
-  const lanelet::Lanelet & no_drivable_lane, const geometry_msgs::msg::Point & ego_pos)
+  const lanelet::Lanelet & no_drivable_lane, const geometry_msgs::msg::Point & ego_pos,
+  const PlannerData & planner_data)
 {
   debug_data_ = DebugData();
-  debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
   debug_data_.path_polygon_intersection = path_no_drivable_lane_polygon_intersection;
 
   for (const auto & p : no_drivable_lane.polygon2d().basicPolygon()) {
