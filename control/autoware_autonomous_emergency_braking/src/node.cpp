@@ -32,7 +32,10 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
+// no longer needed in Jazzy
+#ifdef ROS_DISTRO_HUMBLE
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#endif
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/crop_hull.h>
