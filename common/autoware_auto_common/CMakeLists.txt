@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_auto_common)
 
+
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
@@ -21,7 +22,7 @@ if(BUILD_TESTING)
     test/test_type_name.cpp
     test/test_type_traits.cpp
   )
-  target_compile_options(${TEST_COMMON} PRIVATE -Wno-sign-conversion)
+  target_compile_options(${TEST_COMMON} PRIVATE -Wno-sign-conversion -Wno-c++20-compat)
   target_include_directories(${TEST_COMMON} PRIVATE include)
   ament_target_dependencies(${TEST_COMMON}
     builtin_interfaces

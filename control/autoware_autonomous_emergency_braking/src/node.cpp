@@ -31,7 +31,6 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
-#include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/crop_hull.h>
