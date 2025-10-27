@@ -76,7 +76,10 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
