@@ -656,11 +656,19 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   projected_ego_pose.position = ref_points_spline.getSplineInterpolatedPointAt(s_ego);
   projected_ego_pose.orientation = ego_pose.orientation;
 
-  const std::array<geometry_msgs::msg::Point, 4> boundary_points_body_frame = { 
+  const size_t num_body_points = 10;
+
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_body_frame = { 
     getCorner(projected_ego_pose, front,  half_width),  // front-left
     getCorner(projected_ego_pose, front, -half_width),  // front-right
+    getCorner(projected_ego_pose, front + 0.25*(rear-front),  -half_width),
+    getCorner(projected_ego_pose, front + 0.50*(rear-front),  -half_width),
+    getCorner(projected_ego_pose, front + 0.75*(rear-front),  -half_width),
     getCorner(projected_ego_pose, -rear,  -half_width),  // rear-right
-    getCorner(projected_ego_pose, -rear,   half_width)   // rear-left
+    getCorner(projected_ego_pose, -rear,   half_width),   // rear-left
+    getCorner(projected_ego_pose, rear + 0.25*(front-rear),  half_width),
+    getCorner(projected_ego_pose, rear + 0.50*(front-rear),  half_width),
+    getCorner(projected_ego_pose, rear + 0.75*(front-rear),  half_width)
   };
 
   std::cerr << "Corner points in body frame:" << std::endl;
@@ -669,7 +677,7 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   }
   std::cerr << std::endl;
 
-  std::array<geometry_msgs::msg::Point, 4> corner_points_curvilinear;
+  std::array<geometry_msgs::msg::Point, num_body_points> corner_points_curvilinear;
   std::transform(
     boundary_points_body_frame.begin(), boundary_points_body_frame.end(),
     corner_points_curvilinear.begin(),
@@ -768,6 +776,10 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
     ref_points_spline.resize(mpt_param_.num_points);
   }
 
+  if (ref_points_spline.getSize() == 0) {
+    return ref_points;
+  }
+  
   publishSplineCoefficientsAndCurvatures(ref_points_spline, p.ego_pose, vehicle_info_);
 
   return ref_points;
