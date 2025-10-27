@@ -60,30 +60,6 @@ std::vector<PredictedObject> extractStuckVehicle(
 
 namespace autoware::behavior_velocity_planner
 {
-namespace
-{
-PathWithLaneId fromTrajectory(
-  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
-  std::vector<geometry_msgs::msg::Point> right_bound)
-{
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-  path_msg.left_bound = left_bound;
-  path_msg.right_bound = right_bound;
-  return path_msg;
-}
-
-void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
-{
-  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
-  if (!path_opt) {
-    RCLCPP_ERROR(logger_, "Failed to build trajectory");
-    return;
-  }
-  path = *path_opt;
-}
-}  // namespace
-
 namespace utils = occlusion_spot_utils;
 
 OcclusionSpotModule::OcclusionSpotModule(
@@ -113,7 +89,7 @@ bool OcclusionSpotModule::modifyPathVelocity(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  auto path_msg = fromTrajectory(path, left_bound, right_bound);
+  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
 
   if (param_.is_show_processing_time) stop_watch_.tic("total_processing_time");
   debug_data_.resetData();
@@ -226,7 +202,7 @@ bool OcclusionSpotModule::modifyPathVelocity(
   debug_data_.z = path_msg.points.front().point.pose.position.z;
   debug_data_.possible_collisions = possible_collisions;
   DEBUG_PRINT(show_time, "total [ms]: ", stop_watch_.toc("total_processing_time", true));
-  toTrajectory(path_msg, path, logger_);
+  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
