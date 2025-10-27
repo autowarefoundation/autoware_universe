@@ -27,30 +27,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-namespace
-{
-PathWithLaneId fromTrajectory(
-  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
-  std::vector<geometry_msgs::msg::Point> right_bound)
-{
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-  path_msg.left_bound = left_bound;
-  path_msg.right_bound = right_bound;
-  return path_msg;
-}
-
-void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
-{
-  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
-  if (!path_opt) {
-    RCLCPP_ERROR(logger_, "Failed to build trajectory");
-    return;
-  }
-  path = *path_opt;
-}
-}  // namespace
-
 using autoware::motion_utils::calcSignedArcLength;
 using autoware_utils::create_point;
 
@@ -106,7 +82,7 @@ bool SpeedBumpModule::modifyPathVelocity(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  auto path_msg = fromTrajectory(path, left_bound, right_bound);
+  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
 
   debug_data_ = DebugData();
   debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
@@ -130,7 +106,7 @@ bool SpeedBumpModule::modifyPathVelocity(
     return false;
   }
 
-  toTrajectory(path_msg, path, logger_);
+  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 

@@ -181,27 +181,6 @@ autoware_internal_debug_msgs::msg::StringStamped createStringStampedMessage(
   }
   return msg;
 }
-
-PathWithLaneId fromTrajectory(
-  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
-  std::vector<geometry_msgs::msg::Point> right_bound)
-{
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-  path_msg.left_bound = left_bound;
-  path_msg.right_bound = right_bound;
-  return path_msg;
-}
-
-void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
-{
-  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
-  if (!path_opt) {
-    RCLCPP_ERROR(logger_, "Failed to build trajectory");
-    return;
-  }
-  path = *path_opt;
-}
 }  // namespace
 
 CrosswalkModule::CrosswalkModule(
@@ -242,7 +221,7 @@ bool CrosswalkModule::modifyPathVelocity(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  auto path_msg = fromTrajectory(path, left_bound, right_bound);
+  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
 
   stop_watch_.tic("total_processing_time");
   RCLCPP_INFO_EXPRESSION(
@@ -323,7 +302,7 @@ bool CrosswalkModule::modifyPathVelocity(
     createStringStampedMessage(clock_->now(), module_id_, debug_data_.collision_points);
   collision_info_pub_->publish(collision_info_msg);
 
-  toTrajectory(path_msg, path, logger_);
+  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
