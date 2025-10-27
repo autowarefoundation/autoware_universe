@@ -18,6 +18,7 @@
 #include "autoware_utils/geometry/geometry.hpp"
 #include "util.hpp"
 
+#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <iostream>
@@ -26,6 +27,30 @@
 
 namespace autoware::behavior_velocity_planner
 {
+namespace
+{
+PathWithLaneId fromTrajectory(
+  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
+  std::vector<geometry_msgs::msg::Point> right_bound)
+{
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+  path_msg.left_bound = left_bound;
+  path_msg.right_bound = right_bound;
+  return path_msg;
+}
+
+void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
+{
+  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
+  if (!path_opt) {
+    RCLCPP_ERROR(logger_, "Failed to build trajectory");
+    return;
+  }
+  path = *path_opt;
+}
+}  // namespace
+
 using autoware::motion_utils::calcSignedArcLength;
 using autoware_utils::create_point;
 
@@ -77,20 +102,20 @@ SpeedBumpModule::SpeedBumpModule(
   }
 }
 
-bool SpeedBumpModule::modifyPathVelocity(PathWithLaneId * path)
+bool SpeedBumpModule::modifyPathVelocity(
+  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  if (path->points.empty()) {
-    return false;
-  }
+  auto path_msg = fromTrajectory(path, left_bound, right_bound);
 
   debug_data_ = DebugData();
-  debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
 
-  const auto & ego_pos = planner_data_->current_odometry->pose.position;
+  const auto & ego_pos = planner_data.current_odometry->pose.position;
   const auto & speed_bump = speed_bump_reg_elem_.speedBump();
   const auto & speed_bump_polygon = lanelet::utils::to2D(speed_bump).basicPolygon();
 
-  const auto & ego_path = *path;
+  const auto & ego_path = path_msg;
   const auto & path_polygon_intersection_status =
     getPathPolygonIntersectionStatus(ego_path, speed_bump_polygon, ego_pos, 2);
 
@@ -100,12 +125,19 @@ bool SpeedBumpModule::modifyPathVelocity(PathWithLaneId * path)
     debug_data_.speed_bump_polygon.push_back(create_point(p.x(), p.y(), ego_pos.z));
   }
 
-  return applySlowDownSpeed(*path, speed_bump_slow_down_speed_, path_polygon_intersection_status);
+  if (!applySlowDownSpeed(
+        path_msg, speed_bump_slow_down_speed_, path_polygon_intersection_status, planner_data)) {
+    return false;
+  }
+
+  toTrajectory(path_msg, path, logger_);
+  return true;
 }
 
 bool SpeedBumpModule::applySlowDownSpeed(
   PathWithLaneId & output, const float speed_bump_speed,
-  const PathPolygonIntersectionStatus & path_polygon_intersection_status)
+  const PathPolygonIntersectionStatus & path_polygon_intersection_status,
+  const PlannerData & planner_data)
 {
   if (isNoRelation(path_polygon_intersection_status)) {
     return false;
@@ -120,7 +152,7 @@ bool SpeedBumpModule::applySlowDownSpeed(
     const auto & src_point = *path_polygon_intersection_status.first_intersection_point;
     const auto & slow_start_margin_to_base_link =
       -1 *
-      (planner_data_->vehicle_info_.max_longitudinal_offset_m + planner_param_.slow_start_margin);
+      (planner_data.vehicle_info_.max_longitudinal_offset_m + planner_param_.slow_start_margin);
     auto slow_start_point_idx_candidate =
       insertPointWithOffset(src_point, slow_start_margin_to_base_link, output.points, 5e-2);
     if (slow_start_point_idx_candidate) {
@@ -148,7 +180,7 @@ bool SpeedBumpModule::applySlowDownSpeed(
     // and the speed bump polygon
     const auto & src_point = *path_polygon_intersection_status.second_intersection_point;
     const auto & slow_end_margin_to_base_link =
-      planner_data_->vehicle_info_.rear_overhang_m + planner_param_.slow_end_margin;
+      planner_data.vehicle_info_.rear_overhang_m + planner_param_.slow_end_margin;
     auto slow_end_point_idx_candidate =
       insertPointWithOffset(src_point, slow_end_margin_to_base_link, output.points, 5e-2);
     if (slow_end_point_idx_candidate) {
