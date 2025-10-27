@@ -250,14 +250,6 @@ visualization_msgs::msg::MarkerArray IntersectionModule::createDebugMarkerArray(
       &debug_marker_array, now);
   }
 
-  if (debug_data_.second_attention_area) {
-    append_marker_array(
-      ::createLaneletPolygonsMarkerArray(
-        {debug_data_.second_attention_area.value()}, "second_attention_area", lane_id_, 1, 0.647,
-        0.0),
-      &debug_marker_array, now);
-  }
-
   if (debug_data_.stuck_vehicle_detect_area) {
     append_marker_array(
       debug::createPolygonMarkerArray(
@@ -344,23 +336,12 @@ visualization_msgs::msg::MarkerArray IntersectionModule::createDebugMarkerArray(
       std::get<1>(white), std::get<2>(white)),
     &debug_marker_array, now);
 
-  if (debug_data_.first_pass_judge_wall_pose) {
-    const double r = debug_data_.passed_first_pass_judge ? 1.0 : 0.0;
-    const double g = debug_data_.passed_first_pass_judge ? 0.0 : 1.0;
+  if (debug_data_.pass_judge_wall_pose) {
+    const double r = debug_data_.passed_pass_judge ? 1.0 : 0.0;
+    const double g = debug_data_.passed_pass_judge ? 0.0 : 1.0;
     append_marker_array(
       ::createPoseMarkerArray(
-        debug_data_.first_pass_judge_wall_pose.value(), "first_pass_judge_wall_pose", module_id_, r,
-        g, 0.0),
-      &debug_marker_array, now);
-  }
-
-  if (debug_data_.second_pass_judge_wall_pose) {
-    const double r = debug_data_.passed_second_pass_judge ? 1.0 : 0.0;
-    const double g = debug_data_.passed_second_pass_judge ? 0.0 : 1.0;
-    append_marker_array(
-      ::createPoseMarkerArray(
-        debug_data_.second_pass_judge_wall_pose.value(), "second_pass_judge_wall_pose", module_id_,
-        r, g, 0.0),
+        debug_data_.pass_judge_wall_pose.value(), "pass_judge_wall_pose", module_id_, r, g, 0.0),
       &debug_marker_array, now);
   }
 
@@ -457,7 +438,7 @@ autoware::motion_utils::VirtualWalls IntersectionModule::createVirtualWalls()
   if (debug_data_.too_late_stop_wall_pose) {
     wall.style = autoware::motion_utils::VirtualWallType::pass;
     wall.text = "intersection";
-    wall.detail = "too late to stop";
+    wall.detail = "too late to stop and conflict with will_overrun MRM";
     wall.ns = "intersection" + std::to_string(module_id_) + "_";
     wall.pose = debug_data_.too_late_stop_wall_pose.value();
     virtual_walls.push_back(wall);

@@ -17,6 +17,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -167,16 +169,11 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   const PathLanelets & path_lanelets,
   const IntersectionModule::TimeDistanceArray & time_distance_array,
   const IntersectionModule::TrafficPrioritizedLevel & traffic_prioritized_level,
-  const bool passed_1st_judge_line_first_time, const bool passed_2nd_judge_line_first_time,
+  const bool passed_judge_line_first_time,
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array)
 {
-  const auto & intersection_lanelets = intersection_lanelets_.value();
-
-  if (passed_1st_judge_line_first_time) {
-    object_info_manager_.setPassed1stPassJudgeLineFirstTime(clock_->now());
-  }
-  if (passed_2nd_judge_line_first_time) {
-    object_info_manager_.setPassed2ndPassJudgeLineFirstTime(clock_->now());
+  if (passed_judge_line_first_time) {
+    object_info_manager_.setPassedPassJudgeLineFirstTime(clock_->now());
   }
 
   const double passing_time = time_distance_array.back().first;
@@ -291,10 +288,8 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       if (predicted_path.path.size() < 2) {
         continue;
       }
-      const auto object_passage_interval_opt = findPassageInterval(
-        predicted_path, predicted_object.shape, ego_poly,
-        intersection_lanelets.first_attention_lane(),
-        intersection_lanelets.second_attention_lane());
+      const auto object_passage_interval_opt =
+        findPassageInterval(predicted_path, predicted_object.shape, ego_poly);
       if (!object_passage_interval_opt) {
         // there is no chance of geometric collision for the entire prediction horizon
         continue;
@@ -414,21 +409,8 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
     }
     object_info->update_safety(unsafe_interval, safe_interval, safe_under_traffic_control);
-    if (passed_1st_judge_line_first_time) {
-      object_info->setDecisionAt1stPassJudgeLinePassage(
-        CollisionKnowledge{
-          clock_->now(),  // stamp
-          unsafe_interval
-            ? CollisionKnowledge::SafeType::UNSAFE
-            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                          : CollisionKnowledge::SafeType::SAFE),  // safe
-          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-            .x  // observed_velocity
-        });
-    }
-    if (passed_2nd_judge_line_first_time) {
-      object_info->setDecisionAt2ndPassJudgeLinePassage(
+    if (passed_judge_line_first_time) {
+      object_info->setDecisionAtPassJudgeLinePassage(
         CollisionKnowledge{
           clock_->now(),  // stamp
           unsafe_interval
@@ -500,147 +482,75 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
 }
 
 std::string IntersectionModule::generateDetectionBlameDiagnosis(
-  const std::vector<
-    std::pair<IntersectionModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-    too_late_detect_objects,
-  const std::vector<
-    std::pair<IntersectionModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-    misjudge_objects) const
+  const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
+  const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects) const
 {
   std::string diag;
-  if (!safely_passed_1st_judge_line_time_) {
+  if (!safely_passed_judge_line_time_) {
     return diag;
   }
-  const auto [passed_1st_judge_line_time, passed_1st_judge_line_pose] =
-    safely_passed_1st_judge_line_time_.value();
-  const auto passed_1st_judge_line_time_double =
-    static_cast<double>(passed_1st_judge_line_time.nanoseconds()) / 1e+9;
+  const auto [passed_judge_line_time, passed_judge_line_pose] =
+    safely_passed_judge_line_time_.value();
+  const auto passed_judge_line_time_double =
+    static_cast<double>(passed_judge_line_time.nanoseconds()) / 1e+9;
 
   const auto now = clock_->now();
   const auto now_double = static_cast<double>(now.nanoseconds()) / 1e+9;
 
   // CAVEAT: format library causes runtime fault if the # of placeholders is more than the # of
   // vargs
-  for (const auto & [blame_type, object_info] : too_late_detect_objects) {
-    if (
-      blame_type == CollisionStatus::BLAME_AT_FIRST_PASS_JUDGE && object_info->unsafe_interval()) {
+  for (const auto & object_info : too_late_detect_objects) {
+    if (object_info->unsafe_interval()) {
       const auto & unsafe_interval = object_info->unsafe_interval().value();
-      const double time_diff = now_double - passed_1st_judge_line_time_double;
+      const double time_diff = now_double - passed_judge_line_time_double;
       diag += fmt::format(
-        "object {0} was not detected when ego passed the 1st pass judge line at {1}, but now at "
-        "{2}, collision is detected after {3}~{4} seconds on the first attention lanelet of type "
-        "{5}.\n",
-        object_info->uuid_str,                                // 0
-        passed_1st_judge_line_time_double,                    // 1
-        now_double,                                           // 2
-        unsafe_interval.interval_time.first,                  // 3
-        unsafe_interval.interval_time.second,                 // 4
-        magic_enum::enum_name(unsafe_interval.lane_position)  // 5
+        "object {0} was not detected when ego passed the pass judge line at {1}, but now at "
+        "{2}, collision is detected after {3}~{4} seconds on the first attention lanelet of type\n",
+        object_info->uuid_str,                // 0
+        passed_judge_line_time_double,        // 1
+        now_double,                           // 2
+        unsafe_interval.interval_time.first,  // 3
+        unsafe_interval.interval_time.second  // 4
       );
       const auto past_position_opt = object_info->estimated_past_position(time_diff);
       if (past_position_opt) {
         const auto & past_position = past_position_opt.value();
         diag += fmt::format(
-          "this object is estimated to have been at x = {0}, y = {1} when ego passed the 1st pass "
+          "this object is estimated to have been at x = {0}, y = {1} when ego passed the pass "
           "judge line({2} seconds before from now) given the estimated current velocity {3}[m/s]. "
-          "ego was at x = {4}, y = {5} when it passed the 1st pass judge line so it is the fault "
+          "ego was at x = {4}, y = {5} when it passed the pass judge line so it is the fault "
           "of detection side that failed to detect around {6}[m] range at that time.\n",
-          past_position.x,                                                            // 0
-          past_position.y,                                                            // 1
-          time_diff,                                                                  // 2
-          object_info->observed_velocity(),                                           // 3
-          passed_1st_judge_line_pose.position.x,                                      // 4
-          passed_1st_judge_line_pose.position.y,                                      // 5
-          autoware_utils::calc_distance2d(passed_1st_judge_line_pose, past_position)  // 6
-        );
-      }
-    }
-    if (
-      safely_passed_2nd_judge_line_time_ &&
-      blame_type == CollisionStatus::BLAME_AT_SECOND_PASS_JUDGE && object_info->unsafe_interval()) {
-      const auto [passed_2nd_judge_line_time, passed_2nd_judge_line_pose] =
-        safely_passed_2nd_judge_line_time_.value();
-      const auto passed_2nd_judge_line_time_double =
-        static_cast<double>(passed_2nd_judge_line_time.nanoseconds()) / 1e+9;
-
-      const auto & unsafe_interval = object_info->unsafe_interval().value();
-      const double time_diff = now_double - passed_2nd_judge_line_time_double;
-      diag += fmt::format(
-        "object {0} was not detected when ego passed the 2nd pass judge line at {1}, but now at "
-        "{2}, collision is detected after {3}~{4} seconds on the lanelet of type {5}.\n",
-        object_info->uuid_str,                                // 0
-        passed_2nd_judge_line_time_double,                    // 1
-        now_double,                                           // 2
-        unsafe_interval.interval_time.first,                  // 3
-        unsafe_interval.interval_time.second,                 // 4
-        magic_enum::enum_name(unsafe_interval.lane_position)  // 5
-      );
-      const auto past_position_opt = object_info->estimated_past_position(time_diff);
-      if (past_position_opt) {
-        const auto & past_position = past_position_opt.value();
-        diag += fmt::format(
-          "this object is estimated to have been at x = {0}, y = {1} when ego passed the 2nd pass "
-          "judge line({2} seconds before from now) given the estimated current velocity {3}[m/s]. "
-          "ego was at x = {4}, y = {5} when it passed the 2nd pass judge line so it is the fault "
-          "of detection side that failed to detect around {6}[m] range at that time.\n",
-          past_position.x,                                                            // 0
-          past_position.y,                                                            // 1
-          time_diff,                                                                  // 2
-          object_info->observed_velocity(),                                           // 3
-          passed_2nd_judge_line_pose.position.x,                                      // 4
-          passed_2nd_judge_line_pose.position.y,                                      // 5
-          autoware_utils::calc_distance2d(passed_2nd_judge_line_pose, past_position)  // 6
+          past_position.x,                                                        // 0
+          past_position.y,                                                        // 1
+          time_diff,                                                              // 2
+          object_info->observed_velocity(),                                       // 3
+          passed_judge_line_pose.position.x,                                      // 4
+          passed_judge_line_pose.position.y,                                      // 5
+          autoware_utils::calc_distance2d(passed_judge_line_pose, past_position)  // 6
         );
       }
     }
   }
-  for (const auto & [blame_type, object_info] : misjudge_objects) {
-    if (
-      blame_type == CollisionStatus::BLAME_AT_FIRST_PASS_JUDGE && object_info->unsafe_interval() &&
-      object_info->decision_at_1st_pass_judge_line_passage()) {
-      const auto & decision_at_1st_pass_judge_line =
-        object_info->decision_at_1st_pass_judge_line_passage().value();
-      const auto decision_at_1st_pass_judge_line_time =
-        static_cast<double>(decision_at_1st_pass_judge_line.stamp.nanoseconds()) / 1e+9;
+  for (const auto & object_info : misjudge_objects) {
+    if (object_info->unsafe_interval() && object_info->decision_at_pass_judge_line_passage()) {
+      const auto & decision_at_pass_judge_line =
+        object_info->decision_at_pass_judge_line_passage().value();
+      const auto decision_at_pass_judge_line_time =
+        static_cast<double>(decision_at_pass_judge_line.stamp.nanoseconds()) / 1e+9;
       const auto & unsafe_interval = object_info->unsafe_interval().value();
       diag += fmt::format(
-        "object {0} was judged as {1} when ego passed the 1st pass judge line at time {2} "
+        "object {0} was judged as {1} when ego passed the pass judge line at time {2} "
         "previously with the estimated velocity {3}[m/s], but now at {4} collision is detected "
-        "after {5}~{6} seconds on the first attention lanelet of type {7} with the estimated "
-        "current velocity {8}[m/s]\n",
-        object_info->uuid_str,                                             // 0
-        magic_enum::enum_name(decision_at_1st_pass_judge_line.safe_type),  // 1
-        decision_at_1st_pass_judge_line_time,                              // 2
-        decision_at_1st_pass_judge_line.observed_velocity,                 // 3
-        now_double,                                                        // 4
-        unsafe_interval.interval_time.first,                               // 5
-        unsafe_interval.interval_time.second,                              // 6
-        magic_enum::enum_name(unsafe_interval.lane_position),              // 7
-        object_info->observed_velocity()                                   // 8
-      );
-    }
-    if (
-      blame_type == CollisionStatus::BLAME_AT_SECOND_PASS_JUDGE && object_info->unsafe_interval() &&
-      object_info->decision_at_2nd_pass_judge_line_passage()) {
-      const auto & decision_at_2nd_pass_judge_line =
-        object_info->decision_at_2nd_pass_judge_line_passage().value();
-      const auto decision_at_2nd_pass_judge_line_time =
-        static_cast<double>(decision_at_2nd_pass_judge_line.stamp.nanoseconds()) / 1e+9;
-      const auto & unsafe_interval = object_info->unsafe_interval().value();
-      diag += fmt::format(
-        "object {0} was judged as {1} when ego passed the 2nd pass judge line at time {2} "
-        "previously with the estimated velocity {3}[m/s], but now at {4} collision is detected "
-        "after {5}~{6} seconds on the lanelet of type {7} with the estimated current velocity "
-        "{8}[m/s]\n",
-        object_info->uuid_str,                                             // 0
-        magic_enum::enum_name(decision_at_2nd_pass_judge_line.safe_type),  // 1
-        decision_at_2nd_pass_judge_line_time,                              // 2
-        decision_at_2nd_pass_judge_line.observed_velocity,                 // 3
-        now_double,                                                        // 4
-        unsafe_interval.interval_time.first,                               // 5
-        unsafe_interval.interval_time.second,                              // 6
-        magic_enum::enum_name(unsafe_interval.lane_position),              // 7
-        object_info->observed_velocity()                                   // 8
+        "after {5}~{6} seconds on the first attention lanelet with the estimated "
+        "current velocity {7}[m/s]\n",
+        object_info->uuid_str,                                         // 0
+        magic_enum::enum_name(decision_at_pass_judge_line.safe_type),  // 1
+        decision_at_pass_judge_line_time,                              // 2
+        decision_at_pass_judge_line.observed_velocity,                 // 3
+        now_double,                                                    // 4
+        unsafe_interval.interval_time.first,                           // 5
+        unsafe_interval.interval_time.second,                          // 6
+        object_info->observed_velocity()                               // 7
       );
     }
   }
@@ -650,25 +560,21 @@ std::string IntersectionModule::generateDetectionBlameDiagnosis(
 std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
   const IntersectionModule::TimeDistanceArray & ego_time_distance_array,
-  const std::vector<
-    std::pair<IntersectionModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-    too_late_detect_objects,
-  [[maybe_unused]] const std::vector<
-    std::pair<IntersectionModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-    misjudge_objects) const
+  const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
+  [[maybe_unused]] const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects) const
 {
   static constexpr double min_vel = 1e-2;
   std::string diag;
   const double ego_vel = planner_data_->current_velocity->twist.linear.x;
-  for (const auto & [blame_type, object_info] : too_late_detect_objects) {
+  for (const auto & object_info : too_late_detect_objects) {
     if (!object_info->unsafe_interval()) {
       continue;
     }
     // object side
     const auto & unsafe_interval = object_info->unsafe_interval().value();
     const auto [begin, end] = unsafe_interval.interval_position;
-    const auto &p1 = unsafe_interval.path.at(begin).position,
-               p2 = unsafe_interval.path.at(end).position;
+    const auto & p1 = unsafe_interval.path.at(begin).position;
+    const auto & p2 = unsafe_interval.path.at(end).position;
     const auto collision_pos =
       autoware_utils::create_point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, (p1.z + p2.z) / 2);
     const auto object_dist_to_margin_point =
@@ -712,16 +618,8 @@ std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
 }
 
 IntersectionModule::CollisionStatus IntersectionModule::detectCollision(
-  const bool is_over_1st_pass_judge_line,
-  const std::optional<bool> is_over_2nd_pass_judge_line) const
+  const bool is_over_pass_judge_line) const
 {
-  // ==========================================================================================
-  // if collision is detected for multiple objects, we prioritize collision on the first
-  // attention lanelet
-  // ==========================================================================================
-  bool collision_at_first_lane = false;
-  bool collision_at_non_first_lane = false;
-
   // ==========================================================================================
   // find the objects which are judged as UNSAFE after ego passed pass judge lines.
   //
@@ -736,9 +634,10 @@ IntersectionModule::CollisionStatus IntersectionModule::detectCollision(
   // that case is both "too late to stop" and "too late to go" for the planner. and basically
   // detection side is responsible for this fault
   // ==========================================================================================
-  std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> misjudge_objects;
-  std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>>
-    too_late_detect_objects;
+  bool collision_detected = false;
+
+  std::vector<std::shared_ptr<ObjectInfo>> misjudge_objects;
+  std::vector<std::shared_ptr<ObjectInfo>> too_late_detect_objects;
   for (const auto & object_info : object_info_manager_.attentionObjects()) {
     if (object_info->is_safe_under_traffic_control()) {
       debug_data_.safe_under_traffic_control_targets.objects.push_back(
@@ -749,7 +648,8 @@ IntersectionModule::CollisionStatus IntersectionModule::detectCollision(
     if (!unsafe_info_opt) {
       continue;
     }
-    const auto & unsafe_info = unsafe_info_opt.value();
+    collision_detected = true;
+
     // ==========================================================================================
     // if ego is over the pass judge lines, then the visualization as "too_late_objects" or
     // "misjudge_objects" is more important than that for "unsafe"
@@ -761,61 +661,25 @@ IntersectionModule::CollisionStatus IntersectionModule::detectCollision(
     // visualized as "misjudge"
     // ==========================================================================================
     auto * debug_container = &debug_data_.unsafe_targets.objects;
-    if (unsafe_info.lane_position == CollisionInterval::LanePosition::FIRST) {
-      collision_at_first_lane = true;
-    } else {
-      collision_at_non_first_lane = true;
-    }
-    if (
-      is_over_1st_pass_judge_line &&
-      unsafe_info.lane_position == CollisionInterval::LanePosition::FIRST) {
-      const auto & decision_at_1st_pass_judge_opt =
-        object_info->decision_at_1st_pass_judge_line_passage();
-      if (!decision_at_1st_pass_judge_opt) {
-        too_late_detect_objects.emplace_back(
-          CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
+    if (is_over_pass_judge_line) {
+      const auto & decision_at_pass_judge_opt = object_info->decision_at_pass_judge_line_passage();
+      if (!decision_at_pass_judge_opt) {
+        too_late_detect_objects.emplace_back(object_info);
         debug_container = &debug_data_.too_late_detect_targets.objects;
       } else {
-        const auto & decision_at_1st_pass_judge = decision_at_1st_pass_judge_opt.value();
-        if (decision_at_1st_pass_judge.safe_type != CollisionKnowledge::SafeType::UNSAFE) {
-          misjudge_objects.emplace_back(
-            CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
+        const auto & decision_at_pass_judge = decision_at_pass_judge_opt.value();
+        if (decision_at_pass_judge.safe_type != CollisionKnowledge::SafeType::UNSAFE) {
+          misjudge_objects.emplace_back(object_info);
           debug_container = &debug_data_.misjudge_targets.objects;
         } else {
-          too_late_detect_objects.emplace_back(
-            CollisionStatus::BlameType::BLAME_AT_FIRST_PASS_JUDGE, object_info);
-          debug_container = &debug_data_.too_late_detect_targets.objects;
-        }
-      }
-    }
-    if (is_over_2nd_pass_judge_line && is_over_2nd_pass_judge_line.value()) {
-      const auto & decision_at_2nd_pass_judge_opt =
-        object_info->decision_at_2nd_pass_judge_line_passage();
-      if (!decision_at_2nd_pass_judge_opt) {
-        too_late_detect_objects.emplace_back(
-          CollisionStatus::BlameType::BLAME_AT_SECOND_PASS_JUDGE, object_info);
-        debug_container = &debug_data_.too_late_detect_targets.objects;
-      } else {
-        const auto & decision_at_2nd_pass_judge = decision_at_2nd_pass_judge_opt.value();
-        if (decision_at_2nd_pass_judge.safe_type != CollisionKnowledge::SafeType::UNSAFE) {
-          misjudge_objects.emplace_back(
-            CollisionStatus::BlameType::BLAME_AT_SECOND_PASS_JUDGE, object_info);
-          debug_container = &debug_data_.misjudge_targets.objects;
-        } else {
-          too_late_detect_objects.emplace_back(
-            CollisionStatus::BlameType::BLAME_AT_SECOND_PASS_JUDGE, object_info);
+          too_late_detect_objects.emplace_back(object_info);
           debug_container = &debug_data_.too_late_detect_targets.objects;
         }
       }
     }
     debug_container->emplace_back(object_info->predicted_object());
   }
-  if (collision_at_first_lane) {
-    return {true, CollisionInterval::FIRST, too_late_detect_objects, misjudge_objects};
-  } else if (collision_at_non_first_lane) {
-    return {true, CollisionInterval::ELSE, too_late_detect_objects, misjudge_objects};
-  }
-  return {false, CollisionInterval::ELSE, too_late_detect_objects, misjudge_objects};
+  return {collision_detected, too_late_detect_objects, misjudge_objects};
 }
 
 std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
@@ -825,7 +689,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 {
   const double detection_area_angle_thr = planner_param_.common.attention_area_angle_threshold;
   const bool consider_wrong_direction_vehicle =
-    planner_param_.common.attention_area_angle_threshold;
+    planner_param_.collision_detection.consider_wrong_direction_vehicle;
   const double dist_margin = planner_param_.common.attention_area_margin;
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
@@ -833,7 +697,8 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
     if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
       continue;
     }
-    const double ll_angle = lanelet::utils::getLaneletAngle(ll, pose.position);
+    const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      ll, autoware::experimental::lanelet2_utils::from_ros(pose.position).basicPoint());
     const double pose_angle = tf2::getYaw(pose.orientation);
     const double angle_diff = autoware_utils::normalize_radian(ll_angle - pose_angle, -M_PI);
     if (consider_wrong_direction_vehicle) {
@@ -894,17 +759,14 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
   // spatiotemporal profile, which is judged as SAFE because that profile does not collide
   // with the predicted paths of objects.
   //
-  // if second_attention_lane exists, second_attention_stopline_idx is used. if not,
   // max(occlusion_stopline_idx, first_attention_stopline_idx) is used because
   // occlusion_stopline_idx varies depending on the peeking offset parameter
   // ==========================================================================================
-  const auto second_attention_stopline_idx = intersection_stoplines.second_attention_stopline;
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline.value();
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto last_intersection_stopline_candidate_idx =
-    second_attention_stopline_idx ? second_attention_stopline_idx.value()
-                                  : std::max(occlusion_stopline_idx, first_attention_stopline_idx);
+    std::max(occlusion_stopline_idx, first_attention_stopline_idx);
 
   bool assigned_lane_found = false;
   // crop intersection part of the path, and set the reference velocity to intersection_velocity

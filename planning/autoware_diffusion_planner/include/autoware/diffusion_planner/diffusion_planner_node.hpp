@@ -23,7 +23,6 @@
 
 #include <Eigen/Dense>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/route_handler/route_handler.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
@@ -85,7 +84,6 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
-using autoware::route_handler::RouteHandler;
 using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
@@ -116,14 +114,13 @@ struct DiffusionPlannerParams
   bool update_traffic_light_group_info;
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
-  bool use_route_handler;
   int batch_size;
   std::vector<double> temperature_list;
   int64_t velocity_smoothing_window;
 };
 struct DiffusionPlannerDebugParams
 {
-  bool publish_debug_route{false};
+  bool publish_debug_route{true};
   bool publish_debug_map{false};
 };
 
@@ -156,7 +153,7 @@ struct DiffusionPlannerDebugParams
  * - do_inference: Run inference on input data and return predictions.
  * - on_parameter: Callback for dynamic parameter updates.
  * - create_input_data: Prepare input data for inference.
- * - get_ego_centric_agent_data: Extract ego-centric agent data from tracked objects.
+ * - get_ego_centric_neighbor_agent_data: Extract ego-centric agent data from tracked objects.
  * - create_trajectory: Convert predictions to a trajectory in map coordinates.
  * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
  *
@@ -248,9 +245,8 @@ private:
   InputDataMap create_input_data();
 
   // preprocessing
-  std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
   Eigen::Matrix4d ego_to_map_transform_;
-  AgentData get_ego_centric_agent_data(
+  AgentData get_ego_centric_neighbor_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
@@ -259,14 +255,6 @@ private:
    * @return Vector replicated for the configured batch size.
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
-
-  /**
-   * @brief Select route segment indices based on the route handler.
-   * @param ego_kinematic_state The current state of the ego vehicle.
-   * @return Vector of selected route segment indices.
-   */
-  std::vector<int64_t> select_route_segment_indices_by_route_handler(
-    const nav_msgs::msg::Odometry & ego_kinematic_state) const;
 
   // ego history for ego_agent_past
   std::deque<Pose> ego_history_;
@@ -294,6 +282,7 @@ private:
 
   // Model input data
   std::optional<AgentData> agent_data_{std::nullopt};
+  std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;

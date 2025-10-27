@@ -66,6 +66,8 @@ enum class ObjectInfo {
   INVALID_SHIFT_LINE,
   // others
   AMBIGUOUS_STOPPED_VEHICLE,
+  PARKING_VIOLATION_VEHICLE,
+  IS_ADJACENT_LANE_STOP_VEHICLE,
 };
 
 struct ObjectParameter
@@ -112,6 +114,12 @@ struct AvoidanceParameters
 
   // enable avoidance for all parking vehicle
   std::string policy_ambiguous_vehicle{"ignore"};
+
+  // enable avoidance for parking violation vehicle
+  std::string policy_parking_violation_vehicle{"ignore"};
+
+  // enable avoidance for adjacent lane stop vehicle
+  std::string policy_adjacent_lane_stop_vehicle{"auto"};
 
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
@@ -425,10 +433,6 @@ struct ObjectData  // avoidance target
   // envelope polygon centroid
   Point2d centroid{};
 
-  // Adds extra margin for objects near highly curved sections of the path
-  // to prevent the vehicle's front from getting too close to obstacles.
-  double curvature_based_margin{0.0};
-
   // lateral distance from overhang to the road shoulder
   double to_road_shoulder_distance{0.0};
 
@@ -456,11 +460,17 @@ struct ObjectData  // avoidance target
   // is within intersection area
   bool is_within_intersection{false};
 
+  // is parked vehicle on parking violation area
+  bool is_parking_violation{false};
+
   // is parked vehicle on road shoulder
   bool is_parked{false};
 
   // is driving on ego current lane
   bool is_on_ego_lane{false};
+
+  // is driving on adjacent lane
+  bool is_adjacent_lane_stop_vehicle{false};
 
   // is ambiguous stopped vehicle.
   bool is_ambiguous{false};
@@ -561,9 +571,6 @@ struct AvoidancePlanningData
   // If the point is behind ego_pose, the value is negative.
   std::vector<double> arclength_from_ego;
 
-  // Lateral distance from the vehicle's front corner to the path centerline at each path point.
-  std::vector<double> front_corner_offsets;
-
   // current driving lanelet
   lanelet::ConstLanelets current_lanelets;
   lanelet::ConstLanelets extend_lanelets;
@@ -640,7 +647,6 @@ struct AvoidancePlanningData
     reference_path_rough = PathWithLaneId();
     ego_closest_path_index = 0;
     arclength_from_ego.clear();
-    front_corner_offsets.clear();
     current_lanelets.clear();
     extend_lanelets.clear();
     candidate_path = ShiftedPath();

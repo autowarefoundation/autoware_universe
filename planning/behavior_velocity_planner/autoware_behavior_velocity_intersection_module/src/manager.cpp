@@ -64,8 +64,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
     ip.common.max_jerk = get_or_declare_parameter<double>(node, ns + ".common.max_jerk");
     ip.common.delay_response_time =
       get_or_declare_parameter<double>(node, ns + ".common.delay_response_time");
-    ip.common.enable_pass_judge_before_default_stopline = get_or_declare_parameter<bool>(
-      node, ns + ".common.enable_pass_judge_before_default_stopline");
   }
 
   // stuck
@@ -268,14 +266,6 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       node, ns + ".occlusion.attention_lane_crop_curvature_threshold");
     ip.occlusion.attention_lane_curvature_calculation_ds = get_or_declare_parameter<double>(
       node, ns + ".occlusion.attention_lane_curvature_calculation_ds");
-
-    // creep_during_peeking
-    {
-      ip.occlusion.creep_during_peeking.enable =
-        get_or_declare_parameter<bool>(node, ns + ".occlusion.creep_during_peeking.enable");
-      ip.occlusion.creep_during_peeking.creep_velocity = get_or_declare_parameter<double>(
-        node, ns + ".occlusion.creep_during_peeking.creep_velocity");
-    }
 
     ip.occlusion.peeking_offset =
       get_or_declare_parameter<double>(node, ns + ".occlusion.peeking_offset");

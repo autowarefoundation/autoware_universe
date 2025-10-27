@@ -107,7 +107,7 @@ private:
     const std::vector<TrajectoryPoint> & decimated_traj_points, const VehicleInfo & vehicle_info,
     const Pose & current_ego_pose, const double lat_margin,
     const bool enable_to_consider_current_pose, const double time_to_convergence,
-    const double decimate_trajectory_step_length) const;
+    const double decimate_trajectory_step_length, const bool is_from_front_bumper) const;
 
   std::optional<Point> plan_stop(
     const std::shared_ptr<const PlannerData> planner_data,
@@ -119,6 +119,7 @@ private:
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const std::vector<Polygon2d> & decimated_traj_polygons,
+    const std::vector<Polygon2d> & decimated_traj_polygons_no_margin,
     const RelevantLaneletData & lanelet_data, const rclcpp::Time & current_time,
     const double dist_to_bumper);
 
@@ -129,12 +130,25 @@ private:
   bool has_minimum_detection_duration(
     const std::string & object_id, const rclcpp::Time & current_time) const;
 
+  void update_stopped_object_tracking(
+    const std::string & object_id, const geometry_msgs::msg::Point & current_position,
+    const double current_velocity, const rclcpp::Time & current_time);
+
+  void update_ego_reached_virtual_wall(
+    const std::string & object_id, const geometry_msgs::msg::Point & virtual_wall_position,
+    const geometry_msgs::msg::Pose & ego_pose, const rclcpp::Time & current_time);
+
+  bool is_object_stopped_for_duration_after_ego_arrival(
+    const std::string & object_id, const rclcpp::Time & current_time,
+    const geometry_msgs::msg::Pose & ego_pose, const double duration_threshold) const;
+
   std::optional<StopObstacle> pick_stop_obstacle_from_predicted_object(
     const std::shared_ptr<const PlannerData> planner_data,
     const std::shared_ptr<PlannerData::Object> object,
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const std::vector<Polygon2d> & decimated_traj_polygons,
+    const std::vector<Polygon2d> & decimated_traj_polygons_no_margin,
     const RelevantLaneletData & lanelet_data, const rclcpp::Time & current_time,
     const double dist_to_bumper);
 

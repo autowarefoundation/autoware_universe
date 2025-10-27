@@ -254,6 +254,40 @@ bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
 
+/**
+ * @brief Check if ego vehicle is on modified goal position
+ * @param current_pose Current ego pose
+ * @param modified_goal Modified goal candidate
+ * @param parameters Goal planner parameters for threshold
+ * @return true if ego is within arrival distance of modified goal
+ */
+bool is_on_modified_goal(
+  const Pose & current_pose, const GoalCandidate & modified_goal,
+  const GoalPlannerParameters & parameters);
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
+  const GoalPlannerParameters & parameters);
+
+struct RegenerationCheckResult
+{
+  bool should_regenerate{false};  ///< True if path candidates should be regenerated
+  std::string reason;  ///< Reason for regeneration decision (empty if no regeneration needed)
+
+  explicit operator bool() const { return should_regenerate; }
+};
+/**
+ * @brief Check if path candidates should be regenerated
+ * @param ego_pose Current ego vehicle pose
+ * @param current_upstream Current upstream module output
+ * @param original_upstream Original upstream module output when candidates were generated
+ * @param lane_change_detected Whether lane change state has changed
+ * @return RegenerationCheckResult with decision and reason
+ */
+RegenerationCheckResult should_regenerate_path_candidates(
+  const Pose & ego_pose, const BehaviorModuleOutput & current_upstream,
+  const BehaviorModuleOutput & original_upstream, const bool lane_change_detected);
+
 bool hasPreviousModulePathShapeChanged(
   const BehaviorModuleOutput & upstream_module_output,
   const BehaviorModuleOutput & last_upstream_module_output);
