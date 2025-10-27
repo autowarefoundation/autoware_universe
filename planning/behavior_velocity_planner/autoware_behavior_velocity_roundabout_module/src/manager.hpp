@@ -54,11 +54,11 @@ public:
 private:
   RoundaboutModule::PlannerParam roundabout_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
   /* * @brief Get the lanelets that are associated with the roundabout entry lanelets.
    * This function retrieves the lanelets that are associated with the roundabout entry lanelets.
@@ -69,16 +69,14 @@ private:
    */
   std::set<lanelet::Id> getAssociativeRoundaboutEntryLanelets(
     const lanelet::ConstLanelet & lane, const lanelet::autoware::Roundabout & roundabout,
-    const lanelet::routing::RoutingGraphPtr routing_graph);
+    const lanelet::routing::RoutingGraphPtr routing_graph, const PlannerData & planner_data);
   bool isRegisteredModule(const lanelet::ConstLanelet & entry_lanelet) const;
 
   /* called from SceneModuleInterfaceWithRTC::plan */
   void sendRTC(const Time & stamp) override;
   void setActivation() override;
-  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
   /* called from SceneModuleInterface::updateSceneModuleInstances */
-  void deleteExpiredModules(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void deleteExpiredModules(const Trajectory & path, const PlannerData & planner_data) override;
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };

@@ -112,13 +112,16 @@ RoundaboutModuleManager::RoundaboutModuleManager(rclcpp::Node & node)
 }
 
 void RoundaboutModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
 {
-  const auto routing_graph = planner_data_->route_handler_->getRoutingGraphPtr();
-  const auto lanelet_map = planner_data_->route_handler_->getLaneletMapPtr();
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
+  const auto routing_graph = planner_data.route_handler_->getRoutingGraphPtr();
+  const auto lanelet_map = planner_data.route_handler_->getLaneletMapPtr();
 
   const auto roundabout_reg_elem_map = planning_utils::getRegElemMapOnPath<Roundabout>(
-    path, lanelet_map, planner_data_->current_odometry->pose);
+    path_msg, lanelet_map, planner_data.current_odometry->pose);
 
   for (const auto & roundabout : roundabout_reg_elem_map) {
     const auto module_id = roundabout.second.id();
@@ -131,28 +134,31 @@ void RoundaboutModuleManager::launchNewModules(
       continue;
     }
 
-    const auto associative_ids =
-      getAssociativeRoundaboutEntryLanelets(roundabout.second, *roundabout.first, routing_graph);
+    const auto associative_ids = getAssociativeRoundaboutEntryLanelets(
+      roundabout.second, *roundabout.first, routing_graph, planner_data);
 
     const auto new_module = std::make_shared<RoundaboutModule>(
-      module_id, roundabout.first, roundabout.second.id(), planner_data_, roundabout_param_,
-      associative_ids, node_, logger_.get_child("roundabout_module"), clock_, time_keeper_,
+      module_id, roundabout.first, roundabout.second.id(), roundabout_param_, associative_ids,
+      node_, logger_.get_child("roundabout_module"), clock_, time_keeper_,
       planning_factor_interface_);
     generate_uuid(module_id);
     const UUID uuid = getUUID(new_module->getModuleId());
     rtc_interface_.updateCooperateStatus(
       uuid, true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
       std::numeric_limits<double>::lowest(), clock_->now());
-    registerModule(new_module);
+    registerModule(new_module, planner_data);
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 RoundaboutModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   const auto lane_set = planning_utils::getLaneletsOnPath(
-    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
+    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return [lane_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     const auto roundabout_module = std::dynamic_pointer_cast<RoundaboutModule>(scene_module);
@@ -168,7 +174,7 @@ RoundaboutModuleManager::getModuleExpiredFunction(
 
 std::set<lanelet::Id> RoundaboutModuleManager::getAssociativeRoundaboutEntryLanelets(
   const lanelet::ConstLanelet & lane, const lanelet::autoware::Roundabout & roundabout,
-  const lanelet::routing::RoutingGraphPtr routing_graph)
+  const lanelet::routing::RoutingGraphPtr routing_graph, const PlannerData & planner_data)
 {
   std::set<lanelet::Id> associative_lanelets;
   associative_lanelets.insert(lane.id());
@@ -185,9 +191,9 @@ std::set<lanelet::Id> RoundaboutModuleManager::getAssociativeRoundaboutEntryLane
   }
   // get adjacent entry lanelets
   const auto right_lanelets =
-    planner_data_->route_handler_->getAllRightSharedLinestringLanelets(lane, false);
+    planner_data.route_handler_->getAllRightSharedLinestringLanelets(lane, false);
   const auto left_lanelets =
-    planner_data_->route_handler_->getAllLeftSharedLinestringLanelets(lane, false);
+    planner_data.route_handler_->getAllLeftSharedLinestringLanelets(lane, false);
 
   associative_lanelets.insert(lane.id());
   for (const auto & right_lanelet : right_lanelets) {
@@ -242,12 +248,6 @@ void RoundaboutModuleManager::sendRTC(const Time & stamp)
   decision_state_pub_->publish(decision_type);
 }
 
-void RoundaboutModuleManager::modifyPathVelocity(
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
-{
-  SceneModuleManagerInterfaceWithRTC::modifyPathVelocity(path);
-}
-
 void RoundaboutModuleManager::setActivation()
 {
   for (const auto & scene_module : scene_modules_) {
@@ -258,9 +258,9 @@ void RoundaboutModuleManager::setActivation()
 }
 
 void RoundaboutModuleManager::deleteExpiredModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
-  const auto isModuleExpired = getModuleExpiredFunction(path);
+  const auto isModuleExpired = getModuleExpiredFunction(path, planner_data);
 
   auto itr = scene_modules_.begin();
   while (itr != scene_modules_.end()) {
