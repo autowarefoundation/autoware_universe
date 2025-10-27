@@ -24,10 +24,12 @@
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
@@ -72,6 +74,7 @@ private:
   // TODO(Maxime): move to the module interface
   rclcpp::Publisher<universe_utils::ProcessingTimeDetail>::SharedPtr timekeeper_publisher_;
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_trajectory_publisher_;
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch_{};
   std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
   std::optional<diagnostic_updater::Updater> diagnostic_updater_ = std::nullopt;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
