@@ -47,7 +47,7 @@ struct FuturePosition
 std::vector<FuturePosition> calculate_future_profile(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const double minimum_default_velocity, const double time_to_restart,
-  const std::shared_ptr<const PlannerData> & planner_data, const lanelet::Id lane_id);
+  const PlannerData & planner_data, const lanelet::Id lane_id);
 
 /**
  * @brief compute the time interval in which the `future_positions` enter the `line1` and exit the

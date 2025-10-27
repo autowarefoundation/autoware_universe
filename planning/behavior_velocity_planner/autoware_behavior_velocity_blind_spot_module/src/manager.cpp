@@ -40,11 +40,14 @@ BlindSpotModuleManager::BlindSpotModuleManager(rclcpp::Node & node)
 }
 
 void BlindSpotModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   for (const auto & ll : planning_utils::getLaneletsOnPath(
-         path, planner_data_->route_handler_->getLaneletMapPtr(),
-         planner_data_->current_odometry->pose)) {
+         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
+         planner_data.current_odometry->pose)) {
     const auto lane_id = ll.id();
     const auto module_id = lane_id;
 
@@ -62,24 +65,27 @@ void BlindSpotModuleManager::launchNewModules(
 
     registerModule(
       std::make_shared<BlindSpotModule>(
-        module_id, lane_id, turn_direction, planner_data_, planner_param_,
-        logger_.get_child("blind_spot_module"), clock_, time_keeper_, planning_factor_interface_,
-        decision_state_pub_));
+        module_id, lane_id, turn_direction, planner_param_, logger_.get_child("blind_spot_module"),
+        clock_, time_keeper_, planning_factor_interface_, decision_state_pub_),
+      planner_data);
     generate_uuid(module_id);
     updateRTCStatus(
       getUUID(module_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-      path.header.stamp);
+      stamp);
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 BlindSpotModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
-  const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
-    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
 
-  return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+  const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
+    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+
+  return [&lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
   };
 }
