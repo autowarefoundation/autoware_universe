@@ -15,11 +15,11 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 
+#include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <autoware/point_types/types.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
