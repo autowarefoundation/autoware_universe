@@ -332,7 +332,8 @@ Trajectory get_trajectory_from_prediction_matrix(
 
     // stopping logic
     if (
-      enable_force_stop && trajectory.points[row].longitudinal_velocity_mps <= threshold_velocity) {
+      enable_force_stop &&
+      std::abs(trajectory.points[row].longitudinal_velocity_mps) < threshold_velocity) {
       force_stop = true;
     }
     if (row > 0 && force_stop) {
