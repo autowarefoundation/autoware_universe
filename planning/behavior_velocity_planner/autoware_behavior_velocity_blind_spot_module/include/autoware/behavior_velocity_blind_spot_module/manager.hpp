@@ -48,11 +48,11 @@ public:
 private:
   PlannerParam planner_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };
