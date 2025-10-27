@@ -194,10 +194,17 @@
               "minimum": 0,
               "description": "Maximum fidelity weight at high speeds [dimensionless]"
             },
-            "constrain_last_point": {
-              "type": "boolean",
-              "default": false,
-              "description": "Fix last point as hard constraint (if false, only first point fixed)"
+            "num_constrained_points_start": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Number of points from the start of the trajectory to constrain as hard constraints (preserves initial state)"
+            },
+            "num_constrained_points_end": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Number of points from the end of the trajectory to constrain as hard constraints"
             }
           },
           "required": [
@@ -215,7 +222,8 @@
             "sigmoid_sharpness",
             "min_fidelity_weight",
             "max_fidelity_weight",
-            "constrain_last_point"
+            "num_constrained_points_start",
+            "num_constrained_points_end"
           ]
         },
         "trajectory_velocity_optimizer": {

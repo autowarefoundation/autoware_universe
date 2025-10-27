@@ -76,14 +76,19 @@ void TrajectoryQPSmoother::set_up_params()
     get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.min_fidelity_weight");
   qp_params_.max_fidelity_weight =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.max_fidelity_weight");
-  qp_params_.constrain_last_point =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.constrain_last_point");
+
+  // Point constraint parameters
+  qp_params_.num_constrained_points_start =
+    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.num_constrained_points_start");
+  qp_params_.num_constrained_points_end =
+    get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.num_constrained_points_end");
 
   // Log configuration at startup
   RCLCPP_DEBUG(
-    node_ptr->get_logger(), "QP Smoother: velocity-based fidelity = %s, constrain_last_point = %s",
+    node_ptr->get_logger(),
+    "QP Smoother: velocity-based fidelity = %s, constrained points = [start: %d, end: %d]",
     qp_params_.use_velocity_based_fidelity ? "ENABLED" : "DISABLED",
-    qp_params_.constrain_last_point ? "true" : "false");
+    qp_params_.num_constrained_points_start, qp_params_.num_constrained_points_end);
 
   if (qp_params_.use_velocity_based_fidelity) {
     RCLCPP_DEBUG(
@@ -126,8 +131,14 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
     parameters, "trajectory_qp_smoother.min_fidelity_weight", qp_params_.min_fidelity_weight);
   update_param<double>(
     parameters, "trajectory_qp_smoother.max_fidelity_weight", qp_params_.max_fidelity_weight);
-  update_param<bool>(
-    parameters, "trajectory_qp_smoother.constrain_last_point", qp_params_.constrain_last_point);
+
+  // Point constraint parameter updates
+  update_param<int>(
+    parameters, "trajectory_qp_smoother.num_constrained_points_start",
+    qp_params_.num_constrained_points_start);
+  update_param<int>(
+    parameters, "trajectory_qp_smoother.num_constrained_points_end",
+    qp_params_.num_constrained_points_end);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
@@ -145,11 +156,18 @@ void TrajectoryQPSmoother::optimize_trajectory(
     return;
   }
 
-  constexpr size_t min_points_for_optimization = 5;
+  // Minimum points needed: base requirement (5) or total constrained points + 1 free point
+  constexpr size_t base_min_points = 5;
+  const size_t total_constrained_points =
+    qp_params_.num_constrained_points_start + qp_params_.num_constrained_points_end;
+  const size_t min_points_for_optimization =
+    std::max(base_min_points, total_constrained_points + 1);
+
   if (traj_points.size() < min_points_for_optimization) {
     RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "QP Smoother: Trajectory too short (< 5 points), skipping optimization");
+      "QP Smoother: Trajectory too short (%zu points < %zu required), skipping optimization",
+      traj_points.size(), min_points_for_optimization);
     return;
   }
 
@@ -354,33 +372,53 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     f_vec[y_i] = -w_i * y_orig;
   }
 
-  // Constraints: fix first point (always), last point (conditional)
-  const int num_constraints = qp_params_.constrain_last_point ? 4 : 2;
+  const int num_points_start = std::max(0, qp_params_.num_constrained_points_start);
+  const int num_points_end = std::max(0, qp_params_.num_constrained_points_end);
+
+  // Constraints: fix points from start and end
+  // Each point has 2 constraints (x, y)
+  const int num_constraints = 2 * (num_points_start + num_points_end);
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
 
-  // Fix first point (x, y) - ALWAYS constrained
-  A(0, 0) = 1.0;
-  l_vec[0] = input_trajectory[0].pose.position.x;
-  u_vec[0] = input_trajectory[0].pose.position.x;
+  int constraint_idx = 0;
 
-  A(1, 1) = 1.0;
-  l_vec[1] = input_trajectory[0].pose.position.y;
-  u_vec[1] = input_trajectory[0].pose.position.y;
+  // Fix first num_points_start points
+  for (int i = 0; i < num_points_start; ++i) {
+    const int x_idx = 2 * i;
+    const int y_idx = 2 * i + 1;
 
-  // Fix last point (x, y) - CONDITIONAL on constrain_last_point parameter
-  if (qp_params_.constrain_last_point) {
-    const int last_x_idx = 2 * (N - 1);
-    const int last_y_idx = 2 * (N - 1) + 1;
+    // Constrain x coordinate
+    A(constraint_idx, x_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[i].pose.position.x;
+    u_vec[constraint_idx] = input_trajectory[i].pose.position.x;
+    constraint_idx++;
 
-    A(2, last_x_idx) = 1.0;
-    l_vec[2] = input_trajectory[N - 1].pose.position.x;
-    u_vec[2] = input_trajectory[N - 1].pose.position.x;
+    // Constrain y coordinate
+    A(constraint_idx, y_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[i].pose.position.y;
+    u_vec[constraint_idx] = input_trajectory[i].pose.position.y;
+    constraint_idx++;
+  }
 
-    A(3, last_y_idx) = 1.0;
-    l_vec[3] = input_trajectory[N - 1].pose.position.y;
-    u_vec[3] = input_trajectory[N - 1].pose.position.y;
+  // Fix last num_points_end points
+  for (int i = 0; i < num_points_end; ++i) {
+    const int point_idx = N - num_points_end + i;
+    const int x_idx = 2 * point_idx;
+    const int y_idx = 2 * point_idx + 1;
+
+    // Constrain x coordinate
+    A(constraint_idx, x_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    constraint_idx++;
+
+    // Constrain y coordinate
+    A(constraint_idx, y_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    constraint_idx++;
   }
 }
 
