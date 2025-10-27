@@ -301,54 +301,10 @@ bool isWithinIntersection(
   }
   const auto & polygon = *polygon_opt;
 
-  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) == "right") {
-    return boost::geometry::within(
-      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-        .basicPoint(),
-      lanelet::utils::to2D(polygon.basicPolygon()));
-  }
-
-  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) == "left") {
-    return boost::geometry::within(
-      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-        .basicPoint(),
-      lanelet::utils::to2D(polygon.basicPolygon()));
-  }
-
-  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) != "straight") {
-    return false;
-  }
-
-  lanelet::ConstLanelets prev_lanes;
-  if (!route_handler->getPreviousLaneletsWithinRoute(object.overhang_lanelet, &prev_lanes)) {
-    return false;
-  }
-
-  if (isOnRight(object)) {
-    for (const auto & prev_lane : prev_lanes) {
-      for (const auto & sibling_lane : route_handler->getNextLanelets(prev_lane)) {
-        if (std::string(sibling_lane.attributeOr("turn_direction", "else")) == "right") {
-          return boost::geometry::within(
-            lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-              .basicPoint(),
-            lanelet::utils::to2D(polygon.basicPolygon()));
-        }
-      }
-    }
-  } else {
-    for (const auto & prev_lane : prev_lanes) {
-      for (const auto & sibling_lane : route_handler->getNextLanelets(prev_lane)) {
-        if (std::string(sibling_lane.attributeOr("turn_direction", "else")) == "left") {
-          return boost::geometry::within(
-            lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-              .basicPoint(),
-            lanelet::utils::to2D(polygon.basicPolygon()));
-        }
-      }
-    }
-  }
-
-  return false;
+  return boost::geometry::within(
+    lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+      .basicPoint(),
+    lanelet::utils::to2D(polygon.basicPolygon()));
 }
 
 bool isWithinFreespace(
