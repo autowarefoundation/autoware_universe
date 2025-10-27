@@ -132,6 +132,7 @@ void DiffusionPlanner::set_up_params()
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
   params_.velocity_smoothing_window =
     this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
+  params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.0);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -163,6 +164,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<std::vector<double>>(parameters, "temperature", temp_params.temperature_list);
     update_param<int64_t>(
       parameters, "velocity_smoothing_window", temp_params.velocity_smoothing_window);
+    update_param<double>(parameters, "stopping_threshold", temp_params.stopping_threshold);
     params_ = temp_params;
   }
 
@@ -400,6 +402,8 @@ InputDataMap DiffusionPlanner::create_input_data()
     return {};
   }
 
+  ego_kinematic_state_ = *ego_kinematic_state;
+
   if (params_.update_traffic_light_group_info) {
     const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
     preprocess::process_traffic_signals(
@@ -563,9 +567,14 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 {
   CandidateTrajectories candidate_trajectories;
 
+  // when ego is moving, enable force stop
+  const bool enable_force_stop =
+    ego_kinematic_state_.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
+
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
-      predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window);
+      predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
+      enable_force_stop, params_.stopping_threshold);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
