@@ -66,8 +66,8 @@ struct StopPoseWithObjectUuids
 struct DebugData
 {
   DebugData() = default;
-  explicit DebugData(const std::shared_ptr<const PlannerData> planner_data)
-  : base_link2front(planner_data->vehicle_info_.max_longitudinal_offset_m)
+  explicit DebugData(const PlannerData & planner_data)
+  : base_link2front(planner_data.vehicle_info_.max_longitudinal_offset_m)
   {
   }
 
