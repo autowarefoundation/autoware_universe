@@ -20,6 +20,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
@@ -35,6 +36,30 @@
 
 namespace autoware::behavior_velocity_planner
 {
+namespace
+{
+PathWithLaneId fromTrajectory(
+  const Trajectory & path, std::vector<geometry_msgs::msg::Point> left_bound,
+  std::vector<geometry_msgs::msg::Point> right_bound)
+{
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+  path_msg.left_bound = left_bound;
+  path_msg.right_bound = right_bound;
+  return path_msg;
+}
+
+void toTrajectory(const PathWithLaneId & path_msg, Trajectory & path, rclcpp::Logger & logger_)
+{
+  const auto path_opt = experimental::trajectory::pretty_build(path_msg.points);
+  if (!path_opt) {
+    RCLCPP_ERROR(logger_, "Failed to build trajectory");
+    return;
+  }
+  path = *path_opt;
+}
+}  // namespace
+
 namespace bg = boost::geometry;
 
 NoStoppingAreaModule::NoStoppingAreaModule(
@@ -55,32 +80,34 @@ NoStoppingAreaModule::NoStoppingAreaModule(
   state_machine_.setMarginTime(planner_param_.state_clear_time);
 }
 
-bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
+bool NoStoppingAreaModule::modifyPathVelocity(
+  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
+  auto path_msg = fromTrajectory(path, left_bound, right_bound);
+
   // Store original path
-  const auto original_path = *path;
-  const auto & predicted_obj_arr_ptr = planner_data_->predicted_objects;
-  const auto & current_pose = planner_data_->current_odometry;
-  if (path->points.size() <= 2) {
-    return true;
-  }
+  const auto original_path = path_msg;
+  const auto & predicted_obj_arr_ptr = planner_data.predicted_objects;
+  const auto & current_pose = planner_data.current_odometry;
+
   // Reset data
   debug_data_ = no_stopping_area::DebugData();
-  debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
 
-  const no_stopping_area::EgoData ego_data(*planner_data_);
+  const no_stopping_area::EgoData ego_data(planner_data);
 
   // Get stop line geometry
   const auto stop_line = no_stopping_area::get_stop_line_geometry2d(
     original_path, no_stopping_area_reg_elem_, planner_param_.stop_line_margin,
-    planner_data_->vehicle_info_.vehicle_width_m);
+    planner_data.vehicle_info_.vehicle_width_m);
   if (!stop_line) {
     setSafe(true);
     return true;
   }
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line.value(), planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m, {lane_id_});
+    planner_data.vehicle_info_.max_longitudinal_offset_m, {lane_id_});
   if (!stop_point) {
     setSafe(true);
     return true;
@@ -96,19 +123,19 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
     setSafe(true);
     return true;
   }
-  const auto & vi = planner_data_->vehicle_info_;
+  const auto & vi = planner_data.vehicle_info_;
   const double margin = planner_param_.stop_line_margin;
   const double ego_space_in_front_of_stuck_vehicle =
     margin + vi.vehicle_length_m + planner_param_.stuck_vehicle_front_margin;
   const Polygon2d stuck_vehicle_detect_area =
     no_stopping_area::generate_ego_no_stopping_area_lane_polygon(
-      *path, current_pose->pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stuck_vehicle,
+      path_msg, current_pose->pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stuck_vehicle,
       planner_param_.detection_area_length, planner_param_.path_expand_width, logger_, *clock_);
   const double ego_space_in_front_of_stop_line =
     margin + planner_param_.stop_margin + vi.rear_overhang_m;
   const Polygon2d stop_line_detect_area =
     no_stopping_area::generate_ego_no_stopping_area_lane_polygon(
-      *path, current_pose->pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stop_line,
+      path_msg, current_pose->pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stop_line,
       planner_param_.detection_area_length, planner_param_.path_expand_width, logger_, *clock_);
   if (stuck_vehicle_detect_area.outer().empty() && stop_line_detect_area.outer().empty()) {
     setSafe(true);
@@ -122,7 +149,7 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Find stop line in no stopping area
   const bool is_entry_prohibited_by_stop_line =
     no_stopping_area::check_stop_lines_in_no_stopping_area(
-      *path, stop_line_detect_area, debug_data_);
+      path_msg, stop_line_detect_area, debug_data_);
   const bool is_entry_prohibited =
     is_entry_prohibited_by_stuck_vehicle || is_entry_prohibited_by_stop_line;
   if (!no_stopping_area::is_stoppable(
@@ -139,14 +166,14 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   setSafe(state_machine_.getState() != StateMachine::State::STOP);
   if (!isActivated()) {
     // ----------------stop reason and stop point--------------------------
-    no_stopping_area::insert_stop_point(*path, *stop_point);
+    no_stopping_area::insert_stop_point(path_msg, *stop_point);
     // For virtual wall
     debug_data_.stop_poses.push_back(stop_pose);
 
     // Create StopReason
     {
       planning_factor_interface_->add(
-        path->points, planner_data_->current_odometry->pose, stop_point->second,
+        path_msg.points, planner_data.current_odometry->pose, stop_point->second,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "");
@@ -157,6 +184,8 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
     pass_judge_.is_stoppable = true;
     pass_judge_.pass_judged = false;
   }
+
+  toTrajectory(path_msg, path, logger_);
   return true;
 }
 
