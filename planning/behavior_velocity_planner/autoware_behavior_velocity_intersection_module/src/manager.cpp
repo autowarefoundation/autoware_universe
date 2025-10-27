@@ -394,7 +394,7 @@ IntersectionModuleManager::getModuleExpiredFunction(
   const auto lane_set = planning_utils::getLaneletsOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [&lane_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
+  return [lane_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     const auto intersection_module = std::dynamic_pointer_cast<IntersectionModule>(scene_module);
     const auto & associative_ids = intersection_module->getAssociativeIds();
     for (const auto & lane : lane_set) {

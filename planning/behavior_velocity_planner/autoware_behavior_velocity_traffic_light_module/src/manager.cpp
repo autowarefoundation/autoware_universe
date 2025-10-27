@@ -150,7 +150,7 @@ TrafficLightModuleManager::getModuleExpiredFunction(
   const auto lanelet_id_set = planning_utils::getLaneletIdSetOnPath<TrafficLight>(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [this, &lanelet_id_set, &planner_data](
+  return [this, lanelet_id_set, planner_data](
            [[maybe_unused]] const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     for (const auto & id : lanelet_id_set) {
       if (getRegisteredAssociatedModule(id, planner_data)) {

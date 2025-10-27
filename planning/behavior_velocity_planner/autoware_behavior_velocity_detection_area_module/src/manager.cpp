@@ -99,7 +99,7 @@ DetectionAreaModuleManager::getModuleExpiredFunction(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return
-    [&detection_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
+    [detection_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
       return detection_area_id_set.count(scene_module->getModuleId()) == 0;
     };
 }
