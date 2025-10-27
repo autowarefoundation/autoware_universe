@@ -56,20 +56,20 @@ UnknownTracker::UnknownTracker(
       motion_model_.setMotionParams(q_stddev_x, q_stddev_y, q_stddev_vx, q_stddev_vy);
     }
 
-  // Set motion limits
-  motion_model_.setMotionLimits(
-    autoware_utils_math::kmph2mps(60), /* [m/s] maximum velocity, x */
-    autoware_utils_math::kmph2mps(60)  /* [m/s] maximum velocity, y */
-  );
+    // Set motion limits
+    motion_model_.setMotionLimits(
+      autoware_utils_math::kmph2mps(60), /* [m/s] maximum velocity, x */
+      autoware_utils_math::kmph2mps(60)  /* [m/s] maximum velocity, y */
+    );
 
-  // Set initial state
-  {
-    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double x = object.pose.position.x;
-    const double y = object.pose.position.y;
-    auto pose_cov = object.pose_covariance;
-    auto twist_cov = object.twist_covariance;
-    const double yaw = tf2::getYaw(object.pose.orientation);
+    // Set initial state
+    {
+      using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+      const double x = object.pose.position.x;
+      const double y = object.pose.position.y;
+      auto pose_cov = object.pose_covariance;
+      auto twist_cov = object.twist_covariance;
+      const double yaw = tf2::getYaw(object.pose.orientation);
 
       double vx = 0.0;
       double vy = 0.0;
@@ -96,16 +96,16 @@ UnknownTracker::UnknownTracker(
         pose_cov[XYZRPY_COV_IDX::Y_X] = pose_cov[XYZRPY_COV_IDX::X_Y];
       }
 
-    if (!object.kinematics.has_twist_covariance) {
-      constexpr double p0_stddev_vx = autoware_utils_math::kmph2mps(10);  // [m/s]
-      constexpr double p0_stddev_vy = autoware_utils_math::kmph2mps(10);  // [m/s]
-      const double p0_cov_vx = std::pow(p0_stddev_vx, 2.0);
-      const double p0_cov_vy = std::pow(p0_stddev_vy, 2.0);
-      twist_cov[XYZRPY_COV_IDX::X_X] = p0_cov_vx;
-      twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
-      twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
-      twist_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_vy;
-    }
+      if (!object.kinematics.has_twist_covariance) {
+        constexpr double p0_stddev_vx = autoware_utils_math::kmph2mps(10);  // [m/s]
+        constexpr double p0_stddev_vy = autoware_utils_math::kmph2mps(10);  // [m/s]
+        const double p0_cov_vx = std::pow(p0_stddev_vx, 2.0);
+        const double p0_cov_vy = std::pow(p0_stddev_vy, 2.0);
+        twist_cov[XYZRPY_COV_IDX::X_X] = p0_cov_vx;
+        twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
+        twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
+        twist_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_vy;
+      }
 
       // rotate twist covariance matrix, since it is in the vehicle coordinate system
       Eigen::MatrixXd twist_cov_rotate(2, 2);

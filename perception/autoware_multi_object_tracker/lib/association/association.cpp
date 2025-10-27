@@ -68,7 +68,8 @@ DataAssociation::DataAssociation(const AssociatorConfig & config)
   updateMaxSearchDistances();
 }
 
-void DataAssociation::setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
+void DataAssociation::setTimeKeeper(
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
 }

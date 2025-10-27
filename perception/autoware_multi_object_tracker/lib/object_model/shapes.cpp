@@ -133,9 +133,11 @@ double get2dGeneralizedIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
-  const auto target_polygon = autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   const double target_area = boost::geometry::area(target_polygon);
   if (source_area < MIN_AREA && target_area < MIN_AREA) return -1.0;
 
@@ -153,10 +155,12 @@ bool get2dPrecisionRecallGIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
   if (source_area < MIN_AREA) return false;
-  const auto target_polygon = autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   const double target_area = boost::geometry::area(target_polygon);
   if (target_area < MIN_AREA) return false;
 
