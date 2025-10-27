@@ -50,10 +50,11 @@ public:
 private:
   WalkwayModule::PlannerParam walkway_planner_param_{};
 
-  void launchNewModules(const PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const PathWithLaneId & path) override;
+    const Trajectory & path, const PlannerData & planner_data) override;
 };
 
 class WalkwayModulePlugin : public PluginWrapper<WalkwayModuleManager>

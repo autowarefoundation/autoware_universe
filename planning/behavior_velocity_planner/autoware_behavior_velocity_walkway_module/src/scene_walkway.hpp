@@ -50,7 +50,10 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -60,7 +63,8 @@ private:
 
   [[nodiscard]] std::pair<double, geometry_msgs::msg::Point> getStopLine(
     const PathWithLaneId & ego_path, bool & exist_stopline_in_map,
-    const geometry_msgs::msg::Point & first_path_point_on_walkway) const;
+    const geometry_msgs::msg::Point & first_path_point_on_walkway,
+    const PlannerData & planner_data) const;
 
   enum class State { APPROACH, STOP, SURPASSED };
 
