@@ -44,7 +44,10 @@ public:
    * @param path A pointer to the path containing points to be modified.
    * @return [bool] wether the path velocity was modified or not.
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   /**
    * @brief Create a visualization of debug markers.

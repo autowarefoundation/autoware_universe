@@ -69,7 +69,8 @@ private:
    *
    * @param path The path with lane ID information to determine module launch.
    */
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   /**
    * @brief Get a function to check module expiration.
@@ -81,7 +82,7 @@ private:
    * @return A function for checking module expiration.
    */
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+    const Trajectory & path, const PlannerData & planner_data) override;
 };
 
 /**
