@@ -22,8 +22,6 @@
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
 #include <functional>
 #include <memory>
 
@@ -44,11 +42,11 @@ public:
 private:
   NoStoppingAreaModule::PlannerParam planner_param_{};
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
 class NoStoppingAreaModulePlugin : public PluginWrapper<NoStoppingAreaModuleManager>
