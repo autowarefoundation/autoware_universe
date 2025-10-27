@@ -23,8 +23,6 @@
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
 #include <functional>
 #include <memory>
 #include <optional>
@@ -33,9 +31,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 class CrosswalkModuleManager : public SceneModuleManagerInterfaceWithRTC
 {
 public:
@@ -55,10 +50,11 @@ public:
 private:
   CrosswalkModule::PlannerParam crosswalk_planner_param_{};
 
-  void launchNewModules(const PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(const PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
 class CrosswalkModulePlugin : public PluginWrapper<CrosswalkModuleManager>
