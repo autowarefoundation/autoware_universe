@@ -39,10 +39,9 @@ namespace autoware::behavior_velocity_planner
 namespace bg = boost::geometry;
 
 MergeFromPrivateRoadModule::MergeFromPrivateRoadModule(
-  const int64_t module_id, const int64_t lane_id,
-  [[maybe_unused]] std::shared_ptr<const PlannerData> planner_data,
-  const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+  const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+  const std::set<lanelet::Id> & associative_ids, const rclcpp::Logger logger,
+  const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -80,26 +79,30 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   return std::nullopt;
 }
 
-bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
+bool MergeFromPrivateRoadModule::modifyPathVelocity(
+  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
+  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
+
   debug_data_ = DebugData();
 
-  const auto input_path = *path;
+  const auto input_path = path_msg;
 
   StateMachine::State current_state = state_machine_.getState();
   RCLCPP_DEBUG(
     logger_, "lane_id = %ld, state = %s", lane_id_, StateMachine::toString(current_state).c_str());
 
   /* get current pose */
-  geometry_msgs::msg::Pose current_pose = planner_data_->current_odometry->pose;
+  geometry_msgs::msg::Pose current_pose = planner_data.current_odometry->pose;
 
   /* get lanelet map */
-  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
-  const auto routing_graph_ptr = planner_data_->route_handler_->getRoutingGraphPtr();
+  const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+  const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
 
   /* spline interpolation */
   const auto interpolated_path_info_opt = util::generateInterpolatedPath(
-    lane_id_, associative_ids_, *path, planner_param_.path_interpolation_ds, logger_);
+    lane_id_, associative_ids_, path_msg, planner_param_.path_interpolation_ds, logger_);
   if (!interpolated_path_info_opt) {
     RCLCPP_DEBUG_SKIPFIRST_THROTTLE(logger_, *clock_, 1000 /* ms */, "splineInterpolate failed");
     RCLCPP_DEBUG(logger_, "===== plan end =====");
@@ -112,10 +115,10 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
     return false;
   }
 
-  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
-  const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
+  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const auto local_footprint = planner_data.vehicle_info_.createFootprint(0.0, 0.0);
   if (!first_conflicting_lanelet_) {
-    const auto conflicting_lanelets = getAttentionLanelets();
+    const auto conflicting_lanelets = getAttentionLanelets(planner_data);
     first_conflicting_lanelet_ = getFirstConflictingLanelet(
       conflicting_lanelets, interpolated_path_info, local_footprint, baselink2front);
   }
@@ -138,52 +141,56 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
          static_cast<int>(planner_param_.stopline_margin / planner_param_.path_interpolation_ds)));
 
   const auto stopline_idx_opt = util::insertPointIndex(
-    interpolated_path_info.path.points.at(stopline_idx_ip).point.pose, path,
-    planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+    interpolated_path_info.path.points.at(stopline_idx_ip).point.pose, &path_msg,
+    planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
   if (!stopline_idx_opt) {
     RCLCPP_DEBUG(logger_, "failed to insert stopline, ignore planning.");
     return true;
   }
   const auto stopline_idx = stopline_idx_opt.value();
 
-  debug_data_.virtual_wall_pose = planning_utils::getAheadPose(stopline_idx, baselink2front, *path);
-  debug_data_.stop_point_pose = path->points.at(stopline_idx).point.pose;
+  debug_data_.virtual_wall_pose =
+    planning_utils::getAheadPose(stopline_idx, baselink2front, path_msg);
+  debug_data_.stop_point_pose = path_msg.points.at(stopline_idx).point.pose;
 
   /* set stop speed */
   if (state_machine_.getState() == StateMachine::State::STOP) {
     constexpr double v = 0.0;
-    planning_utils::setVelocityFromIndex(stopline_idx, v, path);
+    planning_utils::setVelocityFromIndex(stopline_idx, v, &path_msg);
 
     /* get stop point and stop factor */
-    const auto & stop_pose = path->points.at(stopline_idx).point.pose;
+    const auto & stop_pose = path_msg.points.at(stopline_idx).point.pose;
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose,
+      path_msg.points, planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "merge_from_private");
 
     const double signed_arc_dist_to_stop_point = autoware::motion_utils::calcSignedArcLength(
-      path->points, current_pose.position, path->points.at(stopline_idx).point.pose.position);
+      path_msg.points, current_pose.position, path_msg.points.at(stopline_idx).point.pose.position);
 
     if (
       signed_arc_dist_to_stop_point < planner_param_.stop_distance_threshold &&
-      planner_data_->isVehicleStopped(planner_param_.stop_duration_sec)) {
+      planner_data.isVehicleStopped(planner_param_.stop_duration_sec)) {
       state_machine_.setState(StateMachine::State::GO);
       if (signed_arc_dist_to_stop_point < -planner_param_.stop_distance_threshold) {
         RCLCPP_ERROR(logger_, "Failed to stop near stop line but ego stopped. Change state to GO");
       }
     }
 
+    planning_utils::toTrajectory(path_msg, path);
     return true;
   }
 
+  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
-lanelet::ConstLanelets MergeFromPrivateRoadModule::getAttentionLanelets() const
+lanelet::ConstLanelets MergeFromPrivateRoadModule::getAttentionLanelets(
+  const PlannerData & planner_data) const
 {
-  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
-  const auto routing_graph_ptr = planner_data_->route_handler_->getRoutingGraphPtr();
+  const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+  const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
 
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto conflicting_lanelets =

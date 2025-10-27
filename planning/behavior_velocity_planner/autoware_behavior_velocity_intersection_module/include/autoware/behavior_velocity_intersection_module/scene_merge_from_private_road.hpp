@@ -20,7 +20,6 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
@@ -60,9 +59,9 @@ public:
   };
 
   MergeFromPrivateRoadModule(
-    const int64_t module_id, const int64_t lane_id, std::shared_ptr<const PlannerData> planner_data,
-    const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+    const std::set<lanelet::Id> & associative_ids, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
@@ -71,13 +70,16 @@ public:
    * @brief plan go-stop velocity at traffic crossing with collision check between reference path
    * and object predicted path
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
   const std::set<lanelet::Id> & getAssociativeIds() const { return associative_ids_; }
-  lanelet::ConstLanelets getAttentionLanelets() const;
+  lanelet::ConstLanelets getAttentionLanelets(const PlannerData & planner_data) const;
 
 private:
   const int64_t lane_id_;
