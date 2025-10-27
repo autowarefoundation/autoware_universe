@@ -39,7 +39,7 @@ std::tuple<
   bool /* reconciled occlusion disapproval */>
 IntersectionModule::getOcclusionStatus(
   const TrafficPrioritizedLevel & traffic_prioritized_level,
-  const InterpolatedPathInfo & interpolated_path_info)
+  const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data)
 {
   const auto & intersection_lanelets = intersection_lanelets_.value();
   const auto & occlusion_attention_lanelets = intersection_lanelets.occlusion_attention();
@@ -66,7 +66,7 @@ IntersectionModule::getOcclusionStatus(
   auto occlusion_status =
     (planner_param_.occlusion.enable && !occlusion_attention_lanelets.empty() &&
      !is_amber_or_red_or_no_tl_info_ever)
-      ? detectOcclusion(interpolated_path_info)
+      ? detectOcclusion(interpolated_path_info, planner_data)
       : NotOccluded{};
 
   // ==========================================================================================
@@ -104,7 +104,7 @@ IntersectionModule::getOcclusionStatus(
 }
 
 IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
-  const InterpolatedPathInfo & interpolated_path_info) const
+  const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data) const
 {
   const auto & intersection_lanelets = intersection_lanelets_.value();
   const auto & adjacent_lanelets = intersection_lanelets.adjacent();
@@ -112,8 +112,8 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
   const auto first_attention_area = intersection_lanelets.first_attention_area().value();
   const auto & lane_divisions = occlusion_attention_divisions_.value();
 
-  const auto & occ_grid = *planner_data_->occupancy_grid;
-  const auto & current_pose = planner_data_->current_odometry->pose;
+  const auto & occ_grid = *planner_data.occupancy_grid;
+  const auto & current_pose = planner_data.current_odometry->pose;
   const double occlusion_dist_thr = planner_param_.occlusion.occlusion_required_clearance_distance;
 
   const auto & path_ip = interpolated_path_info.path;
