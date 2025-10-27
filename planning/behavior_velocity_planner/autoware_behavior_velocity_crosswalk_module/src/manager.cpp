@@ -281,7 +281,7 @@ CrosswalkModuleManager::getModuleExpiredFunction(
     crosswalk_id_set.insert(crosswalk.first->crosswalkLanelet().id());
   }
 
-  return [&crosswalk_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
+  return [crosswalk_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     return crosswalk_id_set.count(scene_module->getModuleId()) == 0;
   };
 }

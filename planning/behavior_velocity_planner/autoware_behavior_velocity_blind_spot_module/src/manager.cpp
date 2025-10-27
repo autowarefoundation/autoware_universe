@@ -85,7 +85,7 @@ BlindSpotModuleManager::getModuleExpiredFunction(
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [&lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+  return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
   };
 }

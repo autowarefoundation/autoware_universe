@@ -86,7 +86,7 @@ NoStoppingAreaModuleManager::getModuleExpiredFunction(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
   return
-    [&no_stopping_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
+    [no_stopping_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
       return no_stopping_area_id_set.count(scene_module->getModuleId()) == 0;
     };
 }
