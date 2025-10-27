@@ -1867,7 +1867,6 @@ void updateClassificationUnstableObjects(
   std::unordered_map<std::string, rclcpp::Time> & unknown_type_object_first_seen_time_map,
   const double unstable_classification_time)
 {
-  // std::cout << "map size: " << unknown_type_object_first_seen_time_map.size() << std::endl;
   if (filtering_utils::isUnknownTypeObject(object_data)) {
     auto now = rclcpp::Clock(RCL_ROS_TIME).now();
     std::string object_id = to_hex_string(object_data.object.object_id);
