@@ -61,12 +61,15 @@ PredictedObjects create_predicted_objects(
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to extract.
  * @param velocity_smoothing_window The window size for velocity smoothing.
+ * @param enable_force_stop Whether to enable force stop logic.
+ * @param stopping_threshold The threshold for keeping the stopping state [m/s].
  * @return A Trajectory message for the specified batch and agent.
  */
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window);
+  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold);
 
 /**
  * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
