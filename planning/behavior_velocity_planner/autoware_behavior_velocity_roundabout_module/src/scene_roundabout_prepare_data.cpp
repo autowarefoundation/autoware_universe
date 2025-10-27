@@ -46,14 +46,14 @@ namespace autoware::behavior_velocity_planner
 {
 
 Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoundaboutData(
-  PathWithLaneId * path)
+  PathWithLaneId * path, const PlannerData & planner_data)
 {
-  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
-  const auto routing_graph_ptr = planner_data_->route_handler_->getRoutingGraphPtr();
+  const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+  const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
-  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
-  const auto footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
-  const auto & current_pose = planner_data_->current_odometry->pose;
+  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const auto footprint = planner_data.vehicle_info_.createFootprint(0.0, 0.0);
+  const auto & current_pose = planner_data.current_odometry->pose;
 
   // spline interpolation
   const auto interpolated_path_info_opt = util::generateInterpolatedPath(
@@ -95,7 +95,7 @@ Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoun
   }
 
   const auto roundabout_stoplines_opt = generateRoundaboutStopLines(
-    roundabout_lanelets.first_attention_lane().value(), interpolated_path_info, path);
+    roundabout_lanelets.first_attention_lane().value(), interpolated_path_info, path, planner_data);
   if (!roundabout_stoplines_opt) {
     return make_err<RoundaboutModule::BasicData, InternalError>(
       "failed to generate roundabout_stoplines");
@@ -106,10 +106,10 @@ Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoun
     planning_utils::getLaneletsOnPath(*path, lanelet_map_ptr, current_pose);
   // see the doc for struct PathLanelets
   const auto closest_idx_ip = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    path_ip.points, current_pose, planner_data_->ego_nearest_dist_threshold,
-    planner_data_->ego_nearest_yaw_threshold);
+    path_ip.points, current_pose, planner_data.ego_nearest_dist_threshold,
+    planner_data.ego_nearest_yaw_threshold);
   const auto path_lanelets_opt =
-    generatePathLanelets(lanelets_on_path, interpolated_path_info, closest_idx_ip);
+    generatePathLanelets(lanelets_on_path, interpolated_path_info, closest_idx_ip, planner_data);
   if (!path_lanelets_opt.has_value()) {
     return make_err<RoundaboutModule::BasicData, InternalError>("failed to generate PathLanelets");
   }
@@ -122,22 +122,23 @@ Result<RoundaboutModule::BasicData, InternalError> RoundaboutModule::prepareRoun
 std::optional<RoundaboutStopLines> RoundaboutModule::generateRoundaboutStopLines(
   const lanelet::ConstLanelet & first_attention_lane,
   const InterpolatedPathInfo & interpolated_path_info,
-  autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const
+  autoware_internal_planning_msgs::msg::PathWithLaneId * original_path,
+  const PlannerData & planner_data) const
 {
   const double stopline_margin = planner_param_.common.default_stopline_margin;
-  const double max_accel = planner_data_->max_stop_acceleration_threshold;
-  const double max_jerk = planner_data_->max_stop_jerk_threshold;
-  const double delay_response_time = planner_data_->delay_response_time;
+  const double max_accel = planner_data.max_stop_acceleration_threshold;
+  const double max_jerk = planner_data.max_stop_jerk_threshold;
+  const double delay_response_time = planner_data.delay_response_time;
 
   const auto first_attention_area = first_attention_lane.polygon3d();
   const auto & path_ip = interpolated_path_info.path;
   const double ds = interpolated_path_info.ds;
-  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
 
   const int stopline_margin_idx_dist = std::ceil(stopline_margin / ds);
 
   // find the index of the first point whose vehicle footprint on it intersects with attention_area
-  const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
+  const auto local_footprint = planner_data.vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
     util::getFirstPointInsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
@@ -156,13 +157,13 @@ std::optional<RoundaboutStopLines> RoundaboutModule::generateRoundaboutStopLines
   const auto default_stopline_ip = stop_idx_ip_int >= 0 ? static_cast<size_t>(stop_idx_ip_int) : 0;
 
   // (2) ego front stop line position on interpolated path
-  const geometry_msgs::msg::Pose & current_pose = planner_data_->current_odometry->pose;
+  const geometry_msgs::msg::Pose & current_pose = planner_data.current_odometry->pose;
   const auto closest_idx_ip = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    path_ip.points, current_pose, planner_data_->ego_nearest_dist_threshold,
-    planner_data_->ego_nearest_yaw_threshold);
+    path_ip.points, current_pose, planner_data.ego_nearest_dist_threshold,
+    planner_data.ego_nearest_yaw_threshold);
 
-  const double velocity = planner_data_->current_velocity->twist.linear.x;
-  const double acceleration = planner_data_->current_acceleration->accel.accel.linear.x;
+  const double velocity = planner_data.current_velocity->twist.linear.x;
+  const double acceleration = planner_data.current_acceleration->accel.accel.linear.x;
   const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
     velocity, acceleration, max_accel, max_jerk, delay_response_time);
 
@@ -200,8 +201,8 @@ std::optional<RoundaboutStopLines> RoundaboutModule::generateRoundaboutStopLines
   for (const auto & [stop_idx_ip, stop_idx] : stoplines) {
     const auto & insert_point = path_ip.points.at(*stop_idx_ip).point.pose;
     const auto insert_idx = util::insertPointIndex(
-      insert_point, original_path, planner_data_->ego_nearest_dist_threshold,
-      planner_data_->ego_nearest_yaw_threshold);
+      insert_point, original_path, planner_data.ego_nearest_dist_threshold,
+      planner_data.ego_nearest_yaw_threshold);
     if (!insert_idx) {
       return std::nullopt;
     }
@@ -305,9 +306,10 @@ lanelet::ConstLanelets RoundaboutModule::getPrecedingLanelets(
 
 std::optional<PathLanelets> RoundaboutModule::generatePathLanelets(
   const lanelet::ConstLanelets & lanelets_on_path,
-  const InterpolatedPathInfo & interpolated_path_info, const size_t closest_idx) const
+  const InterpolatedPathInfo & interpolated_path_info, const size_t closest_idx,
+  const PlannerData & planner_data) const
 {
-  const double width = planner_data_->vehicle_info_.vehicle_width_m;
+  const double width = planner_data.vehicle_info_.vehicle_width_m;
   static constexpr double path_lanelet_interval = 1.5;
 
   const auto & assigned_lane_interval_opt = interpolated_path_info.lane_id_interval;

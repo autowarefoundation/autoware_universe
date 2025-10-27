@@ -43,9 +43,9 @@ namespace autoware::behavior_velocity_planner
 
 RoundaboutModule::RoundaboutModule(
   const int64_t module_id, std::shared_ptr<const lanelet::autoware::Roundabout> roundabout,
-  const int64_t lane_id, [[maybe_unused]] std::shared_ptr<const PlannerData> planner_data,
-  const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-  rclcpp::Node & node, const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+  const int64_t lane_id, const PlannerParam & planner_param,
+  const std::set<lanelet::Id> & associative_ids, rclcpp::Node & node, const rclcpp::Logger logger,
+  const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -64,13 +64,17 @@ RoundaboutModule::RoundaboutModule(
       "~/debug/roundabout/object_ttc", 1);
 }
 
-bool RoundaboutModule::modifyPathVelocity(PathWithLaneId * path)
+bool RoundaboutModule::modifyPathVelocity(
+  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
+  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
+
   debug_data_ = DebugData();
 
   initializeRTCStatus();
 
-  const auto decision_result = modifyPathVelocityDetail(path);
+  const auto decision_result = modifyPathVelocityDetail(&path_msg, planner_data);
   prev_decision_result_ = decision_result;
 
   {
@@ -79,10 +83,11 @@ bool RoundaboutModule::modifyPathVelocity(PathWithLaneId * path)
     internal_debug_data_.decision_type = decision_type;
   }
 
-  prepareRTCStatus(decision_result, *path);
+  prepareRTCStatus(decision_result, path_msg);
 
-  reactRTCApproval(decision_result, path);
+  reactRTCApproval(decision_result, &path_msg, planner_data);
 
+  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
@@ -92,9 +97,10 @@ void RoundaboutModule::initializeRTCStatus()
   setDistance(std::numeric_limits<double>::lowest());
 }
 
-DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
+DecisionResult RoundaboutModule::modifyPathVelocityDetail(
+  PathWithLaneId * path, const PlannerData & planner_data)
 {
-  const auto prepare_data = prepareRoundaboutData(path);
+  const auto prepare_data = prepareRoundaboutData(path, planner_data);
   if (!prepare_data) {
     return prepare_data.err();
   }
@@ -103,11 +109,11 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
 
   const auto closest_idx = roundabout_stoplines.closest_idx;
   const auto can_smoothly_stop_at = [&](const auto & stop_line_idx) {
-    const double max_accel = planner_data_->max_stop_acceleration_threshold;
-    const double max_jerk = planner_data_->max_stop_jerk_threshold;
-    const double delay_response_time = planner_data_->delay_response_time;
-    const double velocity = planner_data_->current_velocity->twist.linear.x;
-    const double acceleration = planner_data_->current_acceleration->accel.accel.linear.x;
+    const double max_accel = planner_data.max_stop_acceleration_threshold;
+    const double max_jerk = planner_data.max_stop_jerk_threshold;
+    const double delay_response_time = planner_data.delay_response_time;
+    const double velocity = planner_data.current_velocity->twist.linear.x;
+    const double acceleration = planner_data.current_acceleration->accel.accel.linear.x;
     const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
       velocity, acceleration, max_accel, max_jerk, delay_response_time);
     return autoware::motion_utils::calcSignedArcLength(path->points, closest_idx, stop_line_idx) >
@@ -141,10 +147,10 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
   // classify the objects to attention_area/roundabout_area and update their position, velocity,
   // belonging attention lanelet, distance to corresponding stopline
   // ==========================================================================================
-  updateObjectInfoManagerArea();
+  updateObjectInfoManagerArea(planner_data);
 
   const auto [is_over_1st_pass_judge_line, safely_passed_1st_judge_line] =
-    isOverPassJudgeLinesStatus(*path, roundabout_stoplines);
+    isOverPassJudgeLinesStatus(*path, roundabout_stoplines, planner_data);
 
   // ==========================================================================================
   // calculate the expected vehicle speed and obtain the spatiotemporal profile of ego to the
@@ -152,7 +158,7 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
   // ==========================================================================================
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped ego_ttc_time_array;
   const auto time_distance_array =
-    calcRoundaboutPassingTime(*path, roundabout_stoplines, &ego_ttc_time_array);
+    calcRoundaboutPassingTime(*path, roundabout_stoplines, &ego_ttc_time_array, planner_data);
 
   // ==========================================================================================
   // run collision checking for each objects. Also if ego just
@@ -161,7 +167,8 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
   // ==========================================================================================
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped object_ttc_time_array;
   updateObjectInfoManagerCollision(
-    path_lanelets, time_distance_array, safely_passed_1st_judge_line, &object_ttc_time_array);
+    path_lanelets, time_distance_array, safely_passed_1st_judge_line, &object_ttc_time_array,
+    planner_data);
   {
     const auto & debug = planner_param_.debug.ttc;
     if (
@@ -221,7 +228,8 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
     }
     if (has_collision) {
       const std::string evasive_diag = generateEgoRiskEvasiveDiagnosis(
-        *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects);
+        *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects,
+        planner_data);
       debug_data_.too_late_stop_wall_pose = path->points.at(default_stopline_idx).point.pose;
       return OverPassJudge{safety_diag, evasive_diag};
     }
@@ -418,9 +426,9 @@ void reactRTCApprovalByDecisionResult(
 
 void RoundaboutModule::reactRTCApproval(
   const DecisionResult & decision_result,
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path, const PlannerData & planner_data)
 {
-  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
   std::visit(
     VisitorSwitch{[&](const auto & decision) {
       reactRTCApprovalByDecisionResult(
@@ -433,9 +441,9 @@ void RoundaboutModule::reactRTCApproval(
 
 RoundaboutModule::PassJudgeStatus RoundaboutModule::isOverPassJudgeLinesStatus(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const RoundaboutStopLines & roundabout_stoplines)
+  const RoundaboutStopLines & roundabout_stoplines, const PlannerData & planner_data)
 {
-  const auto & current_pose = planner_data_->current_odometry->pose;
+  const auto & current_pose = planner_data.current_odometry->pose;
   const auto closest_idx = roundabout_stoplines.closest_idx;
   const auto default_stopline_idx = roundabout_stoplines.default_stopline.value();
   const size_t pass_judge_line_idx = roundabout_stoplines.first_pass_judge_line;
@@ -449,7 +457,7 @@ RoundaboutModule::PassJudgeStatus RoundaboutModule::isOverPassJudgeLinesStatus(
     safely_passed_1st_judge_line_time_ = std::make_pair(clock_->now(), current_pose);
     safely_passed_1st_judge_line_first_time = true;
   }
-  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
   debug_data_.first_pass_judge_wall_pose =
     planning_utils::getAheadPose(pass_judge_line_idx, baselink2front, path);
   debug_data_.passed_first_pass_judge = safely_passed_1st_judge_line_time_.has_value();

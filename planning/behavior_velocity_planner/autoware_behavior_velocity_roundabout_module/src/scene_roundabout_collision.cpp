@@ -76,13 +76,13 @@ bool RoundaboutModule::isTargetCollisionVehicleType(
   return false;
 }
 
-void RoundaboutModule::updateObjectInfoManagerArea()
+void RoundaboutModule::updateObjectInfoManagerArea(const PlannerData & planner_data)
 {
   const auto & roundabout_lanelets = roundabout_lanelets_.value();
   const auto & attention_lanelets = roundabout_lanelets.attention();
   // const auto & attention_lanelet_stoplines = roundabout_lanelets.attention_stoplines();
   const auto & adjacent_lanelets = roundabout_lanelets.adjacent();
-  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
+  const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
   // const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   // const auto roundabout_area = util::getRoundaboutArea(assigned_lanelet, lanelet_map_ptr);
 
@@ -94,7 +94,7 @@ void RoundaboutModule::updateObjectInfoManagerArea()
   const auto old_map = object_info_manager_.getObjectsMap();
   object_info_manager_.clearObjects();
 
-  for (const auto & predicted_object : planner_data_->predicted_objects->objects) {
+  for (const auto & predicted_object : planner_data.predicted_objects->objects) {
     if (!isTargetCollisionVehicleType(predicted_object)) {
       continue;
     }
@@ -133,7 +133,8 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
   const PathLanelets & path_lanelets,
   const RoundaboutModule::TimeDistanceArray & time_distance_array,
   const bool passed_1st_judge_line_first_time,
-  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array)
+  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array,
+  const PlannerData & planner_data)
 {
   const auto & roundabout_lanelets = roundabout_lanelets_.value();
 
@@ -144,7 +145,7 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
   const double passing_time = time_distance_array.back().first;
   const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
   const auto closest_arc_coords =
-    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
+    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data.current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
   debug_data_.ego_lane = ego_lane.polygon3d();
   const auto ego_poly = ego_lane.polygon2d().basicPolygon();
@@ -205,7 +206,7 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
         continue;
       }
       cutPredictPathWithinDuration(
-        planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+        planner_data.predicted_objects->header.stamp, passing_time, &predicted_path);
       if (predicted_path.path.size() < 2) {
         continue;
       }
@@ -249,10 +250,10 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
       }
       const double ego_start_arc_length = std::max(
         0.0, closest_arc_coords.length + ego_start_itr->second -
-               planner_data_->vehicle_info_.rear_overhang_m);
+               planner_data.vehicle_info_.rear_overhang_m);
       const double ego_end_arc_length = std::min(
         closest_arc_coords.length + ego_end_itr->second +
-          planner_data_->vehicle_info_.max_longitudinal_offset_m,
+          planner_data.vehicle_info_.max_longitudinal_offset_m,
         lanelet::utils::getLaneletLength2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
         {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
@@ -459,11 +460,12 @@ std::string RoundaboutModule::generateEgoRiskEvasiveDiagnosis(
     too_late_detect_objects,
   [[maybe_unused]] const std::vector<
     std::pair<RoundaboutModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-    misjudge_objects) const
+    misjudge_objects,
+  const PlannerData & planner_data) const
 {
   static constexpr double min_vel = 1e-2;
   std::string diag;
-  const double ego_vel = planner_data_->current_velocity->twist.linear.x;
+  const double ego_vel = planner_data.current_velocity->twist.linear.x;
   for (const auto & [blame_type, object_info] : too_late_detect_objects) {
     if (!object_info->unsafe_interval()) {
       continue;
@@ -622,7 +624,8 @@ std::optional<size_t> RoundaboutModule::checkAngleForTargetLanelets(
 RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const RoundaboutStopLines & roundabout_stoplines,
-  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const
+  autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array,
+  const PlannerData & planner_data) const
 {
   const double roundabout_velocity =
     planner_param_.collision_detection.velocity_profile.default_velocity;
@@ -632,7 +635,7 @@ RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
     planner_param_.collision_detection.velocity_profile.use_upstream;
   const double minimum_upstream_velocity =
     planner_param_.collision_detection.velocity_profile.minimum_upstream_velocity;
-  const double current_velocity = planner_data_->current_velocity->twist.linear.x;
+  const double current_velocity = planner_data.current_velocity->twist.linear.x;
 
   // ==========================================================================================
   // if ego is waiting for collision detection, the entry time into the roundabout
@@ -695,7 +698,7 @@ RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
 
   // apply smoother to reference velocity
   PathWithLaneId smoothed_reference_path = reference_path;
-  if (!smoothPath(reference_path, smoothed_reference_path, planner_data_)) {
+  if (!smoothPath(reference_path, smoothed_reference_path, planner_data)) {
     smoothed_reference_path = reference_path;
   }
 
@@ -710,7 +713,7 @@ RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
   const auto smoothed_path_closest_idx =
     autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
       smoothed_reference_path.points, path.points.at(closest_idx).point.pose,
-      planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+      planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
 
   const std::optional<size_t> upstream_stopline_idx_opt = [&]() -> std::optional<size_t> {
     if (upstream_stopline) {
@@ -718,7 +721,7 @@ RoundaboutModule::TimeDistanceArray RoundaboutModule::calcRoundaboutPassingTime(
         reference_path.points.at(upstream_stopline.value()).point.pose;
       return autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
         smoothed_reference_path.points, upstream_stopline_point,
-        planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+        planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
     }
     return std::nullopt;
   }();

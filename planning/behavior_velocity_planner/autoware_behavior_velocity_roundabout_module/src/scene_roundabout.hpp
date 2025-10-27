@@ -157,9 +157,9 @@ public:
 
   RoundaboutModule(
     const int64_t module_id, std::shared_ptr<const lanelet::autoware::Roundabout> roundabout,
-    const int64_t lane_id, std::shared_ptr<const PlannerData> planner_data,
-    const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-    rclcpp::Node & node, const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const int64_t lane_id, const PlannerParam & planner_param,
+    const std::set<lanelet::Id> & associative_ids, rclcpp::Node & node, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
@@ -178,7 +178,10 @@ public:
    * the context. Then prepareRTCStatus() is called to set the safety value of ROUNDABOUT.
    * @{
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
   /** @}*/
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
@@ -291,7 +294,7 @@ private:
   /**
    * @brief analyze collision objects context and return DecisionResult
    */
-  DecisionResult modifyPathVelocityDetail(PathWithLaneId * path);
+  DecisionResult modifyPathVelocityDetail(PathWithLaneId * path, const PlannerData & planner_data);
 
   /**
    * @brief set RTC value according to calculated DecisionResult
@@ -304,7 +307,7 @@ private:
    */
   void reactRTCApproval(
     const DecisionResult & decision_result,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const PlannerData & planner_data);
   /** @}*/
 
 private:
@@ -333,7 +336,8 @@ private:
    *
    * To simplify modifyPathVelocityDetail(), this function is used at first
    */
-  Result<BasicData, InternalError> prepareRoundaboutData(PathWithLaneId * path);
+  Result<BasicData, InternalError> prepareRoundaboutData(
+    PathWithLaneId * path, const PlannerData & planner_data);
 
   /**
    * @brief generate RoundaboutStopLines
@@ -341,7 +345,8 @@ private:
   std::optional<RoundaboutStopLines> generateRoundaboutStopLines(
     const lanelet::ConstLanelet & first_attention_lane,
     const InterpolatedPathInfo & interpolated_path_info,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
+    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief generate RoundaboutLanelets
@@ -356,7 +361,8 @@ private:
    */
   std::optional<PathLanelets> generatePathLanelets(
     const lanelet::ConstLanelets & lanelets_on_path,
-    const InterpolatedPathInfo & interpolated_path_info, const size_t closest_idx) const;
+    const InterpolatedPathInfo & interpolated_path_info, const size_t closest_idx,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief generate discretized detection lane linestring.
@@ -389,7 +395,7 @@ private:
    */
   PassJudgeStatus isOverPassJudgeLinesStatus(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const RoundaboutStopLines & roundabout_stoplines);
+    const RoundaboutStopLines & roundabout_stoplines, const PlannerData & planner_data);
   /** @} */
 
 private:
@@ -407,7 +413,7 @@ private:
    * @brief find the objects on attention_area/roundabout_area and update positional information
    * @attention this function has access to value() of roundabout_lanelets_
    */
-  void updateObjectInfoManagerArea();
+  void updateObjectInfoManagerArea(const PlannerData & planner_data);
 
   /**
    * @brief find the collision Interval/CollisionKnowledge of registered objects
@@ -416,7 +422,8 @@ private:
   void updateObjectInfoManagerCollision(
     const PathLanelets & path_lanelets, const TimeDistanceArray & time_distance_array,
     const bool passed_1st_judge_line_first_time,
-    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array);
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array,
+    const PlannerData & planner_data);
 
   void cutPredictPathWithinDuration(
     const builtin_interfaces::msg::Time & object_stamp, const double time_thr,
@@ -442,7 +449,8 @@ private:
     const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
       too_late_detect_objects,
     const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-      misjudge_objects) const;
+      misjudge_objects,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief return if collision is detected and the collision position
@@ -461,7 +469,8 @@ private:
   TimeDistanceArray calcRoundaboutPassingTime(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const RoundaboutStopLines & roundabout_stoplines,
-    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const;
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array,
+    const PlannerData & planner_data) const;
   /** @} */
 
   mutable DebugData debug_data_;
