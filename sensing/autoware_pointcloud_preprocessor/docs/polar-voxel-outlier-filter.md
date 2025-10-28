@@ -361,8 +361,6 @@ visibility_estimation_only: true # Diagnostics only
   - elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is $`[-\frac{\pi}{2}, \frac{pi}{2}]`$
 - **Secondary voxel limiting**: Visibility estimation can be tuned via `visibility_estimation_max_secondary_voxel_count`
 
-
-
 ## Error detection and handling
 
 The filter includes robust error handling:
