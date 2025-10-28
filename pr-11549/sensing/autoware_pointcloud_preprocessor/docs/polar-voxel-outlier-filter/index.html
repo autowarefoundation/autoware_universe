@@ -21380,29 +21380,29 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <td>visibility_estimation_min_azimuth_rad</td>
 <td>float</td>
 <td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
-<td>0.78</td>
-<td>≥0</td>
+<td>0.0</td>
+<td>≥0.0<br>≤6.28</td>
 </tr>
 <tr>
 <td>visibility_estimation_max_azimuth_rad</td>
 <td>float</td>
 <td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
-<td>2.35</td>
-<td>≤3.14</td>
+<td>6.28</td>
+<td>≥0.0<br>≤6.28</td>
 </tr>
 <tr>
 <td>visibility_estimation_min_elevation_rad</td>
 <td>float</td>
 <td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
-<td>-0.26</td>
-<td>≥-1.57</td>
+<td>-1.57</td>
+<td>≥-1.57<br>≤1.57</td>
 </tr>
 <tr>
 <td>visibility_estimation_max_elevation_rad</td>
 <td>float</td>
 <td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
-<td>1.04</td>
-<td>≤1.57</td>
+<td>1.57</td>
+<td>≥-1.57<br>≤1.57</td>
 </tr>
 <tr>
 <td>use_return_type_classification</td>
@@ -21620,13 +21620,12 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Supported formats</strong>: PointXYZIRC and PointXYZIRCAEDT only</li>
 <li><strong>Finite coordinates required</strong>: Automatically filters out NaN/Inf points</li>
 <li><strong>Return type dependency</strong>: Advanced filtering effectiveness depends on accurate return type classification</li>
-<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code> setting</li>
-<li><strong>Secondary voxel limiting</strong>: Visibility estimation can be tuned via <code>visibility_estimation_max_secondary_voxel_count</code></li>
-<li><strong>Visualization marker</strong>: The marker to visualize the area used for visibility estimation assumes the following definition for azimuth and elevation:<ul>
+<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimutha_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> settings. Besides, for azimuth and elevation range, the following definitions are assumed<ul>
 <li>azimuth: starts with the y-axis, increasing in counter-corkscrew rule around the z-axis. The range domain is <span class="arithmatex">\(<code>[0, 2\pi]</code>\)</span></li>
 <li>elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is <span class="arithmatex">\(<code>[-\frac{\pi}{2}, \frac{pi}{2}]</code>\)</span></li>
 </ul>
 </li>
+<li><strong>Secondary voxel limiting</strong>: Visibility estimation can be tuned via <code>visibility_estimation_max_secondary_voxel_count</code></li>
 </ul>
 <h2 id="error-detection-and-handling">Error detection and handling<a class="headerlink" href="#error-detection-and-handling" title="Permanent link">#</a></h2>
 <p>The filter includes robust error handling:</p>
