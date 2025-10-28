@@ -40,6 +40,7 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  initialize_optimizers();
 
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&TrajectoryOptimizer::on_parameter, this, std::placeholders::_1));
@@ -57,18 +58,25 @@ void TrajectoryOptimizer::initialize_optimizers()
     return;
   }
   // initialize optimizer pointers
-  eb_smoother_optimizer_ptr_ = std::make_shared<plugin::TrajectoryEBSmootherOptimizer>(
-    "eb_smoother_optimizer", this, time_keeper_, params_);
-  trajectory_extender_ptr_ = std::make_shared<plugin::TrajectoryExtender>(
-    "trajectory_extender", this, time_keeper_, params_);
-  trajectory_point_fixer_ptr_ = std::make_shared<plugin::TrajectoryPointFixer>(
-    "trajectory_point_fixer", this, time_keeper_, params_);
-  trajectory_qp_smoother_ptr_ = std::make_shared<plugin::TrajectoryQPSmoother>(
-    "trajectory_qp_smoother", this, time_keeper_, params_);
-  trajectory_spline_smoother_ptr_ = std::make_shared<plugin::TrajectorySplineSmoother>(
-    "trajectory_spline_smoother", this, time_keeper_, params_);
-  trajectory_velocity_optimizer_ptr_ = std::make_shared<plugin::TrajectoryVelocityOptimizer>(
-    "trajectory_velocity_optimizer", this, time_keeper_, params_);
+  eb_smoother_optimizer_ptr_ = std::make_shared<plugin::TrajectoryEBSmootherOptimizer>();
+  eb_smoother_optimizer_ptr_->initialize("eb_smoother_optimizer", this, time_keeper_);
+
+  trajectory_extender_ptr_ = std::make_shared<plugin::TrajectoryExtender>();
+  trajectory_extender_ptr_->initialize("trajectory_extender", this, time_keeper_);
+
+  trajectory_point_fixer_ptr_ = std::make_shared<plugin::TrajectoryPointFixer>();
+  trajectory_point_fixer_ptr_->initialize("trajectory_point_fixer", this, time_keeper_);
+
+  trajectory_qp_smoother_ptr_ = std::make_shared<plugin::TrajectoryQPSmoother>();
+  trajectory_qp_smoother_ptr_->initialize("trajectory_qp_smoother", this, time_keeper_);
+
+  trajectory_spline_smoother_ptr_ = std::make_shared<plugin::TrajectorySplineSmoother>();
+  trajectory_spline_smoother_ptr_->initialize("trajectory_spline_smoother", this, time_keeper_);
+
+  trajectory_velocity_optimizer_ptr_ = std::make_shared<plugin::TrajectoryVelocityOptimizer>();
+  trajectory_velocity_optimizer_ptr_->initialize(
+    "trajectory_velocity_optimizer", this, time_keeper_);
+
   initialized_optimizers_ = true;
 }
 

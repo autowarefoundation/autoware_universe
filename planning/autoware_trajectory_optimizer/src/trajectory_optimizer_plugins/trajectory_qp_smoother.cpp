@@ -32,15 +32,6 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-TrajectoryQPSmoother::TrajectoryQPSmoother(
-  const std::string name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-  const TrajectoryOptimizerParams & params)
-: TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-{
-  set_up_params();
-}
-
 void TrajectoryQPSmoother::set_up_params()
 {
   auto node_ptr = get_node_ptr();

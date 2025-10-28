@@ -27,18 +27,6 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-TrajectoryVelocityOptimizer::TrajectoryVelocityOptimizer(
-  const std::string name, rclcpp::Node * node_ptr,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-  const TrajectoryOptimizerParams & params)
-: TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-{
-  set_up_params();
-  if (velocity_params_.smooth_velocities) {
-    set_up_velocity_smoother(node_ptr, time_keeper);
-  }
-}
-
 void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
   rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
 {
@@ -123,6 +111,10 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.limit_lateral_acceleration");
   velocity_params_.smooth_velocities =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.smooth_velocities");
+
+  if (velocity_params_.smooth_velocities) {
+    set_up_velocity_smoother(node_ptr, get_time_keeper());
+  }
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_parameter(
