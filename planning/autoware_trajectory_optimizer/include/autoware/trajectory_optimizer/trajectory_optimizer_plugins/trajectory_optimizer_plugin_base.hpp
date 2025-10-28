@@ -67,12 +67,13 @@ public:
     std::cerr << "initialized TrajectoryOptimizerPlugin: " << name_ << std::endl;
   }
 
-  bool is_initialized() const { return node_ptr_ != nullptr; }
   std::string get_name() const { return name_; }
+
+protected:
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
 
-protected:
+private:
   std::string name_{"unnamed_plugin"};
   rclcpp::Node * node_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
