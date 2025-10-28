@@ -51,10 +51,10 @@ void TrajectoryQPSmoother::set_up_params()
     get_or_declare_parameter<int>(*node_ptr, "trajectory_qp_smoother.osqp_max_iter");
   qp_params_.osqp_verbose =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.osqp_verbose");
-  qp_params_.fix_orientation =
-    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.fix_orientation");
-  qp_params_.orientation_correction_threshold_deg = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_qp_smoother.orientation_correction_threshold_deg");
+  qp_params_.preserve_input_trajectory_orientation = get_or_declare_parameter<bool>(
+    *node_ptr, "trajectory_qp_smoother.preserve_input_trajectory_orientation");
+  qp_params_.max_distance_for_orientation_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_qp_smoother.max_distance_for_orientation_m");
 
   // Velocity-based fidelity parameters
   qp_params_.use_velocity_based_fidelity =
@@ -105,10 +105,11 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
   update_param<int>(parameters, "trajectory_qp_smoother.osqp_max_iter", qp_params_.osqp_max_iter);
   update_param<bool>(parameters, "trajectory_qp_smoother.osqp_verbose", qp_params_.osqp_verbose);
   update_param<bool>(
-    parameters, "trajectory_qp_smoother.fix_orientation", qp_params_.fix_orientation);
+    parameters, "trajectory_qp_smoother.preserve_input_trajectory_orientation",
+    qp_params_.preserve_input_trajectory_orientation);
   update_param<double>(
-    parameters, "trajectory_qp_smoother.orientation_correction_threshold_deg",
-    qp_params_.orientation_correction_threshold_deg);
+    parameters, "trajectory_qp_smoother.max_distance_for_orientation_m",
+    qp_params_.max_distance_for_orientation_m);
 
   // Velocity-based fidelity parameter updates
   update_param<bool>(
@@ -186,11 +187,10 @@ void TrajectoryQPSmoother::optimize_trajectory(
       "messages!");
     return;
   }
-  // Apply orientation correction if enabled
-  if (qp_params_.fix_orientation) {
-    const double yaw_threshold_rad =
-      autoware_utils_math::deg2rad(qp_params_.orientation_correction_threshold_deg);
-    utils::fix_trajectory_orientation(original_trajectory, smoothed_trajectory, yaw_threshold_rad);
+  // Copy orientations from original trajectory
+  if (qp_params_.preserve_input_trajectory_orientation) {
+    utils::copy_trajectory_orientation(
+      original_trajectory, smoothed_trajectory, qp_params_.max_distance_for_orientation_m, M_PI);
   }
 
   traj_points = smoothed_trajectory;

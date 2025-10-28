@@ -256,38 +256,25 @@ bool validate_point(const TrajectoryPoint & point)
          is_valid(point.pose.orientation.w);
 }
 
-void fix_trajectory_orientation(
+void copy_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const double yaw_threshold_rad)
+  const double max_distance_m, const double max_yaw_rad)
 {
-  for (auto & point : output_trajectory) {
-    const auto nearest_index_opt =
-      autoware::motion_utils::findNearestIndex(input_trajectory, point.pose);
-
+  for (auto & out_point : output_trajectory) {
+    const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+      input_trajectory, out_point.pose, max_distance_m, max_yaw_rad);
     if (!nearest_index_opt.has_value()) {
       continue;
     }
-
-    const size_t nearest_idx = nearest_index_opt.value();
-
-    // Get yaw from both orientations
-    const double input_yaw = tf2::getYaw(input_trajectory[nearest_idx].pose.orientation);
-    const double output_yaw = tf2::getYaw(point.pose.orientation);
-
-    // Calculate yaw difference (normalized to [-pi, pi])
-    const double yaw_diff = autoware_utils_math::normalize_radian(output_yaw - input_yaw);
-
-    // If difference exceeds threshold, use original orientation
-    if (std::abs(yaw_diff) > yaw_threshold_rad) {
-      point.pose.orientation = input_trajectory[nearest_idx].pose.orientation;
-    }
+    const auto nearest_index = nearest_index_opt.value();
+    out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
   }
 }
 
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
   const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
-  const bool copy_original_orientation)
+  const bool preserve_input_trajectory_orientation)
 {
   constexpr size_t min_points_for_akima_spline = 5;
   constexpr double min_interpolation_resolution_m = 0.1;
@@ -337,17 +324,8 @@ void apply_spline(
   temp_traj = autoware::motion_utils::resampleTrajectory(
     temp_traj, interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
     use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
-  if (copy_original_orientation) {
-    // Copy orientation from original trajectory
-    for (auto & out_point : temp_traj.points) {
-      const auto nearest_index_yaw_opt = autoware::motion_utils::findNearestIndex(
-        traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
-      if (!nearest_index_yaw_opt.has_value()) {
-        continue;
-      }
-      const auto nearest_index_yaw = nearest_index_yaw_opt.value();
-      out_point.pose.orientation = traj_points.at(nearest_index_yaw).pose.orientation;
-    }
+  if (preserve_input_trajectory_orientation) {
+    copy_trajectory_orientation(traj_points, temp_traj.points, max_distance_discrepancy_m, M_PI_2);
   }
   traj_points = temp_traj.points;
 }
