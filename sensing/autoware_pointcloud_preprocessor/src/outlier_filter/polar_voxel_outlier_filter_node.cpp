@@ -1159,7 +1159,7 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
   marker.color.b = 0.0;
   marker.pose.orientation.w = 1.0;
 
-  auto polar_to_xyz = [](auto r, auto az, auto el) {
+  auto polar_to_xyz = [](auto radius, auto azimuth, auto elevation) {
     // NOTE: This conversion assumes the following angular definitions
     // some LiDAR may not fit this definition:
     // - azimuth: starts from the y-axis, increasing in counter-corkscrew rule around the z-axis
@@ -1167,9 +1167,9 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
     // - elevation: starts from the x-axis, increasing in counter-corkscrew rule around the y-axis
     //   domain: [-pi/2, pi/2]
     geometry_msgs::msg::Point p;
-    p.x = r * std::cos(el) * std::sin(az);
-    p.y = r * std::cos(el) * std::cos(az);
-    p.z = r * std::sin(el);
+    p.x = radius * std::cos(elevation) * std::sin(azimuth);
+    p.y = radius * std::cos(elevation) * std::cos(azimuth);
+    p.z = radius * std::sin(elevation);
     return p;
   };
 
@@ -1189,12 +1189,13 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
   double azimuth_portion = azimuth_range_width / marker_resolution;
   double elevation_portion = elevation_range_width / marker_resolution;
 
-  for (int az_idx = 0; az_idx < marker_resolution; az_idx++) {
-    for (int el_idx = 0; el_idx < marker_resolution; el_idx++) {
-      double az1 = visibility_estimation_min_azimuth_rad_ + az_idx * azimuth_portion;
-      double az2 = visibility_estimation_min_azimuth_rad_ + (az_idx + 1) * azimuth_portion;
-      double el1 = visibility_estimation_min_elevation_rad_ + el_idx * elevation_portion;
-      double el2 = visibility_estimation_min_elevation_rad_ + (el_idx + 1) * elevation_portion;
+  for (int azimuth_idx = 0; azimuth_idx < marker_resolution; azimuth_idx++) {
+    for (int elevation_idx = 0; elevation_idx < marker_resolution; elevation_idx++) {
+      double az1 = visibility_estimation_min_azimuth_rad_ + azimuth_idx * azimuth_portion;
+      double az2 = visibility_estimation_min_azimuth_rad_ + (azimuth_idx + 1) * azimuth_portion;
+      double el1 = visibility_estimation_min_elevation_rad_ + elevation_idx * elevation_portion;
+      double el2 =
+        visibility_estimation_min_elevation_rad_ + (elevation_idx + 1) * elevation_portion;
 
       // if visibility_estimation_max_elevation_rad_ < visibility_estimation_min_elevation_rad_,
       // el1 and el2 can take [pi/2, 3pi/2], which is out of value domain.
