@@ -76,3 +76,8 @@ rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother,
+  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)

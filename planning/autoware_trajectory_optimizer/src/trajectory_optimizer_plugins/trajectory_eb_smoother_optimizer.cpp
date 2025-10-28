@@ -70,3 +70,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryEBSmootherOptimizer::on_param
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer,
+  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)
