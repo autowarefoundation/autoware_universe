@@ -522,26 +522,26 @@ The path is generated with following flow.
 
 1. **Parameter Setting and Initialization**
 
-1. **Get lane information**
+2. **Get lane information**
    - Get road lane (target lane) and shoulder lane (start lane) information.
 
-1. **Start and Target Path Generation**
+3. **Start and Target Path Generation**
    - Generate the centerline path of the target lane.
-   - Genarated the straight path of the shoulder lane.
+   - Generated the straight path of the shoulder lane.
 
-1. **Circular Arc Path Generation (red dotted line in the following figure)**
+4. **Circular Arc Path Generation (red dotted line in the following figure)**
    - Generate circular arc path using the same method as geometric pull out.
    - Calculate composite arc path with two arc segments (entry and exit arcs).
    - This process is repeated with gradually increasing maximum steering angles from the parameter list `clothoid_max_steer_angles_deg` (e.g., [5.0, 10.0, 20.0] degrees) until a valid path is found.
 
-1. **Clothoid Approximation**
+5. **Clothoid Approximation**
    - Convert the circular arc segments to clothoid curves.
    - Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path (**black dotted line in the following figure**).
    - Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path (**black line in the following figure**).
 
-1. **Lane Departure Check and Path Validation**
+6. **Lane Departure Check and Path Validation**
 
-1. **Collision Check**
+7. **Collision Check**
 
 ![clothoid_pullout_path_generation_flow](./images/clothoid_flow.drawio.svg)
 
