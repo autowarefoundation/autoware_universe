@@ -55,9 +55,32 @@ inline double adjust_resolution_to_circle(double requested_resolution)
   return TWO_PI / bins;
 }
 
+static inline bool within_circular_range(
+  const double & value_lower, const double & value_upper, const double & user_min,
+  const double & user_max, const double & domain_min, const double & domain_max)
+{
+  double user_min_mod = std::fmod(user_min, TWO_PI);
+  double user_max_mod = std::fmod(user_max, TWO_PI);
+  bool within_range = false;
+  if (user_min_mod < user_max_mod) {
+    // Normal case
+    within_range = user_min_mod <= value_lower && value_upper <= user_max_mod;
+  } else {
+    // Circular case
+    within_range = (user_min_mod <= value_lower && value_upper <= domain_max) ||
+                   (domain_min <= value_lower && value_upper <= user_max_mod);
+  }
+  return within_range;
+}
+
 PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("PolarVoxelOutlierFilter", options), updater_(this)
+: Filter("PolarVoxelOutlierFilter", options),
+  azimuth_domain_min(0.0),
+  azimuth_domain_max(TWO_PI),
+  elevation_domain_min(-M_PI / 2.0),
+  elevation_domain_max(M_PI / 2.0),
+  updater_(this)
 {
   radial_resolution_m_ = declare_parameter<double>("radial_resolution_m");
   azimuth_resolution_rad_ =
@@ -546,6 +569,21 @@ PolarVoxelOutlierFilterComponent::count_voxel_points(
       }
     }
   }
+
+  auto within_azimuth_range = [this](
+                                const double & val_lower, const double & val_upper,
+                                const double & user_min, const double & user_max) {
+    return within_circular_range(
+      val_lower, val_upper, user_min, user_max, azimuth_domain_min, azimuth_domain_max);
+  };
+
+  auto within_elevation_range = [this](
+                                  const double & val_lower, const double & val_upper,
+                                  const double & user_min, const double & user_max) {
+    return within_circular_range(
+      val_lower, val_upper, user_min, user_max, elevation_domain_min, elevation_domain_max);
+  };
+
   // Add range information for visibility calculation
   for (const auto & [voxel_idx, counts] : voxel_point_counts) {
     // Calculate the maximum radius for this voxel
@@ -556,10 +594,12 @@ PolarVoxelOutlierFilterComponent::count_voxel_points(
     double voxel_max_elevation = (voxel_idx.elevation_idx + 1) * elevation_resolution_rad_;
     voxel_point_counts[voxel_idx].is_in_visibility_range =
       voxel_max_radius <= visibility_estimation_max_range_m_ &&
-      visibility_estimation_min_azimuth_rad_ <= voxel_min_azimuth &&
-      voxel_max_azimuth <= visibility_estimation_max_azimuth_rad_ &&
-      visibility_estimation_min_elevation_rad_ <= voxel_min_elevation &&
-      voxel_max_elevation <= visibility_estimation_max_elevation_rad_;
+      within_azimuth_range(
+        voxel_min_azimuth, voxel_max_azimuth, visibility_estimation_min_azimuth_rad_,
+        visibility_estimation_max_azimuth_rad_) &&
+      within_elevation_range(
+        voxel_min_elevation, voxel_max_elevation, visibility_estimation_min_elevation_rad_,
+        visibility_estimation_max_elevation_rad_);
   }
   return voxel_point_counts;
 }
@@ -1134,18 +1174,35 @@ void PolarVoxelOutlierFilterComponent::publish_area_marker(
   };
 
   // Break azimuth and elevation into discrete steps to approximate the volume
-  double azimuth_portion =
-    (visibility_estimation_max_azimuth_rad_ - visibility_estimation_min_azimuth_rad_) /
-    marker_resolution;
-  double elevation_portion =
-    (visibility_estimation_max_elevation_rad_ - visibility_estimation_min_elevation_rad_) /
-    marker_resolution;
+  double azimuth_range_width =
+    visibility_estimation_max_azimuth_rad_ - visibility_estimation_min_azimuth_rad_;
+  while (azimuth_range_width < 0) {
+    azimuth_range_width += TWO_PI;
+  }
+
+  double elevation_range_width =
+    visibility_estimation_max_elevation_rad_ - visibility_estimation_min_elevation_rad_;
+  while (elevation_range_width < 0) {
+    elevation_range_width += TWO_PI;
+  }
+
+  double azimuth_portion = azimuth_range_width / marker_resolution;
+  double elevation_portion = elevation_range_width / marker_resolution;
+
   for (int az_idx = 0; az_idx < marker_resolution; az_idx++) {
     for (int el_idx = 0; el_idx < marker_resolution; el_idx++) {
       double az1 = visibility_estimation_min_azimuth_rad_ + az_idx * azimuth_portion;
       double az2 = visibility_estimation_min_azimuth_rad_ + (az_idx + 1) * azimuth_portion;
       double el1 = visibility_estimation_min_elevation_rad_ + el_idx * elevation_portion;
       double el2 = visibility_estimation_min_elevation_rad_ + (el_idx + 1) * elevation_portion;
+
+      // if visibility_estimation_max_elevation_rad_ < visibility_estimation_min_elevation_rad_,
+      // el1 and el2 can take [pi/2, 3pi/2], which is out of value domain.
+      // Skip creating surface if  either el1 or el2 is in that case
+      if (
+        (M_PI / 2.0 < el1 && el1 < 3 * M_PI / 2.0) || (M_PI / 2.0 < el2 && el2 < 3 * M_PI / 2.0)) {
+        continue;
+      }
 
       double r1 = 0;
       double r2 = visibility_estimation_max_range_m_;

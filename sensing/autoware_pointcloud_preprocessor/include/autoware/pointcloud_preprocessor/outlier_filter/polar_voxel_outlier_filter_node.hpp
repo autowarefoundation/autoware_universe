@@ -209,6 +209,12 @@ protected:
   void on_visibility_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void on_filter_ratio_check(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
+  // Constants to handle circular angles
+  const double azimuth_domain_min;
+  const double azimuth_domain_max;
+  const double elevation_domain_min;
+  const double elevation_domain_max;
+
   // Parameters
   double radial_resolution_m_{};
   double azimuth_resolution_rad_{};
