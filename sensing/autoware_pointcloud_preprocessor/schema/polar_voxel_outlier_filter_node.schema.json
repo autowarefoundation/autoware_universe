@@ -60,25 +60,29 @@
         "visibility_estimation_min_azimuth_rad": {
           "type": "number",
           "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
-          "default": "0.78",
-          "minimum": 0
+          "default": "0.0",
+          "minimum": 0.0,
+          "maximum": 6.28
         },
         "visibility_estimation_max_azimuth_rad": {
           "type": "number",
           "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
-          "default": "2.35",
-          "maximum": 3.14
+          "default": "6.28",
+          "minimum": 0.0,
+          "maximum": 6.28
         },
         "visibility_estimation_min_elevation_rad": {
           "type": "number",
           "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
-          "default": "-0.26",
-          "minimum": -1.57
+          "default": "-1.57",
+          "minimum": -1.57,
+          "maximum": 1.57
         },
         "visibility_estimation_max_elevation_rad": {
           "type": "number",
           "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
-          "default": "1.04",
+          "default": "1.57",
+          "minimum": -1.57,
           "maximum": 1.57
         },
         "use_return_type_classification": {

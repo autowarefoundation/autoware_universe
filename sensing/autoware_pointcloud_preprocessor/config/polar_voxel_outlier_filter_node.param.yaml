@@ -9,10 +9,10 @@
     max_radius_m: 300.0                          # Maximum radius to consider (meters)
     intensity_threshold: 2                       # Maximum intensity threshold for secondary returns (primary returns are not affected)
     visibility_estimation_max_range_m: 20.0      # Maximum range for visibility estimation (meters)
-    visibility_estimation_min_azimuth_rad: 0.78    # Minimum azimuth for estimating point cloud visibility, in radius
-    visibility_estimation_max_azimuth_rad: 2.35    # Maximum azimuth for estimating point cloud visibility, in radius
-    visibility_estimation_min_elevation_rad: -0.26 # Minimum elevation for estimating point cloud visibility, in radius
-    visibility_estimation_max_elevation_rad: 1.04  # Maximum elevation for estimating point cloud visibility, in radius
+    visibility_estimation_min_azimuth_rad: 0.0     # Minimum azimuth for estimating point cloud visibility, in radius
+    visibility_estimation_max_azimuth_rad: 6.28    # Maximum azimuth for estimating point cloud visibility, in radius
+    visibility_estimation_min_elevation_rad: -1.57 # Minimum elevation for estimating point cloud visibility, in radius
+    visibility_estimation_max_elevation_rad: 1.57  # Maximum elevation for estimating point cloud visibility, in radius
 
     # Return type classification parameters
     use_return_type_classification: true         # Whether to use return type classification

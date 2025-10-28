@@ -356,11 +356,12 @@ visibility_estimation_only: true # Diagnostics only
 - **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
 - **Finite coordinates required**: Automatically filters out NaN/Inf points
 - **Return type dependency**: Advanced filtering effectiveness depends on accurate return type classification
-- **Visibility range dependency**: Visibility accuracy depends on appropriate `visibility_estimation_max_range_m` setting
-- **Secondary voxel limiting**: Visibility estimation can be tuned via `visibility_estimation_max_secondary_voxel_count`
-- **Visualization marker**: The marker to visualize the area used for visibility estimation assumes the following definition for azimuth and elevation:
+- **Visibility range dependency**: Visibility accuracy depends on appropriate `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimutha_rad`, and `visibility_estimation_(min|max)_elevation_rad` settings. Besides, for azimuth and elevation range, the following definitions are assumed
   - azimuth: starts with the y-axis, increasing in counter-corkscrew rule around the z-axis. The range domain is $`[0, 2\pi]`$
   - elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is $`[-\frac{\pi}{2}, \frac{pi}{2}]`$
+- **Secondary voxel limiting**: Visibility estimation can be tuned via `visibility_estimation_max_secondary_voxel_count`
+
+
 
 ## Error detection and handling
 

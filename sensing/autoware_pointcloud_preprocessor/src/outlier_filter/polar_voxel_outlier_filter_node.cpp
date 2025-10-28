@@ -40,7 +40,6 @@ namespace autoware::pointcloud_preprocessor
 static constexpr double diagnostics_update_period_sec = 0.1;
 static constexpr size_t point_cloud_height_organized = 1;
 static constexpr double TWO_PI = 2.0 * M_PI;
-static constexpr double HALF_PI = M_PI / 2.0;
 static constexpr int marker_resolution = 50;
 
 template <typename... T>
@@ -795,8 +794,8 @@ bool PolarVoxelOutlierFilterComponent::validate_negative_half_pi_to_half_pi(
   const rclcpp::Parameter & param, std::string & reason)
 {
   double val = param.as_double();
-  if (val < -HALF_PI || val > HALF_PI) {
-    reason = param.get_name() + " must be between -PI/2 and PI/2";
+  if (val < -M_PI / 2.0 || val > M_PI / 2.0) {
+    reason = param.get_name() + " must be between -PI and PI";
     return false;
   }
   return true;
