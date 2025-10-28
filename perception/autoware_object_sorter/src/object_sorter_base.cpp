@@ -62,10 +62,10 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
   // read each label settings
   for (size_t i = 0; i < label_names.size(); i++) {
     std::string sort_target_label = "sort_target." + label_names[i];
-    LabelSettings label_sttings;
+    LabelSettings label_settings;
 
-    label_sttings.publish = declare_parameter<bool>(sort_target_label + ".publish");
-    label_sttings.min_velocity =
+    label_settings.publish = declare_parameter<bool>(sort_target_label + ".publish");
+    label_settings.min_velocity =
       declare_parameter<double>(sort_target_label + ".min_velocity_threshold");
 
     if (use_distance_thresholding) {
@@ -78,7 +78,7 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
       const double min_dist_sq = min_dist * min_dist;
 
       // Check distance
-      label_sttings.isInTargetRange = [min_dist_sq, max_dist_sq](double dx, double dy) {
+      label_settings.isInTargetRange = [min_dist_sq, max_dist_sq](double dx, double dy) {
         const double dist_sq = dx * dx + dy * dy;
         if (dist_sq < min_dist_sq || dist_sq > max_dist_sq) {
           // Outside the target distance
@@ -94,7 +94,7 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
       const double min_y = declare_parameter<double>(sort_target_label + ".range_threshold.min_y");
 
       // Check object's relative position
-      label_sttings.isInTargetRange = [min_x, max_x, min_y, max_y](double dx, double dy) {
+      label_settings.isInTargetRange = [min_x, max_x, min_y, max_y](double dx, double dy) {
         if (
           // Outside x
           dx < min_x || dx > max_x ||
@@ -108,7 +108,7 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
       };
     }
 
-    label_sttings_[label_number[i]] = label_sttings;
+    label_settings_[label_number[i]] = label_settings;
   }
 }
 
@@ -141,13 +141,13 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   double dist_origin_y = ego_pos.y + range_calc_offset_y_;
 
   for (const auto & object : input_msg->objects) {
-    const LabelSettings & label_sttings = label_sttings_[object.classification.front().label];
+    const LabelSettings & label_settings = label_settings_[object.classification.front().label];
 
-    if (!label_sttings.publish) {
+    if (!label_settings.publish) {
       continue;
     }
 
-    if (!label_sttings.isInTargetVelocity(object.kinematics.twist_with_covariance.twist.linear)) {
+    if (!label_settings.isInTargetVelocity(object.kinematics.twist_with_covariance.twist.linear)) {
       continue;
     }
 
@@ -157,7 +157,7 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
       const double object_diff_y =
         object.kinematics.pose_with_covariance.pose.position.y - dist_origin_y;
 
-      if (!label_sttings.isInTargetRange(object_diff_x, object_diff_y)) {
+      if (!label_settings.isInTargetRange(object_diff_x, object_diff_y)) {
         continue;
       }
     }

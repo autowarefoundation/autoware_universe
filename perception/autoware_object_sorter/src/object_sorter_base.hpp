@@ -75,10 +75,9 @@ private:
 
   // Parameter
   std::string range_calc_frame_id_;
-  LabelSettings label_settings_;
   double range_calc_offset_x_;
   double range_calc_offset_y_;
-  std::unordered_map<uint8_t, LabelSettings> label_sttings_;
+  std::unordered_map<uint8_t, LabelSettings> label_settings_;
 };
 
 }  // namespace autoware::object_sorter
