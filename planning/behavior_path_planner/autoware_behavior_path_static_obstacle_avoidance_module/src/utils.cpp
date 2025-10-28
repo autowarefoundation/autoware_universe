@@ -580,7 +580,7 @@ std::optional<lanelet::ConstLineString3d> getNearestIntersectionRoadBorder(
   // get linestrings in the bounding box
   linestrings = route_handler->getLaneletMapPtr()->lineStringLayer.search(bbox);
 
-  // typeがroad_borderのlinestringを抽出
+  // extract road_border linestring
   std::vector<lanelet::ConstLineString3d> road_border_linestring;
   for (const auto & ls : linestrings) {
     const lanelet::Attribute & type = ls.attribute(lanelet::AttributeName::Type);
