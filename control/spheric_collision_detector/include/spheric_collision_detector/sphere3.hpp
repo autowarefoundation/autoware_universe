@@ -25,14 +25,15 @@
 
 namespace sphere3
 {
-    class Sphere3{
-        public:
-            Eigen::Vector3d center_;
-            double radius_;
-            int tag_;
+class Sphere3
+{
+public:
+  Eigen::Vector3d center_;
+  double radius_;
+  int tag_;
 
-            Sphere3(Eigen::Vector3d center, double radius, int tag);
-    };
-} //namespace sphere3
+  Sphere3(Eigen::Vector3d center, double radius, int tag);
+};
+}  // namespace sphere3
 
-#endif  // SPHERIC_COLLISION_DETECTOR_SPHERE3_HPP_
+#endif  // SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_

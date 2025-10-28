@@ -21,11 +21,7 @@
           "description": "Max deceleration for ego vehicle to stop."
         }
       },
-      "required": [
-        "delay_time",
-        "max_deceleration",
-        "update_rate"
-      ]
+      "required": ["delay_time", "max_deceleration", "update_rate"]
     }
   },
   "properties": {
