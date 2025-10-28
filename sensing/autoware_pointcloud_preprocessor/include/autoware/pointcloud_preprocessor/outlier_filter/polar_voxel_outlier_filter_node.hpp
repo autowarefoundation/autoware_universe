@@ -16,7 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__POLAR_VOXEL_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
-#include "autoware/pointcloud_preprocessor/outlier_filter/hysteresis_state_machine.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/hysteresis_state_machine.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
