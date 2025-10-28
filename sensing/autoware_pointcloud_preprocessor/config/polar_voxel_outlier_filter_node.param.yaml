@@ -20,9 +20,6 @@
     secondary_noise_threshold: 4                 # Threshold for classifying primary vs secondary returns
     visibility_estimation_max_secondary_voxel_count: 500  # Maximum secondary voxel count for visibility estimation
     primary_return_types: [1, 6, 8, 10]          # Return types considered as primary returns (all others are secondary)
-    num_frames_hysteresis_transition: 1          # The number of frames to be required to transition judgement
-    immediate_report_error: false                # Whether to report error state immediately if a single frame categorized as error
-    immediate_relax_state: false                 # Whether to relax state if observed state is better than the current one
 
     # Performance and debug control
     visibility_estimation_only: false           # Run filter for visibility estimation only (no point cloud output)
@@ -34,3 +31,6 @@
     filter_ratio_warn_threshold: 0.7             # Warning threshold for filter ratio diagnostics
     visibility_error_threshold: 0.8              # Error threshold for visibility diagnostics
     visibility_warn_threshold: 0.9               # Warning threshold for visibility diagnostics
+    num_frames_hysteresis_transition: 1          # The number of frames to be required to transition judgement
+    immediate_report_error: false                # Whether to report error state immediately if a single frame categorized as error
+    immediate_relax_state: false                 # Whether to relax state if observed state is better than the current one
