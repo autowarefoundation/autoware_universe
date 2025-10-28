@@ -10,7 +10,7 @@
       - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
 
-    # Plugin activation flags - control runtime enable/disable via rqt_reconfigure
+    # Plugin activation flags - control runtime enable/disable
     use_akima_spline_interpolation: false
     use_eb_smoother: false
     use_qp_smoother: true
