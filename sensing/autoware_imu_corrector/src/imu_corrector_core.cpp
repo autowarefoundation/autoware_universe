@@ -93,6 +93,15 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   gyro_scale_.vector.x = 1.0;
   gyro_scale_.vector.y = 1.0;
   gyro_scale_.vector.z = 1.0;
+
+  RCLCPP_INFO(this->get_logger(), "correct_for_static_bias: %s", correct_for_static_bias_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "correct_for_dynamic_bias: %s", correct_for_dynamic_bias_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "correct_for_scale: %s", correct_for_scale_ ? "true" : "false");
+
+  if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
+    throw std::runtime_error(
+      "Cannot enable both static and dynamic gyro bias correction simultaneously.");
+  }
 }
 
 void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr)
@@ -109,11 +118,6 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
     gyro_scale_.vector.x = 1.0;
     gyro_scale_.vector.y = 1.0;
     gyro_scale_.vector.z = 1.0;
-  }
-
-  if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
-    throw std::runtime_error(
-      "Cannot enable both static and dynamic gyro bias correction simultaneously.");
   }
 
   if (correct_for_static_bias_) {
