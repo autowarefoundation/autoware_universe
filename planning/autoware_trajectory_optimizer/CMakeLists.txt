@@ -5,7 +5,6 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 pluginlib_export_plugin_description_file(autoware_trajectory_optimizer plugins.xml)
 
-# Main node component library
 ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer.cpp
   src/utils.cpp
@@ -16,7 +15,6 @@ rclcpp_components_register_node(autoware_trajectory_optimizer_component
   EXECUTABLE autoware_trajectory_optimizer_node
 )
 
-# Separate plugin library for pluginlib (NOT linked to component)
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
   src/trajectory_optimizer_plugins/trajectory_extender.cpp

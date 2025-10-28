@@ -6,6 +6,22 @@
     "trajectory_optimizer_node": {
       "type": "object",
       "properties": {
+        "plugin_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+          ],
+          "description": "List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified."
+        },
         "use_akima_spline_interpolation": {
           "type": "boolean",
           "default": false,
