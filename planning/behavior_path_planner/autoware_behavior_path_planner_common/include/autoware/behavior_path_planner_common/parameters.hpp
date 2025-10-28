@@ -53,6 +53,7 @@ struct BehaviorPathPlannerParameters
   double turn_signal_minimum_search_distance;
   double turn_signal_shift_length_threshold;
   double turn_signal_remaining_shift_length_threshold;
+  double turn_signal_remaining_distance_to_bound_threshold;
   bool turn_signal_on_swerving;
   std::string turn_signal_roundabout_on_entry;
   std::string turn_signal_roundabout_on_exit;

@@ -421,6 +421,9 @@ TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const do
 double calc_judge_line_dist_with_jerk_limit(
   const double velocity, const double acceleration, const double max_stop_acceleration,
   const double max_stop_jerk, const double delay_response_time);
+
+std::optional<double> calc_signed_lateral_distance_to_boundary(
+  const lanelet::ConstLineString3d & boundary, const Pose & reference_pose);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
