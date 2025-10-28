@@ -94,8 +94,11 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   gyro_scale_.vector.y = 1.0;
   gyro_scale_.vector.z = 1.0;
 
-  RCLCPP_INFO(this->get_logger(), "correct_for_static_bias: %s", correct_for_static_bias_ ? "true" : "false");
-  RCLCPP_INFO(this->get_logger(), "correct_for_dynamic_bias: %s", correct_for_dynamic_bias_ ? "true" : "false");
+  RCLCPP_INFO(
+    this->get_logger(), "correct_for_static_bias: %s", correct_for_static_bias_ ? "true" : "false");
+  RCLCPP_INFO(
+    this->get_logger(), "correct_for_dynamic_bias: %s",
+    correct_for_dynamic_bias_ ? "true" : "false");
   RCLCPP_INFO(this->get_logger(), "correct_for_scale: %s", correct_for_scale_ ? "true" : "false");
 
   if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
