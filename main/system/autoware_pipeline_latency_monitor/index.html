@@ -19977,7 +19977,7 @@
 <p>The node is configured with a sequence of processing steps. For each step, it subscribes to a topic that publishes its execution latency.</p>
 <p>To calculate the total latency, the node works backward from the last step in the defined sequence. It takes the most recent latency measurement from the final step. Then, for each preceding step, it finds a corresponding latency measurement from its history whose timestamp is consistent with the subsequent step. Specifically, it ensures that the end time of a given step occurs before the start time of the next step in the chain.</p>
 <p>The total latency is the sum of these chronologically-consistent individual latencies. The node also allows for adding fixed offset values to the final sum.</p>
-<p>The calculated total latency is published continuously and also used to report diagnostic information. A WARN status is published if the latency exceeds a configurable threshold.</p>
+<p>The calculated total latency is published continuously and also used to report diagnostic information. An ERROR status is published if the latency exceeds a configurable threshold.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <p>Subscribes to topics containing latency information for each processing step. The topic names and types are configured via parameters.
@@ -20021,7 +20021,7 @@ Only 2 message types are currently supported.</p>
 <tr>
 <td><code>/diagnostics</code></td>
 <td><code>diagnostic_msgs/DiagnosticArray</code></td>
-<td>Publishes the diagnostic status. Reports <code>OK</code> if the latency is within the threshold, and <code>WARN</code> if it is exceeded.</td>
+<td>Publishes the diagnostic status. Reports <code>OK</code> if the latency is within the threshold, and <code>ERROR</code> if it is exceeded.</td>
 </tr>
 <tr>
 <td><code>~/debug/&lt;step_name&gt;_latency_ms</code></td>
@@ -20056,7 +20056,7 @@ Only 2 message types are currently supported.</p>
 <td><code>latency_threshold_ms</code></td>
 <td><code>double</code></td>
 <td>1000</td>
-<td>The latency threshold in milliseconds. If the total latency exceeds this value, a <code>WARN</code> diagnostic is reported.</td>
+<td>The latency threshold in milliseconds. If the total latency exceeds this value, an <code>ERROR</code> diagnostic is reported.</td>
 </tr>
 <tr>
 <td><code>window_size</code></td>
