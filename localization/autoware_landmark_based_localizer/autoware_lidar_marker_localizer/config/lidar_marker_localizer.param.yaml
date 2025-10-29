@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    enable_read_all_target_ids: true
+    target_ids: ["0000", "0001", "0002", "0003", "0004", "0005"]
 
     # marker name
     marker_name: "reflector"

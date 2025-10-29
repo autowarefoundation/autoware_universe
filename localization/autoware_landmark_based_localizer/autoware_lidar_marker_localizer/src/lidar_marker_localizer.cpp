@@ -51,6 +51,9 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   using std::placeholders::_1;
   using std::placeholders::_2;
 
+  param_.enable_read_all_target_ids = this->declare_parameter<bool>("enable_read_all_target_ids");
+  param_.target_ids = this->declare_parameter<std::vector<std::string>>("target_ids");
+
   param_.marker_name = this->declare_parameter<std::string>("marker_name");
   param_.resolution = this->declare_parameter<double>("resolution");
   param_.intensity_pattern = this->declare_parameter<std::vector<int64_t>>("intensity_pattern");
@@ -145,7 +148,11 @@ void LidarMarkerLocalizer::initialize_diagnostics()
 
 void LidarMarkerLocalizer::map_bin_callback(const HADMapBin::ConstSharedPtr & map_bin_msg_ptr)
 {
-  landmark_manager_.parse_landmarks(map_bin_msg_ptr, param_.marker_name);
+  if (param_.enable_read_all_target_ids) {
+    landmark_manager_.parse_landmarks(map_bin_msg_ptr, param_.marker_name);
+  } else {
+    landmark_manager_.parse_landmarks(map_bin_msg_ptr, param_.marker_name, param_.target_ids);
+  }
   const MarkerArray marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
   pub_marker_mapped_->publish(marker_msg);
 }
