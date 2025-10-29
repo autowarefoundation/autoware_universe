@@ -290,7 +290,7 @@ __forceinline__ __device__ void segmentCell(
   float minus_t_gnd_radius_sum = 0;
   float minus_t_gnd_height_sum = 0;
   float minus_t_gnd_point_num = 0;
-  ClassifiedPointType last_gnd_point;
+  ClassifiedPointType last_gnd_point, p;
   int last_gnd_idx;
   int local_gnd_point_num;
 
@@ -362,7 +362,7 @@ __forceinline__ __device__ void segmentCell(
         minus_t_gnd_height_sum += p.z;
         minus_t_gnd_radius_sum += p.radius;
         ++minus_t_gnd_point_num;
-        p.type == PointType::NON_GROUND;
+        p.type = PointType::NON_GROUND;
         last_gnd_idx = j;
       }
 
