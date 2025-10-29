@@ -21620,7 +21620,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Supported formats</strong>: PointXYZIRC and PointXYZIRCAEDT only</li>
 <li><strong>Finite coordinates required</strong>: Automatically filters out NaN/Inf points</li>
 <li><strong>Return type dependency</strong>: Advanced filtering effectiveness depends on accurate return type classification</li>
-<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimutha_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> settings. Besides, for azimuth and elevation range, the following definitions are assumed<ul>
+<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> settings. Besides, for azimuth and elevation range, the following definitions are assumed<ul>
 <li>azimuth: starts with the y-axis, increasing in counter-corkscrew rule around the z-axis. The range domain is <span class="arithmatex">\(<code>[0, 2\pi]</code>\)</span></li>
 <li>elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is <span class="arithmatex">\(<code>[-\frac{\pi}{2}, \frac{pi}{2}]</code>\)</span></li>
 </ul>
