@@ -61,6 +61,8 @@ class LidarMarkerLocalizer : public rclcpp::Node
 
   struct Param
   {
+    bool enable_read_all_target_ids;
+    std::vector<std::string> target_ids;
     std::string marker_name;
 
     double resolution;

@@ -53,11 +53,72 @@ void LandmarkManager::parse_landmarks(
     const auto & v1 = vertices[1];
     const auto & v2 = vertices[2];
     const auto & v3 = vertices[3];
-    const double volume = (v1 - v0).cross(v2 - v0).dot(v3 - v0) / 6.0;
-    const double volume_threshold = 1e-3;
-    if (volume > volume_threshold) {
+    // const double volume = (v1 - v0).cross(v2 - v0).dot(v3 - v0) / 6.0;
+    // const double volume_threshold = 1e-3;
+    // if (volume > volume_threshold) {
+    //   continue;
+    // }
+
+    // Calculate the center of the quadrilateral
+    const auto center = (v0 + v1 + v2 + v3) / 4.0;
+
+    // Define axes
+    const auto x_axis = (v1 - v0).normalized();
+    const auto y_axis = (v2 - v1).normalized();
+    const auto z_axis = x_axis.cross(y_axis).normalized();
+
+    // Construct rotation matrix and convert it to quaternion
+    Eigen::Matrix3d rotation_matrix;
+    rotation_matrix << x_axis, y_axis, z_axis;
+    const Eigen::Quaterniond q{rotation_matrix};
+
+    // Create Pose
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = center.x();
+    pose.position.y = center.y();
+    pose.position.z = center.z();
+    pose.orientation.x = q.x();
+    pose.orientation.y = q.y();
+    pose.orientation.z = q.z();
+    pose.orientation.w = q.w();
+
+    // Add
+    landmarks_map_[landmark_id].push_back(pose);
+  }
+}
+
+void LandmarkManager::parse_landmarks(
+  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr & msg,
+  const std::string & target_subtype, const std::vector<std::string> target_ids)
+{
+  std::vector<lanelet::Polygon3d> landmarks =
+    lanelet::localization::parseLandmarkPolygons(msg, target_subtype);
+  for (const lanelet::Polygon3d & poly : landmarks) {
+    // Get landmark_id
+    const std::string landmark_id = poly.attributeOr("marker_id", "none");
+
+    auto find_it = std::find(std::begin(target_ids), std::end(target_ids), landmark_id);
+    if (find_it == std::end(target_ids)) {
       continue;
     }
+
+    // Get 4 vertices
+    const auto & vertices = poly.basicPolygon();
+    if (vertices.size() != 4) {
+      continue;
+    }
+
+    // 4 vertices represent the landmark vertices in counterclockwise order
+    // Calculate the volume by considering it as a tetrahedron
+    const auto & v0 = vertices[0];
+    const auto & v1 = vertices[1];
+    const auto & v2 = vertices[2];
+    const auto & v3 = vertices[3];
+    // const double volume = (v1 - v0).cross(v2 - v0).dot(v3 - v0) / 6.0;
+    // const double volume_threshold = 1e-3;
+    // if (volume > volume_threshold) {
+    //   continue;
+    // }
 
     // Calculate the center of the quadrilateral
     const auto center = (v0 + v1 + v2 + v3) / 4.0;
@@ -168,47 +229,50 @@ geometry_msgs::msg::Pose LandmarkManager::calculate_new_self_pose(
       autoware_utils_geometry::transform_pose(detected_landmark_on_base_link, self_pose);
 
     // match to map
-    if (landmarks_map_.count(landmark.id) == 0) {
-      continue;
-    }
+    // if (landmarks_map_.count(landmark.id) == 0) {
+    //   continue;
+    // }
 
     // check all poses
-    for (const Pose mapped_landmark_on_map : landmarks_map_.at(landmark.id)) {
-      // check distance
-      const double curr_distance = autoware_utils_geometry::calc_distance3d(
-        mapped_landmark_on_map.position, detected_landmark_on_map.position);
-      if (curr_distance > min_distance) {
-        continue;
-      }
+    // for (const Pose mapped_landmark_on_map : landmarks_map_.at(landmark.id)) {
+    for (const auto & [landmark_id_str, landmark_poses] : landmarks_map_) {
+      for (const auto & mapped_landmark_on_map : landmark_poses) {
+        // check distance
+        const double curr_distance = autoware_utils_geometry::calc_distance3d(
+          mapped_landmark_on_map.position, detected_landmark_on_map.position);
+        if (curr_distance > min_distance) {
+          continue;
+        }
 
-      if (consider_orientation) {
-        const Eigen::Affine3d landmark_pose =
-          autoware::localization_util::pose_to_affine3d(mapped_landmark_on_map);
-        const Eigen::Affine3d landmark_to_base_link =
-          autoware::localization_util::pose_to_affine3d(detected_landmark_on_base_link).inverse();
-        const Eigen::Affine3d new_self_pose_eigen = landmark_pose * landmark_to_base_link;
+        if (consider_orientation) {
+          const Eigen::Affine3d landmark_pose =
+            autoware::localization_util::pose_to_affine3d(mapped_landmark_on_map);
+          const Eigen::Affine3d landmark_to_base_link =
+            autoware::localization_util::pose_to_affine3d(detected_landmark_on_base_link).inverse();
+          const Eigen::Affine3d new_self_pose_eigen = landmark_pose * landmark_to_base_link;
 
-        const Pose new_self_pose =
-          autoware::localization_util::matrix4f_to_pose(new_self_pose_eigen.matrix().cast<float>());
+          const Pose new_self_pose = autoware::localization_util::matrix4f_to_pose(
+            new_self_pose_eigen.matrix().cast<float>());
 
-        // update
-        min_distance = curr_distance;
-        min_new_self_pose = new_self_pose;
-      } else {
-        const double diff_x =
-          mapped_landmark_on_map.position.x - detected_landmark_on_map.position.x;
-        const double diff_y =
-          mapped_landmark_on_map.position.y - detected_landmark_on_map.position.y;
-        const double diff_z =
-          mapped_landmark_on_map.position.z - detected_landmark_on_map.position.z;
-        Pose new_self_pose = self_pose;
-        new_self_pose.position.x += diff_x;
-        new_self_pose.position.y += diff_y;
-        new_self_pose.position.z += diff_z;
+          // update
+          min_distance = curr_distance;
+          min_new_self_pose = new_self_pose;
+        } else {
+          const double diff_x =
+            mapped_landmark_on_map.position.x - detected_landmark_on_map.position.x;
+          const double diff_y =
+            mapped_landmark_on_map.position.y - detected_landmark_on_map.position.y;
+          const double diff_z =
+            mapped_landmark_on_map.position.z - detected_landmark_on_map.position.z;
+          Pose new_self_pose = self_pose;
+          new_self_pose.position.x += diff_x;
+          new_self_pose.position.y += diff_y;
+          new_self_pose.position.z += diff_z;
 
-        // update
-        min_distance = curr_distance;
-        min_new_self_pose = new_self_pose;
+          // update
+          min_distance = curr_distance;
+          min_new_self_pose = new_self_pose;
+        }
       }
     }
   }
