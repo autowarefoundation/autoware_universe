@@ -17,6 +17,7 @@
     vote_threshold_for_detect_marker: 20
     marker_to_vehicle_offset_y: 0.0
     marker_height_from_ground: 1.075
+    reference_ring_number: 255 # set to 255 to disable ring filtering
 
     # for interpolate algorithm
     self_pose_timeout_sec: 1.0
