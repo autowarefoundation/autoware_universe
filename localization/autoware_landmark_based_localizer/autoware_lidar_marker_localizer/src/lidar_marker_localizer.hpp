@@ -73,6 +73,7 @@ class LidarMarkerLocalizer : public rclcpp::Node
     int64_t vote_threshold_for_detect_marker;
     double marker_to_vehicle_offset_y;
     double marker_height_from_ground;
+    int64_t reference_ring_number;
 
     double self_pose_timeout_sec;
     double self_pose_distance_tolerance_m;
