@@ -333,7 +333,7 @@ void apply_spline(
   if (copy_original_orientation) {
     for (auto & out_point : output_points) {
       const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
-        original_traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
+        original_traj_points, out_point.pose, max_distance_discrepancy_m, M_PI);
       if (!nearest_index_opt.has_value()) {
         continue;
       }
