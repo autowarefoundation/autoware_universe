@@ -24,6 +24,7 @@
 
 #include <array>
 #include <memory>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -91,6 +92,11 @@ private:
   bool orientation_std_available_;
   bool orientation_rate_available_;
   bool orientation_rate_std_available_;
+
+  // Maps for classification remapping
+  static const std::map<std::string, std::uint8_t> RADAR_LABEL_TO_UINT_MAP;
+  static const std::map<std::string, std::uint8_t> OBJECT_LABEL_TO_UINT_MAP;
+  std::map<std::uint8_t, std::uint8_t> classification_remap_;
 };
 }  // namespace autoware
 
