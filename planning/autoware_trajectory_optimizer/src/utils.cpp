@@ -14,6 +14,10 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include "autoware/trajectory/interpolator/akima_spline.hpp"
+#include "autoware/trajectory/interpolator/interpolator.hpp"
+#include "autoware/trajectory/pose.hpp"
+#include "autoware/trajectory/trajectory_point.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
@@ -37,6 +41,10 @@
 
 namespace autoware::trajectory_optimizer::utils
 {
+using autoware::experimental::trajectory::interpolator::AkimaSpline;
+using InterpolationTrajectory =
+  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
+
 rclcpp::Logger get_logger()
 {
   return rclcpp::get_logger("trajectory_optimizer");
@@ -273,61 +281,68 @@ void copy_trajectory_orientation(
 
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
-  const bool preserve_input_trajectory_orientation)
+  const double max_distance_discrepancy_m, const bool copy_original_orientation)
 {
-  constexpr size_t min_points_for_akima_spline = 5;
-  constexpr double min_interpolation_resolution_m = 0.1;
-  const auto traj_length = autoware::motion_utils::calcArcLength(traj_points);
+  constexpr size_t minimum_points_for_akima_spline = 5;
+  if (traj_points.size() < minimum_points_for_akima_spline) {
+    log_error_throttle("Not enough points in trajectory for spline interpolation");
+    return;
+  }
+  const TrajectoryPoints original_traj_points = traj_points;
+  auto trajectory_interpolation_util =
+    InterpolationTrajectory::Builder{}
+      .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
+      .build(traj_points);
+  if (!trajectory_interpolation_util) {
+    log_warn_throttle("Failed to build interpolation trajectory");
+    return;
+  }
+  trajectory_interpolation_util->align_orientation_with_trajectory_direction();
+  TrajectoryPoints output_points{traj_points.front()};
+  constexpr double epsilon = 1e-2;
+  const auto ds = std::max(interpolation_resolution_m, epsilon);
+  output_points.reserve(static_cast<size_t>(trajectory_interpolation_util->length() / ds));
 
-  if (
-    interpolation_resolution_m < min_interpolation_resolution_m ||
-    traj_points.size() < min_points_for_akima_spline || traj_length < interpolation_resolution_m) {
+  for (auto s = ds; s <= trajectory_interpolation_util->length(); s += ds) {
+    auto p = trajectory_interpolation_util->compute(s);
+    if (!validate_point(p)) {
+      continue;
+    }
+    output_points.push_back(p);
+  }
+
+  if (output_points.size() < 2) {
+    log_warn_throttle("Not enough points in trajectory after akima spline interpolation");
+    return;
+  }
+  auto last_interpolated_point = output_points.back();
+  auto & original_trajectory_last_point = traj_points.back();
+
+  if (!validate_point(original_trajectory_last_point)) {
+    log_warn_throttle("Last point in original trajectory is invalid. Removing last point");
+    traj_points = output_points;
     return;
   }
 
-  constexpr bool use_lerp_for_z = false;
-  constexpr bool use_zero_order_hold_for_twist = true;
-  constexpr bool resample_input_trajectory_stop_point = false;
-  constexpr bool dont_use_akima_spline_for_xy =
-    true;  // Note: autoware::motion_utils::resampleTrajectory has an error where the use akima
-           // spline input is inverted, so setting the use_akima_spline_for_xy to true actually
-           // applies a simple lerp
-  autoware_planning_msgs::msg::Trajectory temp_traj;
-  temp_traj.points = traj_points;
-  // first resample to a lower resolution to avoid ill-conditioned spline
-  temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, 2.0 * interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
-    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
-  // then resample to the desired resolution using akima spline
-  temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, interpolation_resolution_m, !dont_use_akima_spline_for_xy, use_lerp_for_z,
-    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
+  auto d = autoware_utils::calc_distance2d(
+    last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
+  if (d > epsilon) {
+    output_points.push_back(original_trajectory_last_point);
+  }
 
-  // check where the original trajectory ends in the new trajectory or where there is a significant
-  // change in yaw
-  const double max_yaw_discrepancy_rad = autoware_utils_math::deg2rad(max_yaw_discrepancy_deg);
-  const auto last_original_point = traj_points.back();
-  const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
-    temp_traj.points, last_original_point.pose, max_distance_discrepancy_m,
-    max_yaw_discrepancy_rad);
-  if (!nearest_index_opt.has_value() || nearest_index_opt.value() == 0) {
-    log_warn_throttle("Could not find a suitable point to crop the trajectory");
-    return;
+  if (copy_original_orientation) {
+    for (auto & out_point : output_points) {
+      const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
+        original_traj_points, out_point.pose, max_distance_discrepancy_m, M_PI_2);
+      if (!nearest_index_opt.has_value()) {
+        continue;
+      }
+      const auto nearest_index = nearest_index_opt.value();
+      out_point.pose.orientation = original_traj_points.at(nearest_index).pose.orientation;
+    }
   }
-  // crop the trajectory up to the nearest index
-  temp_traj.points = TrajectoryPoints(
-    temp_traj.points.begin(), std::next(temp_traj.points.begin(), nearest_index_opt.value()));
-  // ensure the last point is the same as the original trajectory last point
-  temp_traj.points.push_back(last_original_point);
-  // re-sample again using lerp to ensure the resolution is maintained after cropping
-  temp_traj = autoware::motion_utils::resampleTrajectory(
-    temp_traj, interpolation_resolution_m, dont_use_akima_spline_for_xy, use_lerp_for_z,
-    use_zero_order_hold_for_twist, resample_input_trajectory_stop_point);
-  if (preserve_input_trajectory_orientation) {
-    copy_trajectory_orientation(traj_points, temp_traj.points, max_distance_discrepancy_m, M_PI_2);
-  }
-  traj_points = temp_traj.points;
+
+  traj_points = output_points;
 }
 
 void add_ego_state_to_trajectory(
@@ -344,9 +359,8 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(
-    autoware_utils_math::normalize_degree(
-      ego_state.pose.orientation.z - last_point.pose.orientation.z));
+  const auto yaw_diff = std::abs(autoware_utils_math::normalize_degree(
+    ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;
