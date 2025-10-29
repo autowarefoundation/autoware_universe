@@ -76,6 +76,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<double>("limit_distance_from_self_pose_to_nearest_marker_y");
   param_.limit_distance_from_self_pose_to_marker =
     this->declare_parameter<double>("limit_distance_from_self_pose_to_marker");
+  param_.reference_ring_number = this->declare_parameter<int64_t>("reference_ring_number");
   std::vector<double> base_covariance =
     this->declare_parameter<std::vector<double>>("base_covariance");
   for (std::size_t i = 0; i < base_covariance.size(); ++i) {
@@ -386,7 +387,7 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
 
   // initialize variables
   std::vector<int> vote(bin_num, 0);
-  std::vector<float> min_y(bin_num, std::numeric_limits<float>::max());
+  std::vector<float> reference_ring_y(bin_num, std::numeric_limits<float>::max());
 
   // for each channel
   for (const pcl::PointCloud<autoware::point_types::PointXYZIRC> & one_ring : ring_points) {
@@ -398,7 +399,11 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
       const int bin_index = static_cast<int>((point.x - min_x) / param_.resolution);
       intensity_sum[bin_index] += point.intensity;
       intensity_num[bin_index]++;
-      min_y[bin_index] = std::min(min_y[bin_index], point.y);
+      if (
+        (point.ring == param_.reference_ring_number) ||
+        (param_.reference_ring_number == std::numeric_limits<uint8_t>::max())) {
+        reference_ring_y[bin_index] = std::min(reference_ring_y[bin_index], point.y);
+      }
     }
 
     // calc average
@@ -472,7 +477,7 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
         static_cast<double>(i) + static_cast<double>(param_.intensity_pattern.size()) / 2.0;
       Pose marker_pose_on_base_link;
       marker_pose_on_base_link.position.x = bin_position * param_.resolution + min_x;
-      marker_pose_on_base_link.position.y = min_y[i];
+      marker_pose_on_base_link.position.y = reference_ring_y[i];
       marker_pose_on_base_link.position.z = param_.marker_height_from_ground;
       marker_pose_on_base_link.orientation =
         autoware_utils_geometry::create_quaternion_from_rpy(M_PI_2, 0.0, 0.0);  // TODO(YamatoAndo)
