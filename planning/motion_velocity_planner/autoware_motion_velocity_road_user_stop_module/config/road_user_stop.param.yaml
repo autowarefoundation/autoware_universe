@@ -59,3 +59,10 @@
         lost_object_retention_duration: 2.0 # [s] duration to keep tracking objects after they are lost or exit the detection area
 
         polygon_expansion_length: 0.5 # [m] Factor to expand object polygon when object was previously inside detection area
+
+      # stopped object tracking parameters
+      stopped_object_tracking:
+        stopped_velocity_threshold: 0.5 # [m/s] velocity threshold to consider object as stopped
+        stopped_position_tolerance: 0.3 # [m] distance threshold for stopped position movement
+        ego_reached_wall_distance_threshold: 0.5 # [m] distance threshold to consider ego reached virtual wall
+        stopped_duration_after_ego_arrival: 3.0 # [s] duration threshold for stopped object after ego reaches virtual wall

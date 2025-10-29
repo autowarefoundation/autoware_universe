@@ -60,13 +60,6 @@ namespace autoware::behavior_velocity_planner
  */
 struct CollisionInterval
 {
-  enum LanePosition {
-    FIRST,
-    SECOND,
-    ELSE,
-  };
-  LanePosition lane_position{LanePosition::ELSE};
-
   //! original predicted path
   std::vector<geometry_msgs::msg::Pose> path;
 
@@ -162,14 +155,9 @@ public:
    */
   bool before_stopline_by(const double margin) const;
 
-  void setDecisionAt1stPassJudgeLinePassage(const CollisionKnowledge & knowledge)
+  void setDecisionAtPassJudgeLinePassage(const CollisionKnowledge & knowledge)
   {
-    decision_at_1st_pass_judge_line_passage_ = knowledge;
-  }
-
-  void setDecisionAt2ndPassJudgeLinePassage(const CollisionKnowledge & knowledge)
-  {
-    decision_at_2nd_pass_judge_line_passage_ = knowledge;
+    decision_at_pass_judge_line_passage_ = knowledge;
   }
 
   const std::optional<CollisionInterval> & unsafe_interval() const { return unsafe_interval_; }
@@ -179,14 +167,9 @@ public:
     return predicted_object_.kinematics.initial_twist_with_covariance.twist.linear.x;
   }
 
-  const std::optional<CollisionKnowledge> & decision_at_1st_pass_judge_line_passage() const
+  const std::optional<CollisionKnowledge> & decision_at_pass_judge_line_passage() const
   {
-    return decision_at_1st_pass_judge_line_passage_;
-  }
-
-  const std::optional<CollisionKnowledge> & decision_at_2nd_pass_judge_line_passage() const
-  {
-    return decision_at_2nd_pass_judge_line_passage_;
+    return decision_at_pass_judge_line_passage_;
   }
 
   const std::string uuid_str;
@@ -212,8 +195,7 @@ private:
   //! true if the object is judged as negligible given traffic light color
   bool safe_under_traffic_control_{false};
 
-  std::optional<CollisionKnowledge> decision_at_1st_pass_judge_line_passage_{std::nullopt};
-  std::optional<CollisionKnowledge> decision_at_2nd_pass_judge_line_passage_{std::nullopt};
+  std::optional<CollisionKnowledge> decision_at_pass_judge_line_passage_{std::nullopt};
 
   /**
    * @brief calculate/update the distance to corresponding stopline
@@ -253,13 +235,9 @@ public:
     return objects_info_;
   }
 
-  void setPassed1stPassJudgeLineFirstTime(const rclcpp::Time & time)
+  void setPassedPassJudgeLineFirstTime(const rclcpp::Time & time)
   {
-    passed_1st_judge_line_first_time_ = time;
-  }
-  void setPassed2ndPassJudgeLineFirstTime(const rclcpp::Time & time)
-  {
-    passed_2nd_judge_line_first_time_ = time;
+    passed_judge_line_first_time_ = time;
   }
 
 private:
@@ -274,8 +252,7 @@ private:
   //! parked objects on attention_area/intersection_area
   std::vector<std::shared_ptr<ObjectInfo>> parked_objects_;
 
-  std::optional<rclcpp::Time> passed_1st_judge_line_first_time_{std::nullopt};
-  std::optional<rclcpp::Time> passed_2nd_judge_line_first_time_{std::nullopt};
+  std::optional<rclcpp::Time> passed_judge_line_first_time_{std::nullopt};
 };
 
 /**
@@ -283,9 +260,8 @@ private:
  */
 std::optional<CollisionInterval> findPassageInterval(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly,
-  const std::optional<lanelet::ConstLanelet> & first_attention_lane_opt,
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane_opt);
+  const autoware_perception_msgs::msg::Shape & shape,
+  const lanelet::BasicPolygon2d & ego_lane_poly);
 
 }  // namespace autoware::behavior_velocity_planner
 

@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    processors: [refine_by_speed]
+    # --- RefineBySpeed ---
+    refine_by_speed:
+      speed_threshold: 1.0 # [m/s]
+      interpolation: linear # [linear, spline, spline_by_akima]
