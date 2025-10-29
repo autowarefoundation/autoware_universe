@@ -656,19 +656,31 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   projected_ego_pose.position = ref_points_spline.getSplineInterpolatedPointAt(s_ego);
   projected_ego_pose.orientation = ego_pose.orientation;
 
-  const size_t num_body_points = 10;
+  const size_t num_body_points = 4;
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_body_frame = {
+    [&] { geometry_msgs::msg::Point p; p.x = front;  p.y =  half_width; p.z = 0.0; return p; }(),  // front-left
+    [&] { geometry_msgs::msg::Point p; p.x = front;  p.y = -half_width; p.z = 0.0; return p; }(),  // front-right
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.25 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.50 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.75 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
+    [&] { geometry_msgs::msg::Point p; p.x = -rear;  p.y = -half_width; p.z = 0.0; return p; }(),   // rear-right
+    [&] { geometry_msgs::msg::Point p; p.x = -rear;  p.y =  half_width; p.z = 0.0; return p; }(),   // rear-left
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.25 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.50 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.75 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }()
+  };
 
-  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_body_frame = { 
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_global_frame = { 
     getCorner(projected_ego_pose, front,  half_width),  // front-left
     getCorner(projected_ego_pose, front, -half_width),  // front-right
-    getCorner(projected_ego_pose, front + 0.25*(rear-front),  -half_width),
-    getCorner(projected_ego_pose, front + 0.50*(rear-front),  -half_width),
-    getCorner(projected_ego_pose, front + 0.75*(rear-front),  -half_width),
+    // getCorner(projected_ego_pose, front + 0.25*(rear-front),  -half_width),
+    // getCorner(projected_ego_pose, front + 0.50*(rear-front),  -half_width),
+    // getCorner(projected_ego_pose, front + 0.75*(rear-front),  -half_width),
     getCorner(projected_ego_pose, -rear,  -half_width),  // rear-right
     getCorner(projected_ego_pose, -rear,   half_width),   // rear-left
-    getCorner(projected_ego_pose, rear + 0.25*(front-rear),  half_width),
-    getCorner(projected_ego_pose, rear + 0.50*(front-rear),  half_width),
-    getCorner(projected_ego_pose, rear + 0.75*(front-rear),  half_width)
+    // getCorner(projected_ego_pose, rear + 0.25*(front-rear),  half_width),
+    // getCorner(projected_ego_pose, rear + 0.50*(front-rear),  half_width),
+    // getCorner(projected_ego_pose, rear + 0.75*(front-rear),  half_width)
   };
 
   std::cerr << "Corner points in body frame:" << std::endl;
@@ -679,7 +691,7 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
 
   std::array<geometry_msgs::msg::Point, num_body_points> corner_points_curvilinear;
   std::transform(
-    boundary_points_body_frame.begin(), boundary_points_body_frame.end(),
+    boundary_points_global_frame.begin(), boundary_points_global_frame.end(),
     corner_points_curvilinear.begin(),
     [&ref_points_spline](const geometry_msgs::msg::Point &p) {
       const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
@@ -692,8 +704,11 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   );
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
+  for (const auto& corner_point_body : boundary_points_body_frame) {
+    msg.body_points.push_back(corner_point_body);
+  }
   for (const auto & corner_point_curvilinear : corner_points_curvilinear) {
-    msg.body_points.push_back(corner_point_curvilinear);
+    msg.body_points_curvilinear.push_back(corner_point_curvilinear);
   }
   msg.knots = msg_knots;
   msg.x_coeffs = msg_x;
