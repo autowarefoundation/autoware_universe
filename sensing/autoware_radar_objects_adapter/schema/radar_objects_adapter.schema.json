@@ -37,6 +37,24 @@
           "type": "number",
           "description": "The default z-coordinate in meters of the size of radar objects in the case the radar does not provide it.",
           "default": 2.0
+        },
+        "classification_remap": {
+          "type": "array",
+          "description": "Flat list of [RadarLabel, PerceptionLabel, RadarLabel, PerceptionLabel, ...]. Must contain an even number of elements.",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "examples": [
+            [
+              "UNKNOWN", "UNKNOWN",
+              "CAR", "CAR",
+              "TRUCK", "TRUCK",
+              "MOTORCYCLE", "MOTORCYCLE",
+              "BICYCLE", "BICYCLE",
+              "PEDESTRIAN", "PEDESTRIAN",
+              "ANIMAL", "ANIMAL",
+              "HAZARD", "UNKNOWN"
+            ]
+          ]
         }
       },
       "required": [
@@ -45,7 +63,8 @@
         "default_acceleration_z",
         "default_size_x",
         "default_size_y",
-        "default_size_z"
+        "default_size_z",
+        "classification_remap"
       ],
       "additionalProperties": false
     }
