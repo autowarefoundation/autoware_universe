@@ -172,6 +172,10 @@ rclcpp::NodeOptions make_node_options()
     .append_parameter_override("min_radius_m", 0.5)
     .append_parameter_override("max_radius_m", 300.0)
     .append_parameter_override("visibility_estimation_max_range_m", 10.0)
+    .append_parameter_override("visibility_estimation_min_azimuth_rad", 0.00)
+    .append_parameter_override("visibility_estimation_max_azimuth_rad", 3.14)
+    .append_parameter_override("visibility_estimation_min_elevation_rad", -1.57)
+    .append_parameter_override("visibility_estimation_max_elevation_rad", 1.57)
     .append_parameter_override("visibility_estimation_max_secondary_voxel_count", 2)
     .append_parameter_override("visibility_estimation_only", false)
     .append_parameter_override("use_return_type_classification", true)
@@ -183,7 +187,11 @@ rclcpp::NodeOptions make_node_options()
     .append_parameter_override("filter_ratio_error_threshold", 0.5)
     .append_parameter_override("filter_ratio_warn_threshold", 0.7)
     .append_parameter_override("visibility_error_threshold", 0.8)
-    .append_parameter_override("visibility_warn_threshold", 0.9);
+    .append_parameter_override("visibility_warn_threshold", 0.9)
+    .append_parameter_override("publish_area_marker", false)
+    .append_parameter_override("num_frames_hysteresis_transition", 1)
+    .append_parameter_override("immediate_report_error", false)
+    .append_parameter_override("immediate_relax_state", false);
 }
 
 class PolarVoxelOutlierFilterTest : public ::testing::Test
