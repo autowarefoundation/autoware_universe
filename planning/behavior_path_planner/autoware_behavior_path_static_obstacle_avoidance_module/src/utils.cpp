@@ -733,32 +733,27 @@ bool isNeverAvoidanceTarget(
     const auto is_enabled_parking_violation =
       parameters->policy_parking_violation_vehicle == "manual" ||
       parameters->policy_parking_violation_vehicle == "auto";
-    if (is_enabled_parking_violation && object.is_parking_violation) {
-      return false;
+
+    if (is_enabled_parking_violation) {
+      if (object.is_parking_violation) {
+        return false;
+      }
     }
 
     if (object.behavior == ObjectData::Behavior::NONE) {
-      object.info = ObjectInfo::IS_NOT_PARKING_OBJECT;
+      object.info = ObjectInfo::PARALLEL_TO_EGO_LANE;
       RCLCPP_DEBUG(
-        rclcpp::get_logger(logger_namespace), "object with in intersection. never avoid it.");
+        rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
       return true;
     }
 
     if (object.behavior == ObjectData::Behavior::MERGING) {
       object.info = ObjectInfo::MERGING_TO_EGO_LANE;
       RCLCPP_DEBUG(
-        rclcpp::get_logger(logger_namespace), "merging vehicle in intersection. never avoid it.");
-      return true;
-    }
-
-    if (object.behavior == ObjectData::Behavior::DEVIATING) {
-      object.info = ObjectInfo::DEVIATING_FROM_EGO_LANE;
-      RCLCPP_DEBUG(
-        rclcpp::get_logger(logger_namespace), "deviating vehicle in intersection. never avoid it.");
+        rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
       return true;
     }
   }
-
   if (
     object.is_adjacent_lane_stop_vehicle &&
     parameters->policy_adjacent_lane_stop_vehicle == "ignore") {
@@ -899,18 +894,24 @@ bool isObviousAvoidanceTarget(
     }
   }
 
-  if (object.is_within_intersection) {
+  if (!object.is_within_intersection) {
+    if (object.is_parked && object.behavior == ObjectData::Behavior::NONE) {
+      RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parked vehicle.");
+      return true;
+    }
+
+    if (!object.is_on_ego_lane && object.behavior == ObjectData::Behavior::NONE) {
+      RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is adjacent vehicle.");
+      return true;
+    }
+  } else {
     const auto is_enabled_parking_violation =
       parameters->policy_parking_violation_vehicle == "manual" ||
       parameters->policy_parking_violation_vehicle == "auto";
     if (is_enabled_parking_violation && object.is_parking_violation) {
-      if (object.behavior == ObjectData::Behavior::NONE) {
-        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
-        RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parking violation.");
-        return true;
-      }
-    } else {
-      return false;
+      object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
+      RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is parking violation vehicle.");
+      return true;
     }
   }
 
