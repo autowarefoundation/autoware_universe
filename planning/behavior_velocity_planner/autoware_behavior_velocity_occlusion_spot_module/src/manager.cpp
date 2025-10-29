@@ -114,7 +114,8 @@ OcclusionSpotModuleManager::OcclusionSpotModuleManager(rclcpp::Node & node)
 }
 
 void OcclusionSpotModuleManager::launchNewModules(
-  const Trajectory & /* path */, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
 {
   // general
   if (!isModuleRegistered(module_id_)) {
@@ -128,7 +129,7 @@ void OcclusionSpotModuleManager::launchNewModules(
 
 std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 OcclusionSpotModuleManager::getModuleExpiredFunction(
-  const Trajectory & /* path */, const PlannerData & /* planner_data */)
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const PlannerData & planner_data)
 {
   return
     []([[maybe_unused]] const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {

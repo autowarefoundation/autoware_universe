@@ -57,7 +57,7 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
 }
 
 void TrafficLightModuleManager::modifyPathVelocity(
-  Trajectory & path, const std_msgs::msg::Header & /* header */,
+  Trajectory & path, [[maybe_unused]] const std_msgs::msg::Header & header,
   const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {

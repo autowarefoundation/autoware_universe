@@ -42,9 +42,10 @@ autoware::motion_utils::VirtualWalls TemplateModule::createVirtualWalls()
 }
 
 bool TemplateModule::modifyPathVelocity(
-  Trajectory & /* path */, const std::vector<geometry_msgs::msg::Point> & /* left_bound */,
-  const std::vector<geometry_msgs::msg::Point> & /* right_bound */,
-  const PlannerData & /* planner_data */)
+  [[maybe_unused]] Trajectory & path,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & left_bound,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & right_bound,
+  [[maybe_unused]] const PlannerData & planner_data)
 {
   RCLCPP_INFO_ONCE(logger_, "Template Module is executing!");
   return false;
