@@ -17,22 +17,11 @@
 
 #include "scene_roundabout.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware_lanelet2_extension/regulatory_elements/roundabout.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <std_msgs/msg/string.hpp>
-
-#include <lanelet2_routing/RoutingGraph.h>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 
 #include <functional>
 #include <memory>
 #include <set>
-#include <string>
 #include <unordered_map>
 
 namespace autoware::behavior_velocity_planner
@@ -81,7 +70,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };
 
-class RoundaboutModulePlugin : public PluginWrapper<RoundaboutModuleManager>
+class RoundaboutModulePlugin : public experimental::PluginWrapper<RoundaboutModuleManager>
 {
 };
 

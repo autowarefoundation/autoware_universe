@@ -15,15 +15,12 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_utils/ros/parameter.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
-
 NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
@@ -61,7 +58,7 @@ void NoDrivableLaneModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 NoDrivableLaneModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -71,7 +68,7 @@ NoDrivableLaneModuleManager::getModuleExpiredFunction(
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+  return [lane_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
   };
 }
@@ -81,4 +78,4 @@ NoDrivableLaneModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::NoDrivableLaneModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

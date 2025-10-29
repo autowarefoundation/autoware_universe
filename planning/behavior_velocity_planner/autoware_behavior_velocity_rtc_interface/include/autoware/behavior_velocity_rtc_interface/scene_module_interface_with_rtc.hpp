@@ -15,15 +15,9 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_
 
-#include <autoware/behavior_velocity_planner_common/planner_data.hpp>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
-#include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <builtin_interfaces/msg/time.hpp>
-
-#include <tier4_rtc_msgs/msg/state.hpp>
-#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <memory>
 #include <optional>
@@ -32,21 +26,14 @@
 #include <utility>
 #include <vector>
 
-// Debug
-#include <rclcpp/publisher.hpp>
-#include <rclcpp/rclcpp.hpp>
-
 namespace autoware::behavior_velocity_planner
 {
 
 using autoware::rtc_interface::RTCInterface;
-using autoware_utils::get_or_declare_parameter;
-using builtin_interfaces::msg::Time;
 using tier4_rtc_msgs::msg::Module;
 using tier4_rtc_msgs::msg::State;
-using unique_identifier_msgs::msg::UUID;
 
-class SceneModuleInterfaceWithRTC : public SceneModuleInterface
+class SceneModuleInterfaceWithRTC : public experimental::SceneModuleInterface
 {
 public:
   explicit SceneModuleInterfaceWithRTC(
@@ -80,7 +67,7 @@ protected:
 };
 
 class SceneModuleManagerInterfaceWithRTC
-: public SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>
+: public experimental::SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>
 {
 public:
   SceneModuleManagerInterfaceWithRTC(
@@ -145,13 +132,15 @@ protected:
 };
 
 extern template void
-SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::updateSceneModuleInstances(
+experimental::SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::updateSceneModuleInstances(
   const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data);
-extern template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::modifyPathVelocity(
+extern template void
+experimental::SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::modifyPathVelocity(
   Trajectory & path, const std_msgs::msg::Header & header,
   const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data);
-extern template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::registerModule(
+extern template void
+experimental::SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::registerModule(
   const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module,
   const PlannerData & planner_data);
 }  // namespace autoware::behavior_velocity_planner

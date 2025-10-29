@@ -17,21 +17,9 @@
 
 #include "occlusion_spot_utils.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <nav_msgs/msg/occupancy_grid.hpp>
-
-#include <boost/optional.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
 
 #include <memory>
 #include <string>
@@ -39,7 +27,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class OcclusionSpotModule : public SceneModuleInterface
+class OcclusionSpotModule : public experimental::SceneModuleInterface
 {
   using PlannerParam = occlusion_spot_utils::PlannerParam;
   using DebugData = occlusion_spot_utils::DebugData;

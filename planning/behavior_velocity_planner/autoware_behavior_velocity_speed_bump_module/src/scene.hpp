@@ -17,10 +17,9 @@
 
 #include "util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
@@ -30,7 +29,7 @@ namespace autoware::behavior_velocity_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class SpeedBumpModule : public SceneModuleInterface
+class SpeedBumpModule : public experimental::SceneModuleInterface
 {
 public:
   struct DebugData

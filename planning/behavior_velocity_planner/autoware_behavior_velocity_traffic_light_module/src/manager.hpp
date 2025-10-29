@@ -17,12 +17,8 @@
 
 #include "scene.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 
 #include <functional>
 #include <memory>
@@ -80,7 +76,7 @@ private:
   std::optional<int> nearest_ref_stop_path_point_index_;
 };
 
-class TrafficLightModulePlugin : public PluginWrapper<TrafficLightModuleManager>
+class TrafficLightModulePlugin : public experimental::PluginWrapper<TrafficLightModuleManager>
 {
 };
 

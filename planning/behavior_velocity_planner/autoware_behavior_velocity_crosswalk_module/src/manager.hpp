@@ -17,17 +17,11 @@
 
 #include "scene_crosswalk.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <functional>
 #include <memory>
-#include <optional>
-#include <set>
-#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -57,7 +51,7 @@ private:
   getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class CrosswalkModulePlugin : public PluginWrapper<CrosswalkModuleManager>
+class CrosswalkModulePlugin : public experimental::PluginWrapper<CrosswalkModuleManager>
 {
 };
 }  // namespace autoware::behavior_velocity_planner

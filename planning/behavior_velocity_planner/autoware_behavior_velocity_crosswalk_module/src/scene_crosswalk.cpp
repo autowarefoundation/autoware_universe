@@ -17,38 +17,12 @@
 #include "occluded_crosswalk.hpp"
 #include "parked_vehicles_stop.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware_utils_geometry/geometry.hpp>
-#include <autoware_utils_uuid/uuid_helper.hpp>
-#include <rclcpp/logging.hpp>
-#include <rclcpp/rclcpp.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
-#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
-#include <autoware_perception_msgs/msg/detail/predicted_objects__struct.hpp>
-#include <geometry_msgs/msg/detail/point__struct.hpp>
-
-#include <boost/geometry/algorithms/buffer.hpp>
-#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_end_flat.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
-
-#include <lanelet2_core/geometry/LineString.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-#include <lanelet2_core/primitives/Point.h>
-#include <lanelet2_core/primitives/Polygon.h>
-#include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>

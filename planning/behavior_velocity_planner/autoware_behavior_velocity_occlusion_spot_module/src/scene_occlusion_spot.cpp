@@ -17,17 +17,8 @@
 #include "occlusion_spot_utils.hpp"
 #include "risk_predictive_braking.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-
-#include <boost/optional.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
 #include <memory>

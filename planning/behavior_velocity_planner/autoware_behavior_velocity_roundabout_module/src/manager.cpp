@@ -14,12 +14,7 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <limits>
 #include <memory>
@@ -30,7 +25,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Roundabout;
 
 RoundaboutModuleManager::RoundaboutModuleManager(rclcpp::Node & node)
@@ -281,4 +275,4 @@ void RoundaboutModuleManager::deleteExpiredModules(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::RoundaboutModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

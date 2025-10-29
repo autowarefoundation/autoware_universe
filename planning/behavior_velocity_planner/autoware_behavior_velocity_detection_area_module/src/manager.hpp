@@ -17,10 +17,7 @@
 
 #include "scene.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 
 #include <functional>
 #include <memory>
@@ -51,7 +48,7 @@ private:
   getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class DetectionAreaModulePlugin : public PluginWrapper<DetectionAreaModuleManager>
+class DetectionAreaModulePlugin : public experimental::PluginWrapper<DetectionAreaModuleManager>
 {
 };
 

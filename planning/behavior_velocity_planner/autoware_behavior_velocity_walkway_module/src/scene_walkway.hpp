@@ -15,26 +15,19 @@
 #ifndef SCENE_WALKWAY_HPP_
 #define SCENE_WALKWAY_HPP_
 
-#include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 #include "scene_walkway.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware/behavior_velocity_crosswalk_module/util.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
-#include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <memory>
-#include <optional>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-class WalkwayModule : public SceneModuleInterface
+class WalkwayModule : public experimental::SceneModuleInterface
 {
 public:
   struct PlannerParam

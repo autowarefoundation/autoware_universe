@@ -14,9 +14,6 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
 #include <limits>
 #include <memory>
 #include <set>
@@ -26,7 +23,6 @@
 namespace autoware::behavior_velocity_planner
 {
 
-using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Crosswalk;
 
 WalkwayModuleManager::WalkwayModuleManager(rclcpp::Node & node)
@@ -88,7 +84,7 @@ void WalkwayModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 WalkwayModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -110,13 +106,14 @@ WalkwayModuleManager::getModuleExpiredFunction(
     walkway_id_set.insert(crosswalk.first->id());
   }
 
-  return [walkway_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
-    return walkway_id_set.count(scene_module->getModuleId()) == 0;
-  };
+  return
+    [walkway_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+      return walkway_id_set.count(scene_module->getModuleId()) == 0;
+    };
 }
 }  // namespace autoware::behavior_velocity_planner
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::WalkwayModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

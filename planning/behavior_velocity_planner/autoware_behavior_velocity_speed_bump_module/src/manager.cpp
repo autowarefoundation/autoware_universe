@@ -14,13 +14,6 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
-#include <tf2/utils.h>
-
 #include <memory>
 #include <set>
 #include <string>
@@ -30,7 +23,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::SpeedBump;
 
 SpeedBumpModuleManager::SpeedBumpModuleManager(rclcpp::Node & node)
@@ -75,7 +67,7 @@ void SpeedBumpModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 SpeedBumpModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -85,9 +77,10 @@ SpeedBumpModuleManager::getModuleExpiredFunction(
   const auto speed_bump_id_set = planning_utils::getRegElemIdSetOnPath<SpeedBump>(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [speed_bump_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
-    return speed_bump_id_set.count(scene_module->getModuleId()) == 0;
-  };
+  return
+    [speed_bump_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+      return speed_bump_id_set.count(scene_module->getModuleId()) == 0;
+    };
 }
 
 }  // namespace autoware::behavior_velocity_planner
@@ -95,4 +88,4 @@ SpeedBumpModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::SpeedBumpModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

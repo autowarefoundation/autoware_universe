@@ -17,9 +17,8 @@
 
 #include "util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
@@ -29,7 +28,7 @@ namespace autoware::behavior_velocity_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class NoDrivableLaneModule : public SceneModuleInterface
+class NoDrivableLaneModule : public experimental::SceneModuleInterface
 {
 public:
   enum class State { INIT, APPROACHING, INSIDE_NO_DRIVABLE_LANE, STOPPED };

@@ -15,18 +15,16 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
 #include <vector>
+
 namespace autoware::behavior_velocity_planner
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
-class TemplateModule : public SceneModuleInterface
+class TemplateModule : public experimental::SceneModuleInterface
 {
 public:
   TemplateModule(

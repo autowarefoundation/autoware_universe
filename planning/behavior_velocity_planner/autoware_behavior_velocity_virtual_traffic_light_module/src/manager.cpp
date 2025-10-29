@@ -14,14 +14,11 @@
 
 #include "manager.hpp"
 
-#include "autoware_utils/geometry/boost_geometry.hpp"
-
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/parameter.hpp>
-
-#include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -152,4 +149,4 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::VirtualTrafficLightModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)
