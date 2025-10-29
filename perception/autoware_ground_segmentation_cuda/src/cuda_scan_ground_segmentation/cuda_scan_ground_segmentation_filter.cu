@@ -275,8 +275,7 @@ __forceinline__ __device__ void segmentCell(
   ClassifiedPointType * classified_points, const FilterParameters & param, Cell & cell,
   float slope,                 // Slope of the line connect the previous ground cells
   int start_pid, int end_pid,  // Start and end indices of points in the current cell
-  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode
-)
+  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode)
 {
   if (start_pid >= end_pid) {
     return;
@@ -356,8 +355,9 @@ __forceinline__ __device__ void segmentCell(
     for (int j = start_pid; j < end_pid; j += WARP_SIZE) {
       auto p = classified_points[j];
 
-      if (p.type == PointType::GROUND && 
-          p.z > cell_gnd_height_min + param.non_ground_height_threshold && cell_gnd_point_num > 1) {
+      if (
+        p.type == PointType::GROUND &&
+        p.z > cell_gnd_height_min + param.non_ground_height_threshold && cell_gnd_point_num > 1) {
         last_gnd_point = p;
         minus_t_gnd_height_sum += p.z;
         minus_t_gnd_radius_sum += p.radius;
