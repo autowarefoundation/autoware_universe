@@ -65,12 +65,15 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int64_t>("negative_match_num_threshold");
   param_.vote_threshold_for_detect_marker =
     this->declare_parameter<int64_t>("vote_threshold_for_detect_marker");
+  param_.marker_to_vehicle_offset_y = this->declare_parameter<double>("marker_to_vehicle_offset_y");
   param_.marker_height_from_ground = this->declare_parameter<double>("marker_height_from_ground");
   param_.self_pose_timeout_sec = this->declare_parameter<double>("self_pose_timeout_sec");
   param_.self_pose_distance_tolerance_m =
     this->declare_parameter<double>("self_pose_distance_tolerance_m");
   param_.limit_distance_from_self_pose_to_nearest_marker =
     this->declare_parameter<double>("limit_distance_from_self_pose_to_nearest_marker");
+  param_.limit_distance_from_self_pose_to_nearest_marker_y =
+    this->declare_parameter<double>("limit_distance_from_self_pose_to_nearest_marker_y");
   param_.limit_distance_from_self_pose_to_marker =
     this->declare_parameter<double>("limit_distance_from_self_pose_to_marker");
   std::vector<double> base_covariance =
@@ -239,9 +242,16 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
   diagnostics_interface_->add_key_value(
     "distance_self_pose_to_nearest_marker", distance_from_self_pose_to_nearest_marker);
 
+  const double distance_from_self_pose_to_nearest_marker_y =
+    std::abs(nearest_marker_pose_on_base_link.position.y - param_.marker_to_vehicle_offset_y);
+  diagnostics_interface_->add_key_value(
+    "distance_from_self_pose_to_nearest_marker_y", distance_from_self_pose_to_nearest_marker_y);
+
   const bool is_exist_marker_within_self_pose =
-    distance_from_self_pose_to_nearest_marker <
-    param_.limit_distance_from_self_pose_to_nearest_marker;
+    (distance_from_self_pose_to_nearest_marker <
+     param_.limit_distance_from_self_pose_to_nearest_marker) &&
+    (distance_from_self_pose_to_nearest_marker_y <
+     param_.limit_distance_from_self_pose_to_nearest_marker_y);
 
   if (!is_detected_marker) {
     if (!is_exist_marker_within_self_pose) {
