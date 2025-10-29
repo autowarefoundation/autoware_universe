@@ -275,14 +275,13 @@ __forceinline__ __device__ void segmentCell(
   ClassifiedPointType * classified_points, const FilterParameters & param, Cell & cell,
   float slope,                 // Slope of the line connect the previous ground cells
   int start_pid, int end_pid,  // Start and end indices of points in the current cell
-  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode)
+  float prev_cell_gnd_radius_avg, float prev_cell_gnd_height_avg, const SegmentationMode & mode
+)
 {
   if (start_pid >= end_pid) {
     return;
   }
 
-  // Here I assume each thread handles no more than 64 points
-  int64_t ground_mask = 0, recheck_mask = 0, backup_mask = 0;
   // For computing the cell statistic
   float t_gnd_radius_sum = 0;
   float t_gnd_height_sum = 0;
@@ -292,7 +291,9 @@ __forceinline__ __device__ void segmentCell(
   float minus_t_gnd_radius_sum = 0;
   float minus_t_gnd_height_sum = 0;
   float minus_t_gnd_point_num = 0;
-  ClassifiedPointType p;
+  ClassifiedPointType last_gnd_point;
+  int last_gnd_idx;
+  int local_gnd_point_num;
 
   // Fit line from the recent ground cells
   for (int j = start_pid + wid; j < end_pid; j += WARP_SIZE) {
@@ -320,16 +321,15 @@ __forceinline__ __device__ void segmentCell(
     if (p.type == PointType::GROUND) {
       t_gnd_radius_sum += p.radius;
       t_gnd_height_sum += p.z;
-      t_gnd_point_num += 1;
+      ++t_gnd_point_num;
       t_gnd_height_min = (t_gnd_height_min > p.z) ? p.z : t_gnd_height_min;
-
-      // Set the corresponding bit to 1
-      // In the recheck we don't have to check every point, just jump to the ground point
-      ground_mask |= 1 << ((j - start_pid - wid) / WARP_SIZE);
     }
+
+    classified_points[j] = p;
   }
 
   // Wait for all threads in the warp to finish
+  local_gnd_point_num = t_gnd_point_num;
   __syncwarp();
 
   // Find the min height and the number of ground points first
@@ -349,41 +349,29 @@ __forceinline__ __device__ void segmentCell(
   int cell_gnd_point_num = __shfl_sync(FULL_MASK, t_gnd_point_num, 0);
   float cell_gnd_radius_sum = __shfl_sync(FULL_MASK, t_gnd_radius_sum, 0);
 
-  // This is to record the remaining ground point in each thread
-  // After looping, ground_mask will be cleared, so we need to back it up
-  recheck_mask = backup_mask = ground_mask;
-
   if (
     param.use_recheck_ground_cluster && cell_gnd_point_num > 1 &&
     cell_gnd_radius_sum / (float)(cell_gnd_point_num) > param.recheck_start_distance) {
     // Now recheck the points using the height_min
-    // This is to record the remaining ground point in each thread
-    recheck_mask = ground_mask;
-    // After looping, ground_mask will be cleared, so we need to back it up
-    backup_mask = ground_mask;
+    for (int j = start_pid; j < end_pid; j += WARP_SIZE) {
+      auto p = classified_points[j];
 
-    while (ground_mask != 0) {
-      // Get the offset of the ground point
-      int pos = __ffs(ground_mask) - 1;
-      int gnd_pid = pos * WARP_SIZE + start_pid + wid;
-
-      // Clear the bit
-      ground_mask &= (ground_mask - 1);
-      p = classified_points[gnd_pid];
-
-      if (p.z > cell_gnd_height_min + param.non_ground_height_threshold && cell_gnd_point_num > 1) {
+      if (p.type == PointType::GROUND && 
+          p.z > cell_gnd_height_min + param.non_ground_height_threshold && cell_gnd_point_num > 1) {
+        last_gnd_point = p;
         minus_t_gnd_height_sum += p.z;
         minus_t_gnd_radius_sum += p.radius;
         ++minus_t_gnd_point_num;
-
-        // If the point is no longer ground, clear the bit
-        recheck_mask &= (recheck_mask - 1);
+        p.type == PointType::NON_GROUND;
+        last_gnd_idx = j;
       }
+
+      classified_points[j] = p;
     }
 
     // Now use ballot sync to see if there are any ground points remaining
-    uint32_t recheck_res = __ballot_sync(FULL_MASK, recheck_mask > 0);
-    uint32_t backup_res = __ballot_sync(FULL_MASK, backup_mask > 0);
+    uint32_t recheck_res = __ballot_sync(FULL_MASK, local_gnd_point_num > minus_t_gnd_point_num);
+    uint32_t backup_res = __ballot_sync(FULL_MASK, local_gnd_point_num > 0);
 
     // If no ground point remains, we have to keep the last ground point
     if (recheck_res == 0 && backup_res > 0) {
@@ -392,14 +380,13 @@ __forceinline__ __device__ void segmentCell(
 
       // Only the last point in that thread remain
       if (wid == last_tid) {
-        // Luckily, the last point still remains
-        minus_t_gnd_height_sum -= p.z;
-        minus_t_gnd_radius_sum -= p.radius;
+        // Keep the last point's stat
+        minus_t_gnd_height_sum -= last_gnd_point.z;
+        minus_t_gnd_radius_sum -= last_gnd_point.radius;
         --minus_t_gnd_point_num;
-        recheck_mask |= (1 << (31 - __clz(backup_res)));
+        classified_points[last_gnd_idx] = last_gnd_point;
       }
     }
-
     __syncwarp();
 
     // Final update
@@ -414,17 +401,6 @@ __forceinline__ __device__ void segmentCell(
       t_gnd_radius_sum -= minus_t_gnd_radius_sum;
       t_gnd_point_num -= minus_t_gnd_point_num;
     }
-  }
-
-  // Now update the point type in the global memory
-  while (recheck_mask != 0) {
-    // Get the offset of the ground point
-    int pos = __ffs(recheck_mask) - 1;
-    int gnd_pid = pos * WARP_SIZE + start_pid + wid;
-
-    classified_points[gnd_pid].type = PointType::GROUND;
-    // Clear the bit
-    recheck_mask &= (recheck_mask - 1);
   }
 
   // Finally, thread 0 update the cell stat
