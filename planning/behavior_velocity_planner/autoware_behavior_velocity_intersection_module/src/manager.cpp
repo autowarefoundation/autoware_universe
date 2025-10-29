@@ -307,7 +307,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
 }
 
 void IntersectionModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
+  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
 {
   PathWithLaneId path_msg;
   path_msg.points = path.restore();
@@ -523,7 +524,8 @@ MergeFromPrivateModuleManager::MergeFromPrivateModuleManager(rclcpp::Node & node
 }
 
 void MergeFromPrivateModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
+  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
 {
   PathWithLaneId path_msg;
   path_msg.points = path.restore();

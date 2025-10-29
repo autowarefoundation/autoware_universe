@@ -63,7 +63,8 @@ VirtualTrafficLightModuleManager::VirtualTrafficLightModuleManager(rclcpp::Node 
 }
 
 void VirtualTrafficLightModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & /* stamp */, const PlannerData & planner_data)
+  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
 {
   PathWithLaneId path_msg;
   path_msg.points = path.restore();
