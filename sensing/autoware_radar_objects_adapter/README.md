@@ -9,22 +9,31 @@ This package converts `autoware_sensing_msgs::msg::RadarObjects` into `autoware_
 A node that converts radar objects from the sensing definition into a perception friendly format with no filtering involved.
 
 ### Parameter: classification_remap
-This parameter allows remapping of classification labels from `autoware_sensing_msgs::msg::RadarClassification` to `autoware_perception_msgs::msg::ObjectClassification`. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.
 
+This parameter allows remapping of classification labels from `autoware_sensing_msgs::msg::RadarClassification` to `autoware_perception_msgs::msg::ObjectClassification`. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.
 
 For example, the following configuration remaps `MOTORCYCLE` and `BICYCLE` from radar classification to `CAR` in the perception classification, while keeping other labels unchanged:
 
 ```yaml
-    classification_remap: [
-      "UNKNOWN", "UNKNOWN",
-      "CAR", "CAR",
-      "TRUCK", "TRUCK",
-      "MOTORCYCLE", "CAR",
-      "BICYCLE", "CAR",
-      "PEDESTRIAN", "PEDESTRIAN",
-      "ANIMAL", "ANIMAL",
-      "HAZARD", "UNKNOWN"
-    ]
+classification_remap:
+  [
+    "UNKNOWN",
+    "UNKNOWN",
+    "CAR",
+    "CAR",
+    "TRUCK",
+    "TRUCK",
+    "MOTORCYCLE",
+    "CAR",
+    "BICYCLE",
+    "CAR",
+    "PEDESTRIAN",
+    "PEDESTRIAN",
+    "ANIMAL",
+    "ANIMAL",
+    "HAZARD",
+    "UNKNOWN",
+  ]
 ```
 
 ### Inputs / Outputs

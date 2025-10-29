@@ -23,30 +23,20 @@
 #include <vector>
 namespace autoware
 {
-  // Maps for classification remapping 
-  using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
-  const std::map<std::string, std::uint8_t> RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP = {
-    {"UNKNOWN", RadarClassification::UNKNOWN},
-    {"CAR", RadarClassification::CAR},
-    {"TRUCK", RadarClassification::TRUCK},
-    {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
-    {"BICYCLE", RadarClassification::BICYCLE},
-    {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
-    {"ANIMAL", RadarClassification::ANIMAL},
-    {"HAZARD", RadarClassification::HAZARD}
-  };
-  using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
-  const std::map<std::string, std::uint8_t> RadarObjectsAdapter::OBJECT_LABEL_TO_UINT_MAP = {
-    {"UNKNOWN", ObjectClassification::UNKNOWN},
-    {"CAR", ObjectClassification::CAR},
-    {"TRUCK", ObjectClassification::TRUCK},
-    {"BUS", ObjectClassification::BUS},
-    {"TRAILER", ObjectClassification::TRAILER},
-    {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
-    {"BICYCLE", ObjectClassification::BICYCLE},
-    {"PEDESTRIAN", ObjectClassification::PEDESTRIAN},
-    {"ANIMAL", ObjectClassification::ANIMAL}
-  };
+// Maps for classification remapping
+using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
+const std::map<std::string, std::uint8_t> RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP = {
+  {"UNKNOWN", RadarClassification::UNKNOWN}, {"CAR", RadarClassification::CAR},
+  {"TRUCK", RadarClassification::TRUCK},     {"MOTORCYCLE", RadarClassification::MOTORCYCLE},
+  {"BICYCLE", RadarClassification::BICYCLE}, {"PEDESTRIAN", RadarClassification::PEDESTRIAN},
+  {"ANIMAL", RadarClassification::ANIMAL},   {"HAZARD", RadarClassification::HAZARD}};
+using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
+const std::map<std::string, std::uint8_t> RadarObjectsAdapter::OBJECT_LABEL_TO_UINT_MAP = {
+  {"UNKNOWN", ObjectClassification::UNKNOWN}, {"CAR", ObjectClassification::CAR},
+  {"TRUCK", ObjectClassification::TRUCK},     {"BUS", ObjectClassification::BUS},
+  {"TRAILER", ObjectClassification::TRAILER}, {"MOTORCYCLE", ObjectClassification::MOTORCYCLE},
+  {"BICYCLE", ObjectClassification::BICYCLE}, {"PEDESTRIAN", ObjectClassification::PEDESTRIAN},
+  {"ANIMAL", ObjectClassification::ANIMAL}};
 
 float mask_cov_value(double value)
 {
@@ -92,11 +82,14 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
   // Load classification remap policy
   try {
     // 1. Load classification_remap as flat list of strings
-    this->declare_parameter<std::vector<std::string>>("classification_remap", std::vector<std::string>{});
-    auto list_remap =
-      this->get_parameter("classification_remap").get_parameter_value().get<std::vector<std::string>>();
+    this->declare_parameter<std::vector<std::string>>(
+      "classification_remap", std::vector<std::string>{});
+    auto list_remap = this->get_parameter("classification_remap")
+                        .get_parameter_value()
+                        .get<std::vector<std::string>>();
     if (list_remap.size() % 2 != 0) {
-      RCLCPP_ERROR(this->get_logger(),
+      RCLCPP_ERROR(
+        this->get_logger(),
         "Parameter 'classification_remap' must have even number of elements "
         "(found %zu). Each pair represents [input, output].",
         list_remap.size());
@@ -104,35 +97,36 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     }
     // 2. Convert every pair of [input, output] into map entries
     for (size_t i = 0; i + 1 < list_remap.size(); i += 2) {
-      const auto & input_str  = list_remap[i];
+      const auto & input_str = list_remap[i];
       const auto & output_str = list_remap[i + 1];
 
-      const auto it_in  = RADAR_LABEL_TO_UINT_MAP.find(input_str);
+      const auto it_in = RADAR_LABEL_TO_UINT_MAP.find(input_str);
       if (it_in == RADAR_LABEL_TO_UINT_MAP.end()) {
-        RCLCPP_WARN(this->get_logger(),
+        RCLCPP_WARN(
+          this->get_logger(),
           "classification_remap: Input key '%s' is not a valid RadarClassification.",
           input_str.c_str());
         continue;
       }
       const auto it_out = OBJECT_LABEL_TO_UINT_MAP.find(output_str);
       if (it_out == OBJECT_LABEL_TO_UINT_MAP.end()) {
-        RCLCPP_WARN(this->get_logger(),
+        RCLCPP_WARN(
+          this->get_logger(),
           "classification_remap: Output value '%s' is not a valid ObjectClassification.",
           output_str.c_str());
         continue;
       }
       classification_remap_[it_in->second] = it_out->second;
     }
-    RCLCPP_INFO(this->get_logger(),
-      "Loaded classification_remap policy with %zu rules.", classification_remap_.size());
+    RCLCPP_INFO(
+      this->get_logger(), "Loaded classification_remap policy with %zu rules.",
+      classification_remap_.size());
 
   } catch (const rclcpp::exceptions::ParameterNotDeclaredException & e) {
-    RCLCPP_ERROR(this->get_logger(),
-      "Parameter 'classification_remap' not declared. %s", e.what());
+    RCLCPP_ERROR(this->get_logger(), "Parameter 'classification_remap' not declared. %s", e.what());
     throw;
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(),
-      "Failed to load 'classification_remap'. %s", e.what());
+    RCLCPP_ERROR(this->get_logger(), "Failed to load 'classification_remap'. %s", e.what());
     throw;
   }
 }
@@ -285,7 +279,7 @@ void RadarObjectsAdapter::populate_classifications(
 
   for (const auto & input_classification : input_classifications) {
     // class remap based on policy defined in parameter
-    if (classification_remap_.count(input_classification.label)) {    
+    if (classification_remap_.count(input_classification.label)) {
       ObjectClassification output_classification;
       output_classification.label = classification_remap_.at(input_classification.label);
       output_classification.probability = input_classification.probability;

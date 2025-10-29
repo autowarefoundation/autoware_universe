@@ -23,8 +23,8 @@
 #include <autoware_sensing_msgs/msg/radar_objects.hpp>
 
 #include <array>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>

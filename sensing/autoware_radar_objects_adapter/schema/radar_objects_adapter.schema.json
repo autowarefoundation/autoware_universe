@@ -45,14 +45,22 @@
           "minItems": 2,
           "examples": [
             [
-              "UNKNOWN", "UNKNOWN",
-              "CAR", "CAR",
-              "TRUCK", "TRUCK",
-              "MOTORCYCLE", "MOTORCYCLE",
-              "BICYCLE", "BICYCLE",
-              "PEDESTRIAN", "PEDESTRIAN",
-              "ANIMAL", "ANIMAL",
-              "HAZARD", "UNKNOWN"
+              "UNKNOWN",
+              "UNKNOWN",
+              "CAR",
+              "CAR",
+              "TRUCK",
+              "TRUCK",
+              "MOTORCYCLE",
+              "MOTORCYCLE",
+              "BICYCLE",
+              "BICYCLE",
+              "PEDESTRIAN",
+              "PEDESTRIAN",
+              "ANIMAL",
+              "ANIMAL",
+              "HAZARD",
+              "UNKNOWN"
             ]
           ]
         }
