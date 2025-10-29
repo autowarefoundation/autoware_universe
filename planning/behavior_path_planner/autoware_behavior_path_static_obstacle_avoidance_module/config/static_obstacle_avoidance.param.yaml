@@ -172,6 +172,8 @@
           # "manual" : generate candidate path and wait operator approval even if RTC is running as AUTO mode.
           # "ignore" : never avoid it.
           policy: "ignore"                              # [-]
+          condition:
+            th_road_border_distance: 0.8                  # [m]
 
         avoidance_for_adjacent_lane_stop_vehicle:
           # policy for ego behavior for adjacent lane stop vehicle.

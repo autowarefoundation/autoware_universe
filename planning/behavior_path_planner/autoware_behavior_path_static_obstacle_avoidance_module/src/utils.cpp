@@ -547,6 +547,65 @@ double getDistanceToCenterline(const ObjectData & object, const AvoidancePlannin
   return to_centerline;
 }
 
+std::optional<lanelet::ConstLineString3d> getNearestIntersectionRoadBorder(
+  const ObjectData & object, const std::shared_ptr<RouteHandler> & route_handler)
+{
+  const std::string area_id = object.overhang_lanelet.attributeOr("intersection_area", "else");
+  if (area_id == "else") {
+    return std::nullopt;
+  }
+
+  if (!std::atoi(area_id.c_str())) {
+    return std::nullopt;
+  }
+
+  const std::string location = object.overhang_lanelet.attributeOr("location", "else");
+  if (location == "private") {
+    return std::nullopt;
+  }
+
+  const auto polygon_iter =
+    route_handler->getLaneletMapPtr()->polygonLayer.find(std::atoi(area_id.c_str()));
+  if (polygon_iter == route_handler->getLaneletMapPtr()->polygonLayer.end()) {
+    return std::nullopt;
+  }
+
+  const auto & polygon = *polygon_iter;
+
+  std::vector<lanelet::LineString3d> linestrings;
+  // get intersection polygon bounding box
+  const auto bbox = boost::geometry::return_envelope<lanelet::BoundingBox2d>(
+    lanelet::utils::to2D(polygon.basicPolygon()));
+
+  // get linestrings in the bounding box
+  linestrings = route_handler->getLaneletMapPtr()->lineStringLayer.search(bbox);
+
+  // extract road_border linestring
+  std::vector<lanelet::ConstLineString3d> road_border_linestring;
+  for (const auto & ls : linestrings) {
+    const lanelet::Attribute & type = ls.attribute(lanelet::AttributeName::Type);
+    if (type == "road_border") {
+      road_border_linestring.push_back(ls);
+    }
+  }
+
+  // get nearest road border linestring
+  using Point2d = boost::geometry::model::d2::point_xy<double>;
+  const Point2d p_object{object.getPosition().x, object.getPosition().y};
+  double min_distance = std::numeric_limits<double>::max();
+  std::optional<lanelet::ConstLineString3d> nearest_road_border = std::nullopt;
+  for (const auto & ls : road_border_linestring) {
+    const double distance =
+      boost::geometry::distance(lanelet::utils::to2D(ls.basicLineString()), p_object);
+    if (distance < min_distance) {
+      min_distance = distance;
+      nearest_road_border = ls;
+    }
+  }
+
+  return nearest_road_border;
+}
+
 /**
  * @brief check whether the object is parking on law violation area.
  * @param object polygon.
@@ -564,18 +623,26 @@ bool isParkingViolation(
   }
 
   // mark a vehicle as an object to avoid if it is pulled to the side and oriented with the lane.
-  const auto left_lane = route_handler->getLeftLanelet(object.overhang_lanelet, true, false);
-  const auto is_on_left_lane_edge = !isOnRight(object) && !left_lane.has_value();
-  const auto right_lane = route_handler->getRightLanelet(object.overhang_lanelet, true, false);
-  const auto is_on_right_lane_edge = isOnRight(object) && !right_lane.has_value();
-  const auto is_on_lane_edge = is_on_left_lane_edge || is_on_right_lane_edge;
+  const auto nearest_road_border_opt = getNearestIntersectionRoadBorder(object, route_handler);
+  if (!nearest_road_border_opt.has_value()) {
+    return false;
+  }
+  const auto nearest_road_border = nearest_road_border_opt.value();
+
+  // calculate distance from object edge (envelope polygon) to road border
+  const auto distance_to_road_border = boost::geometry::distance(
+    object.envelope_poly, lanelet::utils::to2D(nearest_road_border.basicLineString()));
+
+  RCLCPP_DEBUG(
+    rclcpp::get_logger(logger_namespace), "distance_to_road_border: %f", distance_to_road_border);
+  const auto is_near_road_border = distance_to_road_border < parameters->th_road_border_distance;
 
   if (
-    is_on_lane_edge && object.behavior == ObjectData::Behavior::NONE &&
+    is_near_road_border && object.behavior == ObjectData::Behavior::NONE &&
     object.shiftable_ratio > parameters->object_check_shiftable_ratio) {
     return true;
   }
-  return true;
+  return false;
 }
 
 /**
@@ -662,24 +729,31 @@ bool isNeverAvoidanceTarget(
   const std::shared_ptr<const PlannerData> & planner_data,
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
-  if (object.is_parking_violation) {
-    if (parameters->policy_parking_violation_vehicle == "ignore") {
-      if (object.behavior == ObjectData::Behavior::NONE) {
-        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
-        RCLCPP_DEBUG(
-          rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
-        return true;
-      }
+  if (object.is_within_intersection) {
+    const auto is_enabled_parking_violation =
+      parameters->policy_parking_violation_vehicle == "manual" ||
+      parameters->policy_parking_violation_vehicle == "auto";
 
-      if (object.behavior == ObjectData::Behavior::MERGING) {
-        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
-        RCLCPP_DEBUG(
-          rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
-        return true;
+    if (is_enabled_parking_violation) {
+      if (object.is_parking_violation) {
+        return false;
       }
     }
-  }
 
+    if (object.behavior == ObjectData::Behavior::NONE) {
+      object.info = ObjectInfo::PARALLEL_TO_EGO_LANE;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
+      return true;
+    }
+
+    if (object.behavior == ObjectData::Behavior::MERGING) {
+      object.info = ObjectInfo::MERGING_TO_EGO_LANE;
+      RCLCPP_DEBUG(
+        rclcpp::get_logger(logger_namespace), "object belongs to ego lane. never avoid it.");
+      return true;
+    }
+  }
   if (
     object.is_adjacent_lane_stop_vehicle &&
     parameters->policy_adjacent_lane_stop_vehicle == "ignore") {
@@ -820,17 +894,7 @@ bool isObviousAvoidanceTarget(
     }
   }
 
-  if (object.is_parking_violation) {
-    if (
-      parameters->policy_parking_violation_vehicle == "manual" ||
-      parameters->policy_parking_violation_vehicle == "auto") {
-      if (object.behavior == ObjectData::Behavior::NONE) {
-        object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
-        RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parking violation.");
-        return true;
-      }
-    }
-  } else {
+  if (!object.is_within_intersection) {
     if (object.is_parked && object.behavior == ObjectData::Behavior::NONE) {
       RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is obvious parked vehicle.");
       return true;
@@ -838,11 +902,15 @@ bool isObviousAvoidanceTarget(
 
     if (!object.is_on_ego_lane && object.behavior == ObjectData::Behavior::NONE) {
       RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is adjacent vehicle.");
-      if (
-        object.is_adjacent_lane_stop_vehicle &&
-        parameters->policy_adjacent_lane_stop_vehicle == "manual") {
-        object.info = ObjectInfo::IS_ADJACENT_LANE_STOP_VEHICLE;
-      }
+      return true;
+    }
+  } else {
+    const auto is_enabled_parking_violation =
+      parameters->policy_parking_violation_vehicle == "manual" ||
+      parameters->policy_parking_violation_vehicle == "auto";
+    if (is_enabled_parking_violation && object.is_parking_violation) {
+      object.info = ObjectInfo::PARKING_VIOLATION_VEHICLE;
+      RCLCPP_DEBUG(rclcpp::get_logger(logger_namespace), "object is parking violation vehicle.");
       return true;
     }
   }
@@ -2202,6 +2270,8 @@ void filterTargetObjects(
       o.avoid_margin = filtering_utils::getAvoidMargin(o, planner_data, parameters);
     } else if (filtering_utils::isVehicleTypeObject(o)) {
       // TARGET: CAR, TRUCK, BUS, TRAILER, MOTORCYCLE
+      o.behavior = filtering_utils::getObjectBehavior(o, parameters);
+      o.is_on_ego_lane = filtering_utils::isOnEgoLane(o, planner_data->route_handler);
 
       o.is_within_intersection =
         filtering_utils::isWithinIntersection(o, planner_data->route_handler);
@@ -2211,8 +2281,6 @@ void filterTargetObjects(
       o.is_parking_violation =
         filtering_utils::isParkingViolation(o, planner_data->route_handler, parameters);
       o.is_parked = filtering_utils::isParkedVehicle(o, parameters);
-      o.behavior = filtering_utils::getObjectBehavior(o, parameters);
-      o.is_on_ego_lane = filtering_utils::isOnEgoLane(o, planner_data->route_handler);
       o.is_adjacent_lane_stop_vehicle = filtering_utils::isAdjacentLaneStopVehicle(o);
       o.avoid_margin = filtering_utils::getAvoidMargin(o, planner_data, parameters);
 

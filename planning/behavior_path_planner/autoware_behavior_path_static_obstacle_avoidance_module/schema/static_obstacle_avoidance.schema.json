@@ -862,9 +862,22 @@
                   "enum": ["auto", "manual", "ignore"],
                   "description": "Ego behavior policy for parking violation vehicle.",
                   "default": "ignore"
+                },
+                "condition": {
+                  "type": "object",
+                  "properties": {
+                    "th_road_border_distance": {
+                      "type": "number",
+                      "description": "Distance threshold from road border to determine parking violation.",
+                      "default": 0.8,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["th_road_border_distance"],
+                  "additionalProperties": false
                 }
               },
-              "required": ["policy"],
+              "required": ["policy", "condition"],
               "additionalProperties": false
             },
             "avoidance_for_adjacent_lane_stop_vehicle": {
