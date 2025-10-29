@@ -14,20 +14,12 @@
 
 #include "manager.hpp"
 
-#include "scene_occlusion_spot.hpp"
-
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
 using occlusion_spot_utils::DETECTION_METHOD;
 using occlusion_spot_utils::PASS_JUDGE;
 
@@ -134,17 +126,18 @@ void OcclusionSpotModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 OcclusionSpotModuleManager::getModuleExpiredFunction(
   const Trajectory & /* path */, const PlannerData & /* planner_data */)
 {
-  return []([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) {
-    return false;
-  };
+  return
+    []([[maybe_unused]] const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+      return false;
+    };
 }
 }  // namespace autoware::behavior_velocity_planner
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::OcclusionSpotModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

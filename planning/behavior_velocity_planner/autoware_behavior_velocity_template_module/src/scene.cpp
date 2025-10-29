@@ -14,10 +14,6 @@
 
 #include "scene.hpp"
 
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <memory>
 #include <string>
 

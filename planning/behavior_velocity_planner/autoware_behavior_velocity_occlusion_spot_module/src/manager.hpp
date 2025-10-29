@@ -18,27 +18,15 @@
 #include "occlusion_spot_utils.hpp"
 #include "scene_occlusion_spot.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <nav_msgs/msg/occupancy_grid.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-class OcclusionSpotModuleManager : public SceneModuleManagerInterface<>
+class OcclusionSpotModuleManager : public experimental::SceneModuleManagerInterface<>
 {
 public:
   explicit OcclusionSpotModuleManager(rclcpp::Node & node);
@@ -63,11 +51,11 @@ private:
   void launchNewModules(
     const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
-  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const Trajectory & path, const PlannerData & planner_data) override;
+  std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class OcclusionSpotModulePlugin : public PluginWrapper<OcclusionSpotModuleManager>
+class OcclusionSpotModulePlugin : public experimental::PluginWrapper<OcclusionSpotModuleManager>
 {
 };
 

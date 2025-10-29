@@ -17,15 +17,8 @@
 
 #include "scene.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
-#include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
 
 #include <functional>
 #include <memory>
@@ -33,7 +26,7 @@
 namespace autoware::behavior_velocity_planner
 {
 class VirtualTrafficLightModuleManager
-: public SceneModuleManagerInterface<VirtualTrafficLightModule>
+: public experimental::SceneModuleManagerInterface<VirtualTrafficLightModule>
 {
 public:
   explicit VirtualTrafficLightModuleManager(rclcpp::Node & node);
@@ -68,7 +61,8 @@ private:
     pub_infrastructure_commands_;
 };
 
-class VirtualTrafficLightModulePlugin : public PluginWrapper<VirtualTrafficLightModuleManager>
+class VirtualTrafficLightModulePlugin
+: public experimental::PluginWrapper<VirtualTrafficLightModuleManager>
 {
 };
 

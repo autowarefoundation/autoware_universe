@@ -14,10 +14,7 @@
 
 #include "autoware/behavior_velocity_intersection_module/manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils/ros/parameter.hpp>
 
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
@@ -31,8 +28,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
-
 IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterfaceWithRTC(
     node, getModuleName(),
@@ -602,7 +597,7 @@ void MergeFromPrivateModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 MergeFromPrivateModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -612,7 +607,7 @@ MergeFromPrivateModuleManager::getModuleExpiredFunction(
   const auto lane_set = planning_utils::getLaneletsOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [&lane_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+  return [&lane_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
     const auto merge_from_private_module =
       std::dynamic_pointer_cast<MergeFromPrivateRoadModule>(scene_module);
     const auto & associative_ids = merge_from_private_module->getAssociativeIds();
@@ -651,7 +646,7 @@ bool MergeFromPrivateModuleManager::hasSameParentLaneletAndTurnDirectionWithRegi
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::IntersectionModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::MergeFromPrivateModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

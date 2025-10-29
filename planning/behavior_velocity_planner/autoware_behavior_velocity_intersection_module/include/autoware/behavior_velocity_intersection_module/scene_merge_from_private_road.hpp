@@ -15,14 +15,9 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/point.hpp>
 
 #include <memory>
 #include <set>
@@ -37,7 +32,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class MergeFromPrivateRoadModule : public SceneModuleInterface
+class MergeFromPrivateRoadModule : public experimental::SceneModuleInterface
 {
 public:
   struct DebugData

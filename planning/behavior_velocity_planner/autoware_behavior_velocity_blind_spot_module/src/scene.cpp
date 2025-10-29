@@ -17,17 +17,7 @@
 #include "autoware/behavior_velocity_blind_spot_module/time_to_collision.hpp"
 #include "autoware/behavior_velocity_blind_spot_module/util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils_geometry/boost_geometry.hpp>
-
-#include <std_msgs/msg/string.hpp>
-
-#include <boost/geometry/algorithms/intersects.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 

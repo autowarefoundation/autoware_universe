@@ -15,22 +15,12 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info.hpp>
-#include <nlohmann/json.hpp>
-#include <rclcpp/clock.hpp>
-#include <rclcpp/logger.hpp>
 
 #include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 #include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
 
 #include <functional>
 #include <memory>
@@ -41,7 +31,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class VirtualTrafficLightModule : public SceneModuleInterface
+class VirtualTrafficLightModule : public experimental::SceneModuleInterface
 {
 public:
   enum class State : uint8_t {

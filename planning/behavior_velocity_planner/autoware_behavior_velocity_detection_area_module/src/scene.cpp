@@ -17,19 +17,11 @@
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
-#include <autoware_utils_uuid/uuid_helper.hpp>
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <lanelet2_core/geometry/Polygon.h>
 
 #include <cstring>
 #include <iomanip>
 #include <memory>
-#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>

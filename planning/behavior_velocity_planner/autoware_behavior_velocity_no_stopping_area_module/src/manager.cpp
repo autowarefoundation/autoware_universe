@@ -14,9 +14,6 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
 #include <limits>
 #include <memory>
 #include <set>
@@ -25,7 +22,6 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::NoStoppingArea;
 
 NoStoppingAreaModuleManager::NoStoppingAreaModuleManager(rclcpp::Node & node)
@@ -96,4 +92,4 @@ NoStoppingAreaModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

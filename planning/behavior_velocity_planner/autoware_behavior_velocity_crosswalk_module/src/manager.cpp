@@ -14,9 +14,6 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_utils/ros/parameter.hpp>
-
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -27,7 +24,6 @@
 namespace autoware::behavior_velocity_planner
 {
 
-using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Crosswalk;
 
 CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
@@ -290,4 +286,4 @@ CrosswalkModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::CrosswalkModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

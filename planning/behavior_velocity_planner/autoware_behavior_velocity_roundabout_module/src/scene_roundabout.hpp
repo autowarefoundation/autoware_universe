@@ -20,26 +20,15 @@
 #include "roundabout_lanelets.hpp"
 #include "roundabout_stoplines.hpp"
 
-#include <autoware/behavior_velocity_intersection_module/interpolated_path_info.hpp>
 #include <autoware/behavior_velocity_intersection_module/result.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/roundabout.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_debug_msgs/msg/float64_multi_array_stamped.hpp>
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
-#include <lanelet2_core/Forward.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_routing/Forward.h>
 
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>

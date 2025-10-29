@@ -16,19 +16,7 @@
 
 #include "utils.hpp"
 
-#include <autoware/behavior_velocity_planner_common/planner_data.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/interpolation/spline_interpolation.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <rclcpp/clock.hpp>
-#include <rclcpp/logger.hpp>
-
-#include <lanelet2_core/geometry/Polygon.h>
-#include <lanelet2_core/primitives/Polygon.h>
-#include <lanelet2_core/utility/Optional.h>
 
 #include <cmath>
 #include <memory>

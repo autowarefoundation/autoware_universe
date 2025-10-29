@@ -14,13 +14,6 @@
 
 #include "scene.hpp"
 
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware_utils/geometry/geometry.hpp"
-#include "util.hpp"
-
-#include <autoware/trajectory/utils/pretty_build.hpp>
-#include <rclcpp/rclcpp.hpp>
-
 #include <iostream>
 #include <memory>
 #include <utility>

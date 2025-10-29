@@ -23,25 +23,9 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include <boost/assert.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/functional/hash.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
-#include <lanelet2_core/primitives/Lanelet.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_core/primitives/Polygon.h>
-#include <pcl/common/distances.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
 
 #include <algorithm>
 #include <iostream>

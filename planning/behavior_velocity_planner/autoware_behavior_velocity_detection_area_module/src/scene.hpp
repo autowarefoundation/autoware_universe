@@ -15,21 +15,14 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <boost/optional.hpp>
+#define EIGEN_MPL2_ONLY
+
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 
 #include <memory>
 #include <utility>
 #include <vector>
-
-#define EIGEN_MPL2_ONLY
-#include <Eigen/Core>
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <tf2/LinearMath/Transform.h>
 
 namespace autoware::behavior_velocity_planner
 {

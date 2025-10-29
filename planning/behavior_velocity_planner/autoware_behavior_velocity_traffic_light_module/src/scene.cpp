@@ -16,18 +16,7 @@
 
 #include "utils.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware/trajectory/utils/pretty_build.hpp>
-#include <rclcpp/duration.hpp>
-
-#include <boost/geometry/algorithms/distance.hpp>
-#include <boost/geometry/algorithms/intersection.hpp>
-
-#include <tf2/utils.h>
-
-#include <memory>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>
@@ -37,6 +26,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
