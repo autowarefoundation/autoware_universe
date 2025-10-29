@@ -71,12 +71,14 @@ class LidarMarkerLocalizer : public rclcpp::Node
     int64_t positive_match_num_threshold;
     int64_t negative_match_num_threshold;
     int64_t vote_threshold_for_detect_marker;
+    double marker_to_vehicle_offset_y;
     double marker_height_from_ground;
 
     double self_pose_timeout_sec;
     double self_pose_distance_tolerance_m;
 
     double limit_distance_from_self_pose_to_nearest_marker;
+    double limit_distance_from_self_pose_to_nearest_marker_y;
     double limit_distance_from_self_pose_to_marker;
     std::array<double, 36> base_covariance;
 
