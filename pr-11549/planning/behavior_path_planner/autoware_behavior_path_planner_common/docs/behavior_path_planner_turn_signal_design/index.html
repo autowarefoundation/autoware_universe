@@ -20003,6 +20003,13 @@
 <td align="left">0.1</td>
 </tr>
 <tr>
+<td align="left">turn_signal_remaining_distance_to_bound_threshold</td>
+<td align="left">[m]</td>
+<td align="left">double</td>
+<td align="left">Distance from ego vehicle's front edge to the far-side boundary of the target merging lane. The turn signal will be turned off when the value is less than the threshold.</td>
+<td align="left">1.3</td>
+</tr>
+<tr>
 <td align="left">turn_signal_on_swerving</td>
 <td align="left">[-]</td>
 <td align="left">bool</td>
@@ -20146,7 +20153,7 @@
   Cross point with lane change path and boundary line of the adjacent lane.</li>
 </ul>
 <p><img alt="section_lane_change" src="../../images/turn_signal_decider/lane_change.drawio.svg"></p>
-<h4 id="4-pull-out">4. Pull out<a class="headerlink" href="#4-pull-out" title="Permanent link">#</a></h4>
+<h4 id="4-pull-out-start-planner">4. Pull out (Start Planner)<a class="headerlink" href="#4-pull-out-start-planner" title="Permanent link">#</a></h4>
 <ul>
 <li>desired start point
   Start point of the path of pull out.</li>
@@ -20164,6 +20171,11 @@
   Terminal point of the path of pull out.</li>
 </ul>
 <p><img alt="section_pull_out" src="../../images/turn_signal_decider/pull_out.drawio.svg"></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The blinker also deactivate based on the remaining lateral distance to the target lane boundary.</p>
+<p>If this distance is smaller than the configurable parameter <code>turn_signal_remaining_distance_to_bound_threshold</code>, the blinker will turn off immediately.</p>
+</div>
 <h4 id="5-goal-planner">5. Goal Planner<a class="headerlink" href="#5-goal-planner" title="Permanent link">#</a></h4>
 <ul>
 <li>desired start point

@@ -21125,6 +21125,63 @@ See also <a href="https://www.sciencedirect.com/science/article/pii/S14746670153
 </table>
 <h3 id="clothoid-pull-out"><strong>clothoid pull out</strong><a class="headerlink" href="#clothoid-pull-out" title="Permanent link">#</a></h3>
 <p>Generate smooth paths using clothoid curves that provide continuous curvature transitions. The clothoid path consists of three segments: entry clothoid, circular arc, and exit clothoid, ensuring smooth steering transitions.</p>
+<p><img alt="clothoid_pull_out" src="images/clothoid_pullout.drawio.svg"></p>
+<h4 id="path-generation-flow">Path Generation Flow<a class="headerlink" href="#path-generation-flow" title="Permanent link">#</a></h4>
+<p>The path is generated with following flow.</p>
+<ol>
+<li>
+<p><strong>Parameter Setting and Initialization</strong></p>
+</li>
+<li>
+<p><strong>Get lane information</strong></p>
+<ul>
+<li>Get road lane (target lane) and shoulder lane (start lane) information.</li>
+</ul>
+</li>
+<li>
+<p><strong>Start and Target Path Generation</strong></p>
+<ul>
+<li>Generate the centerline path of the target lane.</li>
+<li>Generated the straight path of the shoulder lane.</li>
+</ul>
+</li>
+<li>
+<p><strong>Circular Arc Path Generation (red dotted line in the following figure)</strong></p>
+<ul>
+<li>Generate circular arc path using the same method as geometric pull out.</li>
+<li>Calculate composite arc path with two arc segments (entry and exit arcs).</li>
+<li>This process is repeated with gradually increasing maximum steering angles from the parameter list <code>clothoid_max_steer_angles_deg</code> (e.g., [5.0, 10.0, 20.0] degrees) until a valid path is found.</li>
+</ul>
+</li>
+<li>
+<p><strong>Clothoid Approximation</strong></p>
+<ul>
+<li>Convert the circular arc segments to clothoid curves.</li>
+<li>Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path (<strong>black dotted line in the following figure</strong>).</li>
+<li>Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path (<strong>black line in the following figure</strong>).</li>
+</ul>
+</li>
+<li>
+<p><strong>Lane Departure Check and Path Validation</strong></p>
+</li>
+<li>
+<p><strong>Collision Check</strong></p>
+</li>
+</ol>
+<p><img alt="clothoid_pullout_path_generation_flow" src="images/clothoid_flow.drawio.svg"></p>
+<p>The following diagram illustrates the process flow for generating clothoid paths:</p>
+<pre class="mermaid"><code>flowchart TD
+    A[Start: Parameter Setting and Initialization] --&gt; B[Get Lane Information]
+    B --&gt; C[Start and Target Path Generation]
+    C --&gt; D[Select a candidate max steer angle]
+    D --&gt; E[Generate Circular Arc Path]
+    E --&gt; F[Clothoid Approximation]
+    F --&gt; G[Lane Departure Check and Path Validation]
+    G --&gt; H[Collision Check]
+    H --&gt; I[Is the path valid?]
+    I --&gt;|No| D
+    I --&gt;|Yes| J[End: Return Path]
+    D --&gt;|No More Candidate| K[Path Generation Failure]</code></pre>
 <h4 id="parameters-for-clothoid-pull-out">parameters for clothoid pull out<a class="headerlink" href="#parameters-for-clothoid-pull-out" title="Permanent link">#</a></h4>
 <table>
 <thead>
@@ -21181,6 +21238,13 @@ See also <a href="https://www.sciencedirect.com/science/article/pii/S14746670153
 </tr>
 </tbody>
 </table>
+<h4 id="limitation">Limitation<a class="headerlink" href="#limitation" title="Permanent link">#</a></h4>
+<ul>
+<li><strong>Violation of the max curvature</strong>: During the rigid transformation of the approximated clothoid path to align with the original circular arc path, the scaling factor may cause the maximum steering angle constraint to be violated. When the scale factor is smaller than 1.0, the curvature of the transformed clothoid path may exceed the maximum curvature corresponding to the specified maximum steering angle.</li>
+</ul>
+<ul>
+<li><strong>Yaw Angle Deviation at Path Endpoints</strong>: The rigid transformation process introduces yaw angle deviations at the start and end points of the clothoid path. As shown in the figure above, note that the yaw angles at the start and end points differ between the original circular arc path (red dotted line) and the transformed clothoid path (black solid line).</li>
+</ul>
 <h2 id="backward-pull-out-start-point-search"><strong>backward pull out start point search</strong><a class="headerlink" href="#backward-pull-out-start-point-search" title="Permanent link">#</a></h2>
 <p>If a safe path cannot be generated from the current position, search backwards for a pull out start point at regular intervals(default: <code>2.0</code>).</p>
 <p><img alt="pull_out_after_back" src="images/pull_out_after_back.drawio.svg"></p>
