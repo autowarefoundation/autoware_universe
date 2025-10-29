@@ -14,6 +14,8 @@
 
 #include "object_sorter_base.hpp"
 
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
@@ -141,7 +143,9 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   double dist_origin_y = ego_pos.y + range_calc_offset_y_;
 
   for (const auto & object : input_msg->objects) {
-    const LabelSettings & label_settings = label_settings_[object.classification.front().label];
+    const uint8_t label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    const LabelSettings & label_settings = label_settings_[label];
 
     if (!label_settings.publish) {
       continue;
