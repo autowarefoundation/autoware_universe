@@ -14791,42 +14791,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#core-filtering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Core Filtering Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#return-type-classification-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Return Type Classification Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#performance-and-debug-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      Performance and Debug Control
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#diagnostics-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Diagnostics Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#parameter-interactions" class="md-nav__link">
     <span class="md-ellipsis">
       Parameter Interactions
@@ -20739,42 +20703,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#core-filtering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Core Filtering Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#return-type-classification-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Return Type Classification Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#performance-and-debug-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      Performance and Debug Control
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#diagnostics-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Diagnostics Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#parameter-interactions" class="md-nav__link">
     <span class="md-ellipsis">
       Parameter Interactions
@@ -21253,7 +21181,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <h3 id="range-aware-visibility-estimation">Range-Aware Visibility Estimation<a class="headerlink" href="#range-aware-visibility-estimation" title="Permanent link">#</a></h3>
 <p>The visibility metric is calculated only for voxels within the configured range:</p>
 <ul>
-<li><strong>Range Filtering</strong>: Only voxels with maximum radius ≤ <code>visibility_estimation_max_range_m</code> are considered</li>
+<li><strong>Range Filtering</strong>: Only voxels with maximum radius ≤ <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_min_azimuth_rad</code> ≤ azimuth ≤ <code>visibility_estimation_max_azimuth_rad</code>, and <code>visibility_estimation_min_elevation_rad</code> ≤ elevation ≤ <code>visibility_estimation_max_elevation_rad</code> are considered</li>
 <li><strong>Visibility Estimation Tuning</strong>: Reported visibility value is tuned using the <code>visibility_estimation_max_secondary_voxel_count</code> parameter</li>
 <li><strong>Reliability</strong>: Excludes potentially unreliable distant measurements from visibility calculations</li>
 <li><strong>Configurable</strong>: Allows adjustment based on sensor characteristics and requirements</li>
@@ -21315,7 +21243,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Both criteria must be satisfied</strong> for a voxel to be kept</li>
 </ul>
 </li>
-<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code> and secondary voxel count limited by <code>visibility_estimation_max_secondary_voxel_count</code></li>
+<li><strong>Range-Aware Visibility</strong>: Visibility calculation limited to voxels within <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code>, and secondary voxel count limited by <code>visibility_estimation_max_secondary_voxel_count</code></li>
 <li><strong>Secondary Return Filtering</strong>: Optional exclusion of secondary returns from output</li>
 <li><strong>Output</strong>: Filtered point cloud with enhanced noise removal (unless visibility-only mode)</li>
 </ol>
@@ -21381,169 +21309,205 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <h3 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h3>
 <p>This implementation inherits <code>autoware::pointcloud_preprocessor::Filter</code> class, please refer <a href="../../">README</a>.</p>
-<h3 id="core-filtering-parameters">Core Filtering Parameters<a class="headerlink" href="#core-filtering-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
+<th>Name</th>
 <th>Type</th>
 <th>Description</th>
 <th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>radial_resolution_m</code></td>
-<td>double</td>
-<td>Resolution in radial direction (meters)</td>
+<td>radial_resolution_m</td>
+<td>float</td>
+<td>The resolution in radial direction [m].</td>
 <td>0.5</td>
+<td>≥0</td>
 </tr>
 <tr>
-<td><code>azimuth_resolution_rad</code></td>
-<td>double</td>
-<td>Resolution in azimuth direction (radians)</td>
-<td>0.0175 (~1.0°)</td>
+<td>azimuth_resolution_rad</td>
+<td>float</td>
+<td>The resolution in azimuth direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole azimuth range.</td>
+<td>0.0175</td>
+<td>≥0<br>≤6.283185307179586</td>
 </tr>
 <tr>
-<td><code>elevation_resolution_rad</code></td>
-<td>double</td>
-<td>Resolution in elevation direction (radians)</td>
-<td>0.0175 (~1.0°)</td>
+<td>elevation_resolution_rad</td>
+<td>float</td>
+<td>The resolution in elevation direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole elevation range.</td>
+<td>0.0175</td>
+<td>≥0<br>≤6.283185307179586</td>
 </tr>
 <tr>
-<td><code>voxel_points_threshold</code></td>
-<td>int</td>
-<td>Minimum points required per voxel</td>
+<td>voxel_points_threshold</td>
+<td>integer</td>
+<td>The minimum number of points required per voxel.</td>
 <td>2</td>
+<td>≥1</td>
 </tr>
 <tr>
-<td><code>min_radius_m</code></td>
-<td>double</td>
-<td>Minimum radius to consider (meters)</td>
+<td>min_radius_m</td>
+<td>float</td>
+<td>The minimum radius to consider [m].</td>
 <td>0.5</td>
+<td>≥0</td>
 </tr>
 <tr>
-<td><code>max_radius_m</code></td>
-<td>double</td>
-<td>Maximum radius to consider (meters)</td>
+<td>max_radius_m</td>
+<td>float</td>
+<td>The maximum radius to consider [m].</td>
 <td>300.0</td>
+<td>≥0</td>
 </tr>
 <tr>
-<td><code>intensity_threshold</code></td>
-<td>int</td>
-<td>Maximum intensity threshold for secondary returns</td>
+<td>intensity_threshold</td>
+<td>integer</td>
+<td>The maximum intensity threshold for secondary returns (primary returns are not affected).</td>
 <td>2</td>
+<td>≥0<br>≤255</td>
 </tr>
 <tr>
-<td><code>visibility_estimation_max_range_m</code></td>
-<td>double</td>
-<td>Maximum range for visibility estimation (meters)</td>
+<td>visibility_estimation_max_range_m</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range).</td>
 <td>20.0</td>
+<td>≥0</td>
 </tr>
 <tr>
-<td><code>visibility_estimation_max_secondary_voxel_count</code></td>
-<td>int</td>
-<td>Maximum secondary voxel count for visibility estimation</td>
-<td>500</td>
+<td>visibility_estimation_min_azimuth_rad</td>
+<td>float</td>
+<td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>0.0</td>
+<td>≥0.0<br>≤6.28</td>
 </tr>
-</tbody>
-</table>
-<h3 id="return-type-classification-parameters">Return Type Classification Parameters<a class="headerlink" href="#return-type-classification-parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
 <tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
+<td>visibility_estimation_max_azimuth_rad</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>6.28</td>
+<td>≥0.0<br>≤6.28</td>
 </tr>
-</thead>
-<tbody>
 <tr>
-<td><code>use_return_type_classification</code></td>
-<td>bool</td>
-<td>Enable advanced two-criteria filtering</td>
+<td>visibility_estimation_min_elevation_rad</td>
+<td>float</td>
+<td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>-1.57</td>
+<td>≥-1.57<br>≤1.57</td>
+</tr>
+<tr>
+<td>visibility_estimation_max_elevation_rad</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>1.57</td>
+<td>≥-1.57<br>≤1.57</td>
+</tr>
+<tr>
+<td>use_return_type_classification</td>
+<td>boolean</td>
+<td>Whether to use return type classification (if false, all returns are processed).</td>
 <td>true</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>filter_secondary_returns</code></td>
-<td>bool</td>
-<td>Keep only primary returns in output</td>
+<td>filter_secondary_returns</td>
+<td>boolean</td>
+<td>Whether to filter secondary returns (if true, only primary returns are kept).</td>
 <td>false</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>secondary_noise_threshold</code></td>
-<td>int</td>
-<td>Maximum secondary returns allowed per voxel</td>
+<td>secondary_noise_threshold</td>
+<td>float</td>
+<td>Threshold for classifying primary vs secondary returns.</td>
 <td>4</td>
+<td>≥0</td>
 </tr>
 <tr>
-<td><code>primary_return_types</code></td>
-<td>int[]</td>
-<td>Return types considered as primary returns</td>
-<td>[1,6,8,10]</td>
+<td>visibility_estimation_max_secondary_voxel_count</td>
+<td>integer</td>
+<td>Maximum secondary voxel count for visibility estimation calculations.</td>
+<td>500</td>
+<td>≥0</td>
 </tr>
-</tbody>
-</table>
-<h3 id="performance-and-debug-control">Performance and Debug Control<a class="headerlink" href="#performance-and-debug-control" title="Permanent link">#</a></h3>
-<table>
-<thead>
 <tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
+<td>primary_return_types</td>
+<td>array</td>
+<td>List of return type values considered as primary returns (all others are secondary).</td>
+<td>[1, 6, 8, 10]</td>
+<td>N/A</td>
 </tr>
-</thead>
-<tbody>
 <tr>
-<td><code>visibility_estimation_only</code></td>
-<td>bool</td>
-<td>Run filter for visibility estimation only (no point cloud output)</td>
+<td>visibility_estimation_only</td>
+<td>boolean</td>
+<td>Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).</td>
 <td>false</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>publish_noise_cloud</code></td>
-<td>bool</td>
-<td>Generate and publish noise cloud for debugging (ignored in visibility-only mode)</td>
-<td>true</td>
+<td>publish_noise_cloud</td>
+<td>boolean</td>
+<td>Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
-</tbody>
-</table>
-<h3 id="diagnostics-parameters">Diagnostics Parameters<a class="headerlink" href="#diagnostics-parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
 <tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>filter_ratio_error_threshold</code></td>
-<td>double</td>
-<td>Error threshold for filter ratio</td>
+<td>filter_ratio_error_threshold</td>
+<td>float</td>
+<td>The filter ratio threshold for error diagnostics (ratio of output/input points).</td>
 <td>0.5</td>
+<td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td><code>filter_ratio_warn_threshold</code></td>
-<td>double</td>
-<td>Warning threshold for filter ratio</td>
+<td>filter_ratio_warn_threshold</td>
+<td>float</td>
+<td>The filter ratio threshold for warning diagnostics (ratio of output/input points).</td>
 <td>0.7</td>
+<td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td><code>visibility_error_threshold</code></td>
-<td>double</td>
-<td>Error threshold for visibility metric</td>
+<td>visibility_error_threshold</td>
+<td>float</td>
+<td>The visibility threshold for error diagnostics.</td>
 <td>0.8</td>
+<td>≥0<br>≤1</td>
 </tr>
 <tr>
-<td><code>visibility_warn_threshold</code></td>
-<td>double</td>
-<td>Warning threshold for visibility metric</td>
+<td>visibility_warn_threshold</td>
+<td>float</td>
+<td>The visibility threshold for warning diagnostics.</td>
 <td>0.9</td>
+<td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>publish_area_marker</td>
+<td>boolean</td>
+<td>Publish a marker to visualize region used for visibility estimation</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>num_frames_hysteresis_transition</td>
+<td>float</td>
+<td>The number of frames to be required to transition judgement</td>
+<td>1</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>immediate_report_error</td>
+<td>boolean</td>
+<td>Whether to report error state immediately if a single frame categorized as error</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>immediate_relax_state</td>
+<td>boolean</td>
+<td>Whether to relax state if observed state is better than the current one</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
@@ -21596,6 +21560,10 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="nt">azimuth_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
 <span class="nt">elevation_resolution_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0175</span><span class="w"> </span><span class="c1"># ~1 degree</span>
 <span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span><span class="w"> </span><span class="c1"># Range limit for visibility calculation</span>
+<span class="nt">visibility_estimation_min_azimuth_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.78</span>
+<span class="nt">visibility_estimation_max_azimuth_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.35</span>
+<span class="nt">visibility_estimation_min_elevation_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-0.26</span>
+<span class="nt">visibility_estimation_max_elevation_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.04</span>
 <span class="nt">visibility_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Normal filtering mode</span>
 <span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
@@ -21603,6 +21571,10 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Enable debugging and monitoring</span>
 <span class="nt">use_return_type_classification</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="nt">visibility_estimation_max_range_m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20.0</span><span class="w"> </span><span class="c1"># Configured range for urban environments</span>
+<span class="nt">visibility_estimation_min_azimuth_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.78</span>
+<span class="nt">visibility_estimation_max_azimuth_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.35</span>
+<span class="nt">visibility_estimation_min_elevation_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-0.26</span>
+<span class="nt">visibility_estimation_max_elevation_rad</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.04</span>
 <span class="nt">visibility_estimation_max_secondary_voxel_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span><span class="w"> </span><span class="c1"># Allow secondary voxels in visibility calculation</span>
 <span class="nt">visibility_estimation_only</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w"> </span><span class="c1"># Normal filtering with debug output</span>
 <span class="nt">publish_noise_cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># Enable noise cloud for analysis</span>
@@ -21648,7 +21620,11 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>Supported formats</strong>: PointXYZIRC and PointXYZIRCAEDT only</li>
 <li><strong>Finite coordinates required</strong>: Automatically filters out NaN/Inf points</li>
 <li><strong>Return type dependency</strong>: Advanced filtering effectiveness depends on accurate return type classification</li>
-<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code> setting</li>
+<li><strong>Visibility range dependency</strong>: Visibility accuracy depends on appropriate <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> settings. Besides, for azimuth and elevation range, the following definitions are assumed<ul>
+<li>azimuth: starts with the y-axis, increasing in counter-corkscrew rule around the z-axis. The range domain is <span class="arithmatex">\(<code>[0, 2\pi]</code>\)</span></li>
+<li>elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is <span class="arithmatex">\(<code>[-\frac{\pi}{2}, \frac{pi}{2}]</code>\)</span></li>
+</ul>
+</li>
 <li><strong>Secondary voxel limiting</strong>: Visibility estimation can be tuned via <code>visibility_estimation_max_secondary_voxel_count</code></li>
 </ul>
 <h2 id="error-detection-and-handling">Error detection and handling<a class="headerlink" href="#error-detection-and-handling" title="Permanent link">#</a></h2>
@@ -21683,6 +21659,10 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="c1">#   &lt;param name="visibility_estimation_max_secondary_voxel_count" value="500"/&gt;</span>
 <span class="c1">#   &lt;param name="primary_return_types" value="[1,6,8,10]"/&gt;</span>
 <span class="c1">#   &lt;param name="visibility_estimation_max_range_m" value="20.0"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_min_azimuth_rad" value="0.78"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_azimuth_rad" value="2.35"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_min_elevation_rad" value="-0.26"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_elevation_rad" value="1.04"/&gt;</span>
 <span class="c1">#   &lt;param name="visibility_estimation_only" value="false"/&gt;</span>
 <span class="c1"># &lt;/node&gt;</span>
 
@@ -21691,6 +21671,10 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <span class="c1">#   &lt;param name="use_return_type_classification" value="true"/&gt;</span>
 <span class="c1">#   &lt;param name="visibility_estimation_only" value="true"/&gt;</span>
 <span class="c1">#   &lt;param name="visibility_estimation_max_range_m" value="20.0"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_min_azimuth_rad" value="0.78"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_azimuth_rad" value="2.35"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_min_elevation_rad" value="-0.26"/&gt;</span>
+<span class="c1">#   &lt;param name="visibility_estimation_max_elevation_rad" value="1.04"/&gt;</span>
 <span class="c1">#   &lt;param name="visibility_estimation_max_secondary_voxel_count" value="500"/&gt;</span>
 <span class="c1"># &lt;/node&gt;</span>
 </code></pre></div>
@@ -21786,7 +21770,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <h3 id="visibility-diagnostics">Visibility Diagnostics<a class="headerlink" href="#visibility-diagnostics" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Advanced mode only</strong>: Uses return type classification data</li>
-<li><strong>Range-limited metric</strong>: Only considers voxels within <code>visibility_estimation_max_range_m</code></li>
+<li><strong>Range-limited metric</strong>: Only considers voxels within <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code> and <code>visibility_estimation_(min|max)_elevation_rad</code></li>
 <li><strong>Secondary voxel limiting</strong>: Controlled by <code>visibility_estimation_max_secondary_voxel_count</code> parameter</li>
 <li><strong>Voxel-based metric</strong>: Percentage of range-limited voxels passing secondary threshold test</li>
 <li><strong>Environmental indicator</strong>: Useful for detecting sensor conditions within reliable range</li>
@@ -21847,7 +21831,7 @@ Uses pre-computed polar coordinates directly from the point fields:</p>
 <li><strong>For lenient visibility estimation</strong>: Allow higher secondary voxel counts (several hundred)</li>
 <li><strong>For primary-only output</strong>: Enable <code>filter_secondary_returns</code></li>
 <li><strong>For sensor-specific optimization</strong>: Adjust <code>primary_return_types</code> based on sensor characteristics</li>
-<li><strong>For range-specific visibility</strong>: Set <code>visibility_estimation_max_range_m</code> based on sensor effective range and application requirements</li>
+<li><strong>For range-specific visibility</strong>: Set <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> based on sensor effective range and application requirements</li>
 </ul>
 <h4 id="mode-selection-guidelines">Mode Selection Guidelines<a class="headerlink" href="#mode-selection-guidelines" title="Permanent link">#</a></h4>
 <ul>
@@ -21972,7 +21956,7 @@ ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</s
 <li><strong>Ensure return type field</strong>: Verify input point clouds have return_type field</li>
 <li><strong>Set parameter</strong>: <code>use_return_type_classification: true</code></li>
 <li><strong>Configure return types</strong>: Set <code>primary_return_types</code> for your sensor</li>
-<li><strong>Set visibility range</strong>: Configure <code>visibility_estimation_max_range_m</code> for your application</li>
+<li><strong>Set visibility range</strong>: Configure <code>visibility_estimation_max_range_m</code>, <code>visibility_estimation_(min|max)_azimuth_rad</code>, and <code>visibility_estimation_(min|max)_elevation_rad</code> for your application</li>
 <li><strong>Configure secondary voxel limiting</strong>: Set <code>visibility_estimation_max_secondary_voxel_count</code> based on requirements</li>
 <li><strong>Tune thresholds</strong>: Adjust <code>secondary_noise_threshold</code> based on requirements</li>
 <li><strong>Monitor diagnostics</strong>: Use range-aware visibility metrics for performance assessment</li>
