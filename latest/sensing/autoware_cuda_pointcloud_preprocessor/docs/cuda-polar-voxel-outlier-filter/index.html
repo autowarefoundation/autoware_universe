@@ -20240,6 +20240,34 @@
 <td>≥0</td>
 </tr>
 <tr>
+<td>visibility_estimation_min_azimuth_rad</td>
+<td>float</td>
+<td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>0.0</td>
+<td>≥0.0<br>≤6.28</td>
+</tr>
+<tr>
+<td>visibility_estimation_max_azimuth_rad</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>6.28</td>
+<td>≥0.0<br>≤6.28</td>
+</tr>
+<tr>
+<td>visibility_estimation_min_elevation_rad</td>
+<td>float</td>
+<td>The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>-1.57</td>
+<td>≥-1.57<br>≤1.57</td>
+</tr>
+<tr>
+<td>visibility_estimation_max_elevation_rad</td>
+<td>float</td>
+<td>The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).</td>
+<td>1.57</td>
+<td>≥-1.57<br>≤1.57</td>
+</tr>
+<tr>
 <td>use_return_type_classification</td>
 <td>boolean</td>
 <td>Whether to use return type classification (if false, all returns are processed).</td>
@@ -20315,6 +20343,34 @@
 <td>The visibility threshold for warning diagnostics.</td>
 <td>0.9</td>
 <td>≥0<br>≤1</td>
+</tr>
+<tr>
+<td>publish_area_marker</td>
+<td>boolean</td>
+<td>Publish a marker to visualize region used for visibility estimation</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>num_frames_hysteresis_transition</td>
+<td>float</td>
+<td>The number of frames to be required to transition judgement</td>
+<td>1</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>immediate_report_error</td>
+<td>boolean</td>
+<td>Whether to report error state immediately if a single frame categorized as error</td>
+<td>false</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>immediate_relax_state</td>
+<td>boolean</td>
+<td>Whether to relax state if observed state is better than the current one</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
