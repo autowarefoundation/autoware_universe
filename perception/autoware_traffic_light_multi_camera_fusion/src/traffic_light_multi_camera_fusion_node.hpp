@@ -53,6 +53,8 @@ struct GroupFusionInfo
   std::map<StateKey, utils::FusionRecord> best_record_for_state;
 };
 
+using GroupFusionInfoMap = std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
+
 class MultiCameraFusion : public rclcpp::Node
 {
 public:
@@ -88,9 +90,35 @@ private:
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused records.
    */
-  std::map<IdType, GroupFusionInfo> accumulateGroupEvidence(
+  GroupFusionInfoMap accumulateGroupEvidence(
     const std::map<IdType, utils::FusionRecord> & fused_record_map);
+  
+  /**
+   * @brief Processes a single fused record and updates the group_fusion_info_map.
+   */
+  void processFusedRecord(
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
 
+  /**
+   * @brief Updates the map for a single (element, regulatory_id) combination.
+   */
+  void updateGroupInfoForElement(
+    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
+    const tier4_perception_msgs::msg::TrafficLightElement & element,
+    const utils::FusionRecord & record);
+
+  /**
+   * @brief Handles the log-odds accumulation logic.
+   */
+  void updateLogOdds(
+    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
+
+  /**
+   * @brief Handles the logic for tracking the best record for a given state.
+   */
+  void updateBestRecord(
+    std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
+    double confidence, const utils::FusionRecord & record);
   /**
    * @brief Determines the best state for each group based on accumulated evidence.
    */
