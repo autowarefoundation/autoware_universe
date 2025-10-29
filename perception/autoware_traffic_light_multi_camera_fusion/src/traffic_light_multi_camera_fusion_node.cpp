@@ -318,15 +318,18 @@ void MultiCameraFusion::updateBestRecord(
 {
   const auto it = best_record_map.find(state_key);
 
-  if (it == best_record_map.end() || 
-      (it->second.signal.elements.empty() == false && 
-       confidence > it->second.signal.elements[0].confidence))
-  {
+  if (it == best_record_map.end()) {
     best_record_map[state_key] = record;
+    return;
   }
-  else if (it == best_record_map.end())
-  {
-    // Handle case where state_key is not found separately
+
+  auto& existing_record = it->second;
+
+  if (existing_record.signal.elements.empty()) {
+    return;
+  }
+
+  if (confidence > existing_record.signal.elements[0].confidence) {
     best_record_map[state_key] = record;
   }
 }
