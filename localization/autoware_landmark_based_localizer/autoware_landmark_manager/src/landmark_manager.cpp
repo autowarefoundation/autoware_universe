@@ -16,7 +16,7 @@
 
 #include "autoware/localization_util/util_func.hpp"
 #include "autoware_lanelet2_extension/utility/message_conversion.hpp"
-#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils_geometry/geometry.hpp"
 
 #include <Eigen/Core>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -165,7 +165,7 @@ geometry_msgs::msg::Pose LandmarkManager::calculate_new_self_pose(
 
     // convert base_link to map
     const Pose detected_landmark_on_map =
-      autoware_utils::transform_pose(detected_landmark_on_base_link, self_pose);
+      autoware_utils_geometry::transform_pose(detected_landmark_on_base_link, self_pose);
 
     // match to map
     if (landmarks_map_.count(landmark.id) == 0) {
@@ -175,7 +175,7 @@ geometry_msgs::msg::Pose LandmarkManager::calculate_new_self_pose(
     // check all poses
     for (const Pose mapped_landmark_on_map : landmarks_map_.at(landmark.id)) {
       // check distance
-      const double curr_distance = autoware_utils::calc_distance3d(
+      const double curr_distance = autoware_utils_geometry::calc_distance3d(
         mapped_landmark_on_map.position, detected_landmark_on_map.position);
       if (curr_distance > min_distance) {
         continue;

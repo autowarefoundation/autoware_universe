@@ -92,7 +92,6 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   auto & intersection_lanelets = intersection_lanelets_.value();
   debug_data_.attention_area = intersection_lanelets.attention_area();
   debug_data_.first_attention_area = intersection_lanelets.first_attention_area();
-  debug_data_.second_attention_area = intersection_lanelets.second_attention_area();
   debug_data_.occlusion_attention_area = intersection_lanelets.occlusion_attention_area();
   debug_data_.adjacent_area = intersection_lanelets.adjacent_area();
 
@@ -101,8 +100,7 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   // the attention area, so update() is called to update the internal data as well as traffic
   // light info
   // ==========================================================================================
-  intersection_lanelets.update(
-    is_prioritized, interpolated_path_info, footprint, baselink2front, routing_graph_ptr);
+  intersection_lanelets.update(is_prioritized, interpolated_path_info, footprint, baselink2front);
 
   const auto & conflicting_lanelets = intersection_lanelets.conflicting();
   const auto & first_conflicting_area_opt = intersection_lanelets.first_conflicting_area();
@@ -113,7 +111,6 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   }
   const auto & first_conflicting_lane = first_conflicting_lane_opt.value();
   const auto & first_conflicting_area = first_conflicting_area_opt.value();
-  const auto & second_attention_area_opt = intersection_lanelets.second_attention_area();
 
   // ==========================================================================================
   // even if the attention area is null, stuck vehicle stop line needs to be generated from
@@ -124,8 +121,8 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
                                               : first_conflicting_lane;
 
   const auto intersection_stoplines_opt = generateIntersectionStopLines(
-    assigned_lanelet, first_conflicting_area, dummy_first_attention_lane, second_attention_area_opt,
-    interpolated_path_info, path);
+    assigned_lanelet, first_conflicting_area, dummy_first_attention_lane, interpolated_path_info,
+    previous_stop_pose_, path);
   if (!intersection_stoplines_opt) {
     return make_err<IntersectionModule::BasicData, InternalError>(
       "failed to generate intersection_stoplines");
@@ -232,19 +229,15 @@ std::optional<size_t> IntersectionModule::getStopLineIndexFromMap(
 std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionStopLines(
   lanelet::ConstLanelet assigned_lanelet, const lanelet::CompoundPolygon3d & first_conflicting_area,
   const lanelet::ConstLanelet & first_attention_lane,
-  const std::optional<lanelet::CompoundPolygon3d> & second_attention_area_opt,
   const InterpolatedPathInfo & interpolated_path_info,
+  const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
   autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const
 {
   const bool use_stuck_stopline = planner_param_.stuck_vehicle.use_stuck_stopline;
   const double stopline_margin = planner_param_.common.default_stopline_margin;
-  const double max_accel = planner_param_.common.max_accel;
-  const double max_jerk = planner_param_.common.max_jerk;
-  const double delay_response_time = planner_param_.common.delay_response_time;
   const double peeking_offset = planner_param_.occlusion.peeking_offset;
 
   const auto first_attention_area = first_attention_lane.polygon3d();
-  const auto first_attention_lane_centerline = first_attention_lane.centerline2d();
   const auto & path_ip = interpolated_path_info.path;
   const double ds = interpolated_path_info.ds;
   const auto & lane_interval_ip = interpolated_path_info.lane_id_interval.value();
@@ -253,7 +246,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   const int stopline_margin_idx_dist = std::ceil(stopline_margin / ds);
   const int base2front_idx_dist = std::ceil(baselink2front / ds);
 
-  // find the index of the first point whose vehicle footprint on it intersects with attention_area
+  // (1) find the index of the first point whose vehicle footprint on it intersects with
+  // attention_area for the first time
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
     util::getFirstPointInsidePolygonByFootprint(
@@ -261,135 +255,173 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   if (!first_footprint_inside_1st_attention_ip_opt) {
     return std::nullopt;
   }
-  const auto first_footprint_inside_1st_attention_ip =
-    first_footprint_inside_1st_attention_ip_opt.value();
+  const auto first_attention_stopline_ip = first_footprint_inside_1st_attention_ip_opt.value();
 
-  std::optional<size_t> first_footprint_attention_centerline_ip_opt = std::nullopt;
-  for (auto i = std::get<0>(lane_interval_ip); i < std::get<1>(lane_interval_ip); ++i) {
-    const auto & base_pose = path_ip.points.at(i).point.pose;
-    const auto path_footprint =
-      autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose));
-    if (bg::intersects(path_footprint, first_attention_lane_centerline.basicLineString())) {
-      // NOTE: maybe consideration of braking dist is necessary
-      first_footprint_attention_centerline_ip_opt = i;
-      break;
-    }
-  }
-  if (!first_footprint_attention_centerline_ip_opt) {
-    return std::nullopt;
-  }
-  const size_t first_footprint_attention_centerline_ip =
-    first_footprint_attention_centerline_ip_opt.value();
+  // (2) pass judge line position on interpolated path
+  const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
+    planner_data_->current_velocity->twist.linear.x,
+    planner_data_->current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
+    planner_param_.common.max_jerk, 0.0);
+  int first_pass_judge_ip_int =
+    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds));
+  const auto first_pass_judge_line_ip = static_cast<size_t>(
+    std::clamp<int>(first_pass_judge_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
 
-  // (1) default stop line position on interpolated path
-  bool default_stopline_valid = true;
-  int stop_idx_ip_int = -1;
-  if (const auto map_stop_idx_ip =
-        getStopLineIndexFromMap(interpolated_path_info, assigned_lanelet);
-      map_stop_idx_ip) {
-    stop_idx_ip_int = static_cast<int>(map_stop_idx_ip.value()) - base2front_idx_dist;
-  }
-  if (stop_idx_ip_int < 0) {
-    stop_idx_ip_int = first_footprint_inside_1st_attention_ip - stopline_margin_idx_dist;
-  }
-  if (stop_idx_ip_int < 0) {
-    default_stopline_valid = false;
-  }
-  const auto default_stopline_ip = stop_idx_ip_int >= 0 ? static_cast<size_t>(stop_idx_ip_int) : 0;
-
-  // (2) ego front stop line position on interpolated path
+  // (3) ego front stop line position on interpolated path
   const geometry_msgs::msg::Pose & current_pose = planner_data_->current_odometry->pose;
   const auto closest_idx_ip = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     path_ip.points, current_pose, planner_data_->ego_nearest_dist_threshold,
     planner_data_->ego_nearest_yaw_threshold);
 
-  // (3) occlusion peeking stop line position on interpolated path
-  int occlusion_peeking_line_ip_int = static_cast<int>(default_stopline_ip);
-  bool occlusion_peeking_line_valid = true;
-  // NOTE: if footprints[0] is already inside the attention area, invalid
-  {
+  // (4) default stop line position on interpolated path
+  const auto default_stopline_ip_and_valid = [&]() -> std::pair<size_t, bool> {
+    bool default_stopline_valid = true;
+    int stop_idx_ip_int = -1;
+    if (const auto map_stop_idx_ip =
+          getStopLineIndexFromMap(interpolated_path_info, assigned_lanelet);
+        map_stop_idx_ip) {
+      stop_idx_ip_int = static_cast<int>(map_stop_idx_ip.value()) - base2front_idx_dist;
+    }
+    if (stop_idx_ip_int < 0) {
+      stop_idx_ip_int = static_cast<int>(first_attention_stopline_ip) - stopline_margin_idx_dist;
+    }
+    if (stop_idx_ip_int < 0) {
+      default_stopline_valid = false;
+    }
+    return {
+      stop_idx_ip_int >= 0 ? static_cast<size_t>(stop_idx_ip_int) : 0, default_stopline_valid};
+  }();
+  const auto default_stopline_ip = default_stopline_ip_and_valid.first;
+  const auto default_stopline_valid = default_stopline_ip_and_valid.second;
+
+  // (5) collision stop line
+  const auto [collision_stopline_ip, collision_stopline_valid] = [&]() -> std::pair<size_t, bool> {
+    if (previous_stop_pose.collision_stopline_pose) {
+      const auto previous_stop_pose_idx =
+        autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+          path_ip.points, previous_stop_pose.collision_stopline_pose.value(),
+          planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+      return {previous_stop_pose_idx, true};
+    }
+    if (!default_stopline_valid) {
+      return {0, false};
+    }
+
+    const double dist_to_default_stopline =
+      motion_utils::calcSignedArcLength(path_ip.points, closest_idx_ip, default_stopline_ip);
+
+    if (dist_to_default_stopline > braking_dist) {
+      // default stop line is feasible
+      return {default_stopline_ip, true};
+    }
+    // default stop line is infeasible
+    if (closest_idx_ip < first_pass_judge_line_ip) {
+      // but ego is still before pass judge line
+      const size_t idx = closest_idx_ip + static_cast<int>(std::ceil(braking_dist / ds));
+      return {
+        static_cast<size_t>(
+          std::clamp<int>(static_cast<int>(idx), 0, static_cast<int>(path_ip.points.size() - 1))),
+        true};
+    }
+    if (previous_stop_pose.occlusion_peeking_stopline_pose) {
+      // NOTE(soblin): see IntersectionModule::isOverPassJudgeLinesStatus. during peeking, ego can
+      // pass original pass judge line
+      const auto previous_stop_pose_idx =
+        autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+          path_ip.points, previous_stop_pose.occlusion_peeking_stopline_pose.value(),
+          planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+      return {previous_stop_pose_idx, true};
+    }
+    // ego is over pass judge line
+    return {first_attention_stopline_ip, true};
+  }();
+
+  // (6) occlusion peeking stop line position on interpolated path
+  // static position
+  const auto static_occlusion_peeking_line_ip_and_line_valid = [&]() -> std::pair<size_t, bool> {
+    // NOTE: if footprints[0] is already inside the attention area, invalid
     const auto & base_pose0 = path_ip.points.at(default_stopline_ip).point.pose;
     const auto path_footprint0 =
       autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose0));
     if (bg::intersects(
           path_footprint0, lanelet::utils::to2D(first_attention_area).basicPolygon())) {
-      occlusion_peeking_line_valid = false;
+      return {0, false};
     }
-  }
-  if (occlusion_peeking_line_valid) {
-    occlusion_peeking_line_ip_int =
-      first_footprint_inside_1st_attention_ip + std::ceil(peeking_offset / ds);
-  }
-  const auto occlusion_peeking_line_ip = static_cast<size_t>(
-    std::clamp<int>(occlusion_peeking_line_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
+    int occlusion_peeking_line_ip_int = static_cast<int>(first_attention_stopline_ip) +
+                                        static_cast<int>(std::ceil(peeking_offset / ds));
+    return {
+      static_cast<size_t>(std::clamp<int>(
+        occlusion_peeking_line_ip_int, 0, static_cast<int>(path_ip.points.size() - 1))),
+      true};
+  }();
+  const auto static_occlusion_peeking_line_ip =
+    static_occlusion_peeking_line_ip_and_line_valid.first;
+  const auto static_occlusion_peeking_line_valid =
+    static_occlusion_peeking_line_ip_and_line_valid.second;
 
-  // (4) first attention stopline position on interpolated path
-  const auto first_attention_stopline_ip = first_footprint_inside_1st_attention_ip;
-  const bool first_attention_stopline_valid = true;
+  // dynamic position
+  const auto [occlusion_peeking_line_ip, occlusion_peeking_line_valid] =
+    [&]() -> std::pair<size_t, bool> {
+    if (previous_stop_pose.occlusion_peeking_stopline_pose) {
+      const auto previous_stop_pose_idx =
+        autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+          path_ip.points, previous_stop_pose.occlusion_peeking_stopline_pose.value(),
+          planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
+      return {previous_stop_pose_idx, true};
+    }
+    if (!static_occlusion_peeking_line_valid) {
+      return {0, false};
+    }
 
-  // (5) 1st pass judge line position on interpolated path
-  const double velocity = planner_data_->current_velocity->twist.linear.x;
-  const double acceleration = planner_data_->current_acceleration->accel.accel.linear.x;
-  const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
-    velocity, acceleration, max_accel, max_jerk, delay_response_time);
-  int first_pass_judge_ip_int =
-    static_cast<int>(first_footprint_inside_1st_attention_ip) - std::ceil(braking_dist / ds);
-  const auto first_pass_judge_line_ip = static_cast<size_t>(
-    std::clamp<int>(first_pass_judge_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
-  const auto occlusion_wo_tl_pass_judge_line_ip = static_cast<size_t>(std::max<int>(
-    0, static_cast<int>(first_footprint_attention_centerline_ip) - std::ceil(braking_dist / ds)));
+    const double dist_to_static_stopline = motion_utils::calcSignedArcLength(
+      path_ip.points, closest_idx_ip, static_occlusion_peeking_line_ip);
 
-  // (6) stuck vehicle stopline position on interpolated path
-  int stuck_stopline_ip_int = 0;
-  bool stuck_stopline_valid = true;
-  if (use_stuck_stopline) {
-    // ==========================================================================================
-    // NOTE: when ego vehicle is approaching attention area and already passed
-    // first_conflicting_area, this could be null.
-    // ==========================================================================================
-    const auto stuck_stopline_idx_ip_opt = util::getFirstPointInsidePolygonByFootprint(
-      first_conflicting_area, interpolated_path_info, local_footprint, baselink2front);
-    if (!stuck_stopline_idx_ip_opt) {
-      stuck_stopline_valid = false;
-      stuck_stopline_ip_int = 0;
+    if (dist_to_static_stopline > braking_dist) {
+      // static stop line position is feasible
+      return {static_occlusion_peeking_line_ip, true};
+    }
+    // static stop line is infeasible
+    if (closest_idx_ip < first_pass_judge_line_ip) {
+      // but ego is still before pass judge line
+      const int idx =
+        static_cast<int>(closest_idx_ip) + static_cast<int>(std::ceil(braking_dist / ds));
+      return {
+        static_cast<size_t>(std::clamp<int>(idx, 0, static_cast<int>(path_ip.points.size() - 1))),
+        true};
+    }
+    // ego is over pass judge line
+    return {first_attention_stopline_ip, true};
+  }();
+
+  // (7) stuck vehicle stopline position on interpolated path
+  const auto [stuck_stopline_ip, stuck_stopline_valid] = [&]() -> std::pair<size_t, bool> {
+    int stuck_stopline_ip_int = 0;
+    if (use_stuck_stopline) {
+      // ==========================================================================================
+      // NOTE: when ego vehicle is approaching attention area and already passed
+      // first_conflicting_area, this could be null.
+      // ==========================================================================================
+      const auto stuck_stopline_idx_ip_opt = util::getFirstPointInsidePolygonByFootprint(
+        first_conflicting_area, interpolated_path_info, local_footprint, baselink2front);
+      if (!stuck_stopline_idx_ip_opt) {
+        return {0, false};
+      }
+      stuck_stopline_ip_int =
+        static_cast<int>(stuck_stopline_idx_ip_opt.value()) - stopline_margin_idx_dist;
     } else {
-      stuck_stopline_ip_int = stuck_stopline_idx_ip_opt.value() - stopline_margin_idx_dist;
+      stuck_stopline_ip_int =
+        std::get<0>(lane_interval_ip) - (stopline_margin_idx_dist + base2front_idx_dist);
     }
-  } else {
-    stuck_stopline_ip_int =
-      std::get<0>(lane_interval_ip) - (stopline_margin_idx_dist + base2front_idx_dist);
-  }
-  if (stuck_stopline_ip_int < 0) {
-    stuck_stopline_valid = false;
-  }
-  const auto stuck_stopline_ip = static_cast<size_t>(std::max(0, stuck_stopline_ip_int));
-
-  // (7) second attention stopline position on interpolated path
-  int second_attention_stopline_ip_int = -1;
-  bool second_attention_stopline_valid = false;
-  if (second_attention_area_opt) {
-    const auto & second_attention_area = second_attention_area_opt.value();
-    std::optional<size_t> first_footprint_inside_2nd_attention_ip_opt =
-      util::getFirstPointInsidePolygonByFootprint(
-        second_attention_area, interpolated_path_info, local_footprint, baselink2front);
-    if (first_footprint_inside_2nd_attention_ip_opt) {
-      second_attention_stopline_ip_int = first_footprint_inside_2nd_attention_ip_opt.value();
-      second_attention_stopline_valid = true;
+    if (stuck_stopline_ip_int < 0) {
+      return {0, false};
     }
-  }
-  const auto second_attention_stopline_ip =
-    second_attention_stopline_ip_int >= 0 ? static_cast<size_t>(second_attention_stopline_ip_int)
-                                          : 0;
+    return {
+      static_cast<size_t>(
+        std::clamp<int>(stuck_stopline_ip_int, 0, static_cast<int>(path_ip.points.size() - 1))),
+      true};
+  }();
 
-  // (8) second pass judge line position on interpolated path. It is null if second_attention_lane
-  // is null
-  size_t second_pass_judge_line_ip = occlusion_wo_tl_pass_judge_line_ip;
-  bool second_pass_judge_line_valid = false;
-  if (second_attention_area_opt) {
-    second_pass_judge_line_valid = true;
-  }
-
-  // (9) the position where ego footprint most approaches the opposite boundary of
+  // (8) the position where ego footprint most approaches the opposite boundary of
   const std::string turn_direction = assigned_lanelet.attributeOr("turn_direction", "else");
   const auto compute_lane_end_azimuth = [](const lanelet::ConstLanelet & lane) {
     const auto & centerline = lane.centerline();
@@ -406,20 +438,19 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     is_merging ? util::find_maximum_footprint_overshoot_position(
                    interpolated_path_info, local_footprint, first_attention_lane,
                    planner_param_.conservative_merging.minimum_lateral_distance_threshold,
-                   turn_direction, first_footprint_inside_1st_attention_ip)
+                   turn_direction, first_attention_stopline_ip)
                : std::nullopt;
   const auto maximum_footprint_overshoot_line_ip = maximum_footprint_overshoot_line_opt.value_or(0);
+
   struct IntersectionStopLinesTemp
   {
     size_t closest_idx{0};
     size_t stuck_stopline{0};
     size_t default_stopline{0};
+    size_t collision_stopline{0};
     size_t first_attention_stopline{0};
-    size_t second_attention_stopline{0};
     size_t occlusion_peeking_stopline{0};
-    size_t first_pass_judge_line{0};
-    size_t second_pass_judge_line{0};
-    size_t occlusion_wo_tl_pass_judge_line{0};
+    size_t pass_judge_line{0};
     size_t most_footprint_overshoot_line{0};
   };
 
@@ -428,13 +459,10 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     {&closest_idx_ip, &intersection_stoplines_temp.closest_idx},
     {&stuck_stopline_ip, &intersection_stoplines_temp.stuck_stopline},
     {&default_stopline_ip, &intersection_stoplines_temp.default_stopline},
+    {&collision_stopline_ip, &intersection_stoplines_temp.collision_stopline},
     {&first_attention_stopline_ip, &intersection_stoplines_temp.first_attention_stopline},
-    {&second_attention_stopline_ip, &intersection_stoplines_temp.second_attention_stopline},
     {&occlusion_peeking_line_ip, &intersection_stoplines_temp.occlusion_peeking_stopline},
-    {&first_pass_judge_line_ip, &intersection_stoplines_temp.first_pass_judge_line},
-    {&second_pass_judge_line_ip, &intersection_stoplines_temp.second_pass_judge_line},
-    {&occlusion_wo_tl_pass_judge_line_ip,
-     &intersection_stoplines_temp.occlusion_wo_tl_pass_judge_line},
+    {&first_pass_judge_line_ip, &intersection_stoplines_temp.pass_judge_line},
     {&maximum_footprint_overshoot_line_ip,
      &intersection_stoplines_temp.most_footprint_overshoot_line}};
   stoplines.sort(
@@ -449,12 +477,6 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     }
     *stop_idx = insert_idx.value();
   }
-  if (
-    intersection_stoplines_temp.occlusion_peeking_stopline <
-    intersection_stoplines_temp.default_stopline) {
-    intersection_stoplines_temp.occlusion_peeking_stopline =
-      intersection_stoplines_temp.default_stopline;
-  }
 
   IntersectionStopLines intersection_stoplines;
   intersection_stoplines.closest_idx = intersection_stoplines_temp.closest_idx;
@@ -464,29 +486,20 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   if (default_stopline_valid) {
     intersection_stoplines.default_stopline = intersection_stoplines_temp.default_stopline;
   }
-  if (first_attention_stopline_valid) {
-    intersection_stoplines.first_attention_stopline =
-      intersection_stoplines_temp.first_attention_stopline;
+  if (collision_stopline_valid) {
+    intersection_stoplines.collision_stopline = intersection_stoplines_temp.collision_stopline;
   }
-  if (second_attention_stopline_valid) {
-    intersection_stoplines.second_attention_stopline =
-      intersection_stoplines_temp.second_attention_stopline;
-  }
+  intersection_stoplines.first_attention_stopline =
+    intersection_stoplines_temp.first_attention_stopline;
   if (occlusion_peeking_line_valid) {
     intersection_stoplines.occlusion_peeking_stopline =
       intersection_stoplines_temp.occlusion_peeking_stopline;
   }
-  if (second_pass_judge_line_valid) {
-    intersection_stoplines.second_pass_judge_line =
-      intersection_stoplines_temp.second_pass_judge_line;
-  }
+  intersection_stoplines.pass_judge_line = intersection_stoplines_temp.pass_judge_line;
   if (maximum_footprint_overshoot_line_opt) {
     intersection_stoplines.maximum_footprint_overshoot_line =
       intersection_stoplines_temp.most_footprint_overshoot_line;
   }
-  intersection_stoplines.first_pass_judge_line = intersection_stoplines_temp.first_pass_judge_line;
-  intersection_stoplines.occlusion_wo_tl_pass_judge_line =
-    intersection_stoplines_temp.occlusion_wo_tl_pass_judge_line;
   return intersection_stoplines;
 }
 

@@ -275,7 +275,12 @@ TEST_F(BehaviorPathPlanningUtilTest, refinePathForGoal)
   {
     const double search_radius_range = 1.0;
     const auto refined_path = refinePathForGoal(
-      search_radius_range, search_rad_range, output_path_interval, path, goal_pose, goal_lane_id);
+      search_radius_range, search_rad_range, output_path_interval, path, goal_pose, goal_lane_id,
+      [&](int64_t lane_id) -> lanelet::ConstLanelet {
+        return {
+          lane_id, lanelet::LineString3d(lanelet::utils::getId()),
+          lanelet::LineString3d(lanelet::utils::getId())};
+      });
     EXPECT_EQ(refined_path.points.size(), 8);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.longitudinal_velocity_mps, 0.0);
     EXPECT_DOUBLE_EQ(refined_path.points.back().point.pose.position.x, 5.2);

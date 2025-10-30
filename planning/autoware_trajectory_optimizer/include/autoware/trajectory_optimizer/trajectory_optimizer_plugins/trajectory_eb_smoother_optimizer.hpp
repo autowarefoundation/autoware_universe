@@ -42,14 +42,12 @@ using SmootherTimekeeper = autoware::path_smoother::TimeKeeper;
 class TrajectoryEBSmootherOptimizer : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryEBSmootherOptimizer(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params);
+  TrajectoryEBSmootherOptimizer() = default;
   ~TrajectoryEBSmootherOptimizer() = default;
 
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

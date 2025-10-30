@@ -482,6 +482,34 @@ protected:
    */
   virtual void processOnExit() {}
 
+  virtual void update_rtc_status(
+    const double start_distance, const double finish_distance,
+    const std::optional<bool> safe = std::nullopt,
+    const std::optional<uint8_t> state = std::nullopt)
+  {
+    autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+    for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
+      if (!ptr) {
+        continue;
+      }
+
+      // Use the provided safe_status, or calculate the default if it's not provided.
+      const bool final_safe = safe.value_or(isExecutionReady());
+
+      // Use the provided state, or calculate the default if it's not provided.
+      const auto default_state =
+        (!ptr->isRegistered(uuid_map_.at(module_name)) || isWaitingApproval()
+           ? State::WAITING_FOR_EXECUTION
+           : State::RUNNING);
+
+      const uint8_t final_state = state.value_or(default_state);
+
+      ptr->updateCooperateStatus(
+        uuid_map_.at(module_name), final_safe, final_state, start_distance, finish_distance,
+        clock_->now());
+    }
+  }
+
   virtual void updateRTCStatus(const double start_distance, const double finish_distance)
   {
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
@@ -494,6 +522,26 @@ protected:
           clock_->now());
       }
     }
+  }
+
+  template <class PathPointsType>
+  void update_rtc_status(
+    const PathPointsType & path_points, const geometry_msgs::msg::Point & ref_position,
+    const geometry_msgs::msg::Point & target_start_position,
+    const geometry_msgs::msg::Point & target_end_position,
+    const std::optional<bool> safe = std::nullopt,
+    const std::optional<uint8_t> state = std::nullopt)
+  {
+    if (path_points.empty()) {
+      update_rtc_status(0.0, 0.0, safe, state);
+      return;
+    }
+
+    const double start_distance =
+      autoware::motion_utils::calcSignedArcLength(path_points, ref_position, target_start_position);
+    const double finish_distance =
+      autoware::motion_utils::calcSignedArcLength(path_points, ref_position, target_end_position);
+    update_rtc_status(start_distance, finish_distance, safe, state);
   }
 
   void updateRTCStatusForSuccess()
@@ -535,6 +583,44 @@ protected:
       return false;
     }
     return existApprovedRequest();
+  }
+
+  /**
+   * @brief Checks if any registered module is currently forced activated.
+   *
+   * A module is considered 'force activated' if it has been commanded to ACTIVATE but is currently
+   * operating in an unsafe state or was explicitly requested, ignoring the normal 'safe' constraint
+   * for activation. This check bypasses the standard safety/auto-mode logic and focuses purely on
+   * an overriding command state (ACTIVATE) while the module is either WAITING_FOR_EXECUTION or
+   * RUNNING.
+   *
+   * @return bool True if at least one registered module is force-activated, false otherwise.
+   */
+  bool is_rtc_force_activated() const
+  {
+    return std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(), [&](const auto & rtc) {
+        const auto & [module_name, rtc_ptr] = rtc;
+        return rtc_ptr->isForceActivated(uuid_map_.at(module_name));
+      });
+  }
+
+  /**
+   * @brief Checks if any registered module is currently forced deactivated.
+   *
+   * A module is typically considered force deactivated if it
+   * has been commanded to DEACTIVATE despite potentially meeting conditions that would
+   * normally permit activation (e.g., overriding a 'safe' state).
+   *
+   * @return bool True if at least one registered module is force-deactivated, false otherwise.
+   */
+  bool is_rtc_force_deactivated() const
+  {
+    return std::any_of(
+      rtc_interface_ptr_map_.begin(), rtc_interface_ptr_map_.end(), [&](const auto & rtc) {
+        const auto & [module_name, rtc_ptr] = rtc;
+        return rtc_ptr->isForceDeactivated(uuid_map_.at(module_name));
+      });
   }
 
   void removeRTCStatus()

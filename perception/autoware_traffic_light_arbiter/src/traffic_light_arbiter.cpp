@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -74,12 +75,27 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
   external_delay_tolerance_ = this->declare_parameter<double>("external_delay_tolerance");
   external_time_tolerance_ = this->declare_parameter<double>("external_time_tolerance");
   perception_time_tolerance_ = this->declare_parameter<double>("perception_time_tolerance");
-  external_priority_ = this->declare_parameter<bool>("external_priority");
+
+  // Parse source priority parameter
+  const std::string priority_str = this->declare_parameter<std::string>("source_priority");
+  if (priority_str == "external") {
+    source_priority_ = SourcePriority::EXTERNAL;
+  } else if (priority_str == "perception") {
+    source_priority_ = SourcePriority::PERCEPTION;
+  } else if (priority_str == "confidence") {
+    source_priority_ = SourcePriority::CONFIDENCE;
+  } else {
+    RCLCPP_WARN(
+      get_logger(), "Unknown source_priority '%s', defaulting to 'confidence'",
+      priority_str.c_str());
+    source_priority_ = SourcePriority::CONFIDENCE;
+  }
+
   enable_signal_matching_ = this->declare_parameter<bool>("enable_signal_matching");
 
   if (enable_signal_matching_) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>();
-    signal_match_validator_->setExternalPriority(external_priority_);
+    signal_match_validator_->setSourcePriority(source_priority_);
   }
 
   map_sub_ = create_subscription<LaneletMapBin>(
@@ -140,7 +156,8 @@ void TrafficLightArbiter::onExternalMsg(const TrafficSignalArray::ConstSharedPtr
 
   // Update external traffic lights map with new information
   for (const auto & signal : msg->traffic_light_groups) {
-    external_traffic_lights_[signal.traffic_light_group_id] = *msg;
+    external_traffic_lights_[signal.traffic_light_group_id] =
+      std::make_pair(rclcpp::Time(msg->stamp), signal);
   }
 
   // Clean up expired signals
@@ -161,7 +178,8 @@ void TrafficLightArbiter::cleanupExpiredExternalSignals(
 {
   auto it = external_traffic_lights_.begin();
   while (it != external_traffic_lights_.end()) {
-    const auto age = (current_time - rclcpp::Time(it->second.stamp)).seconds();
+    const auto & msg_stamp = it->second.first;
+    const auto age = (current_time - msg_stamp).seconds();
     if (std::abs(age) > tolerance) {
       RCLCPP_DEBUG(
         get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",
@@ -181,9 +199,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
   // Create external signals array from stored valid signals
   TrafficSignalArray valid_external_signals;
   for (const auto & [id, info] : external_traffic_lights_) {
-    valid_external_signals.traffic_light_groups.insert(
-      valid_external_signals.traffic_light_groups.end(), info.traffic_light_groups.begin(),
-      info.traffic_light_groups.end());
+    valid_external_signals.traffic_light_groups.emplace_back(info.second);
   }
 
   auto append_predictions = [](auto & map, const auto & groups) {
@@ -234,11 +250,11 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     }
   } else {
     for (const auto & signal : latest_perception_msg_.traffic_light_groups) {
-      add_signal_function(signal, false);
+      add_signal_function(signal, source_priority_ == SourcePriority::PERCEPTION);
     }
 
     for (const auto & signal : valid_external_signals.traffic_light_groups) {
-      add_signal_function(signal, external_priority_);
+      add_signal_function(signal, source_priority_ == SourcePriority::EXTERNAL);
     }
   }
 
@@ -259,7 +275,8 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
 
         if (
           !success &&
-          (iter_element.confidence < element.confidence || iter_priority < element_priority)) {
+          (element_priority > iter_priority ||
+           (element_priority == iter_priority && element.confidence > iter_element.confidence))) {
           iter->second = elements_and_priority;
         }
       }
@@ -286,7 +303,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
   // Calculate latest time from available sources
   rclcpp::Time latest_time = rclcpp::Time(latest_perception_msg_.stamp);
   for (const auto & [id, info] : external_traffic_lights_) {
-    const auto external_time = rclcpp::Time(info.stamp);
+    const auto & external_time = info.first;
     if (external_time > latest_time) {
       latest_time = external_time;
     }

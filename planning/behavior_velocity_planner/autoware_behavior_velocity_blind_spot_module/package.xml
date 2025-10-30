@@ -21,7 +21,6 @@
   <depend>autoware_behavior_velocity_planner_common</depend>
   <depend>autoware_behavior_velocity_rtc_interface</depend>
   <depend>autoware_internal_planning_msgs</depend>
-  <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_object_recognition_utils</depend>

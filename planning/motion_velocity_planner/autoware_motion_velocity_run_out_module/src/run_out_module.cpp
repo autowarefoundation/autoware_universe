@@ -31,8 +31,11 @@
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/duration.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
 #include <string>
@@ -44,6 +47,15 @@ namespace autoware::motion_velocity_planner
 
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
+
+static autoware_internal_debug_msgs::msg::Float64Stamped create_float64_stamped(
+  const rclcpp::Time & now, const float & data)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped msg;
+  msg.stamp = now;
+  msg.data = data;
+  return msg;
+}
 
 void RunOutModule::init_parameters(rclcpp::Node & node)
 {
@@ -62,6 +74,9 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   logger_ = node.get_logger();
   clock_ = node.get_clock();
 
+  processing_time_publisher_ =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/" + ns_ + "/processing_time_ms", 1);
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
@@ -69,7 +84,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
-    "~/" + ns_ + "/processing_time", 1);
+    "~/" + ns_ + "/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
@@ -197,6 +212,7 @@ VelocityPlanningResult RunOutModule::plan(
   const std::shared_ptr<const PlannerData> planner_data)
 {
   const auto now = clock_->now();
+  stop_watch_.tic();
   time_keeper_->start_track("plan()");
   time_keeper_->start_track("calc_ego_footprint()");
   const auto ego_footprint = calculate_trajectory_corner_footprint(
@@ -265,6 +281,8 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");
+
+  processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
   return result.velocity_planning_result;
 }
 

@@ -26,9 +26,11 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace autoware::traffic_light
 {
+
 class TrafficLightArbiter : public rclcpp::Node
 {
 public:
@@ -57,11 +59,11 @@ private:
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
-  bool external_priority_;
+  SourcePriority source_priority_;
   bool enable_signal_matching_;
 
   TrafficSignalArray latest_perception_msg_;
-  std::unordered_map<lanelet::Id, TrafficSignalArray> external_traffic_lights_;
+  std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
 }  // namespace autoware::traffic_light

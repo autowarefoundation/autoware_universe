@@ -176,7 +176,7 @@ TEST(PathGenerator, test_generatePathForCrosswalkUser)
   reachable_crosswalk.back_left_point << -1.0, 1.0;
 
   // Generate predicted path
-  const PredictedPath predicted_path = path_generator.generatePathForCrosswalkUser(
+  const auto predicted_path = path_generator.generatePathForCrosswalkUser(
     tracked_object, reachable_crosswalk, prediction_time_horizon);
 
   // Check

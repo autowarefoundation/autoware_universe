@@ -1,0 +1,6 @@
+traffic_rule_filter:
+  filter_names:
+    type: string_array
+    default_value: []
+    description: metrics.
+    read_only: false

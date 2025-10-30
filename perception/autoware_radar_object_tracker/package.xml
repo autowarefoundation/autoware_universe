@@ -14,7 +14,7 @@
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
   <depend>autoware_kalman_filter</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_utils_geometry</depend>

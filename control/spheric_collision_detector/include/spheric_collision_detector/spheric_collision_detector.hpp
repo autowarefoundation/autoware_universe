@@ -32,11 +32,11 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <chrono>
+#include <fstream>
 #include <map>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <chrono>
 
 namespace spheric_collision_detector
 {
@@ -62,7 +62,7 @@ struct Input
 };
 
 struct Output
-{ 
+{
   std::map<std::string, double> processing_time_map;
   bool will_collide;
   autoware_planning_msgs::msg::Trajectory resampled_trajectory;
@@ -101,13 +101,12 @@ private:
     const LinearRing2d & local_vehicle_footprint);
 
   static std::vector<std::shared_ptr<sphere3::Sphere3>> createVehiclePassingAreas(
-    const std::vector<LinearRing2d> & vehicle_footprints, 
-    const double vehicle_height,
+    const std::vector<LinearRing2d> & vehicle_footprints, const double vehicle_height,
     const double sphere_radius);
 
-    static bool checkCollision(
-      const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres, 
-      const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
+  static bool checkCollision(
+    const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
+    const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
 };
 }  // namespace spheric_collision_detector
 

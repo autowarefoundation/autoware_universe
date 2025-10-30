@@ -1134,6 +1134,25 @@ where
 
 If none of the sampled accelerations pass the safety check, the lane change path will be canceled, subject to the [hysteresis check](#preventing-oscillating-paths-when-unsafe).
 
+!!! note
+
+    Applying this fix allows the vehicle to change lanes more easily behind a leading object.
+
+!!! warning
+
+    Although the safety check assumes deceleration, it actually executes the **original path velocity**.
+
+    The behavior module assumes that downstream modules (e.g., obstacle stop, cruise planner) will handle actual velocity adjustments.
+    Because of this, **deceleration sampling is applied only to leading objects**, not trailing or adjacent ones.
+
+    * For **leading objects**, secondary safety layers exist — for example, obstacle stop or cruise planner modules that can modify the velocity profile in response to sudden deceleration.
+    * For **trailing or nearby objects**, such mechanisms do not exist (obstacle stop and cruise do not apply to trailing objects).
+
+    Therefore, applying deceleration sampling in these cases could lead to **false negatives**, i.e.: the safety check would assume ego is decelerating, when in reality, ego cannot decelerate.
+
+    In practice, other modules (e.g., run out) may occasionally cause ego to decelerate, indirectly affecting safety check behavior for trailing objects. However, these activations are **situation-dependent** and **not guaranteed**.
+    Hence, **no deceleration sampling** is applied to trailing objects.
+
 #### Cancel
 
 Cancelling lane change is possible as long as the ego vehicle is in the prepare phase and has not started deviating from the current lane center line.
