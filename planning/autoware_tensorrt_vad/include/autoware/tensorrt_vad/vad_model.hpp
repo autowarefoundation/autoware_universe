@@ -268,42 +268,40 @@ private:
         static_cast<const float*>(nets_[head_name]->bindings["out.map_all_pts_preds"]->ptr),
         stream_);
     
+    // Extract planning trajectories (use config parameters)
+    const int32_t points_per_trajectory = vad_config_.planning_timesteps * 2;  // x,y per timestep
+    const int32_t num_commands = vad_config_.planning_ego_commands;
+
     // Extract planning for the given command
-    auto [selected_trajectory, all_trajectories] = postprocess_trajectories(ego_fut_preds, cmd);
-
-    return VadOutputData{selected_trajectory, all_trajectories, map_polylines, filtered_bboxes};
-  }
-
-  static std::pair<std::vector<float>, std::map<int32_t, std::vector<float>>> postprocess_trajectories(
-      const std::vector<float>& ego_fut_preds,
-      int32_t cmd) {
-    std::vector<float> selected_trajectory(
-        ego_fut_preds.begin() + cmd * 12,
-        ego_fut_preds.begin() + (cmd + 1) * 12
+    std::vector<float> planning(
+        ego_fut_preds.begin() + cmd * points_per_trajectory,
+        ego_fut_preds.begin() + (cmd + 1) * points_per_trajectory
     );
-    
+
     // cumsum to build trajectory in 3d space
-    for (int32_t i = 1; i < 6; i++) {
-      selected_trajectory[i * 2] += selected_trajectory[(i-1) * 2];
-      selected_trajectory[i * 2 + 1] += selected_trajectory[(i-1) * 2 + 1];
+    for (int32_t i = 1; i < vad_config_.planning_timesteps; i++) {
+      planning[i * 2] += planning[(i-1) * 2];
+      planning[i * 2 + 1] += planning[(i-1) * 2 + 1];
     }
-    
-    // Extract all trajectories for all 3 commands
+
+    // Extract all trajectories for all commands
     std::map<int32_t, std::vector<float>> all_trajectories;
-    for (int32_t command_idx = 0; command_idx < 3; command_idx++) {
+
+    for (int32_t command_idx = 0; command_idx < num_commands; command_idx++) {
       std::vector<float> trajectory(
-          ego_fut_preds.begin() + command_idx * 12,
-          ego_fut_preds.begin() + (command_idx + 1) * 12
+          ego_fut_preds.begin() + command_idx * points_per_trajectory,
+          ego_fut_preds.begin() + (command_idx + 1) * points_per_trajectory
       );
-      
+
       // cumsum to build trajectory in 3d space
-      for (int32_t i = 1; i < 6; i++) {
+      for (int32_t i = 1; i < vad_config_.planning_timesteps; i++) {
         trajectory[i * 2] += trajectory[(i-1) * 2];
         trajectory[i * 2 + 1] += trajectory[(i-1) * 2 + 1];
       }
+
       all_trajectories[command_idx] = trajectory;
     }
-    return {selected_trajectory, all_trajectories};
+    return VadOutputData{planning, all_trajectories, map_polylines, filtered_bboxes};
   }
 };
 
