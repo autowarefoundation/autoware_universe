@@ -48,9 +48,10 @@ ament_python_install_package(${PROJECT_NAME}
   PACKAGE_DIR src/${PROJECT_NAME}
 )
 
-# Install Python scripts
+# Install Python entry point scripts
 install(PROGRAMS
-  src/${PROJECT_NAME}/multi_camera_combiner_node.py
+  scripts/autoware_carla_interface
+  scripts/multi_camera_combiner
   DESTINATION lib/${PROJECT_NAME}
 )
 
