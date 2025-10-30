@@ -23,14 +23,9 @@
       # default_can_bus[16] yaw[rad]
       # default_can_bus[17] patch_angle(difference between yaw and prev_yaw)[deg]
       default_can_bus: [-42274.0312, 89140.4531, 6.92498255, -0.00156072155, -0.0132345976, -0.475291312, 0.879727542, 0.158691406, -2.24609375, -9.72595215, 0.0, 0.0, 0.00481297961, 0.0, 2.15303349, 0.0, 5.19237747, 303.230896]
-      # Identity mapping since launch file already provides cameras in correct VAD/training order
+      # CARLA Tier4: Camera order matches VAD training order (identity mapping)
       # Training order (from B2D_vad_dataset_tier4.py): FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
-      autoware_to_vad_camera_mapping: [0, 0, # camera0 (FRONT) -> VAD 0 (FRONT)
-                                       1, 1, # camera1 (BACK) -> VAD 1 (BACK)
-                                       2, 2, # camera2 (FRONT_LEFT) -> VAD 2 (FRONT_LEFT)
-                                       3, 3, # camera3 (BACK_LEFT) -> VAD 3 (BACK_LEFT)
-                                       4, 4, # camera4 (FRONT_RIGHT) -> VAD 4 (FRONT_RIGHT)
-                                       5, 5] # camera5 (BACK_RIGHT) -> VAD 5 (BACK_RIGHT)
+      # camera0 (FRONT), camera1 (BACK), camera2 (FRONT_LEFT), camera3 (BACK_LEFT), camera4 (FRONT_RIGHT), camera5 (BACK_RIGHT)
       # Identity matrix - NO transformation needed
       # The carla_tier4 model already inputs and outputs in Tier4 coordinates
       vad2base: [1.0, 0.0, 0.0, 0.0,   # X = X (no change)

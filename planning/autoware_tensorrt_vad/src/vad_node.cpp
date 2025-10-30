@@ -70,7 +70,7 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
       declare_parameter<int32_t>("interface_params.target_image_height"),
       declare_parameter<std::vector<double>>("interface_params.detection_range"),
       declare_parameter<int32_t>("model_params.default_command"),
-      declare_parameter<std::vector<int64_t>>("interface_params.autoware_to_vad_camera_mapping"),
+      declare_parameter<std::vector<double>>("interface_params.vad2base"),
       declare_parameter<std::vector<std::string>>("model_params.map_class_names"),
       declare_parameter<std::vector<double>>("interface_params.map_colors"),
       declare_parameter<std::vector<std::string>>("class_mapping"),
@@ -343,7 +343,10 @@ VadConfig VadNode::load_vad_config()
   auto map_thresholds = this->get_parameter("model_params.map_confidence_thresholds").as_double_array();
 
   if (map_class_names.size() != map_thresholds.size()) {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "map_class_names and map_confidence_thresholds must have the same size");
+    RCLCPP_ERROR(this->get_logger(),
+      "map_class_names (%zu) and map_confidence_thresholds (%zu) must have the same size",
+      map_class_names.size(), map_thresholds.size());
+    throw std::runtime_error("Parameter array length mismatch: map_class_names and map_confidence_thresholds");
   }
   vad_config.map_class_names = map_class_names;
   vad_config.map_num_classes = static_cast<int32_t>(map_class_names.size());
@@ -358,7 +361,10 @@ VadConfig VadNode::load_vad_config()
   auto object_thresholds = this->get_parameter("model_params.object_confidence_thresholds").as_double_array();
 
   if (object_class_names.size() != object_thresholds.size()) {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "object_class_names and object_confidence_thresholds must have the same size");
+    RCLCPP_ERROR(this->get_logger(),
+      "object_class_names (%zu) and object_confidence_thresholds (%zu) must have the same size",
+      object_class_names.size(), object_thresholds.size());
+    throw std::runtime_error("Parameter array length mismatch: object_class_names and object_confidence_thresholds");
   }
   vad_config.bbox_class_names = object_class_names;
 
@@ -511,6 +517,15 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS& sensor_qos)
   try {
     camera_image_subs_.resize(num_cameras_);
     std::vector<bool> use_raw_cameras = this->declare_parameter<std::vector<bool>>("node_params.use_raw");
+
+    // Validate use_raw parameter size matches num_cameras
+    if (static_cast<int32_t>(use_raw_cameras.size()) != num_cameras_) {
+      RCLCPP_ERROR(this->get_logger(),
+        "use_raw parameter size (%zu) does not match num_cameras (%d)",
+        use_raw_cameras.size(), num_cameras_);
+      throw std::runtime_error("Parameter array length mismatch: use_raw size must match num_cameras");
+    }
+
     auto resolve_topic_name = [this](const std::string & query) {
       return this->get_node_topics_interface()->resolve_topic_name(query);
     };

@@ -27,17 +27,17 @@ CameraImagesData InputImageConverter::process_image(
   const std::vector<sensor_msgs::msg::Image::ConstSharedPtr>& images) const
 {
   std::vector<cv::Mat> processed_images;
-  const int32_t num_cameras = static_cast<int32_t>(config_.autoware_to_vad_camera_mapping.size());
-  processed_images.resize(num_cameras); // Initialize in VAD camera order
+  const int32_t num_cameras = static_cast<int32_t>(images.size());
+  processed_images.resize(num_cameras);
 
-  // Process each camera image
-  for (int32_t autoware_idx = 0; autoware_idx < num_cameras; ++autoware_idx) {
-    const auto& image_msg = images[autoware_idx];
+  // Process each camera image (CARLA Tier4: identity mapping, camera order matches VAD training order)
+  for (int32_t camera_idx = 0; camera_idx < num_cameras; ++camera_idx) {
+    const auto& image_msg = images[camera_idx];
 
     // Skip if image is not available
     if (!image_msg) {
       RCLCPP_WARN_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
-                           "Image for camera %d is null, skipping", autoware_idx);
+                           "Image for camera %d is null, skipping", camera_idx);
       continue;
     }
 
@@ -58,16 +58,15 @@ CameraImagesData InputImageConverter::process_image(
     }
 
     if (bgr_img.empty()) {
-      RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000, "Failed to decode image data: %d", autoware_idx);
+      RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000, "Failed to decode image data: %d", camera_idx);
       continue;
     }
 
     // Clone the data to ensure memory continuity
     cv::Mat processed_img = bgr_img.clone();
 
-    // Store in VAD camera order
-    int32_t vad_idx = config_.autoware_to_vad_camera_mapping.at(autoware_idx);
-    processed_images[vad_idx] = processed_img;
+    // Store directly (identity mapping for CARLA Tier4)
+    processed_images[camera_idx] = processed_img;
   }
 
   return processed_images;

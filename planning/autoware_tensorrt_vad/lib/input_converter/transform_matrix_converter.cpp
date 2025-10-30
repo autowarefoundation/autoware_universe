@@ -69,43 +69,41 @@ std::vector<float> InputTransformMatrixConverter::matrix_to_flat(const Eigen::Ma
 VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
   const std::vector<sensor_msgs::msg::CameraInfo::ConstSharedPtr>& camera_infos) const
 {
-  const int32_t num_cameras = static_cast<int32_t>(config_.autoware_to_vad_camera_mapping.size());
-  std::vector<float> frame_vad_base2img(16 * num_cameras, 0.0f); // Reserve space for cameras
+  const int32_t num_cameras = static_cast<int32_t>(camera_infos.size());
+  std::vector<float> frame_vad_base2img(16 * num_cameras, 0.0f);
 
-  // Process each camera
-  for (int32_t autoware_camera_id = 0; autoware_camera_id < num_cameras; ++autoware_camera_id) {
-    if (!camera_infos[autoware_camera_id]) {
+  // Process each camera (CARLA Tier4: identity mapping, camera order matches VAD training order)
+  for (int32_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
+    if (!camera_infos[camera_id]) {
       continue;
     }
 
     // Use transformer to lookup base2cam transformation
-    auto base2cam_opt = coordinate_transformer_.lookup_base2cam(camera_infos[autoware_camera_id]->header.frame_id);
+    auto base2cam_opt = coordinate_transformer_.lookup_base2cam(camera_infos[camera_id]->header.frame_id);
     if (!base2cam_opt) {
-      RCLCPP_WARN_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000, 
-                  "Failed to lookup transformation for camera %d", autoware_camera_id);
+      RCLCPP_WARN_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
+                  "Failed to lookup transformation for camera %d", camera_id);
       continue;
     }
     Eigen::Matrix4f base2cam = *base2cam_opt;
 
-    Eigen::Matrix4f cam2img = create_cam2img(camera_infos[autoware_camera_id]);
-    
-    // Calculate vad2cam transformation: vad2img = cam2img * base2cam
-    Eigen::Matrix4f vad_base2img = cam2img * base2cam;
+    Eigen::Matrix4f cam2img = create_cam2img(camera_infos[camera_id]);
+
+    // Calculate vad2cam transformation: vad2img = cam2img * base2cam * vad2base
+    Eigen::Matrix4f vad2cam_rt = base2cam * config_.vad2base;
+    Eigen::Matrix4f vad_base2img = cam2img * vad2cam_rt;
 
     // Calculate scaling factors from camera_info
-    auto [scale_width, scale_height] = calculate_scale(camera_infos[autoware_camera_id]);
+    auto [scale_width, scale_height] = calculate_scale(camera_infos[camera_id]);
 
     // Apply scaling
     Eigen::Matrix4f vad_base2img_scaled = apply_scaling(vad_base2img, scale_width, scale_height);
 
     std::vector<float> vad_base2img_flat = matrix_to_flat(vad_base2img_scaled);
 
-    // Store result at VAD camera ID position after vad_base2img calculation
-    int32_t vad_camera_id = config_.autoware_to_vad_camera_mapping.at(autoware_camera_id);
-    if (vad_camera_id >= 0 && vad_camera_id < num_cameras) {
-      std::copy(vad_base2img_flat.begin(), vad_base2img_flat.end(),
-                frame_vad_base2img.begin() + vad_camera_id * 16);
-    }
+    // Store directly (identity mapping for CARLA Tier4)
+    std::copy(vad_base2img_flat.begin(), vad_base2img_flat.end(),
+              frame_vad_base2img.begin() + camera_id * 16);
   }
 
   return frame_vad_base2img;
