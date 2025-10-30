@@ -40,9 +40,7 @@ def launch_setup(context, *args, **kwargs):
             name="cuda_scan_ground_segmentation_filter",
             remappings=[
                 ("~/input/pointcloud", LaunchConfiguration("input/pointcloud")),
-                ("~/input/pointcloud/cuda", [LaunchConfiguration("input/pointcloud"), "/cuda"]),
                 ("~/output/pointcloud", LaunchConfiguration("output/pointcloud")),
-                ("~/output/pointcloud/cuda", [LaunchConfiguration("output/pointcloud"), "/cuda"]),
             ],
             parameters=[ground_segmentation_node_param],
             extra_arguments=[],
