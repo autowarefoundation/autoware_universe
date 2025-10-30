@@ -45,3 +45,4 @@
     save_file_directory_path: detected_reflector_intensity
     save_file_name: detected_reflector_intensity
     save_frame_id: velodyne_top
+    radius_for_extracting_marker_pointcloud: 0.4 # [m] within
