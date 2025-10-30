@@ -496,15 +496,8 @@ void TrajectoryQPSmoother::post_process_trajectory(
     }
   }
 
-  // Fourth pass: Recalculate accelerations from velocities
-  // acceleration[i] = (velocity[i+1] - velocity[i]) / dt
-  for (size_t i = 0; i < N - 1; ++i) {
-    const double v0 = output_trajectory[i].longitudinal_velocity_mps;
-    const double v1 = output_trajectory[i + 1].longitudinal_velocity_mps;
-    output_trajectory[i].acceleration_mps2 = static_cast<float>((v1 - v0) / dt);
-  }
-  // Last point: set acceleration to zero
-  output_trajectory[N - 1].acceleration_mps2 = 0.0f;
+  // Fourth pass: Recalculate accelerations from velocities using constant dt
+  utils::recalculate_longitudinal_acceleration(output_trajectory, true, dt);
 }
 
 std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(

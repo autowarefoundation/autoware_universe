@@ -133,20 +133,35 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
     });
 
   // recalculate acceleration after velocity change
-  const int64_t size = input_trajectory_array.size();
-  for (int64_t i = 0; i + 1 < size; ++i) {
-    const float curr_time_from_start =
-      static_cast<float>(input_trajectory_array[i].time_from_start.sec) +
-      static_cast<float>(input_trajectory_array[i].time_from_start.nanosec) * 1e-9f;
-    const float next_time_from_start =
-      static_cast<float>(input_trajectory_array[i + 1].time_from_start.sec) +
-      static_cast<float>(input_trajectory_array[i + 1].time_from_start.nanosec) * 1e-9f;
-    const float dt = next_time_from_start - curr_time_from_start;
-    const float dv = input_trajectory_array[i + 1].longitudinal_velocity_mps -
-                     input_trajectory_array[i].longitudinal_velocity_mps;
-    input_trajectory_array[i].acceleration_mps2 = dv / (dt + 1e-5f);
+  recalculate_longitudinal_acceleration(input_trajectory_array);
+}
+
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_constant_dt, const double constant_dt)
+{
+  if (trajectory.size() < 2) {
+    return;
   }
-  input_trajectory_array.back().acceleration_mps2 = 0.0f;
+
+  auto get_dt = [&](const size_t i) -> double {
+    if (use_constant_dt) {
+      return std::max(constant_dt, 1e-9);
+    }
+    const double curr_time = static_cast<double>(trajectory[i].time_from_start.sec) +
+                             static_cast<double>(trajectory[i].time_from_start.nanosec) * 1e-9;
+    const double next_time = static_cast<double>(trajectory[i + 1].time_from_start.sec) +
+                             static_cast<double>(trajectory[i + 1].time_from_start.nanosec) * 1e-9;
+    return std::max(next_time - curr_time, 1e-9);
+  };
+
+  const size_t size = trajectory.size();
+  for (size_t i = 0; i + 1 < size; ++i) {
+    const double dt = get_dt(i);
+    const double dv = static_cast<double>(trajectory[i + 1].longitudinal_velocity_mps) -
+                      static_cast<double>(trajectory[i].longitudinal_velocity_mps);
+    trajectory[i].acceleration_mps2 = static_cast<float>(dv / dt);
+  }
+  trajectory.back().acceleration_mps2 = 0.0f;
 }
 
 void limit_lateral_acceleration(
@@ -359,8 +374,9 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(autoware_utils_math::normalize_degree(
-    ego_state.pose.orientation.z - last_point.pose.orientation.z));
+  const auto yaw_diff = std::abs(
+    autoware_utils_math::normalize_degree(
+      ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;

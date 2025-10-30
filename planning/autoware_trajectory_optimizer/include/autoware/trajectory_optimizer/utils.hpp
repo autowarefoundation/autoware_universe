@@ -140,6 +140,17 @@ void clamp_velocities(
 void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
 
+/**
+ * @brief Recalculates longitudinal acceleration from velocity differences.
+ *
+ * @param trajectory The trajectory points with velocities to recalculate accelerations from.
+ * @param use_constant_dt If true, use constant_dt; if false, use time_from_start spacing.
+ * @param constant_dt Constant time step in seconds (used only if use_constant_dt is true).
+ */
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_constant_dt = false,
+  const double constant_dt = 0.1);
+
 void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
   const Odometry & current_odometry);
