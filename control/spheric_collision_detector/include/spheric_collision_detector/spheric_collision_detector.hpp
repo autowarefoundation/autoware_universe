@@ -16,12 +16,11 @@
 #define SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
 
 #include "spheric_collision_detector/sphere3.hpp"
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include <tier4_autoware_utils/geometry/boost_geometry.hpp>
-#include <vehicle_info_util/vehicle_info_util.hpp>
-
-#include <autoware_auto_planning_msgs/msg/trajectory.hpp>
-#include <autoware_auto_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -41,8 +40,8 @@
 
 namespace spheric_collision_detector
 {
-using tier4_autoware_utils::LinearRing2d;
-using tier4_autoware_utils::Point2d;
+using autoware_utils::LinearRing2d;
+using autoware_utils::Point2d;
 
 using Path = std::vector<geometry_msgs::msg::Pose>;
 
@@ -56,9 +55,9 @@ struct Input
 {
   geometry_msgs::msg::PoseStamped::ConstSharedPtr current_pose;
   geometry_msgs::msg::Twist::ConstSharedPtr current_twist;
-  autoware_auto_perception_msgs::msg::DetectedObjects::ConstSharedPtr object_recognition;
+  autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr object_recognition;
   geometry_msgs::msg::TransformStamped::ConstSharedPtr obstacle_transform;
-  autoware_auto_planning_msgs::msg::Trajectory::ConstSharedPtr predicted_trajectory;
+  autoware_planning_msgs::msg::Trajectory::ConstSharedPtr predicted_trajectory;
   geometry_msgs::msg::TransformStamped object_recognition_transform;
 };
 
@@ -66,7 +65,7 @@ struct Output
 { 
   std::map<std::string, double> processing_time_map;
   bool will_collide;
-  autoware_auto_planning_msgs::msg::Trajectory resampled_trajectory;
+  autoware_planning_msgs::msg::Trajectory resampled_trajectory;
   std::vector<LinearRing2d> vehicle_footprints;
   std::vector<std::shared_ptr<sphere3::Sphere3>> vehicle_passing_areas;
   long int collision_elapsed_time;
@@ -85,20 +84,20 @@ public:
 private:
   Param param_;
   double ego_sphere_radius_;
-  vehicle_info_util::VehicleInfo vehicle_info_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   LinearRing2d vehicle_footprint_;
 
   std::ofstream out_file_;
 
   //! This function assumes the input trajectory is sampled dense enough
-  static autoware_auto_planning_msgs::msg::Trajectory resampleTrajectory(
-    const autoware_auto_planning_msgs::msg::Trajectory & trajectory, const double interval);
+  static autoware_planning_msgs::msg::Trajectory resampleTrajectory(
+    const autoware_planning_msgs::msg::Trajectory & trajectory, const double interval);
 
-  static autoware_auto_planning_msgs::msg::Trajectory cutTrajectory(
-    const autoware_auto_planning_msgs::msg::Trajectory & trajectory, const double length);
+  static autoware_planning_msgs::msg::Trajectory cutTrajectory(
+    const autoware_planning_msgs::msg::Trajectory & trajectory, const double length);
 
   static std::vector<LinearRing2d> createVehicleFootprints(
-    const autoware_auto_planning_msgs::msg::Trajectory & trajectory, 
+    const autoware_planning_msgs::msg::Trajectory & trajectory, 
     const LinearRing2d & local_vehicle_footprint);
 
   static std::vector<std::shared_ptr<sphere3::Sphere3>> createVehiclePassingAreas(
