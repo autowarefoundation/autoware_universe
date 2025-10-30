@@ -33,19 +33,16 @@ public:
   int32_t target_image_height;
   std::array<float, 6> detection_range;
   int32_t default_command;
-  Eigen::Matrix4f vad2base;
-  Eigen::Matrix4f base2vad;
   std::map<std::string, std::array<float, 3>> map_colors;  // Map type to RGB color
   std::vector<std::string> class_mapping;  // VAD class index to Autoware class name mapping (array index = VAD class index)
   std::vector<std::string> bbox_class_names;  // Object class names from VAD model
 
   // NOTE: double and int64_t are used because ROS 2's declare_parameter cannot accept std::vector<float> or std::vector<int32_t>
-  // CARLA Tier4 only: uses identity camera mapping (Autoware camera order matches VAD training order)
+  // CARLA Tier4 only: VAD coordinates are identical to Autoware Tier4 base_link coordinates
   VadInterfaceConfig(
     int32_t target_image_width_, int32_t target_image_height_,
     const std::vector<double>& detection_range_,
     int32_t default_command_,
-    const std::vector<double>& vad2base_,
     const std::vector<std::string>& map_classes_,
     const std::vector<double>& map_colors_,
     const std::vector<std::string>& class_mapping_,
@@ -60,13 +57,6 @@ public:
     for (int i = 0; i < 6; ++i) {
       detection_range[i] = static_cast<float>(detection_range_[i]);
     }
-    // vad2base: 16 elements, row-major
-    vad2base = Eigen::Matrix4f::Identity();
-    for (int i = 0; i < 16; ++i) {
-      vad2base(i/4, i%4) = static_cast<float>(vad2base_[i]);
-    }
-    // base2vad: inverse
-    base2vad = vad2base.inverse();
     // map_colors: convert from vector<string> (classes) and vector<double> (colors) to map of array<float, 3>
     map_colors.clear();
     // Format: [class1_r, class1_g, class1_b, class2_r, class2_g, class2_b, ...]
