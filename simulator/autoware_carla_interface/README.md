@@ -236,4 +236,3 @@ The maps provided by the Carla Simulator ([Carla Lanelet2 Maps](https://bitbucke
 
 - **Testing on procedural maps (Adv Digital Twin)**: Currently unable to test due to failures in creating the Adv Digital Twin map.
 - **Traffic light recognition**: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.
-- **LiDAR concatenation**: When using multiple LiDARs, you may need to uncomment the lidar concatenation relay in the launch file (currently disabled by default).
