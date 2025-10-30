@@ -40,12 +40,6 @@
 namespace autoware::lidar_marker_localizer
 {
 
-landmark_manager::Landmark get_nearest_landmark(
-  const geometry_msgs::msg::Pose & self_pose,
-  const std::vector<landmark_manager::Landmark> & landmarks);
-std::array<double, 36> rotate_covariance(
-  const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation);
-
 LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options)
 : Node("lidar_marker_localizer", node_options), is_activated_(false)
 {
@@ -546,9 +540,9 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   return detected_landmarks;
 }
 
-landmark_manager::Landmark get_nearest_landmark(
+landmark_manager::Landmark LidarMarkerLocalizer::get_nearest_landmark(
   const geometry_msgs::msg::Pose & self_pose,
-  const std::vector<landmark_manager::Landmark> & landmarks)
+  const std::vector<landmark_manager::Landmark> & landmarks) const
 {
   landmark_manager::Landmark nearest_landmark;
   double min_distance = std::numeric_limits<double>::max();
@@ -567,8 +561,8 @@ landmark_manager::Landmark get_nearest_landmark(
   return nearest_landmark;
 }
 
-std::array<double, 36> rotate_covariance(
-  const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation)
+std::array<double, 36> LidarMarkerLocalizer::rotate_covariance(
+  const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation) const
 {
   std::array<double, 36> ret_covariance = src_covariance;
 
