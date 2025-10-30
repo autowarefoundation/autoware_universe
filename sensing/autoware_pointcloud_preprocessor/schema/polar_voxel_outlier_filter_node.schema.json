@@ -57,6 +57,34 @@
           "default": "20.0",
           "minimum": 0
         },
+        "visibility_estimation_min_azimuth_rad": {
+          "type": "number",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "0.0",
+          "minimum": 0.0,
+          "maximum": 6.28
+        },
+        "visibility_estimation_max_azimuth_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "6.28",
+          "minimum": 0.0,
+          "maximum": 6.28
+        },
+        "visibility_estimation_min_elevation_rad": {
+          "type": "number",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "-1.57",
+          "minimum": -1.57,
+          "maximum": 1.57
+        },
+        "visibility_estimation_max_elevation_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "1.57",
+          "minimum": -1.57,
+          "maximum": 1.57
+        },
         "use_return_type_classification": {
           "type": "boolean",
           "description": "Whether to use return type classification (if false, all returns are processed).",
@@ -126,6 +154,27 @@
           "default": "0.9",
           "minimum": 0,
           "maximum": 1
+        },
+        "publish_area_marker": {
+          "type": "boolean",
+          "description": "Publish a marker to visualize region used for visibility estimation",
+          "default": "false"
+        },
+        "num_frames_hysteresis_transition": {
+          "type": "number",
+          "description": "The number of frames to be required to transition judgement",
+          "default": "1",
+          "minimum": 1
+        },
+        "immediate_report_error": {
+          "type": "boolean",
+          "description": "Whether to report error state immediately if a single frame categorized as error",
+          "default": "false"
+        },
+        "immediate_relax_state": {
+          "type": "boolean",
+          "description": "Whether to relax state if observed state is better than the current one",
+          "default": "false"
         }
       },
       "required": [
@@ -137,6 +186,10 @@
         "max_radius_m",
         "intensity_threshold",
         "visibility_estimation_max_range_m",
+        "visibility_estimation_min_azimuth_rad",
+        "visibility_estimation_max_azimuth_rad",
+        "visibility_estimation_min_elevation_rad",
+        "visibility_estimation_max_elevation_rad",
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
@@ -147,7 +200,11 @@
         "filter_ratio_error_threshold",
         "filter_ratio_warn_threshold",
         "visibility_error_threshold",
-        "visibility_warn_threshold"
+        "visibility_warn_threshold",
+        "publish_area_marker",
+        "num_frames_hysteresis_transition",
+        "immediate_report_error",
+        "immediate_relax_state"
       ],
       "additionalProperties": false
     }

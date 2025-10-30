@@ -3,21 +3,25 @@ project(autoware_trajectory_optimizer)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+pluginlib_export_plugin_description_file(autoware_trajectory_optimizer plugins.xml)
 
 ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
   src/trajectory_optimizer.cpp
   src/utils.cpp
+)
+
+rclcpp_components_register_node(autoware_trajectory_optimizer_component
+  PLUGIN "autoware::trajectory_optimizer::TrajectoryOptimizer"
+  EXECUTABLE autoware_trajectory_optimizer_node
+)
+
+ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.cpp
   src/trajectory_optimizer_plugins/trajectory_extender.cpp
   src/trajectory_optimizer_plugins/trajectory_point_fixer.cpp
   src/trajectory_optimizer_plugins/trajectory_qp_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_spline_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_velocity_optimizer.cpp
-)
-target_link_libraries(autoware_trajectory_optimizer_component)
-rclcpp_components_register_node(autoware_trajectory_optimizer_component
-  PLUGIN "autoware::trajectory_optimizer::TrajectoryOptimizer"
-  EXECUTABLE autoware_trajectory_optimizer_node
 )
 
 if(BUILD_TESTING)

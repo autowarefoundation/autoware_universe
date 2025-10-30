@@ -17,6 +17,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
+#include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -1713,5 +1714,38 @@ PoseWithDetailOpt insert_feasible_stop_point(
   }
 
   return PoseWithDetail(current_path.points.at(*stop_idx).point.pose, stop_reason);
+}
+
+std::optional<double> calc_point_dist_to_closest_lane_boundary(
+  const RouteHandler & route_handler, const Pose & ego_baselink_pose,
+  const vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & direction)
+{
+  if (direction != "left" && direction != "right") {
+    return std::nullopt;
+  }
+
+  const auto local_footprint = vehicle_info.createFootprint();
+  const auto vehicle_footprint = autoware_utils::transform_vector(
+    local_footprint, autoware_utils::pose2transform(ego_baselink_pose));
+
+  const auto fp_corner_idx = (direction == "left")
+                               ? vehicle_info_utils::VehicleInfo::FrontLeftIndex
+                               : vehicle_info_utils::VehicleInfo::FrontRightIndex;
+  const auto & corner_point = vehicle_footprint.at(fp_corner_idx);
+
+  Pose corner_pose;
+  corner_pose.position = autoware_utils::to_msg(corner_point.to_3d(ego_baselink_pose.position.z));
+  corner_pose.orientation = ego_baselink_pose.orientation;
+
+  lanelet::ConstLanelet lanelet;
+  if (!route_handler.getClosestLaneletWithinRoute(corner_pose, &lanelet)) {
+    return std::nullopt;
+  }
+
+  const auto & nearest_linestring =
+    (direction == "left") ? lanelet.leftBound() : lanelet.rightBound();
+
+  return boundary_departure_checker::utils::calc_signed_lateral_distance_to_boundary(
+    nearest_linestring, corner_pose);
 }
 }  // namespace autoware::behavior_path_planner::utils

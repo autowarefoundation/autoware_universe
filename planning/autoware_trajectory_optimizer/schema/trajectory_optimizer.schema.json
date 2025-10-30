@@ -6,6 +6,22 @@
     "trajectory_optimizer_node": {
       "type": "object",
       "properties": {
+        "plugin_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+          ],
+          "description": "List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified."
+        },
         "use_akima_spline_interpolation": {
           "type": "boolean",
           "default": false,
@@ -97,17 +113,17 @@
               "minimum": 0,
               "description": "Maximum position deviation allowed for spline outlier detection [m]"
             },
-            "copy_original_orientation": {
+            "preserve_input_trajectory_orientation": {
               "type": "boolean",
               "default": true,
-              "description": "Copy orientation from original trajectory to spline-interpolated trajectory"
+              "description": "Copy orientations from input trajectory to spline output"
             }
           },
           "required": [
             "interpolation_resolution_m",
             "max_yaw_discrepancy_deg",
             "max_distance_discrepancy_m",
-            "copy_original_orientation"
+            "preserve_input_trajectory_orientation"
           ]
         },
         "trajectory_qp_smoother": {
@@ -154,16 +170,16 @@
               "default": false,
               "description": "Enable OSQP verbose solver output"
             },
-            "fix_orientation": {
+            "preserve_input_trajectory_orientation": {
               "type": "boolean",
               "default": true,
-              "description": "Enable orientation correction for QP solver output"
+              "description": "Copy orientations from input trajectory to smoothed output"
             },
-            "orientation_correction_threshold_deg": {
+            "max_distance_for_orientation_m": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Yaw threshold for correcting QP solver output orientation [deg]"
+              "description": "Max distance for nearest neighbor matching when copying orientations [m]"
             },
             "use_velocity_based_fidelity": {
               "type": "boolean",
@@ -215,8 +231,8 @@
             "osqp_eps_rel",
             "osqp_max_iter",
             "osqp_verbose",
-            "fix_orientation",
-            "orientation_correction_threshold_deg",
+            "preserve_input_trajectory_orientation",
+            "max_distance_for_orientation_m",
             "use_velocity_based_fidelity",
             "velocity_threshold_mps",
             "sigmoid_sharpness",

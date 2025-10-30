@@ -117,6 +117,7 @@ struct DiffusionPlannerParams
   int batch_size;
   std::vector<double> temperature_list;
   int64_t velocity_smoothing_window;
+  double stopping_threshold;
 };
 struct DiffusionPlannerDebugParams
 {
@@ -159,10 +160,6 @@ struct DiffusionPlannerDebugParams
  *
  * @section Internal State
  * @brief
- * - route_handler_: Handles route-related operations.
- * - ego_to_map_transforms_: Stores transformation matrices between ego and map coordinates.
- * - ego_kinematic_state_: Current odometry state of the ego vehicle.
- * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
  * - Lanelet map and routing members: route_ptr_, routing_graph_ptr_,
@@ -281,6 +278,7 @@ private:
   cudaStream_t stream_{nullptr};
 
   // Model input data
+  nav_msgs::msg::Odometry ego_kinematic_state_;
   std::optional<AgentData> agent_data_{std::nullopt};
   std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
 

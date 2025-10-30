@@ -1,6 +1,16 @@
 /**:
   ros__parameters:
-    # Plugin activation flags
+    # Plugin execution order - plugins will run in this order
+    plugin_names:
+      - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+
+    # Plugin activation flags - control runtime enable/disable
     use_akima_spline_interpolation: false
     use_eb_smoother: false
     use_qp_smoother: true

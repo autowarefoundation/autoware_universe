@@ -267,7 +267,7 @@ void PipelineLatencyMonitorNode::check_total_latency(
       diagnostic_msgs::msg::DiagnosticStatus::OK,
       "Some latency inputs not yet received: " + uninitialized_inputs);
   } else if (total_latency_ms_ > latency_threshold_ms_) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Total latency exceeds threshold");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Total latency exceeds threshold");
   } else {
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::OK, "Total latency within acceptable range");

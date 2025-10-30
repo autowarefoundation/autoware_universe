@@ -52,10 +52,7 @@ struct TrajectoryVelocityOptimizerParams
 class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryVelocityOptimizer(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params);
+  TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
 
   void set_up_velocity_smoother(

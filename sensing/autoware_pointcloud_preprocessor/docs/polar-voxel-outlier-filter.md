@@ -118,7 +118,7 @@ When `use_return_type_classification=true`, points are classified using the `ret
 
 The visibility metric is calculated only for voxels within the configured range:
 
-- **Range Filtering**: Only voxels with maximum radius ≤ `visibility_estimation_max_range_m` are considered
+- **Range Filtering**: Only voxels with maximum radius ≤ `visibility_estimation_max_range_m`, `visibility_estimation_min_azimuth_rad` ≤ azimuth ≤ `visibility_estimation_max_azimuth_rad`, and `visibility_estimation_min_elevation_rad` ≤ elevation ≤ `visibility_estimation_max_elevation_rad` are considered
 - **Visibility Estimation Tuning**: Reported visibility value is tuned using the `visibility_estimation_max_secondary_voxel_count` parameter
 - **Reliability**: Excludes potentially unreliable distant measurements from visibility calculations
 - **Configurable**: Allows adjustment based on sensor characteristics and requirements
@@ -176,7 +176,7 @@ The filter uses different algorithms based on the `use_return_type_classificatio
    - **Criterion 1**: Primary returns ≥ `voxel_points_threshold`
    - **Criterion 2**: Secondary returns ≤ `secondary_noise_threshold`
    - **Both criteria must be satisfied** for a voxel to be kept
-6. **Range-Aware Visibility**: Visibility calculation limited to voxels within `visibility_estimation_max_range_m` and secondary voxel count limited by `visibility_estimation_max_secondary_voxel_count`
+6. **Range-Aware Visibility**: Visibility calculation limited to voxels within `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_estimation_(min|max)_elevation_rad`, and secondary voxel count limited by `visibility_estimation_max_secondary_voxel_count`
 7. **Secondary Return Filtering**: Optional exclusion of secondary returns from output
 8. **Output**: Filtered point cloud with enhanced noise removal (unless visibility-only mode)
 
@@ -229,44 +229,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, please refer [README](../README.md).
 
-### Core Filtering Parameters
-
-| Parameter                                         | Type   | Description                                             | Default        |
-| ------------------------------------------------- | ------ | ------------------------------------------------------- | -------------- |
-| `radial_resolution_m`                             | double | Resolution in radial direction (meters)                 | 0.5            |
-| `azimuth_resolution_rad`                          | double | Resolution in azimuth direction (radians)               | 0.0175 (~1.0°) |
-| `elevation_resolution_rad`                        | double | Resolution in elevation direction (radians)             | 0.0175 (~1.0°) |
-| `voxel_points_threshold`                          | int    | Minimum points required per voxel                       | 2              |
-| `min_radius_m`                                    | double | Minimum radius to consider (meters)                     | 0.5            |
-| `max_radius_m`                                    | double | Maximum radius to consider (meters)                     | 300.0          |
-| `intensity_threshold`                             | int    | Maximum intensity threshold for secondary returns       | 2              |
-| `visibility_estimation_max_range_m`               | double | Maximum range for visibility estimation (meters)        | 20.0           |
-| `visibility_estimation_max_secondary_voxel_count` | int    | Maximum secondary voxel count for visibility estimation | 500            |
-
-### Return Type Classification Parameters
-
-| Parameter                        | Type  | Description                                 | Default    |
-| -------------------------------- | ----- | ------------------------------------------- | ---------- |
-| `use_return_type_classification` | bool  | Enable advanced two-criteria filtering      | true       |
-| `filter_secondary_returns`       | bool  | Keep only primary returns in output         | false      |
-| `secondary_noise_threshold`      | int   | Maximum secondary returns allowed per voxel | 4          |
-| `primary_return_types`           | int[] | Return types considered as primary returns  | [1,6,8,10] |
-
-### Performance and Debug Control
-
-| Parameter                    | Type | Description                                                                      | Default |
-| ---------------------------- | ---- | -------------------------------------------------------------------------------- | ------- |
-| `visibility_estimation_only` | bool | Run filter for visibility estimation only (no point cloud output)                | false   |
-| `publish_noise_cloud`        | bool | Generate and publish noise cloud for debugging (ignored in visibility-only mode) | true    |
-
-### Diagnostics Parameters
-
-| Parameter                      | Type   | Description                             | Default |
-| ------------------------------ | ------ | --------------------------------------- | ------- |
-| `filter_ratio_error_threshold` | double | Error threshold for filter ratio        | 0.5     |
-| `filter_ratio_warn_threshold`  | double | Warning threshold for filter ratio      | 0.7     |
-| `visibility_error_threshold`   | double | Error threshold for visibility metric   | 0.8     |
-| `visibility_warn_threshold`    | double | Warning threshold for visibility metric | 0.9     |
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/polar_voxel_outlier_filter_node.schema.json") }}
 
 ### Parameter Interactions
 
@@ -326,6 +289,10 @@ radial_resolution_m: 0.5
 azimuth_resolution_rad: 0.0175 # ~1 degree
 elevation_resolution_rad: 0.0175 # ~1 degree
 visibility_estimation_max_range_m: 20.0 # Range limit for visibility calculation
+visibility_estimation_min_azimuth_rad: 0.78
+visibility_estimation_max_azimuth_rad: 2.35
+visibility_estimation_min_elevation_rad: -0.26
+visibility_estimation_max_elevation_rad: 1.04
 visibility_estimation_only: false # Normal filtering mode
 publish_noise_cloud: true
 ```
@@ -336,6 +303,10 @@ publish_noise_cloud: true
 # Enable debugging and monitoring
 use_return_type_classification: true
 visibility_estimation_max_range_m: 20.0 # Configured range for urban environments
+visibility_estimation_min_azimuth_rad: 0.78
+visibility_estimation_max_azimuth_rad: 2.35
+visibility_estimation_min_elevation_rad: -0.26
+visibility_estimation_max_elevation_rad: 1.04
 visibility_estimation_max_secondary_voxel_count: 500 # Allow secondary voxels in visibility calculation
 visibility_estimation_only: false # Normal filtering with debug output
 publish_noise_cloud: true # Enable noise cloud for analysis
@@ -385,7 +356,9 @@ visibility_estimation_only: true # Diagnostics only
 - **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
 - **Finite coordinates required**: Automatically filters out NaN/Inf points
 - **Return type dependency**: Advanced filtering effectiveness depends on accurate return type classification
-- **Visibility range dependency**: Visibility accuracy depends on appropriate `visibility_estimation_max_range_m` setting
+- **Visibility range dependency**: Visibility accuracy depends on appropriate `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_estimation_(min|max)_elevation_rad` settings. Besides, for azimuth and elevation range, the following definitions are assumed
+  - azimuth: starts with the y-axis, increasing in counter-corkscrew rule around the z-axis. The range domain is $`[0, 2\pi]`$
+  - elevation: starts with the x-axis, increasing in counter-corkscrew rule around the y-axis. The range domain is $`[-\frac{\pi}{2}, \frac{pi}{2}]`$
 - **Secondary voxel limiting**: Visibility estimation can be tuned via `visibility_estimation_max_secondary_voxel_count`
 
 ## Error detection and handling
@@ -424,6 +397,10 @@ The filter includes robust error handling:
 #   <param name="visibility_estimation_max_secondary_voxel_count" value="500"/>
 #   <param name="primary_return_types" value="[1,6,8,10]"/>
 #   <param name="visibility_estimation_max_range_m" value="20.0"/>
+#   <param name="visibility_estimation_min_azimuth_rad" value="0.78"/>
+#   <param name="visibility_estimation_max_azimuth_rad" value="2.35"/>
+#   <param name="visibility_estimation_min_elevation_rad" value="-0.26"/>
+#   <param name="visibility_estimation_max_elevation_rad" value="1.04"/>
 #   <param name="visibility_estimation_only" value="false"/>
 # </node>
 
@@ -432,6 +409,10 @@ The filter includes robust error handling:
 #   <param name="use_return_type_classification" value="true"/>
 #   <param name="visibility_estimation_only" value="true"/>
 #   <param name="visibility_estimation_max_range_m" value="20.0"/>
+#   <param name="visibility_estimation_min_azimuth_rad" value="0.78"/>
+#   <param name="visibility_estimation_max_azimuth_rad" value="2.35"/>
+#   <param name="visibility_estimation_min_elevation_rad" value="-0.26"/>
+#   <param name="visibility_estimation_max_elevation_rad" value="1.04"/>
 #   <param name="visibility_estimation_max_secondary_voxel_count" value="500"/>
 # </node>
 ```
@@ -533,7 +514,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 ### Visibility Diagnostics
 
 - **Advanced mode only**: Uses return type classification data
-- **Range-limited metric**: Only considers voxels within `visibility_estimation_max_range_m`
+- **Range-limited metric**: Only considers voxels within `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad` and `visibility_estimation_(min|max)_elevation_rad`
 - **Secondary voxel limiting**: Controlled by `visibility_estimation_max_secondary_voxel_count` parameter
 - **Voxel-based metric**: Percentage of range-limited voxels passing secondary threshold test
 - **Environmental indicator**: Useful for detecting sensor conditions within reliable range
@@ -596,7 +577,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 - **For lenient visibility estimation**: Allow higher secondary voxel counts (several hundred)
 - **For primary-only output**: Enable `filter_secondary_returns`
 - **For sensor-specific optimization**: Adjust `primary_return_types` based on sensor characteristics
-- **For range-specific visibility**: Set `visibility_estimation_max_range_m` based on sensor effective range and application requirements
+- **For range-specific visibility**: Set `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_estimation_(min|max)_elevation_rad` based on sensor effective range and application requirements
 
 #### Mode Selection Guidelines
 
@@ -665,7 +646,7 @@ To enable advanced filtering on existing systems:
 1. **Ensure return type field**: Verify input point clouds have return_type field
 2. **Set parameter**: `use_return_type_classification: true`
 3. **Configure return types**: Set `primary_return_types` for your sensor
-4. **Set visibility range**: Configure `visibility_estimation_max_range_m` for your application
+4. **Set visibility range**: Configure `visibility_estimation_max_range_m`, `visibility_estimation_(min|max)_azimuth_rad`, and `visibility_estimation_(min|max)_elevation_rad` for your application
 5. **Configure secondary voxel limiting**: Set `visibility_estimation_max_secondary_voxel_count` based on requirements
 6. **Tune thresholds**: Adjust `secondary_noise_threshold` based on requirements
 7. **Monitor diagnostics**: Use range-aware visibility metrics for performance assessment

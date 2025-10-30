@@ -37,14 +37,8 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 class TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryOptimizerPluginBase(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    [[maybe_unused]] const TrajectoryOptimizerParams & params)
-  : name_(name), node_ptr_(node_ptr), time_keeper_(time_keeper)
-  {
-    std::cerr << "instantiated TrajectoryOptimizerPluginBase: " << name_ << std::endl;
-  }
+  TrajectoryOptimizerPluginBase() = default;
+
   virtual ~TrajectoryOptimizerPluginBase() = default;
 
   // Main optimization function
@@ -60,13 +54,28 @@ public:
   // Plugin parameter update callback - plugins update their own parameters here
   virtual rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) = 0;
+
+  // Initialize plugin with node context (for pluginlib-loaded plugins)
+  virtual void initialize(
+    const std::string & name, rclcpp::Node * node_ptr,
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+  {
+    name_ = name;
+    node_ptr_ = node_ptr;
+    time_keeper_ = time_keeper;
+    set_up_params();
+    std::cerr << "initialized TrajectoryOptimizerPlugin: " << name_ << std::endl;
+  }
+
   std::string get_name() const { return name_; }
+
+protected:
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
 
 private:
-  std::string name_;
-  rclcpp::Node * node_ptr_;
+  std::string name_{"unnamed_plugin"};
+  rclcpp::Node * node_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 };
 }  // namespace autoware::trajectory_optimizer::plugin

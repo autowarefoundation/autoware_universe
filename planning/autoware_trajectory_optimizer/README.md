@@ -16,17 +16,33 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
 
 ## Architecture
 
-The package uses a plugin architecture where each optimization step inherits from `TrajectoryOptimizerPluginBase`. The current plugin execution order is:
+The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from `TrajectoryOptimizerPluginBase` and is loaded via the ROS 2 pluginlib system.
+
+### Plugin Loading and Execution
+
+Plugins are loaded based on the `plugin_names` parameter, which defines both which plugins to load and their execution order:
+
+```yaml
+plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+```
+
+### Available Plugins
 
 1. **TrajectoryPointFixer** - Removes invalid/repeated points and fixes trajectory direction
-2. **TrajectoryQPSmoother** - QP-based path smoothing with jerk constraints (optional)
-3. **TrajectoryEBSmootherOptimizer** - Elastic Band path smoothing (optional)
-4. **TrajectorySplineSmoother** - Akima spline interpolation (optional)
-5. **TrajectoryVelocityOptimizer** - Velocity profile optimization
-6. **TrajectoryExtender** - Extends trajectory backward using past ego states (optional, disabled by default)
-7. **TrajectoryPointFixer** - Final cleanup of trajectory points
+2. **TrajectoryQPSmoother** - QP-based path smoothing with jerk constraints
+3. **TrajectoryEBSmootherOptimizer** - Elastic Band path smoothing
+4. **TrajectorySplineSmoother** - Akima spline interpolation
+5. **TrajectoryVelocityOptimizer** - Velocity profile optimization with lateral acceleration limits
+6. **TrajectoryExtender** - Extends trajectory backward using past ego states
 
-Each plugin can be enabled/disabled via parameters and manages its own configuration independently.
+Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_qp_smoother`) and manages its own configuration independently.
 
 ### ⚠️ Important: Plugin Ordering Constraints
 
@@ -69,4 +85,34 @@ The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory 
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
-Main node parameters control plugin activation (e.g., `use_qp_smoother`, `use_akima_spline_interpolation`), while plugin-specific parameters use namespaced names (e.g., `trajectory_qp_smoother.weight_smoothness`).
+### Parameter Types
+
+1. **Plugin Loading** (`plugin_names`) - Array of plugin class names determining load order and execution sequence
+2. **Activation Flags** - Boolean flags for runtime enable/disable (e.g., `use_qp_smoother`, `use_akima_spline_interpolation`)
+3. **Plugin-Specific Parameters** - Namespaced parameters for each plugin (e.g., `trajectory_qp_smoother.weight_smoothness`)
+
+### Configuring Plugin Order
+
+To change plugin execution order, modify the `plugin_names` array in `config/trajectory_optimizer.param.yaml`:
+
+```yaml
+# Example: Run spline smoother before velocity optimizer
+plugin_names:
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+  - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+  - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+```
+
+#### CRITICAL: QP Smoother Ordering Constraint
+
+The `TrajectoryQPSmoother` plugin **MUST run before** any plugins that resample or modify trajectory structure:
+
+- `TrajectorySplineSmoother` (Akima spline - resamples trajectory)
+- `TrajectoryEBSmootherOptimizer` (Elastic Band - resamples trajectory)
+- `TrajectoryVelocityOptimizer` (velocity smoothing with resampling)
+- `TrajectoryExtender` (adds/modifies points at trajectory start)
+
+The QP solver requires constant time intervals (Δt = 0.1s) between points. These plugins modify the time domain structure or add points, breaking the QP solver assumptions. If you need QP smoothing, it must appear first in the pipeline after `TrajectoryPointFixer`.
+
+Note: Plugin order changes require node restart. Runtime enable/disable is controlled by activation flags.
