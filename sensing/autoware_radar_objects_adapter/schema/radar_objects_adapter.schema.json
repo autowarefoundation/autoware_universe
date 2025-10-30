@@ -40,9 +40,10 @@
         },
         "classification_remap": {
           "type": "array",
-          "description": "Flat list of [RadarLabel, PerceptionLabel, RadarLabel, PerceptionLabel, ...]. Must contain an even number of elements.",
+          "description": "Flat list of [RadarLabel, PerceptionLabel, RadarLabel, PerceptionLabel, ...]. Must contain an even number of elements. Note: This schema cannot enforce the evenness constraint; it must be validated at runtime.",
           "items": { "type": "string" },
           "minItems": 2,
+          "x-evenItems": true,
           "examples": [
             [
               "UNKNOWN",
