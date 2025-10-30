@@ -19852,6 +19852,24 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#plugin-loading-and-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin Loading and Execution
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Plugins
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#important-plugin-ordering-constraints" class="md-nav__link">
     <span class="md-ellipsis">
       ⚠️ Important: Plugin Ordering Constraints
@@ -19889,6 +19907,30 @@
       Parameters
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameter-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameter Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuring-plugin-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuring Plugin Order
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -19928,17 +19970,28 @@
 <li><strong>Dynamic parameter reconfiguration</strong> - Runtime parameter updates supported</li>
 </ul>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
-<p>The package uses a plugin architecture where each optimization step inherits from <code>TrajectoryOptimizerPluginBase</code>. The current plugin execution order is:</p>
+<p>The package uses a pluginlib-based architecture where optimization plugins are dynamically loaded at startup. Each plugin inherits from <code>TrajectoryOptimizerPluginBase</code> and is loaded via the ROS 2 pluginlib system.</p>
+<h3 id="plugin-loading-and-execution">Plugin Loading and Execution<a class="headerlink" href="#plugin-loading-and-execution" title="Permanent link">#</a></h3>
+<p>Plugins are loaded based on the <code>plugin_names</code> parameter, which defines both which plugins to load and their execution order:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">plugin_names</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryExtender"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
+</code></pre></div>
+<h3 id="available-plugins">Available Plugins<a class="headerlink" href="#available-plugins" title="Permanent link">#</a></h3>
 <ol>
 <li><strong>TrajectoryPointFixer</strong> - Removes invalid/repeated points and fixes trajectory direction</li>
-<li><strong>TrajectoryQPSmoother</strong> - QP-based path smoothing with jerk constraints (optional)</li>
-<li><strong>TrajectoryEBSmootherOptimizer</strong> - Elastic Band path smoothing (optional)</li>
-<li><strong>TrajectorySplineSmoother</strong> - Akima spline interpolation (optional)</li>
-<li><strong>TrajectoryVelocityOptimizer</strong> - Velocity profile optimization</li>
-<li><strong>TrajectoryExtender</strong> - Extends trajectory backward using past ego states (optional, disabled by default)</li>
-<li><strong>TrajectoryPointFixer</strong> - Final cleanup of trajectory points</li>
+<li><strong>TrajectoryQPSmoother</strong> - QP-based path smoothing with jerk constraints</li>
+<li><strong>TrajectoryEBSmootherOptimizer</strong> - Elastic Band path smoothing</li>
+<li><strong>TrajectorySplineSmoother</strong> - Akima spline interpolation</li>
+<li><strong>TrajectoryVelocityOptimizer</strong> - Velocity profile optimization with lateral acceleration limits</li>
+<li><strong>TrajectoryExtender</strong> - Extends trajectory backward using past ego states</li>
 </ol>
-<p>Each plugin can be enabled/disabled via parameters and manages its own configuration independently.</p>
+<p>Each plugin can be enabled/disabled at runtime via activation flags (e.g., <code>use_qp_smoother</code>) and manages its own configuration independently.</p>
 <h3 id="important-plugin-ordering-constraints">⚠️ Important: Plugin Ordering Constraints<a class="headerlink" href="#important-plugin-ordering-constraints" title="Permanent link">#</a></h3>
 <p><strong>The order of plugin execution is critical and must be carefully maintained:</strong></p>
 <ul>
@@ -19986,52 +20039,59 @@
 </thead>
 <tbody>
 <tr>
+<td>plugin_names</td>
+<td>array</td>
+<td>List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified.</td>
+<td>['autoware::trajectory_optimizer::plugin::TrajectoryPointFixer', 'autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectoryExtender', 'autoware::trajectory_optimizer::plugin::TrajectoryPointFixer']</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>use_akima_spline_interpolation</td>
 <td>boolean</td>
 <td>Enable Akima spline interpolation for trajectory smoothing</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_eb_smoother</td>
 <td>boolean</td>
 <td>Enable Elastic Band smoother for trajectory smoothing</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_qp_smoother</td>
 <td>boolean</td>
 <td>Enable QP-based trajectory smoothing with explicit jerk constraints</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>fix_invalid_points</td>
 <td>boolean</td>
 <td>Remove repeated or invalid points, or points that go against the general trajectory direction</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>extend_trajectory_backward</td>
 <td>boolean</td>
 <td>Extend trajectory backward using ego pose history</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>optimize_velocity</td>
 <td>boolean</td>
 <td>Enable velocity profile optimization with jerk filtering and constraint enforcement</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_point_fixer.orientation_threshold_deg</td>
 <td>float</td>
 <td>Yaw threshold for removing wrongly oriented points [deg]</td>
-<td>5</td>
+<td>5.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20045,14 +20105,14 @@
 <td>trajectory_extender.nearest_yaw_threshold_deg</td>
 <td>float</td>
 <td>Yaw threshold for trajectory matching [deg]</td>
-<td>60</td>
+<td>60.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_extender.backward_trajectory_extension_m</td>
 <td>float</td>
 <td>Length to extend trajectory backward using ego history [m]</td>
-<td>5</td>
+<td>5.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20073,28 +20133,28 @@
 <td>trajectory_spline_smoother.max_distance_discrepancy_m</td>
 <td>float</td>
 <td>Maximum position deviation allowed for spline outlier detection [m]</td>
-<td>5</td>
+<td>5.0</td>
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_spline_smoother.copy_original_orientation</td>
+<td>trajectory_spline_smoother.preserve_input_trajectory_orientation</td>
 <td>boolean</td>
-<td>Copy orientation from original trajectory to spline-interpolated trajectory</td>
-<td>1</td>
+<td>Copy orientations from input trajectory to spline output</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_qp_smoother.weight_smoothness</td>
 <td>float</td>
 <td>Weight for path curvature minimization (geometric smoothness) [dimensionless]</td>
-<td>10</td>
+<td>10.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_qp_smoother.weight_fidelity</td>
 <td>float</td>
 <td>Weight for path fidelity (staying close to original path) [dimensionless]</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20129,28 +20189,28 @@
 <td>trajectory_qp_smoother.osqp_verbose</td>
 <td>boolean</td>
 <td>Enable OSQP verbose solver output</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.fix_orientation</td>
+<td>trajectory_qp_smoother.preserve_input_trajectory_orientation</td>
 <td>boolean</td>
-<td>Enable orientation correction for QP solver output</td>
-<td>1</td>
+<td>Copy orientations from input trajectory to smoothed output</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_qp_smoother.orientation_correction_threshold_deg</td>
+<td>trajectory_qp_smoother.max_distance_for_orientation_m</td>
 <td>float</td>
-<td>Yaw threshold for correcting QP solver output orientation [deg]</td>
-<td>5</td>
+<td>Max distance for nearest neighbor matching when copying orientations [m]</td>
+<td>5.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_qp_smoother.use_velocity_based_fidelity</td>
 <td>boolean</td>
 <td>Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -20164,7 +20224,7 @@
 <td>trajectory_qp_smoother.sigmoid_sharpness</td>
 <td>float</td>
 <td>Sigmoid steepness for velocity-based fidelity transition (higher = sharper)</td>
-<td>50</td>
+<td>50.0</td>
 <td>≥1</td>
 </tr>
 <tr>
@@ -20178,7 +20238,7 @@
 <td>trajectory_qp_smoother.max_fidelity_weight</td>
 <td>float</td>
 <td>Maximum fidelity weight at high speeds [dimensionless]</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20206,21 +20266,21 @@
 <td>trajectory_velocity_optimizer.nearest_yaw_threshold_deg</td>
 <td>float</td>
 <td>Yaw threshold for trajectory matching [deg]</td>
-<td>60</td>
+<td>60.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.target_pull_out_speed_mps</td>
 <td>float</td>
 <td>Target speed during pull-out maneuver [m/s]</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.target_pull_out_acc_mps2</td>
 <td>float</td>
 <td>Target acceleration during pull-out maneuver [m/s²]</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20241,56 +20301,56 @@
 <td>trajectory_velocity_optimizer.set_engage_speed</td>
 <td>boolean</td>
 <td>Set minimum speed during engage</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.limit_speed</td>
 <td>boolean</td>
 <td>Enable speed limiting</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.limit_lateral_acceleration</td>
 <td>boolean</td>
 <td>Enable lateral acceleration limiting</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>trajectory_velocity_optimizer.smooth_velocities</td>
 <td>boolean</td>
 <td>Enable jerk-filtered velocity smoothing</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>jerk_filter_params.jerk_weight</td>
 <td>float</td>
 <td>Weight for smoothness cost for jerk</td>
-<td>10</td>
+<td>10.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>jerk_filter_params.over_v_weight</td>
 <td>float</td>
 <td>Weight for over speed limit cost</td>
-<td>100000</td>
+<td>100000.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>jerk_filter_params.over_a_weight</td>
 <td>float</td>
 <td>Weight for over accel limit cost</td>
-<td>5000</td>
+<td>5000.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>jerk_filter_params.over_j_weight</td>
 <td>float</td>
 <td>Weight for over jerk limit cost</td>
-<td>2000</td>
+<td>2000.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20311,21 +20371,21 @@
 <td>common.output_backward_traj_length</td>
 <td>float</td>
 <td>Backward length for backward trajectory from base_link [m]</td>
-<td>5</td>
+<td>5.0</td>
 <td>≥0</td>
 </tr>
 <tr>
 <td>option.enable_warm_start</td>
 <td>boolean</td>
 <td>Enable warm start for optimization</td>
-<td>1</td>
+<td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>option.enable_optimization_validation</td>
 <td>boolean</td>
 <td>Enable optimization validation</td>
-<td>0</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -20339,14 +20399,14 @@
 <td>common.delta_arc_length</td>
 <td>float</td>
 <td>Delta arc length for optimization [m]</td>
-<td>1</td>
+<td>1.0</td>
 <td>&gt;0</td>
 </tr>
 <tr>
 <td>weight.smooth_weight</td>
 <td>float</td>
 <td>Weight for smoothness constraint</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20360,7 +20420,7 @@
 <td>elastic_band_params.ego_nearest_dist_threshold</td>
 <td>float</td>
 <td>Distance threshold for ego nearest search [m]</td>
-<td>3</td>
+<td>3.0</td>
 <td>≥0</td>
 </tr>
 <tr>
@@ -20373,7 +20433,31 @@
 </tbody>
 </table>
 <p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
-<p>Main node parameters control plugin activation (e.g., <code>use_qp_smoother</code>, <code>use_akima_spline_interpolation</code>), while plugin-specific parameters use namespaced names (e.g., <code>trajectory_qp_smoother.weight_smoothness</code>).</p></div>
+<h3 id="parameter-types">Parameter Types<a class="headerlink" href="#parameter-types" title="Permanent link">#</a></h3>
+<ol>
+<li><strong>Plugin Loading</strong> (<code>plugin_names</code>) - Array of plugin class names determining load order and execution sequence</li>
+<li><strong>Activation Flags</strong> - Boolean flags for runtime enable/disable (e.g., <code>use_qp_smoother</code>, <code>use_akima_spline_interpolation</code>)</li>
+<li><strong>Plugin-Specific Parameters</strong> - Namespaced parameters for each plugin (e.g., <code>trajectory_qp_smoother.weight_smoothness</code>)</li>
+</ol>
+<h3 id="configuring-plugin-order">Configuring Plugin Order<a class="headerlink" href="#configuring-plugin-order" title="Permanent link">#</a></h3>
+<p>To change plugin execution order, modify the <code>plugin_names</code> array in <code>config/trajectory_optimizer.param.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Example: Run spline smoother before velocity optimizer</span>
+<span class="nt">plugin_names</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"</span>
+</code></pre></div>
+<h4 id="critical-qp-smoother-ordering-constraint">CRITICAL: QP Smoother Ordering Constraint<a class="headerlink" href="#critical-qp-smoother-ordering-constraint" title="Permanent link">#</a></h4>
+<p>The <code>TrajectoryQPSmoother</code> plugin <strong>MUST run before</strong> any plugins that resample or modify trajectory structure:</p>
+<ul>
+<li><code>TrajectorySplineSmoother</code> (Akima spline - resamples trajectory)</li>
+<li><code>TrajectoryEBSmootherOptimizer</code> (Elastic Band - resamples trajectory)</li>
+<li><code>TrajectoryVelocityOptimizer</code> (velocity smoothing with resampling)</li>
+<li><code>TrajectoryExtender</code> (adds/modifies points at trajectory start)</li>
+</ul>
+<p>The QP solver requires constant time intervals (Δt = 0.1s) between points. These plugins modify the time domain structure or add points, breaking the QP solver assumptions. If you need QP smoothing, it must appear first in the pipeline after <code>TrajectoryPointFixer</code>.</p>
+<p>Note: Plugin order changes require node restart. Runtime enable/disable is controlled by activation flags.</p></div>
 
 
 
