@@ -89,8 +89,8 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     static_cast<uint32_t>(filter_parameters.max_radius / filter_parameters.cell_divider_size_m);
   filter_parameters.max_num_cells = static_cast<uint32_t>(
     filter_parameters.max_num_cells_per_sector * filter_parameters.num_sectors);
-  // filter_parameters.gnd_cell_buffer_size =
-  //   static_cast<uint32_t>(declare_parameter<int>("gnd_cell_buffer_size"));
+  filter_parameters.gnd_cell_buffer_size =
+    static_cast<uint32_t>(declare_parameter<int>("gnd_cell_buffer_size"));
 
   int64_t max_mem_pool_size_in_byte =
     declare_parameter<int64_t>("max_mem_pool_size_in_byte", 1e9);  // 1 GB

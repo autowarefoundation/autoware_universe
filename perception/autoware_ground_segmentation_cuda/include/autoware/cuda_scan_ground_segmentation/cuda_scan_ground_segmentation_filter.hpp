@@ -112,7 +112,7 @@ struct FilterParameters
   uint32_t num_sectors;                   // number of radial sectors
   uint32_t gnd_grid_continual_thresh{3};  // threshold for continual ground grid
   uint32_t use_recheck_ground_cluster;    // to enable recheck ground cluster
-  const uint32_t gnd_cell_buffer_size{5};
+  uint32_t gnd_cell_buffer_size{5};
 };
 
 class CudaScanGroundSegmentationFilter

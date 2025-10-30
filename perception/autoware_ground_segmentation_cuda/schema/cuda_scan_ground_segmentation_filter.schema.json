@@ -104,7 +104,6 @@
         "use_lowest_point",
         "center_pcl_shift",
         "sector_angle_deg",
-        "max_radius",
         "gnd_cell_buffer_size"
       ],
       "additionalProperties": false
