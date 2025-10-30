@@ -17,6 +17,7 @@
 #include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
@@ -24,8 +25,10 @@
 
 #include <algorithm>
 #include <deque>
+#include <functional>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -257,7 +260,7 @@ bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
   return false;
 }
 
-bool PredictorVru::doesPathCrossAnyFence(const PredictedPath & predicted_path) const
+PredictedPath PredictorVru::cutPathBeforeFences(const PredictedPath & predicted_path) const
 {
   lanelet::BasicLineString2d predicted_path_ls;
   for (const auto & pt : predicted_path.path) {
@@ -265,12 +268,54 @@ bool PredictorVru::doesPathCrossAnyFence(const PredictedPath & predicted_path) c
   }
   const auto candidates =
     fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
+  std::vector<lanelet::ConstLineString3d> crossed_fences{};
   for (const auto & candidate : candidates) {
     if (doesPathCrossFence(predicted_path_ls, candidate)) {
-      return true;
+      crossed_fences.push_back(candidate);
+      break;
     }
   }
-  return false;
+  if (crossed_fences.empty()) {
+    return predicted_path;
+  }
+
+  const auto & path = predicted_path.path;
+  auto closest_cross_index = path.size() - 1;
+  double dist_to_closest_cross = std::numeric_limits<double>::infinity();
+  const double z = path.at(0).position.z;
+  for (const auto & fence : crossed_fences) {
+    std::vector<autoware_utils_geometry::Point2d> intersections;
+    boost::geometry::intersection(
+      predicted_path_ls, lanelet::utils::to2D(fence).basicLineString(), intersections);
+    if (intersections.empty()) {
+      continue;
+    }
+    unsigned nearest_intersection_index = path.size() - 1;
+    for (const auto & intersection : intersections) {
+      const auto nearest_index_this = autoware::motion_utils::findNearestIndex(
+        predicted_path.path,
+        autoware_utils_geometry::create_point(intersection.x(), intersection.y(), z));
+      if (nearest_index_this < nearest_intersection_index) {
+        nearest_intersection_index = nearest_index_this;
+      }
+    }
+    const double distance_to_nearest_intersection = std::inner_product(
+      path.begin(), path.begin() + nearest_intersection_index, path.begin() + 1, 0.0 /* init */,
+      std::plus<double>{}, [](const auto & a, const auto & b) {
+        return autoware_utils_geometry::calc_distance3d(a, b);
+      });
+    if (distance_to_nearest_intersection < dist_to_closest_cross) {
+      dist_to_closest_cross = distance_to_nearest_intersection;
+      closest_cross_index = nearest_intersection_index;
+    }
+  }
+  // trim the path upto nearest_index_global
+  auto trimmed_path = predicted_path;
+  trimmed_path.path.clear();
+  for (unsigned i = 0; i <= closest_cross_index; ++i) {
+    trimmed_path.path.push_back(path.at(i));
+  }
+  return trimmed_path;
 }
 
 void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
@@ -475,9 +520,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       path_generator_->generatePathForNonVehicleObject(mutable_object, prediction_time_horizon_);
     predicted_path.confidence = 1.0;
 
-    if (!doesPathCrossAnyFence(predicted_path)) {
-      predicted_object.kinematics.predicted_paths.push_back(predicted_path);
-    }
+    predicted_object.kinematics.predicted_paths.push_back(cutPathBeforeFences(predicted_path));
   }
 
   boost::optional<lanelet::ConstLanelet> crossing_crosswalk{boost::none};
