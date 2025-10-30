@@ -17,6 +17,7 @@
 #include <autoware/universe_utils/geometry/geometry.hpp>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -121,7 +122,6 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     RCLCPP_INFO(
       this->get_logger(), "Loaded classification_remap policy with %zu rules.",
       classification_remap_.size());
-
   } catch (const rclcpp::exceptions::ParameterNotDeclaredException & e) {
     RCLCPP_ERROR(this->get_logger(), "Parameter 'classification_remap' not declared. %s", e.what());
     throw;
