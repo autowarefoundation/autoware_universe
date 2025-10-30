@@ -30,9 +30,9 @@
   <arg name="output/map" default="debug/vad/map"/>
 
   <node pkg="autoware_tensorrt_vad" exec="vad_node" name="vad" output="screen" args="--ros-args --log-level $(var log_level)">
-    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/vad_tiny.param.yaml" allow_substs="true"/>
-    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/ml_package_vad_tiny.param.yaml" allow_substs="true"/>
-    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/vad_carla_tier4.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/ml_package_vad_carla_tier4.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper_carla_tier4.param.yaml" allow_substs="true"/>
 
     <remap from="~/output/objects" to="$(var output/objects)"/>
     <remap from="~/output/trajectory" to="$(var output/trajectory)"/>

@@ -14,6 +14,7 @@
 
 #include "autoware/tensorrt_vad/vad_interface.hpp"
 #include <opencv2/opencv.hpp>
+#include <cmath>
 
 namespace autoware::tensorrt_vad
 {
@@ -43,13 +44,32 @@ VadInputData VadInterface::convert_input(const VadInputTopicData & vad_input_top
 {
   VadInputData vad_input_data;
 
-  // Process vad_base2img transformation using converter, with caching
+  // Process vad_base2img transformation using converter, with validation and caching
+  // If not cached or if cached value is invalid (all zeros), recompute
   if (!vad_base2img_transform_.has_value()) {
-    vad_base2img_transform_ = input_transform_matrix_converter_->process_vad_base2img(
+    auto computed_transform = input_transform_matrix_converter_->process_vad_base2img(
       vad_input_topic_data.camera_infos
     );
+
+    // Validate: check if transform contains non-zero values (valid TF lookup)
+    bool is_valid = false;
+    for (const auto& val : computed_transform) {
+      if (std::abs(val) > 1e-6f) {
+        is_valid = true;
+        break;
+      }
+    }
+
+    // Only cache if valid
+    if (is_valid) {
+      vad_base2img_transform_ = computed_transform;
+    }
   }
-  vad_input_data.vad_base2img = vad_base2img_transform_.value();
+
+  // Use cached value if available, otherwise use computed (potentially invalid) transform
+  vad_input_data.vad_base2img = vad_base2img_transform_.has_value()
+    ? vad_base2img_transform_.value()
+    : input_transform_matrix_converter_->process_vad_base2img(vad_input_topic_data.camera_infos);
   
   // Process can_bus using converter
   vad_input_data.can_bus = input_can_bus_converter_->process_can_bus(
