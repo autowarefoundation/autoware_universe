@@ -351,14 +351,13 @@ void LidarMarkerLocalizer::service_trigger_node(
   res->success = true;
 }
 
+template <typename PointT>
 std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   const PointCloud2::ConstSharedPtr & points_msg_ptr)
 {
   // TODO(YamatoAndo)
   // Transform sensor_frame to base_link
-
-  pcl::PointCloud<autoware::point_types::PointXYZIRC>::Ptr points_ptr(
-    new pcl::PointCloud<autoware::point_types::PointXYZIRC>);
+  pcl::PointCloud<PointT>::Ptr points_ptr(new pcl::PointCloud<PointT>);
   pcl::fromROSMsg(*points_msg_ptr, *points_ptr);
 
   if (points_ptr->empty()) {
@@ -366,12 +365,20 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     return std::vector<landmark_manager::Landmark>{};
   }
 
-  std::vector<pcl::PointCloud<autoware::point_types::PointXYZIRC>> ring_points(128);
+  uint16_t lower_ring_id = 128;
+  uint16_t upper_ring_id = 0;
+  for (const auto & point : points_ptr->points) {
+    lower_ring_id = std::min(point.ring, lower_ring_id);
+    upper_ring_id = std::max(point.ring, upper_ring_id);
+  }
+  uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
+
+  std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
 
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
-  for (const autoware::point_types::PointXYZIRC & point : points_ptr->points) {
-    ring_points[point.channel].push_back(point);
+  for (const auto & point : points_ptr->points) {
+    ring_points[point.ring - lower_ring_id].push_back(point);
     min_x = std::min(min_x, point.x);
     max_x = std::max(max_x, point.x);
   }
@@ -389,13 +396,14 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   std::vector<int> vote(bin_num, 0);
   std::vector<float> reference_ring_y(bin_num, std::numeric_limits<float>::max());
 
-  // for each channel
-  for (const pcl::PointCloud<autoware::point_types::PointXYZIRC> & one_ring : ring_points) {
+  // for each ring
+  for (const auto & one_ring : ring_points) {
     std::vector<double> intensity_sum(bin_num, 0.0);
     std::vector<int> intensity_num(bin_num, 0);
     std::vector<double> average_intensity(bin_num, 0.0);
+    const size_t ring_id = one_ring.front().ring - ring_points.front().points.front().ring;
 
-    for (const autoware::point_types::PointXYZIRC & point : one_ring.points) {
+    for (const auto & point : one_ring.points) {
       const int bin_index = static_cast<int>((point.x - min_x) / param_.resolution);
       intensity_sum[bin_index] += point.intensity;
       intensity_num[bin_index]++;
@@ -612,6 +620,8 @@ void LidarMarkerLocalizer::save_detected_marker_log(
   csv_file.close();
 }
 
+// Transform pointcloud from source_frame to target_frame
+// If PointType would be used in this function, this function should be templated
 void LidarMarkerLocalizer::transform_sensor_measurement(
   const std::string & source_frame, const std::string & target_frame,
   const sensor_msgs::msg::PointCloud2::SharedPtr & sensor_points_input_ptr,
@@ -641,6 +651,12 @@ void LidarMarkerLocalizer::transform_sensor_measurement(
   pcl_ros::transformPointCloud(
     base_to_sensor_matrix, *sensor_points_input_ptr, *sensor_points_output_ptr);
 }
+
+// Explicit instantiation
+template std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks<
+  autoware::point_types::PointXYZIRC>(const PointCloud2::ConstSharedPtr &);
+template std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks<
+  autoware::point_types::PointXYZIRADRT>(const PointCloud2::ConstSharedPtr &);
 
 }  // namespace autoware::lidar_marker_localizer
 
