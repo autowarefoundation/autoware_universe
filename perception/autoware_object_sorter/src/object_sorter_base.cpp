@@ -97,16 +97,7 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
 
       // Check object's relative position
       label_settings.isInTargetRange = [min_x, max_x, min_y, max_y](double dx, double dy) {
-        if (
-          // Outside x
-          dx < min_x || dx > max_x ||
-          // Outside y
-          dy < min_y || dy > max_y) {
-          // Outside the target area
-          return false;
-        } else {
-          return true;
-        }
+        return (min_x <= dx && dx <= max_x && min_y <= dy && dy <= max_y);
       };
     }
 
