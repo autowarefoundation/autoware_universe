@@ -117,21 +117,35 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   ObjsMsgType output_objects;
   output_objects.header = input_msg->header;
 
+  double tx;
+  double ty;
+  double cos_yaw;
+  double sin_yaw;
+  // Even when it failed to get the transform, we still can do the velocity check
   bool transform_success = false;
-  geometry_msgs::msg::Vector3 ego_pos;
   try {
-    const geometry_msgs::msg::TransformStamped ts = tf_buffer_.lookupTransform(
-      input_msg->header.frame_id, range_calc_frame_id_, input_msg->header.stamp,
-      rclcpp::Duration::from_seconds(0.5));
-    // Use the ego's position in the topic's frame id for computing the distance
-    ego_pos = ts.transform.translation;
+    const geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame =
+      tf_buffer_.lookupTransform(
+        range_calc_frame_id_,        // target frame
+        input_msg->header.frame_id,  // source frame
+        input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
+
+    // Extract translation
+    tx = tf_input_frame_to_target_frame.transform.translation.x;
+    ty = tf_input_frame_to_target_frame.transform.translation.y;
+
+    // Extract yaw from quaternion
+    const geometry_msgs::msg::Quaternion & q = tf_input_frame_to_target_frame.transform.rotation;
+    const tf2::Quaternion tf_q(q.x, q.y, q.z, q.w);
+    const double yaw = tf2::getYaw(tf_q);
+
+    cos_yaw = std::cos(yaw);
+    sin_yaw = std::sin(yaw);
+
     transform_success = true;
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
   }
-
-  double dist_origin_x = ego_pos.x + range_calc_offset_x_;
-  double dist_origin_y = ego_pos.y + range_calc_offset_y_;
 
   for (const auto & object : input_msg->objects) {
     const uint8_t label =
@@ -147,10 +161,14 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
     }
 
     if (transform_success) {
-      const double object_diff_x =
-        object.kinematics.pose_with_covariance.pose.position.x - dist_origin_x;
-      const double object_diff_y =
-        object.kinematics.pose_with_covariance.pose.position.y - dist_origin_y;
+      // We will check the condition in 2D (x-y)
+      const double object_x = object.kinematics.pose_with_covariance.pose.position.x;
+      const double object_y = object.kinematics.pose_with_covariance.pose.position.y;
+      const double object_x_in_target_frame = object_x * cos_yaw - object_y * sin_yaw + tx;
+      const double object_y_in_target_frame = object_x * sin_yaw + object_y * cos_yaw + ty;
+
+      const double object_diff_x = object_x_in_target_frame - range_calc_offset_x_;
+      const double object_diff_y = object_y_in_target_frame - range_calc_offset_y_;
 
       if (!label_settings.isInTargetRange(object_diff_x, object_diff_y)) {
         continue;
