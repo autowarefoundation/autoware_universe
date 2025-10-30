@@ -26,11 +26,11 @@
 namespace autoware::tensorrt_vad::vad_interface {
 
 /**
- * @brief CoordinateTransformer handles coordinate system transformations and TF lookups
- * 
- * This class manages:
- * - VAD coordinate system to Autoware coordinate system transformations
- * - TF buffer for dynamic coordinate transformations
+ * @brief CoordinateTransformer handles TF lookups for camera transformations
+ *
+ * Note: For CARLA Tier4, VAD coordinates are identical to Autoware base_link coordinates,
+ * so no coordinate transformation is needed. This class only provides TF buffer lookups
+ * for camera frame transformations (base_link to camera frames).
  */
 class CoordinateTransformer {
 public:
