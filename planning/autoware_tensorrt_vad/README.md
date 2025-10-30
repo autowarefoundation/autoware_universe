@@ -25,21 +25,21 @@ Parameters can be set via YAML (see `config/vad_tiny.param.yaml` and `config/ml_
 
 ## Inputs
 
-| Topic                     | Message Type                                        | Description              |
-| ------------------------- | --------------------------------------------------- | ------------------------ |
+| Topic                  | Message Type                                             | Description                                                     |
+| ---------------------- | -------------------------------------------------------- | --------------------------------------------------------------- |
 | `~/input/image*`       | sensor_msgs/msg/Image or sensor_msgs/msg/CompressedImage | Input image topics (supports both compressed and uncompressed). |
-| `~/input/camera_info*` | sensor_msgs/msg/CameraInfo                                   | Input camera info topics, for camera parameters.                |
-| `~/input/odometry`        | nav_msgs/msg/Odometry                               | Ego vehicle odometry     |
-| `~/input/acceleration`    | geometry_msgs/msg/AccelWithCovarianceStamped        | Ego acceleration         |
+| `~/input/camera_info*` | sensor_msgs/msg/CameraInfo                               | Input camera info topics, for camera parameters.                |
+| `~/input/odometry`     | nav_msgs/msg/Odometry                                    | Ego vehicle odometry                                            |
+| `~/input/acceleration` | geometry_msgs/msg/AccelWithCovarianceStamped             | Ego acceleration                                                |
 
 ## Outputs
 
-| Topic                        | Message Type                                  | Description                                |
-| ---------------------------- | --------------------------------------------- | ------------------------------------------ |
-| `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory         | Planned trajectory for the ego vehicle     |
-| `~/output/trajectories` | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories |
-| `~/output/objects` | autoware_perception_msgs/msg/PredictedObjects | Predicted future states of dynamic objects |
-| `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray            | Lane debug markers                         |
+| Topic                   | Message Type                                              | Description                                |
+| ----------------------- | --------------------------------------------------------- | ------------------------------------------ |
+| `~/output/trajectory`   | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
+| `~/output/trajectories` | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
+| `~/output/objects`      | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
+| `~/debug/lane_marker`   | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
 
 ---
 

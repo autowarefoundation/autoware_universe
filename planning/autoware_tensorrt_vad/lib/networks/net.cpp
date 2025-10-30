@@ -14,10 +14,12 @@
 
 #include "autoware/tensorrt_vad/networks/net.hpp"
 
-namespace autoware::tensorrt_vad {
+namespace autoware::tensorrt_vad
+{
 
 // NetworkType utility functions implementation
-std::string toString(NetworkType type) {
+std::string toString(NetworkType type)
+{
   switch (type) {
     case NetworkType::BACKBONE:
       return "backbone";
@@ -31,17 +33,18 @@ std::string toString(NetworkType type) {
 }
 
 std::unique_ptr<autoware::tensorrt_common::TrtCommon> build_engine(
-    const autoware::tensorrt_common::TrtCommonConfig& trt_common_config,
-    const std::vector<autoware::tensorrt_common::NetworkIO>& network_io,
-    const std::string& engine_name,
-    const std::string& plugins_path,
-    std::shared_ptr<VadLogger> logger) {
+  const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
+  const std::vector<autoware::tensorrt_common::NetworkIO> & network_io,
+  const std::string & engine_name, const std::string & plugins_path,
+  std::shared_ptr<VadLogger> logger)
+{
   logger->info("Building " + engine_name + " engine...");
-  
+
   auto trt_common = std::make_unique<autoware::tensorrt_common::TrtCommon>(
     trt_common_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
     std::vector<std::string>{plugins_path});
-  auto network_io_ptr = std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
+  auto network_io_ptr =
+    std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
   if (!trt_common->setup(nullptr, std::move(network_io_ptr))) {
     logger->error("Failed to setup " + engine_name + " TrtCommon");
     return nullptr;
@@ -51,11 +54,12 @@ std::unique_ptr<autoware::tensorrt_common::TrtCommon> build_engine(
 }
 
 std::unique_ptr<autoware::tensorrt_common::TrtCommon> Net::init_tensorrt(
-    const VadConfig& vad_config,
-    const autoware::tensorrt_common::TrtCommonConfig& trt_common_config,
-    const std::string& plugins_path) {
+  const VadConfig & vad_config,
+  const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
+  const std::string & plugins_path)
+{
   logger_->info("Initializing TensorRT engine");
-  
+
   // Generate NetworkIO using the overridden implementation
   auto network_io = setup_network_io(vad_config);
 
@@ -74,17 +78,16 @@ std::unique_ptr<autoware::tensorrt_common::TrtCommon> Net::init_tensorrt(
 // Net class implementation
 
 Net::Net(
-  const VadConfig& /*vad_config*/,
-  const autoware::tensorrt_common::TrtCommonConfig& /*trt_common_config*/,
-  NetworkType network_type,
-  const std::string& /*plugins_path*/,
-  std::shared_ptr<VadLogger> logger
-) : logger_(logger), network_type_(network_type)
+  const VadConfig & /*vad_config*/,
+  const autoware::tensorrt_common::TrtCommonConfig & /*trt_common_config*/,
+  NetworkType network_type, const std::string & /*plugins_path*/, std::shared_ptr<VadLogger> logger)
+: logger_(logger), network_type_(network_type)
 {
   // TensorRT initialization is handled by derived classes
 }
 
-void Net::set_input_tensor(TensorMap& ext) {
+void Net::set_input_tensor(TensorMap & ext)
+{
   int32_t nb = trt_common->getNbIOTensors();
 
   for (int32_t n = 0; n < nb; n++) {
@@ -102,15 +105,17 @@ void Net::set_input_tensor(TensorMap& ext) {
   }
 }
 
-void Net::enqueue(cudaStream_t stream) {
+void Net::enqueue(cudaStream_t stream)
+{
   trt_common->enqueueV3(stream);
 }
 
-Net::~Net() {
-    for (auto& pair : bindings) {
-        pair.second.reset();
-    }
-    bindings.clear();
+Net::~Net()
+{
+  for (auto & pair : bindings) {
+    pair.second.reset();
+  }
+  bindings.clear();
 }
 
-} // namespace autoware::tensorrt_vad
+}  // namespace autoware::tensorrt_vad

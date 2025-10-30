@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_VAD_CONFIG_HPP_
-#define AUTOWARE_TENSORRT_VAD_VAD_CONFIG_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_
+#define AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_
 
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <map>
-#include <array>
-
-#include "networks/preprocess/multi_camera_preprocess.hpp"
 #include "networks/postprocess/map_postprocess_kernel.hpp"
 #include "networks/postprocess/object_postprocess_kernel.hpp"
+#include "networks/preprocess/multi_camera_preprocess.hpp"
+
+#include <array>
+#include <cstdint>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace autoware::tensorrt_vad
 {
@@ -56,7 +56,7 @@ struct VadConfig
   int32_t map_num_queries;
   int32_t map_num_class;
   int32_t map_points_per_polylines;
-  
+
   std::array<float, 6> detection_range;
   std::map<std::string, float> map_confidence_thresholds;
   std::map<std::string, float> object_confidence_thresholds;
@@ -65,23 +65,23 @@ struct VadConfig
   int32_t map_num_classes;
   std::string plugins_path;
   std::vector<NetConfig> nets_config;
-  
+
   // Parameters for MultiCameraPreprocessor
   int32_t input_image_width;
   int32_t input_image_height;
   std::array<float, 3> image_normalization_param_mean;
   std::array<float, 3> image_normalization_param_std;
-  
+
   // Helper method to create MultiCameraPreprocessConfig
   MultiCameraPreprocessConfig create_multi_camera_preprocess_config() const;
-  
+
   // Helper method to create MapPostprocessConfig
   MapPostprocessConfig create_map_postprocess_config() const;
-  
+
   // Helper method to create ObjectPostprocessConfig
   ObjectPostprocessConfig create_object_postprocess_config() const;
 };
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE_TENSORRT_VAD_VAD_CONFIG_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_

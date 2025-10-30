@@ -54,7 +54,7 @@
     <remap from="~/input/camera_info3" to="$(var camera_info3)"/>
     <remap from="~/input/camera_info4" to="$(var camera_info4)"/>
     <remap from="~/input/camera_info5" to="$(var camera_info5)"/>
-    
+
     <!-- Image remapping -->
     <remap from="~/input/image0" to="$(var image0)"/>
     <remap from="~/input/image1" to="$(var image1)"/>
@@ -62,7 +62,7 @@
     <remap from="~/input/image3" to="$(var image3)"/>
     <remap from="~/input/image4" to="$(var image4)"/>
     <remap from="~/input/image5" to="$(var image5)"/>
-    
+
     <!-- Vehicle state remapping -->
     <remap from="~/input/kinematic_state" to="$(var kinematic_state)"/>
     <remap from="~/input/acceleration" to="$(var acceleration)"/>

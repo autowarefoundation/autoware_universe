@@ -18,45 +18,45 @@ namespace autoware::tensorrt_vad
 {
 
 VadInputTopicData::VadInputTopicData(const int32_t num_cameras)
-  : images(num_cameras), camera_infos(num_cameras), num_cameras_(num_cameras)
+: images(num_cameras), camera_infos(num_cameras), num_cameras_(num_cameras)
 {
 }
 
 bool VadInputTopicData::is_complete() const
 {
   // Check if vector sizes match expected camera count
-  if (static_cast<int32_t>(images.size()) != num_cameras_ || 
-      static_cast<int32_t>(camera_infos.size()) != num_cameras_) {
+  if (
+    static_cast<int32_t>(images.size()) != num_cameras_ ||
+    static_cast<int32_t>(camera_infos.size()) != num_cameras_) {
     return false;
   }
-  
+
   // Check if all required data is available
   for (int32_t i = 0; i < num_cameras_; ++i) {
     if (!images[i] || !camera_infos[i]) {
       return false;
     }
   }
-  
-  return kinematic_state != nullptr && 
-         acceleration != nullptr;
+
+  return kinematic_state != nullptr && acceleration != nullptr;
 }
 
 void VadInputTopicData::reset()
 {
   frame_started_ = false;
-  
+
   // Reset all images and camera_infos using clear + resize
   images.clear();
   images.resize(num_cameras_);
   camera_infos.clear();
   camera_infos.resize(num_cameras_);
-  
+
   // Reset other data
   kinematic_state = nullptr;
   acceleration = nullptr;
 }
 
-void VadInputTopicData::ensure_frame_started(const rclcpp::Time& msg_stamp)
+void VadInputTopicData::ensure_frame_started(const rclcpp::Time & msg_stamp)
 {
   if (!frame_started_) {
     stamp = msg_stamp;
@@ -64,7 +64,8 @@ void VadInputTopicData::ensure_frame_started(const rclcpp::Time& msg_stamp)
   }
 }
 
-void VadInputTopicData::set_image(const std::size_t camera_id, const sensor_msgs::msg::Image::ConstSharedPtr& msg)
+void VadInputTopicData::set_image(
+  const std::size_t camera_id, const sensor_msgs::msg::Image::ConstSharedPtr & msg)
 {
   if (camera_id >= images.size()) {
     return;  // Invalid camera ID
@@ -73,7 +74,8 @@ void VadInputTopicData::set_image(const std::size_t camera_id, const sensor_msgs
   images[camera_id] = msg;
 }
 
-void VadInputTopicData::set_camera_info(const std::size_t camera_id, const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg)
+void VadInputTopicData::set_camera_info(
+  const std::size_t camera_id, const sensor_msgs::msg::CameraInfo::ConstSharedPtr & msg)
 {
   if (camera_id >= camera_infos.size()) {
     return;  // Invalid camera ID
@@ -82,13 +84,14 @@ void VadInputTopicData::set_camera_info(const std::size_t camera_id, const senso
   camera_infos[camera_id] = msg;
 }
 
-void VadInputTopicData::set_kinematic_state(const nav_msgs::msg::Odometry::ConstSharedPtr& msg)
+void VadInputTopicData::set_kinematic_state(const nav_msgs::msg::Odometry::ConstSharedPtr & msg)
 {
   ensure_frame_started(msg->header.stamp);
   kinematic_state = msg;
 }
 
-void VadInputTopicData::set_acceleration(const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr& msg)
+void VadInputTopicData::set_acceleration(
+  const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr & msg)
 {
   ensure_frame_started(msg->header.stamp);
   acceleration = msg;

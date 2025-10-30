@@ -12,58 +12,63 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_ROS_VAD_LOGGER_HPP_
-#define AUTOWARE_TENSORRT_VAD_ROS_VAD_LOGGER_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_
+#define AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
+
 #include <string>
 
 namespace autoware::tensorrt_vad
 {
 
 // VadLogger interface definition
-class VadLogger {
+class VadLogger
+{
 public:
   virtual ~VadLogger() = default;
-  
+
   // Define each log level method as pure virtual function
-  virtual void debug(const std::string& message) = 0;
-  virtual void info(const std::string& message) = 0;
-  virtual void warn(const std::string& message) = 0;
-  virtual void error(const std::string& message) = 0;
+  virtual void debug(const std::string & message) = 0;
+  virtual void info(const std::string & message) = 0;
+  virtual void warn(const std::string & message) = 0;
+  virtual void error(const std::string & message) = 0;
 };
 
 /**
  * @brief VadLogger implementation for ROS 2
  */
-class RosVadLogger : public VadLogger {
+class RosVadLogger : public VadLogger
+{
 private:
-    rclcpp::Logger logger_;
+  rclcpp::Logger logger_;
 
 public:
-    explicit RosVadLogger(rclcpp::Node::SharedPtr node) 
-        : logger_(node->get_logger()) {}
-    
-    explicit RosVadLogger(const rclcpp::Logger& logger) 
-        : logger_(logger) {}
+  explicit RosVadLogger(rclcpp::Node::SharedPtr node) : logger_(node->get_logger()) {}
 
-    void debug(const std::string& message) override {
-        RCLCPP_DEBUG_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
-    }
+  explicit RosVadLogger(const rclcpp::Logger & logger) : logger_(logger) {}
 
-    void info(const std::string& message) override {
-        RCLCPP_INFO_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
-    }
+  void debug(const std::string & message) override
+  {
+    RCLCPP_DEBUG_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
+  }
 
-    void warn(const std::string& message) override {
-        RCLCPP_WARN_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
-    }
+  void info(const std::string & message) override
+  {
+    RCLCPP_INFO_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
+  }
 
-    void error(const std::string& message) override {
-        RCLCPP_ERROR_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
-    }
+  void warn(const std::string & message) override
+  {
+    RCLCPP_WARN_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
+  }
+
+  void error(const std::string & message) override
+  {
+    RCLCPP_ERROR_THROTTLE(logger_, *rclcpp::Clock::make_shared(), 5000, "%s", message.c_str());
+  }
 };
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE_TENSORRT_VAD_ROS_VAD_LOGGER_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_

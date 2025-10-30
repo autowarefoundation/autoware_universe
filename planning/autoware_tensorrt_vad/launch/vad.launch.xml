@@ -51,7 +51,7 @@
     <remap from="~/input/image3" to="$(var image3)"/>
     <remap from="~/input/image4" to="$(var image4)"/>
     <remap from="~/input/image5" to="$(var image5)"/>
-    
+
     <remap from="~/input/kinematic_state" to="$(var kinematic_state)"/>
     <remap from="~/input/acceleration" to="$(var acceleration)"/>
   </node>

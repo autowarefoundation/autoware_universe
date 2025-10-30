@@ -14,24 +14,25 @@
 
 #include "autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp"
 
-namespace autoware::tensorrt_vad::vad_interface {
+namespace autoware::tensorrt_vad::vad_interface
+{
 
-InputBEVShiftConverter::InputBEVShiftConverter(const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config)
-  : Converter(coordinate_transformer, config),
-    real_w_(config.detection_range[3] - config.detection_range[0]),
-    real_h_(config.detection_range[4] - config.detection_range[1]),
-    default_delta_x_(0.0f),
-    default_delta_y_(0.0f)
+InputBEVShiftConverter::InputBEVShiftConverter(
+  const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config)
+: Converter(coordinate_transformer, config),
+  real_w_(config.detection_range[3] - config.detection_range[0]),
+  real_h_(config.detection_range[4] - config.detection_range[1]),
+  default_delta_x_(0.0f),
+  default_delta_y_(0.0f)
 {
 }
 
 ShiftData InputBEVShiftConverter::process_shift(
-  const CanBusData& can_bus,
-  const CanBusData& prev_can_bus) const
+  const CanBusData & can_bus, const CanBusData & prev_can_bus) const
 {
   float delta_x = default_delta_x_;
   float delta_y = default_delta_y_;
-  
+
   if (!prev_can_bus.empty()) {
     delta_x = can_bus[0] - prev_can_bus[0];  // translation difference
     delta_y = can_bus[1] - prev_can_bus[1];  // translation difference
@@ -51,4 +52,4 @@ ShiftData InputBEVShiftConverter::process_shift(
   return {shift_x, shift_y};
 }
 
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface

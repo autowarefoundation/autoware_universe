@@ -1,15 +1,31 @@
+// Copyright 2024 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <rclcpp/rclcpp.hpp>
+
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+
+#include <tf2_ros/transform_broadcaster.h>
+
+#include <cmath>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
-#include <cmath>
-
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/transform_broadcaster.h>
 
 namespace autoware::tensorrt_vad
 {
@@ -45,13 +61,15 @@ public:
         publish_odometry_if_ready();
       });
 
-    odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("~/output/odometry", rclcpp::QoS(10));
+    odom_pub_ =
+      this->create_publisher<nav_msgs::msg::Odometry>("~/output/odometry", rclcpp::QoS(10));
 
     if (publish_tf_) {
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     }
 
-    RCLCPP_INFO(this->get_logger(), "carla_state_publisher initialized (frame_id=%s, child_frame_id=%s)",
+    RCLCPP_INFO(
+      this->get_logger(), "carla_state_publisher initialized (frame_id=%s, child_frame_id=%s)",
       frame_id_.c_str(), child_frame_id_.c_str());
   }
 
@@ -80,7 +98,8 @@ private:
     if (time_diff > max_time_diff_sec_) {
       RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 5000,
-        "Pose/Twist timestamp difference %.3f sec exceeds threshold %.3f sec - skipping odometry publish",
+        "Pose/Twist timestamp difference %.3f sec exceeds threshold %.3f sec - skipping odometry "
+        "publish",
         time_diff, max_time_diff_sec_);
       return;
     }

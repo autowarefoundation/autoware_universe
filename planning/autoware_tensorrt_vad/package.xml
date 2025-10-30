@@ -10,18 +10,18 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <!-- ROS 2 core dependencies -->
+  <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_internal_planning_msgs</depend>
-  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_tensorrt_plugins</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>cv_bridge</depend>
-  <depend>image_transport</depend>
   <depend>eigen3_cmake_module</depend>
   <depend>geometry_msgs</depend>
+  <depend>image_transport</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
@@ -31,10 +31,12 @@
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
 
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <exec_depend>autoware_launch</exec_depend>
+
   <test_depend>ament_cmake_gmock</test_depend>
   <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

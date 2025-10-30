@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_SYNCHRONIZATION_STRATEGY_HPP_
-#define AUTOWARE_TENSORRT_VAD_SYNCHRONIZATION_STRATEGY_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__SYNCHRONIZATION_STRATEGY_HPP_
+#define AUTOWARE__TENSORRT_VAD__SYNCHRONIZATION_STRATEGY_HPP_
 
 #include "autoware/tensorrt_vad/vad_interface.hpp"
 
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/camera_info.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
+#include <sensor_msgs/msg/image.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -36,7 +36,8 @@ namespace autoware::tensorrt_vad
  * that determine when inference should be triggered and how to handle
  * dropped topic data.
  */
-class SynchronizationStrategy {
+class SynchronizationStrategy
+{
 public:
   virtual ~SynchronizationStrategy() = default;
 
@@ -45,28 +46,29 @@ public:
    * @param data VadInputTopicData in Current frame
    * @return true if ready to trigger inference, false otherwise
    */
-  virtual bool is_ready(const VadInputTopicData& data) const = 0;
+  virtual bool is_ready(const VadInputTopicData & data) const = 0;
 
   /**
    * @brief Check if any image topic data is dropped
    * @param data VadInputTopicData in Current frame
    * @return true if any image topic data is dropped, false otherwise
    */
-  virtual bool is_dropped(const VadInputTopicData& data) const = 0;
+  virtual bool is_dropped(const VadInputTopicData & data) const = 0;
 
   /**
    * @brief Fill dropped data with appropriate default values
    * @param current_data VadInputTopicData in Current frame with potentially dropped topics
    * @return Modified frame data with dropped topics filled
    */
-  virtual std::optional<VadInputTopicData> fill_dropped_data(const VadInputTopicData& current_data) = 0;
+  virtual std::optional<VadInputTopicData> fill_dropped_data(
+    const VadInputTopicData & current_data) = 0;
 
   /**
    * @brief Check if the current frame data is synchronized within tolerance
    * @param data VadInputTopicData in Current frame
    * @return true if data is synchronized, false otherwise
    */
-  virtual bool is_synchronized(const VadInputTopicData& data) const = 0;
+  virtual bool is_synchronized(const VadInputTopicData & data) const = 0;
 };
 
 /**
@@ -76,43 +78,43 @@ public:
  * Inference is triggered when front camera data is available and synchronized
  * with localization data.
  */
-class FrontCriticalSynchronizationStrategy : public SynchronizationStrategy {
+class FrontCriticalSynchronizationStrategy : public SynchronizationStrategy
+{
 public:
   /**
    * @brief Constructor
    * @param front_camera_id Camera ID for the front camera (anchor topic)
    * @param sync_tolerance_ms Synchronization tolerance in milliseconds (e.g. 100ms)
    */
-  explicit FrontCriticalSynchronizationStrategy(
-    int32_t front_camera_id, 
-    double sync_tolerance_ms);
+  explicit FrontCriticalSynchronizationStrategy(int32_t front_camera_id, double sync_tolerance_ms);
 
   // Override virtual functions
-  bool is_ready(const VadInputTopicData& data) const override;
-  bool is_dropped(const VadInputTopicData& data) const override;
-  
+  bool is_ready(const VadInputTopicData & data) const override;
+  bool is_dropped(const VadInputTopicData & data) const override;
+
   /**
    * @brief Fill dropped data with black images using front camera dimensions
    * @param current_data VadInputTopicData in Current frame with potentially dropped topics
    * @return Modified frame data with dropped topics filled
    * @note Uses front camera's width, height, and timestamp for all dropped images
    */
-  std::optional<VadInputTopicData> fill_dropped_data(const VadInputTopicData& current_data) override;
+  std::optional<VadInputTopicData> fill_dropped_data(
+    const VadInputTopicData & current_data) override;
 
   /**
-   * @brief Check if the current frame data is synchronized 
+   * @brief Check if the current frame data is synchronized
    *        when the acceleration and kinematic_state topic timestamps
    *        are within sync_tolerance_ms of the front_camera timestamp for synchronization.
    * @param data VadInputTopicData in Current frame
    * @return true if data is synchronized, false otherwise
    */
-  bool is_synchronized(const VadInputTopicData& data) const override;
+  bool is_synchronized(const VadInputTopicData & data) const override;
 
 private:
-  int32_t front_camera_id_;      ///< Front camera ID (anchor camera)
-  double sync_tolerance_ms_;     ///< Synchronization tolerance in milliseconds
+  int32_t front_camera_id_;   ///< Front camera ID (anchor camera)
+  double sync_tolerance_ms_;  ///< Synchronization tolerance in milliseconds
 };
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE_TENSORRT_VAD_SYNCHRONIZATION_STRATEGY_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__SYNCHRONIZATION_STRATEGY_HPP_

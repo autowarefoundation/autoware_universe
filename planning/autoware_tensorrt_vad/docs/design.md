@@ -40,22 +40,20 @@ In recent years, approaches have been proposed to address these challenges by tr
 `autoware_tensorrt_vad` is clearly separated into two domains: the "ROS/Autoware domain" (`VadNode`) and the "CUDA domain" (`VadModel`).
 
 - **ROS domain responsibilities**:
-
   - ROS topic subscription/publication
     - Topic drop and synchronization verification
   - Integration with Autoware
 
 - **Interface responsibilities**:
-
   - Input processing
     - Coordinate transformation
     - Conversion from ROS Topics (`VadInputTopicData`) to `VadInputData`
-      - CUDA-independent preprocessing 
+      - CUDA-independent preprocessing
     - Camera ID mapping
   - Output processing
     - Coordinate transformation
     - Conversion from `VadOutputData` to ROS Topics (`VadOutputTopicData`)
-      - CUDA-independent postprocessing 
+      - CUDA-independent postprocessing
 
 - **CUDA domain responsibilities**:
   - Camera image preprocessing (CUDA-dependent)
@@ -95,7 +93,7 @@ graph TD
 
     style VadInputData fill:#1A5276,stroke:#154360,stroke-width:2px,color:#FFFFFF;
     style VadOutputData fill:#1A5276,stroke:#154360,stroke-width:2px,color:#FFFFFF;
-    
+
     %% Links to source code files
     click VadNode "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
     click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface header file"
@@ -169,7 +167,7 @@ flowchart TD
     style VadInterface2 fill:#633974,stroke:#512E5F,stroke-width:2px,color:#FFFFFF;
     style VadOutputTopicData fill:#943126,stroke:#78281F,stroke-width:2px,color:#FFFFFF;
     style VadNode_pub fill:#943126,stroke:#78281F,stroke-width:2px,color:#FFFFFF;
-    
+
     %% Links to source code files
     click VadNode_sub "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
     click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface header file"
@@ -207,10 +205,10 @@ flowchart TD
 
 #### Expected Use Cases
 
-| Use Case | vad_tiny.param.yaml | ml_package_vad_tiny.param.yaml | object_class_remapper.param.yaml |
-|----------|---------------------|------------------------------|--------------------------------|
-| ONNX-dependent changes | Modify | Do not modify | Modify only when VAD ONNX output class definitions change |
-| ONNX-independent changes | Do not modify | Modify | Modify only when object class definitions in Autoware change |
+| Use Case                 | vad_tiny.param.yaml | ml_package_vad_tiny.param.yaml | object_class_remapper.param.yaml                             |
+| ------------------------ | ------------------- | ------------------------------ | ------------------------------------------------------------ |
+| ONNX-dependent changes   | Modify              | Do not modify                  | Modify only when VAD ONNX output class definitions change    |
+| ONNX-independent changes | Do not modify       | Modify                         | Modify only when object class definitions in Autoware change |
 
 ### Extensible design for Autoware `camera_id` changes
 

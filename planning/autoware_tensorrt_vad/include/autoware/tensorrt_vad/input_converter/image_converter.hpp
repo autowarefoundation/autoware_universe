@@ -12,36 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_INPUT_CONVERTER_IMAGE_CONVERTER_HPP_
-#define AUTOWARE_TENSORRT_VAD_INPUT_CONVERTER_IMAGE_CONVERTER_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
+#define AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
 
 #include "autoware/tensorrt_vad/converter.hpp"
-#include <sensor_msgs/msg/image.hpp>
-#include <opencv2/core/mat.hpp>
-#include <vector>
-#include <memory>
 
-namespace autoware::tensorrt_vad::vad_interface {
+#include <opencv2/core/mat.hpp>
+
+#include <sensor_msgs/msg/image.hpp>
+
+#include <memory>
+#include <vector>
+
+namespace autoware::tensorrt_vad::vad_interface
+{
 
 using CameraImagesData = std::vector<cv::Mat>;
 
 /**
  * @brief InputImageConverter handles camera image data processing and normalization
- * 
+ *
  * This class converts ROS Image messages to normalized float arrays suitable for VAD model input:
  * - Image format conversion (BGR to RGB)
  * - Image resizing to target dimensions
  * - Pixel value normalization using mean and std parameters
  * - Multiple camera image concatenation in VAD camera order
  */
-class InputImageConverter : public Converter {
+class InputImageConverter : public Converter
+{
 public:
   /**
    * @brief Constructor
    * @param coordinate_transformer Reference to coordinate transformer
    * @param config Reference to configuration containing image parameters
    */
-  InputImageConverter(const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config);
+  InputImageConverter(
+    const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config);
 
   /**
    * @brief Process multiple camera images for VAD model input
@@ -49,10 +55,9 @@ public:
    * @return CameraImagesData Vector of cv::Mat images processed for VAD model
    */
   CameraImagesData process_image(
-    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr>& images) const;
-
+    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & images) const;
 };
 
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface
 
-#endif  // AUTOWARE_TENSORRT_VAD_INPUT_CONVERTER_IMAGE_CONVERTER_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
