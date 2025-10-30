@@ -8,80 +8,104 @@
       "properties": {
         "global_slope_max_angle_deg": {
           "type": "number",
-          "description": "The global angle to classify as the ground or object [deg]. A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.",
+          "description": "Maximum global ground slope angle [deg]. Larger values reduce false negatives on steep roads but can increase false positives (classifying objects as ground).",
           "default": 10.0
         },
         "local_slope_max_angle_deg": {
           "type": "number",
-          "description": "The local angle to classify as the ground or object [deg] when comparing with adjacent point. A small value enhance accuracy classification of object with inclined surface. This should be considered together with split_points_distance_tolerance value.",
+          "description": "Maximum local slope angle [deg] between adjacent points (used for fine discrimination of small objects or ramps).",
           "default": 13.0
         },
         "split_points_distance_tolerance": {
           "type": "number",
-          "description": "The xy-distance threshold to distinguish far and near [m]",
+          "description": "XY distance threshold [m] separating 'near' and 'far' point comparisons in local slope evaluation.",
           "default": 0.2
         },
         "split_height_distance": {
           "type": "number",
-          "description": "The height threshold to distinguish ground and non-ground pointcloud when comparing with adjacent points [m]. A small threshold improves classification of non-ground point, especially for high elevation resolution pointcloud lidar. However, it might cause false positive for small step-like road surface or misaligned multiple lidar configuration.",
+          "description": "Height difference threshold [m] for initial ground vs non-ground split between adjacent points.",
           "default": 0.2
         },
         "non_ground_height_threshold": {
           "type": "number",
-          "description": "Height threshold of non ground objects [m] as split_height_distance",
+          "description": "Absolute vertical distance threshold [m] above estimated ground line to classify a point as non-ground.",
           "default": 0.2
         },
         "grid_size_m": {
           "type": "number",
-          "description": "The first grid size [m]. A large value enhances the prediction stability for ground surface. suitable for rough surface or multiple lidar configuration.",
+          "description": "Radial cell size in polar grid [m]; larger values smooth ground estimation but may miss small objects.",
           "default": 0.1
         },
         "gnd_cell_buffer_size": {
           "type": "integer",
-          "description": "Number of gnd cells using to estimate local ground slope",
+          "description": "Number of previous ground cells used to estimate local ground slope.",
           "default": 4
         },
         "detection_range_z_max": {
           "type": "number",
-          "description": "Maximum height of detection range [m]",
+          "description": "Maximum Z height (above base_link) considered in classification [m].",
           "default": 2.5
         },
         "low_priority_region_x": {
           "type": "number",
-          "description": "The non-zero x threshold in back side from which small objects detection is low priority [m]",
+          "description": "Rearward X threshold [m] (negative, behind base_link) beyond which small object detection is deprioritized.",
           "default": -20.0
         },
         "center_pcl_shift": {
           "type": "number",
-          "description": "The x-axis offset of addition LiDARs from vehicle center of mass [m]",
+          "description": "X-axis offset [m] applied to additional LiDAR point clouds relative to vehicle reference (positive forward).",
           "default": 0.0
         },
         "sector_angle_deg": {
           "type": "number",
-          "description": " The radial angle to divide pointcloud into sectors [deg]",
+          "description": "Angular width of each polar sector [deg].",
           "default": 1.0
         },
         "use_recheck_ground_cluster": {
           "type": "boolean",
-          "description": "Enable recheck ground cluster",
-          "default": "true"
+          "description": "Enable secondary pass to re-evaluate ground clusters (may reduce false ground on elevated points).",
+          "default": true
         },
         "recheck_start_distance": {
           "type": "number",
-          "description": "The distance to start rechecking ground cluster [m]",
+          "description": "Minimum radial distance [m] at which ground cluster recheck logic begins.",
           "default": 20.0,
           "minimum": 0.0
         },
         "use_lowest_point": {
           "type": "boolean",
-          "description": "To select lowest point for reference in recheck ground cluster, otherwise select middle point",
-          "default": "true"
+          "description": "Use lowest point in cell as reference during ground recheck (otherwise median-like selection).",
+          "default": true
         },
-        "max_radius": {
+        "min_x": {
           "type": "number",
-          "description": "The maximum radius to consider for ground segmentation [m]",
-          "default": 240.0,
-          "minimum": 0.0
+          "description": "Minimum X range relative to base_link [m] included in processing.",
+          "default": -100.0
+        },
+        "max_x": {
+          "type": "number",
+          "description": "Maximum X (forward) range relative to base_link [m] included in processing.",
+          "default": 150.0
+        },
+        "min_y": {
+          "type": "number",
+          "description": "Minimum Y range relative to base_link [m] included in processing.",
+          "default": -70.0
+        },
+        "max_y": {
+          "type": "number",
+          "description": "Maximum Y range relative to base_link [m] included in processing.",
+          "default": 70.0
+        },
+        "min_z": {
+          "type": "number",
+          "description": "Minimum Z range relative to base_link [m] included in processing.",
+          "default": -2.5
+        },
+        "max_z": {
+          "type": "number",
+          "description": "Maximum Z range relative to base_link [m] included in processing.",
+          "default": 2.5
         }
       },
       "required": [
@@ -119,3 +143,4 @@
   "required": ["/**"],
   "additionalProperties": false
 }
+
