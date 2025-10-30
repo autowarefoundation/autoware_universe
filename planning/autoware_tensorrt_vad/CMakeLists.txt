@@ -139,38 +139,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
 endif()
 
-ament_auto_add_library(${PROJECT_NAME}_state_component SHARED
-  src/carla_state_publisher.cpp
-)
-
-ament_target_dependencies(${PROJECT_NAME}_state_component
-  geometry_msgs
-  nav_msgs
-  rclcpp
-  rclcpp_components
-  tf2_ros
-)
-
-rclcpp_components_register_node(${PROJECT_NAME}_state_component
-  PLUGIN "autoware::tensorrt_vad::CarlaStatePublisher"
-  EXECUTABLE carla_state_publisher
-)
-
-ament_auto_add_library(${PROJECT_NAME}_operation_mode_component SHARED
-  src/carla_operation_mode_publisher.cpp
-)
-
-ament_target_dependencies(${PROJECT_NAME}_operation_mode_component
-  autoware_adapi_v1_msgs
-  rclcpp
-  rclcpp_components
-)
-
-rclcpp_components_register_node(${PROJECT_NAME}_operation_mode_component
-  PLUGIN "autoware::tensorrt_vad::CarlaOperationModePublisher"
-  EXECUTABLE carla_operation_mode_publisher
-)
-
 ament_auto_package(
   USE_SCOPED_HEADER_INSTALL_DIR
   INSTALL_TO_SHARE

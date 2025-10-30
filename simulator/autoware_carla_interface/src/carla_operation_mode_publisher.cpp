@@ -20,7 +20,7 @@
 #include <chrono>
 #include <string>
 
-namespace autoware::tensorrt_vad
+namespace autoware::carla_interface
 {
 
 class CarlaOperationModePublisher : public rclcpp::Node
@@ -92,7 +92,7 @@ private:
   rclcpp::TimerBase::SharedPtr publish_timer_;
 };
 
-}  // namespace autoware::tensorrt_vad
+}  // namespace autoware::carla_interface
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::tensorrt_vad::CarlaOperationModePublisher)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::carla_interface::CarlaOperationModePublisher)

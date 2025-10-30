@@ -19,12 +19,19 @@
   <depend>tf2_ros</depend>
   <depend>tier4_vehicle_msgs</depend>
 
+  <!-- C++ dependencies for utility nodes -->
+  <depend>autoware_adapi_v1_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

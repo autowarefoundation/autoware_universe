@@ -27,7 +27,7 @@
 #include <string>
 #include <utility>
 
-namespace autoware::tensorrt_vad
+namespace autoware::carla_interface
 {
 
 class CarlaStatePublisher : public rclcpp::Node
@@ -140,7 +140,7 @@ private:
   TwistMsg::ConstSharedPtr latest_twist_{nullptr};
 };
 
-}  // namespace autoware::tensorrt_vad
+}  // namespace autoware::carla_interface
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::tensorrt_vad::CarlaStatePublisher)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::carla_interface::CarlaStatePublisher)
