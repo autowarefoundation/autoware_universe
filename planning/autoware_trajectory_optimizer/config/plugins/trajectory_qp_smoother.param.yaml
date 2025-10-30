@@ -18,9 +18,9 @@
       osqp_max_iter: 100                      # Maximum solver iterations
       osqp_verbose: false                     # Print solver output to console
 
-      # Orientation correction
-      fix_orientation: true                   # Enable orientation correction
-      orientation_correction_threshold_deg: 5.0  # Yaw threshold for correcting QP output orientation [deg]
+      # Orientation preservation
+      preserve_input_trajectory_orientation: true  # Copy orientations from input trajectory to smoothed output
+      max_distance_for_orientation_m: 5.0          # Max distance for nearest neighbor matching when copying orientations [m]
 
       # Velocity-based fidelity weighting
       use_velocity_based_fidelity: true      # Enable velocity-dependent fidelity (low weight at slow speeds)
