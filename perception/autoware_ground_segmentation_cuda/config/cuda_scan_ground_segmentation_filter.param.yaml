@@ -2,7 +2,6 @@
   ros__parameters:
     global_slope_max_angle_deg: 10.0
     local_slope_max_angle_deg: 25.0
-    split_points_distance_tolerance: 0.2
     split_height_distance: 0.2
     non_ground_height_threshold: 0.20
     grid_size_m: 0.5
@@ -10,7 +9,6 @@
     use_recheck_ground_cluster: true
     recheck_start_distance: 20.0
     use_lowest_point: true
-    low_priority_region_x: -20.0
     center_pcl_shift: 0.0
     sector_angle_deg: 1.0
     gnd_cell_buffer_size: 5

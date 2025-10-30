@@ -16,16 +16,6 @@
           "description": "Maximum local slope angle [deg] between adjacent points (used for fine discrimination of small objects or ramps).",
           "default": 13.0
         },
-        "split_points_distance_tolerance": {
-          "type": "number",
-          "description": "XY distance threshold [m] separating 'near' and 'far' point comparisons in local slope evaluation.",
-          "default": 0.2
-        },
-        "split_height_distance": {
-          "type": "number",
-          "description": "Height difference threshold [m] for initial ground vs non-ground split between adjacent points.",
-          "default": 0.2
-        },
         "non_ground_height_threshold": {
           "type": "number",
           "description": "Absolute vertical distance threshold [m] above estimated ground line to classify a point as non-ground.",
@@ -45,11 +35,6 @@
           "type": "number",
           "description": "Maximum Z height (above base_link) considered in classification [m].",
           "default": 2.5
-        },
-        "low_priority_region_x": {
-          "type": "number",
-          "description": "Rearward X threshold [m] (negative, behind base_link) beyond which small object detection is deprioritized.",
-          "default": -20.0
         },
         "center_pcl_shift": {
           "type": "number",
@@ -111,15 +96,12 @@
       "required": [
         "global_slope_max_angle_deg",
         "local_slope_max_angle_deg",
-        "split_points_distance_tolerance",
-        "split_height_distance",
         "non_ground_height_threshold",
         "grid_size_m",
         "detection_range_z_max",
         "use_recheck_ground_cluster",
         "recheck_start_distance",
         "use_lowest_point",
-        "low_priority_region_x",
         "center_pcl_shift",
         "sector_angle_deg",
         "max_radius",

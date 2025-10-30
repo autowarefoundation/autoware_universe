@@ -71,8 +71,6 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
     static_cast<float>(deg2rad(declare_parameter<double>("local_slope_max_angle_deg")));
   filter_parameters.global_slope_max_ratio = std::tan(filter_parameters.global_slope_max_angle_rad);
   filter_parameters.local_slope_max_ratio = std::tan(filter_parameters.local_slope_max_angle_rad);
-  filter_parameters.split_points_distance_tolerance =
-    static_cast<float>(declare_parameter<double>("split_points_distance_tolerance"));
 
   // cell mode parameters
   filter_parameters.use_recheck_ground_cluster =

@@ -96,7 +96,6 @@ struct FilterParameters
   float local_slope_max_angle_rad;   // radians
   float global_slope_max_ratio;
   float local_slope_max_ratio;
-  float split_points_distance_tolerance;  // distance in meters between concentric divisions
   // common parameters
   float sector_angle_rad;  // radial sector angle in radians
   float inv_sector_angle_rad;
