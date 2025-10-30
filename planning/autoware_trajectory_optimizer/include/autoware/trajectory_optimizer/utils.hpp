@@ -65,16 +65,18 @@ void smooth_trajectory_with_elastic_band(
 bool validate_point(const TrajectoryPoint & point);
 
 /**
- * @brief Corrects the orientation of output trajectory points when they deviate significantly from
- * input trajectory.
+ * @brief Copies orientations from input trajectory to output trajectory points.
  * @param input_trajectory The reference input trajectory points.
- * @param output_trajectory The output trajectory points to be corrected.
- * @param yaw_threshold_rad The yaw difference threshold in radians. Orientations are corrected when
- * difference exceeds this value.
+ * @param output_trajectory The output trajectory points to be updated.
+ * @param max_distance_m Maximum position deviation allowed for nearest neighbor matching.
+ * @param max_yaw_rad Maximum yaw deviation allowed for nearest neighbor matching.
+ *
+ * For each output point, finds the nearest input point within the distance and yaw constraints
+ * and copies its orientation. If no match is found, the output orientation is preserved.
  */
-void fix_trajectory_orientation(
+void copy_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const double yaw_threshold_rad);
+  const double max_distance_m, const double max_yaw_rad);
 
 /**
  * @brief Interpolates the given trajectory points based on trajectory length.
@@ -84,12 +86,13 @@ void fix_trajectory_orientation(
  * @param max_yaw_discrepancy_deg Maximum yaw deviation allowed for spline outlier detection.
  * @param max_distance_discrepancy_m Maximum position deviation allowed for spline outlier
  * detection.
- * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
- * be copied.
+ * @param preserve_input_trajectory_orientation Flag to indicate if orientation from original
+ * trajectory should be copied.
  */
 void apply_spline(
-  TrajectoryPoints & traj_points, double interpolation_resolution_m, double max_yaw_discrepancy_deg,
-  double max_distance_discrepancy_m, bool copy_original_orientation);
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
+  const bool preserve_input_trajectory_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.

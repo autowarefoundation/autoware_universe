@@ -26,6 +26,7 @@
   <depend>autoware_velocity_smoother</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
+  <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2</depend>

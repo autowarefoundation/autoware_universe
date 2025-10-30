@@ -39,17 +39,10 @@ struct TrajectoryExtenderParams
   double backward_trajectory_extension_m{5.0};
 };
 
-class TrajectoryExtender : TrajectoryOptimizerPluginBase
+class TrajectoryExtender : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryExtender(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params)
-  : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-  {
-    set_up_params();
-  }
+  TrajectoryExtender() = default;
   ~TrajectoryExtender() = default;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,

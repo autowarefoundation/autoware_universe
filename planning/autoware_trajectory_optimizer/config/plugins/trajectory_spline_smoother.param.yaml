@@ -5,4 +5,4 @@
       interpolation_resolution_m: 0.5  # [m] Interpolation resolution for Akima spline
       max_yaw_discrepancy_deg: 2.5  # [deg] Maximum yaw deviation allowed for spline outlier detection
       max_distance_discrepancy_m: 5.0  # [m] Maximum position deviation allowed for spline outlier detection
-      copy_original_orientation: true  # Flag to indicate if orientation from original trajectory should be copied
+      preserve_input_trajectory_orientation: true  # Copy orientations from input trajectory to spline output

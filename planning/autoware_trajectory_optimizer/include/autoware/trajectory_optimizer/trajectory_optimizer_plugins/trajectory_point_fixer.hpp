@@ -40,17 +40,10 @@ struct TrajectoryPointFixerParams
     5.0};  // Yaw threshold for removing wrongly oriented points [deg]
 };
 
-class TrajectoryPointFixer : TrajectoryOptimizerPluginBase
+class TrajectoryPointFixer : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryPointFixer(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params)
-  : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-  {
-    set_up_params();
-  }
+  TrajectoryPointFixer() = default;
   ~TrajectoryPointFixer() = default;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
