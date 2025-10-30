@@ -67,12 +67,20 @@ CanBusData InputCanBusConverter::process_can_bus(
 
   // Calculate patch_angle[deg] (17)
   float delta_yaw = default_delta_yaw_;
-  
+
   if (!prev_can_bus.empty()) {
     float prev_angle = prev_can_bus[16];
     delta_yaw = yaw - prev_angle;
+
+    // Normalize to [-π, π] to handle wrap-around correctly
+    while (delta_yaw > M_PI) {
+      delta_yaw -= 2.0f * M_PI;
+    }
+    while (delta_yaw < -M_PI) {
+      delta_yaw += 2.0f * M_PI;
+    }
   }
-  
+
   can_bus[17] = delta_yaw * 180.0f / M_PI;
 
   return can_bus;
