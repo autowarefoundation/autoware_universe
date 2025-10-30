@@ -6,7 +6,7 @@
     class_mapping: ["CAR", "CAR", "TRUCK", "BICYCLE", "UNKNOWN", "UNKNOWN", "UNKNOWN", "PEDESTRIAN", "UNKNOWN"]
     # 0: car -> CAR
     # 1: van -> CAR (vans are classified as cars in Autoware)
-    # 2: truck -> TRUCK  
+    # 2: truck -> TRUCK
     # 3: bicycle -> BICYCLE
     # 4: traffic_sign -> UNKNOWN (static object, not tracked)
     # 5: traffic_cone -> UNKNOWN (could be mapped to UNKNOWN or a specific class if needed)

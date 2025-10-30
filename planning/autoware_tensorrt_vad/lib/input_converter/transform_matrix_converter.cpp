@@ -13,32 +13,32 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
-namespace autoware::tensorrt_vad::vad_interface {
+namespace autoware::tensorrt_vad::vad_interface
+{
 
 InputTransformMatrixConverter::InputTransformMatrixConverter(
-  const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config)
-  : Converter(coordinate_transformer, config)
+  const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config)
+: Converter(coordinate_transformer, config)
 {
 }
 
 Eigen::Matrix4f InputTransformMatrixConverter::create_cam2img(
-  const sensor_msgs::msg::CameraInfo::ConstSharedPtr& camera_info) const
+  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info) const
 {
   // Create cam2img matrix directly from camera_info->k
   Eigen::Matrix4f cam2img;
-  cam2img << camera_info->k[0], camera_info->k[1], camera_info->k[2], 0.0f,
-             camera_info->k[3], camera_info->k[4], camera_info->k[5], 0.0f,
-             camera_info->k[6], camera_info->k[7], camera_info->k[8], 0.0f,
-             0.0f,              0.0f,              0.0f,              1.0f;
+  cam2img << camera_info->k[0], camera_info->k[1], camera_info->k[2], 0.0f, camera_info->k[3],
+    camera_info->k[4], camera_info->k[5], 0.0f, camera_info->k[6], camera_info->k[7],
+    camera_info->k[8], 0.0f, 0.0f, 0.0f, 0.0f, 1.0f;
 
   return cam2img;
 }
 
-
 std::pair<float, float> InputTransformMatrixConverter::calculate_scale(
-  const sensor_msgs::msg::CameraInfo::ConstSharedPtr& camera_info) const
+  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info) const
 {
   const float scale_width = config_.target_image_width / static_cast<float>(camera_info->width);
   const float scale_height = config_.target_image_height / static_cast<float>(camera_info->height);
@@ -46,7 +46,7 @@ std::pair<float, float> InputTransformMatrixConverter::calculate_scale(
 }
 
 Eigen::Matrix4f InputTransformMatrixConverter::apply_scaling(
-  const Eigen::Matrix4f& vad_base2img, const float scale_width, const float scale_height) const
+  const Eigen::Matrix4f & vad_base2img, const float scale_width, const float scale_height) const
 {
   Eigen::Matrix4f scale_matrix = Eigen::Matrix4f::Identity();
   scale_matrix(0, 0) = scale_width;
@@ -54,7 +54,8 @@ Eigen::Matrix4f InputTransformMatrixConverter::apply_scaling(
   return scale_matrix * vad_base2img;
 }
 
-std::vector<float> InputTransformMatrixConverter::matrix_to_flat(const Eigen::Matrix4f& matrix) const
+std::vector<float> InputTransformMatrixConverter::matrix_to_flat(
+  const Eigen::Matrix4f & matrix) const
 {
   std::vector<float> flat(16);
   int32_t k = 0;
@@ -67,7 +68,7 @@ std::vector<float> InputTransformMatrixConverter::matrix_to_flat(const Eigen::Ma
 }
 
 VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
-  const std::vector<sensor_msgs::msg::CameraInfo::ConstSharedPtr>& camera_infos) const
+  const std::vector<sensor_msgs::msg::CameraInfo::ConstSharedPtr> & camera_infos) const
 {
   const int32_t num_cameras = static_cast<int32_t>(camera_infos.size());
   std::vector<float> frame_vad_base2img(16 * num_cameras, 0.0f);
@@ -79,10 +80,12 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
     }
 
     // Use transformer to lookup base2cam transformation
-    auto base2cam_opt = coordinate_transformer_.lookup_base2cam(camera_infos[camera_id]->header.frame_id);
+    auto base2cam_opt =
+      coordinate_transformer_.lookup_base2cam(camera_infos[camera_id]->header.frame_id);
     if (!base2cam_opt) {
-      RCLCPP_WARN_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
-                  "Failed to lookup transformation for camera %d", camera_id);
+      RCLCPP_WARN_THROTTLE(
+        rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
+        "Failed to lookup transformation for camera %d", camera_id);
       continue;
     }
     Eigen::Matrix4f base2cam = *base2cam_opt;
@@ -90,7 +93,8 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
     Eigen::Matrix4f cam2img = create_cam2img(camera_infos[camera_id]);
 
     // Calculate base2img transformation
-    // Note: VAD coordinates are the same as Autoware Tier4 base_link coordinates (no transformation needed)
+    // Note: VAD coordinates are the same as Autoware Tier4 base_link coordinates (no transformation
+    // needed)
     Eigen::Matrix4f vad_base2img = cam2img * base2cam;
 
     // Calculate scaling factors from camera_info
@@ -102,11 +106,12 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
     std::vector<float> vad_base2img_flat = matrix_to_flat(vad_base2img_scaled);
 
     // Store directly (identity mapping for CARLA Tier4)
-    std::copy(vad_base2img_flat.begin(), vad_base2img_flat.end(),
-              frame_vad_base2img.begin() + camera_id * 16);
+    std::copy(
+      vad_base2img_flat.begin(), vad_base2img_flat.end(),
+      frame_vad_base2img.begin() + camera_id * 16);
   }
 
   return frame_vad_base2img;
 }
 
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface

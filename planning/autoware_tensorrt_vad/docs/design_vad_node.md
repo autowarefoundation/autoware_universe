@@ -13,24 +13,24 @@
 ```mermaid
 flowchart TD
     Start([Anchor Topic Subscribed]) --> CheckReady
-    
+
     subgraph AnchorCallbackScope["anchor_callback()"]
         CheckReady{Is VadInputTopicData synchronization ready?}
-        
+
         CheckReady -->|Yes| CheckDropped
         CheckReady -->|No| ErrorLog[Log error]
-        
+
         subgraph TriggerInferenceScope["trigger_inference()"]
             CheckDropped{Are any topics<br/>dropped?}
-            
+
             CheckDropped -->|Yes| FillDropped[fill_dropped_data]
             CheckDropped -->|No| CheckComplete{Are all required topics<br/>completed?}
-            
+
             FillDropped --> CheckComplete
-            
+
             CheckComplete -->|Yes| ConvertInput
             CheckComplete -->|No| ReturnNull[return nullopt]
-            
+
             subgraph ExecuteInferenceScope["execute_inference()"]
                 ConvertInput[Convert from VadInputTopicData to VadInputData]
                 ConvertInput --> VadModelInfer[VadModel::infer]
@@ -38,15 +38,15 @@ flowchart TD
                 ConvertOutput --> GetOutput[return VadOutputTopicData]
             end
         end
-        
+
         GetOutput --> Publish[Publish result topics]
         Publish --> Reset[Reset current frame data]
         ErrorLog --> Reset
         ReturnNull --> Reset
     end
-    
+
     Reset --> End([End])
-    
+
     style AnchorCallbackScope fill:#f0f8ff,stroke:#4682b4,stroke-width:2px,color:#000000
     style TriggerInferenceScope fill:#fff8dc,stroke:#daa520,stroke-width:2px,color:#000000
     style ExecuteInferenceScope fill:#f5f5dc,stroke:#8b4513,stroke-width:2px,color:#000000
@@ -67,4 +67,4 @@ flowchart TD
 - Excessive use of callbacks when subscribing can increase CPU usage. Use callbacks only when it's necessary to react to topic reception, otherwise use `Subscription->take()`.
 - This class has many responsibilities: creating config from ROS parameters, creating publishers and subscribers, callback functions, triggering and executing inference, and publishing. If readability becomes poor, it should be split into separate classes by responsibility.
 - Add [`SynchronizationStrategy`](../include/autoware/tensorrt_vad/synchronization_strategy.hpp) other than FrontCritical
-    - e.g. Consider synchronized when the front 3 images are available
+  - e.g. Consider synchronized when the front 3 images are available

@@ -13,20 +13,22 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_vad/input_converter/can_bus_converter.hpp"
+
 #include <Eigen/Dense>
 
-namespace autoware::tensorrt_vad::vad_interface {
+namespace autoware::tensorrt_vad::vad_interface
+{
 
-InputCanBusConverter::InputCanBusConverter(const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config)
-  : Converter(coordinate_transformer, config),
-    default_delta_yaw_(0.0f)
+InputCanBusConverter::InputCanBusConverter(
+  const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config)
+: Converter(coordinate_transformer, config), default_delta_yaw_(0.0f)
 {
 }
 
 CanBusData InputCanBusConverter::process_can_bus(
-  const nav_msgs::msg::Odometry::ConstSharedPtr& kinematic_state,
-  const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr& acceleration,
-  const std::vector<float>& prev_can_bus) const
+  const nav_msgs::msg::Odometry::ConstSharedPtr & kinematic_state,
+  const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr & acceleration,
+  const std::vector<float> & prev_can_bus) const
 {
   CanBusData can_bus(18, 0.0f);
 
@@ -54,15 +56,14 @@ CanBusData InputCanBusConverter::process_can_bus(
   // velocity (13:16)
   can_bus[13] = kinematic_state->twist.twist.linear.x;
   can_bus[14] = kinematic_state->twist.twist.linear.y;
-  can_bus[15] = 0.0f; // Set z-direction velocity to 0
+  can_bus[15] = 0.0f;  // Set z-direction velocity to 0
 
   // Calculate patch_angle[rad] (16)
   // yaw = ArcTan(2 * (w * z + x * y) / (1 - 2 * (y ** 2 + z ** 2)))
   double yaw = std::atan2(
-      2.0 * (can_bus[6] * can_bus[5] + can_bus[3] * can_bus[4]),
-      1.0 - 2.0 * (can_bus[4] * can_bus[4] + can_bus[5] * can_bus[5]));
-  if (yaw < 0)
-    yaw += 2 * M_PI;
+    2.0 * (can_bus[6] * can_bus[5] + can_bus[3] * can_bus[4]),
+    1.0 - 2.0 * (can_bus[4] * can_bus[4] + can_bus[5] * can_bus[5]));
+  if (yaw < 0) yaw += 2 * M_PI;
   can_bus[16] = static_cast<float>(yaw);
 
   // Calculate patch_angle[deg] (17)
@@ -85,4 +86,4 @@ CanBusData InputCanBusConverter::process_can_bus(
 
   return can_bus;
 }
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface

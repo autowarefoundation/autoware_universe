@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,51 +15,56 @@
  * limitations under the License.
  */
 
-#ifndef _TENSOR_HPP_
-#define _TENSOR_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
+#define AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
 
-#include <string>
-#include <memory>
-#include <vector>
-#include <unordered_map>
-
-#include <cuda_fp16.h>
-#include <cuda_runtime_api.h>
-#include <NvInfer.h>
-#include <NvInferRuntime.h>
 #include "autoware/tensorrt_vad/ros_vad_logger.hpp"
 
-namespace autoware::tensorrt_vad {
+#include <NvInfer.h>
+#include <NvInferRuntime.h>
+#include <cuda_fp16.h>
+#include <cuda_runtime_api.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace autoware::tensorrt_vad
+{
 
 // Function to get element size for different data types
 unsigned int getElementSize(nvinfer1::DataType t);
 
-struct Tensor {
+struct Tensor
+{
   std::string name;
-  void* ptr;
+  void * ptr;
   nvinfer1::Dims dim;
   int32_t volume = 1;
   nvinfer1::DataType dtype;
   std::shared_ptr<VadLogger> logger_;
 
   // Constructor
-  Tensor(std::string name, nvinfer1::Dims dim, nvinfer1::DataType dtype, std::shared_ptr<VadLogger> logger = nullptr);
+  Tensor(
+    std::string name, nvinfer1::Dims dim, nvinfer1::DataType dtype,
+    std::shared_ptr<VadLogger> logger = nullptr);
 
   // Get number of bytes
   int32_t nbytes();
 
   // Load data from host to device
-  template<class Dtype=float>
-  void load(const std::vector<float>& data, cudaStream_t stream = 0);
+  template <class Dtype = float>
+  void load(const std::vector<float> & data, cudaStream_t stream = 0);
 
   // Copy data from device to host
-  template<class T>
+  template <class T>
   std::vector<T> cpu();
 
-}; // struct Tensor
+};  // struct Tensor
 
 using TensorMap = std::unordered_map<std::string, std::shared_ptr<Tensor>>;
 
-} // namespace autoware::tensorrt_vad
+}  // namespace autoware::tensorrt_vad
 
-#endif // _TENSOR_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_

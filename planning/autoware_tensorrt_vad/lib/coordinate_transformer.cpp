@@ -13,37 +13,37 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_vad/coordinate_transformer.hpp"
+
 #include <tf2/exceptions.h>
 
-namespace autoware::tensorrt_vad::vad_interface {
+namespace autoware::tensorrt_vad::vad_interface
+{
 
-CoordinateTransformer::CoordinateTransformer(
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer)
-  : tf_buffer_(tf_buffer)
+CoordinateTransformer::CoordinateTransformer(std::shared_ptr<tf2_ros::Buffer> tf_buffer)
+: tf_buffer_(tf_buffer)
 {
 }
 
-std::optional<Eigen::Matrix4f> CoordinateTransformer::lookup_base2cam(const std::string& source_frame) const
+std::optional<Eigen::Matrix4f> CoordinateTransformer::lookup_base2cam(
+  const std::string & source_frame) const
 {
   std::string target_frame = "base_link";
 
   try {
     geometry_msgs::msg::TransformStamped lookup_result =
-        tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
-    
+      tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
+
     Eigen::Matrix4f transform_matrix = Eigen::Matrix4f::Identity();
-    
+
     // Translation
     transform_matrix(0, 3) = lookup_result.transform.translation.x;
     transform_matrix(1, 3) = lookup_result.transform.translation.y;
     transform_matrix(2, 3) = lookup_result.transform.translation.z;
-    
+
     // Rotation (quaternion to rotation matrix conversion)
     Eigen::Quaternionf q(
-        lookup_result.transform.rotation.w,
-        lookup_result.transform.rotation.x,
-        lookup_result.transform.rotation.y,
-        lookup_result.transform.rotation.z);
+      lookup_result.transform.rotation.w, lookup_result.transform.rotation.x,
+      lookup_result.transform.rotation.y, lookup_result.transform.rotation.z);
     transform_matrix.block<3, 3>(0, 0) = q.toRotationMatrix();
 
     // calculate the inverse transformation
@@ -51,12 +51,13 @@ std::optional<Eigen::Matrix4f> CoordinateTransformer::lookup_base2cam(const std:
 
     return transform_matrix_inverse;
 
-  } catch (const tf2::TransformException &ex) {
-    RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000, 
-                 "Failed to get TF transformation: %s -> %s. Reason: %s",
-                 source_frame.c_str(), target_frame.c_str(), ex.what());
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_ERROR_THROTTLE(
+      rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
+      "Failed to get TF transformation: %s -> %s. Reason: %s", source_frame.c_str(),
+      target_frame.c_str(), ex.what());
     return std::nullopt;
   }
 }
 
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface

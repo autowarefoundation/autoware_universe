@@ -12,29 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_HEAD_HPP_
-#define AUTOWARE_TENSORRT_VAD_HEAD_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__HEAD_HPP_
+#define AUTOWARE__TENSORRT_VAD__NETWORKS__HEAD_HPP_
 
 #include "autoware/tensorrt_vad/networks/net.hpp"
 
-namespace autoware::tensorrt_vad {
+namespace autoware::tensorrt_vad
+{
 
-class Head : public Net {
+class Head : public Net
+{
 private:
   NetworkType network_type_;
 
 public:
   Head(
-    const VadConfig& vad_config,
-    const autoware::tensorrt_common::TrtCommonConfig& trt_common_config,
-    NetworkType network_type,
-    const std::string& plugins_path,
-    std::shared_ptr<VadLogger> logger
-  );
+    const VadConfig & vad_config,
+    const autoware::tensorrt_common::TrtCommonConfig & trt_common_config, NetworkType network_type,
+    const std::string & plugins_path, std::shared_ptr<VadLogger> logger);
 
-  std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(const VadConfig& vad_config) override;
+  std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(
+    const VadConfig & vad_config) override;
 };
 
-} // namespace autoware::tensorrt_vad
+}  // namespace autoware::tensorrt_vad
 
-#endif // AUTOWARE_TENSORRT_VAD_HEAD_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__HEAD_HPP_

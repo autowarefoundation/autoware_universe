@@ -5,7 +5,7 @@
     # object_class: ["car", "truck", "construction_vehicle", "bus", "trailer", "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone"]
     class_mapping: ["CAR", "TRUCK", "TRUCK", "BUS", "TRUCK", "UNKNOWN", "MOTORCYCLE", "BICYCLE", "PEDESTRIAN", "UNKNOWN"]
     # 0: car -> CAR
-    # 1: truck -> TRUCK  
+    # 1: truck -> TRUCK
     # 2: construction_vehicle -> TRUCK
     # 3: bus -> BUS
     # 4: trailer -> TRUCK

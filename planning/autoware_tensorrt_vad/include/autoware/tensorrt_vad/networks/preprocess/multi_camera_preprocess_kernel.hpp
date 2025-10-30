@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
-#define AUTOWARE_TENSORRT_VAD_MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#define AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
 
 #include <cuda_runtime.h>
+
 #include <cstdint>
 
-namespace autoware::tensorrt_vad {
+namespace autoware::tensorrt_vad
+{
 
 /**
  * @struct MultiCameraPreprocessConfig
  * @brief Configuration parameters required for CUDA preprocessing
  */
-struct MultiCameraPreprocessConfig {
-    int32_t input_width;
-    int32_t input_height;
-    int32_t output_width;
-    int32_t output_height;
-    int32_t num_cameras;
-    float scale_x;             // Scaling factor for x-axis (input_width / output_width)
-    float scale_y;             // Scaling factor for y-axis (input_height / output_height)
-    float mean[3];             // Mean values for normalization [R, G, B]
-    float inverse_std[3];      // Inverse standard deviation values [R, G, B]
+struct MultiCameraPreprocessConfig
+{
+  int32_t input_width;
+  int32_t input_height;
+  int32_t output_width;
+  int32_t output_height;
+  int32_t num_cameras;
+  float scale_x;         // Scaling factor for x-axis (input_width / output_width)
+  float scale_y;         // Scaling factor for y-axis (input_height / output_height)
+  float mean[3];         // Mean values for normalization [R, G, B]
+  float inverse_std[3];  // Inverse standard deviation values [R, G, B]
 };
 
 /**
@@ -45,10 +48,8 @@ struct MultiCameraPreprocessConfig {
  * @return cudaError_t CUDA error code
  */
 cudaError_t launch_multi_camera_resize_kernel(
-    uint8_t** d_input_images,
-    uint8_t** d_resized_images,
-    const MultiCameraPreprocessConfig& config,
-    cudaStream_t stream);
+  uint8_t ** d_input_images, uint8_t ** d_resized_images,
+  const MultiCameraPreprocessConfig & config, cudaStream_t stream);
 
 /**
  * @brief Launch normalization kernel to convert BGR->RGB, normalize, and format as CHW
@@ -59,11 +60,9 @@ cudaError_t launch_multi_camera_resize_kernel(
  * @return cudaError_t CUDA error code
  */
 cudaError_t launch_multi_camera_normalize_kernel(
-    uint8_t** d_resized_images,
-    float* d_output,
-    const MultiCameraPreprocessConfig& config,
-    cudaStream_t stream);
+  uint8_t ** d_resized_images, float * d_output, const MultiCameraPreprocessConfig & config,
+  cudaStream_t stream);
 
 }  // namespace autoware::tensorrt_vad
 
-#endif // AUTOWARE_TENSORRT_VAD_MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_

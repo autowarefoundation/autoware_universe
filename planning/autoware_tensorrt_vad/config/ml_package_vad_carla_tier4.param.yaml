@@ -69,17 +69,17 @@
             "name": "out.0"
       network_io_params:
         num_cameras: 6                    # Number of cameras
-        
+
         # BEV (Bird's Eye View) related parameters for CARLA Tier4
         bev_h: 106                        # BEV grid height (Tier4 specific)
         bev_w: 200                        # BEV grid width (Tier4 specific)
         bev_feature_dim: 256              # Feature dimension
-        
+
         # Image processing related parameters
-        target_image_width: 640           # Target image width  
+        target_image_width: 640           # Target image width
         target_image_height: 384          # Target image height (model expects 384)
         downsample_factor: 32             # Downsampling factor for image features
-        
+
         num_decoder_layers: 3             # Number of Transformer decoder layers
 
         # Trajectory prediction related parameters
@@ -92,11 +92,11 @@
         # planning
         planning_ego_commands: 6          # Number of trajectory prediction modes (model outputs 6 modes)
         planning_timesteps: 6
-        
+
         # Map element detection
         map_num_queries: 100              # Number of map element detection queries
         map_num_class: 6                  # Number of map element classes (CARLA Tier4)
         map_points_per_polylines: 20      # Number of points per polyline
-              
+
         # can_bus
         can_bus_dim: 18                   # CAN bus data dimension

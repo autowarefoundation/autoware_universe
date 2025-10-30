@@ -12,35 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_TENSORRT_VAD_OUTPUT_CONVERTER_MAP_CONVERTER_HPP
-#define AUTOWARE_TENSORRT_VAD_OUTPUT_CONVERTER_MAP_CONVERTER_HPP
+#ifndef AUTOWARE__TENSORRT_VAD__OUTPUT_CONVERTER__MAP_CONVERTER_HPP_
+#define AUTOWARE__TENSORRT_VAD__OUTPUT_CONVERTER__MAP_CONVERTER_HPP_
 
 #include "autoware/tensorrt_vad/converter.hpp"
 #include "autoware/tensorrt_vad/vad_model.hpp"
 
-#include <visualization_msgs/msg/marker_array.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <rclcpp/time.hpp>
 #include <Eigen/Dense>
+#include <rclcpp/time.hpp>
 
-#include <vector>
-#include <string>
-#include <map>
+#include <geometry_msgs/msg/point.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+
 #include <array>
+#include <map>
+#include <string>
+#include <vector>
 
-namespace autoware::tensorrt_vad::vad_interface {
+namespace autoware::tensorrt_vad::vad_interface
+{
 
 /**
  * @brief Converter for processing VAD map polylines into ROS visualization markers
  */
-class OutputMapConverter : public Converter {
+class OutputMapConverter : public Converter
+{
 public:
   /**
    * @brief Constructor
    * @param coordinate_transformer Reference to coordinate transformer
    * @param config Reference to VAD interface configuration
    */
-  OutputMapConverter(const CoordinateTransformer& coordinate_transformer, const VadInterfaceConfig& config);
+  OutputMapConverter(
+    const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config);
 
   /**
    * @brief Process map polylines from VAD to visualization markers
@@ -50,9 +54,8 @@ public:
    * @return visualization_msgs::msg::MarkerArray Visualization markers for RViz
    */
   visualization_msgs::msg::MarkerArray process_map_points(
-    const std::vector<MapPolyline>& vad_map_polylines,
-    const rclcpp::Time& stamp,
-    const Eigen::Matrix4d& base2map_transform) const;
+    const std::vector<MapPolyline> & vad_map_polylines, const rclcpp::Time & stamp,
+    const Eigen::Matrix4d & base2map_transform) const;
 
 private:
   /**
@@ -64,19 +67,17 @@ private:
    * @return visualization_msgs::msg::Marker Single marker for the polyline
    */
   visualization_msgs::msg::Marker create_polyline_marker(
-    const MapPolyline& map_polyline,
-    const int32_t marker_id,
-    const rclcpp::Time& stamp,
-    const Eigen::Matrix4d& base2map_transform) const;
+    const MapPolyline & map_polyline, const int32_t marker_id, const rclcpp::Time & stamp,
+    const Eigen::Matrix4d & base2map_transform) const;
 
   /**
    * @brief Get color for a specific map type
    * @param type Map polyline type (e.g., "divider", "boundary", etc.)
    * @return std::array<float, 3> RGB color values [0-1]
    */
-  std::array<float, 3> get_color_for_type(const std::string& type) const;
+  std::array<float, 3> get_color_for_type(const std::string & type) const;
 };
 
-} // namespace autoware::tensorrt_vad::vad_interface
+}  // namespace autoware::tensorrt_vad::vad_interface
 
-#endif // AUTOWARE_TENSORRT_VAD_OUTPUT_CONVERTER_MAP_CONVERTER_HPP
+#endif  // AUTOWARE__TENSORRT_VAD__OUTPUT_CONVERTER__MAP_CONVERTER_HPP_
