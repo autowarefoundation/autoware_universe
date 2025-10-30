@@ -71,10 +71,12 @@ private:
   /**
    * @brief Convert VAD bounding box to ROS Twist message
    * @param bbox Bounding box data
-   * @return geometry_msgs::msg::Twist ROS Twist message
+   * @param base2map_transform Transformation matrix from base_link to map frame
+   * @return geometry_msgs::msg::Twist ROS Twist message in map frame
    */
   geometry_msgs::msg::Twist convert_velocity(
-    const BBox& bbox) const;
+    const BBox& bbox,
+    const Eigen::Matrix4d& base2map_transform) const;
 
   /**
    * @brief Convert VAD bounding box to ROS Shape message

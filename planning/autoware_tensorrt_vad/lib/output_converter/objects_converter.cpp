@@ -93,12 +93,30 @@ float OutputObjectsConverter::calculate_object_orientation(
 }
 
 geometry_msgs::msg::Twist OutputObjectsConverter::convert_velocity(
-  const BBox& bbox) const
+  const BBox& bbox,
+  const Eigen::Matrix4d& base2map_transform) const
 {
     geometry_msgs::msg::Twist twist;
-    twist.linear.x = bbox.bbox[8];
-    twist.linear.y = bbox.bbox[9];
-    twist.linear.z = 0.0f;
+    // Velocities are already in base_link frame after VAD coordinate removal
+    float v_x = bbox.bbox[8];
+    float v_y = bbox.bbox[9];
+    float v_z = 0.0f;
+
+    // Apply rotation from base_link to map frame
+    // Extract rotation matrix (3x3) from the transformation
+    Eigen::Matrix3d rotation_matrix = base2map_transform.block<3, 3>(0, 0);
+
+    // Create velocity vector in base_link frame
+    Eigen::Vector3d velocity_base(static_cast<double>(v_x),
+                                   static_cast<double>(v_y),
+                                   static_cast<double>(v_z));
+
+    // Rotate velocity to map frame
+    Eigen::Vector3d velocity_map = rotation_matrix * velocity_base;
+
+    twist.linear.x = velocity_map.x();
+    twist.linear.y = velocity_map.y();
+    twist.linear.z = velocity_map.z();
     return twist;
 }
 
@@ -214,7 +232,7 @@ autoware_perception_msgs::msg::PredictedObjects OutputObjectsConverter::process_
     predicted_object.shape = convert_shape(bbox);
 
     // Set velocity
-    predicted_object.kinematics.initial_twist_with_covariance.twist = convert_velocity(bbox);
+    predicted_object.kinematics.initial_twist_with_covariance.twist = convert_velocity(bbox, base2map_transform);
 
     // Process predicted trajectories
     predicted_object.kinematics.predicted_paths = convert_predicted_paths(bbox, base2map_transform, yaw);
