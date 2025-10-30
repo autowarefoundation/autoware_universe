@@ -31,6 +31,7 @@
 #include <cmath>
 #include <limits>
 #include <utility>
+#include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
@@ -152,6 +153,16 @@ double applyDiffLimitFilter(
 geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   const size_t src_idx, const double distance,
   const autoware_planning_msgs::msg::Trajectory & trajectory);
+
+/**
+ * @brief calculate max_acc from current speed
+ * @param [in] current_velocity current velocity
+ * @param [in] vel_th_vec velocity_threshold vector
+ * @param [in] max_acc_vec max_acc vector
+ */
+double getCurrentMaxAcc(
+  double current_velocity, const std::vector<double> & vel_th_vec,
+  const std::vector<double> & max_acc_vec);
 
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
