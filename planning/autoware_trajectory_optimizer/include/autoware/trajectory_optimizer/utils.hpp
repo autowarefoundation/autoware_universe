@@ -76,7 +76,7 @@ bool validate_point(const TrajectoryPoint & point);
  */
 void copy_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  double max_distance_m, double max_yaw_rad);
+  const double max_distance_m, const double max_yaw_rad);
 
 /**
  * @brief Interpolates the given trajectory points based on trajectory length.
@@ -90,8 +90,9 @@ void copy_trajectory_orientation(
  * trajectory should be copied.
  */
 void apply_spline(
-  TrajectoryPoints & traj_points, double interpolation_resolution_m, double max_yaw_discrepancy_deg,
-  double max_distance_discrepancy_m, bool preserve_input_trajectory_orientation);
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
+  const bool preserve_input_trajectory_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
