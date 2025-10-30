@@ -40,12 +40,15 @@ geometry_msgs::msg::Point interpolated_point_at_time(
     [&](const autoware_planning_msgs::msg::TrajectoryPoint & t) {
       return rclcpp::Duration(t.time_from_start).seconds() >= time;
     });
+  if (prev_it == trajectory.end()) {
+    return trajectory.back().pose.position;
+  }
   const auto prev_time = rclcpp::Duration(prev_it->time_from_start).seconds();
-  if (prev_time == time) {
+  if (std::next(prev_it) == trajectory.end() || std::abs(prev_time - time) < 1e-3) {
     return prev_it->pose.position;
   }
   const auto next_time = rclcpp::Duration(std::next(prev_it)->time_from_start).seconds();
-  if (next_time == prev_time) {
+  if (std::abs(next_time - prev_time) < 1e-3) {
     return std::next(prev_it)->pose.position;
   }
   const auto t_delta = next_time - prev_time;
