@@ -432,6 +432,10 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
 
   // for each ring
   for (const auto & one_ring : ring_points) {
+    if (one_ring.empty()) {
+      continue;
+    }
+
     std::vector<double> intensity_sum(bin_num, 0.0);
     std::vector<int> intensity_num(bin_num, 0);
     std::vector<double> average_intensity(bin_num, 0.0);
