@@ -15,12 +15,12 @@
       plugins_path: "$(var plugins_path)/plugins/libautoware_tensorrt_plugins.so"
       # CARLA navigation commands (for 6-mode model):
       # Mode 0: LEFT (turn left at intersection)
-      # Mode 1: RIGHT (turn right at intersection)  
+      # Mode 1: RIGHT (turn right at intersection)
       # Mode 2: STRAIGHT (go straight at intersection)
       # Mode 3: LANEFOLLOW (follow current lane)
       # Mode 4: CHANGELANELEFT (change to left lane)
       # Mode 5: CHANGELANERIGHT (change to right lane)
-      default_command: 3  # Default to LANEFOLLOW mode for normal driving
+      default_command: 3  # Default to LANEFOLLOW mode (follow current lane)
       # Map confidence thresholds for 6 CARLA Tier4 classes
       map_confidence_thresholds: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
       # Object confidence thresholds for 9 CARLA Tier4 classes

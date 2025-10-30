@@ -143,47 +143,86 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 
 void VadNode::image_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
+  if (!msg) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received null image message for camera %zu", camera_id);
+    return;
+  }
+
   // Validate camera_id
   if (static_cast<int32_t>(camera_id) >= num_cameras_) {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Invalid camera_id: %zu. Expected 0-%d", camera_id, num_cameras_ - 1);
     return;
   }
 
-  vad_input_topic_data_current_frame_.set_image(camera_id, msg);
-    
-  // Check if this is the front camera (anchor camera)
-  if (static_cast<int32_t>(camera_id) == front_camera_id_) {
-    anchor_callback();
-  }
+  try {
+    {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+      vad_input_topic_data_current_frame_.set_image(camera_id, msg);
+    }
 
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received image from camera %zu", camera_id);
+    // Check if this is the front camera (anchor camera)
+    if (static_cast<int32_t>(camera_id) == front_camera_id_) {
+      anchor_callback();
+    }
+
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received image from camera %zu", camera_id);
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception in image_callback: %s", e.what());
+  }
 }
 
 void VadNode::camera_info_callback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id)
 {
+  if (!msg) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received null camera_info message for camera %zu", camera_id);
+    return;
+  }
+
   // Validate camera_id
   if (static_cast<int32_t>(camera_id) >= num_cameras_) {
     RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Invalid camera_id: %zu. Expected 0-%d", camera_id, num_cameras_ - 1);
     return;
   }
 
-  vad_input_topic_data_current_frame_.set_camera_info(camera_id, msg);
-
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received camera info from camera %zu", camera_id);
+  try {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    vad_input_topic_data_current_frame_.set_camera_info(camera_id, msg);
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received camera info from camera %zu", camera_id);
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception in camera_info_callback: %s", e.what());
+  }
 }
 
 void VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
-  vad_input_topic_data_current_frame_.set_kinematic_state(msg);
+  if (!msg) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received null odometry message");
+    return;
+  }
 
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received odometry data");
+  try {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    vad_input_topic_data_current_frame_.set_kinematic_state(msg);
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received odometry data");
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception in odometry_callback: %s", e.what());
+  }
 }
 
 void VadNode::acceleration_callback(const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg)
 {
-  vad_input_topic_data_current_frame_.set_acceleration(msg);
+  if (!msg) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received null acceleration message");
+    return;
+  }
 
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received acceleration data");
+  try {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    vad_input_topic_data_current_frame_.set_acceleration(msg);
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received acceleration data");
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception in acceleration_callback: %s", e.what());
+  }
 }
 
 void VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
@@ -198,16 +237,35 @@ void VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr 
 
 void VadNode::anchor_callback()
 {
-  if (sync_strategy_->is_ready(vad_input_topic_data_current_frame_)) {
-    auto vad_output_topic_data = trigger_inference(std::move(vad_input_topic_data_current_frame_));
+  try {
+    std::optional<VadInputTopicData> frame_data;
+    {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+      if (!sync_strategy_) {
+        RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Sync strategy not initialized");
+        return;
+      }
+
+      if (!sync_strategy_->is_ready(vad_input_topic_data_current_frame_)) {
+        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Synchronization strategy indicates data is not ready for inference");
+        return;
+      }
+
+      frame_data.emplace(vad_input_topic_data_current_frame_);
+      vad_input_topic_data_current_frame_.reset();
+    }
+
+    if (!frame_data.has_value()) {
+      return;
+    }
+
+    auto vad_output_topic_data = trigger_inference(std::move(*frame_data));
     if (vad_output_topic_data.has_value()) {
       publish(vad_output_topic_data.value());
     }
-  } else {
-    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Synchronization strategy indicates data is not ready for inference");
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception in anchor_callback: %s", e.what());
   }
-  
-  vad_input_topic_data_current_frame_.reset();
 }
 
 std::optional<VadOutputTopicData> VadNode::trigger_inference(VadInputTopicData vad_input_topic_data_current_frame)
@@ -398,19 +456,34 @@ std::optional<VadOutputTopicData> VadNode::execute_inference(const VadInputTopic
     return std::nullopt;
   }
 
-  // Convert to VadInputData through VadInterface
-  const auto vad_input = vad_interface_ptr_->convert_input(vad_input_topic_data);
+  try {
+    if (!vad_input_topic_data.is_complete()) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 5000,
+        "Skipping inference: input frame incomplete (images/camera_info/state/accel)");
+      return std::nullopt;
+    }
+    // Convert to VadInputData through VadInterface
+    const auto vad_input = vad_interface_ptr_->convert_input(vad_input_topic_data);
 
-  // Execute inference with VadModel
-  const auto vad_output = vad_model_ptr_->infer(vad_input);
+    // Execute inference with VadModel
+    const auto vad_output = vad_model_ptr_->infer(vad_input);
 
-  const auto [base2map_transform, map2base_transform] = get_transform_matrix(*vad_input_topic_data.kinematic_state);
-  // Convert to ROS types through VadInterface
-  if (vad_output.has_value()) {
-    const auto vad_output_topic_data = vad_interface_ptr_->convert_output(
-      *vad_output, this->now(), trajectory_timestep_, base2map_transform);
-    // Return VadOutputTopicData
-    return vad_output_topic_data;
+    const auto [base2map_transform, map2base_transform] =
+      get_transform_matrix(*vad_input_topic_data.kinematic_state);
+    // Convert to ROS types through VadInterface
+    if (vad_output.has_value()) {
+      const auto vad_output_topic_data = vad_interface_ptr_->convert_output(
+        *vad_output, this->now(), trajectory_timestep_, base2map_transform);
+      // Return VadOutputTopicData
+      return vad_output_topic_data;
+    }
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Exception during inference: %s", e.what());
+    return std::nullopt;
+  } catch (...) {
+    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Unknown exception during inference");
+    return std::nullopt;
   }
 
   return std::nullopt;
@@ -435,25 +508,32 @@ void VadNode::publish(const VadOutputTopicData & vad_output_topic_data)
 
 void VadNode::create_camera_image_subscribers(const rclcpp::QoS& sensor_qos)
 {
-  camera_image_subs_.resize(num_cameras_);
-  std::vector<bool> use_raw_cameras = this->declare_parameter<std::vector<bool>>("node_params.use_raw");
-  auto resolve_topic_name = [this](const std::string & query) {
-    return this->get_node_topics_interface()->resolve_topic_name(query);
-  };
-  for (int32_t i = 0; i < num_cameras_; ++i) {
-    const auto transport = use_raw_cameras[i] ? "raw" : "compressed";
-    auto callback =
-        [this, i](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-          this->image_callback(msg, i);
-        };
+  try {
+    camera_image_subs_.resize(num_cameras_);
+    std::vector<bool> use_raw_cameras = this->declare_parameter<std::vector<bool>>("node_params.use_raw");
+    auto resolve_topic_name = [this](const std::string & query) {
+      return this->get_node_topics_interface()->resolve_topic_name(query);
+    };
+    for (int32_t i = 0; i < num_cameras_; ++i) {
+      const auto transport = use_raw_cameras[i] ? "raw" : "compressed";
+      auto callback =
+          [this, i](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
+            this->image_callback(msg, i);
+          };
 
-    const auto image_topic = resolve_topic_name("~/input/image" + std::to_string(i));
-    camera_image_subs_[i] = image_transport::create_subscription(
-        this,
-        image_topic,
-        callback,
-        transport,
-        sensor_qos.get_rmw_qos_profile());
+      const auto image_topic = resolve_topic_name("~/input/image" + std::to_string(i));
+      RCLCPP_INFO(this->get_logger(), "Creating image subscriber %d for topic: %s, transport: %s", i, image_topic.c_str(), transport);
+      camera_image_subs_[i] = image_transport::create_subscription(
+          this,
+          image_topic,
+          callback,
+          transport,
+          sensor_qos.get_rmw_qos_profile());
+      RCLCPP_INFO(this->get_logger(), "Image subscriber %d created successfully", i);
+    }
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "Exception in create_camera_image_subscribers: %s", e.what());
+    throw;  // Re-throw to prevent partial initialization
   }
 }
 
