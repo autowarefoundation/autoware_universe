@@ -128,8 +128,8 @@ void filter_velocity(
  * @param min_acceleration The minimum acceleration to be clamped.
  */
 void clamp_velocities(
-  std::vector<TrajectoryPoint> & input_trajectory_array, float min_velocity,
-  float min_acceleration);
+  std::vector<TrajectoryPoint> & input_trajectory_array, const Odometry & current_odometry,
+  float min_velocity, float min_acceleration);
 
 /**
  * @brief Sets the maximum velocity for the input trajectory points.
@@ -138,11 +138,25 @@ void clamp_velocities(
  * @param max_velocity The maximum velocity to be set.
  */
 void set_max_velocity(
-  std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
+  std::vector<TrajectoryPoint> & input_trajectory_array, const Odometry & current_odometry,
+  const float max_velocity);
 
 void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
   const Odometry & current_odometry);
+
+/**
+ * @brief Recalculates longitudinal acceleration from velocity differences.
+ *
+ * This function computes acceleration[i] = (velocity[i+1] - velocity[i]) / dt
+ * using either trajectory time_from_start or a fixed time step.
+ *
+ * @param trajectory The trajectory points with velocities to calculate accelerations from
+ * @param use_fixed_time_step If true, use fixed_dt; if false, use time_from_start from trajectory
+ * @param fixed_dt Fixed time step in seconds (used only if use_fixed_time_step is true)
+ */
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, bool use_fixed_time_step = false, double fixed_dt = 0.1);
 
 /**
  * @brief Removes points from the input trajectory that are too close to each other.

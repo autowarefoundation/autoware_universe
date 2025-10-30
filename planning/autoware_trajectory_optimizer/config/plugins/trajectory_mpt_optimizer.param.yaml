@@ -1,0 +1,87 @@
+/**:
+  ros__parameters:
+    trajectory_mpt_optimizer:
+      # Bounds generation
+      bounds_lateral_offset_m: 5.0  # Lateral offset for generating drivable area bounds [m]
+
+      # Debug
+      enable_debug_info: false  # Enable debug visualization and logging
+
+      # Trajectory parameters (required by MPT optimizer)
+      output_delta_arc_length_m: 1.0  # Output trajectory point spacing [m]
+      output_backward_traj_length_m: 5.0  # Length of backward trajectory extension [m]
+
+      # Ego nearest search parameters
+      ego_nearest_dist_threshold_m: 3.0  # Distance threshold for ego nearest search [m]
+      ego_nearest_yaw_threshold_deg: 60.0  # Yaw threshold for ego nearest search [deg]
+
+    # MPT optimizer parameters (passed through to MPTOptimizer)
+    mpt:
+      option:
+        steer_limit_constraint: false
+        visualize_sampling_num: 1
+        enable_manual_warm_start: false
+        enable_warm_start: false
+        enable_optimization_validation: false
+
+      common:
+        num_points: 100
+        delta_arc_length: 1.0
+
+      kinematics:
+        optimization_center_offset: 2.3  # Optimization center offset from base_link [m] (defaults to wheel_base * 0.8)
+
+      clearance:
+        hard_clearance_from_road: 0.0
+        soft_clearance_from_road: 0.1
+
+      weight:
+        soft_collision_free_weight: 1.0
+        lat_error_weight: 1.0
+        yaw_error_weight: 0.0
+        yaw_error_rate_weight: 0.0
+        steer_input_weight: 1.0
+        steer_rate_weight: 1.0
+        terminal_lat_error_weight: 100.0
+        terminal_yaw_error_weight: 100.0
+        goal_lat_error_weight: 1000.0
+        goal_yaw_error_weight: 1000.0
+
+      avoidance:
+        max_bound_fixing_time: 1.0
+        max_longitudinal_margin_for_bound_violation: 1.0
+        max_avoidance_cost: 0.5
+        avoidance_cost_margin: 0.0
+        avoidance_cost_band_length: 5.0
+        avoidance_cost_decrease_rate: 0.05
+        min_drivable_width: 0.2
+
+        weight:
+          lat_error_weight: 0.0
+          yaw_error_weight: 10.0
+          steer_input_weight: 100.0
+
+      collision_free_constraints:
+        option:
+          l_inf_norm: true
+          soft_constraint: true
+          hard_constraint: false
+
+        vehicle_circles:
+          method: "fitting_uniform_circle"
+
+          bicycle_model:
+            num_for_calculation: 3
+            front_radius_ratio: 1.0
+            rear_radius_ratio: 1.0
+
+          uniform_circle:
+            num: 3
+            radius_ratio: 1.0
+
+          fitting_uniform_circle:
+            num: 3
+
+      validation:
+        max_lat_error: 5.0
+        max_yaw_error: 1.046

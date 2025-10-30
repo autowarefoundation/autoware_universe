@@ -24,7 +24,8 @@
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -106,7 +107,8 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
 }
 
 void clamp_velocities(
-  TrajectoryPoints & input_trajectory_array, float min_velocity, float min_acceleration)
+  TrajectoryPoints & input_trajectory_array, const Odometry & current_odometry, float min_velocity,
+  float min_acceleration)
 {
   std::for_each(
     input_trajectory_array.begin(), input_trajectory_array.end(),
@@ -114,9 +116,14 @@ void clamp_velocities(
       point.longitudinal_velocity_mps = std::max(point.longitudinal_velocity_mps, min_velocity);
       point.acceleration_mps2 = std::max(point.acceleration_mps2, min_acceleration);
     });
+  motion_utils::calculate_time_from_start(
+    input_trajectory_array, current_odometry.pose.pose.position);
+  recalculate_longitudinal_acceleration(input_trajectory_array, false);
 }
 
-void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max_velocity)
+void set_max_velocity(
+  TrajectoryPoints & input_trajectory_array, const Odometry & current_odometry,
+  const float max_velocity)
 {
   std::for_each(
     input_trajectory_array.begin(), input_trajectory_array.end(),
@@ -125,20 +132,9 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
     });
 
   // recalculate acceleration after velocity change
-  const int64_t size = input_trajectory_array.size();
-  for (int64_t i = 0; i + 1 < size; ++i) {
-    const float curr_time_from_start =
-      static_cast<float>(input_trajectory_array[i].time_from_start.sec) +
-      static_cast<float>(input_trajectory_array[i].time_from_start.nanosec) * 1e-9f;
-    const float next_time_from_start =
-      static_cast<float>(input_trajectory_array[i + 1].time_from_start.sec) +
-      static_cast<float>(input_trajectory_array[i + 1].time_from_start.nanosec) * 1e-9f;
-    const float dt = next_time_from_start - curr_time_from_start;
-    const float dv = input_trajectory_array[i + 1].longitudinal_velocity_mps -
-                     input_trajectory_array[i].longitudinal_velocity_mps;
-    input_trajectory_array[i].acceleration_mps2 = dv / (dt + 1e-5f);
-  }
-  input_trajectory_array.back().acceleration_mps2 = 0.0f;
+  motion_utils::calculate_time_from_start(
+    input_trajectory_array, current_odometry.pose.pose.position);
+  recalculate_longitudinal_acceleration(input_trajectory_array, false);
 }
 
 void limit_lateral_acceleration(
@@ -191,6 +187,39 @@ void limit_lateral_acceleration(
 
   motion_utils::calculate_time_from_start(
     input_trajectory_array, current_odometry.pose.pose.position);
+  recalculate_longitudinal_acceleration(input_trajectory_array, false);
+}
+
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_fixed_time_step, const double fixed_dt)
+{
+  if (trajectory.size() < 2) {
+    return;
+  }
+
+  const size_t N = trajectory.size();
+
+  auto get_time_from_start = [](const TrajectoryPoint & point) -> double {
+    return point.time_from_start.sec + point.time_from_start.nanosec * 1e-9;
+  };
+
+  auto get_time_step = [&](const TrajectoryPoint & from, const TrajectoryPoint & to) -> double {
+    if (use_fixed_time_step) {
+      return fixed_dt;
+    }
+    return get_time_from_start(to) - get_time_from_start(from);
+  };
+
+  // Use fixed time step (QP smoother mode)
+  for (size_t i = 0; i < N - 1; ++i) {
+    const auto v0 = trajectory[i].longitudinal_velocity_mps;
+    const auto v1 = trajectory[i + 1].longitudinal_velocity_mps;
+    const auto dt = get_time_step(trajectory[i], trajectory[i + 1]);
+    trajectory[i].acceleration_mps2 = (dt > 1e-6) ? static_cast<float>((v1 - v0) / dt) : 0.0f;
+  }
+
+  // Last point: set acceleration to zero
+  trajectory[N - 1].acceleration_mps2 = 0.0f;
 }
 
 void filter_velocity(

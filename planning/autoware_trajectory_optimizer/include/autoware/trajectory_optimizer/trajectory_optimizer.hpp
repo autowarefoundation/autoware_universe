@@ -17,6 +17,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_extender.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
@@ -67,6 +68,7 @@ private:
   // Optimizer pointers
   std::shared_ptr<plugin::TrajectoryEBSmootherOptimizer> eb_smoother_optimizer_ptr_;
   std::shared_ptr<plugin::TrajectoryExtender> trajectory_extender_ptr_;
+  std::shared_ptr<plugin::TrajectoryMPTOptimizer> trajectory_mpt_optimizer_ptr_;
   std::shared_ptr<plugin::TrajectoryPointFixer> trajectory_point_fixer_ptr_;
   std::shared_ptr<plugin::TrajectoryQPSmoother> trajectory_qp_smoother_ptr_;
   std::shared_ptr<plugin::TrajectorySplineSmoother> trajectory_spline_smoother_ptr_;

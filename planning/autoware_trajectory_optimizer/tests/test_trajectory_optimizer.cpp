@@ -18,6 +18,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <nav_msgs/msg/detail/odometry__struct.hpp>
+
 #include <gtest/gtest.h>
 
 #include <limits>
@@ -70,7 +72,10 @@ TEST_F(TrajectoryOptimizerUtilsTest, RemoveCloseProximityPoints)
 TEST_F(TrajectoryOptimizerUtilsTest, ClampVelocities)
 {
   TrajectoryPoints points = create_sample_trajectory();
-  autoware::trajectory_optimizer::utils::clamp_velocities(points, 2.0f, 0.5f);
+  Odometry current_odometry;
+  current_odometry.pose.pose.position.x = 0.0;
+  current_odometry.pose.pose.position.y = 0.0;
+  autoware::trajectory_optimizer::utils::clamp_velocities(points, current_odometry, 2.0f, 0.5f);
   for (const auto & point : points) {
     ASSERT_GE(point.longitudinal_velocity_mps, 2.0f);
     ASSERT_GE(point.acceleration_mps2, 0.5f);
@@ -80,7 +85,10 @@ TEST_F(TrajectoryOptimizerUtilsTest, ClampVelocities)
 TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity)
 {
   TrajectoryPoints points = create_sample_trajectory();
-  autoware::trajectory_optimizer::utils::set_max_velocity(points, 2.0f);
+  Odometry current_odometry;
+  current_odometry.pose.pose.position.x = 0.0;
+  current_odometry.pose.pose.position.y = 0.0;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, current_odometry, 2.0f);
   for (const auto & point : points) {
     ASSERT_LE(point.longitudinal_velocity_mps, 2.0f);
   }

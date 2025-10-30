@@ -21,6 +21,11 @@
           "default": true,
           "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
         },
+        "use_mpt_optimizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Model Predictive Trajectory optimization for kinematically-feasible and collision-free trajectories"
+        },
         "fix_invalid_points": {
           "type": "boolean",
           "default": true,
@@ -445,6 +450,7 @@
         "use_akima_spline_interpolation",
         "use_eb_smoother",
         "use_qp_smoother",
+        "use_mpt_optimizer",
         "fix_invalid_points",
         "extend_trajectory_backward",
         "optimize_velocity"
