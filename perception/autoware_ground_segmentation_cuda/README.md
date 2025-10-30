@@ -13,3 +13,7 @@ This package reimplements the current scan_ground_filter of the ground_segmentat
 ## Inner-workings / Algorithm
 
 The detailed algorithm is available in [scan-ground-filter.md](../autoware_ground_segmentation/docs/scan-ground-filter.md).
+
+## Parameters
+
+{{ json_to_markdown("perception/autoware_ground_segmentation_cuda/schema/cuda_scan_ground_segmentation_filter.schema.json") }}
