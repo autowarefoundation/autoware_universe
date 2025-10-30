@@ -89,6 +89,7 @@ class LidarMarkerLocalizer : public rclcpp::Node
     std::string save_file_directory_path;
     std::string save_file_name;
     std::string save_frame_id;
+    double radius_for_extracting_marker_pointcloud;
   };
 
 public:
@@ -110,6 +111,8 @@ private:
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
     const geometry_msgs::msg::Pose marker_pose) const;
   void save_detected_marker_log(const sensor_msgs::msg::PointCloud2::SharedPtr & points_msg_ptr);
+  template <typename PointT>
+  void save_intensity(const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
 
   void transform_sensor_measurement(
     const std::string & source_frame, const std::string & target_frame,
