@@ -34,12 +34,24 @@ CameraImagesData InputImageConverter::process_image(
   for (int32_t autoware_idx = 0; autoware_idx < num_cameras; ++autoware_idx) {
     const auto& image_msg = images[autoware_idx];
 
+    // Skip if image is not available
+    if (!image_msg) {
+      RCLCPP_WARN_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
+                           "Image for camera %d is null, skipping", autoware_idx);
+      continue;
+    }
+
     // Create cv::Mat from sensor_msgs::msg::Image
     cv::Mat bgr_img;
     if (image_msg->encoding == "bgr8") {
       // For BGR8, use data directly
-      bgr_img = cv::Mat(image_msg->height, image_msg->width, CV_8UC3, 
+      bgr_img = cv::Mat(image_msg->height, image_msg->width, CV_8UC3,
                         const_cast<uint8_t*>(image_msg->data.data()), image_msg->step);
+    } else if (image_msg->encoding == "bgra8") {
+      // For BGRA8, convert to BGR8
+      cv::Mat bgra_img(image_msg->height, image_msg->width, CV_8UC4,
+                       const_cast<uint8_t*>(image_msg->data.data()), image_msg->step);
+      cv::cvtColor(bgra_img, bgr_img, cv::COLOR_BGRA2BGR);
     } else {
       RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000, "Unsupported image encoding: %s", image_msg->encoding.c_str());
       continue;

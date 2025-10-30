@@ -54,6 +54,7 @@
 #include <vector>
 #include <map>
 #include <optional>
+#include <mutex>
 
 namespace autoware::tensorrt_vad
 {
@@ -121,6 +122,7 @@ private:
 
   // Current frame data accumulation
   VadInputTopicData vad_input_topic_data_current_frame_;
+  mutable std::mutex data_mutex_;
   
   std::optional<VadOutputTopicData> execute_inference(const VadInputTopicData & vad_input_topic_data);
   std::optional<VadOutputTopicData> trigger_inference(VadInputTopicData vad_input_topic_data_current_frame);
