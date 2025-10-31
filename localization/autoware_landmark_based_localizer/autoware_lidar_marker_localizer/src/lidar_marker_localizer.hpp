@@ -64,6 +64,8 @@ class LidarMarkerLocalizer : public rclcpp::Node
   {
     bool enable_read_all_target_ids;
     std::vector<std::string> target_ids;
+    int64_t queue_size_for_output_pose;
+
     std::string marker_name;
 
     double resolution;
