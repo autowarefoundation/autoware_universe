@@ -25,6 +25,22 @@ Key capabilities:
 
 ---
 
+## Visualization
+
+### Lane Following Demo
+
+![Lane Following](media/lane_follow_demo.gif)
+
+The module demonstrates robust lane following capabilities, maintaining the vehicle within lane boundaries while tracking the desired trajectory.
+
+### Turn Right Demo
+
+![Turn Right](media/turn_right_demo.gif)
+
+The system successfully handles right turn maneuvers, generating smooth trajectories that follow road geometry and traffic rules.
+
+---
+
 ## Parameters
 
 {{ json_to_markdown("planning/autoware_tensorrt_vad/schema/vad_tiny.schema.json") }}
