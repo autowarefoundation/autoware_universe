@@ -45,9 +45,15 @@ struct MapHostBuffers
   std::vector<int32_t> max_class_indices;
 };
 
+struct CopyContext
+{
+  cudaStream_t stream;
+  const MapPostprocessConfig & config;
+  const std::shared_ptr<VadLogger> & logger;
+};
+
 bool copy_device_to_host(
-  const MapPostprocessor::MapDeviceBuffers & device_buffers, cudaStream_t stream,
-  const MapPostprocessConfig & config, const std::shared_ptr<VadLogger> & logger,
+  const MapPostprocessor::MapDeviceBuffers & device_buffers, const CopyContext & context,
   MapHostBuffers & host_buffers)
 {
   struct CopyOperation
@@ -58,11 +64,11 @@ bool copy_device_to_host(
     const char * name;
   };
 
-  const size_t cls_scores_size =
-    static_cast<size_t>(config.map_num_queries) * config.map_num_classes * sizeof(float);
-  const size_t points_size = static_cast<size_t>(config.map_num_queries) *
-                             config.map_points_per_polylines * 2 * sizeof(float);
-  const size_t flags_size = static_cast<size_t>(config.map_num_queries) * sizeof(int32_t);
+  const size_t cls_scores_size = static_cast<size_t>(context.config.map_num_queries) *
+                                 context.config.map_num_classes * sizeof(float);
+  const size_t points_size = static_cast<size_t>(context.config.map_num_queries) *
+                             context.config.map_points_per_polylines * 2 * sizeof(float);
+  const size_t flags_size = static_cast<size_t>(context.config.map_num_queries) * sizeof(int32_t);
 
   const std::array<CopyOperation, 4> operations{{
     {host_buffers.cls_scores.data(), device_buffers.cls_scores, cls_scores_size, "cls_scores"},
@@ -74,27 +80,58 @@ bool copy_device_to_host(
 
   for (const auto & op : operations) {
     if (!op.src) {
-      logger->error(std::string("Device pointer for ") + op.name + " is null");
+      context.logger->error(std::string("Device pointer for ") + op.name + " is null");
       return false;
     }
 
     cudaError_t result =
-      cudaMemcpyAsync(op.dst, op.src, op.size_in_bytes, cudaMemcpyDeviceToHost, stream);
+      cudaMemcpyAsync(op.dst, op.src, op.size_in_bytes, cudaMemcpyDeviceToHost, context.stream);
     if (result != cudaSuccess) {
-      logger->error(
+      context.logger->error(
         "Failed to copy " + std::string(op.name) +
         " from device: " + std::string(cudaGetErrorString(result)));
       return false;
     }
   }
 
-  const cudaError_t sync_result = cudaStreamSynchronize(stream);
+  const cudaError_t sync_result = cudaStreamSynchronize(context.stream);
   if (sync_result != cudaSuccess) {
-    logger->error("Stream synchronization failed: " + std::string(cudaGetErrorString(sync_result)));
+    context.logger->error(
+      "Stream synchronization failed: " + std::string(cudaGetErrorString(sync_result)));
     return false;
   }
 
   return true;
+}
+
+bool is_query_valid(
+  int32_t query_idx, const MapHostBuffers & host_buffers, const MapPostprocessConfig & config)
+{
+  if (
+    query_idx >= static_cast<int32_t>(host_buffers.valid_flags.size()) ||
+    host_buffers.valid_flags.at(query_idx) == 0) {
+    return false;
+  }
+
+  const int32_t max_class_idx = host_buffers.max_class_indices.at(query_idx);
+  return max_class_idx >= 0 && max_class_idx < static_cast<int32_t>(config.map_class_names.size());
+}
+
+std::vector<std::vector<float>> extract_polyline_points(
+  int32_t query_idx, const MapHostBuffers & host_buffers, int32_t points_per_polyline)
+{
+  std::vector<std::vector<float>> points(points_per_polyline, std::vector<float>(2));
+
+  for (int32_t p = 0; p < points_per_polyline; ++p) {
+    const int32_t base_idx = query_idx * points_per_polyline * 2 + p * 2;
+    if (base_idx + 1 >= static_cast<int32_t>(host_buffers.points.size())) {
+      break;
+    }
+    points[p][0] = host_buffers.points.at(base_idx);
+    points[p][1] = host_buffers.points.at(base_idx + 1);
+  }
+
+  return points;
 }
 
 std::vector<MapPolyline> build_map_polylines(
@@ -104,27 +141,12 @@ std::vector<MapPolyline> build_map_polylines(
   map_polylines.reserve(config.map_num_queries);
 
   for (int32_t query_idx = 0; query_idx < config.map_num_queries; ++query_idx) {
-    if (
-      query_idx >= static_cast<int32_t>(host_buffers.valid_flags.size()) ||
-      host_buffers.valid_flags.at(query_idx) == 0) {
+    if (!is_query_valid(query_idx, host_buffers, config)) {
       continue;
     }
 
     const int32_t max_class_idx = host_buffers.max_class_indices.at(query_idx);
-    if (max_class_idx < 0 || max_class_idx >= static_cast<int32_t>(config.map_class_names.size())) {
-      continue;
-    }
-
-    std::vector<std::vector<float>> points(config.map_points_per_polylines, std::vector<float>(2));
-
-    for (int32_t p = 0; p < config.map_points_per_polylines; ++p) {
-      const int32_t base_idx = query_idx * config.map_points_per_polylines * 2 + p * 2;
-      if (base_idx + 1 >= static_cast<int32_t>(host_buffers.points.size())) {
-        break;
-      }
-      points[p][0] = host_buffers.points.at(base_idx);
-      points[p][1] = host_buffers.points.at(base_idx + 1);
-    }
+    auto points = extract_polyline_points(query_idx, host_buffers, config.map_points_per_polylines);
 
     map_polylines.emplace_back(config.map_class_names.at(max_class_idx), std::move(points));
   }
@@ -193,7 +215,8 @@ std::vector<autoware::tensorrt_vad::MapPolyline> MapPostprocessor::copy_map_resu
 
   MapHostBuffers host_buffers(num_queries, num_classes, points_per_polyline);
 
-  if (!copy_device_to_host(device_buffers, stream, config_, logger_, host_buffers)) {
+  const CopyContext context{stream, config_, logger_};
+  if (!copy_device_to_host(device_buffers, context, host_buffers)) {
     return {};
   }
 
