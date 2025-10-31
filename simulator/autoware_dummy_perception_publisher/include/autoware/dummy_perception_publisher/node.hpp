@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 
+#include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -125,6 +126,9 @@ private:
 
   void timerCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
+
+  pcl::PointCloud<autoware::point_types::PointXYZIRC> convertPointCloudXYZtoXYZIRC(
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr & input_cloud) const;
 
 public:
   DummyPerceptionPublisherNode();
