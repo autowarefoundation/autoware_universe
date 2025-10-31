@@ -20,6 +20,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::tensorrt_vad
@@ -27,24 +28,15 @@ namespace autoware::tensorrt_vad
 
 unsigned int getElementSize(nvinfer1::DataType t)
 {
-  switch (t) {
-    case nvinfer1::DataType::kFLOAT:
-      return sizeof(float);
-    case nvinfer1::DataType::kHALF:
-      return sizeof(float) / 2;
-    case nvinfer1::DataType::kINT8:
-      return sizeof(int8_t);
-    case nvinfer1::DataType::kINT32:
-      return sizeof(int32_t);
-    case nvinfer1::DataType::kBOOL:
-      return sizeof(bool);
-    case nvinfer1::DataType::kUINT8:
-      return sizeof(uint8_t);
-    case nvinfer1::DataType::kFP8:
-      return sizeof(float) / 4;
-    default:
-      return 0;
-  }
+  // Static map for data type sizes
+  static const std::unordered_map<nvinfer1::DataType, unsigned int> size_map = {
+    {nvinfer1::DataType::kFLOAT, sizeof(float)},  {nvinfer1::DataType::kHALF, sizeof(float) / 2},
+    {nvinfer1::DataType::kINT8, sizeof(int8_t)},  {nvinfer1::DataType::kINT32, sizeof(int32_t)},
+    {nvinfer1::DataType::kBOOL, sizeof(bool)},    {nvinfer1::DataType::kUINT8, sizeof(uint8_t)},
+    {nvinfer1::DataType::kFP8, sizeof(float) / 4}};
+
+  auto it = size_map.find(t);
+  return (it != size_map.end()) ? it->second : 0;
 }
 
 Tensor::Tensor(
