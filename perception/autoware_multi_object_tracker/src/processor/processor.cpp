@@ -41,7 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -611,7 +611,8 @@ void TrackerProcessor::getMergedObjects(
   }
 }
 
-void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+void TrackerProcessor::setTimeKeeper(
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
   association_->setTimeKeeper(time_keeper_);
