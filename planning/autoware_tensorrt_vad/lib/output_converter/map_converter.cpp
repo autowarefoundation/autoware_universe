@@ -14,6 +14,9 @@
 
 #include "autoware/tensorrt_vad/output_converter/map_converter.hpp"
 
+#include <string>
+#include <vector>
+
 namespace autoware::tensorrt_vad::vad_interface
 {
 

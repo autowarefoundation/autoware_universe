@@ -29,6 +29,7 @@
 
 #include <cmath>
 #include <map>
+#include <memory>
 #include <optional>
 #include <tuple>
 #include <unordered_map>

@@ -17,6 +17,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <stdexcept>
+#include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface
 {

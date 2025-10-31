@@ -16,6 +16,8 @@
 
 #include <Eigen/Dense>
 
+#include <vector>
+
 namespace autoware::tensorrt_vad::vad_interface
 {
 

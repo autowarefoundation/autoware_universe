@@ -18,6 +18,8 @@
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <cmath>
+#include <string>
+#include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface
 {

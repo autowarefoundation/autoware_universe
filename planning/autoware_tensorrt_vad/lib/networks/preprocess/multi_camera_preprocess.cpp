@@ -15,7 +15,9 @@
 #include "autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <thread>
+#include <vector>
 
 namespace autoware::tensorrt_vad
 {
