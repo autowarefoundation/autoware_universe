@@ -86,9 +86,13 @@ std::optional<PullOverPath> PullOverPath::create(
     const auto size = std::min(parking_path_curvatures.size(), parking_path_curvature_base.size());
     double total_abs_kappa_diff = 0;
     for (unsigned i = 0; i + 1 < size; ++i) {
-      total_abs_kappa_diff += std::fabs(
-        (parking_path_curvatures.at(i + 1) - parking_path_curvatures.at(i)) /
-        (parking_path_curvature_base.at(i + 1) - parking_path_curvature_base.at(i)));
+      const double denominator =
+        parking_path_curvature_base.at(i + 1) - parking_path_curvature_base.at(i);
+      // Avoid division by zero
+      if (std::abs(denominator) > 1e-6) {
+        total_abs_kappa_diff += std::fabs(
+          (parking_path_curvatures.at(i + 1) - parking_path_curvatures.at(i)) / denominator);
+      }
     }
     return total_abs_kappa_diff;
   }();

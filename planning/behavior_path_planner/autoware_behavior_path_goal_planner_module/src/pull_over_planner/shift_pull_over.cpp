@@ -223,15 +223,18 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   }
 
   // set lane_id and velocity to shifted_path
-  for (size_t i = path_shifter.getShiftLines().front().start_idx;
-       i < shifted_path.path.points.size() - 1; ++i) {
+  if (path_shifter.getShiftLines().empty()) {
+    return std::nullopt;
+  }
+  const size_t start_idx = path_shifter.getShiftLines().front().start_idx;
+  for (size_t i = start_idx; i < shifted_path.path.points.size() - 1; ++i) {
     auto & point = shifted_path.path.points.at(i);
     point.point.longitudinal_velocity_mps =
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
     lanelet::Lanelet lanelet{};
     if (lanelet::utils::query::getClosestLanelet(lanes, point.point.pose, &lanelet)) {
       point.lane_ids = {lanelet.id()};  // overwrite lane_ids
-    } else {
+    } else if (i > 0) {
       point.lane_ids = shifted_path.path.points.at(i - 1).lane_ids;
     }
   }
