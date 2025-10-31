@@ -17,16 +17,11 @@
 
 #include "scene.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 
 #include <functional>
 #include <memory>
-#include <optional>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -47,20 +42,26 @@ public:
 private:
   TrafficLightModule::PlannerParam planner_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
-  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
+  void modifyPathVelocity(
+    Trajectory & path, const std_msgs::msg::Header & header,
+    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   bool isModuleRegisteredFromRegElement(const lanelet::Id & id, const size_t module_id) const;
 
-  std::shared_ptr<TrafficLightModule> getRegisteredAssociatedModule(const lanelet::Id & id) const;
+  std::shared_ptr<TrafficLightModule> getRegisteredAssociatedModule(
+    const lanelet::Id & id, const PlannerData & planner_data) const;
 
   bool hasAssociatedTrafficLight(
-    const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id) const;
+    const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id,
+    const PlannerData & planner_data) const;
 
   std::shared_ptr<TrafficLightModule> findModuleById(const lanelet::Id & module_id) const;
 
@@ -70,11 +71,9 @@ private:
 
   // Debug
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr pub_tl_state_;
-
-  std::optional<int> nearest_ref_stop_path_point_index_;
 };
 
-class TrafficLightModulePlugin : public PluginWrapper<TrafficLightModuleManager>
+class TrafficLightModulePlugin : public experimental::PluginWrapper<TrafficLightModuleManager>
 {
 };
 

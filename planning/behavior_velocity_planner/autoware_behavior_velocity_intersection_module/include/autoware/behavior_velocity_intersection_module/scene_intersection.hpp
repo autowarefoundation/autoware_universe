@@ -24,15 +24,6 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_debug_msgs/msg/float64_multi_array_stamped.hpp>
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
-#include <lanelet2_core/Forward.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_routing/Forward.h>
 
 #include <memory>
 #include <optional>
@@ -291,10 +282,10 @@ public:
   };
 
   IntersectionModule(
-    const int64_t module_id, const int64_t lane_id, std::shared_ptr<const PlannerData> planner_data,
-    const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-    const std::string & turn_direction, const bool has_traffic_light, rclcpp::Node & node,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+    const std::set<lanelet::Id> & associative_ids, const std::string & turn_direction,
+    const bool has_traffic_light, rclcpp::Node & node, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface,
@@ -316,7 +307,10 @@ public:
    * INTERSECTION_OCCLUSION.
    * @{
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
   /** @}*/
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
@@ -427,7 +421,8 @@ private:
    * @brief this function is used to check if target stop position is feasible
    */
   bool can_smoothly_stop_at(
-    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx) const;
+    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx,
+    const PlannerData & planner_data) const;
 
   /** @}*/
 
@@ -522,7 +517,7 @@ private:
   /**
    * @brief analyze traffic_light/occupancy/objects context and return DecisionResult
    */
-  DecisionResult modifyPathVelocityDetail(PathWithLaneId * path);
+  DecisionResult modifyPathVelocityDetail(PathWithLaneId * path, const PlannerData & planner_data);
 
   /**
    * @brief set RTC value according to calculated DecisionResult
@@ -535,7 +530,7 @@ private:
    */
   void reactRTCApproval(
     const DecisionResult & decision_result,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const PlannerData & planner_data);
   /** @}*/
 
 private:
@@ -564,25 +559,27 @@ private:
    *
    * To simplify modifyPathVelocityDetail(), this function is used at first
    */
-  Result<BasicData, InternalError> prepareIntersectionData(PathWithLaneId * path);
+  Result<BasicData, InternalError> prepareIntersectionData(
+    PathWithLaneId * path, const PlannerData & planner_data);
 
   /**
    * @brief find the associated stopline road marking of assigned lanelet
    */
   std::optional<size_t> getStopLineIndexFromMap(
     const InterpolatedPathInfo & interpolated_path_info,
-    lanelet::ConstLanelet assigned_lanelet) const;
+    const lanelet::ConstLanelet & assigned_lanelet, const PlannerData & planner_data) const;
 
   /**
    * @brief generate IntersectionStopLines
    */
   std::optional<IntersectionStopLines> generateIntersectionStopLines(
-    lanelet::ConstLanelet assigned_lanelet,
+    const lanelet::ConstLanelet & assigned_lanelet,
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const lanelet::ConstLanelet & first_attention_lane,
     const InterpolatedPathInfo & interpolated_path_info,
     const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
-    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
+    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief generate IntersectionLanelets
@@ -601,8 +598,8 @@ private:
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const std::vector<lanelet::CompoundPolygon3d> & conflicting_areas,
     const std::optional<lanelet::CompoundPolygon3d> & first_attention_area,
-    const std::vector<lanelet::CompoundPolygon3d> & attention_areas,
-    const size_t closest_idx) const;
+    const std::vector<lanelet::CompoundPolygon3d> & attention_areas, const size_t closest_idx,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief generate discretized detection lane linestring.
@@ -629,13 +626,13 @@ private:
   /**
    * @brief find TrafficPrioritizedLevel
    */
-  TrafficPrioritizedLevel getTrafficPrioritizedLevel() const;
+  TrafficPrioritizedLevel getTrafficPrioritizedLevel(const PlannerData & planner_data) const;
 
   /**
    * @brief update the valid traffic signal information if still available, otherwise keep last
    * observation
    */
-  void updateTrafficSignalObservation();
+  void updateTrafficSignalObservation(const PlannerData & planner_data);
 
   /** @} */
 
@@ -654,7 +651,8 @@ private:
    */
   std::optional<StuckStop> isStuckStatus(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets) const;
+    const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets,
+    const PlannerData & planner_data) const;
 
   bool isTargetStuckVehicleType(
     const autoware_perception_msgs::msg::PredictedObject & object) const;
@@ -665,7 +663,8 @@ private:
   /**
    * @brief check stuck
    */
-  bool checkStuckVehicleInIntersection(const PathLanelets & path_lanelets) const;
+  bool checkStuckVehicleInIntersection(
+    const PathLanelets & path_lanelets, const PlannerData & planner_data) const;
   /** @} */
 
 private:
@@ -684,14 +683,14 @@ private:
   std::optional<YieldStuckStop> isYieldStuckStatus(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const InterpolatedPathInfo & interpolated_path_info,
-    const IntersectionStopLines & intersection_stoplines) const;
+    const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data) const;
 
   /**
    * @brief check yield stuck
    */
   bool checkYieldStuckVehicleInIntersection(
     const InterpolatedPathInfo & interpolated_path_info,
-    const lanelet::ConstLanelets & attention_lanelets) const;
+    const lanelet::ConstLanelets & attention_lanelets, const PlannerData & planner_data) const;
   /** @} */
 
 private:
@@ -712,14 +711,15 @@ private:
     bool /* reconciled occlusion disapproval */>
   getOcclusionStatus(
     const TrafficPrioritizedLevel & traffic_prioritized_level,
-    const InterpolatedPathInfo & interpolated_path_info);
+    const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data);
 
   /**
    * @brief calculate detected occlusion status(NOT | STATICALLY | DYNAMICALLY)
    * @attention this function has access to value() of intersection_lanelets_,
    * intersection_lanelets.first_attention_area(), occlusion_attention_divisions_
    */
-  OcclusionType detectOcclusion(const InterpolatedPathInfo & interpolated_path_info) const;
+  OcclusionType detectOcclusion(
+    const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data) const;
   /** @} */
 
 private:
@@ -739,7 +739,8 @@ private:
    */
   PassJudgeStatus isOverPassJudgeLinesStatus(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const bool is_occlusion_state, const IntersectionStopLines & intersection_stoplines);
+    const bool is_occlusion_state, const IntersectionStopLines & intersection_stoplines,
+    const PlannerData & planner_data);
   /** @} */
 
 private:
@@ -757,7 +758,7 @@ private:
    * @brief find the objects on attention_area/intersection_area and update positional information
    * @attention this function has access to value() of intersection_lanelets_
    */
-  void updateObjectInfoManagerArea();
+  void updateObjectInfoManagerArea(const PlannerData & planner_data);
 
   /**
    * @brief find the collision Interval/CollisionKnowledge of registered objects
@@ -767,7 +768,8 @@ private:
     const PathLanelets & path_lanelets, const TimeDistanceArray & time_distance_array,
     const TrafficPrioritizedLevel & traffic_prioritized_level,
     const bool passed_judge_line_first_time,
-    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array);
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array,
+    const PlannerData & planner_data);
 
   void cutPredictPathWithinDuration(
     const builtin_interfaces::msg::Time & object_stamp, const double time_thr,
@@ -801,7 +803,8 @@ private:
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
     const TimeDistanceArray & ego_time_distance_array,
     const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
-    const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects) const;
+    const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief return if collision is detected and the collision position
@@ -822,7 +825,8 @@ private:
   TimeDistanceArray calcIntersectionPassingTime(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
     const IntersectionStopLines & intersection_stoplines,
-    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const;
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array,
+    const PlannerData & planner_data) const;
   /** @} */
 
   mutable DebugData debug_data_;

@@ -14,10 +14,6 @@
 
 #include "scene.hpp"
 
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <memory>
 #include <string>
 
@@ -45,7 +41,11 @@ autoware::motion_utils::VirtualWalls TemplateModule::createVirtualWalls()
   return vw;
 }
 
-bool TemplateModule::modifyPathVelocity([[maybe_unused]] PathWithLaneId * path)
+bool TemplateModule::modifyPathVelocity(
+  [[maybe_unused]] Trajectory & path,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & left_bound,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & right_bound,
+  [[maybe_unused]] const PlannerData & planner_data)
 {
   RCLCPP_INFO_ONCE(logger_, "Template Module is executing!");
   return false;

@@ -78,12 +78,12 @@ static std::vector<FuturePosition> calculate_future_profile_impl(
 std::vector<FuturePosition> calculate_future_profile(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const double minimum_default_velocity, const double time_to_restart,
-  const std::shared_ptr<const PlannerData> & planner_data, const lanelet::Id lane_id)
+  const PlannerData & planner_data, const lanelet::Id lane_id)
 {
-  const double nearest_dist_threshold = planner_data->ego_nearest_dist_threshold;
-  const double nearest_yaw_threshold = planner_data->ego_nearest_yaw_threshold;
-  const auto & current_pose = planner_data->current_odometry->pose;
-  const double current_velocity = planner_data->current_velocity->twist.linear.x;
+  const double nearest_dist_threshold = planner_data.ego_nearest_dist_threshold;
+  const double nearest_yaw_threshold = planner_data.ego_nearest_yaw_threshold;
+  const auto & current_pose = planner_data.current_odometry->pose;
+  const double current_velocity = planner_data.current_velocity->twist.linear.x;
 
   const auto closest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     path.points, current_pose, nearest_dist_threshold, nearest_yaw_threshold);

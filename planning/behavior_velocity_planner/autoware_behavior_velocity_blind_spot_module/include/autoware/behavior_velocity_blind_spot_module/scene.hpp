@@ -15,17 +15,13 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
 
-#include <autoware/behavior_velocity_blind_spot_module/parameter.hpp>
+#include "autoware/behavior_velocity_blind_spot_module/parameter.hpp"
+
 #include <autoware/behavior_velocity_blind_spot_module/time_to_collision.hpp>
 #include <autoware/behavior_velocity_blind_spot_module/util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware/lanelet2_utils/intersection.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-
-#include <lanelet2_routing/RoutingGraph.h>
 
 #include <memory>
 #include <string>
@@ -83,8 +79,8 @@ public:
 public:
   BlindSpotModule(
     const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
-    const std::shared_ptr<const PlannerData> planner_data, const PlannerParam & planner_param,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const PlannerParam & planner_param, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface,
@@ -94,7 +90,10 @@ public:
    * @brief plan go-stop velocity at traffic crossing with collision check between reference path
    * and object predicted path
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   std::vector<autoware::motion_utils::VirtualWall> createVirtualWalls() override;
@@ -117,19 +116,24 @@ private:
   // Parameter
 
   void initializeRTCStatus();
-  BlindSpotDecision modifyPathVelocityDetail(PathWithLaneId * path);
+  BlindSpotDecision modifyPathVelocityDetail(
+    PathWithLaneId * path, const PlannerData & planner_data);
   // setSafe(), setDistance()
   void setRTCStatus(
     const BlindSpotDecision & decision,
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+    const PlannerData & planner_data);
   template <typename Decision>
   void setRTCStatusByDecision(
-    const Decision & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
+    const Decision & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+    const PlannerData & planner_data);
   // stop/GO
-  void reactRTCApproval(const BlindSpotDecision & decision, PathWithLaneId * path);
+  void reactRTCApproval(
+    const BlindSpotDecision & decision, PathWithLaneId * path, const PlannerData & planner_data);
   template <typename Decision>
   void reactRTCApprovalByDecision(
-    const Decision & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path);
+    const Decision & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path,
+    const PlannerData & planner_data);
 
   /**
    * @brief obtain object with ttc information which is considered dangerous
@@ -144,7 +148,8 @@ private:
    * @brief filter objects whose position is inside the attention_area and whose type is target type
    */
   std::vector<autoware_perception_msgs::msg::PredictedObject> filter_attention_objects(
-    const lanelet::BasicPolygon2d & attention_area, const double lateral_gap) const;
+    const lanelet::BasicPolygon2d & attention_area, const double lateral_gap,
+    const PlannerData & planner_data) const;
 
   /**
    * @brief Check if object is belong to targeted classes

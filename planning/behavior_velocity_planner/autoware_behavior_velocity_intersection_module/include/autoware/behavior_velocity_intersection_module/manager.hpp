@@ -18,19 +18,10 @@
 #include "scene_intersection.hpp"
 #include "scene_merge_from_private_road.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -55,21 +46,24 @@ private:
   // additional for INTERSECTION_OCCLUSION
   RTCInterface occlusion_rtc_interface_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
   bool hasSameParentLaneletAndTurnDirectionWithRegistered(const lanelet::ConstLanelet & lane) const;
 
   /* called from SceneModuleInterfaceWithRTC::plan */
   void sendRTC(const Time & stamp) override;
   void setActivation() override;
-  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
+  void modifyPathVelocity(
+    Trajectory & path, const std_msgs::msg::Header & header,
+    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
   /* called from SceneModuleInterface::updateSceneModuleInstances */
-  void deleteExpiredModules(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void deleteExpiredModules(const Trajectory & path, const PlannerData & planner_data) override;
 
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
@@ -79,7 +73,7 @@ private:
     planning_factor_interface_for_occlusion_;
 };
 
-class MergeFromPrivateModuleManager : public SceneModuleManagerInterface<>
+class MergeFromPrivateModuleManager : public experimental::SceneModuleManagerInterface<>
 {
 public:
   explicit MergeFromPrivateModuleManager(rclcpp::Node & node);
@@ -94,19 +88,21 @@ public:
 private:
   MergeFromPrivateRoadModule::PlannerParam merge_from_private_area_param_;
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
-  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 
   bool hasSameParentLaneletAndTurnDirectionWithRegistered(const lanelet::ConstLanelet & lane) const;
 };
 
-class IntersectionModulePlugin : public PluginWrapper<IntersectionModuleManager>
+class IntersectionModulePlugin : public experimental::PluginWrapper<IntersectionModuleManager>
 {
 };
 
-class MergeFromPrivateModulePlugin : public PluginWrapper<MergeFromPrivateModuleManager>
+class MergeFromPrivateModulePlugin
+: public experimental::PluginWrapper<MergeFromPrivateModuleManager>
 {
 };
 
