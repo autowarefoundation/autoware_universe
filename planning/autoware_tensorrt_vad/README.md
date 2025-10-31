@@ -41,8 +41,8 @@ The system successfully handles right turn maneuvers, generating smooth trajecto
 
 Parameters can be set via YAML configuration files:
 
-- Node and interface parameters: `config/vad_carla_tier4.param.yaml`
-- Model and network parameters: `config/ml_package_vad_carla_tier4.param.yaml`
+- Node and interface parameters: `config/vad_carla_tiny.param.yaml`
+- Model and network parameters: `config/ml_package_vad_carla_tiny.param.yaml`
 
 ---
 
@@ -115,29 +115,42 @@ ros2 launch autoware_launch e2e_vad_simulator.launch.xml \
 
 ## Model Setup and Versioning
 
+### Model Download
+
+The VAD model files are automatically downloaded when setting up the Autoware development environment.
+
+To download the latest models, simply run the provided setup script:
+[How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
+
+The models will be downloaded to `~/autoware_data/vad/` by default.
+
+**Manual Download** (if needed):
+Models are hosted at: <https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/>
+
 ### Model Preparation
 
 > :warning: **Note**: The node automatically builds TensorRT engines from ONNX models on first run. Pre-built engines are cached for subsequent runs and are hardware-specific.
 
-1. **Download the pre-trained ONNX models** trained on Bench2Drive CARLA dataset:
-   - `sim_vadv1.extract_img_feat.onnx` - Image feature extraction backbone
-   - `sim_vadv1.pts_bbox_head.forward.onnx` - Planning head (first frame)
-   - `sim_vadv1_prev.pts_bbox_head.forward.onnx` - Temporal planning head
+**Model Components** (trained on Bench2Drive CARLA dataset):
 
-2. **Place the models** in your designated model directory (e.g., `~/autoware_data/vad/`) and update the paths in `ml_package_vad_carla_tier4.param.yaml`:
+- `vad-carla-tiny_backbone.onnx` - Image feature extraction backbone
+- `vad-carla-tiny_head_no_prev.onnx` - Planning head (first frame)
+- `vad-carla-tiny_head.onnx` - Temporal planning head
+
+If you need to manually configure the model paths, update them in `ml_package_vad_carla_tiny.param.yaml`:
 
 ```yaml
 model_params:
   nets:
     backbone:
-      onnx_path: "$(var model_path)/sim_vadv1.extract_img_feat.onnx"
-      engine_path: "$(var model_path)/vad-carla-tier4_backbone.engine"
+      onnx_path: "$(var model_path)/vad-carla-tiny_backbone.onnx"
+      engine_path: "$(var model_path)/vad-carla-tiny_backbone.engine"
     head:
-      onnx_path: "$(var model_path)/sim_vadv1_prev.pts_bbox_head.forward.onnx"
-      engine_path: "$(var model_path)/vad-carla-tier4_head.engine"
+      onnx_path: "$(var model_path)/vad-carla-tiny_head.onnx"
+      engine_path: "$(var model_path)/vad-carla-tiny_head.engine"
     head_no_prev:
-      onnx_path: "$(var model_path)/sim_vadv1.pts_bbox_head.forward.onnx"
-      engine_path: "$(var model_path)/vad-carla-tier4_head_no_prev.engine"
+      onnx_path: "$(var model_path)/vad-carla-tiny_head_no_prev.onnx"
+      engine_path: "$(var model_path)/vad-carla-tiny_head_no_prev.engine"
 ```
 
 3. **Launch the node**: On first run, the node will automatically:
@@ -146,11 +159,11 @@ model_params:
    - Cache engines at the specified `engine_path` locations
    - Use FP16 precision for backbone and FP32 for heads (configurable)
 
-### Model Versions
+### Model Version History
 
-| Model Version | Training Dataset  | Release Date | Notes                            | Node Compatibility |
-| ------------- | ----------------- | ------------ | -------------------------------- | ------------------ |
-| v0.1.0        | Bench2Drive CARLA | 2025-10      | Initial release, 6-camera config | >= 0.1.0           |
+| Version | Training Dataset  | Release Date | Notes                                                                                                          | Node Compatibility |
+| ------- | ----------------- | ------------ | -------------------------------------------------------------------------------------------------------------- | ------------------ |
+| **0.1** | Bench2Drive CARLA | 2025-01      | - Initial release<br>- 6-camera surround view<br>- Trained on CARLA Towns 01-07<br>- FP16/FP32 mixed precision | >= 0.1.0           |
 
 ---
 
