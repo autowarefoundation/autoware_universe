@@ -17,6 +17,8 @@
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <cmath>
+#include <map>
+#include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface
 {

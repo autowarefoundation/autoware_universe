@@ -13,6 +13,8 @@
 // limitations under the License.
 
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__MAP_POSTPROCESS_HPP_
+
+#include <string>
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__MAP_POSTPROCESS_HPP_
 
 #include "autoware/tensorrt_vad/data_types.hpp"

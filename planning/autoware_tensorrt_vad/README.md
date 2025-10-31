@@ -153,7 +153,7 @@ model_params:
       engine_path: "$(var model_path)/vad-carla-tiny_head_no_prev.engine"
 ```
 
-3. **Launch the node**: On first run, the node will automatically:
+1. **Launch the node**: On first run, the node will automatically:
    - Build TensorRT engines from ONNX models
    - Optimize for your specific GPU
    - Cache engines at the specified `engine_path` locations
@@ -206,24 +206,24 @@ We aim to address these limitations through:
 
 ### Training and Datasets
 
-2. **Jia, X., Wu, P., Chen, L., Liu, Y., Li, H., & Yan, J.** (2024). Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving. _Conference on Robot Learning (CoRL) 2024_.
+1. **Jia, X., Wu, P., Chen, L., Liu, Y., Li, H., & Yan, J.** (2024). Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving. _Conference on Robot Learning (CoRL) 2024_.
    - Paper: [arXiv:2406.03877](https://arxiv.org/abs/2406.03877)
    - Code: [github.com/Thinklab-SJTU/Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
    - Description: CARLA-based benchmark for end-to-end autonomous driving evaluation
 
 ### Deployment and Optimization
 
-3. **NVIDIA Corporation** (2024). Deep Learning for Autonomous Ground Vehicles (DL4AGX).
+1. **NVIDIA Corporation** (2024). Deep Learning for Autonomous Ground Vehicles (DL4AGX).
    - Resource: [developer.nvidia.com/drive/drive-agx](https://developer.nvidia.com/drive/drive-agx)
    - Description: TensorRT optimization for autonomous driving workloads and embedded GPU deployment strategies
 
 ### Related Work
 
-4. **Caesar, H., Bankiti, V., Lang, A. H., Vora, S., Liong, V. E., Xu, Q., ... & Beijbom, O.** (2020). nuScenes: A Multimodal Dataset for Autonomous Driving. _IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) 2020_, pp. 11621-11631.
+1. **Caesar, H., Bankiti, V., Lang, A. H., Vora, S., Liong, V. E., Xu, Q., ... & Beijbom, O.** (2020). nuScenes: A Multimodal Dataset for Autonomous Driving. _IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) 2020_, pp. 11621-11631.
    - Paper: [arXiv:1903.11027](https://arxiv.org/abs/1903.11027)
    - Dataset: [nuscenes.org](https://www.nuscenes.org)
 
-5. **Li, Z., Wang, W., Li, H., Xie, E., Sima, C., Lu, T., ... & Dai, J.** (2022). BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers. _European Conference on Computer Vision (ECCV) 2022_, pp. 1-18.
+2. **Li, Z., Wang, W., Li, H., Xie, E., Sima, C., Lu, T., ... & Dai, J.** (2022). BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers. _European Conference on Computer Vision (ECCV) 2022_, pp. 1-18.
    - Paper: [arXiv:2203.17270](https://arxiv.org/abs/2203.17270)
 
 ---

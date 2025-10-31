@@ -16,6 +16,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <utility>
+#include <vector>
+
 namespace autoware::tensorrt_vad::vad_interface
 {
 

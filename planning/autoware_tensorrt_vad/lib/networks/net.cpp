@@ -14,6 +14,11 @@
 
 #include "autoware/tensorrt_vad/networks/net.hpp"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace autoware::tensorrt_vad
 {
 

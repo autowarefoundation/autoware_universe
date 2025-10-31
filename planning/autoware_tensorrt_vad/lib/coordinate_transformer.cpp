@@ -52,7 +52,6 @@ std::optional<Eigen::Matrix4f> CoordinateTransformer::lookup_base2cam(
     Eigen::Matrix4f transform_matrix_inverse = transform_matrix.inverse();
 
     return transform_matrix_inverse;
-
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR_THROTTLE(
       rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,

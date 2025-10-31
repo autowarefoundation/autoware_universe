@@ -21,6 +21,13 @@
 
 #include <cv_bridge/cv_bridge.h>
 
+#include <limits>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 namespace autoware::tensorrt_vad
 {
 std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
