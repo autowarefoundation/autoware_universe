@@ -66,6 +66,8 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
     p.vehicle_shape_margin_m = declare_parameter<double>("vehicle_shape_margin_m");
     p.replan_when_obstacle_found = declare_parameter<bool>("replan_when_obstacle_found");
     p.replan_when_course_out = declare_parameter<bool>("replan_when_course_out");
+    p.parking_accuracy_tolerance = declare_parameter<double>("parking_accuracy_tolerance");
+    p.max_replan_count = declare_parameter<int>("max_replan_count");
   }
 
   // set vehicle_info
@@ -81,6 +83,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
 
   // Planning
   initializePlanningAlgorithm();
+  replan_count_ = 0;
 
   // Subscribers
   route_sub_ = create_subscription<LaneletRoute>(
@@ -200,12 +203,43 @@ void FreespacePlannerNode::updateTargetIndex()
     utils::get_next_target_index(trajectory_.points.size(), reversing_indices_, target_index_);
 
   if (new_target_index == target_index_) {
-    // Finished publishing all partial trajectories
-    is_completed_ = true;
-    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Freespace planning completed");
-    std_msgs::msg::Bool is_completed_msg;
-    is_completed_msg.data = is_completed_;
-    parking_state_pub_->publish(is_completed_msg);
+    double yaw_error =
+      autoware_utils_geometry::calc_yaw_deviation(goal_pose_.pose, current_pose_.pose);
+
+    RCLCPP_INFO_STREAM(
+      get_logger(),
+      " Angle difference (goal pose vs current pose): " << yaw_error << " degrees");
+    RCLCPP_INFO_STREAM(
+      get_logger(), " Final deviation from goal - X: "
+                      << current_pose_.pose.position.x - goal_pose_.pose.position.x
+                      << " Y: " << current_pose_.pose.position.y - goal_pose_.pose.position.y);
+    // activate reparking function
+    if (std::fabs(yaw_error) >= node_param_.parking_accuracy_tolerance) {
+      if (replan_count_ < node_param_.max_replan_count) {
+        replan_count_++;
+        algo_->setReparking(true);
+        is_completed_ = false;
+        reset_in_progress_ = true;
+        return;
+      } else {
+        is_completed_ = true;
+        RCLCPP_INFO_THROTTLE(
+          get_logger(), *get_clock(), 1000, " Reparking has reached the limit counts.");
+
+        std_msgs::msg::Bool is_completed_msg;
+        is_completed_msg.data = is_completed_;
+        parking_state_pub_->publish(is_completed_msg);
+        return;
+      }
+    } else {
+      replan_count_ = 0;
+      is_completed_ = true;
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, " Freespace planning completed.");
+
+      std_msgs::msg::Bool is_completed_msg;
+      is_completed_msg.data = is_completed_;
+      parking_state_pub_->publish(is_completed_msg);
+    }
   } else {
     // Switch to next partial trajectory
     prev_target_index_ = target_index_;
@@ -221,7 +255,7 @@ void FreespacePlannerNode::onRoute(const LaneletRoute::ConstSharedPtr msg)
   goal_pose_.pose = msg->goal_pose;
 
   is_new_parking_cycle_ = true;
-
+  replan_count_ = 0;
   reset();
 }
 
@@ -333,7 +367,16 @@ void FreespacePlannerNode::onTimer()
       utils::is_stopped(odom_buffer_, node_param_.th_stopped_velocity_mps);
     if (is_ego_stopped) {
       // Plan new trajectory
+      const rclcpp::Time start_time = get_clock()->now();
+
+      // Plan new trajectory
       planTrajectory();
+
+      const rclcpp::Time end_time = get_clock()->now();
+      const double duration = (end_time - start_time).seconds();
+
+      RCLCPP_INFO(get_logger(), " execution time: %f seconds", duration);
+
       reset_in_progress_ = false;
     } else {
       // Will keep current stop trajectory
