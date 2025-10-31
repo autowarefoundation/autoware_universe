@@ -5,17 +5,22 @@
 ## Responsibilities
 
 - Convert from `VadInputTopicData` to `VadInputData`, and from `VadOutputData` to `VadOutputTopicData`
-  - Transform coordinate system by [`CoordinateTransformer`](../include/autoware/tensorrt_vad/coordinate_transformer.hpp)
-  - Convert input data
+  - Manage TF lookups via [`CoordinateTransformer`](../include/autoware/tensorrt_vad/coordinate_transformer.hpp)
+    - Provides camera frame transformations (base_link → camera frames) via TF buffer
+    - Note: For CARLA Tier4, VAD coordinates = Autoware base_link coordinates (no conversion needed)
+  - Convert input data (all converters in `vad_interface::` namespace)
     - Convert input images by [`InputImageConverter`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
     - Convert input transform matrix by [`InputTransformMatrixConverter`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
-    - Convert input odometry adata by [`InputCanBusConverter`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp) and [`InputBEVShiftConverter`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
-  - Convert output data
+      - Uses `CoordinateTransformer::lookup_base2cam()` to build transformation matrices
+    - Convert input odometry data by [`InputCanBusConverter`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp)
+    - Compute BEV shift by [`InputBEVShiftConverter`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
+  - Convert output data (all converters in `vad_interface::` namespace)
     - Convert output planning trajectory by [`OutputTrajectoryConverter`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
     - Convert output predicted objects by [`OutputObjectsConverter`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
     - Convert output map markers by [`OutputMapConverter`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
 
-- Responsible for preprocessing and postprocessing that use only CPU (does not use CUDA).
+- Responsible for preprocessing and postprocessing that use only CPU (does not use CUDA)
+- Caches `vad_base2img` transformation matrix after first successful computation to avoid repeated TF lookups
 
 ## Processing Flowchart
 
@@ -106,18 +111,42 @@ flowchart TD
 
 ### Function Roles
 
-### API functions(public)
+### API functions (public)
 
-- `VadNode` calls `convert_input()` before inference and `convert_output()` after inference.
+`VadNode` calls `convert_input()` before inference and `convert_output()` after inference.
 
-- [`convert_input()`](../include/autoware/tensorrt_vad/vad_interface.hpp): Convert from `VadInputTopicData` to `VadInputData`
-  - Image processing is handled by [`InputImageConverter::process_image()`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
-  - Transform matrix processing is handled by [`InputTransformMatrixConverter::process_vad_base2img()`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
-  - Odometry data processing is handled by [`InputCanBusConverter::process_can_bus()`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp) and [`InputBEVShiftConverter::process_shift()`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
-- [`convert_output()`](../include/autoware/tensorrt_vad/vad_interface.hpp): Convert from `VadOutputData` to `VadOutputTopicData`
-  - Trajectory processing is handled by [`OutputTrajectoryConverter::process_trajectory()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp) and [`OutputTrajectoryConverter::process_candidate_trajectories()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
-  - Object processing is handled by [`OutputObjectsConverter::process_predicted_objects()`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
-  - Map processing is handled by [`OutputMapConverter::process_map_points()`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
+- [`convert_input(const VadInputTopicData&)`](../lib/vad_interface.cpp): Convert from `VadInputTopicData` to `VadInputData`
+  - Validates and caches `vad_base2img` transformation via [`InputTransformMatrixConverter::process_vad_base2img()`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
+  - Processes CAN-bus data via [`InputCanBusConverter::process_can_bus()`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp)
+  - Computes BEV shift via [`InputBEVShiftConverter::process_shift()`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
+  - Processes images via [`InputImageConverter::process_image()`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
+  - Updates `prev_can_bus_` for next frame
+
+- [`convert_output(const VadOutputData&, ...)`](../lib/vad_interface.cpp): Convert from `VadOutputData` to `VadOutputTopicData`
+  - Converts candidate trajectories via [`OutputTrajectoryConverter::process_candidate_trajectories()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
+  - Converts main trajectory via [`OutputTrajectoryConverter::process_trajectory()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
+  - Converts map polylines via [`OutputMapConverter::process_map_points()`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
+  - Converts predicted objects via [`OutputObjectsConverter::process_predicted_objects()`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
+
+### Converter Architecture
+
+All converter classes are in the `autoware::tensorrt_vad::vad_interface::` namespace and inherit from a base `Converter` class that provides access to `CoordinateTransformer` and configuration.
+
+## Key Design Details
+
+### CoordinateTransformer
+- Wraps TF buffer and provides `lookup_base2cam(frame_id)` for camera transformations
+- For CARLA Tier4: VAD coordinates are identical to Autoware base_link (no coordinate conversion)
+- Used by `InputTransformMatrixConverter` to build `vad_base2img` matrices
+
+### Caching Strategy
+- `vad_base2img_transform_` is cached after first successful computation
+- Validates transformation (checks for non-zero values) before caching
+- Avoids repeated TF lookups on every frame
+
+### Converter Dependency Injection
+- All converters receive `CoordinateTransformer` reference and config in constructor
+- Enables unit testing and separation of concerns
 
 ## TODO
 

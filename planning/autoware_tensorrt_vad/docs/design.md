@@ -197,18 +197,18 @@ flowchart TD
 
 ### Separation between ONNX-dependent and ONNX-independent ROS parameters
 
-- ONNX-dependent parameters are added to [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)
-- ONNX-independent ROS parameters are added to [`vad_tiny.param.yaml`](../config/vad_tiny.param.yaml)
-  - Object class remapping parameters are added to [`object_class_remapper.param.yaml`](../config/object_class_remapper.param.yaml)
+- ONNX-dependent parameters are added to [`ml_package_vad_carla_tier4.param.yaml`](../config/ml_package_vad_carla_tier4.param.yaml)
+- ONNX-independent ROS parameters are added to [`vad_carla_tier4.param.yaml`](../config/vad_carla_tier4.param.yaml)
+  - Object class remapping parameters are added to [`object_class_remapper_carla_tier4.param.yaml`](../config/object_class_remapper_carla_tier4.param.yaml)
     - Following the precedent of [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)
-- Some parameters like `autoware_to_vad_camera_mapping` depend on both ONNX and ROS Node. If a parameter **could affect ONNX**, it is added to [`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml)
+- Some parameters like `autoware_to_vad_camera_mapping` depend on both ONNX and ROS Node. If a parameter **could affect ONNX**, it is added to [`ml_package_vad_carla_tier4.param.yaml`](../config/ml_package_vad_carla_tier4.param.yaml)
 
 #### Expected Use Cases
 
-| Use Case                 | vad_tiny.param.yaml | ml_package_vad_tiny.param.yaml | object_class_remapper.param.yaml                             |
-| ------------------------ | ------------------- | ------------------------------ | ------------------------------------------------------------ |
-| ONNX-dependent changes   | Modify              | Do not modify                  | Modify only when VAD ONNX output class definitions change    |
-| ONNX-independent changes | Do not modify       | Modify                         | Modify only when object class definitions in Autoware change |
+| Use Case                 | vad_carla_tier4.param.yaml | ml_package_vad_carla_tier4.param.yaml | object_class_remapper_carla_tier4.param.yaml                 |
+| ------------------------ | -------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| ONNX-dependent changes   | Do not modify              | Modify                                | Modify only when VAD ONNX output class definitions change    |
+| ONNX-independent changes | Modify                     | Do not modify                         | Modify only when object class definitions in Autoware change |
 
 ### Extensible design for Autoware `camera_id` changes
 
@@ -221,7 +221,7 @@ flowchart TD
 
 ##### When camera image ID used for VAD input is changed
 
-- Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`ml_package_vad_tiny.param.yaml`](../config/ml_package_vad_tiny.param.yaml))
+- Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`ml_package_vad_carla_tier4.param.yaml`](../config/ml_package_vad_carla_tier4.param.yaml))
 
 ### Additional Design Considerations
 
