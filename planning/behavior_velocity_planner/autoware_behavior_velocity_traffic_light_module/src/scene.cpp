@@ -218,9 +218,10 @@ bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(
   const double & distance_to_stop_line) const
 {
   double ego_velocity = planner_data_->current_velocity->twist.linear.x;
-  double predicted_passing_stop_line_time = ego_velocity > planner_param_.v2i_velocity_threshold
-                                              ? distance_to_stop_line / ego_velocity
-                                              : planner_param_.v2i_required_time_to_departure;
+  if (ego_velocity < planner_param_.v2i_velocity_threshold) {
+    return false;
+  }
+  double predicted_passing_stop_line_time = distance_to_stop_line / ego_velocity;
 
   double seconds = predicted_passing_stop_line_time + planner_param_.v2i_last_time_allowed_to_pass;
 

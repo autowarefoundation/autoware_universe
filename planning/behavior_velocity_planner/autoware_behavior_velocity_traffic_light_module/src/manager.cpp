@@ -56,8 +56,6 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".v2i.last_time_allowed_to_pass");
   planner_param_.v2i_velocity_threshold =
     get_or_declare_parameter<double>(node, ns + ".v2i.velocity_threshold");
-  planner_param_.v2i_required_time_to_departure =
-    get_or_declare_parameter<double>(node, ns + ".v2i.required_time_to_departure");
   pub_tl_state_ = node.create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
     "~/output/traffic_signal", 1);
 }

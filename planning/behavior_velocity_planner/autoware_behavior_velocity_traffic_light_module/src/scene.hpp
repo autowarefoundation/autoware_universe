@@ -72,7 +72,6 @@ public:
     bool v2i_use_remaining_time;
     double v2i_last_time_allowed_to_pass;
     double v2i_velocity_threshold;
-    double v2i_required_time_to_departure;
   };
 
 public:
