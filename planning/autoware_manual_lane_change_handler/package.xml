@@ -3,7 +3,7 @@
   <name>autoware_manual_lane_change_handler</name>
   <version>1.0.0</version>
   <description>Manual lane change handler node extracted from autoware_mission_planner_universe</description>
-  <maintainer email="you@autoware.org">Your Name</maintainer>
+  <maintainer email="arjun.ram@tier4.jp">Arjun J Ram</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
