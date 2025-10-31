@@ -46,6 +46,11 @@
           "default": 20,
           "minimum": 0
         },
+        "marker_to_vehicle_offset_y": {
+          "type": "number",
+          "description": "Y-axiz offset from the center of the marker to vehicle. [m]",
+          "default": 0.0
+        },
         "marker_height_from_ground": {
           "type": "number",
           "description": "Height from the ground to the center of the marker. [m]",
@@ -118,6 +123,7 @@
         "positive_match_num_threshold",
         "negative_match_num_threshold",
         "vote_threshold_for_detect_marker",
+        "marker_to_vehicle_offset_y",
         "self_pose_timeout_sec",
         "self_pose_distance_tolerance_m",
         "limit_distance_from_self_pose_to_nearest_marker",
