@@ -37,7 +37,7 @@
     <arg name="input_odometry" default="/localization/kinematic_state"/>
     <arg name="input_steering" default="/vehicle/status/steering_status"/>
     <arg name="output_actuation_cmd" default="/control/command/actuation_cmd"/>
-    <arg name="config_file" default="$(find-pkg-share autoware_carla_interface)/raw_vehicle_cmd_converter.param.yaml"/>
+    <arg name="config_file" default="$(find-pkg-share autoware_carla_interface)/config/raw_vehicle_cmd_converter.param.yaml"/>
 
     <node pkg="autoware_raw_vehicle_cmd_converter" exec="autoware_raw_vehicle_cmd_converter_node" name="autoware_raw_vehicle_cmd_converter" output="screen">
       <param from="$(var config_file)" allow_substs="true"/>
