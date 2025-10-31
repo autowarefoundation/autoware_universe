@@ -39,6 +39,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::tensorrt_vad

@@ -22,6 +22,7 @@
 #include <cuda_runtime.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::tensorrt_vad

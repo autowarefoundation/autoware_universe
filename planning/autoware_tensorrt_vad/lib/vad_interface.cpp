@@ -17,6 +17,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <cmath>
+#include <memory>
 
 namespace autoware::tensorrt_vad
 {

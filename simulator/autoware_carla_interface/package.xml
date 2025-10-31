@@ -8,10 +8,14 @@
   <license>Apache License 2.0</license>
 
   <exec_depend>std_msgs</exec_depend>
+  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
   <depend>sensor_msgs_py</depend>
@@ -20,10 +24,6 @@
   <depend>tier4_vehicle_msgs</depend>
 
   <!-- C++ dependencies for utility nodes -->
-  <depend>autoware_adapi_v1_msgs</depend>
-  <depend>nav_msgs</depend>
-  <depend>rclcpp</depend>
-  <depend>rclcpp_components</depend>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>

@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace autoware::tensorrt_vad
 {

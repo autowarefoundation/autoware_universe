@@ -14,6 +14,10 @@
 
 #include "autoware/tensorrt_vad/networks/backbone.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::tensorrt_vad
 {
 
