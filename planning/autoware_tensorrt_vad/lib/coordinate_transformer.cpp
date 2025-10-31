@@ -16,6 +16,8 @@
 
 #include <tf2/exceptions.h>
 
+#include <string>
+
 namespace autoware::tensorrt_vad::vad_interface
 {
 

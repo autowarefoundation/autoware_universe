@@ -60,7 +60,6 @@ struct Tensor
   // Copy data from device to host
   template <class T>
   std::vector<T> cpu();
-
 };  // struct Tensor
 
 using TensorMap = std::unordered_map<std::string, std::shared_ptr<Tensor>>;

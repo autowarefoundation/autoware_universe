@@ -30,7 +30,7 @@
       plugins_path: "$(var plugins_path)/plugins/libautoware_tensorrt_plugins.so"
 
       # Navigation command: 0=LEFT, 1=RIGHT, 2=STRAIGHT, 3=LANEFOLLOW, 4=CHANGELANELEFT, 5=CHANGELANERIGHT
-      default_command: 3
+      default_command: 1
 
       # Detection confidence thresholds (0-1 scale)
       # Map classes: [Broken, Solid, SolidSolid, Center, TrafficLight, StopSign]

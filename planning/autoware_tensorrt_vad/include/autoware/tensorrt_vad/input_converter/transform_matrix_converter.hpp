@@ -22,6 +22,7 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface

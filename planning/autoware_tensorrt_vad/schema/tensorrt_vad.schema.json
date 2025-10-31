@@ -78,11 +78,22 @@
               },
               "minItems": 18,
               "maxItems": 18,
-              "default": [1.0, 0.5, 0.0, 0.3922, 0.5843, 0.9294, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.7, 0.0, 0.0],
+              "default": [
+                1.0, 0.5, 0.0, 0.3922, 0.5843, 0.9294, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0,
+                0.7, 0.0, 0.0
+              ],
               "description": "Map element colors in RGB format (0-1 scale), 3 values per class: [Broken, Solid, SolidSolid, Center, TrafficLight, StopSign]"
             }
           },
-          "required": ["input_image_width", "input_image_height", "target_image_width", "target_image_height", "detection_range", "trajectory_timestep", "map_colors"]
+          "required": [
+            "input_image_width",
+            "input_image_height",
+            "target_image_width",
+            "target_image_height",
+            "detection_range",
+            "trajectory_timestep",
+            "map_colors"
+          ]
         },
         "model_params": {
           "type": "object",
@@ -122,7 +133,17 @@
               "items": {
                 "type": "string"
               },
-              "default": ["car", "van", "truck", "bicycle", "traffic_sign", "traffic_cone", "traffic_light", "pedestrian", "others"],
+              "default": [
+                "car",
+                "van",
+                "truck",
+                "bicycle",
+                "traffic_sign",
+                "traffic_cone",
+                "traffic_light",
+                "pedestrian",
+                "others"
+              ],
               "description": "Object class names for detection and tracking"
             },
             "object_confidence_thresholds": {
@@ -256,7 +277,24 @@
                   "description": "CAN bus data dimension (vehicle state)"
                 }
               },
-              "required": ["bev_h", "bev_w", "bev_feature_dim", "downsample_factor", "num_decoder_layers", "prediction_num_queries", "prediction_num_classes", "prediction_bbox_pred_dim", "prediction_trajectory_modes", "prediction_timesteps", "planning_ego_commands", "planning_timesteps", "map_num_queries", "map_num_class", "map_points_per_polylines", "can_bus_dim"]
+              "required": [
+                "bev_h",
+                "bev_w",
+                "bev_feature_dim",
+                "downsample_factor",
+                "num_decoder_layers",
+                "prediction_num_queries",
+                "prediction_num_classes",
+                "prediction_bbox_pred_dim",
+                "prediction_trajectory_modes",
+                "prediction_timesteps",
+                "planning_ego_commands",
+                "planning_timesteps",
+                "map_num_queries",
+                "map_num_class",
+                "map_points_per_polylines",
+                "can_bus_dim"
+              ]
             },
             "nets": {
               "type": "object",
@@ -382,7 +420,18 @@
               "required": ["backbone", "head", "head_no_prev"]
             }
           },
-          "required": ["plugins_path", "default_command", "map_class_names", "map_confidence_thresholds", "object_class_names", "object_confidence_thresholds", "image_normalization_param_mean", "image_normalization_param_std", "network_io_params", "nets"]
+          "required": [
+            "plugins_path",
+            "default_command",
+            "map_class_names",
+            "map_confidence_thresholds",
+            "object_class_names",
+            "object_confidence_thresholds",
+            "image_normalization_param_mean",
+            "image_normalization_param_std",
+            "network_io_params",
+            "nets"
+          ]
         },
         "sync_params": {
           "type": "object",
@@ -410,7 +459,13 @@
           "description": "Class name mapping for object remapping"
         }
       },
-      "required": ["node_params", "interface_params", "model_params", "sync_params", "class_mapping"]
+      "required": [
+        "node_params",
+        "interface_params",
+        "model_params",
+        "sync_params",
+        "class_mapping"
+      ]
     }
   },
   "properties": {

@@ -18,6 +18,9 @@
 #include "autoware/tensorrt_vad/networks/tensor.hpp"
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::tensorrt_vad
 {

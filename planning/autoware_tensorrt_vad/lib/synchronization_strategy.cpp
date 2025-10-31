@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 namespace autoware::tensorrt_vad
 {

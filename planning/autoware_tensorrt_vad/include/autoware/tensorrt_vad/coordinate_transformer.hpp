@@ -22,6 +22,7 @@
 
 #include <tf2_ros/buffer.h>
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -43,7 +44,7 @@ public:
    * @brief Constructor
    * @param tf_buffer Shared pointer to TF buffer for dynamic transformations
    */
-  CoordinateTransformer(std::shared_ptr<tf2_ros::Buffer> tf_buffer);
+  explicit CoordinateTransformer(std::shared_ptr<tf2_ros::Buffer> tf_buffer);
 
   /**
    * @brief Lookup transformation from base_link to camera frame
