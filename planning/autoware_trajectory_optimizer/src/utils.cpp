@@ -122,6 +122,8 @@ void clamp_velocities(
       point.longitudinal_velocity_mps = std::max(point.longitudinal_velocity_mps, min_velocity);
       point.acceleration_mps2 = std::max(point.acceleration_mps2, min_acceleration);
     });
+  // recalculate acceleration after velocity change
+  recalculate_longitudinal_acceleration(input_trajectory_array);
 }
 
 void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max_velocity)
@@ -214,6 +216,9 @@ void limit_lateral_acceleration(
 
   motion_utils::calculate_time_from_start(
     input_trajectory_array, current_odometry.pose.pose.position);
+
+  // recalculate acceleration after velocity change
+  recalculate_longitudinal_acceleration(input_trajectory_array);
 }
 
 void filter_velocity(
