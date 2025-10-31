@@ -30,6 +30,7 @@
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_test_utils/mock_data_parser.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -120,8 +121,8 @@ void plot_goal_candidate(
 {
   std::vector<double> xs, ys;
   std::vector<double> yaw_cos, yaw_sin;
-  const auto goal_footprint =
-    transformVector(local_footprint, autoware_utils::pose2transform(goal.goal_pose));
+  const auto goal_footprint = autoware_utils_geometry::transform_vector(
+    local_footprint, autoware_utils::pose2transform(goal.goal_pose));
   plot_footprint(axes, goal_footprint, color);
   xs.push_back(goal.goal_pose.position.x);
   ys.push_back(goal.goal_pose.position.y);
@@ -564,6 +565,7 @@ int main(int argc, char ** argv)
       node.get(), "goal_planner.");
   goal_planner_parameter.bus_stop_area.use_bus_stop_area = true;
   goal_planner_parameter.lane_departure_check_expansion_margin = 0.2;
+  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo();
   autoware::boundary_departure_checker::Param boundary_departure_checker_params;
   boundary_departure_checker_params.footprint_extra_margin =
     goal_planner_parameter.lane_departure_check_expansion_margin;
@@ -571,8 +573,10 @@ int main(int argc, char ** argv)
     boundary_departure_checker_params, vehicle_info);
 
   const auto footprint = vehicle_info.createFootprint();
-  autoware::behavior_path_planner::GoalSearcher goal_searcher(goal_planner_parameter, footprint);
-  auto goal_candidates = goal_searcher.search(planner_data);
+  auto goal_searcher = autoware::behavior_path_planner::GoalSearcher::create(
+    goal_planner_parameter, footprint, planner_data);
+  auto goal_candidates =
+    goal_searcher.search(planner_data, goal_planner_parameter.bus_stop_area.use_bus_stop_area);
   std::sort(
     goal_candidates.begin(), goal_candidates.end(),
     SortByWeightedDistance(
@@ -614,8 +618,8 @@ int main(int argc, char ** argv)
   std::vector<PullOverPath> candidates;
   for (auto i = 0; i < goal_candidates.size(); ++i) {
     const auto & goal_candidate = goal_candidates.at(i);
-    auto shift_pull_over_planner = autoware::behavior_path_planner::BezierPullOver(
-      *node, goal_planner_parameter, lane_departure_checker);
+    auto shift_pull_over_planner =
+      autoware::behavior_path_planner::BezierPullOver(*node, goal_planner_parameter);
     auto pull_over_paths =
       shift_pull_over_planner.plans(goal_candidate, 0, planner_data, reference_path);
     if (!pull_over_paths.empty()) {
@@ -676,8 +680,8 @@ int main(int argc, char ** argv)
       plot_goal_candidate(ax1, filtered_path.modified_goal(), prio, footprint, color);
       plot_path_with_lane_id(ax2, filtered_path.full_path(), color, "most prio", 2.0);
       for (const auto & path_point : filtered_path.full_path().points) {
-        const auto pose_footprint =
-          transformVector(footprint, autoware_utils::pose2transform(path_point.point.pose));
+        const auto pose_footprint = autoware_utils_geometry::transform_vector(
+          footprint, autoware_utils::pose2transform(path_point.point.pose));
         plot_footprint(ax2, pose_footprint, "blue");
       }
     } else if (i % 50 == 0) {
