@@ -25,6 +25,15 @@
   <arg name="lidar_marker_localizer/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path"/>
   <arg name="lidar_marker_localizer/pointcloud_preprocessor/ring_filter_param_path"/>
 
+  <!-- parameter paths for multi lidar_marker_localizer -->
+  <arg name="lidar_marker_localizer/front_lower_left/lidar_marker_localizer_param_path"/>
+  <arg name="lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path"/>
+  <arg name="lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/ring_filter_param_path"/>
+
+  <arg name="lidar_marker_localizer/front_lower_right/lidar_marker_localizer_param_path"/>
+  <arg name="lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path"/>
+  <arg name="lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/ring_filter_param_path"/>
+
   <arg name="input_pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="localization_pointcloud_container_name" default="/pointcloud_container"/>
 
