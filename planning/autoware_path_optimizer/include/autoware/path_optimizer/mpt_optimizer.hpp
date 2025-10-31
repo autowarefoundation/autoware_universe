@@ -414,7 +414,9 @@ private:
 
   // Add new method to publish spline coefficients and curvatures
   void publishSplineCoefficientsAndCurvatures(
-    const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline, const geometry_msgs::msg::Pose & ego_pose, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info) const;
+    const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
+    const geometry_msgs::msg::Pose & ego_pose,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info) const;
 
   void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
 

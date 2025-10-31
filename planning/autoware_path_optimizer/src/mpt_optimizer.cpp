@@ -557,17 +557,11 @@ void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_va
   debug_optimised_steering_pub_->publish(msg);
 }
 
-geometry_msgs::msg::Point getCorner(
-  const geometry_msgs::msg::Pose & ego_pose,
-  double dx, double dy)
+geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, double dx, double dy)
 {
   // Convert quaternion to roll, pitch, yaw
   tf2::Quaternion q(
-    ego_pose.orientation.x,
-    ego_pose.orientation.y,
-    ego_pose.orientation.z,
-    ego_pose.orientation.w
-  );
+    ego_pose.orientation.x, ego_pose.orientation.y, ego_pose.orientation.z, ego_pose.orientation.w);
 
   double roll, pitch, yaw;
   tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
@@ -644,40 +638,73 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   std::cerr << "vehicle dimensions (LxW): " << vehicle_info.vehicle_length_m << " x "
             << vehicle_info.vehicle_width_m << std::endl;
   std::cerr << "vehicle overhangs (front, rear, left, right): " << vehicle_info.front_overhang_m
-            << ", " << vehicle_info.rear_overhang_m << ", " << vehicle_info.left_overhang_m
-            << ", " << vehicle_info.right_overhang_m << std::endl;
+            << ", " << vehicle_info.rear_overhang_m << ", " << vehicle_info.left_overhang_m << ", "
+            << vehicle_info.right_overhang_m << std::endl;
 
-  const double half_width = (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) / 2.0;
+  const double half_width =
+    (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) /
+    2.0;
   const double front = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.front_overhang_m;
   const double rear = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.rear_overhang_m;
 
-  const auto [s_ego, e_y_ego] = ref_points_spline.projectPointOntoSpline(ego_pose.position.x, ego_pose.position.y);
+  const auto [s_ego, e_y_ego] =
+    ref_points_spline.projectPointOntoSpline(ego_pose.position.x, ego_pose.position.y);
   geometry_msgs::msg::Pose projected_ego_pose;
   projected_ego_pose.position = ref_points_spline.getSplineInterpolatedPointAt(s_ego);
   projected_ego_pose.orientation = ego_pose.orientation;
 
   const size_t num_body_points = 4;
   const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_body_frame = {
-    [&] { geometry_msgs::msg::Point p; p.x = front;  p.y =  half_width; p.z = 0.0; return p; }(),  // front-left
-    [&] { geometry_msgs::msg::Point p; p.x = front;  p.y = -half_width; p.z = 0.0; return p; }(),  // front-right
-    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.25 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
-    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.50 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
-    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.75 * (rear - front); p.y = -half_width; p.z = 0.0; return p; }(),
-    [&] { geometry_msgs::msg::Point p; p.x = -rear;  p.y = -half_width; p.z = 0.0; return p; }(),   // rear-right
-    [&] { geometry_msgs::msg::Point p; p.x = -rear;  p.y =  half_width; p.z = 0.0; return p; }(),   // rear-left
-    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.25 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }(),
-    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.50 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }(),
-    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.75 * (front - rear); p.y =  half_width; p.z = 0.0; return p; }()
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = front;
+      p.y = half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // front-left
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = front;
+      p.y = -half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // front-right
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.25 * (rear - front); p.y = -half_width;
+    // p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.50 * (rear - front); p.y = -half_width;
+    // p.z = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.75 * (rear - front); p.y = -half_width;
+    // p.z = 0.0; return p; }(),
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = -rear;
+      p.y = -half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // rear-right
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = -rear;
+      p.y = half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // rear-left
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.25 * (front - rear); p.y =  half_width; p.z
+    // = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.50 * (front - rear); p.y =  half_width; p.z
+    // = 0.0; return p; }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.75 * (front - rear); p.y =  half_width; p.z
+    // = 0.0; return p; }()
   };
 
-  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_global_frame = { 
-    getCorner(projected_ego_pose, front,  half_width),  // front-left
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_global_frame = {
+    getCorner(projected_ego_pose, front, half_width),   // front-left
     getCorner(projected_ego_pose, front, -half_width),  // front-right
     // getCorner(projected_ego_pose, front + 0.25*(rear-front),  -half_width),
     // getCorner(projected_ego_pose, front + 0.50*(rear-front),  -half_width),
     // getCorner(projected_ego_pose, front + 0.75*(rear-front),  -half_width),
-    getCorner(projected_ego_pose, -rear,  -half_width),  // rear-right
-    getCorner(projected_ego_pose, -rear,   half_width),   // rear-left
+    getCorner(projected_ego_pose, -rear, -half_width),  // rear-right
+    getCorner(projected_ego_pose, -rear, half_width),   // rear-left
     // getCorner(projected_ego_pose, rear + 0.25*(front-rear),  half_width),
     // getCorner(projected_ego_pose, rear + 0.50*(front-rear),  half_width),
     // getCorner(projected_ego_pose, rear + 0.75*(front-rear),  half_width)
@@ -692,19 +719,17 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   std::array<geometry_msgs::msg::Point, num_body_points> corner_points_curvilinear;
   std::transform(
     boundary_points_global_frame.begin(), boundary_points_global_frame.end(),
-    corner_points_curvilinear.begin(),
-    [&ref_points_spline](const geometry_msgs::msg::Point &p) {
+    corner_points_curvilinear.begin(), [&ref_points_spline](const geometry_msgs::msg::Point & p) {
       const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
       geometry_msgs::msg::Point projected;
       projected.x = s;
       projected.y = e_y;
       projected.z = 0.0;
       return projected;
-    }
-  );
+    });
 
   autoware_internal_debug_msgs::msg::SplineDebug msg;
-  for (const auto& corner_point_body : boundary_points_body_frame) {
+  for (const auto & corner_point_body : boundary_points_body_frame) {
     msg.body_points.push_back(corner_point_body);
   }
   for (const auto & corner_point_curvilinear : corner_points_curvilinear) {
@@ -787,18 +812,18 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   ref_points = autoware::motion_utils::cropForwardPoints(
     ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
   // if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
-    // std::cerr << "mpt_param_.num_points: " << mpt_param_.num_points << ", ref_points.size(): "
-    //           << ref_points.size() << std::endl;
-    // ref_points.resize(mpt_param_.num_points);
-    // std::cerr << "Resizing ref_points to mpt_param_.num_points: " << mpt_param_.num_points
-    //           << std::endl;
-    // ref_points_spline.resize(mpt_param_.num_points);
+  // std::cerr << "mpt_param_.num_points: " << mpt_param_.num_points << ", ref_points.size(): "
+  //           << ref_points.size() << std::endl;
+  // ref_points.resize(mpt_param_.num_points);
+  // std::cerr << "Resizing ref_points to mpt_param_.num_points: " << mpt_param_.num_points
+  //           << std::endl;
+  // ref_points_spline.resize(mpt_param_.num_points);
   // }
 
   if (ref_points_spline.getSize() == 0) {
     return ref_points;
   }
-  
+
   publishSplineCoefficientsAndCurvatures(ref_points_spline, p.ego_pose, vehicle_info_);
 
   return ref_points;
