@@ -1011,12 +1011,23 @@ bool hasPreviousModulePathShapeChanged(
   const BehaviorModuleOutput & upstream_module_output,
   const BehaviorModuleOutput & last_upstream_module_output)
 {
+  if (last_upstream_module_output.path.points.size() < 2) {
+    return false;
+  }
+
   // Calculate the lateral distance between each point of the current path and the nearest point of
   // the last path
   constexpr double LATERAL_DEVIATION_THRESH = 0.1;
   for (const auto & p : upstream_module_output.path.points) {
     const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
       last_upstream_module_output.path.points, p.point.pose.position);
+
+    if (nearest_seg_idx + 1 >= last_upstream_module_output.path.points.size()) {
+      // In case the path is curved, nearest_seg_idx may not be monotonically increasing,
+      // so use continue instead of break here.
+      continue;
+    }
+
     const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
     const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
     // Check if the target point is within the segment
