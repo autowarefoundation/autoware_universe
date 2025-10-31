@@ -44,7 +44,7 @@ We also assume that $n\sim\mathcal{N}(0, \sigma^2)$.
 | `angular_velocity_stddev_zz` | double | yaw rate standard deviation imu_link [rad/s]     |
 | `acceleration_stddev`        | double | acceleration standard deviation imu_link [m/s^2] |
 
-**Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_dynamic_bias` option is enabled, the `on_off_correction.correct_for_static_bias` must be disabled, otherwise the values `angular_velocity_offset_` will introduce correction errors.
+**Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_dynamic_bias` flag and the `on_off_correction.correct_for_static_bias` flags are enabled, automatically the `correct_for_static_bias` will be disabled to avoid correction errors.
 
 ## gyro_bias_estimator
 
@@ -138,7 +138,7 @@ In order to test the result of the scale and bias estimation for the gyro, an op
 
 ## IMU Correction control
 
-These 2 parameters control the correction of the bias and scale for the gyroscope. Please note that only one bias correction should be enabled, the offset values `angular_velocity_offset_` are used when using the static bias calibration and the dynamic bias correction uses the estimated values in `~/output/gyro_bias`; if both bias correction flags are enabled the correction will be inaccurate.
+These 2 parameters control the correction of the bias and scale for the gyroscope. Please note that only one bias correction should be enabled, the offset values `angular_velocity_offset_` are used when using the static bias calibration and the dynamic bias correction uses the estimated values in `~/output/gyro_bias`; if both bias correction flags are enabled automatically static correction will be disabled.
 
 ### Parameters
 

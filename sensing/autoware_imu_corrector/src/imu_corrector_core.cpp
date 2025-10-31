@@ -102,8 +102,11 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "correct_for_scale: %s", correct_for_scale_ ? "true" : "false");
 
   if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
-    throw std::runtime_error(
-      "Cannot enable both static and dynamic gyro bias correction simultaneously.");
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Both static and dynamic gyro bias correction are enabled."
+      "Disabling static bias correction.");
+    correct_for_static_bias_ = false;
   }
 }
 
