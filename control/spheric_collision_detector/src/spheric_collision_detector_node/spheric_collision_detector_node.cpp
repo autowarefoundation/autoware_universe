@@ -16,7 +16,6 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -172,7 +171,7 @@ bool SphericCollisionDetectorNode::isDataTimeout()
 void SphericCollisionDetectorNode::onTimer()
 {
   current_pose_ = self_pose_listener_->get_current_pose();
-  
+
   if (object_recognition_) {
     const auto & header = object_recognition_->header;
     try {
@@ -325,9 +324,8 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
 
   {
     auto marker = create_default_marker(
-         "map", this->now(), "scd_obstacle_spheres", 0,
-         visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.03, 0.03, 0.03),
-         create_marker_color(1.0, 1.0, 0.0, 0.5));
+      "map", this->now(), "scd_obstacle_spheres", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+      create_marker_scale(0.03, 0.03, 0.03), create_marker_color(1.0, 1.0, 0.0, 0.5));
 
     for (const auto & obstacle : output_.obstacles) {
       for (const auto & obstacle_sphere : obstacle) {
