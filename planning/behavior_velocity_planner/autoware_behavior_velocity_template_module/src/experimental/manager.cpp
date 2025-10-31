@@ -41,13 +41,13 @@ void TemplateModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 TemplateModuleManager::getModuleExpiredFunction(
   [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const PlannerData & planner_data)
 {
-  return
-    []([[maybe_unused]] const std::shared_ptr<experimental::SceneModuleInterface> & scene_module)
-      -> bool { return false; };
+  return []([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) -> bool {
+    return false;
+  };
 }
 
 }  // namespace autoware::behavior_velocity_planner::experimental

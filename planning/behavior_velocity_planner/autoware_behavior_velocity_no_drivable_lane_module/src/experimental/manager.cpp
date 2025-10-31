@@ -57,7 +57,7 @@ void NoDrivableLaneModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 NoDrivableLaneModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -67,7 +67,7 @@ NoDrivableLaneModuleManager::getModuleExpiredFunction(
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [lane_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+  return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
   };
 }

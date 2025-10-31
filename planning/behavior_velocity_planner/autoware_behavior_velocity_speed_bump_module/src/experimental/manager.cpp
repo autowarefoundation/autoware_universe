@@ -68,7 +68,7 @@ void SpeedBumpModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 SpeedBumpModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -78,10 +78,9 @@ SpeedBumpModuleManager::getModuleExpiredFunction(
   const auto speed_bump_id_set = planning_utils::getRegElemIdSetOnPath<SpeedBump>(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return
-    [speed_bump_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
-      return speed_bump_id_set.count(scene_module->getModuleId()) == 0;
-    };
+  return [speed_bump_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+    return speed_bump_id_set.count(scene_module->getModuleId()) == 0;
+  };
 }
 
 }  // namespace autoware::behavior_velocity_planner::experimental

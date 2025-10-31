@@ -27,7 +27,7 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
-class OcclusionSpotModule : public experimental::SceneModuleInterface
+class OcclusionSpotModule : public SceneModuleInterface
 {
   using PlannerParam = occlusion_spot_utils::PlannerParam;
   using DebugData = occlusion_spot_utils::DebugData;
@@ -63,6 +63,6 @@ protected:
   // Debug
   mutable DebugData debug_data_;
 };
-}  // namespace autoware::behavior_velocity_planner
+}  // namespace autoware::behavior_velocity_planner::experimental
 
 #endif  // SCENE_OCCLUSION_SPOT_HPP_

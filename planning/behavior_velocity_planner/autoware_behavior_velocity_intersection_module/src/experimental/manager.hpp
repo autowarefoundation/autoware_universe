@@ -91,18 +91,17 @@ private:
   void launchNewModules(
     const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
-  std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
-  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
+  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
+    const Trajectory & path, const PlannerData & planner_data) override;
 
   bool hasSameParentLaneletAndTurnDirectionWithRegistered(const lanelet::ConstLanelet & lane) const;
 };
 
-class IntersectionModulePlugin : public experimental::PluginWrapper<IntersectionModuleManager>
+class IntersectionModulePlugin : public PluginWrapper<IntersectionModuleManager>
 {
 };
 
-class MergeFromPrivateModulePlugin
-: public experimental::PluginWrapper<MergeFromPrivateModuleManager>
+class MergeFromPrivateModulePlugin : public PluginWrapper<MergeFromPrivateModuleManager>
 {
 };
 
