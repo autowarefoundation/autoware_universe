@@ -30,7 +30,7 @@
       image_normalization_param_mean: [123.675, 116.28, 103.53]
       image_normalization_param_std: [58.395, 57.12, 57.375]
 
-      # Class definitions (CARLA Tier4)
+      # Class definitions (CARLA)
       map_class_names: ["Broken", "Solid", "SolidSolid", "Center", "TrafficLight", "StopSign"]
       object_class_names: ["car", "van", "truck", "bicycle", "traffic_sign", "traffic_cone", "traffic_light", "pedestrian", "others"]
 

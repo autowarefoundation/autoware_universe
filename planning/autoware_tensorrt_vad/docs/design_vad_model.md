@@ -9,7 +9,7 @@
 - Preprocesses multi-camera images using CUDA via `MultiCameraPreprocessor`
 - Manages two-stage inference: backbone network and head network (with/without prev_bev)
 - Transfers data between Host (CPU) and Device (GPU) using `Tensor` class
-- Postprocesses outputs using CUDA:
+- Post-processes outputs using CUDA:
   - Object detection via `ObjectPostprocessor`
   - Map polylines via `MapPostprocessor`
 - Manages prev_bev features across frames for temporal context
@@ -239,7 +239,7 @@ Preprocessor and Postprocessor classes wrap CUDA kernels and provide clean C++ i
 **Benefits**:
 
 - Separation of concerns: C++ wrapper logic vs CUDA kernel logic
-- Testability: Can mock preprocessors/postprocessors
+- Testability: Can mock pre-processors/post-processors
 - Performance: Kernels optimized for parallel execution on GPU
 
 ```mermaid

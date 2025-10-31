@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-// ROS2 message includes
+// ROS 2 message includes
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>

@@ -7,7 +7,7 @@
 - Convert from `VadInputTopicData` to `VadInputData`, and from `VadOutputData` to `VadOutputTopicData`
   - Manage TF lookups via [`CoordinateTransformer`](../include/autoware/tensorrt_vad/coordinate_transformer.hpp)
     - Provides camera frame transformations (base_link → camera frames) via TF buffer
-    - Note: For CARLA Tier4, VAD coordinates = Autoware base_link coordinates (no conversion needed)
+    - Note: For CARLA, VAD coordinates = Autoware base_link coordinates (no conversion needed)
   - Convert input data (all converters in `vad_interface::` namespace)
     - Convert input images by [`InputImageConverter`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
     - Convert input transform matrix by [`InputTransformMatrixConverter`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
@@ -137,7 +137,7 @@ All converter classes are in the `autoware::tensorrt_vad::vad_interface::` names
 ### CoordinateTransformer
 
 - Wraps TF buffer and provides `lookup_base2cam(frame_id)` for camera transformations
-- For CARLA Tier4: VAD coordinates are identical to Autoware base_link (no coordinate conversion)
+- For CARLA: VAD coordinates are identical to Autoware base_link (no coordinate conversion)
 - Used by `InputTransformMatrixConverter` to build `vad_base2img` matrices
 
 ### Caching Strategy

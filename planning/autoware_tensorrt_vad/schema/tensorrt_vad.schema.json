@@ -108,7 +108,7 @@
               "default": 3,
               "minimum": 0,
               "maximum": 5,
-              "description": "Default navigation command: 0=LEFT, 1=RIGHT, 2=STRAIGHT, 3=LANEFOLLOW, 4=CHANGELANELEFT, 5=CHANGELANERIGHT"
+              "description": "Default navigation command: 0=LEFT, 1=RIGHT, 2=STRAIGHT, 3=LANE_FOLLOW, 4=CHANGE_LANE_LEFT, 5=CHANGE_LANE_RIGHT"
             },
             "map_class_names": {
               "type": "array",
