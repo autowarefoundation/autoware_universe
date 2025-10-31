@@ -4,10 +4,16 @@
 
 ## Responsibilities
 
-- Responsible for CUDA-based processing.
-- Receives `VadInputData`, executes inference, and returns `VadOutputData`.
-- Preprocesses images using CUDA and transfers data from Host (CPU) to Device (GPU).
-- Transfers data from Device (GPU) to Host (CPU) and postprocesses using CUDA.
+- Responsible for CUDA-based processing and TensorRT inference
+- Receives `VadInputData`, executes inference, and returns `VadOutputData`
+- Preprocesses multi-camera images using CUDA via `MultiCameraPreprocessor`
+- Manages two-stage inference: backbone network and head network (with/without prev_bev)
+- Transfers data between Host (CPU) and Device (GPU) using `Tensor` class
+- Postprocesses outputs using CUDA:
+  - Object detection via `ObjectPostprocessor`
+  - Map polylines via `MapPostprocessor`
+- Manages prev_bev features across frames for temporal context
+- Dynamically loads/unloads networks (releases `head_no_prev` after first frame)
 
 ## Processing Flowchart
 
@@ -54,31 +60,84 @@ flowchart TD
 
 ### Function Roles
 
-### API functions(public)
+### API functions (public)
 
-- [`infer()`](../include/autoware/tensorrt_vad/vad_model.hpp): Receives `VadInputData`, preprocesses images using CUDA, transfers data from Host (CPU) to Device (GPU), executes TensorRT engine, transfers data from Device (GPU) to Host (CPU), postprocesses using CUDA, and returns `VadOutputData`. Called from `VadNode`. Returns `std::nullopt` if inference fails.
+- [`infer(const VadInputData&)`](../include/autoware/tensorrt_vad/vad_model.hpp): Main inference pipeline
+  1. Selects head network (`head_no_prev` for first frame, `head` for subsequent frames)
+  2. Calls `load_inputs()` to preprocess and transfer data to GPU
+  3. Calls `enqueue()` to execute backbone and head networks
+  4. Calls `save_prev_bev()` to preserve BEV features for next frame
+  5. Calls `postprocess()` to extract outputs and transfer to CPU
+  6. On first frame: releases `head_no_prev` network and calls `load_head()` to initialize `head` network
+  7. Returns `VadOutputData` containing trajectories, objects, and map polylines
 
-### Internal functions(private)
+### Internal functions (private)
 
-- [`load_head()`](../include/autoware/tensorrt_vad/vad_model.hpp): VAD takes previous frame's BEV features (`prev_bev`) as input. However, for the first frame, no previous BEV features exist, so it uses a special ONNX designed only for the first frame execution. After the first frame inference is completed, `load_head()` loads the head ONNX that uses previous frame's BEV features as input.
+- [`init_engines()`](../include/autoware/tensorrt_vad/vad_model.hpp): Initializes TensorRT networks at construction
+  - Creates `Backbone`, `Head`, and `Head_no_prev` network instances
+  - Sets up external input bindings for memory sharing between networks
+  - Logs binding connections between networks
 
-- [`save_prev_bev()`](../include/autoware/tensorrt_vad/vad_model.hpp): Transfers `prev_bev` from Device (GPU) to Host (CPU) and saves it for the next frame's inference. The return value is stored in the `VadModel` member variable `saved_prev_bev_`.
+- [`load_inputs()`](../include/autoware/tensorrt_vad/vad_model.hpp): Prepares inputs for inference
+  - Preprocesses multi-camera images using `MultiCameraPreprocessor::preprocess_images()`
+  - Loads metadata: `shift`, `vad_base2img` (lidar2img), `can_bus`
+  - Sets `prev_bev` binding for `head` network (not needed for `head_no_prev`)
+
+- [`enqueue()`](../include/autoware/tensorrt_vad/vad_model.hpp): Executes inference
+  - Enqueues backbone network
+  - Enqueues selected head network
+  - Synchronizes CUDA stream to wait for completion
+
+- [`save_prev_bev()`](../include/autoware/tensorrt_vad/vad_model.hpp): Preserves BEV features for next frame
+  - Copies `out.bev_embed` from head output to `prev_bev` tensor
+  - Uses `cudaMemcpyAsync` Device-to-Device transfer
+  - Returns shared pointer to `Tensor` stored in `saved_prev_bev_` member
+
+- [`postprocess()`](../include/autoware/tensorrt_vad/vad_model.hpp): Extracts and processes outputs
+  - Retrieves `out.ego_fut_preds` (trajectory predictions) from GPU
+  - Processes detected objects via `ObjectPostprocessor::postprocess_objects()`
+  - Processes map polylines via `MapPostprocessor::postprocess_map_preds()`
+  - Performs cumulative sum on trajectory points to convert deltas to absolute positions
+  - Extracts trajectories for all commands and the selected command
+  - Returns `VadOutputData` with all processed outputs
+
+- [`release_network()`](../include/autoware/tensorrt_vad/vad_model.hpp): Frees network resources
+  - Clears bindings map
+  - Resets and erases network from `nets_` map
+  - Called to release `head_no_prev` after first frame
+
+- [`load_head()`](../include/autoware/tensorrt_vad/vad_model.hpp): Initializes head network with prev_bev support
+  - VAD requires previous frame's BEV features as input
+  - First frame uses `head_no_prev` (no previous BEV available)
+  - After first frame, switches to `head` which uses `prev_bev` from previous inference
+  - Sets up external bindings to connect with backbone outputs
 
 ### Design concepts
 
-#### Logger
+#### Logger Pattern
 
-- We don't want `VadModel` to depend on ROS.
-- However, we want `VadModel`'s logging functionality to be consistent with `VadNode` and `VadInterface`, using `RCLCPP_INFO_THROTTLE`.
-- Therefore, we define an abstract base class called [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp), and `VadModel` receives `LoggerType` as a template parameter.
-- [`RosVadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp) inherits from [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp) and performs log output using actual ROS 2 logging macros such as `RCLCPP_INFO_THROTTLE`.
-- This design allows `VadModel` to utilize logging functionality without directly depending on ROS 2.
-- To provide this flexibility, `VadModel` is designed as a template class, which requires all implementation to be written in the header file(.hpp). This is a C++ template constraint where template definitions must be available to all translation units that instantiate the template.
+- **Goal**: `VadModel` should not depend on ROS, but needs logging capabilities
+- **Solution**: Template-based dependency injection with abstract logger interface
+- [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp): Abstract base class defining logging interface
+- [`RosVadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp): Concrete implementation using ROS 2 logging macros (`RCLCPP_INFO_THROTTLE`, etc.)
+- `VadModel<LoggerType>`: Template class parameterized by logger type
+  - Enforces `LoggerType` must inherit from `VadLogger` via `static_assert`
+  - Enables unit testing with mock loggers
+  - Maintains consistent logging behavior across ROS and CUDA domains
+- **Trade-off**: Template implementation requires all code in header file (`.hpp`), following C++ template constraints
 
-#### Network classes
+#### Network Architecture
 
-- Each ONNX file corresponds to one `Net` class. The `Net` class uses [`autoware_tensorrt_common`](../../../perception/autoware_tensorrt_common/README.md) to build and execute TensorRT engines.
-- `cudaMalloc` and `cudaMemcpyAsync` operations for Input/output are executed using the [`Tensor`](../include/autoware/tensorrt_vad/networks/tensor.hpp) class.
+- Each ONNX file corresponds to one `Net` class
+- `Net` class uses [`autoware_tensorrt_common`](../../../perception/autoware_tensorrt_common/README.md) to build and execute TensorRT engines
+- Three network types:
+  1. **Backbone**: Processes multi-camera images and extracts features
+  2. **Head_no_prev**: First-frame head without previous BEV features
+  3. **Head**: Subsequent-frame head using `prev_bev` from previous inference
+- Memory management via [`Tensor`](../include/autoware/tensorrt_vad/networks/tensor.hpp) class
+  - Handles `cudaMalloc` for GPU memory allocation
+  - Handles `cudaMemcpyAsync` for Host↔Device transfers
+- Bindings sharing: Outputs from one network can be directly used as inputs to another (e.g., backbone outputs → head inputs)
 
 ```mermaid
 flowchart TD
@@ -134,30 +193,50 @@ flowchart TD
 
 ##### Network classes: API functions
 
-- Constructor
-  - [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp): Called from `VadModel::init_engines`
-    - setup_network_io
-      - Implemented in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp) respectively
-      - Sets input and output sizes and names
-    - [`build_engine`](../include/autoware/tensorrt_vad/networks/net.hpp)
-      - Creates instances of [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) and [`NetworkIO`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) classes
-- set_input_tensor: Called from `VadModel::init_engines`
-  - Executes `cudaMalloc` to allocate memory for input/output tensors on Device (GPU)
-    - `cudaMalloc` itself is executed in [`Tensor`](../lib/networks/tensor.cpp) class constructor.
-- enqueue: Called from `VadModel::enqueue`
-  - Executes TensorRT inference through [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp).
-    - Currently uses `enqueueV3`, but the enqueue version needs to be changed if TensorRT version is updated.
+- **Constructor** → [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp)
+  - Called from `VadModel::init_engines` during model initialization
+  - **setup_network_io**: Implemented differently in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp)
+    - Defines input/output tensor names, shapes, and data types
+  - **build_engine**: Creates TensorRT engine
+    - Instantiates [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) for engine management
+    - Instantiates [`NetworkIO`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/utils.hpp) for I/O configuration
+    - Builds engine from ONNX file or loads from cache
 
-#### CUDA Preprocessor and Postprocessor classes
+- **set_input_tensor**: Called from `VadModel::init_engines` and `VadModel::load_head`
+  - Accepts map of external bindings (tensors from other networks)
+  - Allocates GPU memory for new tensors via [`Tensor`](../lib/networks/tensor.cpp) constructor
+  - Sets up memory sharing for external inputs (avoids redundant copies)
 
-- Preprocessor and Postprocessor classes are wrapper classes for CUDA kernels. Preprocessor and Postprocessor classes have `preprocess_*` or `postprocess_*` functions. By calling these functions from `VadModel`, preprocessing and postprocessing are executed.
-  - Image preprocessing is handled by [`MultiCameraPreprocessor`](../include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp)
-  - Predicted Object postprocessing is handled by [`ObjectPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp)
-  - Map postprocessing is handled by [`MapPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp)
-- `preprocess_*` or `postprocess_*` functions call `launch_*_kernel` functions. These functions determine the block size within the grid and the thread size within the block, and launch CUDA kernels.
-  - Image preprocessing kernel is launched in [`launch_multi_camera_resize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu) and [`launch_multi_camera_normalize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu)
-  - Predicted Object postprocessing kernel is launched in [`launch_object_postprocess_kernel`](../lib/networks/postprocess/object_postprocess_kernel.cu)
-  - Map postprocessing kernel is launched in [`launch_map_postprocess_kernel`](../lib/networks/postprocess/map_postprocess_kernel.cu)
+- **enqueue**: Called from `VadModel::enqueue`
+  - Executes TensorRT inference via [`TrtCommon::enqueueV3`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp)
+  - Runs asynchronously on CUDA stream
+  - Note: Uses `enqueueV3` for current TensorRT version; update if TensorRT API changes
+
+#### CUDA Preprocessor and Postprocessor Architecture
+
+Preprocessor and Postprocessor classes wrap CUDA kernels and provide clean C++ interfaces to `VadModel`.
+
+**Preprocessor/Postprocessor Classes** (CPU-side wrappers):
+- [`MultiCameraPreprocessor`](../include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp): Multi-camera image preprocessing
+- [`ObjectPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp): 3D object detection postprocessing
+- [`MapPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp): Map polyline postprocessing
+
+**Processing Flow**:
+1. `VadModel` calls `preprocess_*()` or `postprocess_*()` methods
+2. These methods call `launch_*_kernel()` functions
+3. Kernel launch functions calculate CUDA grid/block dimensions
+4. CUDA kernels execute on GPU
+
+**CUDA Kernel Launch Functions**:
+- [`launch_multi_camera_resize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu): Resize images to target resolution
+- [`launch_multi_camera_normalize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu): Normalize pixel values
+- [`launch_object_postprocess_kernel`](../lib/networks/postprocess/object_postprocess_kernel.cu): Filter and decode object detections
+- [`launch_map_postprocess_kernel`](../lib/networks/postprocess/map_postprocess_kernel.cu): Decode map polylines
+
+**Benefits**:
+- Separation of concerns: C++ wrapper logic vs CUDA kernel logic
+- Testability: Can mock preprocessors/postprocessors
+- Performance: Kernels optimized for parallel execution on GPU
 
 ```mermaid
 flowchart TD
@@ -210,7 +289,25 @@ flowchart TD
     click LaunchMap "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/map_postprocess_kernel.cu" "Map postprocess kernel implementation"
 ```
 
+## Key Design Details
+
+### Two-Stage Network Loading
+- **First Frame**: Uses `head_no_prev` (no temporal context required)
+- **Subsequent Frames**: Uses `head` (incorporates `prev_bev` from previous frame)
+- **Memory Optimization**: `head_no_prev` is released after first frame to free GPU memory
+
+### Memory Management Strategy
+- **Bindings Sharing**: Network outputs can be directly connected as inputs to other networks
+- **Tensor Class**: Encapsulates CUDA memory operations (malloc, copy, free)
+- **Saved BEV**: `prev_bev` is preserved on GPU between frames (Device-to-Device copy)
+
+### Asynchronous Execution
+- All CUDA operations use a single `cudaStream_t stream_` member
+- Operations are asynchronous but synchronized before postprocessing
+- Enables overlapping computation when possible
+
 ## TODO
 
-- Use `prev_bev` without transferring from Device (GPU) to Host (CPU).
-- Quantization: float is used for inference now, but using integer would enable faster and more memory-efficient inference.
+- **Optimize prev_bev transfer**: Currently copies Device→Device; could keep as output binding to avoid copy
+- **Quantization**: Currently uses FP32; INT8 quantization would improve speed and memory efficiency
+- **Multi-stream execution**: Could pipeline backbone and head execution with multiple streams
