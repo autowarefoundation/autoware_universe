@@ -135,16 +135,19 @@ All converter classes are in the `autoware::tensorrt_vad::vad_interface::` names
 ## Key Design Details
 
 ### CoordinateTransformer
+
 - Wraps TF buffer and provides `lookup_base2cam(frame_id)` for camera transformations
 - For CARLA Tier4: VAD coordinates are identical to Autoware base_link (no coordinate conversion)
 - Used by `InputTransformMatrixConverter` to build `vad_base2img` matrices
 
 ### Caching Strategy
+
 - `vad_base2img_transform_` is cached after first successful computation
 - Validates transformation (checks for non-zero values) before caching
 - Avoids repeated TF lookups on every frame
 
 ### Converter Dependency Injection
+
 - All converters receive `CoordinateTransformer` reference and config in constructor
 - Enables unit testing and separation of concerns
 

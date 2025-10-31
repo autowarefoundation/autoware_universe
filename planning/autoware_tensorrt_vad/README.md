@@ -54,25 +54,25 @@ Parameters can be set via YAML configuration files:
 
 ## Inputs
 
-| Topic                                     | Message Type                                         | Description                           |
-| ----------------------------------------- | ---------------------------------------------------- | ------------------------------------- |
-| ~/input/image*                           | sensor_msgs/msg/Image*                             | Camera images 0-5: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT |
-| ~/input/camera_info*                     | sensor_msgs/msg/CameraInfo                         | Camera calibration for cameras 0-5 |
-| ~/input/kinematic_state                  | nav_msgs/msg/Odometry                              | Vehicle odometry                      |
-| ~/input/acceleration                     | geometry_msgs/msg/AccelWithCovarianceStamped       | Vehicle acceleration                  |
+| Topic                   | Message Type                                 | Description                                                                    |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |
+| ~/input/image\*         | sensor_msgs/msg/Image\*                      | Camera images 0-5: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT |
+| ~/input/camera_info\*   | sensor_msgs/msg/CameraInfo                   | Camera calibration for cameras 0-5                                             |
+| ~/input/kinematic_state | nav_msgs/msg/Odometry                        | Vehicle odometry                                                               |
+| ~/input/acceleration    | geometry_msgs/msg/AccelWithCovarianceStamped | Vehicle acceleration                                                           |
 
-*Image transport supports both raw and compressed formats. Configure per-camera via `use_raw` parameter (default: compressed).
+\*Image transport supports both raw and compressed formats. Configure per-camera via `use_raw` parameter (default: compressed).
 
 ---
 
 ## Outputs
 
-| Topic                                     | Message Type                                              | Description                           |
-| ----------------------------------------- | --------------------------------------------------------- | ------------------------------------- |
-| ~/output/trajectory                      | autoware_planning_msgs/msg/Trajectory                   | Selected ego trajectory               |
-| ~/output/trajectories                    | autoware_internal_planning_msgs/msg/CandidateTrajectories | All 6 candidate trajectories          |
-| ~/output/objects                         | autoware_perception_msgs/msg/PredictedObjects           | Predicted objects with trajectories   |
-| ~/output/map                             | visualization_msgs/msg/MarkerArray                      | Predicted map elements                |
+| Topic                 | Message Type                                              | Description                         |
+| --------------------- | --------------------------------------------------------- | ----------------------------------- |
+| ~/output/trajectory   | autoware_planning_msgs/msg/Trajectory                     | Selected ego trajectory             |
+| ~/output/trajectories | autoware_internal_planning_msgs/msg/CandidateTrajectories | All 6 candidate trajectories        |
+| ~/output/objects      | autoware_perception_msgs/msg/PredictedObjects             | Predicted objects with trajectories |
+| ~/output/map          | visualization_msgs/msg/MarkerArray                        | Predicted map elements              |
 
 ---
 
@@ -156,9 +156,9 @@ model_params:
 
 ### Model Versions
 
-| Model Version | Training Dataset      | Release Date | Notes                              | Node Compatibility |
-| ------------- | -------------------- | ------------ | ---------------------------------- | ------------------ |
-| v1.0.0        | Bench2Drive CARLA    | 2024-10      | Initial release, 6-camera config  | >= 0.1.0          |
+| Model Version | Training Dataset  | Release Date | Notes                            | Node Compatibility |
+| ------------- | ----------------- | ------------ | -------------------------------- | ------------------ |
+| v1.0.0        | Bench2Drive CARLA | 2024-10      | Initial release, 6-camera config | >= 0.1.0           |
 
 ---
 
@@ -181,20 +181,24 @@ While the VAD shows promising capabilities, there are several limitations to be 
 ## References
 
 ### Core Model
+
 - **VAD Repository**: [hustvl/VAD](https://github.com/hustvl/VAD/tree/main)
 - **VAD Paper**: Jiang et al., ["VAD: Vectorized Scene Representation for Efficient Autonomous Driving"](https://arxiv.org/abs/2303.12077), arXiv:2303.12077, 2023
 
 ### Training and Datasets
+
 - **Bench2Drive**: Jia et al., ["Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving"](https://arxiv.org/abs/2406.03877), arXiv:2406.03877, 2024
   - Repository: [Thinklab-SJTU/Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
   - CARLA-based benchmark for end-to-end autonomous driving evaluation
 
 ### Deployment and Optimization
+
 - **NVIDIA DL4AGX**: [Deep Learning for Autonomous Vehicles](https://developer.nvidia.com/drive/drive-agx)
   - TensorRT optimization for autonomous driving workloads
   - Embedded GPU deployment strategies
 
 ### Related Work
+
 - **nuScenes**: Caesar et al., ["nuScenes: A multimodal dataset for autonomous driving"](https://arxiv.org/abs/1903.11027), CVPR 2020
 - **BEVFormer**: Li et al., ["BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers"](https://arxiv.org/abs/2203.17270), ECCV 2022
 
