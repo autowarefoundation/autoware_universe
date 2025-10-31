@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(spheric_collision_detector)
+project(autoware_spheric_collision_detector)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
@@ -31,6 +31,5 @@ endif()
 
 ament_auto_package(
   INSTALL_TO_SHARE
-    launch
-    config
+  USE_SCOPED_HEADER_INSTALL_DIR
 )
