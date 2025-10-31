@@ -619,7 +619,7 @@ void MPTOptimizer::publishSplineCoefficientsAndCurvatures(
   std_msgs::msg::Float32MultiArray msg_y;
   msg_y.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
   msg_y.layout.dim[0].size = y_coeffs.size();
-  msg_y.layout.dim[0].stride = y_coeffs.size();
+  msg_y.layout.dim[0].stride = 4;
   msg_y.layout.dim[0].label = "y_coeffs";
 
   // Populate the message with spline coefficients
@@ -784,12 +784,16 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   updateExtraPoints(ref_points);
 
   // 9. crop forward
-  // ref_points = autoware::motion_utils::cropForwardPoints(
-  //   ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
-  if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
-    ref_points.resize(mpt_param_.num_points);
-    ref_points_spline.resize(mpt_param_.num_points);
-  }
+  ref_points = autoware::motion_utils::cropForwardPoints(
+    ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
+  // if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
+    // std::cerr << "mpt_param_.num_points: " << mpt_param_.num_points << ", ref_points.size(): "
+    //           << ref_points.size() << std::endl;
+    // ref_points.resize(mpt_param_.num_points);
+    // std::cerr << "Resizing ref_points to mpt_param_.num_points: " << mpt_param_.num_points
+    //           << std::endl;
+    // ref_points_spline.resize(mpt_param_.num_points);
+  // }
 
   if (ref_points_spline.getSize() == 0) {
     return ref_points;
