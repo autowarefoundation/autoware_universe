@@ -58,16 +58,16 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
       continue;
     }
 
-    const auto collision =
-      find_collision(mode, target.object_id, context.as_objects()->objects, speed_threshold_);
-    if (!collision) {
-      continue;
-    }
-
     auto & waypoints = mode.path;
     const auto num_waypoints = waypoints.size();
 
     if (num_waypoints < 2) {
+      continue;
+    }
+
+    const auto collision =
+      find_collision(mode, target.object_id, context.as_objects()->objects, speed_threshold_);
+    if (!collision) {
       continue;
     }
 

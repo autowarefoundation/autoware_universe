@@ -14,6 +14,7 @@
 
 #include "autoware/predicted_path_postprocessor/processor/collision.hpp"
 
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -34,12 +35,13 @@ std::optional<CollisionHit> find_collision(
   double min_collision_distance = std::numeric_limits<double>::infinity();
   double global_distance = 0.0;
   std::optional<CollisionHit> result = std::nullopt;
-  for (size_t i = 0; i < path.path.size() - 1; ++i) {
+  for (size_t i = 0; i + 1 < path.path.size(); ++i) {
     const auto & current = path.path[i].position;
     const auto & next = path.path[i + 1].position;
 
     const auto segment_length = std::hypot(next.x - current.x, next.y - current.y);
     if (segment_length < epsilon) {
+      global_distance += segment_length;
       continue;
     }
 
@@ -51,15 +53,20 @@ std::optional<CollisionHit> find_collision(
       }
 
       // check segment intersection
-      const auto polygon = autoware_utils_geometry::to_polygon2d(obstacle).outer();
-      for (size_t j = 0; j < polygon.size() - 1; ++j) {
-        const auto & point1 =
-          autoware_utils_geometry::create_point(polygon[j].x(), polygon[j].y(), 0.0);
-        const auto & point2 =
-          autoware_utils_geometry::create_point(polygon[j + 1].x(), polygon[j + 1].y(), 0.0);
+      autoware_utils_geometry::Polygon2d::ring_type ring;
+      try {
+        ring = autoware_utils_geometry::to_polygon2d(obstacle).outer();
+      } catch (const std::exception & e) {
+        // NOTE: Exception occurred while converting obstacle to polygon
+        continue;
+      }
 
-        const auto intersection = autoware_utils_geometry::intersect(current, next, point1, point2);
+      for (size_t j = 0; j + 1 < ring.size(); ++j) {
+        const auto & p1 = autoware_utils_geometry::create_point(ring[j].x(), ring[j].y(), 0.0);
+        const auto & p2 =
+          autoware_utils_geometry::create_point(ring[j + 1].x(), ring[j + 1].y(), 0.0);
 
+        const auto intersection = autoware_utils_geometry::intersect(current, next, p1, p2);
         if (!intersection) {
           continue;
         }
@@ -75,7 +82,6 @@ std::optional<CollisionHit> find_collision(
         }
       }
     }
-
     // accumulate global distance between current and next points
     global_distance += segment_length;
   }
