@@ -19,9 +19,8 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -97,7 +96,7 @@ private:
     const autoware_planning_msgs::msg::Trajectory & trajectory, const double length);
 
   static std::vector<LinearRing2d> createVehicleFootprints(
-    const autoware_planning_msgs::msg::Trajectory & trajectory, 
+    const autoware_planning_msgs::msg::Trajectory & trajectory,
     const LinearRing2d & local_vehicle_footprint);
 
   static std::vector<std::shared_ptr<sphere3::Sphere3>> createVehiclePassingAreas(
