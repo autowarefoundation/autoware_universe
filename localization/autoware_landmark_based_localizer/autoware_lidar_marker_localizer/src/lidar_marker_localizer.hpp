@@ -25,6 +25,7 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -90,6 +91,7 @@ class LidarMarkerLocalizer : public rclcpp::Node
     std::string save_file_name;
     std::string save_frame_id;
     double radius_for_extracting_marker_pointcloud;
+    int64_t queue_size_for_debug_pub_msg;
   };
 
 public:
@@ -140,6 +142,12 @@ private:
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_marker_pointcloud_;
 
   std::shared_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
+
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_center_intensity_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_positive_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_negative_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_matched_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_vote_grid;
 
   Param param_;
   bool is_activated_;

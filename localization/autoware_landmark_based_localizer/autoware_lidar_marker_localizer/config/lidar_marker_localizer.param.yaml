@@ -46,3 +46,4 @@
     save_file_name: detected_reflector_intensity
     save_frame_id: velodyne_top
     radius_for_extracting_marker_pointcloud: 0.4 # [m] within
+    queue_size_for_debug_pub_msg: 10 # Queue size for debug publishers
