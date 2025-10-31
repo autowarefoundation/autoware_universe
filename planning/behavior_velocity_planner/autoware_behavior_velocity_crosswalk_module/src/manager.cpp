@@ -14,6 +14,9 @@
 
 #include "manager.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -24,6 +27,7 @@
 namespace autoware::behavior_velocity_planner
 {
 
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Crosswalk;
 
 CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
@@ -193,15 +197,11 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".parked_vehicles_stop.vehicle_permanence_duration");
 }
 
-void CrosswalkModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data)
+void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
+  const auto rh = planner_data_->route_handler_;
 
-  const auto rh = planner_data.route_handler_;
-
-  const auto launch = [this, &path_msg, &stamp, &planner_data](
+  const auto launch = [this, &path](
                         const auto road_lanelet_id, const auto crosswalk_lanelet_id,
                         const std::optional<int64_t> & reg_elem_id) {
     if (isModuleRegistered(crosswalk_lanelet_id)) {
@@ -210,15 +210,14 @@ void CrosswalkModuleManager::launchNewModules(
 
     const auto & p = crosswalk_planner_param_;
     const auto logger = logger_.get_child("crosswalk_module");
-    const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+    const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
 
     // NOTE: module_id is always a lane id so that isModuleRegistered works correctly in the case
     //       where both regulatory element and non-regulatory element crosswalks exist.
     registerModule(
       std::make_shared<CrosswalkModule>(
         node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger,
-        clock_, time_keeper_, planning_factor_interface_),
-      planner_data);
+        clock_, time_keeper_, planning_factor_interface_));
     generate_uuid(crosswalk_lanelet_id);
     const auto crosswalk_ll = lanelet_map_ptr->laneletLayer.get(crosswalk_lanelet_id);
     std::optional<bool> override_rtc_auto_mode;
@@ -235,11 +234,11 @@ void CrosswalkModuleManager::launchNewModules(
     }
     updateRTCStatus(
       getUUID(crosswalk_lanelet_id), true, State::WAITING_FOR_EXECUTION,
-      std::numeric_limits<double>::lowest(), stamp, override_rtc_auto_mode);
+      std::numeric_limits<double>::lowest(), path.header.stamp, override_rtc_auto_mode);
   };
 
   const auto crosswalk_reg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(
-    path_msg, rh->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, rh->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   for (const auto & crosswalk : crosswalk_reg_elem_map) {
     // NOTE: The former id is a lane id, and the latter one is a regulatory element's id.
@@ -247,8 +246,7 @@ void CrosswalkModuleManager::launchNewModules(
   }
 
   const auto crosswalk_lanelets = getCrosswalksOnPath(
-    planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),
-    rh->getOverallGraphPtr());
+    planner_data_->current_odometry->pose, path, rh->getLaneletMapPtr(), rh->getOverallGraphPtr());
 
   for (const auto & crosswalk : crosswalk_lanelets) {
     launch(crosswalk.first, crosswalk.second.id(), std::nullopt);
@@ -256,22 +254,17 @@ void CrosswalkModuleManager::launchNewModules(
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-CrosswalkModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+CrosswalkModuleManager::getModuleExpiredFunction(const PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
-  const auto rh = planner_data.route_handler_;
+  const auto rh = planner_data_->route_handler_;
 
   std::set<int64_t> crosswalk_id_set;
 
   crosswalk_id_set = getCrosswalkIdSetOnPath(
-    planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),
-    rh->getOverallGraphPtr());
+    planner_data_->current_odometry->pose, path, rh->getLaneletMapPtr(), rh->getOverallGraphPtr());
 
   const auto crosswalk_reg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(
-    path_msg, rh->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, rh->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   for (const auto & crosswalk : crosswalk_reg_elem_map) {
     crosswalk_id_set.insert(crosswalk.first->crosswalkLanelet().id());
@@ -286,4 +279,4 @@ CrosswalkModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::CrosswalkModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

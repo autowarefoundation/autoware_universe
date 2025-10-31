@@ -15,19 +15,26 @@
 #ifndef SCENE_WALKWAY_HPP_
 #define SCENE_WALKWAY_HPP_
 
+#include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 #include "scene_walkway.hpp"
 
-#include <autoware/behavior_velocity_crosswalk_module/util.hpp>
-#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_routing/RoutingGraph.h>
+#include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-class WalkwayModule : public experimental::SceneModuleInterface
+class WalkwayModule : public SceneModuleInterface
 {
 public:
   struct PlannerParam
@@ -43,10 +50,7 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -56,8 +60,7 @@ private:
 
   [[nodiscard]] std::pair<double, geometry_msgs::msg::Point> getStopLine(
     const PathWithLaneId & ego_path, bool & exist_stopline_in_map,
-    const geometry_msgs::msg::Point & first_path_point_on_walkway,
-    const PlannerData & planner_data) const;
+    const geometry_msgs::msg::Point & first_path_point_on_walkway) const;
 
   enum class State { APPROACH, STOP, SURPASSED };
 

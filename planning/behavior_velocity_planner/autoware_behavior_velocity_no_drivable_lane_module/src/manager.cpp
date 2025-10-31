@@ -15,12 +15,15 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::behavior_velocity_planner
 {
+using autoware_utils::get_or_declare_parameter;
+
 NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
@@ -30,15 +33,11 @@ NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 }
 
 void NoDrivableLaneModuleManager::launchNewModules(
-  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
-  const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   for (const auto & ll : planning_utils::getLaneletsOnPath(
-         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
-         planner_data.current_odometry->pose)) {
+         path, planner_data_->route_handler_->getLaneletMapPtr(),
+         planner_data_->current_odometry->pose)) {
     const auto lane_id = ll.id();
     const auto module_id = lane_id;
 
@@ -54,22 +53,18 @@ void NoDrivableLaneModuleManager::launchNewModules(
     registerModule(
       std::make_shared<NoDrivableLaneModule>(
         module_id, lane_id, planner_param_, logger_.get_child("no_drivable_lane_module"), clock_,
-        time_keeper_, planning_factor_interface_),
-      planner_data);
+        time_keeper_, planning_factor_interface_));
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 NoDrivableLaneModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
-  return [lane_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+  return [lane_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     return lane_id_set.count(scene_module->getModuleId()) == 0;
   };
 }
@@ -79,4 +74,4 @@ NoDrivableLaneModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::NoDrivableLaneModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

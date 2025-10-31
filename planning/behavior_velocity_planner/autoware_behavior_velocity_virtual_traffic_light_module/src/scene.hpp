@@ -15,12 +15,22 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
+#include <nlohmann/json.hpp>
+#include <rclcpp/clock.hpp>
+#include <rclcpp/logger.hpp>
 
 #include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 #include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <functional>
 #include <memory>
@@ -31,7 +41,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class VirtualTrafficLightModule : public experimental::SceneModuleInterface
+class VirtualTrafficLightModule : public SceneModuleInterface
 {
 public:
   enum class State : uint8_t {
@@ -82,10 +92,7 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -155,28 +162,25 @@ private:
 
   void updateInfrastructureCommand();
 
-  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine(
-    const PlannerData & planner_data);
+  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine();
 
-  bool isBeforeStartLine(const size_t end_line_idx, const PlannerData & planner_data);
+  bool isBeforeStartLine(const size_t end_line_idx);
 
-  bool isBeforeStopLine(const size_t end_line_idx, const PlannerData & planner_data);
+  bool isBeforeStopLine(const size_t end_line_idx);
 
-  bool isAfterAnyEndLine(const size_t end_line_idx, const PlannerData & planner_data);
+  bool isAfterAnyEndLine(const size_t end_line_idx);
 
-  bool isNearAnyEndLine(const size_t end_line_idx, const PlannerData & planner_data);
+  bool isNearAnyEndLine(const size_t end_line_idx);
 
   bool isStateTimeout(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
   bool hasRightOfWay(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
   void insertStopVelocityAtStopLine(
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx,
-    const PlannerData & planner_data);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
 
   void insertStopVelocityAtEndLine(
-    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx,
-    const PlannerData & planner_data);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
 
   std::string stateToString(State state) const;
 };

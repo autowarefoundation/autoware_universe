@@ -14,11 +14,14 @@
 
 #include "manager.hpp"
 
+#include "autoware_utils/geometry/boost_geometry.hpp"
+
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+
+#include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -63,20 +66,16 @@ VirtualTrafficLightModuleManager::VirtualTrafficLightModuleManager(rclcpp::Node 
 }
 
 void VirtualTrafficLightModuleManager::launchNewModules(
-  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
-  const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   autoware_utils::LineString2d ego_path_linestring;
-  for (const auto & path_point : path_msg.points) {
+  for (const auto & path_point : path.points) {
     ego_path_linestring.push_back(autoware_utils::from_msg(path_point.point.pose.position).to_2d());
   }
 
   for (const auto & m : planning_utils::getRegElemMapOnPath<VirtualTrafficLight>(
-         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
-         planner_data.current_odometry->pose)) {
+         path, planner_data_->route_handler_->getLaneletMapPtr(),
+         planner_data_->current_odometry->pose)) {
     const auto stop_line_opt = m.first->getStopLine();
     if (!stop_line_opt) {
       RCLCPP_FATAL(
@@ -96,21 +95,17 @@ void VirtualTrafficLightModuleManager::launchNewModules(
         std::make_shared<VirtualTrafficLightModule>(
           module_id, lane_id, *m.first, m.second, planner_param_,
           logger_.get_child("virtual_traffic_light_module"), clock_, time_keeper_,
-          planning_factor_interface_),
-        planner_data);
+          planning_factor_interface_));
     }
   }
 }
 
 std::function<bool(const std::shared_ptr<VirtualTrafficLightModule> &)>
 VirtualTrafficLightModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto id_set = planning_utils::getLaneletIdSetOnPath<VirtualTrafficLight>(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   return [id_set](const std::shared_ptr<VirtualTrafficLightModule> & scene_module) {
     return id_set.count(scene_module->getModuleId()) == 0;
@@ -118,9 +113,7 @@ VirtualTrafficLightModuleManager::getModuleExpiredFunction(
 }
 
 void VirtualTrafficLightModuleManager::modifyPathVelocity(
-  Trajectory & path, const std_msgs::msg::Header & header,
-  const std::vector<geometry_msgs::msg::Point> & left_bound,
-  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   // NOTE: virtual traffic light specific implementation
   //       Since the argument of modifyPathVelocity cannot be changed, the specific information
@@ -130,8 +123,7 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
     scene_module->setCorrespondingVirtualTrafficLightState(virtual_traffic_light_states);
   }
 
-  SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(
-    path, header, left_bound, right_bound, planner_data);
+  SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(path);
 
   // NOTE: virtual traffic light specific implementation
   //       publish infrastructure_command_array
@@ -150,4 +142,4 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::VirtualTrafficLightModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

@@ -1,3 +1,6 @@
 <library path="autoware_behavior_velocity_blind_spot_module">
-  <class type="autoware::behavior_velocity_planner::BlindSpotModulePlugin" base_class_type="autoware::behavior_velocity_planner::PluginInterface"/>
+  <class type="autoware::behavior_velocity_planner::BlindSpotModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::PluginInterface" />
+  <class type="autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::experimental::PluginInterface" />
 </library>
