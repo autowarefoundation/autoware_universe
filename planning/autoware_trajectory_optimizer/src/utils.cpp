@@ -146,14 +146,15 @@ void recalculate_longitudinal_acceleration(
   }
 
   auto get_dt = [&](const size_t i) -> double {
+    constexpr double min_dt_threshold = 1e-9;
     if (use_constant_dt) {
-      return std::max(constant_dt, 1e-9);
+      return std::max(constant_dt, min_dt_threshold);
     }
     const double curr_time = static_cast<double>(trajectory[i].time_from_start.sec) +
                              static_cast<double>(trajectory[i].time_from_start.nanosec) * 1e-9;
     const double next_time = static_cast<double>(trajectory[i + 1].time_from_start.sec) +
                              static_cast<double>(trajectory[i + 1].time_from_start.nanosec) * 1e-9;
-    return std::max(next_time - curr_time, 1e-9);
+    return std::max(next_time - curr_time, min_dt_threshold);
   };
 
   const size_t size = trajectory.size();
@@ -319,8 +320,8 @@ void apply_spline(
   }
   trajectory_interpolation_util->align_orientation_with_trajectory_direction();
   TrajectoryPoints output_points{traj_points.front()};
-  constexpr double epsilon = 1e-2;
-  const auto ds = std::max(interpolation_resolution_m, epsilon);
+  constexpr double min_interpolation_step = 1e-2;
+  const auto ds = std::max(interpolation_resolution_m, min_interpolation_step);
   output_points.reserve(static_cast<size_t>(trajectory_interpolation_util->length() / ds));
 
   for (auto s = ds; s <= trajectory_interpolation_util->length(); s += ds) {
@@ -346,7 +347,7 @@ void apply_spline(
 
   auto d = autoware_utils::calc_distance2d(
     last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
-  if (d > epsilon) {
+  if (d > min_interpolation_step) {
     output_points.push_back(original_trajectory_last_point);
   }
 
