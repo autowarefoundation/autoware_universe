@@ -29,6 +29,21 @@ namespace autoware::tensorrt_vad
 {
 
 /**
+ * @struct ObjectPostprocessArgs
+ * @brief Arguments bundle for object postprocessing to reduce function parameters
+ */
+struct ObjectPostprocessArgs
+{
+  const float * cls_scores{nullptr};           // Device pointer to classification scores
+  const float * bbox_preds{nullptr};           // Device pointer to bbox predictions
+  const float * trajectories{nullptr};         // Device pointer to trajectory data
+  const float * traj_scores{nullptr};          // Device pointer to trajectory scores
+  const int32_t * valid_flags{nullptr};        // Device pointer to valid object flags
+  const int32_t * max_class_indices{nullptr};  // Device pointer to max class indices
+  cudaStream_t stream{nullptr};                // CUDA stream for synchronization
+};
+
+/**
  * @class ObjectPostprocessor
  * @brief GPU postprocessing pipeline for object predictions
  *
@@ -71,19 +86,43 @@ private:
 
   /**
    * @brief Copy processed object results from device to host and create BBox objects
-   * @param d_cls_scores Device buffer with classification scores
-   * @param d_bbox_preds Device buffer with bbox predictions
-   * @param d_trajectories Device buffer with trajectory data
-   * @param d_traj_scores Device buffer with trajectory scores
-   * @param d_valid_flags Device buffer with valid object flags
-   * @param d_max_class_indices Device buffer with max class indices for each object
-   * @param stream CUDA stream for synchronization
+   * @param args Bundle of arguments containing device buffers and stream
    * @return std::vector<BBox> Processed object bounding boxes
    */
   std::vector<autoware::tensorrt_vad::BBox> copy_object_results_to_host(
-    const float * d_cls_scores, const float * d_bbox_preds, const float * d_trajectories,
-    const float * d_traj_scores, const int32_t * d_valid_flags, const int32_t * d_max_class_indices,
-    cudaStream_t stream);
+    const ObjectPostprocessArgs & args);
+
+  /**
+   * @brief Copy device arrays to host memory
+   * @param args Bundle of arguments containing device buffers and stream
+   * @param h_cls_scores Output host buffer for classification scores
+   * @param h_bbox_preds Output host buffer for bbox predictions
+   * @param h_trajectories Output host buffer for trajectories
+   * @param h_traj_scores Output host buffer for trajectory scores
+   * @param h_valid_flags Output host buffer for valid flags
+   * @param h_max_class_indices Output host buffer for max class indices
+   * @return true if copy succeeded, false otherwise
+   */
+  bool copy_device_arrays_to_host(
+    const ObjectPostprocessArgs & args, std::vector<float> & h_cls_scores,
+    std::vector<float> & h_bbox_preds, std::vector<float> & h_trajectories,
+    std::vector<float> & h_traj_scores, std::vector<int32_t> & h_valid_flags,
+    std::vector<int32_t> & h_max_class_indices);
+
+  /**
+   * @brief Create a BBox object from GPU data for a single object
+   * @param obj_idx Object index
+   * @param h_cls_scores Host buffer with classification scores
+   * @param h_bbox_preds Host buffer with bbox predictions
+   * @param h_trajectories Host buffer with trajectories
+   * @param h_traj_scores Host buffer with trajectory scores
+   * @param h_max_class_indices Host buffer with max class indices
+   * @return BBox object
+   */
+  autoware::tensorrt_vad::BBox create_bbox_from_gpu_data(
+    int32_t obj_idx, const std::vector<float> & h_cls_scores,
+    const std::vector<float> & h_bbox_preds, const std::vector<float> & h_trajectories,
+    const std::vector<float> & h_traj_scores, const std::vector<int32_t> & h_max_class_indices);
 
   ObjectPostprocessConfig config_;
   std::shared_ptr<autoware::tensorrt_vad::VadLogger> logger_;  // Direct VadLogger pointer

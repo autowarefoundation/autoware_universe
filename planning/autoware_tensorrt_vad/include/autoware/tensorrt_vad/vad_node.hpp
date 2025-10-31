@@ -49,10 +49,13 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <cmath>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
+#include <tuple>
 #include <vector>
 
 namespace autoware::tensorrt_vad
@@ -70,6 +73,13 @@ private:
     autoware::tensorrt_common::TrtCommonConfig, autoware::tensorrt_common::TrtCommonConfig,
     autoware::tensorrt_common::TrtCommonConfig>
   load_trt_common_configs();
+
+  // Helper methods for load_vad_config
+  void load_detection_range(VadConfig & config);
+  void load_map_configuration(VadConfig & config);
+  void load_object_configuration(VadConfig & config);
+  void load_image_normalization(VadConfig & config);
+  void load_network_configurations(VadConfig & config);
   void initialize_vad_model();
   void create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);
   void create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos);
@@ -83,6 +93,12 @@ private:
     const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg);
   void tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg);
   void anchor_callback();
+
+  // Generic callback handler template
+  template <typename MsgType>
+  void process_callback(
+    const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
+    std::function<void(const typename MsgType::ConstSharedPtr)> setter);
 
   // tf Members
   tf2_ros::Buffer tf_buffer_;
