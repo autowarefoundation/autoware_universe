@@ -83,16 +83,13 @@ void copy_trajectory_orientation(
  *
  * @param traj_points The trajectory points to be interpolated.
  * @param interpolation_resolution_m Interpolation resolution for Akima spline.
- * @param max_yaw_discrepancy_deg Maximum yaw deviation allowed for spline outlier detection.
- * @param max_distance_discrepancy_m Maximum position deviation allowed for spline outlier
- * detection.
- * @param preserve_input_trajectory_orientation Flag to indicate if orientation from original
- * trajectory should be copied.
+ * @param max_distance_discrepancy_m Maximum position deviation allowed for orientation copying.
+ * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
+ * be copied.
  */
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_yaw_discrepancy_deg, const double max_distance_discrepancy_m,
-  const bool preserve_input_trajectory_orientation);
+  const double max_distance_discrepancy_m, const bool copy_original_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
@@ -142,6 +139,17 @@ void clamp_velocities(
  */
 void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
+
+/**
+ * @brief Recalculates longitudinal acceleration from velocity differences.
+ *
+ * @param trajectory The trajectory points with velocities to recalculate accelerations from.
+ * @param use_constant_dt If true, use constant_dt; if false, use time_from_start spacing.
+ * @param constant_dt Constant time step in seconds (used only if use_constant_dt is true).
+ */
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_constant_dt = false,
+  const double constant_dt = 0.1);
 
 void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,

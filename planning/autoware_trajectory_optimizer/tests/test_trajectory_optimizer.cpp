@@ -109,12 +109,10 @@ TEST_F(TrajectoryOptimizerUtilsTest, ApplySpline)
 {
   TrajectoryPoints points = create_sample_trajectory();
   const double interpolation_resolution_m = 0.1;
-  const double max_yaw_discrepancy_deg = 2.5;
   const double max_distance_discrepancy_m = 5.0;
   const bool copy_original_orientation = true;
   autoware::trajectory_optimizer::utils::apply_spline(
-    points, interpolation_resolution_m, max_yaw_discrepancy_deg, max_distance_discrepancy_m,
-    copy_original_orientation);
+    points, interpolation_resolution_m, max_distance_discrepancy_m, copy_original_orientation);
   ASSERT_GE(points.size(), 2);
 }
 

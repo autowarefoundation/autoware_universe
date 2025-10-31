@@ -16,6 +16,7 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
@@ -29,11 +30,14 @@ void TrajectoryEBSmootherOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   const TrajectoryOptimizerData & data)
 {
-  // Use elastic band to smooth the trajectory
-  if (params.use_eb_smoother) {
-    utils::smooth_trajectory_with_elastic_band(
-      traj_points, data.current_odometry, eb_path_smoother_ptr_);
+  if (!params.use_eb_smoother) {
+    return;
   }
+  utils::smooth_trajectory_with_elastic_band(
+    traj_points, data.current_odometry, eb_path_smoother_ptr_);
+
+  autoware::motion_utils::calculate_time_from_start(
+    traj_points, data.current_odometry.pose.pose.position);
 }
 
 void TrajectoryEBSmootherOptimizer::set_up_params()

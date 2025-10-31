@@ -101,17 +101,11 @@
               "exclusiveMinimum": 0,
               "description": "Interpolation resolution for Akima spline [m]"
             },
-            "max_yaw_discrepancy_deg": {
-              "type": "number",
-              "default": 2.5,
-              "minimum": 0,
-              "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
-            },
             "max_distance_discrepancy_m": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Maximum position deviation allowed for spline outlier detection [m]"
+              "description": "Maximum position deviation allowed for orientation copying [m]"
             },
             "preserve_input_trajectory_orientation": {
               "type": "boolean",
@@ -121,7 +115,6 @@
           },
           "required": [
             "interpolation_resolution_m",
-            "max_yaw_discrepancy_deg",
             "max_distance_discrepancy_m",
             "preserve_input_trajectory_orientation"
           ]
