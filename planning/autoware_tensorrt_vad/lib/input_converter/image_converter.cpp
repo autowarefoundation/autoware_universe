@@ -16,11 +16,51 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface
 {
+
+namespace
+{
+const rclcpp::Logger & vad_logger()
+{
+  static const rclcpp::Logger logger = rclcpp::get_logger("autoware_tensorrt_vad");
+  return logger;
+}
+
+const rclcpp::Clock::SharedPtr & vad_clock()
+{
+  static const rclcpp::Clock::SharedPtr clock = rclcpp::Clock::make_shared();
+  return clock;
+}
+
+std::optional<cv::Mat> to_bgr_image(
+  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, const int32_t camera_idx)
+{
+  if (image_msg->encoding == "bgr8") {
+    return cv::Mat(
+      image_msg->height, image_msg->width, CV_8UC3, const_cast<uint8_t *>(image_msg->data.data()),
+      image_msg->step);
+  }
+
+  if (image_msg->encoding == "bgra8") {
+    cv::Mat bgra_img(
+      image_msg->height, image_msg->width, CV_8UC4, const_cast<uint8_t *>(image_msg->data.data()),
+      image_msg->step);
+    cv::Mat bgr_img;
+    cv::cvtColor(bgra_img, bgr_img, cv::COLOR_BGRA2BGR);
+    return bgr_img;
+  }
+
+  RCLCPP_ERROR_THROTTLE(
+    vad_logger(), *vad_clock(), 5000, "Unsupported image encoding: %s for camera %d",
+    image_msg->encoding.c_str(), camera_idx);
+  return std::nullopt;
+}
+}  // namespace
 
 InputImageConverter::InputImageConverter(
   const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config)
@@ -43,35 +83,19 @@ CameraImagesData InputImageConverter::process_image(
     // Skip if image is not available
     if (!image_msg) {
       RCLCPP_WARN_THROTTLE(
-        rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
-        "Image for camera %d is null, skipping", camera_idx);
+        vad_logger(), *vad_clock(), 5000, "Image for camera %d is null, skipping", camera_idx);
       continue;
     }
 
-    // Create cv::Mat from sensor_msgs::msg::Image
-    cv::Mat bgr_img;
-    if (image_msg->encoding == "bgr8") {
-      // For BGR8, use data directly
-      bgr_img = cv::Mat(
-        image_msg->height, image_msg->width, CV_8UC3, const_cast<uint8_t *>(image_msg->data.data()),
-        image_msg->step);
-    } else if (image_msg->encoding == "bgra8") {
-      // For BGRA8, convert to BGR8
-      cv::Mat bgra_img(
-        image_msg->height, image_msg->width, CV_8UC4, const_cast<uint8_t *>(image_msg->data.data()),
-        image_msg->step);
-      cv::cvtColor(bgra_img, bgr_img, cv::COLOR_BGRA2BGR);
-    } else {
-      RCLCPP_ERROR_THROTTLE(
-        rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
-        "Unsupported image encoding: %s", image_msg->encoding.c_str());
+    const auto bgr_img_opt = to_bgr_image(image_msg, camera_idx);
+    if (!bgr_img_opt.has_value()) {
       continue;
     }
+    const cv::Mat & bgr_img = bgr_img_opt.value();
 
     if (bgr_img.empty()) {
       RCLCPP_ERROR_THROTTLE(
-        rclcpp::get_logger("autoware_tensorrt_vad"), *rclcpp::Clock::make_shared(), 5000,
-        "Failed to decode image data: %d", camera_idx);
+        vad_logger(), *vad_clock(), 5000, "Failed to decode image data: %d", camera_idx);
       continue;
     }
 

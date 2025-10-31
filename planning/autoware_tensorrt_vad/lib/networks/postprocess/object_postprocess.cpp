@@ -15,6 +15,7 @@
 #include "autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -59,14 +60,13 @@ void ObjectPostprocessor::cleanup_cuda_resources()
 }
 
 std::vector<autoware::tensorrt_vad::BBox> ObjectPostprocessor::postprocess_objects(
-  const float * all_cls_scores_flat, const float * all_traj_preds_flat,
-  const float * all_traj_cls_scores_flat, const float * all_bbox_preds_flat, cudaStream_t stream)
+  const InferenceInputs & inputs, cudaStream_t stream)
 {
   logger_->debug("Starting CUDA object postprocessing");
 
   // Launch CUDA kernel
   cudaError_t kernel_result = launch_object_postprocess_kernel(
-    all_cls_scores_flat, all_traj_preds_flat, all_traj_cls_scores_flat, all_bbox_preds_flat,
+    inputs.cls_scores, inputs.traj_preds, inputs.traj_cls_scores, inputs.bbox_preds,
     d_obj_cls_scores_, d_obj_bbox_preds_, d_obj_trajectories_, d_obj_traj_scores_,
     d_obj_valid_flags_, d_obj_max_class_indices_, config_, stream);
 
@@ -97,30 +97,13 @@ std::vector<autoware::tensorrt_vad::BBox> ObjectPostprocessor::copy_object_resul
 {
   logger_->debug("Copying object results from GPU to host");
 
-  // Calculate buffer sizes
-  const size_t cls_scores_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_num_classes;
-  const size_t bbox_preds_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_bbox_pred_dim;
-  const size_t trajectories_size = static_cast<size_t>(config_.prediction_num_queries) *
-                                   config_.prediction_trajectory_modes *
-                                   config_.prediction_timesteps * 2;
-  const size_t traj_scores_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_trajectory_modes;
-  const size_t valid_flags_size = static_cast<size_t>(config_.prediction_num_queries);
-
-  // Allocate host memory
-  std::vector<float> h_cls_scores(cls_scores_size);
-  std::vector<float> h_bbox_preds(bbox_preds_size);
-  std::vector<float> h_trajectories(trajectories_size);
-  std::vector<float> h_traj_scores(traj_scores_size);
-  std::vector<int32_t> h_valid_flags(valid_flags_size);
-  std::vector<int32_t> h_max_class_indices(valid_flags_size);
+  HostBuffers host_buffers(
+    config_.prediction_num_queries, config_.prediction_num_classes,
+    config_.prediction_bbox_pred_dim, config_.prediction_trajectory_modes,
+    config_.prediction_timesteps);
 
   // Copy arrays from device to host
-  if (!copy_device_arrays_to_host(
-        args, h_cls_scores, h_bbox_preds, h_trajectories, h_traj_scores, h_valid_flags,
-        h_max_class_indices)) {
+  if (!copy_device_arrays_to_host(args, host_buffers)) {
     return {};
   }
 
@@ -132,13 +115,12 @@ std::vector<autoware::tensorrt_vad::BBox> ObjectPostprocessor::copy_object_resul
 
   for (int32_t obj = 0; obj < config_.prediction_num_queries; ++obj) {
     // Skip invalid objects
-    if (h_valid_flags.at(obj) == 0) {
+    if (host_buffers.valid_flags.at(obj) == 0) {
       continue;
     }
 
     // Create BBox from GPU data
-    bboxes.push_back(create_bbox_from_gpu_data(
-      obj, h_cls_scores, h_bbox_preds, h_trajectories, h_traj_scores, h_max_class_indices));
+    bboxes.push_back(create_bbox_from_gpu_data(obj, host_buffers));
   }
 
   logger_->debug(
@@ -147,23 +129,8 @@ std::vector<autoware::tensorrt_vad::BBox> ObjectPostprocessor::copy_object_resul
 }
 
 bool ObjectPostprocessor::copy_device_arrays_to_host(
-  const ObjectPostprocessArgs & args, std::vector<float> & h_cls_scores,
-  std::vector<float> & h_bbox_preds, std::vector<float> & h_trajectories,
-  std::vector<float> & h_traj_scores, std::vector<int32_t> & h_valid_flags,
-  std::vector<int32_t> & h_max_class_indices)
+  const ObjectPostprocessArgs & args, HostBuffers & buffers)
 {
-  // Calculate buffer sizes
-  const size_t cls_scores_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_num_classes;
-  const size_t bbox_preds_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_bbox_pred_dim;
-  const size_t trajectories_size = static_cast<size_t>(config_.prediction_num_queries) *
-                                   config_.prediction_trajectory_modes *
-                                   config_.prediction_timesteps * 2;
-  const size_t traj_scores_size =
-    static_cast<size_t>(config_.prediction_num_queries) * config_.prediction_trajectory_modes;
-  const size_t valid_flags_size = static_cast<size_t>(config_.prediction_num_queries);
-
   // Structure to hold copy operations
   struct CopyOperation
   {
@@ -174,17 +141,28 @@ bool ObjectPostprocessor::copy_device_arrays_to_host(
   };
 
   // Define all copy operations
-  std::vector<CopyOperation> operations = {
-    {h_cls_scores.data(), args.cls_scores, cls_scores_size * sizeof(float), "cls_scores"},
-    {h_bbox_preds.data(), args.bbox_preds, bbox_preds_size * sizeof(float), "bbox_preds"},
-    {h_trajectories.data(), args.trajectories, trajectories_size * sizeof(float), "trajectories"},
-    {h_traj_scores.data(), args.traj_scores, traj_scores_size * sizeof(float), "traj_scores"},
-    {h_valid_flags.data(), args.valid_flags, valid_flags_size * sizeof(int32_t), "valid_flags"},
-    {h_max_class_indices.data(), args.max_class_indices, valid_flags_size * sizeof(int32_t),
-     "max_class_indices"}};
+  const std::array<CopyOperation, 6> operations{{
+    {buffers.cls_scores.data(), args.cls_scores, buffers.cls_scores.size() * sizeof(float),
+     "cls_scores"},
+    {buffers.bbox_preds.data(), args.bbox_preds, buffers.bbox_preds.size() * sizeof(float),
+     "bbox_preds"},
+    {buffers.trajectories.data(), args.trajectories, buffers.trajectories.size() * sizeof(float),
+     "trajectories"},
+    {buffers.traj_scores.data(), args.traj_scores, buffers.traj_scores.size() * sizeof(float),
+     "traj_scores"},
+    {buffers.valid_flags.data(), args.valid_flags, buffers.valid_flags.size() * sizeof(int32_t),
+     "valid_flags"},
+    {buffers.max_class_indices.data(), args.max_class_indices,
+     buffers.max_class_indices.size() * sizeof(int32_t), "max_class_indices"},
+  }};
 
   // Perform all copy operations
   for (const auto & op : operations) {
+    if (!op.src) {
+      logger_->error(std::string("Device pointer for ") + op.name + " is null");
+      return false;
+    }
+
     cudaError_t result =
       cudaMemcpyAsync(op.dst, op.src, op.size_in_bytes, cudaMemcpyDeviceToHost, args.stream);
     if (result != cudaSuccess) {
@@ -207,9 +185,7 @@ bool ObjectPostprocessor::copy_device_arrays_to_host(
 }
 
 autoware::tensorrt_vad::BBox ObjectPostprocessor::create_bbox_from_gpu_data(
-  int32_t obj_idx, const std::vector<float> & h_cls_scores, const std::vector<float> & h_bbox_preds,
-  const std::vector<float> & h_trajectories, const std::vector<float> & h_traj_scores,
-  const std::vector<int32_t> & h_max_class_indices)
+  int32_t obj_idx, const HostBuffers & buffers)
 {
   // Create BBox with dynamic trajectory modes and timesteps from config
   autoware::tensorrt_vad::BBox bbox(
@@ -217,14 +193,14 @@ autoware::tensorrt_vad::BBox ObjectPostprocessor::create_bbox_from_gpu_data(
 
   // Copy bbox predictions
   for (int32_t i = 0; i < config_.prediction_bbox_pred_dim; ++i) {
-    bbox.bbox.at(i) = h_bbox_preds.at(obj_idx * config_.prediction_bbox_pred_dim + i);
+    bbox.bbox.at(i) = buffers.bbox_preds.at(obj_idx * config_.prediction_bbox_pred_dim + i);
   }
 
   // Get max class index and confidence
-  const int32_t max_class = h_max_class_indices.at(obj_idx);
+  const int32_t max_class = buffers.max_class_indices.at(obj_idx);
   float max_score = 0.0f;
   if (max_class >= 0 && max_class < config_.prediction_num_classes) {
-    max_score = h_cls_scores.at(obj_idx * config_.prediction_num_classes + max_class);
+    max_score = buffers.cls_scores.at(obj_idx * config_.prediction_num_classes + max_class);
   }
 
   bbox.confidence = max_score;
@@ -233,15 +209,15 @@ autoware::tensorrt_vad::BBox ObjectPostprocessor::create_bbox_from_gpu_data(
   // Copy trajectory predictions
   for (int32_t mode = 0; mode < config_.prediction_trajectory_modes; ++mode) {
     bbox.trajectories[mode].confidence =
-      h_traj_scores.at(obj_idx * config_.prediction_trajectory_modes + mode);
+      buffers.traj_scores.at(obj_idx * config_.prediction_trajectory_modes + mode);
 
     // Copy trajectory points
     for (int32_t ts = 0; ts < config_.prediction_timesteps; ++ts) {
       const int32_t traj_idx =
         obj_idx * config_.prediction_trajectory_modes * config_.prediction_timesteps * 2 +
         mode * config_.prediction_timesteps * 2 + ts * 2;
-      bbox.trajectories[mode].trajectory[ts][0] = h_trajectories.at(traj_idx);      // x
-      bbox.trajectories[mode].trajectory[ts][1] = h_trajectories.at(traj_idx + 1);  // y
+      bbox.trajectories[mode].trajectory[ts][0] = buffers.trajectories.at(traj_idx);      // x
+      bbox.trajectories[mode].trajectory[ts][1] = buffers.trajectories.at(traj_idx + 1);  // y
     }
   }
 

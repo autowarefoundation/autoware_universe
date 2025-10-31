@@ -40,21 +40,20 @@ std::string toString(NetworkType type)
 std::unique_ptr<autoware::tensorrt_common::TrtCommon> build_engine(
   const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
   const std::vector<autoware::tensorrt_common::NetworkIO> & network_io,
-  const std::string & engine_name, const std::string & plugins_path,
-  std::shared_ptr<VadLogger> logger)
+  const EngineBuildParams & params)
 {
-  logger->info("Building " + engine_name + " engine...");
+  params.logger->info("Building " + params.engine_name + " engine...");
 
   auto trt_common = std::make_unique<autoware::tensorrt_common::TrtCommon>(
     trt_common_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{plugins_path});
+    std::vector<std::string>{params.plugins_path});
   auto network_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
   if (!trt_common->setup(nullptr, std::move(network_io_ptr))) {
-    logger->error("Failed to setup " + engine_name + " TrtCommon");
+    params.logger->error("Failed to setup " + params.engine_name + " TrtCommon");
     return nullptr;
   }
-  logger->info(engine_name + " engine built successfully");
+  params.logger->info(params.engine_name + " engine built successfully");
   return trt_common;
 }
 
@@ -70,7 +69,8 @@ std::unique_ptr<autoware::tensorrt_common::TrtCommon> Net::init_tensorrt(
 
   // Build engine using network type name
   std::string engine_name = toString(network_type_);
-  auto engine = build_engine(trt_common_config, network_io, engine_name, plugins_path, logger_);
+  EngineBuildParams build_params{engine_name, plugins_path, logger_};
+  auto engine = build_engine(trt_common_config, network_io, build_params);
   if (!engine) {
     logger_->error("Failed to build " + engine_name + " engine");
     return nullptr;

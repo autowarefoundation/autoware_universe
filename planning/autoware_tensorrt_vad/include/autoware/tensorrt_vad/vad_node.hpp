@@ -96,9 +96,10 @@ private:
 
   // Generic callback handler template
   template <typename MsgType>
-  void process_callback(
+  bool process_callback(
     const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
     std::function<void(const typename MsgType::ConstSharedPtr)> setter);
+  bool validate_camera_id(std::size_t camera_id, const std::string & context);
 
   // tf Members
   tf2_ros::Buffer tf_buffer_;
