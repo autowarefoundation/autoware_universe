@@ -72,7 +72,7 @@ geometry_msgs::msg::Point OutputObjectsConverter::convert_position(
 {
   geometry_msgs::msg::Point position;
   // BBox format: [c_x, c_y, w, l, c_z, h, sin(theta), cos(theta), v_x, v_y]
-  // [c_x, c_y, c_z] in VAD (which is same as Autoware Tier4 base_link)
+  // [c_x, c_y, c_z] in VAD (which is same as Autoware base_link)
   float x = bbox.bbox[0];
   float y = bbox.bbox[1];
   float z = bbox.bbox[4] + bbox.bbox[5] * 0.5f;  // z + h / 2. object center
@@ -156,7 +156,7 @@ OutputObjectsConverter::convert_predicted_paths(
       geometry_msgs::msg::Pose pose;
 
       // Predicted trajectory is in relative coordinates (ego coordinate system), so transform to
-      // agent center VAD coordinates are same as Autoware Tier4 base_link coordinates
+      // agent center VAD coordinates are same as Autoware base_link coordinates
       float traj_x =
         pred_traj.trajectory[ts][0] + bbox.bbox[0];  // Relative coordinates from agent center
       float traj_y =

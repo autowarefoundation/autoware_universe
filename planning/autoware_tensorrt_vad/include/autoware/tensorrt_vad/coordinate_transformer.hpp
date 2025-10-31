@@ -33,7 +33,7 @@ namespace autoware::tensorrt_vad::vad_interface
 /**
  * @brief CoordinateTransformer handles TF lookups for camera transformations
  *
- * Note: For CARLA Tier4, VAD coordinates are identical to Autoware base_link coordinates,
+ * Note: For CARLA, VAD coordinates are identical to Autoware base_link coordinates,
  * so no coordinate transformation is needed. This class only provides TF buffer lookups
  * for camera frame transformations (base_link to camera frames).
  */

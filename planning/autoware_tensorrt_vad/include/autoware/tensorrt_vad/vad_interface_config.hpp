@@ -43,8 +43,8 @@ public:
   std::vector<std::string> bbox_class_names;  // Object class names from VAD model
 
   // NOTE: double and int64_t are used because ROS 2's declare_parameter cannot accept
-  // std::vector<float> or std::vector<int32_t> CARLA Tier4 only: VAD coordinates are identical to
-  // Autoware Tier4 base_link coordinates
+  // std::vector<float> or std::vector<int32_t> CARLA only: VAD coordinates are identical to
+  // Autoware base_link coordinates
   VadInterfaceConfig(
     int32_t target_image_width_, int32_t target_image_height_,
     const std::vector<double> & detection_range_, int32_t default_command_,

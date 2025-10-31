@@ -200,30 +200,30 @@ We aim to address these limitations through:
 
 ### Core Model
 
-1. **Jiang, S., Wang, Z., Zhou, H., Wang, J., Liao, B., Chen, J., ... & Wang, X.** (2023). VAD: Vectorized Scene Representation for Efficient Autonomous Driving. _IEEE/CVF International Conference on Computer Vision (ICCV) 2023_, pp. 8340-8350.
+1. VAD: Vectorized Scene Representation for Efficient Autonomous Driving (2023)
    - Paper: [arXiv:2303.12077](https://arxiv.org/abs/2303.12077)
    - Code: [github.com/hustvl/VAD](https://github.com/hustvl/VAD)
 
 ### Training and Datasets
 
-1. **Jia, X., Wu, P., Chen, L., Liu, Y., Li, H., & Yan, J.** (2024). Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving. _Conference on Robot Learning (CoRL) 2024_.
+1. Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving (2024)
    - Paper: [arXiv:2406.03877](https://arxiv.org/abs/2406.03877)
    - Code: [github.com/Thinklab-SJTU/Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
    - Description: CARLA-based benchmark for end-to-end autonomous driving evaluation
 
 ### Deployment and Optimization
 
-1. **NVIDIA Corporation** (2024). Deep Learning for Autonomous Ground Vehicles (DL4AGX).
+1. Deep Learning for Autonomous Ground Vehicles (DL4AGX) (2024)
    - Resource: [developer.nvidia.com/drive/drive-agx](https://developer.nvidia.com/drive/drive-agx)
    - Description: TensorRT optimization for autonomous driving workloads and embedded GPU deployment strategies
 
 ### Related Work
 
-1. **Caesar, H., Bankiti, V., Lang, A. H., Vora, S., Liong, V. E., Xu, Q., ... & Beijbom, O.** (2020). nuScenes: A Multimodal Dataset for Autonomous Driving. _IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) 2020_, pp. 11621-11631.
+1. nuScenes: A Multimodal Dataset for Autonomous Driving (2020)
    - Paper: [arXiv:1903.11027](https://arxiv.org/abs/1903.11027)
    - Dataset: [nuscenes.org](https://www.nuscenes.org)
 
-2. **Li, Z., Wang, W., Li, H., Xie, E., Sima, C., Lu, T., ... & Dai, J.** (2022). BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers. _European Conference on Computer Vision (ECCV) 2022_, pp. 1-18.
+2. BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers (2022)
    - Paper: [arXiv:2203.17270](https://arxiv.org/abs/2203.17270)
 
 ---

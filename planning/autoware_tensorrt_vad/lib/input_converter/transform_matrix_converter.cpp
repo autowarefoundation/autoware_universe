@@ -76,7 +76,7 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
   const int32_t num_cameras = static_cast<int32_t>(camera_infos.size());
   std::vector<float> frame_vad_base2img(16 * num_cameras, 0.0f);
 
-  // Process each camera (CARLA Tier4: identity mapping, camera order matches VAD training order)
+  // Process each camera (CARLA: identity mapping, camera order matches VAD training order)
   for (int32_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
     if (!camera_infos[camera_id]) {
       continue;
@@ -96,7 +96,7 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
     Eigen::Matrix4f cam2img = create_cam2img(camera_infos[camera_id]);
 
     // Calculate base2img transformation
-    // Note: VAD coordinates are the same as Autoware Tier4 base_link coordinates (no transformation
+    // Note: VAD coordinates are the same as Autoware base_link coordinates (no transformation
     // needed)
     Eigen::Matrix4f vad_base2img = cam2img * base2cam;
 
@@ -108,7 +108,7 @@ VadBase2ImgData InputTransformMatrixConverter::process_vad_base2img(
 
     std::vector<float> vad_base2img_flat = matrix_to_flat(vad_base2img_scaled);
 
-    // Store directly (identity mapping for CARLA Tier4)
+    // Store directly (identity mapping for CARLA)
     std::copy(
       vad_base2img_flat.begin(), vad_base2img_flat.end(),
       frame_vad_base2img.begin() + camera_id * 16);

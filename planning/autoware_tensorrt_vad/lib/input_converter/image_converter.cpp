@@ -75,7 +75,7 @@ CameraImagesData InputImageConverter::process_image(
   const int32_t num_cameras = static_cast<int32_t>(images.size());
   processed_images.resize(num_cameras);
 
-  // Process each camera image (CARLA Tier4: identity mapping, camera order matches VAD training
+  // Process each camera image (CARLA: identity mapping, camera order matches VAD training
   // order)
   for (int32_t camera_idx = 0; camera_idx < num_cameras; ++camera_idx) {
     const auto & image_msg = images[camera_idx];
@@ -102,7 +102,7 @@ CameraImagesData InputImageConverter::process_image(
     // Clone the data to ensure memory continuity
     cv::Mat processed_img = bgr_img.clone();
 
-    // Store directly (identity mapping for CARLA Tier4)
+    // Store directly (identity mapping for CARLA)
     processed_images[camera_idx] = processed_img;
   }
 
