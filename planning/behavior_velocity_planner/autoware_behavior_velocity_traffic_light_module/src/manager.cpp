@@ -14,14 +14,20 @@
 
 #include "manager.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
+#include <tf2/utils.h>
+
 #include <limits>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
-
 namespace autoware::behavior_velocity_planner
 {
+using autoware_utils::get_or_declare_parameter;
 using lanelet::TrafficLight;
 
 TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
@@ -57,20 +63,19 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
 }
 
 void TrafficLightModuleManager::modifyPathVelocity(
-  Trajectory & path, [[maybe_unused]] const std_msgs::msg::Header & header,
-  const std::vector<geometry_msgs::msg::Point> & left_bound,
-  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   visualization_msgs::msg::MarkerArray debug_marker_array;
   visualization_msgs::msg::MarkerArray virtual_wall_marker_array;
 
   autoware_perception_msgs::msg::TrafficLightGroup tl_state;
 
-  nearest_ref_stop_path_point_index_ = static_cast<int>(path.get_underlying_bases().size() - 1);
+  nearest_ref_stop_path_point_index_ = static_cast<int>(path->points.size() - 1);
   for (const auto & scene_module : scene_modules_) {
     std::shared_ptr<TrafficLightModule> traffic_light_scene_module(
       std::dynamic_pointer_cast<TrafficLightModule>(scene_module));
-    traffic_light_scene_module->modifyPathVelocity(path, left_bound, right_bound, planner_data);
+    traffic_light_scene_module->setPlannerData(planner_data_);
+    traffic_light_scene_module->modifyPathVelocity(path);
 
     if (
       traffic_light_scene_module->getFirstRefStopPathPointIndex() <
@@ -96,14 +101,11 @@ void TrafficLightModuleManager::modifyPathVelocity(
 }
 
 void TrafficLightModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   for (const auto & traffic_light_reg_elem : planning_utils::getRegElemMapOnPath<TrafficLight>(
-         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
-         planner_data.current_odometry->pose)) {
+         path, planner_data_->route_handler_->getLaneletMapPtr(),
+         planner_data_->current_odometry->pose)) {
     const auto stop_line = traffic_light_reg_elem.first->stopLine();
 
     if (!stop_line) {
@@ -115,18 +117,17 @@ void TrafficLightModuleManager::launchNewModules(
 
     // Use lanelet_id to unregister module when the route is changed
     const auto lane_id = traffic_light_reg_elem.second.id();
-    auto existing_module = getRegisteredAssociatedModule(lane_id, planner_data);
+    auto existing_module = getRegisteredAssociatedModule(lane_id);
     if (!existing_module) {
       registerModule(
         std::make_shared<TrafficLightModule>(
           lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, *stop_line,
           planner_param_, logger_.get_child("traffic_light_module"), clock_, time_keeper_,
-          planning_factor_interface_),
-        planner_data);
+          planning_factor_interface_));
       generate_uuid(lane_id);
       updateRTCStatus(
         getUUID(lane_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
-        stamp);
+        path.header.stamp);
     } else {
       // Update the stop line for the existing module
       existing_module->updateStopLine(*stop_line);
@@ -136,18 +137,15 @@ void TrafficLightModuleManager::launchNewModules(
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 TrafficLightModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto lanelet_id_set = planning_utils::getLaneletIdSetOnPath<TrafficLight>(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
-  return [this, lanelet_id_set, planner_data](
+  return [this, lanelet_id_set](
            [[maybe_unused]] const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     for (const auto & id : lanelet_id_set) {
-      if (getRegisteredAssociatedModule(id, planner_data)) {
+      if (getRegisteredAssociatedModule(id)) {
         return false;
       }
     }
@@ -156,12 +154,12 @@ TrafficLightModuleManager::getModuleExpiredFunction(
 }
 
 std::shared_ptr<TrafficLightModule> TrafficLightModuleManager::getRegisteredAssociatedModule(
-  const lanelet::Id & id, const PlannerData & planner_data) const
+  const lanelet::Id & id) const
 {
-  const auto lane = planner_data.route_handler_->getLaneletMapPtr()->laneletLayer.get(id);
+  const auto lane = planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(id);
 
   for (const auto & registered_id : registered_module_id_set_) {
-    if (hasAssociatedTrafficLight(lane, registered_id, planner_data)) {
+    if (hasAssociatedTrafficLight(lane, registered_id)) {
       return findModuleById(registered_id);
     }
   }
@@ -169,11 +167,10 @@ std::shared_ptr<TrafficLightModule> TrafficLightModuleManager::getRegisteredAsso
 }
 
 bool TrafficLightModuleManager::hasAssociatedTrafficLight(
-  const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id,
-  const PlannerData & planner_data) const
+  const lanelet::ConstLanelet & lane, const lanelet::Id & registered_id) const
 {
   const auto registered_lane =
-    planner_data.route_handler_->getLaneletMapPtr()->laneletLayer.get(registered_id);
+    planner_data_->route_handler_->getLaneletMapPtr()->laneletLayer.get(registered_id);
 
   for (const auto & registered_element : registered_lane.regulatoryElementsAs<TrafficLight>()) {
     for (const auto & element : lane.regulatoryElementsAs<TrafficLight>()) {
@@ -215,4 +212,4 @@ bool TrafficLightModuleManager::hasSameTrafficLight(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::TrafficLightModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

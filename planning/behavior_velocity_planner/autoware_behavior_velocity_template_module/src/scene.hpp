@@ -15,16 +15,18 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
 #include <vector>
-
 namespace autoware::behavior_velocity_planner
 {
-class TemplateModule : public experimental::SceneModuleInterface
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+
+class TemplateModule : public SceneModuleInterface
 {
 public:
   TemplateModule(
@@ -42,10 +44,7 @@ public:
    * @param path A pointer to the path containing points to be modified.
    * @return [bool] wether the path velocity was modified or not.
    */
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   /**
    * @brief Create a visualization of debug markers.

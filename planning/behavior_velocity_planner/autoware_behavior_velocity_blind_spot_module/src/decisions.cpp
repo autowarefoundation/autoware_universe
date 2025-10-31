@@ -24,8 +24,7 @@ namespace autoware::behavior_velocity_planner
  */
 template <typename T>
 void BlindSpotModule::setRTCStatusByDecision(
-  const T &, [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const PlannerData & planner_data)
+  const T &, [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   static_assert("Unsupported type passed to setRTCStatus");
   return;
@@ -34,8 +33,7 @@ void BlindSpotModule::setRTCStatusByDecision(
 template <typename T>
 void BlindSpotModule::reactRTCApprovalByDecision(
   [[maybe_unused]] const T & decision,
-  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  const PlannerData & planner_data)
+  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   static_assert("Unsupported type passed to reactRTCApprovalByDecision");
 }
@@ -46,8 +44,7 @@ void BlindSpotModule::reactRTCApprovalByDecision(
 template <>
 void BlindSpotModule::setRTCStatusByDecision(
   [[maybe_unused]] const InternalError & decision,
-  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  [[maybe_unused]] const PlannerData & planner_data)
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   return;
 }
@@ -55,8 +52,7 @@ void BlindSpotModule::setRTCStatusByDecision(
 template <>
 void BlindSpotModule::reactRTCApprovalByDecision(
   [[maybe_unused]] const InternalError & decision,
-  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  [[maybe_unused]] const PlannerData & planner_data)
+  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   return;
 }
@@ -67,8 +63,7 @@ void BlindSpotModule::reactRTCApprovalByDecision(
 template <>
 void BlindSpotModule::setRTCStatusByDecision(
   [[maybe_unused]] const OverPassJudge & decision,
-  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  [[maybe_unused]] const PlannerData & planner_data)
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   return;
 }
@@ -76,8 +71,7 @@ void BlindSpotModule::setRTCStatusByDecision(
 template <>
 void BlindSpotModule::reactRTCApprovalByDecision(
   [[maybe_unused]] const OverPassJudge & decision,
-  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  [[maybe_unused]] const PlannerData & planner_data)
+  [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   return;
 }
@@ -87,11 +81,10 @@ void BlindSpotModule::reactRTCApprovalByDecision(
  */
 template <>
 void BlindSpotModule::setRTCStatusByDecision(
-  const Unsafe & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const PlannerData & planner_data)
+  const Unsafe & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   setSafe(false);
-  const auto & current_pose = planner_data.current_odometry->pose;
+  const auto & current_pose = planner_data_->current_odometry->pose;
   setDistance(
     autoware::motion_utils::calcSignedArcLength(
       path.points, current_pose.position, decision.stop_line_idx));
@@ -100,18 +93,17 @@ void BlindSpotModule::setRTCStatusByDecision(
 
 template <>
 void BlindSpotModule::reactRTCApprovalByDecision(
-  const Unsafe & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  const PlannerData & planner_data)
+  const Unsafe & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   if (!isActivated()) {
     constexpr double stop_vel = 0.0;
     planning_utils::setVelocityFromIndex(decision.stop_line_idx, stop_vel, path);
     debug_data_.virtual_wall_pose = planning_utils::getAheadPose(
-      decision.stop_line_idx, planner_data.vehicle_info_.max_longitudinal_offset_m, *path);
+      decision.stop_line_idx, planner_data_->vehicle_info_.max_longitudinal_offset_m, *path);
 
     const auto stop_pose = path->points.at(decision.stop_line_idx).point.pose;
     planning_factor_interface_->add(
-      path->points, planner_data.current_odometry->pose, stop_pose,
+      path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "blind_spot(module is judging as UNSAFE)");
@@ -124,11 +116,10 @@ void BlindSpotModule::reactRTCApprovalByDecision(
  */
 template <>
 void BlindSpotModule::setRTCStatusByDecision(
-  const Safe & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const PlannerData & planner_data)
+  const Safe & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   setSafe(true);
-  const auto & current_pose = planner_data.current_odometry->pose;
+  const auto & current_pose = planner_data_->current_odometry->pose;
   setDistance(
     autoware::motion_utils::calcSignedArcLength(
       path.points, current_pose.position, decision.stop_line_idx));
@@ -137,18 +128,17 @@ void BlindSpotModule::setRTCStatusByDecision(
 
 template <>
 void BlindSpotModule::reactRTCApprovalByDecision(
-  const Safe & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  const PlannerData & planner_data)
+  const Safe & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   if (!isActivated()) {
     constexpr double stop_vel = 0.0;
     planning_utils::setVelocityFromIndex(decision.stop_line_idx, stop_vel, path);
     debug_data_.virtual_wall_pose = planning_utils::getAheadPose(
-      decision.stop_line_idx, planner_data.vehicle_info_.max_longitudinal_offset_m, *path);
+      decision.stop_line_idx, planner_data_->vehicle_info_.max_longitudinal_offset_m, *path);
 
     const auto stop_pose = path->points.at(decision.stop_line_idx).point.pose;
     planning_factor_interface_->add(
-      path->points, planner_data.current_odometry->pose, stop_pose,
+      path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "blind_spot(module is judging as SAFE and RTC is not approved)");

@@ -15,16 +15,21 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#define EIGEN_MPL2_ONLY
-
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-
 #include <memory>
 #include <optional>
 #include <tuple>
 #include <vector>
+
+#define EIGEN_MPL2_ONLY
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -80,10 +85,7 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -100,24 +102,21 @@ public:
   void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
 private:
-  bool isStopSignal(const PlannerData & planner_data);
+  bool isStopSignal();
 
-  bool willTrafficLightTurnRedBeforeReachingStopLine(
-    const double & distance_to_stop_line, const PlannerData & planner_data) const;
+  bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
   autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
-    const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point,
-    const PlannerData & planner_data);
+    const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point);
 
-  bool isPassthrough(const double & signed_arc_length, const PlannerData & planner_data) const;
+  bool isPassthrough(const double & signed_arc_length) const;
 
-  bool findValidTrafficSignal(
-    TrafficSignalStamped & valid_traffic_signal, const PlannerData & planner_data) const;
+  bool findValidTrafficSignal(TrafficSignalStamped & valid_traffic_signal) const;
 
   bool isTrafficSignalTimedOut() const;
 
-  void updateTrafficSignal(const PlannerData & planner_data);
+  void updateTrafficSignal();
 
   // Lane id
   const int64_t lane_id_;

@@ -17,16 +17,25 @@
 
 #include "scene_walkway.hpp"
 
-#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
+#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <functional>
 #include <memory>
+#include <optional>
+#include <set>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-class WalkwayModuleManager : public experimental::SceneModuleManagerInterface<>
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+
+class WalkwayModuleManager : public SceneModuleManagerInterface<>
 {
 public:
   explicit WalkwayModuleManager(rclcpp::Node & node);
@@ -41,16 +50,16 @@ public:
 private:
   WalkwayModule::PlannerParam walkway_planner_param_{};
 
-  void launchNewModules(
-    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
+  void launchNewModules(const PathWithLaneId & path) override;
 
-  std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
-  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
+  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
+    const PathWithLaneId & path) override;
 };
 
-class WalkwayModulePlugin : public experimental::PluginWrapper<WalkwayModuleManager>
+class WalkwayModulePlugin : public PluginWrapper<WalkwayModuleManager>
 {
 };
+
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // MANAGER_HPP_

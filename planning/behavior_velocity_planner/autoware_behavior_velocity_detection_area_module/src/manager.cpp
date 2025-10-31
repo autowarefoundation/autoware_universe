@@ -14,6 +14,12 @@
 
 #include "manager.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
+#include <tf2/utils.h>
+
 #include <limits>
 #include <memory>
 #include <set>
@@ -24,6 +30,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::DetectionArea;
 
 DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
@@ -82,15 +89,12 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
 }
 
 void DetectionAreaModuleManager::launchNewModules(
-  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   for (const auto & detection_area_with_lane_id :
        planning_utils::getRegElemMapOnPath<DetectionArea>(
-         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
-         planner_data.current_odometry->pose)) {
+         path, planner_data_->route_handler_->getLaneletMapPtr(),
+         planner_data_->current_odometry->pose)) {
     // Use lanelet_id to unregister module when the route is changed
     const auto lane_id = detection_area_with_lane_id.second.id();
     const auto module_id = detection_area_with_lane_id.first->id();
@@ -99,25 +103,21 @@ void DetectionAreaModuleManager::launchNewModules(
         std::make_shared<DetectionAreaModule>(
           module_id, lane_id, *detection_area_with_lane_id.first, planner_param_,
           logger_.get_child("detection_area_module"), clock_, time_keeper_,
-          planning_factor_interface_),
-        planner_data);
+          planning_factor_interface_));
       generate_uuid(module_id);
       updateRTCStatus(
         getUUID(module_id), true, State::WAITING_FOR_EXECUTION,
-        std::numeric_limits<double>::lowest(), stamp);
+        std::numeric_limits<double>::lowest(), path.header.stamp);
     }
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 DetectionAreaModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
   const auto detection_area_id_set = planning_utils::getRegElemIdSetOnPath<DetectionArea>(
-    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   return
     [detection_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
@@ -130,4 +130,4 @@ DetectionAreaModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::DetectionAreaModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

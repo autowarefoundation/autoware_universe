@@ -17,14 +17,19 @@
 
 #include "scene.hpp"
 
-#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
+#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
+#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <functional>
 #include <memory>
 
 namespace autoware::behavior_velocity_planner
 {
-class NoDrivableLaneModuleManager : public experimental::SceneModuleManagerInterface<>
+class NoDrivableLaneModuleManager : public SceneModuleManagerInterface<>
 {
 public:
   explicit NoDrivableLaneModuleManager(rclcpp::Node & node);
@@ -39,14 +44,13 @@ public:
 private:
   NoDrivableLaneModule::PlannerParam planner_param_;
 
-  void launchNewModules(
-    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
+  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
-  std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
-  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
+  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 };
 
-class NoDrivableLaneModulePlugin : public experimental::PluginWrapper<NoDrivableLaneModuleManager>
+class NoDrivableLaneModulePlugin : public PluginWrapper<NoDrivableLaneModuleManager>
 {
 };
 

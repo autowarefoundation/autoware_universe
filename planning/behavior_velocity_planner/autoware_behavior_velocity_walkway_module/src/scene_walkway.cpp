@@ -14,7 +14,9 @@
 
 #include "scene_walkway.hpp"
 
-#include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <cmath>
 #include <memory>
@@ -58,10 +60,9 @@ WalkwayModule::WalkwayModule(
 
 std::pair<double, geometry_msgs::msg::Point> WalkwayModule::getStopLine(
   const PathWithLaneId & ego_path, bool & exist_stopline_in_map,
-  const geometry_msgs::msg::Point & first_path_point_on_walkway,
-  const PlannerData & planner_data) const
+  const geometry_msgs::msg::Point & first_path_point_on_walkway) const
 {
-  const auto & ego_pos = planner_data.current_odometry->pose.position;
+  const auto & ego_pos = planner_data_->current_odometry->pose.position;
   for (const auto & stop_line : stop_lines_) {
     const auto p_stop_lines =
       getLinestringIntersects(ego_path, lanelet::utils::to2D(stop_line).basicLineString(), ego_pos);
@@ -84,19 +85,15 @@ std::pair<double, geometry_msgs::msg::Point> WalkwayModule::getStopLine(
   return std::make_pair(dist_ego_to_stop, p_stop_line);
 }
 
-bool WalkwayModule::modifyPathVelocity(
-  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
+bool WalkwayModule::modifyPathVelocity(PathWithLaneId * path)
 {
-  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
+  const auto & base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
-  const auto & base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  debug_data_ = DebugData(planner_data_);
 
-  debug_data_ = DebugData(planner_data);
+  const auto input = *path;
 
-  const auto input = path_msg;
-
-  const auto & ego_pos = planner_data.current_odometry->pose.position;
+  const auto & ego_pos = planner_data_->current_odometry->pose.position;
   const auto path_end_points_on_walkway =
     getPathEndPointsOnCrosswalk(input, walkway_.polygon2d().basicPolygon(), ego_pos);
   if (!path_end_points_on_walkway) {
@@ -107,8 +104,7 @@ bool WalkwayModule::modifyPathVelocity(
 
   if (state_ == State::APPROACH) {
     bool exist_stopline_in_map;
-    const auto p_stop_line =
-      getStopLine(input, exist_stopline_in_map, first_path_point_on_walkway, planner_data);
+    const auto p_stop_line = getStopLine(input, exist_stopline_in_map, first_path_point_on_walkway);
 
     const auto & p_stop = p_stop_line.second;
     const auto stop_distance_from_crosswalk =
@@ -120,14 +116,14 @@ bool WalkwayModule::modifyPathVelocity(
       return false;
     }
 
-    const auto inserted_pose = planning_utils::insertStopPoint(stop_pose->position, path_msg);
+    const auto inserted_pose = planning_utils::insertStopPoint(stop_pose->position, *path);
     if (inserted_pose) {
       debug_data_.stop_poses.push_back(inserted_pose.value());
     }
 
     /* get stop point and stop factor */
     planning_factor_interface_->add(
-      path_msg.points, planner_data.current_odometry->pose, stop_pose.value(),
+      path->points, planner_data_->current_odometry->pose, stop_pose.value(),
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
       0.0 /*velocity*/, 0.0 /*shift distance*/, "walkway_stop");
@@ -140,7 +136,7 @@ bool WalkwayModule::modifyPathVelocity(
     debug_data_.stop_judge_range = distance_threshold;
 
     const auto stop_at_stop_point = signed_arc_dist_to_stop_point < distance_threshold &&
-                                    planner_data.isVehicleStopped(planner_param_.stop_duration);
+                                    planner_data_->isVehicleStopped(planner_param_.stop_duration);
 
     if (stop_at_stop_point) {
       // If ego vehicle is after walkway stop and stopped then move to stop state
@@ -151,12 +147,11 @@ bool WalkwayModule::modifyPathVelocity(
       }
     }
 
-    planning_utils::toTrajectory(path_msg, path);
     return true;
   }
 
   if (state_ == State::STOP) {
-    if (planner_data.isVehicleStopped()) {
+    if (planner_data_->isVehicleStopped()) {
       state_ = State::SURPASSED;
     }
   }

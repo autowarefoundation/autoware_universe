@@ -14,6 +14,9 @@
 
 #include "manager.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
 #include <limits>
 #include <memory>
 #include <set>
@@ -23,6 +26,7 @@
 namespace autoware::behavior_velocity_planner
 {
 
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Crosswalk;
 
 WalkwayModuleManager::WalkwayModuleManager(rclcpp::Node & node)
@@ -37,17 +41,11 @@ WalkwayModuleManager::WalkwayModuleManager(rclcpp::Node & node)
   wp.stop_duration = get_or_declare_parameter<double>(node, ns + ".stop_duration");
 }
 
-void WalkwayModuleManager::launchNewModules(
-  const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
-  const PlannerData & planner_data)
+void WalkwayModuleManager::launchNewModules(const PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
+  const auto rh = planner_data_->route_handler_;
 
-  const auto rh = planner_data.route_handler_;
-
-  const auto launch = [this, &planner_data](
-                        const auto & lanelet, const auto & use_regulatory_element) {
+  const auto launch = [this](const auto & lanelet, const auto & use_regulatory_element) {
     const auto attribute =
       lanelet.attributeOr(lanelet::AttributeNamesString::Subtype, std::string(""));
     if (attribute != lanelet::AttributeValueString::Walkway) {
@@ -60,61 +58,53 @@ void WalkwayModuleManager::launchNewModules(
 
     const auto & p = walkway_planner_param_;
     const auto logger = logger_.get_child("walkway_module");
-    const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+    const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
 
     registerModule(
       std::make_shared<WalkwayModule>(
         lanelet.id(), lanelet_map_ptr, p, use_regulatory_element, logger, clock_, time_keeper_,
-        planning_factor_interface_),
-      planner_data);
+        planning_factor_interface_));
   };
 
   const auto crosswalk_leg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(
-    path_msg, rh->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, rh->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   for (const auto & crosswalk : crosswalk_leg_elem_map) {
     launch(crosswalk.first->crosswalkLanelet(), true);
   }
 
   const auto crosswalk_lanelets = getCrosswalksOnPath(
-    planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),
-    rh->getOverallGraphPtr());
+    planner_data_->current_odometry->pose, path, rh->getLaneletMapPtr(), rh->getOverallGraphPtr());
 
   for (const auto & crosswalk : crosswalk_lanelets) {
     launch(crosswalk.second, false);
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
-WalkwayModuleManager::getModuleExpiredFunction(
-  const Trajectory & path, const PlannerData & planner_data)
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+WalkwayModuleManager::getModuleExpiredFunction(const PathWithLaneId & path)
 {
-  PathWithLaneId path_msg;
-  path_msg.points = path.restore();
-
-  const auto rh = planner_data.route_handler_;
+  const auto rh = planner_data_->route_handler_;
 
   std::set<int64_t> walkway_id_set;
 
   walkway_id_set = getCrosswalkIdSetOnPath(
-    planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),
-    rh->getOverallGraphPtr());
+    planner_data_->current_odometry->pose, path, rh->getLaneletMapPtr(), rh->getOverallGraphPtr());
 
   const auto crosswalk_leg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(
-    path_msg, rh->getLaneletMapPtr(), planner_data.current_odometry->pose);
+    path, rh->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
   for (const auto & crosswalk : crosswalk_leg_elem_map) {
     walkway_id_set.insert(crosswalk.first->id());
   }
 
-  return
-    [walkway_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
-      return walkway_id_set.count(scene_module->getModuleId()) == 0;
-    };
+  return [walkway_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+    return walkway_id_set.count(scene_module->getModuleId()) == 0;
+  };
 }
 }  // namespace autoware::behavior_velocity_planner
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::WalkwayModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)

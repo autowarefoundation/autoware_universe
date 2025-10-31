@@ -17,8 +17,15 @@
 
 #include "utils.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
 #include <memory>
 
@@ -55,10 +62,7 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;

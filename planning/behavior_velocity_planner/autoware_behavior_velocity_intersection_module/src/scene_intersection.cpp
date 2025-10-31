@@ -16,8 +16,21 @@
 
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+
+#include <boost/geometry/algorithms/within.hpp>
+
+#include <lanelet2_core/geometry/Polygon.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/CompoundPolygon.h>
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
 #include <limits>
@@ -30,10 +43,11 @@
 namespace autoware::behavior_velocity_planner
 {
 IntersectionModule::IntersectionModule(
-  const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
-  const std::set<lanelet::Id> & associative_ids, const std::string & turn_direction,
-  const bool has_traffic_light, rclcpp::Node & node, const rclcpp::Logger logger,
-  const rclcpp::Clock::SharedPtr clock,
+  const int64_t module_id, const int64_t lane_id,
+  [[maybe_unused]] std::shared_ptr<const PlannerData> planner_data,
+  const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
+  const std::string & turn_direction, const bool has_traffic_light, rclcpp::Node & node,
+  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface,
@@ -81,12 +95,11 @@ IntersectionModule::IntersectionModule(
 }
 
 bool IntersectionModule::can_smoothly_stop_at(
-  const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx,
-  const PlannerData & planner_data) const
+  const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx) const
 {
   const double braking_distance = planning_utils::calcJudgeLineDistWithJerkLimit(
-    planner_data.current_velocity->twist.linear.x,
-    planner_data.current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
+    planner_data_->current_velocity->twist.linear.x,
+    planner_data_->current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
     planner_param_.common.max_jerk, planner_param_.common.delay_response_time);
 
   return autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, target_stop_idx) +
@@ -94,17 +107,13 @@ bool IntersectionModule::can_smoothly_stop_at(
          braking_distance;
 }
 
-bool IntersectionModule::modifyPathVelocity(
-  Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-  const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
+bool IntersectionModule::modifyPathVelocity(PathWithLaneId * path)
 {
-  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
-
   debug_data_ = DebugData();
 
   initializeRTCStatus();
 
-  const auto decision_result = modifyPathVelocityDetail(&path_msg, planner_data);
+  const auto decision_result = modifyPathVelocityDetail(path);
   prev_decision_result_ = decision_result;
 
   {
@@ -114,11 +123,10 @@ bool IntersectionModule::modifyPathVelocity(
     internal_debug_data_.decision_type = decision_type;
   }
 
-  prepareRTCStatus(decision_result, path_msg);
+  prepareRTCStatus(decision_result, *path);
 
-  reactRTCApproval(decision_result, &path_msg, planner_data);
+  reactRTCApproval(decision_result, path);
 
-  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
@@ -152,10 +160,9 @@ static std::string formatOcclusionType(const IntersectionModule::OcclusionType &
   return "RTCOccluded";
 }
 
-DecisionResult IntersectionModule::modifyPathVelocityDetail(
-  PathWithLaneId * path, const PlannerData & planner_data)
+DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * path)
 {
-  const auto prepare_data = prepareIntersectionData(path, planner_data);
+  const auto prepare_data = prepareIntersectionData(path);
   if (!prepare_data) {
     return prepare_data.err();
   }
@@ -163,7 +170,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   const auto & intersection_lanelets = intersection_lanelets_.value();
 
   // NOTE: this level is based on the updateTrafficSignalObservation() which is latest
-  const auto traffic_prioritized_level = getTrafficPrioritizedLevel(planner_data);
+  const auto traffic_prioritized_level = getTrafficPrioritizedLevel();
   const bool is_prioritized =
     traffic_prioritized_level == TrafficPrioritizedLevel::FULLY_PRIORITIZED;
 
@@ -174,11 +181,9 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   // stuck vehicle detection is viable even if attention area is empty
   // so this needs to be checked before attention area validation
   // ==========================================================================================
-  const auto is_stuck_status =
-    isStuckStatus(*path, intersection_stoplines, path_lanelets, planner_data);
+  const auto is_stuck_status = isStuckStatus(*path, intersection_stoplines, path_lanelets);
   if (is_stuck_status) {
-    if (can_smoothly_stop_at(
-          *path, closest_idx, is_stuck_status->stuck_stopline_idx, planner_data)) {
+    if (can_smoothly_stop_at(*path, closest_idx, is_stuck_status->stuck_stopline_idx)) {
       return is_stuck_status.value();
     }
     RCLCPP_WARN_THROTTLE(
@@ -225,7 +230,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   // classify the objects to attention_area/intersection_area and update their position, velocity,
   // belonging attention lanelet, distance to corresponding stopline
   // ==========================================================================================
-  updateObjectInfoManagerArea(planner_data);
+  updateObjectInfoManagerArea();
 
   // ==========================================================================================
   // occlusion_status is type of occlusion,
@@ -239,18 +244,18 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   // not detected but not approved, SAFE is not sent.
   // ==========================================================================================
   const auto [occlusion_status, is_occlusion_cleared_with_margin, is_occlusion_state] =
-    getOcclusionStatus(traffic_prioritized_level, interpolated_path_info, planner_data);
+    getOcclusionStatus(traffic_prioritized_level, interpolated_path_info);
 
   const auto [is_over_pass_judge_line, safely_passed_judge_line] =
-    isOverPassJudgeLinesStatus(*path, is_occlusion_state, intersection_stoplines, planner_data);
+    isOverPassJudgeLinesStatus(*path, is_occlusion_state, intersection_stoplines);
 
   // ==========================================================================================
   // calculate the expected vehicle speed and obtain the spatiotemporal profile of ego to the
   // exit of intersection
   // ==========================================================================================
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped ego_ttc_time_array;
-  const auto time_distance_array = calcIntersectionPassingTime(
-    *path, is_prioritized, intersection_stoplines, &ego_ttc_time_array, planner_data);
+  const auto time_distance_array =
+    calcIntersectionPassingTime(*path, is_prioritized, intersection_stoplines, &ego_ttc_time_array);
 
   // ==========================================================================================
   // run collision checking for each objects considering traffic light level. Also if ego just
@@ -260,7 +265,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped object_ttc_time_array;
   updateObjectInfoManagerCollision(
     path_lanelets, time_distance_array, traffic_prioritized_level, safely_passed_judge_line,
-    &object_ttc_time_array, planner_data);
+    &object_ttc_time_array);
   {
     const auto & debug = planner_param_.debug.ttc;
     if (
@@ -319,8 +324,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
       has_collision_with_margin && !has_traffic_light_ && enable_conservative_yield_merging &&
       intersection_stoplines.maximum_footprint_overshoot_line) {
       if (can_smoothly_stop_at(
-            *path, closest_idx, intersection_stoplines.maximum_footprint_overshoot_line.value(),
-            planner_data)) {
+            *path, closest_idx, intersection_stoplines.maximum_footprint_overshoot_line.value())) {
         // NOTE(soblin): intersection_stoplines.maximum_footprint_overshoot_line.value() is not used
         // as stop line. in this case, ego tries to stop at current position
         const auto stop_line_idx = closest_idx;
@@ -330,8 +334,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
     }
     if (has_collision) {
       const std::string evasive_diag = generateEgoRiskEvasiveDiagnosis(
-        *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects,
-        planner_data);
+        *path, closest_idx, time_distance_array, too_late_detect_objects, misjudge_objects);
       debug_data_.too_late_stop_wall_pose = path->points.at(closest_idx).point.pose;
       return OverPassJudge{safety_diag, evasive_diag};
     }
@@ -345,7 +348,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   const auto is_green_pseudo_collision_status =
     isGreenPseudoCollisionStatus(closest_idx, collision_stopline_idx, intersection_stoplines);
   if (is_green_pseudo_collision_status) {
-    if (can_smoothly_stop_at(*path, closest_idx, collision_stopline_idx, planner_data)) {
+    if (can_smoothly_stop_at(*path, closest_idx, collision_stopline_idx)) {
       return is_green_pseudo_collision_status.value();
     }
     RCLCPP_WARN_THROTTLE(
@@ -356,10 +359,9 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   // yield stuck detection
   // ==========================================================================================
   const auto yield_stuck_status =
-    isYieldStuckStatus(*path, interpolated_path_info, intersection_stoplines, planner_data);
+    isYieldStuckStatus(*path, interpolated_path_info, intersection_stoplines);
   if (yield_stuck_status) {
-    if (can_smoothly_stop_at(
-          *path, closest_idx, yield_stuck_status->stuck_stopline_idx, planner_data)) {
+    if (can_smoothly_stop_at(*path, closest_idx, yield_stuck_status->stuck_stopline_idx)) {
       return yield_stuck_status.value();
     }
     RCLCPP_WARN_THROTTLE(
@@ -378,7 +380,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   }
 
   const bool collision_stop_feasible =
-    can_smoothly_stop_at(*path, closest_idx, collision_stopline_idx, planner_data);
+    can_smoothly_stop_at(*path, closest_idx, collision_stopline_idx);
   const bool collision_stop_tolerable =
     collision_stop_feasible || previous_stop_pose_.collision_stopline_pose;
 
@@ -410,7 +412,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
     const double dist_stopline = fromEgoDist(pos);
     const bool approached_stopline = (dist_stopline < approached_dist_threshold);
     const bool over_stopline = (dist_stopline < -approached_dist_threshold);
-    const bool is_stopped_duration = planner_data.isVehicleStopped();
+    const bool is_stopped_duration = planner_data_->isVehicleStopped();
     if (over_stopline || (is_stopped_duration && approached_stopline)) {
       state_machine.setStateWithMarginTime(
         StateMachine::State::GO, logger_.get_child("stoppedForDurationOrPassed"), *clock_);
@@ -422,7 +424,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
     const bool approached_dist_stopline =
       (std::fabs(dist_stopline) < planner_param_.common.stopline_overshoot_margin);
     const bool over_stopline = (dist_stopline < -planner_param_.common.stopline_overshoot_margin);
-    const bool is_stopped = planner_data.isVehicleStopped(duration);
+    const bool is_stopped = planner_data_->isVehicleStopped(duration);
     return over_stopline || (is_stopped && approached_dist_stopline);
   };
 
@@ -430,7 +432,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
     stoppedForDurationOrPassed(default_stopline_idx, before_creep_state_machine_);
 
   if (!stopped_at_default_line_or_passed) {
-    if (can_smoothly_stop_at(*path, closest_idx, default_stopline_idx, planner_data)) {
+    if (can_smoothly_stop_at(*path, closest_idx, default_stopline_idx)) {
       return FirstWaitBeforeOcclusion{
         is_occlusion_cleared_with_margin, closest_idx, default_stopline_idx, occlusion_stopline_idx,
         occlusion_diag};
@@ -443,7 +445,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   // ego stop at occlusion_stopline before entering attention area if there is no traffic light
   // ==========================================================================================
   const bool occlusion_stop_feasible =
-    can_smoothly_stop_at(*path, closest_idx, occlusion_stopline_idx, planner_data);
+    can_smoothly_stop_at(*path, closest_idx, occlusion_stopline_idx);
   const bool occlusion_stop_tolerable =
     occlusion_stop_feasible || previous_stop_pose_.occlusion_peeking_stopline_pose;
 
@@ -1226,9 +1228,9 @@ void reactRTCApprovalByDecisionResult(
 
 void IntersectionModule::reactRTCApproval(
   const DecisionResult & decision_result,
-  autoware_internal_planning_msgs::msg::PathWithLaneId * path, const PlannerData & planner_data)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
-  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
   IntersectionStopLines::PreviousStopPose current_stop_pose{};
 
@@ -1263,8 +1265,7 @@ bool IntersectionModule::isGreenSolidOn() const
   return false;
 }
 
-IntersectionModule::TrafficPrioritizedLevel IntersectionModule::getTrafficPrioritizedLevel(
-  const PlannerData & planner_data) const
+IntersectionModule::TrafficPrioritizedLevel IntersectionModule::getTrafficPrioritizedLevel() const
 {
   using TrafficSignalElement = autoware_perception_msgs::msg::TrafficLightElement;
 
@@ -1316,15 +1317,15 @@ IntersectionModule::TrafficPrioritizedLevel IntersectionModule::getTrafficPriori
     if (tl_id_and_point_) {
       const auto [tl_id, point] = tl_id_and_point_.value();
       debug_data_.traffic_light_observation =
-        std::make_tuple(planner_data.current_odometry->pose, point, tl_id, color);
+        std::make_tuple(planner_data_->current_odometry->pose, point, tl_id, color);
     }
   }
   return level;
 }
 
-void IntersectionModule::updateTrafficSignalObservation(const PlannerData & planner_data)
+void IntersectionModule::updateTrafficSignalObservation()
 {
-  const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
+  const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
   const auto & lane = lanelet_map_ptr->laneletLayer.get(lane_id_);
 
   if (!tl_id_and_point_) {
@@ -1352,7 +1353,7 @@ void IntersectionModule::updateTrafficSignalObservation(const PlannerData & plan
   }
   const auto [tl_id, point] = tl_id_and_point_.value();
   const auto tl_info_opt =
-    planner_data.getTrafficSignal(tl_id, true /* traffic light module keeps last observation*/);
+    planner_data_->getTrafficSignal(tl_id, true /* traffic light module keeps last observation*/);
   if (!tl_info_opt) {
     // the info of this traffic light is not available
     return;
@@ -1363,9 +1364,9 @@ void IntersectionModule::updateTrafficSignalObservation(const PlannerData & plan
 
 IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStatus(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_occlusion_state,
-  const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data)
+  const IntersectionStopLines & intersection_stoplines)
 {
-  const auto & current_pose = planner_data.current_odometry->pose;
+  const auto & current_pose = planner_data_->current_odometry->pose;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto original_pass_judge_line_idx = intersection_stoplines.pass_judge_line;
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
@@ -1421,7 +1422,7 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
     safely_passed_judge_line_time_ = std::make_pair(clock_->now(), current_pose);
     safely_passed_judge_line_first_time = true;
   }
-  const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const double baselink2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
   debug_data_.pass_judge_wall_pose =
     planning_utils::getAheadPose(pass_judge_line_idx, baselink2front, path);
   debug_data_.passed_pass_judge = safely_passed_judge_line_time_.has_value();

@@ -23,11 +23,25 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
+#include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <boost/assert.hpp>
+#include <boost/assign/list_of.hpp>
 #include <boost/functional/hash.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
+#include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/Polygon.h>
+#include <pcl/common/distances.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <algorithm>
 #include <iostream>
@@ -372,10 +386,7 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(
-    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
-    const std::vector<geometry_msgs::msg::Point> & right_bound,
-    const PlannerData & planner_data) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -385,48 +396,41 @@ private:
   void applySlowDown(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const float safety_slow_down_speed, const std::string & reason,
-    const PlannerData & planner_data);
+    const float safety_slow_down_speed, const std::string & reason);
 
   void applySlowDownByLanelet2Map(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const geometry_msgs::msg::Point & last_path_point_on_crosswalk);
 
   void applySlowDownByOcclusion(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const geometry_msgs::msg::Point & last_path_point_on_crosswalk);
 
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
     const PathWithLaneId & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const PlannerData & planner_data) const;
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk) const;
 
   std::optional<geometry_msgs::msg::Pose> calcStopPose(
     const PathWithLaneId & ego_path, double dist_nearest_cp,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
   std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const PlannerData & planner_data);
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
   std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
     const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const std::optional<geometry_msgs::msg::Pose> & stop_pose, const PlannerData & planner_data);
+    const std::optional<geometry_msgs::msg::Pose> & stop_pose);
 
   std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
     const PathWithLaneId & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
     const PathWithLaneId & sparse_resample_path) const;
@@ -435,36 +439,32 @@ private:
 
   std::optional<CollisionPoint> getCollisionPoint(
     const PathWithLaneId & ego_path, const PredictedObject & object,
-    const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
-    const PlannerData & planner_data);
+    const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
   std::pair<std::optional<StopPoseWithObjectUuids>, std::string> getNearestStopFactorAndReason(
     const PathWithLaneId & ego_path,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
-    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles,
-    const PlannerData & planner_data);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const std::optional<StopPoseWithObjectUuids> & stop_factor, const PlannerData & planner_data);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor);
 
   void planGo(
-    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
-    const PlannerData & planner_data) const;
+    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   void planStop(
     PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose, const std::string & reason,
-    const PlannerData & planner_data) const;
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+    const std::string & reason) const;
 
   // minor functions
   std::pair<double, double> getAttentionRange(
     const PathWithLaneId & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const geometry_msgs::msg::Point & last_path_point_on_crosswalk);
 
   void insertDecelPointWithDebugInfo(
     const geometry_msgs::msg::Point & stop_point, const float target_velocity,
@@ -472,33 +472,28 @@ private:
 
   std::pair<double, double> clampAttentionRangeByNeighborCrosswalks(
     const PathWithLaneId & ego_path, const double near_attention_range,
-    const double far_attention_range, const PlannerData & planner_data);
+    const double far_attention_range);
 
   CollisionPoint createCollisionPoint(
     const geometry_msgs::msg::Point & nearest_collision_point, const double dist_ego2cp,
     const double dist_obj2cp, const geometry_msgs::msg::Vector3 & ego_vel,
     const geometry_msgs::msg::Vector3 & obj_vel,
-    const std::optional<double> object_crosswalk_passage_direction,
-    const PlannerData & planner_data) const;
+    const std::optional<double> object_crosswalk_passage_direction) const;
 
   float calcTargetVelocity(
-    const geometry_msgs::msg::Point & stop_point, const PathWithLaneId & ego_path,
-    const PlannerData & planner_data) const;
+    const geometry_msgs::msg::Point & stop_point, const PathWithLaneId & ego_path) const;
 
   Polygon2d getAttentionArea(
     const PathWithLaneId & sparse_resample_path,
-    const std::pair<double, double> & crosswalk_attention_range,
-    const PlannerData & planner_data) const;
+    const std::pair<double, double> & crosswalk_attention_range) const;
 
   void updateObjectState(
     const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
-    const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
-    const PlannerData & planner_data);
+    const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
-  bool isRedSignalForLanelet(
-    const lanelet::ConstLanelet & lanelet, const PlannerData & planner_data) const;
-  bool isRedSignalForEgo(const PlannerData & planner_data) const;
-  bool isRedSignalForPedestrians(const PlannerData & planner_data) const;
+  bool isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const;
+  bool isRedSignalForEgo() const;
+  bool isRedSignalForPedestrians() const;
 
   static bool isVehicle(const PredictedObject & object);
 
@@ -511,8 +506,8 @@ private:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 
   bool checkRestartSuppression(
-    const PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
-    const PlannerData & planner_data) const;
+    const PathWithLaneId & ego_path,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   SafetyFactorArray createSafetyFactorArray(
     const std::optional<StopPoseWithObjectUuids> & stop_factor) const;

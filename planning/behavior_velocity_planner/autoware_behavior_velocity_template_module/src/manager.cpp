@@ -14,12 +14,22 @@
 
 #include "manager.hpp"
 
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
+#include <tf2/utils.h>
+
 #include <memory>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
+using autoware_utils::get_or_declare_parameter;
+
 TemplateModuleManager::TemplateModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
@@ -28,26 +38,24 @@ TemplateModuleManager::TemplateModuleManager(rclcpp::Node & node)
 }
 
 void TemplateModuleManager::launchNewModules(
-  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
-  const PlannerData & planner_data)
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   int64_t module_id = 0;
   if (!isModuleRegistered(module_id)) {
     registerModule(
       std::make_shared<TemplateModule>(
         module_id, logger_.get_child(getModuleName()), clock_, time_keeper_,
-        planning_factor_interface_),
-      planner_data);
+        planning_factor_interface_));
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 TemplateModuleManager::getModuleExpiredFunction(
-  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const PlannerData & planner_data)
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  return
-    []([[maybe_unused]] const std::shared_ptr<experimental::SceneModuleInterface> & scene_module)
-      -> bool { return false; };
+  return []([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) -> bool {
+    return false;
+  };
 }
 
 }  // namespace autoware::behavior_velocity_planner
@@ -55,4 +63,4 @@ TemplateModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::TemplateModulePlugin,
-  autoware::behavior_velocity_planner::experimental::PluginInterface)
+  autoware::behavior_velocity_planner::PluginInterface)
