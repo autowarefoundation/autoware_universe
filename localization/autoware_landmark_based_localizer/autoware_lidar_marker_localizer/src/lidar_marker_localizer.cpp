@@ -48,6 +48,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
 
   param_.enable_read_all_target_ids = this->declare_parameter<bool>("enable_read_all_target_ids");
   param_.target_ids = this->declare_parameter<std::vector<std::string>>("target_ids");
+  param_.queue_size_for_output_pose =
+    this->declare_parameter<int64_t>("queue_size_for_output_pose");
 
   param_.marker_name = this->declare_parameter<std::string>("marker_name");
   param_.resolution = this->declare_parameter<double>("resolution");
@@ -111,8 +113,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     "~/input/lanelet2_map", rclcpp::QoS(10).durability(rclcpp::DurabilityPolicy::TransientLocal),
     std::bind(&LidarMarkerLocalizer::map_bin_callback, this, _1));
 
-  pub_base_link_pose_with_covariance_on_map_ =
-    this->create_publisher<PoseWithCovarianceStamped>("~/output/pose_with_covariance", 10);
+  pub_base_link_pose_with_covariance_on_map_ = this->create_publisher<PoseWithCovarianceStamped>(
+    "~/output/pose_with_covariance", param_.queue_size_for_output_pose);
   rclcpp::QoS qos_marker = rclcpp::QoS(rclcpp::KeepLast(param_.queue_size_for_debug_pub_msg));
   qos_marker.transient_local();
   qos_marker.reliable();
