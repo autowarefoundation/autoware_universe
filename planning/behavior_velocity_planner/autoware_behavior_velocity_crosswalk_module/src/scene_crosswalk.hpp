@@ -24,6 +24,8 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
+#include <boost/functional/hash.hpp>
+
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
