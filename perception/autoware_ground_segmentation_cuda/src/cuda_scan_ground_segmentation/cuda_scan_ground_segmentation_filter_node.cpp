@@ -48,6 +48,8 @@ CudaScanGroundSegmentationFilterNode::CudaScanGroundSegmentationFilterNode(
   filter_parameters.min_y = static_cast<float>(declare_parameter<double>("min_y"));
   filter_parameters.max_z = static_cast<float>(declare_parameter<double>("max_z"));
   filter_parameters.min_z = static_cast<float>(declare_parameter<double>("min_z"));
+  filter_parameters.center_x =
+    static_cast<float>(declare_parameter<double>("center_pcl_shift"));  // default 0.0
 
   filter_parameters.max_radius = std::max(
     std::max(

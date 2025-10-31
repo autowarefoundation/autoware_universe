@@ -756,8 +756,10 @@ __global__ void markNonOutliers(
 
   for (int i = index; i < point_num; i += stride) {
     auto p = cloud[i];
+    float dx = p.x - param.center_x;
+    float dy = p.y - param.center_y;
     if (
-      p.x < param.min_x || p.x > param.max_x || p.y < param.min_y || p.y > param.max_y ||
+      dx < param.min_x || dx > param.max_x || dy < param.min_y || dy > param.max_y ||
       p.z < param.min_z || p.z > param.max_z) {
       mark[i] = 0;
       continue;
@@ -785,8 +787,7 @@ __global__ void getValidPoints(
 void CudaScanGroundSegmentationFilter::removeOutliers(
   const cuda_blackboard::CudaPointCloud2 & input)
 {
-  float max_radius =
-    filter_parameters_.cell_divider_size_m * filter_parameters_.max_num_cells_per_sector;
+  float max_radius = filter_parameters_.max_radius;
   int point_num = input.width * input.height;
 
   if (point_num <= 0) {
