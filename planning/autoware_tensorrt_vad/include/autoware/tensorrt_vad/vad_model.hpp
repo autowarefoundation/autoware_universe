@@ -278,11 +278,14 @@ private:
       nets_[head_name]->bindings["out.ego_fut_preds"]->cpu<float>();
 
     // Process detected objects using CUDA postprocessor
-    std::vector<BBox> filtered_bboxes = object_postprocessor_->postprocess_objects(
+    ObjectPostprocessor::InferenceInputs inference_inputs{
       static_cast<const float *>(nets_[head_name]->bindings["out.all_cls_scores"]->ptr),
       static_cast<const float *>(nets_[head_name]->bindings["out.all_traj_preds"]->ptr),
       static_cast<const float *>(nets_[head_name]->bindings["out.all_traj_cls_scores"]->ptr),
-      static_cast<const float *>(nets_[head_name]->bindings["out.all_bbox_preds"]->ptr), stream_);
+      static_cast<const float *>(nets_[head_name]->bindings["out.all_bbox_preds"]->ptr)};
+
+    std::vector<BBox> filtered_bboxes =
+      object_postprocessor_->postprocess_objects(inference_inputs, stream_);
 
     // Process map polylines using CUDA postprocessor
     std::vector<MapPolyline> map_polylines = map_postprocessor_->postprocess_map_preds(

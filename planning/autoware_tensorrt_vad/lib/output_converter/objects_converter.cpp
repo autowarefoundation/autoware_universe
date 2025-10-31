@@ -19,10 +19,30 @@
 
 #include <cmath>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::tensorrt_vad::vad_interface
 {
+
+namespace
+{
+uint8_t classification_label_from_name(const std::string & class_name)
+{
+  using Classification = autoware_perception_msgs::msg::ObjectClassification;
+  static const std::unordered_map<std::string, uint8_t> kLabelMap = {
+    {"CAR", Classification::CAR},
+    {"TRUCK", Classification::TRUCK},
+    {"BUS", Classification::BUS},
+    {"BICYCLE", Classification::BICYCLE},
+    {"MOTORCYCLE", Classification::MOTORCYCLE},
+    {"PEDESTRIAN", Classification::PEDESTRIAN},
+  };
+
+  const auto it = kLabelMap.find(class_name);
+  return (it != kLabelMap.end()) ? it->second : Classification::UNKNOWN;
+}
+}  // namespace
 
 OutputObjectsConverter::OutputObjectsConverter(
   const CoordinateTransformer & coordinate_transformer, const VadInterfaceConfig & config)
@@ -35,30 +55,14 @@ autoware_perception_msgs::msg::ObjectClassification OutputObjectsConverter::conv
 {
   autoware_perception_msgs::msg::ObjectClassification classification;
 
-  if (object_class >= 0 && object_class < static_cast<int32_t>(config_.class_mapping.size())) {
-    // Get Autoware class name from class mapping array using VAD class index
+  const bool in_range =
+    object_class >= 0 && object_class < static_cast<int32_t>(config_.class_mapping.size());
+  if (in_range) {
     const std::string & autoware_class_name = config_.class_mapping[object_class];
-
-    // Convert string to Autoware ObjectClassification enum
-    if (autoware_class_name == "CAR") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
-    } else if (autoware_class_name == "TRUCK") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::TRUCK;
-    } else if (autoware_class_name == "BUS") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::BUS;
-    } else if (autoware_class_name == "BICYCLE") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::BICYCLE;
-    } else if (autoware_class_name == "MOTORCYCLE") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE;
-    } else if (autoware_class_name == "PEDESTRIAN") {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
-    } else {
-      classification.label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
-    }
+    classification.label = classification_label_from_name(autoware_class_name);
   } else {
     classification.label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
   }
-
   classification.probability = confidence;
   return classification;
 }

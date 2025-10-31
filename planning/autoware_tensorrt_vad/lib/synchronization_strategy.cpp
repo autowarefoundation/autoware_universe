@@ -50,21 +50,15 @@ bool FrontCriticalSynchronizationStrategy::is_ready(
 bool FrontCriticalSynchronizationStrategy::is_dropped(
   const VadInputTopicData & vad_input_topic_data) const
 {
-  // Check if any camera images are missing
-  for (const auto & image : vad_input_topic_data.images) {
-    if (!image) {
-      return true;  // At least one image is dropped
-    }
-  }
+  const bool missing_image = std::any_of(
+    vad_input_topic_data.images.begin(), vad_input_topic_data.images.end(),
+    [](const auto & image) { return !image; });
 
-  // Check if any camera infos are missing
-  for (const auto & camera_info : vad_input_topic_data.camera_infos) {
-    if (!camera_info) {
-      return true;  // At least one camera info is dropped
-    }
-  }
+  const bool missing_camera_info = std::any_of(
+    vad_input_topic_data.camera_infos.begin(), vad_input_topic_data.camera_infos.end(),
+    [](const auto & camera_info) { return !camera_info; });
 
-  return false;  // No dropped data
+  return missing_image || missing_camera_info;
 }
 
 std::optional<VadInputTopicData> FrontCriticalSynchronizationStrategy::fill_dropped_data(

@@ -36,14 +36,20 @@ namespace autoware::tensorrt_vad
 // Network type enumeration
 enum class NetworkType { BACKBONE, HEAD, HEAD_NO_PREV };
 
+struct EngineBuildParams
+{
+  std::string engine_name;
+  std::string plugins_path;
+  std::shared_ptr<VadLogger> logger;
+};
+
 // Helper function to convert NetworkType to string (for backward compatibility)
 std::string toString(NetworkType type);
 
 std::unique_ptr<autoware::tensorrt_common::TrtCommon> build_engine(
   const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
   const std::vector<autoware::tensorrt_common::NetworkIO> & network_io,
-  const std::string & engine_name, const std::string & plugins_path,
-  std::shared_ptr<VadLogger> logger);
+  const EngineBuildParams & params);
 
 class Net
 {

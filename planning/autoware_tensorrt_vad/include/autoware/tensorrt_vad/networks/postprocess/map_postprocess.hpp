@@ -40,6 +40,14 @@ namespace autoware::tensorrt_vad
 class MapPostprocessor
 {
 public:
+  struct MapDeviceBuffers
+  {
+    const float * cls_scores{nullptr};
+    const float * points{nullptr};
+    const int32_t * valid_flags{nullptr};
+    const int32_t * max_class_indices{nullptr};
+  };
+
   // Template constructor to accept shared_ptr<LoggerType>
   template <typename LoggerType>
   MapPostprocessor(const MapPostprocessConfig & config, std::shared_ptr<LoggerType> logger);
@@ -78,8 +86,7 @@ private:
    * @return std::vector<MapPolyline> Processed map polylines
    */
   std::vector<autoware::tensorrt_vad::MapPolyline> copy_map_results_to_host(
-    const float * d_cls_scores, const float * d_points, const int32_t * d_valid_flags,
-    const int32_t * d_max_class_indices, cudaStream_t stream);
+    const MapDeviceBuffers & device_buffers, cudaStream_t stream);
 
   MapPostprocessConfig config_;
   std::shared_ptr<autoware::tensorrt_vad::VadLogger> logger_;  // Direct VadLogger pointer

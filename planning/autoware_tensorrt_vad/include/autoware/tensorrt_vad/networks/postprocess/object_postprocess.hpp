@@ -54,6 +54,14 @@ struct ObjectPostprocessArgs
 class ObjectPostprocessor
 {
 public:
+  struct InferenceInputs
+  {
+    const float * cls_scores{nullptr};
+    const float * traj_preds{nullptr};
+    const float * traj_cls_scores{nullptr};
+    const float * bbox_preds{nullptr};
+  };
+
   // Template constructor to accept shared_ptr<LoggerType>
   template <typename LoggerType>
   ObjectPostprocessor(const ObjectPostprocessConfig & config, std::shared_ptr<LoggerType> logger);
@@ -66,18 +74,36 @@ public:
 
   /**
    * @brief CUDA-accelerated postprocessing for object predictions
-   * @param all_cls_scores_flat Device pointer to flat object classification scores
-   * @param all_traj_preds_flat Device pointer to flat trajectory predictions
-   * @param all_traj_cls_scores_flat Device pointer to flat trajectory classification scores
-   * @param all_bbox_preds_flat Device pointer to flat bounding box predictions
+   * @param inputs Device pointers bundle for object predictions
    * @param stream CUDA stream to use for execution
    * @return std::vector<BBox> Processed object bounding boxes
    */
   std::vector<autoware::tensorrt_vad::BBox> postprocess_objects(
-    const float * all_cls_scores_flat, const float * all_traj_preds_flat,
-    const float * all_traj_cls_scores_flat, const float * all_bbox_preds_flat, cudaStream_t stream);
+    const InferenceInputs & inputs, cudaStream_t stream);
 
 private:
+  struct HostBuffers
+  {
+    HostBuffers(
+      int32_t num_queries, int32_t num_classes, int32_t bbox_pred_dim, int32_t trajectory_modes,
+      int32_t timesteps)
+    : cls_scores(static_cast<size_t>(num_queries) * num_classes),
+      bbox_preds(static_cast<size_t>(num_queries) * bbox_pred_dim),
+      trajectories(static_cast<size_t>(num_queries) * trajectory_modes * timesteps * 2),
+      traj_scores(static_cast<size_t>(num_queries) * trajectory_modes),
+      valid_flags(static_cast<size_t>(num_queries)),
+      max_class_indices(static_cast<size_t>(num_queries))
+    {
+    }
+
+    std::vector<float> cls_scores;
+    std::vector<float> bbox_preds;
+    std::vector<float> trajectories;
+    std::vector<float> traj_scores;
+    std::vector<int32_t> valid_flags;
+    std::vector<int32_t> max_class_indices;
+  };
+
   /**
    * @brief Cleanup allocated CUDA memory resources.
    * Called when allocation fails or in destructor.
@@ -95,34 +121,19 @@ private:
   /**
    * @brief Copy device arrays to host memory
    * @param args Bundle of arguments containing device buffers and stream
-   * @param h_cls_scores Output host buffer for classification scores
-   * @param h_bbox_preds Output host buffer for bbox predictions
-   * @param h_trajectories Output host buffer for trajectories
-   * @param h_traj_scores Output host buffer for trajectory scores
-   * @param h_valid_flags Output host buffer for valid flags
-   * @param h_max_class_indices Output host buffer for max class indices
+   * @param buffers Host buffer container to receive device data
    * @return true if copy succeeded, false otherwise
    */
-  bool copy_device_arrays_to_host(
-    const ObjectPostprocessArgs & args, std::vector<float> & h_cls_scores,
-    std::vector<float> & h_bbox_preds, std::vector<float> & h_trajectories,
-    std::vector<float> & h_traj_scores, std::vector<int32_t> & h_valid_flags,
-    std::vector<int32_t> & h_max_class_indices);
+  bool copy_device_arrays_to_host(const ObjectPostprocessArgs & args, HostBuffers & buffers);
 
   /**
    * @brief Create a BBox object from GPU data for a single object
    * @param obj_idx Object index
-   * @param h_cls_scores Host buffer with classification scores
-   * @param h_bbox_preds Host buffer with bbox predictions
-   * @param h_trajectories Host buffer with trajectories
-   * @param h_traj_scores Host buffer with trajectory scores
-   * @param h_max_class_indices Host buffer with max class indices
+   * @param buffers Host buffer container with CPU data
    * @return BBox object
    */
   autoware::tensorrt_vad::BBox create_bbox_from_gpu_data(
-    int32_t obj_idx, const std::vector<float> & h_cls_scores,
-    const std::vector<float> & h_bbox_preds, const std::vector<float> & h_trajectories,
-    const std::vector<float> & h_traj_scores, const std::vector<int32_t> & h_max_class_indices);
+    int32_t obj_idx, const HostBuffers & buffers);
 
   ObjectPostprocessConfig config_;
   std::shared_ptr<autoware::tensorrt_vad::VadLogger> logger_;  // Direct VadLogger pointer

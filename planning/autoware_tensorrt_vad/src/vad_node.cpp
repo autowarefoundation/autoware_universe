@@ -21,8 +21,10 @@
 
 #include <cv_bridge/cv_bridge.h>
 
+#include <algorithm>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -68,6 +70,47 @@ std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
   map2bl.block<3, 1>(0, 3) = -R.transpose() * t;
 
   return {bl2map, map2bl};
+}
+
+template <typename MsgType>
+bool VadNode::process_callback(
+  const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
+  std::function<void(const typename MsgType::ConstSharedPtr)> setter)
+{
+  if (!msg) {
+    auto clock = this->get_clock();
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *clock, 5000, "Received null %s message", callback_name.c_str());
+    return false;
+  }
+
+  try {
+    std::lock_guard<std::mutex> lock(data_mutex_);
+    setter(msg);
+  } catch (const std::exception & e) {
+    auto clock = this->get_clock();
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *clock, 5000, "Exception in %s: %s", callback_name.c_str(), e.what());
+    return false;
+  }
+
+  auto clock = this->get_clock();
+  RCLCPP_DEBUG_THROTTLE(
+    this->get_logger(), *clock, 5000, "Received %s data", callback_name.c_str());
+  return true;
+}
+
+bool VadNode::validate_camera_id(std::size_t camera_id, const std::string & context)
+{
+  if (static_cast<int32_t>(camera_id) < num_cameras_) {
+    return true;
+  }
+
+  auto clock = this->get_clock();
+  RCLCPP_ERROR_THROTTLE(
+    this->get_logger(), *clock, 5000, "Invalid camera_id: %zu in %s. Expected range 0-%d",
+    camera_id, context.c_str(), num_cameras_ - 1);
+  return false;
 }
 
 VadNode::VadNode(const rclcpp::NodeOptions & options)
@@ -151,108 +194,53 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 void VadNode::image_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
-  if (!msg) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received null image message for camera %zu",
-      camera_id);
+  if (!validate_camera_id(camera_id, "image_callback")) {
     return;
   }
 
-  // Validate camera_id
-  if (static_cast<int32_t>(camera_id) >= num_cameras_) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Invalid camera_id: %zu. Expected 0-%d",
-      camera_id, num_cameras_ - 1);
-    return;
-  }
+  const std::string callback_name = "image (camera " + std::to_string(camera_id) + ")";
+  const bool processed = process_callback<sensor_msgs::msg::Image>(
+    msg, callback_name,
+    [this, camera_id](const sensor_msgs::msg::Image::ConstSharedPtr & image_msg) {
+      vad_input_topic_data_current_frame_.set_image(camera_id, image_msg);
+    });
 
-  try {
-    {
-      std::lock_guard<std::mutex> lock(data_mutex_);
-      vad_input_topic_data_current_frame_.set_image(camera_id, msg);
-    }
-
-    // Check if this is the front camera (anchor camera)
-    if (static_cast<int32_t>(camera_id) == front_camera_id_) {
-      anchor_callback();
-    }
-
-    RCLCPP_DEBUG_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received image from camera %zu", camera_id);
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Exception in image_callback: %s", e.what());
+  if (processed && static_cast<int32_t>(camera_id) == front_camera_id_) {
+    anchor_callback();
   }
 }
 
 void VadNode::camera_info_callback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id)
 {
-  if (!msg) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000,
-      "Received null camera_info message for camera %zu", camera_id);
+  if (!validate_camera_id(camera_id, "camera_info_callback")) {
     return;
   }
 
-  // Validate camera_id
-  if (static_cast<int32_t>(camera_id) >= num_cameras_) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Invalid camera_id: %zu. Expected 0-%d",
-      camera_id, num_cameras_ - 1);
-    return;
-  }
-
-  try {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    vad_input_topic_data_current_frame_.set_camera_info(camera_id, msg);
-    RCLCPP_DEBUG_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received camera info from camera %zu",
-      camera_id);
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Exception in camera_info_callback: %s",
-      e.what());
-  }
+  const std::string callback_name = "camera_info (camera " + std::to_string(camera_id) + ")";
+  process_callback<sensor_msgs::msg::CameraInfo>(
+    msg, callback_name,
+    [this, camera_id](const sensor_msgs::msg::CameraInfo::ConstSharedPtr & info_msg) {
+      vad_input_topic_data_current_frame_.set_camera_info(camera_id, info_msg);
+    });
 }
 
 void VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
-  if (!msg) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received null odometry message");
-    return;
-  }
-
-  try {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    vad_input_topic_data_current_frame_.set_kinematic_state(msg);
-    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received odometry data");
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Exception in odometry_callback: %s", e.what());
-  }
+  process_callback<nav_msgs::msg::Odometry>(
+    msg, "odometry", [this](const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg) {
+      vad_input_topic_data_current_frame_.set_kinematic_state(odometry_msg);
+    });
 }
 
 void VadNode::acceleration_callback(
   const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg)
 {
-  if (!msg) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received null acceleration message");
-    return;
-  }
-
-  try {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    vad_input_topic_data_current_frame_.set_acceleration(msg);
-    RCLCPP_DEBUG_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Received acceleration data");
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Exception in acceleration_callback: %s",
-      e.what());
-  }
+  process_callback<geometry_msgs::msg::AccelWithCovarianceStamped>(
+    msg, "acceleration",
+    [this](const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr & accel_msg) {
+      vad_input_topic_data_current_frame_.set_acceleration(accel_msg);
+    });
 }
 
 void VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
@@ -347,47 +335,65 @@ VadConfig VadNode::load_vad_config()
 {
   VadConfig vad_config;
   vad_config.num_cameras = this->get_parameter("node_params.num_cameras").as_int();
-  vad_config.bev_h = this->declare_parameter<int32_t>("model_params.network_io_params.bev_h");
-  vad_config.bev_w = this->declare_parameter<int32_t>("model_params.network_io_params.bev_w");
-  vad_config.bev_feature_dim =
-    this->declare_parameter<int32_t>("model_params.network_io_params.bev_feature_dim");
+
+  const auto declare_network_param = [this](const std::string & key) {
+    return this->declare_parameter<int32_t>("model_params.network_io_params." + key);
+  };
+
+  vad_config.bev_h = declare_network_param("bev_h");
+  vad_config.bev_w = declare_network_param("bev_w");
+  vad_config.bev_feature_dim = declare_network_param("bev_feature_dim");
+  vad_config.downsample_factor = declare_network_param("downsample_factor");
+  vad_config.num_decoder_layers = declare_network_param("num_decoder_layers");
+  vad_config.prediction_num_queries = declare_network_param("prediction_num_queries");
+  vad_config.prediction_num_classes = declare_network_param("prediction_num_classes");
+  vad_config.prediction_bbox_pred_dim = declare_network_param("prediction_bbox_pred_dim");
+  vad_config.prediction_trajectory_modes = declare_network_param("prediction_trajectory_modes");
+  vad_config.prediction_timesteps = declare_network_param("prediction_timesteps");
+  vad_config.planning_ego_commands = declare_network_param("planning_ego_commands");
+  vad_config.planning_timesteps = declare_network_param("planning_timesteps");
+  vad_config.map_num_queries = declare_network_param("map_num_queries");
+  vad_config.map_num_class = declare_network_param("map_num_class");
+  vad_config.map_points_per_polylines = declare_network_param("map_points_per_polylines");
+  vad_config.can_bus_dim = declare_network_param("can_bus_dim");
+
   vad_config.target_image_width =
     this->get_parameter("interface_params.target_image_width").as_int();
   vad_config.target_image_height =
     this->get_parameter("interface_params.target_image_height").as_int();
-  vad_config.downsample_factor =
-    this->declare_parameter<int32_t>("model_params.network_io_params.downsample_factor");
-  vad_config.num_decoder_layers =
-    this->declare_parameter<int32_t>("model_params.network_io_params.num_decoder_layers");
-  vad_config.prediction_num_queries =
-    this->declare_parameter<int32_t>("model_params.network_io_params.prediction_num_queries");
-  vad_config.prediction_num_classes =
-    this->declare_parameter<int32_t>("model_params.network_io_params.prediction_num_classes");
-  vad_config.prediction_bbox_pred_dim =
-    this->declare_parameter<int32_t>("model_params.network_io_params.prediction_bbox_pred_dim");
-  vad_config.prediction_trajectory_modes =
-    this->declare_parameter<int32_t>("model_params.network_io_params.prediction_trajectory_modes");
-  vad_config.prediction_timesteps =
-    this->declare_parameter<int32_t>("model_params.network_io_params.prediction_timesteps");
-  vad_config.planning_ego_commands =
-    this->declare_parameter<int32_t>("model_params.network_io_params.planning_ego_commands");
-  vad_config.planning_timesteps =
-    this->declare_parameter<int32_t>("model_params.network_io_params.planning_timesteps");
-  vad_config.map_num_queries =
-    this->declare_parameter<int32_t>("model_params.network_io_params.map_num_queries");
-  vad_config.map_num_class =
-    this->declare_parameter<int32_t>("model_params.network_io_params.map_num_class");
-  vad_config.map_points_per_polylines =
-    this->declare_parameter<int32_t>("model_params.network_io_params.map_points_per_polylines");
 
-  // Load detection range from interface_params (already declared in VadInterfaceConfig)
-  auto detection_range = this->get_parameter("interface_params.detection_range").as_double_array();
-  for (size_t i = 0; i < 6 && i < detection_range.size(); ++i) {
-    vad_config.detection_range[i] = static_cast<float>(detection_range[i]);
+  load_detection_range(vad_config);
+  load_map_configuration(vad_config);
+  load_object_configuration(vad_config);
+
+  vad_config.plugins_path = this->declare_parameter<std::string>("model_params.plugins_path");
+  vad_config.input_image_width =
+    this->declare_parameter<int32_t>("interface_params.input_image_width");
+  vad_config.input_image_height =
+    this->declare_parameter<int32_t>("interface_params.input_image_height");
+
+  load_image_normalization(vad_config);
+  load_network_configurations(vad_config);
+
+  return vad_config;
+}
+
+void VadNode::load_detection_range(VadConfig & config)
+{
+  const auto detection_range =
+    this->get_parameter("interface_params.detection_range").as_double_array();
+  const std::size_t entries =
+    std::min<std::size_t>(config.detection_range.size(), detection_range.size());
+  for (std::size_t i = 0; i < entries; ++i) {
+    config.detection_range[i] = static_cast<float>(detection_range[i]);
   }
+}
 
-  auto map_class_names = this->get_parameter("model_params.map_class_names").as_string_array();
-  auto map_thresholds =
+void VadNode::load_map_configuration(VadConfig & config)
+{
+  const auto map_class_names =
+    this->get_parameter("model_params.map_class_names").as_string_array();
+  const auto map_thresholds =
     this->get_parameter("model_params.map_confidence_thresholds").as_double_array();
 
   if (map_class_names.size() != map_thresholds.size()) {
@@ -398,19 +404,21 @@ VadConfig VadNode::load_vad_config()
     throw std::runtime_error(
       "Parameter array length mismatch: map_class_names and map_confidence_thresholds");
   }
-  vad_config.map_class_names = map_class_names;
-  vad_config.map_num_classes = static_cast<int32_t>(map_class_names.size());
 
-  vad_config.map_confidence_thresholds.clear();
-  for (size_t i = 0; i < map_class_names.size(); ++i) {
-    vad_config.map_confidence_thresholds[map_class_names[i]] =
-      static_cast<float>(map_thresholds[i]);
+  config.map_class_names.assign(map_class_names.begin(), map_class_names.end());
+  config.map_num_classes = static_cast<int32_t>(map_class_names.size());
+  config.map_confidence_thresholds.clear();
+
+  for (std::size_t i = 0; i < map_class_names.size(); ++i) {
+    config.map_confidence_thresholds[map_class_names[i]] = static_cast<float>(map_thresholds[i]);
   }
+}
 
-  // Load object classes and confidence thresholds
-  auto object_class_names =
+void VadNode::load_object_configuration(VadConfig & config)
+{
+  const auto object_class_names =
     this->get_parameter("model_params.object_class_names").as_string_array();
-  auto object_thresholds =
+  const auto object_thresholds =
     this->get_parameter("model_params.object_confidence_thresholds").as_double_array();
 
   if (object_class_names.size() != object_thresholds.size()) {
@@ -421,73 +429,70 @@ VadConfig VadNode::load_vad_config()
     throw std::runtime_error(
       "Parameter array length mismatch: object_class_names and object_confidence_thresholds");
   }
-  vad_config.bbox_class_names = object_class_names;
 
-  vad_config.object_confidence_thresholds.clear();
-  for (size_t i = 0; i < object_class_names.size(); ++i) {
-    vad_config.object_confidence_thresholds[object_class_names[i]] =
+  config.bbox_class_names.assign(object_class_names.begin(), object_class_names.end());
+  config.object_confidence_thresholds.clear();
+
+  for (std::size_t i = 0; i < object_class_names.size(); ++i) {
+    config.object_confidence_thresholds[object_class_names[i]] =
       static_cast<float>(object_thresholds[i]);
   }
+}
 
-  vad_config.can_bus_dim =
-    this->declare_parameter<int32_t>("model_params.network_io_params.can_bus_dim");
-  vad_config.plugins_path = this->declare_parameter<std::string>("model_params.plugins_path");
-
-  // Load input image parameters from interface_params
-  vad_config.input_image_width =
-    this->declare_parameter<int32_t>("interface_params.input_image_width");
-  vad_config.input_image_height =
-    this->declare_parameter<int32_t>("interface_params.input_image_height");
-
-  // Load image normalization parameters from model_params
-  auto image_mean =
+void VadNode::load_image_normalization(VadConfig & config)
+{
+  const auto image_mean =
     this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
-  auto image_std =
+  const auto image_std =
     this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
-  for (size_t i = 0; i < 3 && i < image_mean.size(); ++i) {
-    vad_config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
-  }
-  for (size_t i = 0; i < 3 && i < image_std.size(); ++i) {
-    vad_config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
+
+  const std::size_t mean_entries =
+    std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
+  const std::size_t std_entries =
+    std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
+
+  for (std::size_t i = 0; i < mean_entries; ++i) {
+    config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
   }
 
-  // backbone configuration
+  for (std::size_t i = 0; i < std_entries; ++i) {
+    config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
+  }
+}
+
+void VadNode::load_network_configurations(VadConfig & config)
+{
+  config.nets_config.clear();
+
   NetConfig backbone_config;
   backbone_config.name = this->declare_parameter<std::string>("model_params.nets.backbone.name");
 
-  // head configuration
   NetConfig head_config;
   head_config.name = this->declare_parameter<std::string>("model_params.nets.head.name");
-
-  // head inputs
-  std::string input_feature =
+  const std::string head_input_feature =
     this->declare_parameter<std::string>("model_params.nets.head.inputs.input_feature");
-  std::string net_param = this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
-  std::string name_param =
+  const std::string head_input_net =
+    this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
+  const std::string head_input_name =
     this->declare_parameter<std::string>("model_params.nets.head.inputs.name");
-  head_config.inputs[input_feature]["net"] = net_param;
-  head_config.inputs[input_feature]["name"] = name_param;
+  head_config.inputs[head_input_feature]["net"] = head_input_net;
+  head_config.inputs[head_input_feature]["name"] = head_input_name;
 
-  // head_no_prev configuration
   NetConfig head_no_prev_config;
   head_no_prev_config.name =
     this->declare_parameter<std::string>("model_params.nets.head_no_prev.name");
-
-  // head_no_prev inputs
-  std::string input_feature_no_prev =
+  const std::string head_no_prev_input_feature =
     this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.input_feature");
-  std::string net_param_no_prev =
+  const std::string head_no_prev_input_net =
     this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.net");
-  std::string name_param_no_prev =
+  const std::string head_no_prev_input_name =
     this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.name");
-  head_no_prev_config.inputs[input_feature_no_prev]["net"] = net_param_no_prev;
-  head_no_prev_config.inputs[input_feature_no_prev]["name"] = name_param_no_prev;
+  head_no_prev_config.inputs[head_no_prev_input_feature]["net"] = head_no_prev_input_net;
+  head_no_prev_config.inputs[head_no_prev_input_feature]["name"] = head_no_prev_input_name;
 
-  vad_config.nets_config.push_back(backbone_config);
-  vad_config.nets_config.push_back(head_config);
-  vad_config.nets_config.push_back(head_no_prev_config);
-
-  return vad_config;
+  config.nets_config.push_back(backbone_config);
+  config.nets_config.push_back(head_config);
+  config.nets_config.push_back(head_no_prev_config);
 }
 
 std::tuple<
