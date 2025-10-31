@@ -36,7 +36,7 @@ struct CollisionHit
 };
 
 /**
- * @brief Find first collision between predicted path and obstacles.
+ * @brief Find first collision between predicted path and static obstacles.
  *
  * @param path Predicted path to check for collisions.
  * @param path_uuid UUID of the predicted path.
