@@ -4,24 +4,18 @@
 
 The `autoware_tensorrt_vad` is a ROS 2 component that implements end-to-end autonomous driving using the TensorRT-optimized Vectorized Autonomous Driving (VAD) model. It leverages the [VAD model](https://github.com/hustvl/VAD) (Jiang et al., 2023), optimized for deployment using NVIDIA's [DL4AGX](https://developer.nvidia.com/drive/drive-agx) TensorRT framework. <!-- cSpell:ignore Jiang Shaoyu Bencheng Liao Jiajie Helong Wenyu Xinggang -->
 
-This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with [Autoware](https://autoware.org/) and is designed to work within the Autoware planning framework.
-
-Key capabilities:
-
-- End-to-end driving from camera inputs to trajectory output
-- Vectorized scene representation for efficient processing
-- Multi-camera perception (6 surround-view cameras)
-- Real-time inference using TensorRT optimization
-- Integrated object prediction and map generation
+This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with [Autoware](https://autoware.org/) and is designed to work within the Autoware framework.
 
 ---
 
 ## Features
 
-- **End-to-End Autonomous Driving**: Directly generates trajectories from camera inputs without traditional modular pipeline
+- **Monolithic End-to-End Architecture**: Single neural network directly maps camera inputs to trajectories, replacing the entire traditional perception-planning pipeline with one unified model - no separate detection, tracking, prediction, or planning modules
 - **Multi-Camera Perception**: Processes 6 surround-view cameras simultaneously for 360° awareness
 - **Vectorized Scene Representation**: Efficient scene encoding using vector maps for reduced computational overhead
 - **Real-time TensorRT Inference**: Optimized for embedded deployment with ~20ms inference time
+- **Integrated Perception Outputs**: Generates both object predictions (with future trajectories) and map elements as auxiliary outputs
+- **Temporal Modeling**: Leverages historical features for improved temporal consistency and prediction accuracy
 
 ---
 
@@ -114,9 +108,7 @@ ros2 launch autoware_launch e2e_vad_simulator.launch.xml \
   map_path:=$HOME/autoware_map/Town01 \
   vehicle_model:=sample_vehicle \
   sensor_model:=carla_sensor_kit \
-  simulator_type:=carla \
-  carla_map:=Town01 \
-  use_autoware_sensor_kit:=true
+  carla_map:=Town01
 ```
 
 ---
@@ -158,17 +150,25 @@ model_params:
 
 | Model Version | Training Dataset  | Release Date | Notes                            | Node Compatibility |
 | ------------- | ----------------- | ------------ | -------------------------------- | ------------------ |
-| v1.0.0        | Bench2Drive CARLA | 2024-10      | Initial release, 6-camera config | >= 0.1.0           |
+| v0.1.0        | Bench2Drive CARLA | 2025-10      | Initial release, 6-camera config | >= 0.1.0           |
 
 ---
 
 ## ❗ Limitations
 
-While the VAD shows promising capabilities, there are several limitations to be aware of:
+While VAD demonstrates promising end-to-end driving capabilities, users should be aware of the following limitations:
 
-- **Training Dataset Domain Gap**:
-  The provided VAD model checkpoint was trained on datasets using a nuScenes.
+### Training Data Constraints
+- **Simulation-Only Training**: The model is trained exclusively on CARLA simulator data, which may not capture the full complexity and variability of real-world driving scenarios
 
+### Lack of High-Level Command Interface
+- **No Dynamic Mission Control**: The current implementation lacks a high-level command interface, meaning the model cannot dynamically switch between driving behaviors (e.g., "follow lane" → "turn right at next intersection") during runtime
+
+### Future Improvements
+We aim to address these limitations through:
+- Expanding training data diversity with real-world datasets
+- Implementing conditional planning with high-level command inputs
+- Developing domain adaptation techniques for sim-to-real transfer
 ---
 
 ## Development & Contribution
@@ -182,25 +182,31 @@ While the VAD shows promising capabilities, there are several limitations to be 
 
 ### Core Model
 
-- **VAD Repository**: [hustvl/VAD](https://github.com/hustvl/VAD/tree/main)
-- **VAD Paper**: Jiang et al., ["VAD: Vectorized Scene Representation for Efficient Autonomous Driving"](https://arxiv.org/abs/2303.12077), arXiv:2303.12077, 2023
+1. **Jiang, S., Wang, Z., Zhou, H., Wang, J., Liao, B., Chen, J., ... & Wang, X.** (2023). VAD: Vectorized Scene Representation for Efficient Autonomous Driving. *IEEE/CVF International Conference on Computer Vision (ICCV) 2023*, pp. 8340-8350.
+   - Paper: [arXiv:2303.12077](https://arxiv.org/abs/2303.12077)
+   - Code: [github.com/hustvl/VAD](https://github.com/hustvl/VAD)
 
 ### Training and Datasets
 
-- **Bench2Drive**: Jia et al., ["Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving"](https://arxiv.org/abs/2406.03877), arXiv:2406.03877, 2024
-  - Repository: [Thinklab-SJTU/Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
-  - CARLA-based benchmark for end-to-end autonomous driving evaluation
+2. **Jia, X., Wu, P., Chen, L., Liu, Y., Li, H., & Yan, J.** (2024). Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving. *Conference on Robot Learning (CoRL) 2024*.
+   - Paper: [arXiv:2406.03877](https://arxiv.org/abs/2406.03877)
+   - Code: [github.com/Thinklab-SJTU/Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive)
+   - Description: CARLA-based benchmark for end-to-end autonomous driving evaluation
 
 ### Deployment and Optimization
 
-- **NVIDIA DL4AGX**: [Deep Learning for Autonomous Vehicles](https://developer.nvidia.com/drive/drive-agx)
-  - TensorRT optimization for autonomous driving workloads
-  - Embedded GPU deployment strategies
+3. **NVIDIA Corporation** (2024). Deep Learning for Autonomous Ground Vehicles (DL4AGX).
+   - Resource: [developer.nvidia.com/drive/drive-agx](https://developer.nvidia.com/drive/drive-agx)
+   - Description: TensorRT optimization for autonomous driving workloads and embedded GPU deployment strategies
 
 ### Related Work
 
-- **nuScenes**: Caesar et al., ["nuScenes: A multimodal dataset for autonomous driving"](https://arxiv.org/abs/1903.11027), CVPR 2020
-- **BEVFormer**: Li et al., ["BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers"](https://arxiv.org/abs/2203.17270), ECCV 2022
+4. **Caesar, H., Bankiti, V., Lang, A. H., Vora, S., Liong, V. E., Xu, Q., ... & Beijbom, O.** (2020). nuScenes: A Multimodal Dataset for Autonomous Driving. *IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) 2020*, pp. 11621-11631.
+   - Paper: [arXiv:1903.11027](https://arxiv.org/abs/1903.11027)
+   - Dataset: [nuscenes.org](https://www.nuscenes.org)
+
+5. **Li, Z., Wang, W., Li, H., Xie, E., Sima, C., Lu, T., ... & Dai, J.** (2022). BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers. *European Conference on Computer Vision (ECCV) 2022*, pp. 1-18.
+   - Paper: [arXiv:2203.17270](https://arxiv.org/abs/2203.17270)
 
 ---
 
