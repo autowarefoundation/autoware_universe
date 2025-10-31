@@ -101,28 +101,27 @@
       <arg name="input_pointcloud" value="/sensing/lidar/top/pointcloud"/>
     </include>
 
-      <group>
-        <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
-          <arg name="group_namespace" value="lidar_marker_localizer/front_lower_left"/>
-          <arg name="lidar_container_name" value="/sensing/lidar/front_lower/pointcloud_preprocessor/pandar_node_container"/>
-          <arg name="input_pointcloud" value="/sensing/lidar/front_lower/pointcloud"/>
-          <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
-          <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/ring_filter_param_path)"/>
-          <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/front_lower_left/lidar_marker_localizer_param_path)"/>
-        </include>
-      </group>
+    <group>
+      <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
+        <arg name="group_namespace" value="lidar_marker_localizer/front_lower_left"/>
+        <arg name="lidar_container_name" value="/sensing/lidar/front_lower/pointcloud_preprocessor/pandar_node_container"/>
+        <arg name="input_pointcloud" value="/sensing/lidar/front_lower/pointcloud"/>
+        <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/front_lower_left/pointcloud_preprocessor/ring_filter_param_path)"/>
+        <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/front_lower_left/lidar_marker_localizer_param_path)"/>
+      </include>
+    </group>
 
-      <group>
-        <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
-          <arg name="group_namespace" value="lidar_marker_localizer/front_lower_right"/>
-          <arg name="lidar_container_name" value="/sensing/lidar/front_lower/pointcloud_preprocessor/pandar_node_container"/>
-          <arg name="input_pointcloud" value="/sensing/lidar/front_lower/pointcloud"/>
-          <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
-          <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/ring_filter_param_path)"/>
-          <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/front_lower_right/lidar_marker_localizer_param_path)"/>
-        </include>
-      </group>
-
+    <group>
+      <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
+        <arg name="group_namespace" value="lidar_marker_localizer/front_lower_right"/>
+        <arg name="lidar_container_name" value="/sensing/lidar/front_lower/pointcloud_preprocessor/pandar_node_container"/>
+        <arg name="input_pointcloud" value="/sensing/lidar/front_lower/pointcloud"/>
+        <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/front_lower_right/pointcloud_preprocessor/ring_filter_param_path)"/>
+        <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/front_lower_right/lidar_marker_localizer_param_path)"/>
+      </include>
+    </group>
   </group>
 
   <!-- Pose Estimator Arbiter Launch -->
