@@ -51,7 +51,7 @@ private:
   getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class CrosswalkModulePlugin : public experimental::PluginWrapper<CrosswalkModuleManager>
+class CrosswalkModulePlugin : public PluginWrapper<CrosswalkModuleManager>
 {
 };
 }  // namespace autoware::behavior_velocity_planner::experimental

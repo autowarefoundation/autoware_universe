@@ -29,7 +29,7 @@ namespace autoware::behavior_velocity_planner::experimental
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class SpeedBumpModule : public experimental::SceneModuleInterface
+class SpeedBumpModule : public SceneModuleInterface
 {
 public:
   struct DebugData

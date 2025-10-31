@@ -70,7 +70,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
 };
 
-class RoundaboutModulePlugin : public experimental::PluginWrapper<RoundaboutModuleManager>
+class RoundaboutModulePlugin : public PluginWrapper<RoundaboutModuleManager>
 {
 };
 

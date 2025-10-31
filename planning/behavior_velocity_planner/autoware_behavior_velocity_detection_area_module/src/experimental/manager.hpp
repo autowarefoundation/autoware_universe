@@ -48,7 +48,7 @@ private:
   getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class DetectionAreaModulePlugin : public experimental::PluginWrapper<DetectionAreaModuleManager>
+class DetectionAreaModulePlugin : public PluginWrapper<DetectionAreaModuleManager>
 {
 };
 

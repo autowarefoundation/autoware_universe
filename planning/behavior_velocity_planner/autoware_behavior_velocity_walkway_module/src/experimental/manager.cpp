@@ -85,7 +85,7 @@ void WalkwayModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 WalkwayModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -107,10 +107,9 @@ WalkwayModuleManager::getModuleExpiredFunction(
     walkway_id_set.insert(crosswalk.first->id());
   }
 
-  return
-    [walkway_id_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
-      return walkway_id_set.count(scene_module->getModuleId()) == 0;
-    };
+  return [walkway_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+    return walkway_id_set.count(scene_module->getModuleId()) == 0;
+  };
 }
 }  // namespace autoware::behavior_velocity_planner::experimental
 

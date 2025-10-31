@@ -599,7 +599,7 @@ void MergeFromPrivateModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 MergeFromPrivateModuleManager::getModuleExpiredFunction(
   const Trajectory & path, const PlannerData & planner_data)
 {
@@ -609,7 +609,7 @@ MergeFromPrivateModuleManager::getModuleExpiredFunction(
   const auto lane_set = planning_utils::getLaneletsOnPath(
     path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
 
-  return [&lane_set](const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+  return [&lane_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
     const auto merge_from_private_module =
       std::dynamic_pointer_cast<MergeFromPrivateRoadModule>(scene_module);
     const auto & associative_ids = merge_from_private_module->getAssociativeIds();

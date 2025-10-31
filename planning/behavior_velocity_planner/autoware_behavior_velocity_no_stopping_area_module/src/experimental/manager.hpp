@@ -46,7 +46,7 @@ private:
   getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class NoStoppingAreaModulePlugin : public experimental::PluginWrapper<NoStoppingAreaModuleManager>
+class NoStoppingAreaModulePlugin : public PluginWrapper<NoStoppingAreaModuleManager>
 {
 };
 
