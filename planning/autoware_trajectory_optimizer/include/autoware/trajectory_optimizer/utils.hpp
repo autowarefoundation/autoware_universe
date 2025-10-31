@@ -88,8 +88,8 @@ void copy_trajectory_orientation(
  * be copied.
  */
 void apply_spline(
-  TrajectoryPoints & traj_points, double interpolation_resolution_m,
-  double max_distance_discrepancy_m, bool copy_original_orientation);
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_distance_discrepancy_m, const bool copy_original_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
