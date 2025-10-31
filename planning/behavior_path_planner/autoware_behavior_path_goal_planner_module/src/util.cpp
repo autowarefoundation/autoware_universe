@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
@@ -921,51 +922,8 @@ std::optional<Pose> calcRefinedGoal(
 std::optional<double> calcSignedLateralDistanceToBoundary(
   const lanelet::ConstLineString3d boundary, const Pose & reference_pose)
 {
-  if (boundary.size() < 2) {
-    return std::nullopt;
-  }
-
-  const double yaw = tf2::getYaw(reference_pose.orientation);
-  const Eigen::Vector2d y_axis_direction(-std::sin(yaw), std::cos(yaw));
-  const Eigen::Vector2d reference_point(reference_pose.position.x, reference_pose.position.y);
-
-  double min_distance = std::numeric_limits<double>::max();
-  std::optional<double> signed_lateral_distance;
-
-  for (size_t i = 0; i < boundary.size() - 1; ++i) {
-    const auto & p1 = boundary[i];
-    const auto & p2 = boundary[i + 1];
-
-    const Eigen::Vector2d segment_start(p1.x(), p1.y());
-    const Eigen::Vector2d segment_end(p2.x(), p2.y());
-    const Eigen::Vector2d segment_direction = segment_end - segment_start;
-
-    // Calculate intersection between Y-axis line and boundary segment
-    const double det = y_axis_direction.x() * (-segment_direction.y()) -
-                       y_axis_direction.y() * (-segment_direction.x());
-
-    if (std::abs(det) < 1e-10) {
-      // this segment and the Y-axis are parallel
-      continue;
-    }
-
-    const Eigen::Vector2d rhs = segment_start - reference_point;
-    const double t =
-      ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
-    const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
-
-    // Check if intersection is within segment bounds
-    if (s >= 0.0 && s <= 1.0) {
-      const double distance = std::abs(t);
-
-      if (distance < min_distance) {
-        min_distance = distance;
-        signed_lateral_distance = t;
-      }
-    }
-  }
-
-  return signed_lateral_distance;
+  return boundary_departure_checker::utils::calc_signed_lateral_distance_to_boundary(
+    boundary, reference_pose);
 }
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
@@ -1188,36 +1146,70 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
 {
   const auto & routing_graph = planner_data->route_handler->getRoutingGraphPtr();
   const auto & lanelet_map = planner_data->route_handler->getLaneletMapPtr();
+  const auto & route_handler = planner_data->route_handler;
+
+  const auto goal_lane_id = planner_data->route_handler->getGoalLaneId();
+
   const auto lane_change_complete_lane =
     find_last_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+
   if (!lane_change_complete_lane) {
     return utils::getExtendedCurrentLanesFromPath(
       path, planner_data, backward_length, forward_length,
       /*forward_only_in_route*/ false);
   }
-  auto route_lanes = planner_data->route_handler->getLaneletSequence(
-    *lane_change_complete_lane, backward_length, forward_length);
-  const double remaining_distance =
-    forward_length + backward_length - lanelet::utils::getLaneletLength3d(route_lanes);
-  if (route_lanes.empty() || remaining_distance <= 0.0) {
-    return route_lanes;
+
+  const auto extend_forward = [&](
+                                const lanelet::ConstLanelet & start_lane, const double distance,
+                                lanelet::ConstLanelets & result) {
+    double acc_dist = 0.0;
+    auto current_lane = start_lane;
+    while (acc_dist < distance) {
+      const auto nexts = routing_graph->following(current_lane);
+      if (nexts.empty()) {
+        break;
+      }
+      current_lane = nexts.front();
+      if (lanelet::utils::contains(result, current_lane)) {
+        // loop detected
+        break;
+      }
+      result.push_back(current_lane);
+      acc_dist += lanelet::utils::getLaneletLength3d(current_lane);
+    }
+  };
+
+  lanelet::ConstLanelets route_lanes;
+
+  // Add backward lanes from lane_change_complete_lane
+  const auto backward_lanes = route_handler->getPrecedingLaneletSequence(
+    *lane_change_complete_lane, backward_length, {*lane_change_complete_lane});
+  for (auto it = backward_lanes.rbegin(); it != backward_lanes.rend(); ++it) {
+    route_lanes.insert(route_lanes.end(), it->begin(), it->end());
   }
-  double acc_dist = 0.0;
-  auto last_lanelet = route_lanes.back();
-  while (acc_dist < remaining_distance) {
-    const auto nexts = routing_graph->following(last_lanelet);
+
+  route_lanes.push_back(*lane_change_complete_lane);
+
+  // Extend forward from lane_change_complete_lane
+  auto current_lane = *lane_change_complete_lane;
+  while (true) {
+    const auto nexts = routing_graph->following(current_lane);
     if (nexts.empty()) {
       break;
     }
-    const auto & next = nexts.front();
-    if (lanelet::utils::contains(route_lanes, next)) {
-      // loop
+    current_lane = nexts.front();
+    if (lanelet::utils::contains(route_lanes, current_lane)) {
+      // loop detected
       break;
     }
-    last_lanelet = next;
-    route_lanes.push_back(next);
-    acc_dist += lanelet::utils::getLaneletLength3d(next);
+    route_lanes.push_back(current_lane);
+
+    if (current_lane.id() == goal_lane_id) {
+      extend_forward(current_lane, forward_length, route_lanes);
+      break;
+    }
   }
+
   return route_lanes;
 }
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

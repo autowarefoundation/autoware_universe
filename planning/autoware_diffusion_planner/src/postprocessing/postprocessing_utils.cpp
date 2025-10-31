@@ -71,11 +71,14 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param stamp The ROS time stamp for the message.
  * @param velocity_smoothing_window The window size for velocity smoothing.
+ * @param enable_force_stop Whether to enable force stop logic.
+ * @param stopping_threshold The threshold for keeping the stopping state [m/s].
  * @return A Trajectory message in map coordinates.
  */
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window);
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold);
 };  // namespace
 
 PredictedObjects create_predicted_objects(
@@ -123,8 +126,11 @@ PredictedObjects create_predicted_objects(
     prediction_matrix.transposeInPlace();
 
     constexpr int64_t velocity_smoothing_window = 1;
+    constexpr bool enable_force_stop = false;  // Don't force stop for neighbors
+    constexpr double stopping_threshold = 0.0;
     const Trajectory trajectory_points_in_map_reference = get_trajectory_from_prediction_matrix(
-      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
+      prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, enable_force_stop,
+      stopping_threshold);
 
     PredictedObject object;
     const TrackedObject & object_info =
@@ -160,7 +166,8 @@ PredictedObjects create_predicted_objects(
 Trajectory create_ego_trajectory(
   const std::vector<float> & prediction, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window)
+  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold)
 {
   const int64_t ego_index = 0;
 
@@ -183,7 +190,8 @@ Trajectory create_ego_trajectory(
   prediction_matrix.transposeInPlace();
 
   return get_trajectory_from_prediction_matrix(
-    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window);
+    prediction_matrix, transform_ego_to_map, stamp, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
 }
 
 TurnIndicatorsCommand create_turn_indicators_command(
@@ -282,7 +290,8 @@ Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tenso
 
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window)
+  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -311,6 +320,8 @@ Trajectory get_trajectory_from_prediction_matrix(
   }
 
   // smooth velocity
+  bool force_stop = false;
+  const float threshold_velocity = static_cast<float>(stopping_threshold);
   for (int64_t row = 0; row + velocity_smoothing_window <= prediction_matrix.rows(); ++row) {
     double sum_velocity = 0.0;
     for (int64_t w = 0; w < velocity_smoothing_window; ++w) {
@@ -318,6 +329,17 @@ Trajectory get_trajectory_from_prediction_matrix(
     }
     trajectory.points[row].longitudinal_velocity_mps =
       static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+
+    // stopping logic
+    if (
+      enable_force_stop &&
+      std::abs(trajectory.points[row].longitudinal_velocity_mps) < threshold_velocity) {
+      force_stop = true;
+    }
+    if (row > 0 && force_stop) {
+      trajectory.points[row].longitudinal_velocity_mps = 0.0f;
+      trajectory.points[row].pose = trajectory.points[row - 1].pose;
+    }
   }
 
   // keep the last smoothed velocity for the remaining points
@@ -327,6 +349,10 @@ Trajectory get_trajectory_from_prediction_matrix(
   for (int64_t row = prediction_matrix.rows() - velocity_smoothing_window + 1;
        row < prediction_matrix.rows(); ++row) {
     trajectory.points[row].longitudinal_velocity_mps = last_smoothed_velocity;
+    if (force_stop) {
+      trajectory.points[row].longitudinal_velocity_mps = 0.0f;
+      trajectory.points[row].pose = trajectory.points[row - 1].pose;
+    }
   }
 
   // calculate acceleration

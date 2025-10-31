@@ -39,20 +39,13 @@ struct TrajectorySplineSmootherParams
   double interpolation_resolution_m{0.5};
   double max_yaw_discrepancy_deg{2.5};
   double max_distance_discrepancy_m{5.0};
-  bool copy_original_orientation{true};
+  bool preserve_input_trajectory_orientation{true};
 };
 
-class TrajectorySplineSmoother : TrajectoryOptimizerPluginBase
+class TrajectorySplineSmoother : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectorySplineSmoother(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params)
-  : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-  {
-    set_up_params();
-  }
+  TrajectorySplineSmoother() = default;
   ~TrajectorySplineSmoother() = default;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,

@@ -159,10 +159,10 @@ public:
     const lanelet::ConstLanelets & current_lanelets,
     const std::shared_ptr<RouteHandler> route_handler,
     const BehaviorPathPlannerParameters & parameters, const Odometry::ConstSharedPtr self_odometry,
-    const double current_shift_length, const bool is_driving_forward,
-    const bool egos_lane_is_shifted, const bool override_ego_stopped_check = false,
-    const bool is_pull_out = false, const bool is_lane_change = false,
-    const bool is_pull_over = false) const;
+    const vehicle_info_utils::VehicleInfo & vehicle_info, const double current_shift_length,
+    const bool is_driving_forward, const bool egos_lane_is_shifted,
+    const bool override_ego_stopped_check = false, const bool is_pull_out = false,
+    const bool is_lane_change = false, const bool is_pull_over = false) const;
 
 private:
   struct SignalCandidate
