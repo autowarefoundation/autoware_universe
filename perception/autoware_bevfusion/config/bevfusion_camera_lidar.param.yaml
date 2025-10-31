@@ -1,7 +1,5 @@
 /**:
   ros__parameters:
-    # modality
-    sensor_fusion: true
     # non-network params
     max_camera_lidar_delay: 0.12
     # plugins
@@ -11,6 +9,12 @@
     cloud_capacity: 2000000
     onnx_path: "$(var model_path)/bevfusion_camera_lidar.onnx"
     engine_path: "$(var model_path)/bevfusion_camera_lidar.engine"
+
+    # image backbone network (fusion mode enabled when all three parameters are non-empty)
+    image_backbone_onnx_path: "$(var model_path)/bevfusion_image_backbone.onnx"
+    image_backbone_engine_path: "$(var model_path)/bevfusion_image_backbone.engine"
+    image_backbone_trt_precision: fp16
+
     # pre-process params
     densification_num_past_frames: 1
     densification_world_frame_id: map
