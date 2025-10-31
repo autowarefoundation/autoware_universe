@@ -85,6 +85,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   param_.save_frame_id = this->declare_parameter<std::string>("save_frame_id");
   param_.radius_for_extracting_marker_pointcloud =
     this->declare_parameter<double>("radius_for_extracting_marker_pointcloud");
+  param_.queue_size_for_debug_pub_msg =
+    this->declare_parameter<int64_t>("queue_size_for_debug_pub_msg");
 
   ekf_pose_buffer_ = std::make_unique<autoware::localization_util::SmartPoseBuffer>(
     this->get_logger(), param_.self_pose_timeout_sec, param_.self_pose_distance_tolerance_m);
@@ -111,14 +113,28 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
 
   pub_base_link_pose_with_covariance_on_map_ =
     this->create_publisher<PoseWithCovarianceStamped>("~/output/pose_with_covariance", 10);
-  rclcpp::QoS qos_marker = rclcpp::QoS(rclcpp::KeepLast(10));
+  rclcpp::QoS qos_marker = rclcpp::QoS(rclcpp::KeepLast(param_.queue_size_for_debug_pub_msg));
   qos_marker.transient_local();
   qos_marker.reliable();
   pub_marker_mapped_ = this->create_publisher<MarkerArray>("~/debug/marker_mapped", qos_marker);
-  pub_marker_detected_ = this->create_publisher<PoseArray>("~/debug/marker_detected", 10);
-  pub_debug_pose_with_covariance_ =
-    this->create_publisher<PoseWithCovarianceStamped>("~/debug/pose_with_covariance", 10);
-  pub_marker_pointcloud_ = this->create_publisher<PointCloud2>("~/debug/marker_pointcloud", 10);
+  pub_marker_detected_ = this->create_publisher<PoseArray>(
+    "~/debug/marker_detected", param_.queue_size_for_debug_pub_msg);
+  pub_debug_pose_with_covariance_ = this->create_publisher<PoseWithCovarianceStamped>(
+    "~/debug/pose_with_covariance", param_.queue_size_for_debug_pub_msg);
+  pub_marker_pointcloud_ = this->create_publisher<PointCloud2>(
+    "~/debug/marker_pointcloud", param_.queue_size_for_debug_pub_msg);
+
+  pub_center_intensity_grid = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "~/debug/center_intensity_grid", param_.queue_size_for_debug_pub_msg);
+  pub_positive_grid = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "~/debug/positive_grid", param_.queue_size_for_debug_pub_msg);
+  pub_negative_grid = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "~/debug/negative_grid", param_.queue_size_for_debug_pub_msg);
+  pub_matched_grid = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "~/debug/matched_grid", param_.queue_size_for_debug_pub_msg);
+  pub_vote_grid = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+    "~/debug/vote_grid", param_.queue_size_for_debug_pub_msg);
+
   service_trigger_node_ = this->create_service<SetBool>(
     "~/service/trigger_node_srv",
     std::bind(&LidarMarkerLocalizer::service_trigger_node, this, _1, _2),
@@ -432,8 +448,35 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   }
 
   // initialize variables
+  constexpr int max_vote_percentage = 100;  // Maximum vote percentage for visualization
   std::vector<int> vote(bin_num, 0);
   std::vector<float> reference_ring_y(bin_num, std::numeric_limits<float>::max());
+
+  nav_msgs::msg::OccupancyGrid center_intensity_grid_msg;
+  center_intensity_grid_msg.header = points_msg_ptr->header;
+  center_intensity_grid_msg.header.frame_id = "base_link";
+  center_intensity_grid_msg.info.map_load_time = center_intensity_grid_msg.header.stamp;
+  center_intensity_grid_msg.info.resolution = param_.resolution;
+  center_intensity_grid_msg.info.width = bin_num;
+  center_intensity_grid_msg.info.height = ring_num;
+  center_intensity_grid_msg.info.origin.position.x = min_x;
+  center_intensity_grid_msg.info.origin.position.y = param_.marker_to_vehicle_offset_y;
+  center_intensity_grid_msg.info.origin.position.z =
+    param_.marker_height_from_ground +
+    center_intensity_grid_msg.info.height * center_intensity_grid_msg.info.resolution / 2.0;
+  center_intensity_grid_msg.info.origin.orientation =
+    autoware_utils_geometry::create_quaternion_from_rpy(-M_PI / 2.0, 0.0, 0.0);
+  center_intensity_grid_msg.data = std::vector<int8_t>(
+    center_intensity_grid_msg.info.width * center_intensity_grid_msg.info.height, -1);
+
+  nav_msgs::msg::OccupancyGrid positive_grid_msg;
+  positive_grid_msg = center_intensity_grid_msg;
+
+  nav_msgs::msg::OccupancyGrid negative_grid_msg;
+  negative_grid_msg = center_intensity_grid_msg;
+
+  nav_msgs::msg::OccupancyGrid matched_grid_msg;
+  matched_grid_msg = center_intensity_grid_msg;
 
   // for each ring
   for (const auto & one_ring : ring_points) {
@@ -513,9 +556,19 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
           // ignore param_.intensity_pattern[j] == 0
         }
       }
+      const size_t bin_position = i + param_.intensity_pattern.size() / 2 + ring_id * bin_num;
+      center_intensity_grid_msg.data[bin_position] =
+        std::min(static_cast<int>(center_intensity), max_vote_percentage);
+      positive_grid_msg.data[bin_position] = std::min(
+        static_cast<int>(pos * (max_vote_percentage / param_.positive_match_num_threshold)),
+        max_vote_percentage);
+      negative_grid_msg.data[bin_position] = std::min(
+        static_cast<int>(neg * (max_vote_percentage / param_.negative_match_num_threshold)),
+        max_vote_percentage);
 
       if (
         pos >= param_.positive_match_num_threshold && neg >= param_.negative_match_num_threshold) {
+        matched_grid_msg.data[bin_position] = max_vote_percentage;
         vote[i]++;
       }
     }
@@ -536,6 +589,38 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
       detected_landmarks.push_back(landmark_manager::Landmark{"0", marker_pose_on_base_link});
     }
   }
+
+  nav_msgs::msg::OccupancyGrid vote_grid_msg;
+  vote_grid_msg.header = points_msg_ptr->header;
+  vote_grid_msg.header.frame_id = "base_link";
+  vote_grid_msg.info.map_load_time = vote_grid_msg.header.stamp;
+  vote_grid_msg.info.resolution = param_.resolution;
+  vote_grid_msg.info.width = bin_num;
+  vote_grid_msg.info.height = 1;
+  vote_grid_msg.info.origin.position.x = min_x;
+  vote_grid_msg.info.origin.position.y = (param_.marker_to_vehicle_offset_y >= 0.0) ? 1.0 : -1.0;
+  vote_grid_msg.info.origin.position.z = 0.0;
+  vote_grid_msg.info.origin.orientation.x = 0.0;
+  vote_grid_msg.info.origin.orientation.y = 0.0;
+  vote_grid_msg.info.origin.orientation.z = 0.0;
+  vote_grid_msg.info.origin.orientation.w = 1.0;
+  vote_grid_msg.data = std::vector<int8_t>(vote_grid_msg.info.width * vote_grid_msg.info.height);
+
+  int vote_max = 1;  // NOTE: set non-zero to avoid zero division error
+  for (int i = 0; i < bin_num; i++) {
+    vote_max = std::max(vote[i], vote_max);
+  }
+
+  for (size_t i = 0; i < bin_num - param_.intensity_pattern.size(); i++) {
+    const size_t bin_position = i + param_.intensity_pattern.size() / 2;
+    vote_grid_msg.data[bin_position] = vote[i] * (max_vote_percentage / vote_max);
+  }
+
+  pub_center_intensity_grid->publish(center_intensity_grid_msg);
+  pub_positive_grid->publish(positive_grid_msg);
+  pub_negative_grid->publish(negative_grid_msg);
+  pub_matched_grid->publish(matched_grid_msg);
+  pub_vote_grid->publish(vote_grid_msg);
 
   return detected_landmarks;
 }
