@@ -156,6 +156,7 @@ struct PlanningValidatorData
     if (msg) {
       if (!msg->segments.empty()) {
         route_handler->setRoute(*msg);
+        last_valid_trajectory.reset();
       }
     }
   }
