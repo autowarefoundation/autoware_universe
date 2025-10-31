@@ -70,6 +70,10 @@ struct DebugData
   : base_link2front(planner_data->vehicle_info_.max_longitudinal_offset_m)
   {
   }
+  explicit DebugData(const PlannerData & planner_data)
+  : base_link2front(planner_data.vehicle_info_.max_longitudinal_offset_m)
+  {
+  }
 
   bool ignore_crosswalk{false};
   double base_link2front;

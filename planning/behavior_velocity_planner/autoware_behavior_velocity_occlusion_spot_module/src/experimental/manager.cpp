@@ -1,0 +1,143 @@
+// Copyright 2025 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "manager.hpp"
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace autoware::behavior_velocity_planner::experimental
+{
+using occlusion_spot_utils::DETECTION_METHOD;
+using occlusion_spot_utils::PASS_JUDGE;
+
+OcclusionSpotModuleManager::OcclusionSpotModuleManager(rclcpp::Node & node)
+: SceneModuleManagerInterface(node, getModuleName())
+{
+  const std::string ns(OcclusionSpotModuleManager::getModuleName());
+  auto & pp = planner_param_;
+  // for detection type
+  {
+    const std::string method =
+      get_or_declare_parameter<std::string>(node, ns + ".detection_method");
+    if (method == "occupancy_grid") {  // module id 0
+      pp.detection_method = DETECTION_METHOD::OCCUPANCY_GRID;
+      module_id_ = DETECTION_METHOD::OCCUPANCY_GRID;
+    } else if (method == "predicted_object") {  // module id 1
+      pp.detection_method = DETECTION_METHOD::PREDICTED_OBJECT;
+      module_id_ = DETECTION_METHOD::PREDICTED_OBJECT;
+    } else {
+      throw std::invalid_argument{
+        "[behavior_velocity]: occlusion spot detection method has invalid argument"};
+    }
+  }
+  // for passable judgement
+  {
+    const std::string pass_judge = get_or_declare_parameter<std::string>(node, ns + ".pass_judge");
+    if (pass_judge == "current_velocity") {
+      pp.pass_judge = PASS_JUDGE::CURRENT_VELOCITY;
+    } else if (pass_judge == "smooth_velocity") {
+      pp.pass_judge = PASS_JUDGE::SMOOTH_VELOCITY;
+    } else {
+      throw std::invalid_argument{
+        "[behavior_velocity]: occlusion spot pass judge method has invalid argument"};
+    }
+  }
+  pp.use_object_info = get_or_declare_parameter<bool>(node, ns + ".use_object_info");
+  pp.use_moving_object_ray_cast =
+    get_or_declare_parameter<bool>(node, ns + ".use_moving_object_ray_cast");
+  pp.use_partition_lanelet = get_or_declare_parameter<bool>(node, ns + ".use_partition_lanelet");
+  pp.pedestrian_vel = get_or_declare_parameter<double>(node, ns + ".pedestrian_vel");
+  pp.pedestrian_radius = get_or_declare_parameter<double>(node, ns + ".pedestrian_radius");
+
+  // debug
+  pp.is_show_occlusion = get_or_declare_parameter<bool>(node, ns + ".debug.is_show_occlusion");
+  pp.is_show_cv_window = get_or_declare_parameter<bool>(node, ns + ".debug.is_show_cv_window");
+  pp.is_show_processing_time =
+    get_or_declare_parameter<bool>(node, ns + ".debug.is_show_processing_time");
+
+  // threshold
+  pp.detection_area_offset =
+    get_or_declare_parameter<double>(node, ns + ".threshold.detection_area_offset");
+  pp.detection_area_length =
+    get_or_declare_parameter<double>(node, ns + ".threshold.detection_area_length");
+  pp.stuck_vehicle_vel =
+    get_or_declare_parameter<double>(node, ns + ".threshold.stuck_vehicle_vel");
+  pp.lateral_distance_thr =
+    get_or_declare_parameter<double>(node, ns + ".threshold.lateral_distance");
+  pp.dist_thr = get_or_declare_parameter<double>(node, ns + ".threshold.search_dist");
+  pp.angle_thr = get_or_declare_parameter<double>(node, ns + ".threshold.search_angle");
+
+  // ego additional velocity config
+  pp.v.safety_ratio = get_or_declare_parameter<double>(node, ns + ".motion.safety_ratio");
+  pp.v.safe_margin = get_or_declare_parameter<double>(node, ns + ".motion.safe_margin");
+  pp.v.max_slow_down_jerk =
+    get_or_declare_parameter<double>(node, ns + ".motion.max_slow_down_jerk");
+  pp.v.max_slow_down_accel =
+    get_or_declare_parameter<double>(node, ns + ".motion.max_slow_down_accel");
+  pp.v.non_effective_jerk =
+    get_or_declare_parameter<double>(node, ns + ".motion.non_effective_jerk");
+  pp.v.non_effective_accel =
+    get_or_declare_parameter<double>(node, ns + ".motion.non_effective_acceleration");
+  pp.v.min_allowed_velocity =
+    get_or_declare_parameter<double>(node, ns + ".motion.min_allowed_velocity");
+  // detection_area param
+  pp.detection_area.min_occlusion_spot_size =
+    get_or_declare_parameter<double>(node, ns + ".detection_area.min_occlusion_spot_size");
+  pp.detection_area.min_longitudinal_offset =
+    get_or_declare_parameter<double>(node, ns + ".detection_area.min_longitudinal_offset");
+  pp.detection_area.max_lateral_distance =
+    get_or_declare_parameter<double>(node, ns + ".detection_area.max_lateral_distance");
+  pp.detection_area.slice_length =
+    get_or_declare_parameter<double>(node, ns + ".detection_area.slice_length");
+  // occupancy grid param
+  pp.grid.free_space_max = get_or_declare_parameter<int>(node, ns + ".grid.free_space_max");
+  pp.grid.occupied_min = get_or_declare_parameter<int>(node, ns + ".grid.occupied_min");
+
+  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
+  pp.baselink_to_front = vehicle_info.max_longitudinal_offset_m;
+  pp.wheel_tread = vehicle_info.wheel_tread_m;
+  pp.right_overhang = vehicle_info.right_overhang_m;
+  pp.left_overhang = vehicle_info.left_overhang_m;
+}
+
+void OcclusionSpotModuleManager::launchNewModules(
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
+{
+  // general
+  if (!isModuleRegistered(module_id_)) {
+    registerModule(
+      std::make_shared<OcclusionSpotModule>(
+        module_id_, planner_data, planner_param_, logger_.get_child("occlusion_spot_module"),
+        clock_, time_keeper_, planning_factor_interface_),
+      planner_data);
+  }
+}
+
+std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+OcclusionSpotModuleManager::getModuleExpiredFunction(
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const PlannerData & planner_data)
+{
+  return []([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) {
+    return false;
+  };
+}
+}  // namespace autoware::behavior_velocity_planner::experimental
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::behavior_velocity_planner::experimental::OcclusionSpotModulePlugin,
+  autoware::behavior_velocity_planner::experimental::PluginInterface)
