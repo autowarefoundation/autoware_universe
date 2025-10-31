@@ -118,6 +118,9 @@ struct AvoidanceParameters
   // enable avoidance for parking violation vehicle
   std::string policy_parking_violation_vehicle{"ignore"};
 
+  // threshold distance to road border for parking violation detection
+  double th_road_border_distance{0.0};
+
   // enable avoidance for adjacent lane stop vehicle
   std::string policy_adjacent_lane_stop_vehicle{"auto"};
 
