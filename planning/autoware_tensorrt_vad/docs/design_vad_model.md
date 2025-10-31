@@ -217,23 +217,27 @@ flowchart TD
 Preprocessor and Postprocessor classes wrap CUDA kernels and provide clean C++ interfaces to `VadModel`.
 
 **Preprocessor/Postprocessor Classes** (CPU-side wrappers):
+
 - [`MultiCameraPreprocessor`](../include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp): Multi-camera image preprocessing
 - [`ObjectPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp): 3D object detection postprocessing
 - [`MapPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp): Map polyline postprocessing
 
 **Processing Flow**:
+
 1. `VadModel` calls `preprocess_*()` or `postprocess_*()` methods
 2. These methods call `launch_*_kernel()` functions
 3. Kernel launch functions calculate CUDA grid/block dimensions
 4. CUDA kernels execute on GPU
 
 **CUDA Kernel Launch Functions**:
+
 - [`launch_multi_camera_resize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu): Resize images to target resolution
 - [`launch_multi_camera_normalize_kernel`](../lib/networks/preprocess/multi_camera_preprocess_kernel.cu): Normalize pixel values
 - [`launch_object_postprocess_kernel`](../lib/networks/postprocess/object_postprocess_kernel.cu): Filter and decode object detections
 - [`launch_map_postprocess_kernel`](../lib/networks/postprocess/map_postprocess_kernel.cu): Decode map polylines
 
 **Benefits**:
+
 - Separation of concerns: C++ wrapper logic vs CUDA kernel logic
 - Testability: Can mock preprocessors/postprocessors
 - Performance: Kernels optimized for parallel execution on GPU
@@ -292,16 +296,19 @@ flowchart TD
 ## Key Design Details
 
 ### Two-Stage Network Loading
+
 - **First Frame**: Uses `head_no_prev` (no temporal context required)
 - **Subsequent Frames**: Uses `head` (incorporates `prev_bev` from previous frame)
 - **Memory Optimization**: `head_no_prev` is released after first frame to free GPU memory
 
 ### Memory Management Strategy
+
 - **Bindings Sharing**: Network outputs can be directly connected as inputs to other networks
 - **Tensor Class**: Encapsulates CUDA memory operations (malloc, copy, free)
 - **Saved BEV**: `prev_bev` is preserved on GPU between frames (Device-to-Device copy)
 
 ### Asynchronous Execution
+
 - All CUDA operations use a single `cudaStream_t stream_` member
 - Operations are asynchronous but synchronized before postprocessing
 - Enables overlapping computation when possible
