@@ -9,7 +9,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/debug.cpp
   src/manager.cpp
   src/scene.cpp
-  src/utils.cpp
 )
 
 ament_auto_package(INSTALL_TO_SHARE config)

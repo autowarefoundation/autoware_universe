@@ -17,25 +17,14 @@
 
 #include "scene_crosswalk.hpp"
 
-#include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
-#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <functional>
 #include <memory>
-#include <optional>
-#include <set>
-#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 class CrosswalkModuleManager : public SceneModuleManagerInterfaceWithRTC
 {
 public:
@@ -55,13 +44,14 @@ public:
 private:
   CrosswalkModule::PlannerParam crosswalk_planner_param_{};
 
-  void launchNewModules(const PathWithLaneId & path) override;
+  void launchNewModules(
+    const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
-  getModuleExpiredFunction(const PathWithLaneId & path) override;
+  getModuleExpiredFunction(const Trajectory & path, const PlannerData & planner_data) override;
 };
 
-class CrosswalkModulePlugin : public PluginWrapper<CrosswalkModuleManager>
+class CrosswalkModulePlugin : public experimental::PluginWrapper<CrosswalkModuleManager>
 {
 };
 }  // namespace autoware::behavior_velocity_planner

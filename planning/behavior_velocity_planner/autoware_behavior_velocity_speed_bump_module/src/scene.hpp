@@ -17,10 +17,9 @@
 
 #include "util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
@@ -30,7 +29,7 @@ namespace autoware::behavior_velocity_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class SpeedBumpModule : public SceneModuleInterface
+class SpeedBumpModule : public experimental::SceneModuleInterface
 {
 public:
   struct DebugData
@@ -61,7 +60,10 @@ public:
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -81,7 +83,8 @@ private:
 
   bool applySlowDownSpeed(
     PathWithLaneId & output, const float speed_bump_speed,
-    const PathPolygonIntersectionStatus & path_polygon_intersection_status);
+    const PathPolygonIntersectionStatus & path_polygon_intersection_status,
+    const PlannerData & planner_data);
 
   float speed_bump_slow_down_speed_;
 };

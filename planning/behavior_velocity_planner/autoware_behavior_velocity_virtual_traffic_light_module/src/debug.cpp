@@ -14,6 +14,7 @@
 
 #include "scene.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware_utils/math/constants.hpp>
@@ -27,7 +28,6 @@ using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_orientation;
 using autoware_utils::create_marker_position;
 using autoware_utils::create_marker_scale;
-using autoware_utils::to_msg;
 using namespace std::literals::string_literals;
 
 namespace autoware::behavior_velocity_planner
@@ -68,7 +68,7 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
       "map", now, "instrument_id", module_id_, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
       create_marker_scale(0.0, 0.0, 1.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
-    marker.pose.position = to_msg(m.instrument_center);
+    marker.pose.position = autoware::experimental::lanelet2_utils::to_ros(m.instrument_center);
     marker.text = m.instrument_id;
 
     debug_marker_array.markers.push_back(marker);
@@ -80,7 +80,7 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
       "map", now, "instrument_center", module_id_, visualization_msgs::msg::Marker::SPHERE,
       create_marker_scale(0.3, 0.3, 0.3), create_marker_color(1.0, 0.0, 0.0, 0.999));
 
-    marker.pose.position = to_msg(m.instrument_center);
+    marker.pose.position = autoware::experimental::lanelet2_utils::to_ros(m.instrument_center);
 
     debug_marker_array.markers.push_back(marker);
   }
@@ -92,7 +92,7 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
       create_marker_scale(0.3, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
     for (const auto & p : *m.stop_line) {
-      marker.points.push_back(to_msg(p));
+      marker.points.push_back(autoware::experimental::lanelet2_utils::to_ros(p));
     }
 
     debug_marker_array.markers.push_back(marker);
@@ -105,7 +105,7 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
       create_marker_scale(0.3, 0.0, 0.0), create_marker_color(0.0, 1.0, 0.0, 0.999));
 
     for (const auto & p : m.start_line) {
-      marker.points.push_back(to_msg(p));
+      marker.points.push_back(autoware::experimental::lanelet2_utils::to_ros(p));
     }
 
     debug_marker_array.markers.push_back(marker);
@@ -119,8 +119,8 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
 
     for (const auto & line : m.end_lines) {
       for (size_t i = 1; i < line.size(); ++i) {
-        marker.points.push_back(to_msg(line.at(i - 1)));
-        marker.points.push_back(to_msg(line.at(i)));
+        marker.points.push_back(autoware::experimental::lanelet2_utils::to_ros(line[i - 1]));
+        marker.points.push_back(autoware::experimental::lanelet2_utils::to_ros(line[i]));
       }
     }
 
