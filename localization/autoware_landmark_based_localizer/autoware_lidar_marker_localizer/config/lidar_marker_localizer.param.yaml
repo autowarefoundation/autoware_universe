@@ -2,6 +2,7 @@
   ros__parameters:
     enable_read_all_target_ids: true
     target_ids: ["0000", "0001", "0002", "0003", "0004", "0005"]
+    queue_size_for_output_pose: 10 # Queue size for output/pose_with_covariance publisher
 
     # marker name
     marker_name: "reflector"
