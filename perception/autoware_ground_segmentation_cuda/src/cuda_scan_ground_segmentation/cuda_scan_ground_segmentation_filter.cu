@@ -655,8 +655,7 @@ struct GroundChecker
 
 template <typename CheckerType>
 __global__ void markingPoints(
-  ClassifiedPointType * classified_points, int point_num, int * mark, CheckerType checker
-)
+  ClassifiedPointType * classified_points, int point_num, int * mark, CheckerType checker)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
@@ -697,8 +696,7 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
       point_num, 0, stream_->get(), markingPoints, classified_points.data(), point_num,
-      point_mark.data(), CheckerType()
-    ));
+      point_mark.data(), CheckerType()));
 
   // Exclusive scan
   device_vector<int> writing_loc(stream_, mempool_);
@@ -757,8 +755,10 @@ __global__ void markNonOutliers(
 
   for (int i = index; i < point_num; i += stride) {
     auto p = cloud[i];
-    int val = (p.x < param.min_x || p.x > param.max_x || p.y < param.min_y || 
-                p.y > param.max_y || p.z < param.min_z || p.z > param.max_z) ? 0 : 1;
+    int val = (p.x < param.min_x || p.x > param.max_x || p.y < param.min_y || p.y > param.max_y ||
+               p.z < param.min_z || p.z > param.max_z)
+                ? 0
+                : 1;
     mark[i] = val;
   }
 }
@@ -805,7 +805,8 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
 
   dev_input_points_->height = 1;
   dev_input_points_->width = remain_size;
-  dev_input_points_->data = cuda_blackboard::make_unique<uint8_t[]>(remain_size * dev_input_points_->point_step);
+  dev_input_points_->data =
+    cuda_blackboard::make_unique<uint8_t[]>(remain_size * dev_input_points_->point_step);
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
