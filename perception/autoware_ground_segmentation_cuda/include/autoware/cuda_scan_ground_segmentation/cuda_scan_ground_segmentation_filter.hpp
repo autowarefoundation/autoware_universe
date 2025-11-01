@@ -170,7 +170,6 @@ private:
     device_vector<Cell> & cell_list, device_vector<int> & starting_pid,
     device_vector<ClassifiedPointType> & classified_points);
 
-  const int reserved_dev_point_size_ = 300000;
   std::shared_ptr<CudaStream> stream_;
   std::shared_ptr<CudaMempool> mempool_;
 };

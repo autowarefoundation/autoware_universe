@@ -135,7 +135,6 @@ CudaScanGroundSegmentationFilter::CudaScanGroundSegmentationFilter(
   // Those calls are costly, so it should be done only once.
   dev_input_points_.reset(new cuda_blackboard::CudaPointCloud2);
 
-  dev_input_points_->data = cuda_blackboard::make_unique<uint8_t[]>(reserved_dev_point_size_);
   // Warm-up the memory pool a bit
   empty_cell_mark_.reset(new device_vector<int>(100000, stream_, mempool_));
 }
@@ -352,7 +351,7 @@ __forceinline__ __device__ void segmentCell(
     param.use_recheck_ground_cluster && cell_gnd_point_num > 1 &&
     cell_gnd_radius_sum / (float)(cell_gnd_point_num) > param.recheck_start_distance) {
     // Now recheck the points using the height_min
-    for (int j = start_pid; j < end_pid; j += WARP_SIZE) {
+    for (int j = start_pid + wid; j < end_pid; j += WARP_SIZE) {
       auto p = classified_points[j];
 
       if (
@@ -368,6 +367,8 @@ __forceinline__ __device__ void segmentCell(
 
       classified_points[j] = p;
     }
+
+    __syncwarp();
 
     // Now use ballot sync to see if there are any ground points remaining
     uint32_t recheck_res = __ballot_sync(FULL_MASK, local_gnd_point_num > minus_t_gnd_point_num);
@@ -654,7 +655,8 @@ struct GroundChecker
 
 template <typename CheckerType>
 __global__ void markingPoints(
-  ClassifiedPointType * classified_points, int point_num, int * mark, CheckerType checker)
+  ClassifiedPointType * classified_points, int point_num, int * mark, CheckerType checker
+)
 {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
   int stride = blockDim.x * gridDim.x;
@@ -695,7 +697,8 @@ void CudaScanGroundSegmentationFilter::extractPoints(
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
       point_num, 0, stream_->get(), markingPoints, classified_points.data(), point_num,
-      point_mark.data(), CheckerType()));
+      point_mark.data(), CheckerType()
+    ));
 
   // Exclusive scan
   device_vector<int> writing_loc(stream_, mempool_);
@@ -724,10 +727,6 @@ void CudaScanGroundSegmentationFilter::extractPoints(
       reinterpret_cast<PointTypeStruct *>(output.data.get())));
 }
 
-#ifndef timeDiff
-#define timeDiff(start, end) ((end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec)
-#endif
-
 void CudaScanGroundSegmentationFilter::classifyPointCloud(
   const cuda_blackboard::CudaPointCloud2 & input, cuda_blackboard::CudaPointCloud2 & ground,
   cuda_blackboard::CudaPointCloud2 & non_ground)
@@ -739,6 +738,8 @@ void CudaScanGroundSegmentationFilter::classifyPointCloud(
   removeOutliers(input);
   sort_points(cell_list, starting_pid, classified_points);
   scanPerSectorGroundReference(cell_list, starting_pid, classified_points);
+
+  int point_num = dev_input_points_->height * dev_input_points_->width;
 
   // Extract non-ground points
   extractPoints<NonGroundChecker>(classified_points, *dev_input_points_, non_ground);
@@ -756,15 +757,9 @@ __global__ void markNonOutliers(
 
   for (int i = index; i < point_num; i += stride) {
     auto p = cloud[i];
-    float dx = p.x - param.center_x;
-    float dy = p.y - param.center_y;
-    if (
-      dx < param.min_x || dx > param.max_x || dy < param.min_y || dy > param.max_y ||
-      p.z < param.min_z || p.z > param.max_z) {
-      mark[i] = 0;
-      continue;
-    }
-    mark[i] = 1;
+    int val = (p.x < param.min_x || p.x > param.max_x || p.y < param.min_y || 
+                p.y > param.max_y || p.z < param.min_z || p.z > param.max_z) ? 0 : 1;
+    mark[i] = val;
   }
 }
 
@@ -810,6 +805,7 @@ void CudaScanGroundSegmentationFilter::removeOutliers(
 
   dev_input_points_->height = 1;
   dev_input_points_->width = remain_size;
+  dev_input_points_->data = cuda_blackboard::make_unique<uint8_t[]>(remain_size * dev_input_points_->point_step);
 
   CHECK_CUDA_ERROR(
     cuda::launchAsync<BLOCK_SIZE_X>(
