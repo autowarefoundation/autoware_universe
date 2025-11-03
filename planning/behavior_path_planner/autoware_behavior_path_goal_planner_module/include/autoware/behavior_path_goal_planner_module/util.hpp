@@ -254,6 +254,40 @@ bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
 
+/**
+ * @brief Check if ego vehicle is on modified goal position
+ * @param current_pose Current ego pose
+ * @param modified_goal Modified goal candidate
+ * @param parameters Goal planner parameters for threshold
+ * @return true if ego is within arrival distance of modified goal
+ */
+bool is_on_modified_goal(
+  const Pose & current_pose, const GoalCandidate & modified_goal,
+  const GoalPlannerParameters & parameters);
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
+  const GoalPlannerParameters & parameters);
+
+struct RegenerationCheckResult
+{
+  bool should_regenerate{false};  ///< True if path candidates should be regenerated
+  std::string reason;  ///< Reason for regeneration decision (empty if no regeneration needed)
+
+  explicit operator bool() const { return should_regenerate; }
+};
+/**
+ * @brief Check if path candidates should be regenerated
+ * @param ego_pose Current ego vehicle pose
+ * @param current_upstream Current upstream module output
+ * @param original_upstream Original upstream module output when candidates were generated
+ * @param lane_change_detected Whether lane change state has changed
+ * @return RegenerationCheckResult with decision and reason
+ */
+RegenerationCheckResult should_regenerate_path_candidates(
+  const Pose & ego_pose, const BehaviorModuleOutput & current_upstream,
+  const BehaviorModuleOutput & original_upstream, const bool lane_change_detected);
+
 bool hasPreviousModulePathShapeChanged(
   const BehaviorModuleOutput & upstream_module_output,
   const BehaviorModuleOutput & last_upstream_module_output);
@@ -284,9 +318,26 @@ std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const lanelet::routing::RoutingGraphConstPtr routing_graph);
 
 /**
- * @brief generate lanelets with which pull over path is aligned
- * @note if lane changing path is detected, this returns lanelets aligned with later part of the
- * lane changing path
+ * @brief Get reference road lane sequence that covers both the path length and goal search range
+ *
+ * @param path The path with lane IDs from upstream module
+ * @param planner_data Shared pointer to planner data containing route handler and parameters
+ * @param backward_length Distance to extend backward from lane_change_complete_lane
+ *                        Expected: backward_path_length + backward_goal_search_length
+ *                        - Covers both path length and goal search range backward
+ *                        - Sum is used because which is longer is unknown
+ *                        - Backward lanes are necessary for path generation
+ * @param forward_length Distance to extend forward from goal_lane
+ *                       Expected: forward_goal_search_length
+ *                       - Covers goal search range beyond the path length forward
+ *
+ * @return Continuous lanelet sequence from (lane_change_complete_lane - backward_length) to
+ *         (goal_lane + forward_length) if goal_lane is reachable from lane_change_complete_lane.
+ *         Otherwise, returns sequence from (lane_change_complete_lane - backward_length) to
+ *         the end of lane_change_complete_lane's sequence (until loop or no next lane).
+ *
+ * @note If lane changing path is detected, this returns lanelets aligned with the later part
+ *       of the lane changing path (lane_change_complete_lane)
  */
 lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data,

@@ -98,13 +98,13 @@ bool skip_object_condition(
     prev_decisions && (prev_decisions->decisions.back().type == stop ||
                        (prev_decisions->decisions.back().collision.has_value() &&
                         prev_decisions->decisions.back().collision->type == collision));
+  if (!object.has_target_label) {
+    return skip_object;
+  }
   if (is_previous_target) {
     return !skip_object;
   }
   if (params.ignore_if_stopped && object.is_stopped) {
-    return skip_object;
-  }
-  if (!object.has_target_label) {
     return skip_object;
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(

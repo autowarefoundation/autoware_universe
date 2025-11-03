@@ -80,6 +80,8 @@ struct SlowDownObstacle
   double lat_velocity{};            // lateral velocity against ego's trajectory
 
   double dist_to_traj_poly{};  // for efficient calculation
+  // TODO(takagi): remove mutable by refactoring the previous output usage.
+  mutable std::optional<double> stable_dist_to_traj_poly{};
   geometry_msgs::msg::Point front_collision_point{};
   geometry_msgs::msg::Point back_collision_point{};
   ObjectClassification classification{};
