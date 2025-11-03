@@ -15,25 +15,41 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
 
-#include <boost/geometry/geometries/linestring.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/primitives/Polygon.h>
 
-#include <limits>
 #include <memory>
-#include <string>
+#include <optional>
 #include <utility>
-#include <vector>
+
+namespace autoware::behavior_velocity_planner::no_drivable_lane
+{
+
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+
+// the status of intersection between path and no drivable lane polygon
+struct PolygonIntersection
+{
+  bool is_path_inside_of_polygon = false;  // true if path is completely inside the no drivable lane
+                                           // polygon (no intersection point)
+  bool is_first_path_point_inside_polygon = false;  // true if first path point is inside the no
+                                                    // drivable lane polygon
+  std::optional<double> first_intersection_s;
+  std::optional<double> second_intersection_s;
+};
+
+PolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
+  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const size_t max_num);
+
+}  // namespace autoware::behavior_velocity_planner::no_drivable_lane
 
 namespace autoware::behavior_velocity_planner
 {
 
-namespace bg = boost::geometry;
-
-using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 // the status of intersection between path and no drivable lane polygon
@@ -43,8 +59,8 @@ struct PathWithNoDrivableLanePolygonIntersection
                                            // polygon (no intersection point)
   bool is_first_path_point_inside_polygon =
     false;  // true if first path point is inside the no drivable lane polygon
-  boost::optional<geometry_msgs::msg::Point> first_intersection_point;
-  boost::optional<geometry_msgs::msg::Point> second_intersection_point;
+  std::optional<geometry_msgs::msg::Point> first_intersection_point;
+  std::optional<geometry_msgs::msg::Point> second_intersection_point;
 };
 
 PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(

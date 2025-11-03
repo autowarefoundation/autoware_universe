@@ -26,7 +26,7 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using Trajectory = autoware::experimental::trajectory::Trajectory<PathPointWithLaneId>;
 
 class NoDrivableLaneModule : public SceneModuleInterface
 {
@@ -42,7 +42,8 @@ public:
   struct DebugData
   {
     double base_link2front;
-    PathWithNoDrivableLanePolygonIntersection path_polygon_intersection;
+    std::optional<geometry_msgs::msg::Point> first_intersection_point;
+    std::optional<geometry_msgs::msg::Point> second_intersection_point;
     std::vector<geometry_msgs::msg::Point> no_drivable_lane_polygon;
     geometry_msgs::msg::Pose stop_pose;
   };
@@ -81,17 +82,22 @@ private:
   // State machine
   State state_;
 
-  PathWithNoDrivableLanePolygonIntersection path_no_drivable_lane_polygon_intersection;
-  geometry_msgs::msg::Point first_intersection_point;
-  double distance_ego_first_intersection{};
-
-  void handle_init_state();
-  void handle_approaching_state(PathWithLaneId * path, const PlannerData & planner_data);
+  void handle_init_state(
+    const double ego_front_s,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection);
+  void handle_approaching_state(
+    Trajectory & path, const double ego_front_s,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection,
+    const PlannerData & planner_data);
   void handle_inside_no_drivable_lane_state(
-    PathWithLaneId * path, const PlannerData & planner_data);
-  void handle_stopped_state(PathWithLaneId * path, const PlannerData & planner_data);
+    Trajectory & path, const double ego_front_s, const PlannerData & planner_data);
+  void handle_stopped_state(
+    Trajectory & path, const double ego_front_s, const PlannerData & planner_data);
+
   void initialize_debug_data(
-    const lanelet::Lanelet & no_drivable_lane, const geometry_msgs::msg::Point & ego_pos,
+    const Trajectory & path, const lanelet::Lanelet & no_drivable_lane,
+    const geometry_msgs::msg::Point & ego_pos,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection,
     const PlannerData & planner_data);
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
