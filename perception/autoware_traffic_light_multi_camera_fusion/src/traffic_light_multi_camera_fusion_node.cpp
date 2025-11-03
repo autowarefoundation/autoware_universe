@@ -226,10 +226,10 @@ void MultiCameraFusion::groupFusion(
 }
 
 GroupFusionInfoMap MultiCameraFusion::accumulateGroupEvidence(
-  const std::map<IdType, utils::FusionRecord>& fused_record_map)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   GroupFusionInfoMap group_fusion_info_map;
-  for (const auto& p : fused_record_map) {
+  for (const auto & p : fused_record_map) {
     processFusedRecord(group_fusion_info_map, p.second);
   }
   return group_fusion_info_map;
@@ -240,8 +240,7 @@ GroupFusionInfoMap MultiCameraFusion::accumulateGroupEvidence(
  * (This function contains the logic from the outer loop)
  */
 void MultiCameraFusion::processFusedRecord(
-  GroupFusionInfoMap& group_fusion_info_map,
-  const utils::FusionRecord& record)
+  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record)
 {
   const IdType roi_id = record.roi.traffic_light_id;
 
@@ -258,12 +257,12 @@ void MultiCameraFusion::processFusedRecord(
     return;
   }
 
-  const auto& reg_ele_id_vec = it->second; // Use the iterator
+  const auto & reg_ele_id_vec = it->second;  // Use the iterator
 
   // Loop over all elements in this record
-  for (const auto& element : record.signal.elements) {
+  for (const auto & element : record.signal.elements) {
     // Loop over all regulatory IDs associated with this traffic light
-    for (const auto& reg_ele_id : reg_ele_id_vec) {
+    for (const auto & reg_ele_id : reg_ele_id_vec) {
       // Delegate the innermost logic to another helper
       updateGroupInfoForElement(group_fusion_info_map, reg_ele_id, element, record);
     }
@@ -274,14 +273,13 @@ void MultiCameraFusion::processFusedRecord(
  * @brief Updates the map for a single (element, regulatory_id) combination.
  */
 void MultiCameraFusion::updateGroupInfoForElement(
-  GroupFusionInfoMap& group_fusion_info_map,
-  const IdType& reg_ele_id,
-  const tier4_perception_msgs::msg::TrafficLightElement& element,
-  const utils::FusionRecord& record)
+  GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
+  const tier4_perception_msgs::msg::TrafficLightElement & element,
+  const utils::FusionRecord & record)
 {
   const StateKey state_key = {element.color, element.shape};
   const double confidence = element.confidence;
-  auto& group_info = group_fusion_info_map[reg_ele_id];
+  auto & group_info = group_fusion_info_map[reg_ele_id];
 
   // Update Log-Odds
   updateLogOdds(group_info.accumulated_log_odds, state_key, confidence);
@@ -294,9 +292,7 @@ void MultiCameraFusion::updateGroupInfoForElement(
  * @brief Handles the log-odds accumulation logic.
  */
 void MultiCameraFusion::updateLogOdds(
-  std::map<StateKey, double>& log_odds_map,
-  const StateKey& state_key,
-  double confidence)
+  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence)
 {
   // try_emplace ensures we only add the 0.0 prior (from a 0.5 probability) once.
   log_odds_map.try_emplace(state_key, 0.0);
@@ -311,10 +307,8 @@ void MultiCameraFusion::updateLogOdds(
  * @brief Handles the logic for tracking the best record for a given state.
  */
 void MultiCameraFusion::updateBestRecord(
-  std::map<StateKey, utils::FusionRecord>& best_record_map,
-  const StateKey& state_key,
-  double confidence,
-  const utils::FusionRecord& record)
+  std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
+  double confidence, const utils::FusionRecord & record)
 {
   const auto it = best_record_map.find(state_key);
 
@@ -323,7 +317,7 @@ void MultiCameraFusion::updateBestRecord(
     return;
   }
 
-  auto& existing_record = it->second;
+  auto & existing_record = it->second;
 
   if (existing_record.signal.elements.empty()) {
     return;

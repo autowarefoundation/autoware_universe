@@ -53,7 +53,8 @@ struct GroupFusionInfo
   std::map<StateKey, utils::FusionRecord> best_record_for_state;
 };
 
-using GroupFusionInfoMap = std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
+using GroupFusionInfoMap =
+  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
 class MultiCameraFusion : public rclcpp::Node
 {
@@ -88,11 +89,12 @@ private:
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
   /**
-   * @brief Accumulates log-odds evidence for each traffic light group from individual fused records.
+   * @brief Accumulates log-odds evidence for each traffic light group from individual fused
+   * records.
    */
   GroupFusionInfoMap accumulateGroupEvidence(
     const std::map<IdType, utils::FusionRecord> & fused_record_map);
-  
+
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
