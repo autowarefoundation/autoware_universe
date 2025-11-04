@@ -63,7 +63,7 @@ public:
   };
 
   // Template constructor to accept shared_ptr<LoggerType>
-  template<typename LoggerType>
+  template <typename LoggerType>
   ObjectPostprocessor(const ObjectPostprocessConfig & config, std::shared_ptr<LoggerType> logger);
 
   ~ObjectPostprocessor();
@@ -148,7 +148,7 @@ private:
 };
 
 // Template implementations
-template<typename LoggerType>
+template <typename LoggerType>
 ObjectPostprocessor::ObjectPostprocessor(
   const ObjectPostprocessConfig & config, std::shared_ptr<LoggerType> logger)
 : config_(config), logger_(std::static_pointer_cast<autoware::tensorrt_vad::VadLogger>(logger))
@@ -168,14 +168,14 @@ ObjectPostprocessor::ObjectPostprocessor(
 
   // --- Allocate Object Processing Buffers ---
   const size_t cls_scores_size = static_cast<size_t>(config_.prediction_num_queries) *
-    config_.prediction_num_classes * sizeof(float);
+                                 config_.prediction_num_classes * sizeof(float);
   const size_t bbox_preds_size = static_cast<size_t>(config_.prediction_num_queries) *
-    config_.prediction_bbox_pred_dim * sizeof(float);
+                                 config_.prediction_bbox_pred_dim * sizeof(float);
   const size_t trajectories_size = static_cast<size_t>(config_.prediction_num_queries) *
-    config_.prediction_trajectory_modes *
-    config_.prediction_timesteps * 2 * sizeof(float);
+                                   config_.prediction_trajectory_modes *
+                                   config_.prediction_timesteps * 2 * sizeof(float);
   const size_t traj_scores_size = static_cast<size_t>(config_.prediction_num_queries) *
-    config_.prediction_trajectory_modes * sizeof(float);
+                                  config_.prediction_trajectory_modes * sizeof(float);
   const size_t valid_flags_size =
     static_cast<size_t>(config_.prediction_num_queries) * sizeof(int32_t);
 

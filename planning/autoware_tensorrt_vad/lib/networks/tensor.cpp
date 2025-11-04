@@ -27,9 +27,9 @@ unsigned int getElementSize(nvinfer1::DataType t)
 {
   // Static map for data type sizes
   static const std::unordered_map<nvinfer1::DataType, unsigned int> size_map = {
-    {nvinfer1::DataType::kFLOAT, sizeof(float)}, {nvinfer1::DataType::kHALF, sizeof(float) / 2},
-    {nvinfer1::DataType::kINT8, sizeof(int8_t)}, {nvinfer1::DataType::kINT32, sizeof(int32_t)},
-    {nvinfer1::DataType::kBOOL, sizeof(bool)}, {nvinfer1::DataType::kUINT8, sizeof(uint8_t)},
+    {nvinfer1::DataType::kFLOAT, sizeof(float)},  {nvinfer1::DataType::kHALF, sizeof(float) / 2},
+    {nvinfer1::DataType::kINT8, sizeof(int8_t)},  {nvinfer1::DataType::kINT32, sizeof(int32_t)},
+    {nvinfer1::DataType::kBOOL, sizeof(bool)},    {nvinfer1::DataType::kUINT8, sizeof(uint8_t)},
     {nvinfer1::DataType::kFP8, sizeof(float) / 4}};
 
   auto it = size_map.find(t);
@@ -56,7 +56,7 @@ int32_t Tensor::nbytes()
   return volume * getElementSize(dtype);
 }
 
-template<class Dtype>
+template <class Dtype>
 void Tensor::load(const std::vector<float> & data, cudaStream_t stream)
 {
   if (static_cast<int32_t>(data.size()) != volume) {
@@ -83,7 +83,7 @@ void Tensor::load(const std::vector<float> & data, cudaStream_t stream)
   }
 }
 
-template<class T>
+template <class T>
 std::vector<T> Tensor::cpu()
 {
   std::vector<T> buffer(volume);

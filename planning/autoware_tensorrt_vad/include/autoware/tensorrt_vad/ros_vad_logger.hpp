@@ -44,11 +44,9 @@ private:
   rclcpp::Logger logger_;
 
 public:
-  explicit RosVadLogger(rclcpp::Node::SharedPtr node)
-  : logger_(node->get_logger()) {}
+  explicit RosVadLogger(rclcpp::Node::SharedPtr node) : logger_(node->get_logger()) {}
 
-  explicit RosVadLogger(const rclcpp::Logger & logger)
-  : logger_(logger) {}
+  explicit RosVadLogger(const rclcpp::Logger & logger) : logger_(logger) {}
 
   void debug(const std::string & message) override
   {

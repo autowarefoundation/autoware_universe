@@ -141,17 +141,17 @@ bool ObjectPostprocessor::copy_device_arrays_to_host(
   // Define all copy operations
   const std::array<CopyOperation, 6> operations{{
     {buffers.cls_scores.data(), args.cls_scores, buffers.cls_scores.size() * sizeof(float),
-      "cls_scores"},
+     "cls_scores"},
     {buffers.bbox_preds.data(), args.bbox_preds, buffers.bbox_preds.size() * sizeof(float),
-      "bbox_preds"},
+     "bbox_preds"},
     {buffers.trajectories.data(), args.trajectories, buffers.trajectories.size() * sizeof(float),
-      "trajectories"},
+     "trajectories"},
     {buffers.traj_scores.data(), args.traj_scores, buffers.traj_scores.size() * sizeof(float),
-      "traj_scores"},
+     "traj_scores"},
     {buffers.valid_flags.data(), args.valid_flags, buffers.valid_flags.size() * sizeof(int32_t),
-      "valid_flags"},
+     "valid_flags"},
     {buffers.max_class_indices.data(), args.max_class_indices,
-      buffers.max_class_indices.size() * sizeof(int32_t), "max_class_indices"},
+     buffers.max_class_indices.size() * sizeof(int32_t), "max_class_indices"},
   }};
 
   // Perform all copy operations

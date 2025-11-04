@@ -39,8 +39,7 @@ bool FrontCriticalSynchronizationStrategy::is_ready(
   // Check if front camera data exists
   if (
     front_camera_id_ >= static_cast<int32_t>(vad_input_topic_data.images.size()) ||
-    !vad_input_topic_data.images[front_camera_id_])
-  {
+    !vad_input_topic_data.images[front_camera_id_]) {
     return false;
   }
 
@@ -53,11 +52,11 @@ bool FrontCriticalSynchronizationStrategy::is_dropped(
 {
   const bool missing_image = std::any_of(
     vad_input_topic_data.images.begin(), vad_input_topic_data.images.end(),
-    [](const auto & image) {return !image;});
+    [](const auto & image) { return !image; });
 
   const bool missing_camera_info = std::any_of(
     vad_input_topic_data.camera_infos.begin(), vad_input_topic_data.camera_infos.end(),
-    [](const auto & camera_info) {return !camera_info;});
+    [](const auto & camera_info) { return !camera_info; });
 
   return missing_image || missing_camera_info;
 }
@@ -68,8 +67,7 @@ std::optional<VadInputTopicData> FrontCriticalSynchronizationStrategy::fill_drop
   // Check if front camera image exists
   if (
     front_camera_id_ >= static_cast<int32_t>(current_data.images.size()) ||
-    !current_data.images[front_camera_id_])
-  {
+    !current_data.images[front_camera_id_]) {
     return std::nullopt;  // Cannot fill dropped data without front camera reference
   }
 
@@ -106,8 +104,7 @@ bool FrontCriticalSynchronizationStrategy::is_synchronized(
   // Check if front camera exists
   if (
     front_camera_id_ >= static_cast<int32_t>(vad_input_topic_data.images.size()) ||
-    !vad_input_topic_data.images[front_camera_id_])
-  {
+    !vad_input_topic_data.images[front_camera_id_]) {
     return false;
   }
 

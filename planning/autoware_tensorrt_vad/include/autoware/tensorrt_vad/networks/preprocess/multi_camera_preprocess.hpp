@@ -42,7 +42,7 @@ class MultiCameraPreprocessor
 {
 public:
   // Template constructor to accept shared_ptr<LoggerType>
-  template<typename LoggerType>
+  template <typename LoggerType>
   MultiCameraPreprocessor(
     const MultiCameraPreprocessConfig & config, std::shared_ptr<LoggerType> logger);
 
@@ -91,7 +91,7 @@ private:
 };
 
 // Template implementations
-template<typename LoggerType>
+template <typename LoggerType>
 MultiCameraPreprocessor::MultiCameraPreprocessor(
   const MultiCameraPreprocessConfig & config, std::shared_ptr<LoggerType> logger)
 : config_(config), logger_(std::static_pointer_cast<autoware::tensorrt_vad::VadLogger>(logger))
@@ -120,7 +120,7 @@ MultiCameraPreprocessor::MultiCameraPreprocessor(
   cudaError_t err = cudaMalloc(&d_input_buffer_, total_input_size);
   if (err != cudaSuccess) {
     std::string error_msg = "Failed to allocate input buffer of size " +
-      std::to_string(total_input_size) + ": " + cudaGetErrorString(err);
+                            std::to_string(total_input_size) + ": " + cudaGetErrorString(err);
     logger_->error(error_msg);
     throw std::runtime_error(error_msg);
   }
@@ -128,7 +128,7 @@ MultiCameraPreprocessor::MultiCameraPreprocessor(
   err = cudaMalloc(&d_resized_buffer_, total_resized_size);
   if (err != cudaSuccess) {
     std::string error_msg = "Failed to allocate resized buffer of size " +
-      std::to_string(total_resized_size) + ": " + cudaGetErrorString(err);
+                            std::to_string(total_resized_size) + ": " + cudaGetErrorString(err);
     logger_->error(error_msg);
     cleanup_cuda_resources();
     throw std::runtime_error(error_msg);

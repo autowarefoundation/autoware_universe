@@ -49,7 +49,7 @@ public:
   };
 
   // Template constructor to accept shared_ptr<LoggerType>
-  template<typename LoggerType>
+  template <typename LoggerType>
   MapPostprocessor(const MapPostprocessConfig & config, std::shared_ptr<LoggerType> logger);
 
   ~MapPostprocessor();
@@ -99,7 +99,7 @@ private:
 };
 
 // Template implementations
-template<typename LoggerType>
+template <typename LoggerType>
 MapPostprocessor::MapPostprocessor(
   const MapPostprocessConfig & config, std::shared_ptr<LoggerType> logger)
 : config_(config), logger_(std::static_pointer_cast<autoware::tensorrt_vad::VadLogger>(logger))
@@ -121,7 +121,7 @@ MapPostprocessor::MapPostprocessor(
   const size_t map_cls_scores_size =
     static_cast<size_t>(config_.map_num_queries) * config_.map_num_classes * sizeof(float);
   const size_t map_points_size = static_cast<size_t>(config_.map_num_queries) *
-    config_.map_points_per_polylines * 2 * sizeof(float);
+                                 config_.map_points_per_polylines * 2 * sizeof(float);
   const size_t map_flags_size = static_cast<size_t>(config_.map_num_queries) * sizeof(int32_t);
 
   cudaError_t err = cudaMalloc(&d_map_cls_scores_, map_cls_scores_size);

@@ -65,9 +65,9 @@ bool copy_device_to_host(
   };
 
   const size_t cls_scores_size = static_cast<size_t>(context.config.map_num_queries) *
-    context.config.map_num_classes * sizeof(float);
+                                 context.config.map_num_classes * sizeof(float);
   const size_t points_size = static_cast<size_t>(context.config.map_num_queries) *
-    context.config.map_points_per_polylines * 2 * sizeof(float);
+                             context.config.map_points_per_polylines * 2 * sizeof(float);
   const size_t flags_size = static_cast<size_t>(context.config.map_num_queries) * sizeof(int32_t);
 
   const std::array<CopyOperation, 4> operations{{
@@ -75,7 +75,7 @@ bool copy_device_to_host(
     {host_buffers.points.data(), device_buffers.points, points_size, "points"},
     {host_buffers.valid_flags.data(), device_buffers.valid_flags, flags_size, "valid_flags"},
     {host_buffers.max_class_indices.data(), device_buffers.max_class_indices, flags_size,
-      "max_class_indices"},
+     "max_class_indices"},
   }};
 
   for (const auto & op : operations) {
@@ -109,8 +109,7 @@ bool is_query_valid(
 {
   if (
     query_idx >= static_cast<int32_t>(host_buffers.valid_flags.size()) ||
-    host_buffers.valid_flags.at(query_idx) == 0)
-  {
+    host_buffers.valid_flags.at(query_idx) == 0) {
     return false;
   }
 

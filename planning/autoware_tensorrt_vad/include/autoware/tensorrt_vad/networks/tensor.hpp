@@ -51,11 +51,11 @@ struct Tensor
   int32_t nbytes();
 
   // Load data from host to device
-  template<class Dtype = float>
+  template <class Dtype = float>
   void load(const std::vector<float> & data, cudaStream_t stream = 0);
 
   // Copy data from device to host
-  template<class T>
+  template <class T>
   std::vector<T> cpu();
 };  // struct Tensor
 

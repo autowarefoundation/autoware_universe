@@ -34,7 +34,7 @@ VadInterface::VadInterface(
     std::make_unique<vad_interface::InputImageConverter>(*coordinate_transformer_, config_);
   input_transform_matrix_converter_ =
     std::make_unique<vad_interface::InputTransformMatrixConverter>(
-    *coordinate_transformer_, config_);
+      *coordinate_transformer_, config_);
   input_can_bus_converter_ =
     std::make_unique<vad_interface::InputCanBusConverter>(*coordinate_transformer_, config_);
   input_bev_shift_converter_ =
@@ -76,9 +76,9 @@ VadInputData VadInterface::convert_input(const VadInputTopicData & vad_input_top
 
   // Use cached value if available, otherwise use computed (potentially invalid) transform
   vad_input_data.vad_base2img =
-    vad_base2img_transform_.has_value() ?
-    vad_base2img_transform_.value() :
-    input_transform_matrix_converter_->process_vad_base2img(vad_input_topic_data.camera_infos);
+    vad_base2img_transform_.has_value()
+      ? vad_base2img_transform_.value()
+      : input_transform_matrix_converter_->process_vad_base2img(vad_input_topic_data.camera_infos);
 
   // Process can_bus using converter
   vad_input_data.can_bus = input_can_bus_converter_->process_can_bus(
@@ -109,7 +109,7 @@ VadOutputTopicData VadInterface::convert_output(
   // Convert candidate trajectories using converter
   vad_output_topic_data.candidate_trajectories =
     output_trajectory_converter_->process_candidate_trajectories(
-    vad_output_data.predicted_trajectories, stamp, trajectory_timestep, base2map_transform);
+      vad_output_data.predicted_trajectories, stamp, trajectory_timestep, base2map_transform);
 
   // Convert trajectory using converter
   vad_output_topic_data.trajectory = output_trajectory_converter_->process_trajectory(
