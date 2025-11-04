@@ -69,13 +69,13 @@ inline std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
 
   // Construct forward transformation: base_link → map
   Eigen::Matrix4d bl2map = Eigen::Matrix4d::Identity();
-  bl2map.block<3, 3>(0, 0) = R;      // Rotation part
-  bl2map.block<3, 1>(0, 3) = t;      // Translation part
+  bl2map.block<3, 3>(0, 0) = R;  // Rotation part
+  bl2map.block<3, 1>(0, 3) = t;  // Translation part
 
   // Construct inverse transformation: map → base_link
   Eigen::Matrix4d map2bl = Eigen::Matrix4d::Identity();
-  map2bl.block<3, 3>(0, 0) = R.transpose();        // Inverse rotation
-  map2bl.block<3, 1>(0, 3) = -R.transpose() * t;   // Inverse translation
+  map2bl.block<3, 3>(0, 0) = R.transpose();       // Inverse rotation
+  map2bl.block<3, 1>(0, 3) = -R.transpose() * t;  // Inverse translation
 
   return {bl2map, map2bl};
 }
