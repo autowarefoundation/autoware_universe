@@ -159,7 +159,8 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         for key in CarlaDataProvider._actor_transform_map:
             if key.id == actor.id:
                 # The velocity location information is the entire behavior tree updated every tick
-                # The ego vehicle is created before the behavior tree tick, so exception handling needs to be added
+                # The ego vehicle is created before the behavior tree tick, so exception
+                # handling needs to be added
                 if CarlaDataProvider._actor_transform_map[key] is None:
                     return actor.get_transform()
                 return CarlaDataProvider._actor_transform_map[key]
@@ -403,7 +404,8 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
             blueprint = CarlaDataProvider._rng.choice(blueprints)
         except ValueError:
-            # The model is not part of the blueprint library. Let's take a default one for the given category
+            # The model is not part of the blueprint library. Let's take a default one
+            # for the given category
             bp_filter = "vehicle.*"
             new_model = _actor_blueprint_categories[actor_category]
             if new_model != "":
@@ -419,9 +421,8 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
         if color:
             if not blueprint.has_attribute("color"):
                 print(
-                    "WARNING: Cannot set Color ({}) for actor {} due to missing blueprint attribute".format(
-                        color, blueprint.id
-                    )
+                    "WARNING: Cannot set Color ({}) for actor {} "
+                    "due to missing blueprint attribute".format(color, blueprint.id)
                 )
             else:
                 default_color_rgba = blueprint.get_attribute("color").as_color()
@@ -433,9 +434,8 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
                 except ValueError:
                     # Color can't be set for this vehicle
                     print(
-                        "WARNING: Color ({}) cannot be set for actor {}. Using instead: ({})".format(
-                            color, blueprint.id, default_color
-                        )
+                        "WARNING: Color ({}) cannot be set for actor {}. "
+                        "Using instead: ({})".format(color, blueprint.id, default_color)
                     )
                     blueprint.set_attribute("color", default_color)
         else:
@@ -550,10 +550,11 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def request_new_actors(actor_list, attribute_filter=None, tick=True):
-        """Series of actor in batch.
+        """
+        Series of actor in batch.
 
-        If this was successful, the new actors are returned, None
-        otherwise.
+        If this was successful, the new actors are returned, None otherwise.
+
         """
         SpawnActor = carla.command.SpawnActor  # pylint: disable=invalid-name
         PhysicsCommand = carla.command.SetSimulatePhysics  # pylint: disable=invalid-name
@@ -679,7 +680,9 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
                 try:
                     spawn_point = spawn_points[i]
                 except IndexError:
-                    print("The amount of spawn points is lower than the amount of vehicles spawned")
+                    print(
+                        "The amount of spawn points is lower than the amount " "of vehicles spawned"
+                    )
                     break
 
             if spawn_point:
@@ -723,9 +726,11 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def get_actor_by_id(actor_id):
-        """Get an actor from the pool by using its ID.
+        """
+        Get an actor from the pool by using its ID.
 
         If the actor does not exist, None is returned.
+
         """
         print(CarlaDataProvider._carla_actor_pool)
         if actor_id in CarlaDataProvider._carla_actor_pool:
@@ -759,7 +764,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def remove_actors_in_surrounding(location, distance):
-        """Remove all actors from the pool that are closer than distance to the provided location."""
+        """Remove all actors from the pool that are closer than distance to provided location."""
         for actor_id in CarlaDataProvider._carla_actor_pool.copy():
             if (
                 CarlaDataProvider._carla_actor_pool[actor_id].get_location().distance(location)
@@ -835,10 +840,11 @@ class GameTime(object):
 
     @staticmethod
     def on_carla_tick(timestamp):
-        """Handle the callback receiving the CARLA time.
+        """
+        Handle the callback receiving the CARLA time.
 
-        Update time only when the frame is more recent than the last
-        frame.
+        Update time only when the frame is more recent than the last frame.
+
         """
         if GameTime._last_frame < timestamp.frame:
             frames = timestamp.frame - GameTime._last_frame if GameTime._init else 1

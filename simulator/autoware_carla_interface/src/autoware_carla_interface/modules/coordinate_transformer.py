@@ -28,26 +28,32 @@ except ImportError:
 
 
 class CoordinateTransformer:
-    """Transformer for converting between ROS and CARLA coordinate systems.
+    """
+    Transformer for converting between ROS and CARLA coordinate systems.
 
     ROS uses right-handed coordinate system: X-forward, Y-left, Z-up
     CARLA (Unreal Engine) uses left-handed: X-forward, Y-right, Z-up
+
     """
 
     @staticmethod
     def base_link_to_vehicle_center(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> tuple:
-        """Convert base_link coordinates to vehicle center coordinates.
+        """
+        Convert base_link coordinates to vehicle center coordinates.
 
         base_link is at rear axle center, vehicle center is at geometric center.
 
-        Args:
+        Args
+        ----
             x, y, z: Position in base_link frame
             wheelbase: Vehicle wheelbase in meters (default 2.850)
 
-        Returns:
+        Returns
+        -------
             (x, y, z) in vehicle center frame
+
         """
         x_vehicle_center = x - (wheelbase / 2.0)
         return (x_vehicle_center, y, z)
@@ -56,19 +62,24 @@ class CoordinateTransformer:
     def carla_base_link_to_vehicle_center_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """Convert CARLA base_link coordinates to CARLA vehicle center location.
+        """
+        Convert CARLA base_link coordinates to CARLA vehicle center location.
 
         For carla_sensor_kit which already uses CARLA coordinate conventions (Y-right),
         we only need to apply the wheelbase offset, NOT the coordinate system flip.
 
-        Args:
+        Args
+        ----
             x, y, z: Position in base_link frame (CARLA coordinates)
             wheelbase: Vehicle wheelbase in meters (default 2.850)
 
-        Returns:
+        Returns
+        -------
             CARLA Location object
+
         """
-        # Only apply wheelbase offset (base_link is at rear axle, vehicle center is at geometric center)
+        # Only apply wheelbase offset (base_link is at rear axle, vehicle center
+        # is at geometric center)
         x_vehicle_center = x - (wheelbase / 2.0)
         return carla.Location(x=x_vehicle_center, y=y, z=z)
 
@@ -76,16 +87,20 @@ class CoordinateTransformer:
     def ros_base_link_to_carla_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """Convert ROS base_link coordinates directly to CARLA vehicle location.
+        """
+        Convert ROS base_link coordinates directly to CARLA vehicle location.
 
         Combines frame origin conversion + coordinate system conversion.
 
-        Args:
+        Args
+        ----
             x, y, z: Position in base_link frame (ROS coordinates)
             wheelbase: Vehicle wheelbase in meters (default 2.850)
 
-        Returns:
+        Returns
+        -------
             CARLA Location object
+
         """
         # Step 1: base_link to vehicle center
         x_vc, y_vc, z_vc = CoordinateTransformer.base_link_to_vehicle_center(x, y, z, wheelbase)
@@ -95,15 +110,19 @@ class CoordinateTransformer:
 
     @staticmethod
     def ros_to_carla_location(x: float, y: float, z: float) -> carla.Location:
-        """Convert ROS position to CARLA location.
+        """
+        Convert ROS position to CARLA location.
 
-        Args:
+        Args
+        ----
             x: X position in ROS (forward)
             y: Y position in ROS (left)
             z: Z position in ROS (up)
 
-        Returns:
+        Returns
+        -------
             CARLA Location object
+
         """
         # In CARLA: X-forward, Y-right (opposite of ROS), Z-up
         return carla.Location(x=x, y=-y, z=z)
@@ -112,15 +131,19 @@ class CoordinateTransformer:
     def _convert_rotation_to_carla(
         angles: tuple[float, float, float], in_degrees: bool, negate_pitch_yaw: bool
     ) -> carla.Rotation:
-        """Convert rotation angles to CARLA Rotation object.
+        """
+        Convert rotation angles to CARLA Rotation object.
 
-        Args:
+        Args
+        ----
             angles: Tuple of (roll, pitch, yaw) in radians (or degrees if in_degrees=True)
             in_degrees: If True, input angles are already in degrees
             negate_pitch_yaw: If True, negate pitch and yaw for coordinate system conversion
 
-        Returns:
+        Returns
+        -------
             CARLA Rotation object (in degrees)
+
         """
         roll, pitch, yaw = angles
         roll_deg = roll if in_degrees else math.degrees(roll)
@@ -153,13 +176,17 @@ class CoordinateTransformer:
 
     @staticmethod
     def ros_transform_to_carla_transform(transform_dict: Dict[str, float]) -> carla.Transform:
-        """Convert ROS transform dictionary to CARLA Transform.
+        """
+        Convert ROS transform dictionary to CARLA Transform.
 
-        Args:
+        Args
+        ----
             transform_dict: Dictionary with x, y, z, roll, pitch, yaw
 
-        Returns:
+        Returns
+        -------
             CARLA Transform object
+
         """
         x = transform_dict.get("x", 0.0)
         y = transform_dict.get("y", 0.0)
@@ -175,13 +202,17 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_to_ros_location(location: carla.Location) -> Dict[str, float]:
-        """Convert CARLA location to ROS position.
+        """
+        Convert CARLA location to ROS position.
 
-        Args:
+        Args
+        ----
             location: CARLA Location object
 
-        Returns:
+        Returns
+        -------
             Dictionary with x, y, z in ROS coordinates
+
         """
         return {
             "x": location.x,
@@ -191,13 +222,17 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_to_ros_rotation(rotation: carla.Rotation) -> Dict[str, float]:
-        """Convert CARLA rotation (degrees) to ROS rotation (radians).
+        """
+        Convert CARLA rotation (degrees) to ROS rotation (radians).
 
-        Args:
+        Args
+        ----
             rotation: CARLA Rotation object (in degrees)
 
-        Returns:
+        Returns
+        -------
             Dictionary with roll, pitch, yaw in radians
+
         """
         return {
             "roll": math.radians(rotation.roll),
@@ -207,13 +242,17 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_transform_to_ros_transform(transform: carla.Transform) -> Dict[str, float]:
-        """Convert CARLA Transform to ROS transform dictionary.
+        """
+        Convert CARLA Transform to ROS transform dictionary.
 
-        Args:
+        Args
+        ----
             transform: CARLA Transform object
 
-        Returns:
+        Returns
+        -------
             Dictionary with x, y, z, roll, pitch, yaw in ROS coordinates
+
         """
         location = CoordinateTransformer.carla_to_ros_location(transform.location)
         rotation = CoordinateTransformer.carla_to_ros_rotation(transform.rotation)
@@ -231,14 +270,18 @@ class CoordinateTransformer:
     def apply_transform_offset(
         base_transform: carla.Transform, offset_dict: Dict[str, float]
     ) -> carla.Transform:
-        """Apply an offset transform to a base transform.
+        """
+        Apply an offset transform to a base transform.
 
-        Args:
+        Args
+        ----
             base_transform: Base CARLA Transform
             offset_dict: Offset in ROS coordinates (x, y, z, roll, pitch, yaw)
 
-        Returns:
+        Returns
+        -------
             Combined CARLA Transform
+
         """
         # Convert offset to CARLA transform
         offset_transform = CoordinateTransformer.ros_transform_to_carla_transform(offset_dict)

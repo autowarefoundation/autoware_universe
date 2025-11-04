@@ -65,7 +65,9 @@ CanBusData InputCanBusConverter::process_can_bus(
   double yaw = std::atan2(
     2.0 * (can_bus[6] * can_bus[5] + can_bus[3] * can_bus[4]),
     1.0 - 2.0 * (can_bus[4] * can_bus[4] + can_bus[5] * can_bus[5]));
-  if (yaw < 0) yaw += 2 * M_PI;
+  if (yaw < 0) {
+    yaw += 2 * M_PI;
+  }
   can_bus[16] = static_cast<float>(yaw);
 
   // Calculate patch_angle[deg] (17)

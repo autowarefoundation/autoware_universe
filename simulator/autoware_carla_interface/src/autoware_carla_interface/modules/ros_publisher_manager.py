@@ -37,11 +37,14 @@ class ROSPublisherManager:
     """Manager for ROS publishers."""
 
     def __init__(self, ros_node: Node, logger: Optional[logging.Logger] = None):
-        """Initialize ROS publisher manager.
+        """
+        Initialize ROS publisher manager.
 
         Args:
+        ----
             ros_node: ROS 2 node instance
             logger: Logger instance
+
         """
         self.ros_node = ros_node
         self.logger = logger or logging.getLogger(__name__)
@@ -72,13 +75,17 @@ class ROSPublisherManager:
         return qos
 
     def get_qos_profile(self, profile_name: str) -> QoSProfile:
-        """Get QoS profile by name.
+        """
+        Get QoS profile by name.
 
         Args:
+        ----
             profile_name: Name of QoS profile
 
-        Returns:
+        Returns
+        -------
             QoS profile
+
         """
         profile = self.qos_profiles.get(profile_name.lower())
         if not profile:
@@ -87,10 +94,13 @@ class ROSPublisherManager:
         return profile
 
     def create_publishers_for_registry(self, sensor_registry: SensorRegistry):
-        """Create publishers for all sensors in registry.
+        """
+        Create publishers for all sensors in registry.
 
         Args:
+        ----
             sensor_registry: Sensor registry
+
         """
         for sensor_id, sensor_config in sensor_registry.get_all_sensors().items():
             if sensor_config.sensor_type.startswith("pseudo."):
@@ -99,13 +109,17 @@ class ROSPublisherManager:
             self.create_publisher_for_sensor(sensor_config)
 
     def create_publisher_for_sensor(self, sensor_config: SensorConfig) -> bool:
-        """Create publisher for a sensor.
+        """
+        Create publisher for a sensor.
 
         Args:
+        ----
             sensor_config: Sensor configuration
 
-        Returns:
+        Returns
+        -------
             True if publisher created, False otherwise
+
         """
         try:
             sensor_type = sensor_config.carla_type
@@ -127,13 +141,17 @@ class ROSPublisherManager:
             return False
 
     def _create_camera_publishers(self, sensor_config: SensorConfig) -> bool:
-        """Create camera image and info publishers.
+        """
+        Create camera image and info publishers.
 
         Args:
+        ----
             sensor_config: Sensor configuration
 
-        Returns:
+        Returns
+        -------
             True if created successfully
+
         """
         qos = self.get_qos_profile(sensor_config.qos_profile)
 
@@ -164,16 +182,20 @@ class ROSPublisherManager:
         publisher_dict: Dict,
         sensor_type_name: str,
     ) -> bool:
-        """Create a single-topic publisher (LiDAR, IMU, or GNSS).
+        """
+        Create a single-topic publisher (LiDAR, IMU, or GNSS).
 
         Args:
+        ----
             sensor_config: Sensor configuration
             msg_type: ROS message type class
             publisher_dict: Dictionary to store publisher
             sensor_type_name: Human-readable sensor type name for logging
 
-        Returns:
+        Returns
+        -------
             True if created successfully
+
         """
         if not sensor_config.topic:
             self.logger.error(
@@ -206,12 +228,15 @@ class ROSPublisherManager:
         )
 
     def publish_camera_data(self, sensor_id: str, image_msg: Image, camera_info_msg: CameraInfo):
-        """Publish camera image and info.
+        """
+        Publish camera image and info.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             image_msg: Image message
             camera_info_msg: Camera info message
+
         """
         if sensor_id in self.camera_publishers:
             self.camera_publishers[sensor_id].publish(image_msg)
@@ -220,44 +245,57 @@ class ROSPublisherManager:
             self.camera_info_publishers[sensor_id].publish(camera_info_msg)
 
     def publish_lidar_data(self, sensor_id: str, pointcloud_msg: PointCloud2):
-        """Publish LiDAR pointcloud.
+        """
+        Publish LiDAR pointcloud.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             pointcloud_msg: PointCloud2 message
+
         """
         if sensor_id in self.lidar_publishers:
             self.lidar_publishers[sensor_id].publish(pointcloud_msg)
 
     def publish_imu_data(self, sensor_id: str, imu_msg: Imu):
-        """Publish IMU data.
+        """
+        Publish IMU data.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             imu_msg: IMU message
+
         """
         if sensor_id in self.imu_publishers:
             self.imu_publishers[sensor_id].publish(imu_msg)
 
     def publish_gnss_data(self, sensor_id: str, pose_msg: PoseWithCovarianceStamped):
-        """Publish GNSS pose.
+        """
+        Publish GNSS pose.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             pose_msg: Pose with covariance message
+
         """
         if sensor_id in self.gnss_publishers:
             self.gnss_publishers[sensor_id].publish(pose_msg)
 
     def get_publisher(self, sensor_id: str, publisher_type: str = "main") -> Optional[Any]:
-        """Get publisher by sensor ID.
+        """
+        Get publisher by sensor ID.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             publisher_type: Type of publisher ('main' or 'info')
 
-        Returns:
+        Returns
+        -------
             Publisher instance or None
+
         """
         if publisher_type == "info":
             return self.camera_info_publishers.get(sensor_id)
