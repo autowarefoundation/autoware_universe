@@ -40,6 +40,7 @@ public:
   {
     RequiredSubscriptionInfo required_subscription_info;
     required_subscription_info.no_ground_pointcloud = true;
+    required_subscription_info.predicted_objects = true;
     return required_subscription_info;
   }
 
