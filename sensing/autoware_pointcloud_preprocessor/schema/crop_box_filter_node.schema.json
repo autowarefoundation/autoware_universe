@@ -41,6 +41,11 @@
           "description": "if true, remove points within the box from the pointcloud; otherwise, remove points outside the box.",
           "default": "false"
         },
+        "use_ray_intersection": {
+          "type": "boolean",
+          "description": "if true, filters points in and behind the crop box, as determined by the line segment between the origin and each point. ",
+          "default": "false"
+        },
         "processing_time_threshold_sec": {
           "type": "number",
           "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
@@ -55,6 +60,7 @@
         "max_y",
         "max_z",
         "negative",
+        "use_ray_intersection",
         "processing_time_threshold_sec"
       ],
       "additionalProperties": false
