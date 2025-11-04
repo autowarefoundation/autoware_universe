@@ -244,6 +244,20 @@ class ROSPublisherManager:
         if sensor_id in self.camera_info_publishers:
             self.camera_info_publishers[sensor_id].publish(camera_info_msg)
 
+    def _publish_sensor_data(self, sensor_id: str, msg: Any, publishers_dict: Dict[str, Any]):
+        """
+        Publish sensor data to the appropriate publisher.
+
+        Args:
+        ----
+            sensor_id: Sensor identifier
+            msg: Message to publish
+            publishers_dict: Dictionary containing publishers
+
+        """
+        if sensor_id in publishers_dict:
+            publishers_dict[sensor_id].publish(msg)
+
     def publish_lidar_data(self, sensor_id: str, pointcloud_msg: PointCloud2):
         """
         Publish LiDAR pointcloud.
@@ -254,8 +268,7 @@ class ROSPublisherManager:
             pointcloud_msg: PointCloud2 message
 
         """
-        if sensor_id in self.lidar_publishers:
-            self.lidar_publishers[sensor_id].publish(pointcloud_msg)
+        self._publish_sensor_data(sensor_id, pointcloud_msg, self.lidar_publishers)
 
     def publish_imu_data(self, sensor_id: str, imu_msg: Imu):
         """
@@ -267,8 +280,7 @@ class ROSPublisherManager:
             imu_msg: IMU message
 
         """
-        if sensor_id in self.imu_publishers:
-            self.imu_publishers[sensor_id].publish(imu_msg)
+        self._publish_sensor_data(sensor_id, imu_msg, self.imu_publishers)
 
     def publish_gnss_data(self, sensor_id: str, pose_msg: PoseWithCovarianceStamped):
         """
@@ -280,8 +292,7 @@ class ROSPublisherManager:
             pose_msg: Pose with covariance message
 
         """
-        if sensor_id in self.gnss_publishers:
-            self.gnss_publishers[sensor_id].publish(pose_msg)
+        self._publish_sensor_data(sensor_id, pose_msg, self.gnss_publishers)
 
     def get_publisher(self, sensor_id: str, publisher_type: str = "main") -> Optional[Any]:
         """
