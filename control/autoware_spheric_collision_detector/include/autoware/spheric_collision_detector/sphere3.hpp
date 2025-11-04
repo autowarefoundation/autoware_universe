@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
-#define SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
+#ifndef AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
+#define AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>
@@ -36,4 +36,4 @@ public:
 };
 }  // namespace sphere3
 
-#endif  // SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
+#endif  // AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_

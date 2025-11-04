@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace
-{  
+{
 template <class T>
 bool update_param(
   const std::vector<rclcpp::Parameter> & params, const std::string & name, T & value)
@@ -49,7 +49,6 @@ namespace spheric_collision_detector
 SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOptions & node_options)
 : Node("spheric_collision_detector_node", node_options), updater_(this)
 {
-
   using std::placeholders::_1;
 
   // Node Parameter
@@ -61,7 +60,7 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   // Dynamic Reconfigure
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&SphericCollisionDetectorNode::paramCallback, this, _1));
-    
+
   // Core
   spheric_collision_detector_ = std::make_unique<SphericCollisionDetector>(*this);
   spheric_collision_detector_->setParam(param_);
@@ -130,7 +129,7 @@ bool SphericCollisionDetectorNode::isDataReady()
     return false;
   }
 
-   if (!object_recognition_) {
+  if (!object_recognition_) {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for object_recognition msg...");
@@ -146,7 +145,7 @@ bool SphericCollisionDetectorNode::isDataReady()
 
   if (!current_twist_) {
     RCLCPP_INFO_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000 /* ms */, 
+      this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for current_twist msg...");
     return false;
   }
@@ -177,15 +176,14 @@ void SphericCollisionDetectorNode::onTimer()
     const auto & header = object_recognition_->header;
     try {
       object_recognition_transform_ = tf_buffer_.lookupTransform(
-        "map", header.frame_id, header.stamp,
-        rclcpp::Duration::from_seconds(0.01));
+        "map", header.frame_id, header.stamp, rclcpp::Duration::from_seconds(0.01));
     } catch (tf2::TransformException & ex) {
       RCLCPP_INFO(
         this->get_logger(), "scd: Could not transform map to %s: %s", header.frame_id.c_str(),
         ex.what());
       return;
     }
-  } 
+  }
 
   if (!isDataReady()) {
     return;
@@ -201,7 +199,7 @@ void SphericCollisionDetectorNode::onTimer()
   input_.current_twist = current_twist_;
   input_.object_recognition_transform = object_recognition_transform_;
   output_.will_collide = false;
-  
+
   output_ = spheric_collision_detector_->update(input_);
 
   // Force an immediate update as the state of the node has changed
@@ -311,14 +309,14 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
       create_marker_scale(0.05, 0.05, 0.05), color);
 
     for (const auto & ego_passing_area : output_.vehicle_passing_areas) {
-        const auto c = ego_passing_area->center_;
-        const auto dm = 2.0 * ego_passing_area->radius_;
+      const auto c = ego_passing_area->center_;
+      const auto dm = 2.0 * ego_passing_area->radius_;
 
-        marker.scale.x = dm;
-        marker.scale.y = dm;
-        marker.scale.z = dm; 
+      marker.scale.x = dm;
+      marker.scale.y = dm;
+      marker.scale.z = dm;
 
-        marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
+      marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
     }
 
     marker_array.markers.push_back(marker);
@@ -329,14 +327,14 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
       "map", this->now(), "scd_obstacle_spheres", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
       create_marker_scale(0.03, 0.03, 0.03), create_marker_color(1.0, 1.0, 0.0, 0.5));
 
-    for(const auto & obstacle:output_.obstacles){
-      for (const auto & obstacle_sphere : obstacle){
+    for (const auto & obstacle : output_.obstacles) {
+      for (const auto & obstacle_sphere : obstacle) {
         const auto c = obstacle_sphere->center_;
         const auto dm = 2.0 * obstacle_sphere->radius_;
 
         marker.scale.x = dm;
         marker.scale.y = dm;
-        marker.scale.z = dm; 
+        marker.scale.z = dm;
 
         marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
       }
