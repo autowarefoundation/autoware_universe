@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_vad/vad_node.hpp"
+
 #include "autoware/tensorrt_vad/utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
@@ -24,6 +25,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -93,8 +95,7 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 
   // Create VadInterfaceConfig using model parameters from JSON
   vad_interface_config_ = std::make_unique<VadInterfaceConfig>(
-    model_params.target_image_width,
-    model_params.target_image_height,
+    model_params.target_image_width, model_params.target_image_height,
     declare_parameter<std::vector<double>>("interface_params.detection_range"),
     declare_parameter<int32_t>("model_params.default_command"),
     model_params.map_classes,  // From JSON
@@ -376,109 +377,62 @@ void VadNode::load_detection_range(VadConfig & config)
   }
 }
 
+void VadNode::load_classification_config(const ClassificationConfig & params)
+{
+  if (params.class_names.size() != params.thresholds.size()) {
+    RCLCPP_ERROR(
+      this->get_logger(), "%s: class_names (%zu) and thresholds (%zu) size mismatch",
+      params.validation_context.c_str(), params.class_names.size(), params.thresholds.size());
+    throw std::runtime_error(params.validation_context + ": Parameter array length mismatch");
+  }
+
+  params.target_class_names->assign(params.class_names.begin(), params.class_names.end());
+  if (params.num_classes != nullptr) {
+    *params.num_classes = static_cast<int32_t>(params.class_names.size());
+  }
+
+  params.target_thresholds->clear();
+  for (std::size_t i = 0; i < params.class_names.size(); ++i) {
+    (*params.target_thresholds)[params.class_names[i]] = static_cast<float>(params.thresholds[i]);
+  }
+}
+
 void VadNode::load_map_configuration(VadConfig & config)
 {
-  const auto map_class_names =
-    this->get_parameter("model_params.map_class_names").as_string_array();
-  const auto map_thresholds =
-    this->get_parameter("model_params.map_confidence_thresholds").as_double_array();
-
-  if (map_class_names.size() != map_thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "map_class_names (%zu) and map_confidence_thresholds (%zu) must have the same size",
-      map_class_names.size(), map_thresholds.size());
-    throw std::runtime_error(
-      "Parameter array length mismatch: map_class_names and map_confidence_thresholds");
-  }
-
-  config.map_class_names.assign(map_class_names.begin(), map_class_names.end());
-  config.map_num_classes = static_cast<int32_t>(map_class_names.size());
-  config.map_confidence_thresholds.clear();
-
-  for (std::size_t i = 0; i < map_class_names.size(); ++i) {
-    config.map_confidence_thresholds[map_class_names[i]] = static_cast<float>(map_thresholds[i]);
-  }
+  load_classification_config(
+    {this->get_parameter("model_params.map_class_names").as_string_array(),
+     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
+     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
+     "load_map_configuration"});
 }
 
 void VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  // Use class names from model param.json
-  config.map_class_names = model_params.map_classes;
-  config.map_num_classes = static_cast<int32_t>(model_params.map_classes.size());
-
-  // Load confidence thresholds from YAML (deployment-specific)
-  const auto map_thresholds =
-    this->get_parameter("model_params.map_confidence_thresholds").as_double_array();
-
-  if (config.map_class_names.size() != map_thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "map_class_names from param.json (%zu) and map_confidence_thresholds from YAML (%zu) must "
-      "have the same size",
-      config.map_class_names.size(), map_thresholds.size());
-    throw std::runtime_error(
-      "Parameter array length mismatch: map_class_names and map_confidence_thresholds");
-  }
-
-  config.map_confidence_thresholds.clear();
-  for (std::size_t i = 0; i < config.map_class_names.size(); ++i) {
-    config.map_confidence_thresholds[config.map_class_names[i]] =
-      static_cast<float>(map_thresholds[i]);
-  }
+  load_classification_config(
+    {model_params.map_classes,
+     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
+     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
+     "load_map_configuration_with_model_params"});
 }
 
 void VadNode::load_object_configuration(VadConfig & config)
 {
-  const auto object_class_names =
-    this->get_parameter("model_params.object_class_names").as_string_array();
-  const auto object_thresholds =
-    this->get_parameter("model_params.object_confidence_thresholds").as_double_array();
-
-  if (object_class_names.size() != object_thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "object_class_names (%zu) and object_confidence_thresholds (%zu) must have the same size",
-      object_class_names.size(), object_thresholds.size());
-    throw std::runtime_error(
-      "Parameter array length mismatch: object_class_names and object_confidence_thresholds");
-  }
-
-  config.bbox_class_names.assign(object_class_names.begin(), object_class_names.end());
-  config.object_confidence_thresholds.clear();
-
-  for (std::size_t i = 0; i < object_class_names.size(); ++i) {
-    config.object_confidence_thresholds[object_class_names[i]] =
-      static_cast<float>(object_thresholds[i]);
-  }
+  load_classification_config(
+    {this->get_parameter("model_params.object_class_names").as_string_array(),
+     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
+     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
+     "load_object_configuration"});
 }
 
 void VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  // Use class names from model param.json
-  config.bbox_class_names = model_params.object_classes;
-
-  // Load confidence thresholds from YAML (deployment-specific)
-  const auto object_thresholds =
-    this->get_parameter("model_params.object_confidence_thresholds").as_double_array();
-
-  if (config.bbox_class_names.size() != object_thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "object_class_names from param.json (%zu) and object_confidence_thresholds from YAML (%zu) "
-      "must have the same size",
-      config.bbox_class_names.size(), object_thresholds.size());
-    throw std::runtime_error(
-      "Parameter array length mismatch: object_class_names and object_confidence_thresholds");
-  }
-
-  config.object_confidence_thresholds.clear();
-  for (std::size_t i = 0; i < config.bbox_class_names.size(); ++i) {
-    config.object_confidence_thresholds[config.bbox_class_names[i]] =
-      static_cast<float>(object_thresholds[i]);
-  }
+  load_classification_config(
+    {model_params.object_classes,
+     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
+     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
+     "load_object_configuration_with_model_params"});
 }
 
 void VadNode::load_image_normalization(VadConfig & config)

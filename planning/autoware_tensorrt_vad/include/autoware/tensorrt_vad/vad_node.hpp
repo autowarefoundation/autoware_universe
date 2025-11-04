@@ -77,8 +77,20 @@ private:
     autoware::tensorrt_common::TrtCommonConfig>
   load_trt_common_configs();
 
+  // Helper struct to reduce function arguments and eliminate duplication
+  struct ClassificationConfig
+  {
+    std::vector<std::string> class_names;
+    std::vector<double> thresholds;
+    std::vector<std::string> * target_class_names;
+    std::map<std::string, float> * target_thresholds;
+    int32_t * num_classes;
+    std::string validation_context;
+  };
+
   // Helper methods for load_vad_config
   void load_detection_range(VadConfig & config);
+  void load_classification_config(const ClassificationConfig & params);
   void load_map_configuration(VadConfig & config);
   void load_object_configuration(VadConfig & config);
   void load_map_configuration_with_model_params(

@@ -163,7 +163,7 @@ model_params:
 
 | Version | Training Dataset  | Release Date | Notes                                                                                                          | Node Compatibility |
 | ------- | ----------------- | ------------ | -------------------------------------------------------------------------------------------------------------- | ------------------ |
-| **0.1** | Bench2Drive CARLA | 2025-01      | - Initial release<br>- 6-camera surround view<br>- Trained on CARLA Towns 01-07<br>- FP16/FP32 mixed precision | >= 0.1.0           |
+| **0.1** | Bench2Drive CARLA | 2025-11-04      | - Initial release<br>- 6-camera surround view<br>- Trained on CARLA Towns<br>- FP16/FP32 mixed precision | >= 0.1.0           |
 
 ---
 
