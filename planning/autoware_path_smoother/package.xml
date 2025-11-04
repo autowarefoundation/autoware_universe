@@ -6,6 +6,7 @@
   <description>The autoware_path_smoother package</description>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
+  <maintainer email="arjun.ram@tier4.jp">Arjun Ram</maintainer>
   <license>Apache License 2.0</license>
 
   <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>

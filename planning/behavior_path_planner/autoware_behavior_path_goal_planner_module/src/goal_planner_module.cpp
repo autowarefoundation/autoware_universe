@@ -1514,6 +1514,9 @@ void GoalPlannerModule::decideVelocity(PullOverPath & pull_over_path)
   const double current_vel = planner_data_->self_odometry->twist.twist.linear.x;
 
   // partial_paths
+  if (pull_over_path.partial_paths().empty()) {
+    return;
+  }
   auto & first_path = pull_over_path.partial_paths().front();
   const auto vel =
     static_cast<float>(std::max(current_vel, parameters_.pull_over_minimum_velocity));
@@ -2149,6 +2152,11 @@ TurnSignalInfo GoalPlannerModule::calcTurnSignalInfo(const PullOverContextData &
     if (pull_over_path.type() == PullOverPlannerType::SHIFT) {
       return false;
     }
+    if (
+      pull_over_path.partial_paths().empty() ||
+      pull_over_path.partial_paths().front().points.empty()) {
+      return false;
+    }
     constexpr double distance_threshold = 1.0;
     const auto stop_point = pull_over_path.partial_paths().front().points.back();
     const double distance_from_ego_to_stop_point = std::abs(
@@ -2245,6 +2253,10 @@ void GoalPlannerModule::deceleratePath(PullOverPath & pull_over_path) const
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   assert(goal_searcher_);
   const auto & goal_searcher = goal_searcher_.value();
+
+  if (pull_over_path.partial_paths().empty()) {
+    return;
+  }
 
   // decelerate before the search area start
   const auto & route_handler = planner_data_->route_handler;
