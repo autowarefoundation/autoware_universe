@@ -454,15 +454,16 @@ std::vector<TimeOverlapIntervalPair> filter_time_overlap_intervals(
   for (const auto & interval : intervals) {
     const auto is_before_min_arc_length =
       interval.ego.first_intersection.arc_length <= min_arc_length;
-    const universe_utils::MultiPoint2d interval_intersections = {
-      interval.ego.first_intersection.intersection, interval.ego.last_intersection.intersection};
+    const universe_utils::MultiPoint2d first_intersections = {
+      interval.ego.first_intersection.intersection,
+      interval.object.first_intersection.intersection};
     const auto can_be_ignored =
       interval.ego.first_intersection.ego_time >= params.start_ignore_collisions_time &&
       interval.ego.first_intersection.arc_length >= params.start_ignore_collisions_distance;
     const auto ignored =
       can_be_ignored &&
       !filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
-        interval_intersections, filtering_data.ignore_collisions_polygons);
+        first_intersections, filtering_data.ignore_collisions_polygons);
     if (!is_before_min_arc_length && !ignored) {
       filtered_overlap_intervals.push_back(interval);
     }
