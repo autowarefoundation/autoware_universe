@@ -2,7 +2,7 @@
 
 ### Role
 
-If pointcloud or predicted objects are detected in a detection area defined on a map, the stop planning will be executed at the predetermined point. The module can detect various object types including cars, buses, trucks, and other vehicles or pedestrians based on the configured target filtering parameters.
+If pointcloud or predicted objects are detected in a detection area defined on a map, the stop planning will be executed at the predetermined point.
 
 ![brief](./docs/detection_area.svg)
 
@@ -25,25 +25,23 @@ This module is activated when there is a detection area on the target lane.
 | `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
 | `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
 | `enable_detected_obstacle_logging`  | bool   | [-] enable/disable logging of detected obstacle positions, time elapsed since last detection, and ego vehicle position when ego-vehicle is in STOP state |
-| `target_filtering.pointcloud`       | bool   | [-] whether to use pointcloud for obstacle detection                                                                                                     |
-| `target_filtering.unknown`          | bool   | [-] whether to stop for UNKNOWN objects in detection area                                                                                                |
-| `target_filtering.car`              | bool   | [-] whether to stop for CAR objects in detection area                                                                                                    |
-| `target_filtering.truck`            | bool   | [-] whether to stop for TRUCK objects in detection area                                                                                                  |
-| `target_filtering.bus`              | bool   | [-] whether to stop for BUS objects in detection area                                                                                                    |
-| `target_filtering.trailer`          | bool   | [-] whether to stop for TRAILER objects in detection area                                                                                                |
-| `target_filtering.motorcycle`       | bool   | [-] whether to stop for MOTORCYCLE objects in detection area                                                                                             |
-| `target_filtering.bicycle`          | bool   | [-] whether to stop for BICYCLE objects in detection area                                                                                                |
-| `target_filtering.pedestrian`       | bool   | [-] whether to stop for PEDESTRIAN objects in detection area                                                                                             |
-| `target_filtering.animal`           | bool   | [-] whether to stop for ANIMAL objects in detection area                                                                                                 |
-| `target_filtering.hazard`           | bool   | [-] whether to stop for HAZARD objects (dangerous objects) in detection area                                                                             |
-| `target_filtering.over_drivable`    | bool   | [-] whether to stop for OVER_DRIVABLE objects (e.g., leaves) in detection area                                                                           |
-| `target_filtering.under_drivable`   | bool   | [-] whether to stop for UNDER_DRIVABLE objects (e.g., overpass) in detection area                                                                        |
+| `target_filtering.pointcloud`       | bool   | [-] whether to stop for pointcloud detection                                                                                                             |
+| `target_filtering.unknown`          | bool   | [-] whether to stop for UNKNOWN objects area                                                                                                             |
+| `target_filtering.car`              | bool   | [-] whether to stop for CAR objects area                                                                                                                 |
+| `target_filtering.truck`            | bool   | [-] whether to stop for TRUCK objects area                                                                                                               |
+| `target_filtering.bus`              | bool   | [-] whether to stop for BUS objects area                                                                                                                 |
+| `target_filtering.trailer`          | bool   | [-] whether to stop for TRAILER objects area                                                                                                             |
+| `target_filtering.motorcycle`       | bool   | [-] whether to stop for MOTORCYCLE objects area                                                                                                          |
+| `target_filtering.bicycle`          | bool   | [-] whether to stop for BICYCLE objects area                                                                                                             |
+| `target_filtering.pedestrian`       | bool   | [-] whether to stop for PEDESTRIAN objects area                                                                                                          |
+| `target_filtering.animal`           | bool   | [-] whether to stop for ANIMAL objects area                                                                                                              |
+| `target_filtering.hazard`           | bool   | [-] whether to stop for HAZARD objects area                                                                                                              |
+| `target_filtering.over_drivable`    | bool   | [-] whether to stop for OVER_DRIVABLE objects area                                                                                                       |
+| `target_filtering.under_drivable`   | bool   | [-] whether to stop for UNDER_DRIVABLE objects area                                                                                                      |
 
 ### Inner-workings / Algorithm
 
 1. Gets a detection area and stop line from map information and confirms if there are obstacles in the detection area
-   - If `target_filtering.pointcloud` is enabled, checks for pointcloud obstacles
-   - If no pointcloud obstacles are found and predicted objects are available, checks for predicted objects based on configured object types (unknown, car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, over_drivable, under_drivable)
 2. Inserts stop point l[m] in front of the stop line
 3. Inserts a pass judge point to a point where the vehicle can stop with a max deceleration
 4. Sets velocity as zero behind the stop line when the ego-vehicle is in front of the pass judge point
@@ -65,14 +63,7 @@ The module stops the vehicle if either detection source finds an obstacle. For p
 title modifyPathVelocity
 start
 
-:check obstacles in detection area;
-note right
-  1. If target_filtering.pointcloud is enabled,
-     check pointcloud in detection area
-  2. If no pointcloud obstacle found,
-     check predicted objects based on
-     target_filtering settings
-end note
+:check obstacles area;
 
 if (obstacle detected?) then (no)
 else (yes)
