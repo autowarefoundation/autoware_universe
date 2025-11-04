@@ -115,8 +115,9 @@ protected:
 private:
   struct CropBoxParam
   {
-    CropBox box;
+    CropBox box{};
     bool negative{false};
+    bool use_ray_intersection{false};
     double processing_time_threshold_sec{0.0};
   } param_;
 

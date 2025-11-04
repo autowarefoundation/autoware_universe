@@ -131,6 +131,7 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
     p.box.max_y = declare_parameter<double>("max_y");
     p.box.max_z = declare_parameter<double>("max_z");
     p.negative = declare_parameter<bool>("negative");
+    p.use_ray_intersection = declare_parameter<bool>("use_ray_intersection");
     p.processing_time_threshold_sec = declare_parameter<double>("processing_time_threshold_sec");
     if (tf_input_frame_.empty()) {
       throw std::invalid_argument("Crop box requires non-empty input_frame");
@@ -189,6 +190,11 @@ void CropBoxFilterComponent::faster_filter(
 
   int skipped_count = 0;
 
+  Eigen::Vector4f lidar_origin = {0, 0, 0, 1};
+  if (transform_info.need_transform) {
+    lidar_origin = transform_info.eigen_transform * lidar_origin;
+  }
+
   for (size_t global_offset = 0; global_offset + input->point_step <= input->data.size();
        global_offset += input->point_step) {
     Eigen::Vector4f point;
@@ -206,9 +212,13 @@ void CropBoxFilterComponent::faster_filter(
       point = transform_info.eigen_transform * point;
     }
 
-    bool point_is_inside = point[2] > param_.box.min_z && point[2] < param_.box.max_z &&
-                           point[1] > param_.box.min_y && point[1] < param_.box.max_y &&
-                           point[0] > param_.box.min_x && point[0] < param_.box.max_x;
+    bool point_is_inside{};
+    if (param_.use_ray_intersection) {
+      point_is_inside = does_line_segment_intersect_crop_box(lidar_origin, point, param_.box);
+    } else {
+      point_is_inside = is_point_inside_crop_box(point, param_.box);
+    }
+
     if ((!param_.negative && point_is_inside) || (param_.negative && !point_is_inside)) {
       memcpy(&output.data[output_size], &input->data[global_offset], input->point_step);
 
@@ -360,12 +370,14 @@ rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
     get_param(p, "min_x", new_param.box.min_x) && get_param(p, "min_y", new_param.box.min_y) &&
     get_param(p, "min_z", new_param.box.min_z) && get_param(p, "max_x", new_param.box.max_x) &&
     get_param(p, "max_y", new_param.box.max_y) && get_param(p, "max_z", new_param.box.max_z) &&
-    get_param(p, "negative", new_param.negative)) {
+    get_param(p, "negative", new_param.negative) &&
+    get_param(p, "use_ray_intersection", new_param.use_ray_intersection)) {
     if (
       param_.box.min_x != new_param.box.min_x || param_.box.max_x != new_param.box.max_x ||
       param_.box.min_y != new_param.box.min_y || param_.box.max_y != new_param.box.max_y ||
       param_.box.min_z != new_param.box.min_z || param_.box.max_z != new_param.box.max_z ||
-      param_.negative != new_param.negative) {
+      param_.negative != new_param.negative ||
+      param_.use_ray_intersection != new_param.use_ray_intersection) {
       RCLCPP_DEBUG(
         get_logger(), "[%s::param_callback] Setting the minimum point to: %f %f %f.", get_name(),
         new_param.box.min_x, new_param.box.min_y, new_param.box.min_z);
@@ -375,6 +387,9 @@ rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
       RCLCPP_DEBUG(
         get_logger(), "[%s::param_callback] Setting the filter negative flag to: %s.", get_name(),
         new_param.negative ? "true" : "false");
+      RCLCPP_DEBUG(
+        get_logger(), "[%s::param_callback] Setting the use ray intersection flag to: %s.", get_name(),
+        new_param.use_ray_intersection ? "true" : "false");
       param_ = new_param;
     }
   }
