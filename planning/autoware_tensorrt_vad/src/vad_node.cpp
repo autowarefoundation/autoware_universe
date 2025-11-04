@@ -35,7 +35,7 @@
 
 namespace autoware::tensorrt_vad
 {
-template <typename MsgType>
+template<typename MsgType>
 bool VadNode::process_callback(
   const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
   std::function<void(const typename MsgType::ConstSharedPtr)> setter)
@@ -114,11 +114,11 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 
   candidate_trajectories_publisher_ =
     this->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-      "~/output/trajectories", rclcpp::QoS(1));
+    "~/output/trajectories", rclcpp::QoS(1));
 
   predicted_objects_publisher_ =
     this->create_publisher<autoware_perception_msgs::msg::PredictedObjects>(
-      "~/output/objects", rclcpp::QoS(1));
+    "~/output/objects", rclcpp::QoS(1));
 
   map_points_publisher_ =
     this->create_publisher<visualization_msgs::msg::MarkerArray>("~/output/map", rclcpp::QoS(1));
@@ -146,8 +146,8 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 
   // TF static subscriber (transient local for persistence)
   auto tf_static_qos = rclcpp::QoS(1)
-                         .reliability(rclcpp::ReliabilityPolicy::Reliable)
-                         .durability(rclcpp::DurabilityPolicy::TransientLocal);
+    .reliability(rclcpp::ReliabilityPolicy::Reliable)
+    .durability(rclcpp::DurabilityPolicy::TransientLocal);
   tf_static_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
     "/tf_static", tf_static_qos,
     std::bind(&VadNode::tf_static_callback, this, std::placeholders::_1));
@@ -401,9 +401,9 @@ void VadNode::load_map_configuration(VadConfig & config)
 {
   load_classification_config(
     {this->get_parameter("model_params.map_class_names").as_string_array(),
-     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
-     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
-     "load_map_configuration"});
+      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
+      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
+      "load_map_configuration"});
 }
 
 void VadNode::load_map_configuration_with_model_params(
@@ -411,18 +411,18 @@ void VadNode::load_map_configuration_with_model_params(
 {
   load_classification_config(
     {model_params.map_classes,
-     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
-     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
-     "load_map_configuration_with_model_params"});
+      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
+      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
+      "load_map_configuration_with_model_params"});
 }
 
 void VadNode::load_object_configuration(VadConfig & config)
 {
   load_classification_config(
     {this->get_parameter("model_params.object_class_names").as_string_array(),
-     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
-     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
-     "load_object_configuration"});
+      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
+      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
+      "load_object_configuration"});
 }
 
 void VadNode::load_object_configuration_with_model_params(
@@ -430,9 +430,9 @@ void VadNode::load_object_configuration_with_model_params(
 {
   load_classification_config(
     {model_params.object_classes,
-     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
-     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
-     "load_object_configuration_with_model_params"});
+      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
+      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
+      "load_object_configuration_with_model_params"});
 }
 
 void VadNode::load_image_normalization(VadConfig & config)
@@ -614,17 +614,17 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
         this->get_logger(), "use_raw parameter size (%zu) does not match num_cameras (%d)",
         use_raw_cameras.size(), num_cameras_);
       throw std::runtime_error(
-        "Parameter array length mismatch: use_raw size must match num_cameras");
+              "Parameter array length mismatch: use_raw size must match num_cameras");
     }
 
     auto resolve_topic_name = [this](const std::string & query) {
-      return this->get_node_topics_interface()->resolve_topic_name(query);
-    };
+        return this->get_node_topics_interface()->resolve_topic_name(query);
+      };
     for (int32_t i = 0; i < num_cameras_; ++i) {
       const auto transport = use_raw_cameras[i] ? "raw" : "compressed";
       auto callback = [this, i](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-        this->image_callback(msg, i);
-      };
+          this->image_callback(msg, i);
+        };
 
       const auto image_topic = resolve_topic_name("~/input/image" + std::to_string(i));
       RCLCPP_INFO(
@@ -645,8 +645,8 @@ void VadNode::create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos
   camera_info_subs_.resize(num_cameras_);
   for (int32_t i = 0; i < num_cameras_; ++i) {
     auto callback = [this, i](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
-      this->camera_info_callback(msg, i);
-    };
+        this->camera_info_callback(msg, i);
+      };
 
     camera_info_subs_[i] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
       "~/input/camera_info" + std::to_string(i), camera_info_qos, callback);

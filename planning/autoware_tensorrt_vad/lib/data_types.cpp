@@ -27,7 +27,8 @@ bool VadInputTopicData::is_complete() const
   // Check if vector sizes match expected camera count
   if (
     static_cast<int32_t>(images.size()) != num_cameras_ ||
-    static_cast<int32_t>(camera_infos.size()) != num_cameras_) {
+    static_cast<int32_t>(camera_infos.size()) != num_cameras_)
+  {
     return false;
   }
 

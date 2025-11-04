@@ -45,7 +45,7 @@ std::vector<autoware::tensorrt_common::NetworkIO> Head::setup_network_io(
   nvinfer1::Dims mlvl_dims{
     5,
     {1, vad_config.num_cameras, vad_config.bev_feature_dim, downsampled_image_height,
-     downsampled_image_width}};
+      downsampled_image_width}};
   nvinfer1::Dims can_bus_dims{2, {1, vad_config.can_bus_dim}};
   nvinfer1::Dims lidar2img_dims{3, {vad_config.num_cameras, 4, 4}};
   nvinfer1::Dims shift_dims{2, {1, 2}};
@@ -56,7 +56,7 @@ std::vector<autoware::tensorrt_common::NetworkIO> Head::setup_network_io(
   nvinfer1::Dims traj_preds_dims{
     5,
     {3, 1, vad_config.prediction_num_queries, vad_config.prediction_trajectory_modes,
-     vad_config.prediction_timesteps * 2}};
+      vad_config.prediction_timesteps * 2}};
   nvinfer1::Dims traj_cls_dims{
     4, {3, 1, vad_config.prediction_num_queries, vad_config.prediction_trajectory_modes}};
   nvinfer1::Dims bbox_preds_dims{

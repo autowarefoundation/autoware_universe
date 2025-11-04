@@ -57,9 +57,10 @@ inline void check_model_version(const std::string & json_path)
   const int major_version = j["major_version"].get<int>();
   if (major_version != constants::SUPPORTED_MAJOR_VERSION) {
     throw std::runtime_error(
-      "Unsupported major_version: " + std::to_string(major_version) +
-      ". This node supports major_version " + std::to_string(constants::SUPPORTED_MAJOR_VERSION) +
-      ". " + error_msg);
+            "Unsupported major_version: " + std::to_string(major_version) +
+            ". This node supports major_version " +
+            std::to_string(constants::SUPPORTED_MAJOR_VERSION) +
+            ". " + error_msg);
   }
 }
 

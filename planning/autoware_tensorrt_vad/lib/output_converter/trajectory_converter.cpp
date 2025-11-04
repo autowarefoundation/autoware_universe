@@ -38,11 +38,12 @@ OutputTrajectoryConverter::create_trajectory_points(
 
   // function to transform direction vector from base coordinate system to map coordinate system
   auto transform_direction_to_map = [&base2map_transform](
-                                      const float base_dx, const float base_dy) -> float {
-    Eigen::Vector3d base_direction(static_cast<double>(base_dx), static_cast<double>(base_dy), 0.0);
-    Eigen::Vector3d map_direction = base2map_transform.block<3, 3>(0, 0) * base_direction;
-    return std::atan2(map_direction.y(), map_direction.x());
-  };
+    const float base_dx, const float base_dy) -> float {
+      Eigen::Vector3d base_direction(static_cast<double>(base_dx), static_cast<double>(base_dy),
+        0.0);
+      Eigen::Vector3d map_direction = base2map_transform.block<3, 3>(0, 0) * base_direction;
+      return std::atan2(map_direction.y(), map_direction.x());
+    };
 
   // Add 0-second point (0,0)
   autoware_planning_msgs::msg::TrajectoryPoint initial_point;

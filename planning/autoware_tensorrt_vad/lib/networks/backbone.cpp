@@ -46,7 +46,7 @@ std::vector<autoware::tensorrt_common::NetworkIO> Backbone::setup_network_io(
   nvinfer1::Dims backbone_output_dims{
     5,
     {vad_config.num_cameras, 1, vad_config.bev_feature_dim, downsampled_image_height,
-     downsampled_image_width}};
+      downsampled_image_width}};
 
   std::vector<autoware::tensorrt_common::NetworkIO> backbone_network_io;
   backbone_network_io.emplace_back("img", camera_input_dims);

@@ -54,7 +54,7 @@ inline std::pair<std::string, std::string> parse_external_inputs(
 }
 
 // VAD model class - Handles inference using CUDA/TensorRT
-template <typename LoggerType>
+template<typename LoggerType>
 class VadModel
 {
 public:
@@ -254,7 +254,7 @@ private:
   {
     auto head_engine = std::find_if(
       vad_config_.nets_config.begin(), vad_config_.nets_config.end(),
-      [](const NetConfig & engine) { return engine.name == "head"; });
+      [](const NetConfig & engine) {return engine.name == "head";});
 
     if (head_engine == vad_config_.nets_config.end()) {
       logger_->error("Head engine configuration not found");

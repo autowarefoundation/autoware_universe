@@ -46,13 +46,15 @@ struct PredictedTrajectory
   float confidence;                              // Confidence of this trajectory
 
   // Default constructor
-  PredictedTrajectory() : confidence(0.0f)
+  PredictedTrajectory()
+  : confidence(0.0f)
   {
     // Default to empty trajectory
   }
 
   // Constructor with specific number of timesteps
-  explicit PredictedTrajectory(size_t timesteps) : confidence(0.0f)
+  explicit PredictedTrajectory(size_t timesteps)
+  : confidence(0.0f)
   {
     trajectory.resize(timesteps);
     // Initialize trajectory coordinates to 0
@@ -90,7 +92,8 @@ struct BBox
   std::vector<PredictedTrajectory> trajectories;  // Dynamic number of predicted trajectories
 
   // Default constructor
-  BBox() : confidence(0.0f), object_class(-1)
+  BBox()
+  : confidence(0.0f), object_class(-1)
   {
     // Initialize bbox coordinates to 0
     for (int32_t i = 0; i < 10; ++i) {
@@ -99,7 +102,8 @@ struct BBox
   }
 
   // Constructor with specific number of trajectory modes and timesteps
-  BBox(size_t trajectory_modes, size_t timesteps) : confidence(0.0f), object_class(-1)
+  BBox(size_t trajectory_modes, size_t timesteps)
+  : confidence(0.0f), object_class(-1)
   {
     // Initialize bbox coordinates to 0
     for (int32_t i = 0; i < 10; ++i) {

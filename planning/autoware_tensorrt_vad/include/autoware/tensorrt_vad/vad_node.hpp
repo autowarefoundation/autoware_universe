@@ -114,7 +114,7 @@ private:
   void anchor_callback();
 
   // Generic callback handler template
-  template <typename MsgType>
+  template<typename MsgType>
   bool process_callback(
     const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
     std::function<void(const typename MsgType::ConstSharedPtr)> setter);
