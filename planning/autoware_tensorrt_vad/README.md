@@ -143,14 +143,14 @@ If you need to manually configure the model paths, update them in `ml_package_va
 model_params:
   nets:
     backbone:
-      onnx_path: "$(var model_path)/vad-carla-tiny_backbone.onnx"
-      engine_path: "$(var model_path)/vad-carla-tiny_backbone.engine"
+      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.onnx"
+      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.engine"
     head:
-      onnx_path: "$(var model_path)/vad-carla-tiny_head.onnx"
-      engine_path: "$(var model_path)/vad-carla-tiny_head.engine"
+      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head.onnx"
+      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head.engine"
     head_no_prev:
-      onnx_path: "$(var model_path)/vad-carla-tiny_head_no_prev.onnx"
-      engine_path: "$(var model_path)/vad-carla-tiny_head_no_prev.engine"
+      onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"
+      engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"
 ```
 
 1. **Launch the node**: On first run, the node will automatically:

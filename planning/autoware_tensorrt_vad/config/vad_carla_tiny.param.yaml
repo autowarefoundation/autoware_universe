@@ -39,7 +39,7 @@
     # ==========================================================================
     # Path to model-specific parameters (architecture, normalization, classes)
     # This file is downloaded via Ansible with the model weights
-    model_param_path: $(env HOME)/autoware_data/vad/vad-carla-tiny.param.json
+    model_param_path: $(env HOME)/autoware_data/vad/v0.1/vad-carla-tiny.param.json
 
     # ==========================================================================
     # CAMERA HARDWARE CONFIGURATION (Deployment-Specific)
@@ -124,15 +124,15 @@
         # Backbone network: Feature extraction from images
         backbone:
           name: "backbone"
-          onnx_path: "$(var model_path)/vad-carla-tiny_backbone.onnx"
-          engine_path: "$(var model_path)/vad-carla-tiny_backbone.engine"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.engine"
           precision: "fp16"  # Half precision for GPU efficiency
 
         # Head network: Prediction head with history
         head:
           name: "head"
-          onnx_path: "$(var model_path)/vad-carla-tiny_head.onnx"
-          engine_path: "$(var model_path)/vad-carla-tiny_head.engine"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head.engine"
           precision: "fp32"  # Full precision for accuracy
           inputs:
             "input_feature": "mlvl_feats.0"
@@ -142,8 +142,8 @@
         # Head network: Initial prediction without history
         head_no_prev:
           name: "head_no_prev"
-          onnx_path: "$(var model_path)/vad-carla-tiny_head_no_prev.onnx"
-          engine_path: "$(var model_path)/vad-carla-tiny_head_no_prev.engine"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"
           precision: "fp32"  # Full precision for accuracy
           inputs:
             "input_feature": "mlvl_feats.0"
