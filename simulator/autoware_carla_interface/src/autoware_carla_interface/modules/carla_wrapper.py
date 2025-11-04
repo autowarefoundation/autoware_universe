@@ -269,8 +269,9 @@ class SensorWrapper(object):
     def cleanup(self):
         """Cleanup sensors robustly.
 
-        Stops and destroys all spawned sensors, continuing even if individual
-        sensors fail to clean up. This prevents resource leaks.
+        Stops and destroys all spawned sensors, continuing even if
+        individual sensors fail to clean up. This prevents resource
+        leaks.
         """
         cleanup_errors = []
 

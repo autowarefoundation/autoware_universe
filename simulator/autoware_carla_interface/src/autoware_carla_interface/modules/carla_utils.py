@@ -59,7 +59,8 @@ def _get_struct_fmt(is_bigendian, fields, field_names=None):
 
 
 def create_cloud(header, fields, points):
-    """Create a L{sensor_msgs.msg.PointCloud2} message with different datatype (Modified create_cloud function)."""
+    """Create a L{sensor_msgs.msg.PointCloud2} message with different datatype
+    (Modified create_cloud function)."""
     cloud_struct = struct.Struct(_get_struct_fmt(False, fields))
 
     buff = ctypes.create_string_buffer(cloud_struct.size * len(points))

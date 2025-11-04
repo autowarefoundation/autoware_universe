@@ -28,8 +28,7 @@ except ImportError:
 
 
 class CoordinateTransformer:
-    """
-    Transformer for converting between ROS and CARLA coordinate systems.
+    """Transformer for converting between ROS and CARLA coordinate systems.
 
     ROS uses right-handed coordinate system: X-forward, Y-left, Z-up
     CARLA (Unreal Engine) uses left-handed: X-forward, Y-right, Z-up
@@ -39,8 +38,7 @@ class CoordinateTransformer:
     def base_link_to_vehicle_center(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> tuple:
-        """
-        Convert base_link coordinates to vehicle center coordinates.
+        """Convert base_link coordinates to vehicle center coordinates.
 
         base_link is at rear axle center, vehicle center is at geometric center.
 
@@ -58,8 +56,8 @@ class CoordinateTransformer:
     def carla_base_link_to_vehicle_center_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """
-        Convert CARLA base_link coordinates to CARLA vehicle center location.
+        """Convert CARLA base_link coordinates to CARLA vehicle center
+        location.
 
         For carla_sensor_kit which already uses CARLA coordinate conventions (Y-right),
         we only need to apply the wheelbase offset, NOT the coordinate system flip.
@@ -79,8 +77,8 @@ class CoordinateTransformer:
     def ros_base_link_to_carla_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """
-        Convert ROS base_link coordinates directly to CARLA vehicle location.
+        """Convert ROS base_link coordinates directly to CARLA vehicle
+        location.
 
         Combines frame origin conversion + coordinate system conversion.
 
@@ -99,8 +97,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def ros_to_carla_location(x: float, y: float, z: float) -> carla.Location:
-        """
-        Convert ROS position to CARLA location.
+        """Convert ROS position to CARLA location.
 
         Args:
             x: X position in ROS (forward)
@@ -142,7 +139,8 @@ class CoordinateTransformer:
     def carla_rotation_to_carla_rotation(
         roll: float, pitch: float, yaw: float, in_degrees: bool = False
     ) -> carla.Rotation:
-        """Convert CARLA rotation angles to CARLA Rotation (no coordinate flip)."""
+        """Convert CARLA rotation angles to CARLA Rotation (no coordinate
+        flip)."""
         return CoordinateTransformer._convert_rotation_to_carla(
             (roll, pitch, yaw), in_degrees, negate_pitch_yaw=False
         )
@@ -158,8 +156,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def ros_transform_to_carla_transform(transform_dict: Dict[str, float]) -> carla.Transform:
-        """
-        Convert ROS transform dictionary to CARLA Transform.
+        """Convert ROS transform dictionary to CARLA Transform.
 
         Args:
             transform_dict: Dictionary with x, y, z, roll, pitch, yaw
@@ -181,8 +178,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_to_ros_location(location: carla.Location) -> Dict[str, float]:
-        """
-        Convert CARLA location to ROS position.
+        """Convert CARLA location to ROS position.
 
         Args:
             location: CARLA Location object
@@ -198,8 +194,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_to_ros_rotation(rotation: carla.Rotation) -> Dict[str, float]:
-        """
-        Convert CARLA rotation (degrees) to ROS rotation (radians).
+        """Convert CARLA rotation (degrees) to ROS rotation (radians).
 
         Args:
             rotation: CARLA Rotation object (in degrees)
@@ -215,8 +210,7 @@ class CoordinateTransformer:
 
     @staticmethod
     def carla_transform_to_ros_transform(transform: carla.Transform) -> Dict[str, float]:
-        """
-        Convert CARLA Transform to ROS transform dictionary.
+        """Convert CARLA Transform to ROS transform dictionary.
 
         Args:
             transform: CARLA Transform object
@@ -240,8 +234,7 @@ class CoordinateTransformer:
     def apply_transform_offset(
         base_transform: carla.Transform, offset_dict: Dict[str, float]
     ) -> carla.Transform:
-        """
-        Apply an offset transform to a base transform.
+        """Apply an offset transform to a base transform.
 
         Args:
             base_transform: Base CARLA Transform

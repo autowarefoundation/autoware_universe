@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Sensor kit configuration loader for CARLA-Autoware interface."""
 
 import logging
@@ -561,7 +560,8 @@ class SensorKitLoader:
     def _carla_baselink_to_vehicle_center_transform(
         self, baselink_transform: Dict
     ) -> Dict[str, float]:
-        """Convert CARLA base_link coordinates to CARLA vehicle center coordinates.
+        """Convert CARLA base_link coordinates to CARLA vehicle center
+        coordinates.
 
         The carla_sensor_kit calibration uses CARLA coordinate conventions (Y-right).
         This function applies the wheelbase offset to translate from base_link
