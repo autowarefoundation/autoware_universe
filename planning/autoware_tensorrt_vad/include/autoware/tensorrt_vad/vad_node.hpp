@@ -16,6 +16,9 @@
 #define AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
 
 #include "autoware/tensorrt_vad/synchronization_strategy.hpp"
+#include "autoware/tensorrt_vad/utils/model_config.hpp"
+#include "autoware/tensorrt_vad/utils/param_loader.hpp"
+#include "autoware/tensorrt_vad/utils/version_checker.hpp"
 #include "autoware/tensorrt_vad/vad_interface.hpp"
 #include "autoware/tensorrt_vad/vad_interface_config.hpp"
 #include "autoware/tensorrt_vad/vad_model.hpp"
@@ -78,6 +81,10 @@ private:
   void load_detection_range(VadConfig & config);
   void load_map_configuration(VadConfig & config);
   void load_object_configuration(VadConfig & config);
+  void load_map_configuration_with_model_params(
+    VadConfig & config, const utils::ModelParams & model_params);
+  void load_object_configuration_with_model_params(
+    VadConfig & config, const utils::ModelParams & model_params);
   void load_image_normalization(VadConfig & config);
   void load_network_configurations(VadConfig & config);
   void initialize_vad_model();
@@ -122,7 +129,7 @@ private:
 
   // VAD interface
   std::unique_ptr<VadInterface> vad_interface_ptr_{};
-  VadInterfaceConfig vad_interface_config_;
+  std::unique_ptr<VadInterfaceConfig> vad_interface_config_;
 
   // Synchronization strategy
   std::unique_ptr<SynchronizationStrategy> sync_strategy_;

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_vad/vad_node.hpp"
+#include "autoware/tensorrt_vad/utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -32,46 +33,6 @@
 
 namespace autoware::tensorrt_vad
 {
-std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
-  const nav_msgs::msg::Odometry & msg)
-{
-  // Extract position
-  double x = msg.pose.pose.position.x;
-  double y = msg.pose.pose.position.y;
-  double z = msg.pose.pose.position.z;
-
-  // Create Eigen quaternion and normalize it
-  Eigen::Quaterniond q = std::invoke([&msg]() -> Eigen::Quaterniond {
-    double qx = msg.pose.pose.orientation.x;
-    double qy = msg.pose.pose.orientation.y;
-    double qz = msg.pose.pose.orientation.z;
-    double qw = msg.pose.pose.orientation.w;
-
-    // Create Eigen quaternion and normalize it
-    Eigen::Quaterniond q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<double>::epsilon()) ? Eigen::Quaterniond::Identity()
-                                                               : q.normalized();
-  });
-
-  // Rotation matrix (3x3)
-  Eigen::Matrix3d R = q.toRotationMatrix();
-
-  // Translation vector
-  Eigen::Vector3d t(x, y, z);
-
-  // Base_link → Map (forward)
-  Eigen::Matrix4d bl2map = Eigen::Matrix4d::Identity();
-  bl2map.block<3, 3>(0, 0) = R;
-  bl2map.block<3, 1>(0, 3) = t;
-
-  // Map → Base_link (inverse)
-  Eigen::Matrix4d map2bl = Eigen::Matrix4d::Identity();
-  map2bl.block<3, 3>(0, 0) = R.transpose();
-  map2bl.block<3, 1>(0, 3) = -R.transpose() * t;
-
-  return {bl2map, map2bl};
-}
-
 template <typename MsgType>
 bool VadNode::process_callback(
   const typename MsgType::ConstSharedPtr msg, const std::string & callback_name,
@@ -117,19 +78,31 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
 : Node("vad_node", options),
   tf_buffer_(this->get_clock()),
   num_cameras_(declare_parameter<int32_t>("node_params.num_cameras")),
-  vad_interface_config_(
-    declare_parameter<int32_t>("interface_params.target_image_width"),
-    declare_parameter<int32_t>("interface_params.target_image_height"),
-    declare_parameter<std::vector<double>>("interface_params.detection_range"),
-    declare_parameter<int32_t>("model_params.default_command"),
-    declare_parameter<std::vector<std::string>>("model_params.map_class_names"),
-    declare_parameter<std::vector<double>>("interface_params.map_colors"),
-    declare_parameter<std::vector<std::string>>("class_mapping"),
-    declare_parameter<std::vector<std::string>>("model_params.object_class_names")),
   front_camera_id_(declare_parameter<int32_t>("sync_params.front_camera_id")),
   trajectory_timestep_(declare_parameter<double>("interface_params.trajectory_timestep")),
   vad_input_topic_data_current_frame_(num_cameras_)
 {
+  // Load model parameters from JSON first
+  std::string model_param_path = this->declare_parameter<std::string>("model_param_path");
+  RCLCPP_INFO(this->get_logger(), "Loading model parameters from: %s", model_param_path.c_str());
+  utils::check_model_version(model_param_path);
+  auto model_params = utils::load_model_params(model_param_path);
+  RCLCPP_INFO(
+    this->get_logger(), "Loaded model: %s (v%d.%d)", model_params.model_name.c_str(),
+    model_params.major_version, model_params.minor_version);
+
+  // Create VadInterfaceConfig using model parameters from JSON
+  vad_interface_config_ = std::make_unique<VadInterfaceConfig>(
+    model_params.target_image_width,
+    model_params.target_image_height,
+    declare_parameter<std::vector<double>>("interface_params.detection_range"),
+    declare_parameter<int32_t>("model_params.default_command"),
+    model_params.map_classes,  // From JSON
+    declare_parameter<std::vector<double>>("interface_params.map_colors"),
+    declare_parameter<std::vector<std::string>>("class_mapping"),
+    model_params.object_classes  // From JSON
+  );
+
   // Declare additional parameters that will be used in load_vad_config
   declare_parameter<std::vector<double>>("model_params.map_confidence_thresholds");
   declare_parameter<std::vector<double>>("model_params.object_confidence_thresholds");
@@ -319,7 +292,7 @@ void VadNode::initialize_vad_model()
 
   // Initialize VAD interface and model
   auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
-  vad_interface_ptr_ = std::make_unique<VadInterface>(vad_interface_config_, tf_buffer_shared);
+  vad_interface_ptr_ = std::make_unique<VadInterface>(*vad_interface_config_, tf_buffer_shared);
 
   // Create RosVadLogger using the logger
   auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
@@ -334,37 +307,52 @@ void VadNode::initialize_vad_model()
 VadConfig VadNode::load_vad_config()
 {
   VadConfig vad_config;
+
+  // Load model parameters from JSON
+  std::string model_param_path = this->get_parameter("model_param_path").as_string();
+  RCLCPP_INFO(this->get_logger(), "Loading model parameters from: %s", model_param_path.c_str());
+  utils::check_model_version(model_param_path);
+  auto model_params = utils::load_model_params(model_param_path);
+
+  RCLCPP_INFO(
+    this->get_logger(), "Loaded model: %s (v%d.%d)", model_params.model_name.c_str(),
+    model_params.major_version, model_params.minor_version);
+
+  // Deployment-specific parameters (from YAML)
   vad_config.num_cameras = this->get_parameter("node_params.num_cameras").as_int();
 
-  const auto declare_network_param = [this](const std::string & key) {
-    return this->declare_parameter<int32_t>("model_params.network_io_params." + key);
-  };
+  // Model-specific parameters (from param.json)
+  vad_config.bev_h = model_params.bev_height;
+  vad_config.bev_w = model_params.bev_width;
+  vad_config.bev_feature_dim = model_params.bev_feature_dim;
+  vad_config.downsample_factor = model_params.downsample_factor;
+  vad_config.num_decoder_layers = model_params.num_decoder_layers;
+  vad_config.prediction_num_queries = model_params.prediction_num_queries;
+  vad_config.prediction_num_classes = model_params.prediction_num_classes;
+  vad_config.prediction_bbox_pred_dim = model_params.prediction_bbox_pred_dim;
+  vad_config.prediction_trajectory_modes = model_params.prediction_trajectory_modes;
+  vad_config.prediction_timesteps = model_params.prediction_timesteps;
+  vad_config.planning_ego_commands = model_params.planning_ego_commands;
+  vad_config.planning_timesteps = model_params.planning_timesteps;
+  vad_config.map_num_queries = model_params.map_num_queries;
+  vad_config.map_num_class = model_params.map_num_classes;
+  vad_config.map_points_per_polylines = model_params.map_points_per_polyline;
+  vad_config.can_bus_dim = model_params.can_bus_dim;
+  vad_config.target_image_width = model_params.target_image_width;
+  vad_config.target_image_height = model_params.target_image_height;
 
-  vad_config.bev_h = declare_network_param("bev_h");
-  vad_config.bev_w = declare_network_param("bev_w");
-  vad_config.bev_feature_dim = declare_network_param("bev_feature_dim");
-  vad_config.downsample_factor = declare_network_param("downsample_factor");
-  vad_config.num_decoder_layers = declare_network_param("num_decoder_layers");
-  vad_config.prediction_num_queries = declare_network_param("prediction_num_queries");
-  vad_config.prediction_num_classes = declare_network_param("prediction_num_classes");
-  vad_config.prediction_bbox_pred_dim = declare_network_param("prediction_bbox_pred_dim");
-  vad_config.prediction_trajectory_modes = declare_network_param("prediction_trajectory_modes");
-  vad_config.prediction_timesteps = declare_network_param("prediction_timesteps");
-  vad_config.planning_ego_commands = declare_network_param("planning_ego_commands");
-  vad_config.planning_timesteps = declare_network_param("planning_timesteps");
-  vad_config.map_num_queries = declare_network_param("map_num_queries");
-  vad_config.map_num_class = declare_network_param("map_num_class");
-  vad_config.map_points_per_polylines = declare_network_param("map_points_per_polylines");
-  vad_config.can_bus_dim = declare_network_param("can_bus_dim");
+  // Image normalization from param.json
+  vad_config.image_normalization_param_mean = model_params.image_normalization_mean;
+  vad_config.image_normalization_param_std = model_params.image_normalization_std;
 
-  vad_config.target_image_width =
-    this->get_parameter("interface_params.target_image_width").as_int();
-  vad_config.target_image_height =
-    this->get_parameter("interface_params.target_image_height").as_int();
-
+  // Deployment-specific parameters (from YAML)
   load_detection_range(vad_config);
-  load_map_configuration(vad_config);
-  load_object_configuration(vad_config);
+
+  // Map configuration: use class names from param.json but thresholds from YAML
+  load_map_configuration_with_model_params(vad_config, model_params);
+
+  // Object configuration: use class names from param.json but thresholds from YAML
+  load_object_configuration_with_model_params(vad_config, model_params);
 
   vad_config.plugins_path = this->declare_parameter<std::string>("model_params.plugins_path");
   vad_config.input_image_width =
@@ -372,7 +360,6 @@ VadConfig VadNode::load_vad_config()
   vad_config.input_image_height =
     this->declare_parameter<int32_t>("interface_params.input_image_height");
 
-  load_image_normalization(vad_config);
   load_network_configurations(vad_config);
 
   return vad_config;
@@ -414,6 +401,34 @@ void VadNode::load_map_configuration(VadConfig & config)
   }
 }
 
+void VadNode::load_map_configuration_with_model_params(
+  VadConfig & config, const utils::ModelParams & model_params)
+{
+  // Use class names from model param.json
+  config.map_class_names = model_params.map_classes;
+  config.map_num_classes = static_cast<int32_t>(model_params.map_classes.size());
+
+  // Load confidence thresholds from YAML (deployment-specific)
+  const auto map_thresholds =
+    this->get_parameter("model_params.map_confidence_thresholds").as_double_array();
+
+  if (config.map_class_names.size() != map_thresholds.size()) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "map_class_names from param.json (%zu) and map_confidence_thresholds from YAML (%zu) must "
+      "have the same size",
+      config.map_class_names.size(), map_thresholds.size());
+    throw std::runtime_error(
+      "Parameter array length mismatch: map_class_names and map_confidence_thresholds");
+  }
+
+  config.map_confidence_thresholds.clear();
+  for (std::size_t i = 0; i < config.map_class_names.size(); ++i) {
+    config.map_confidence_thresholds[config.map_class_names[i]] =
+      static_cast<float>(map_thresholds[i]);
+  }
+}
+
 void VadNode::load_object_configuration(VadConfig & config)
 {
   const auto object_class_names =
@@ -435,6 +450,33 @@ void VadNode::load_object_configuration(VadConfig & config)
 
   for (std::size_t i = 0; i < object_class_names.size(); ++i) {
     config.object_confidence_thresholds[object_class_names[i]] =
+      static_cast<float>(object_thresholds[i]);
+  }
+}
+
+void VadNode::load_object_configuration_with_model_params(
+  VadConfig & config, const utils::ModelParams & model_params)
+{
+  // Use class names from model param.json
+  config.bbox_class_names = model_params.object_classes;
+
+  // Load confidence thresholds from YAML (deployment-specific)
+  const auto object_thresholds =
+    this->get_parameter("model_params.object_confidence_thresholds").as_double_array();
+
+  if (config.bbox_class_names.size() != object_thresholds.size()) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "object_class_names from param.json (%zu) and object_confidence_thresholds from YAML (%zu) "
+      "must have the same size",
+      config.bbox_class_names.size(), object_thresholds.size());
+    throw std::runtime_error(
+      "Parameter array length mismatch: object_class_names and object_confidence_thresholds");
+  }
+
+  config.object_confidence_thresholds.clear();
+  for (std::size_t i = 0; i < config.bbox_class_names.size(); ++i) {
+    config.object_confidence_thresholds[config.bbox_class_names[i]] =
       static_cast<float>(object_thresholds[i]);
   }
 }
@@ -566,7 +608,7 @@ std::optional<VadOutputTopicData> VadNode::execute_inference(
     const auto vad_output = vad_model_ptr_->infer(vad_input);
 
     const auto [base2map_transform, map2base_transform] =
-      get_transform_matrix(*vad_input_topic_data.kinematic_state);
+      utils::get_transform_matrix(*vad_input_topic_data.kinematic_state);
     // Convert to ROS types through VadInterface
     if (vad_output.has_value()) {
       const auto vad_output_topic_data = vad_interface_ptr_->convert_output(

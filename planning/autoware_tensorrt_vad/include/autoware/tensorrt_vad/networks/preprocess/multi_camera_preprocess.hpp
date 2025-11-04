@@ -90,7 +90,7 @@ private:
   uint8_t ** d_resized_image_ptrs_{nullptr};  // Pointer array for resized image positions
 };
 
-// Template method implementations (must be in header for templates)
+// Template implementations
 template <typename LoggerType>
 MultiCameraPreprocessor::MultiCameraPreprocessor(
   const MultiCameraPreprocessConfig & config, std::shared_ptr<LoggerType> logger)

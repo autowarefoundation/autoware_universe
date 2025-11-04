@@ -104,7 +104,7 @@ geometry_msgs::msg::Twist OutputObjectsConverter::convert_velocity(
   const BBox & bbox, const Eigen::Matrix4d & base2map_transform) const
 {
   geometry_msgs::msg::Twist twist;
-  // Velocities are already in base_link frame after VAD coordinate removal
+  // Velocities are in base_link frame
   float v_x = bbox.bbox[8];
   float v_y = bbox.bbox[9];
   float v_z = 0.0f;

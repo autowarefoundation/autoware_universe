@@ -98,7 +98,7 @@ private:
   int32_t * d_map_max_class_indices_{nullptr};  // [num_queries] - max class index for each query
 };
 
-// Template method implementations (must be in header for templates)
+// Template implementations
 template <typename LoggerType>
 MapPostprocessor::MapPostprocessor(
   const MapPostprocessConfig & config, std::shared_ptr<LoggerType> logger)

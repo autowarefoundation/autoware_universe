@@ -42,7 +42,7 @@
        Input Topics - Camera Images
        ⚠️  CRITICAL: Image order must match training data order
        Training order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
-       Note: Use image_raw for uncompressed or image_raw/compressed for compressed images
+       Use image_raw for uncompressed or image_raw/compressed for compressed images
        ======================================== -->
   <arg name="image0" default="/sensing/camera/CAM_FRONT/image_raw" description="Front camera image (1600x900)"/>
   <arg name="image1" default="/sensing/camera/CAM_BACK/image_raw" description="Back camera image (1600x900)"/>
@@ -73,12 +73,11 @@
     <param name="use_sim_time" value="$(var use_sim_time)"/>
 
     <!-- Load configuration files
-         - vad_carla_tiny.param.yaml: Node settings, camera config, visualization
-         - ml_package_vad_carla_tiny.param.yaml: Model paths, network architecture, detection parameters
+         - vad_carla_tiny.param.yaml: All deployment-specific configuration
          - object_class_remapper_carla_tiny.param.yaml: CARLA class to Autoware class mapping
+         Model-specific parameters are loaded from vad-carla-tiny.param.json
     -->
     <param from="$(find-pkg-share autoware_tensorrt_vad)/config/vad_carla_tiny.param.yaml" allow_substs="true"/>
-    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/ml_package_vad_carla_tiny.param.yaml" allow_substs="true"/>
     <param from="$(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper_carla_tiny.param.yaml" allow_substs="true"/>
 
     <!-- Output topic remapping -->

@@ -147,7 +147,7 @@ private:
   int32_t * d_obj_max_class_indices_{nullptr};  // [num_queries] - max class index for each object
 };
 
-// Template method implementations (must be in header for templates)
+// Template implementations
 template <typename LoggerType>
 ObjectPostprocessor::ObjectPostprocessor(
   const ObjectPostprocessConfig & config, std::shared_ptr<LoggerType> logger)

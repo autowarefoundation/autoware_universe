@@ -25,6 +25,7 @@
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
   <depend>nav_msgs</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>rosbag2_cpp</depend>

@@ -24,8 +24,6 @@
 namespace autoware::tensorrt_vad
 {
 
-// Note: Template constructor implementation is in the header file
-
 ObjectPostprocessor::~ObjectPostprocessor()
 {
   cleanup_cuda_resources();

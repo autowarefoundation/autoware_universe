@@ -22,8 +22,6 @@
 namespace autoware::tensorrt_vad
 {
 
-// Note: Template constructor and logging method implementations are now in the header file
-
 MultiCameraPreprocessor::~MultiCameraPreprocessor()
 {
   cleanup_cuda_resources();
