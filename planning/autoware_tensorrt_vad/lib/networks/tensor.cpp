@@ -76,11 +76,10 @@ void Tensor::load(const std::vector<float> & data, cudaStream_t stream)
     cudaMemcpyAsync(ptr, data.data(), dsize, cudaMemcpyHostToDevice, stream);
   } else {
     // Type conversion needed
-    std::vector<char> buffer(dsize);
-    Dtype * dbuffer = reinterpret_cast<Dtype *>(buffer.data());
+    std::vector<Dtype> buffer(volume);
 
     for (int i = 0; i < volume; i++) {
-      dbuffer[i] = static_cast<Dtype>(data[i]);
+      buffer[i] = static_cast<Dtype>(data[i]);
     }
 
     cudaMemcpyAsync(ptr, buffer.data(), dsize, cudaMemcpyHostToDevice, stream);
