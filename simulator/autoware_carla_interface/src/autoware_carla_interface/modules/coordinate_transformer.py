@@ -56,8 +56,7 @@ class CoordinateTransformer:
     def carla_base_link_to_vehicle_center_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """Convert CARLA base_link coordinates to CARLA vehicle center
-        location.
+        """Convert CARLA base_link coordinates to CARLA vehicle center location.
 
         For carla_sensor_kit which already uses CARLA coordinate conventions (Y-right),
         we only need to apply the wheelbase offset, NOT the coordinate system flip.
@@ -77,8 +76,7 @@ class CoordinateTransformer:
     def ros_base_link_to_carla_location(
         x: float, y: float, z: float, wheelbase: float = 2.850
     ) -> carla.Location:
-        """Convert ROS base_link coordinates directly to CARLA vehicle
-        location.
+        """Convert ROS base_link coordinates directly to CARLA vehicle location.
 
         Combines frame origin conversion + coordinate system conversion.
 
@@ -139,8 +137,7 @@ class CoordinateTransformer:
     def carla_rotation_to_carla_rotation(
         roll: float, pitch: float, yaw: float, in_degrees: bool = False
     ) -> carla.Rotation:
-        """Convert CARLA rotation angles to CARLA Rotation (no coordinate
-        flip)."""
+        """Convert CARLA rotation angles to CARLA Rotation (no coordinate flip)."""
         return CoordinateTransformer._convert_rotation_to_carla(
             (roll, pitch, yaw), in_degrees, negate_pitch_yaw=False
         )

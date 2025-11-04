@@ -156,8 +156,7 @@ class carla_ros2_interface(object):
         self.logger.info(f"Configured {len(self.sensor_configs)} sensors from mapping")
 
     def _resolve_sensor_kit_name(self) -> str:
-        """Resolve the effective sensor kit name based on parameters and
-        mapping."""
+        """Resolve the effective sensor kit name based on parameters and mapping."""
         param_value = (self.param_values.get("sensor_kit_name", "") or "").strip()
         if param_value:
             return param_value
@@ -317,8 +316,7 @@ class carla_ros2_interface(object):
         return header
 
     def lidar(self, carla_lidar_measurement, id_):
-        """Transform the received lidar measurement into a ROS point cloud
-        message."""
+        """Transform the received lidar measurement into a ROS point cloud message."""
         if self.checkFrequency(id_):
             return
 
@@ -400,8 +398,7 @@ class carla_ros2_interface(object):
                 self.logger.warning("Cannot set initial pose: ego vehicle not available")
 
     def pose(self):
-        """Transform odometry data to Pose and publish with covariance (thread-
-        safe)."""
+        """Transform odometry data to Pose and publish with covariance (thread-safe)."""
         if self.checkFrequency("pose"):
             return
 
@@ -690,8 +687,7 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
-        """Execute main simulation step for publishing sensor data and getting
-        control commands.
+        """Execute main simulation step for publishing sensor data and getting control commands.
 
         Thread-safe: Acquires state lock when writing timestamp and reading current_control.
         The timestamp must be protected because control_callback reads it (via first_order_steering)

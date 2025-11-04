@@ -245,8 +245,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def prepare_map():
-        """Set the current map and loads all traffic lights for this map
-        to_traffic_light_map."""
+        """Set the current map and loads all traffic lights for this map to_traffic_light_map."""
         if CarlaDataProvider._map is None:
             CarlaDataProvider._map = CarlaDataProvider._world.get_map()
 
@@ -361,8 +360,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
     def create_blueprint(
         model, rolename="scenario", color=None, actor_category="car", attribute_filter=None
     ):
-        """Set up the blueprint of an actor given its model and other relevant
-        parameters."""
+        """Set up the blueprint of an actor given its model and other relevant parameters."""
 
         def check_attribute_value(blueprint, name, value):
             """Check if the blueprint has that attribute with that value."""
@@ -459,8 +457,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def handle_actor_batch(batch, tick=True):
-        """Forward a CARLA command batch to spawn actors to CARLA, and gather
-        the responses."""
+        """Forward a CARLA command batch to spawn actors to CARLA, and gather the responses."""
         sync_mode = CarlaDataProvider.is_sync_mode()
         actors = []
 
@@ -718,8 +715,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def get_hero_actor():
-        """Get the actor object of the hero actor if it exists, Return none
-        otherwise."""
+        """Get the actor object of the hero actor if it exists, Return none otherwise."""
         for actor_id in CarlaDataProvider._carla_actor_pool:
             if CarlaDataProvider._carla_actor_pool[actor_id].attributes["role_name"] == "hero":
                 return CarlaDataProvider._carla_actor_pool[actor_id]
@@ -763,8 +759,7 @@ class CarlaDataProvider(object):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def remove_actors_in_surrounding(location, distance):
-        """Remove all actors from the pool that are closer than distance to the
-        provided location."""
+        """Remove all actors from the pool that are closer than distance to the provided location."""
         for actor_id in CarlaDataProvider._carla_actor_pool.copy():
             if (
                 CarlaDataProvider._carla_actor_pool[actor_id].get_location().distance(location)
