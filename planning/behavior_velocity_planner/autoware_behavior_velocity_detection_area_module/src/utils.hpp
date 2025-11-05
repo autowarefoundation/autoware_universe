@@ -15,11 +15,14 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#include "scene.hpp"
+
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
@@ -29,6 +32,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner::detection_area
@@ -76,6 +80,29 @@ bool has_enough_braking_distance(
 /// @return the feasible stop distance by max acceleration
 double feasible_stop_distance_by_max_acceleration(
   const double current_velocity, const double max_acceleration);
+
+/// @brief check if any predicted objects are found inside detection areas
+/// @param [in] detection_areas detection area polygons
+/// @param [in] predicted_objects predicted objects
+/// @param [in] target_filtering target filtering parameters
+/// @return detected object if found, std::nullopt otherwise
+std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_object(
+  const lanelet::ConstPolygons3d & detection_areas,
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering);
+
+/// @brief check if the object classification matches the target filtering criteria
+/// @param [in] classifications object classifications
+/// @param [in] target_filtering target filtering parameters
+/// @return true if the object matches the filtering criteria
+bool is_target_object(
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering);
+
+/// @brief convert object classification label to lowercase string
+/// @param [in] label object classification label
+/// @return lowercase string representation (e.g., "car", "bus", "unknown")
+std::string object_label_to_string(const uint8_t label);
 }  // namespace autoware::behavior_velocity_planner::detection_area
 
 #endif  // UTILS_HPP_

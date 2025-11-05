@@ -16,14 +16,17 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/geometry/Polygon.h>
 
 #include <memory>
-#include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -119,7 +122,8 @@ std::vector<geometry_msgs::msg::Point> get_obstacle_points(
       const double squared_dist = (circle.first.x() - p.x) * (circle.first.x() - p.x) +
                                   (circle.first.y() - p.y) * (circle.first.y() - p.y);
       if (squared_dist <= circle.second) {
-        if (boost::geometry::within(Point2d{p.x, p.y}, poly.basicPolygon())) {
+        const lanelet::BasicPoint2d point(p.x, p.y);
+        if (lanelet::geometry::within(point, poly.basicPolygon())) {
           obstacle_points.push_back(autoware_utils::create_point(p.x, p.y, p.z));
           // get all obstacle point becomes high computation cost so skip if any point is found
           break;
@@ -171,6 +175,119 @@ double feasible_stop_distance_by_max_acceleration(
   const double current_velocity, const double max_acceleration)
 {
   return current_velocity * current_velocity / (2.0 * max_acceleration);
+}
+
+std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_object(
+  const lanelet::ConstPolygons3d & detection_areas,
+  const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering)
+{
+  for (const auto & object : predicted_objects.objects) {
+    if (!is_target_object(object.classification, target_filtering)) {
+      continue;
+    }
+
+    // Get object position
+    const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+
+    // Check if the object is within any detection area
+    for (const auto & detection_area : detection_areas) {
+      const lanelet::BasicPoint2d obj_point(position.x, position.y);
+      const auto detection_area_2d = lanelet::utils::to2D(detection_area);
+      if (lanelet::geometry::within(obj_point, detection_area_2d.basicPolygon())) {
+        return object;  // Return the detected object
+      }
+    }
+  }
+
+  return std::nullopt;  // No object detected
+}
+
+bool is_target_object(
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering)
+{
+  using autoware_perception_msgs::msg::ObjectClassification;
+
+  // Check all classifications (use the one with the highest probability)
+  if (classifications.empty()) {
+    return false;
+  }
+
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(classifications);
+
+  if (label == ObjectClassification::UNKNOWN && target_filtering.unknown) {
+    return true;
+  }
+  if (label == ObjectClassification::CAR && target_filtering.car) {
+    return true;
+  }
+  if (label == ObjectClassification::TRUCK && target_filtering.truck) {
+    return true;
+  }
+  if (label == ObjectClassification::BUS && target_filtering.bus) {
+    return true;
+  }
+  if (label == ObjectClassification::TRAILER && target_filtering.trailer) {
+    return true;
+  }
+  if (label == ObjectClassification::MOTORCYCLE && target_filtering.motorcycle) {
+    return true;
+  }
+  if (label == ObjectClassification::BICYCLE && target_filtering.bicycle) {
+    return true;
+  }
+  if (label == ObjectClassification::PEDESTRIAN && target_filtering.pedestrian) {
+    return true;
+  }
+  if (label == ObjectClassification::ANIMAL && target_filtering.animal) {
+    return true;
+  }
+  if (label == ObjectClassification::HAZARD && target_filtering.hazard) {
+    return true;
+  }
+  if (label == ObjectClassification::OVER_DRIVABLE && target_filtering.over_drivable) {
+    return true;
+  }
+  if (label == ObjectClassification::UNDER_DRIVABLE && target_filtering.under_drivable) {
+    return true;
+  }
+
+  return false;
+}
+
+std::string object_label_to_string(const uint8_t label)
+{
+  using autoware_perception_msgs::msg::ObjectClassification;
+
+  switch (label) {
+    case ObjectClassification::UNKNOWN:
+      return "unknown";
+    case ObjectClassification::CAR:
+      return "car";
+    case ObjectClassification::TRUCK:
+      return "truck";
+    case ObjectClassification::BUS:
+      return "bus";
+    case ObjectClassification::TRAILER:
+      return "trailer";
+    case ObjectClassification::MOTORCYCLE:
+      return "motorcycle";
+    case ObjectClassification::BICYCLE:
+      return "bicycle";
+    case ObjectClassification::PEDESTRIAN:
+      return "pedestrian";
+    case ObjectClassification::ANIMAL:
+      return "animal";
+    case ObjectClassification::HAZARD:
+      return "hazard";
+    case ObjectClassification::OVER_DRIVABLE:
+      return "over_drivable";
+    case ObjectClassification::UNDER_DRIVABLE:
+      return "under_drivable";
+    default:
+      return "unrecognized";
+  }
 }
 
 }  // namespace autoware::behavior_velocity_planner::detection_area

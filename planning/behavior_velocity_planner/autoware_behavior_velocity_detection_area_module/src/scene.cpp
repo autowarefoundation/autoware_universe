@@ -19,6 +19,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/object_classification.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
@@ -28,6 +30,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -90,10 +93,40 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
   // Find obstacles in detection area
-  const auto obstacle_points = detection_area::get_obstacle_points(
-    detection_area_reg_elem_.detectionAreas(), *planner_data_->no_ground_pointcloud);
-  debug_data_.obstacle_points = obstacle_points;
-  if (!obstacle_points.empty()) {
+  bool has_obstacle = false;
+  std::string detection_source;
+
+  // Check pointcloud
+  if (planner_param_.target_filtering.pointcloud) {
+    const auto obstacle_points = detection_area::get_obstacle_points(
+      detection_area_reg_elem_.detectionAreas(), *planner_data_->no_ground_pointcloud);
+    debug_data_.obstacle_points = obstacle_points;
+
+    if (!obstacle_points.empty()) {
+      has_obstacle = true;
+      detection_source = "pointcloud";
+    }
+  }
+
+  // Check predicted objects
+  if (!has_obstacle && planner_data_->predicted_objects) {
+    const auto detected_object = detection_area::get_detected_object(
+      detection_area_reg_elem_.detectionAreas(), *planner_data_->predicted_objects,
+      planner_param_.target_filtering);
+    if (detected_object.has_value()) {
+      has_obstacle = true;
+
+      // Get object type name
+      const auto label =
+        autoware::object_recognition_utils::getHighestProbLabel(detected_object->classification);
+      const auto object_type_name = detection_area::object_label_to_string(label);
+
+      detection_source = object_type_name;
+    }
+  }
+
+  // Update last obstacle found time
+  if (has_obstacle) {
     last_obstacle_found_time_ = std::make_shared<const rclcpp::Time>(clock_->now());
   }
 
@@ -236,7 +269,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   }
 
   if (state_ == State::STOP && planner_param_.enable_detected_obstacle_logging) {
-    print_detected_obstacle(obstacle_points, self_pose);
+    print_detected_obstacle(debug_data_.obstacle_points, self_pose);
   }
 
   planning_utils::insertStopPoint(modified_stop_pose.position, modified_stop_line_seg_idx, *path);
@@ -250,7 +283,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
       path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
-      0.0 /*shift distance*/, "");
+      0.0 /*shift distance*/, detection_source);
   }
 
   return true;
