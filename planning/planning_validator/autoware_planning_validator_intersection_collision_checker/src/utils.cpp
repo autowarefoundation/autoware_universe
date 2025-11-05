@@ -27,6 +27,8 @@
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
+
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -159,7 +161,7 @@ lanelet::ConstLanelets extend_lanelet(
     prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
     if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
     extended_lanelets.push_back(prev_lanelets.front());
-    current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
+    current_arc_length += lanelet::geometry::length2d(prev_lanelets.front());
   }
   std::reverse(extended_lanelets.begin(), extended_lanelets.end());
   return extended_lanelets;

@@ -441,7 +441,7 @@ auto check_turn_behavior(
       total_length - ego_coordinate_on_arc.length - vehicle_info.max_longitudinal_offset_m;
     const std::string turn_direction = lane.attributeOr("turn_direction", "none");
 
-    total_length += lanelet::utils::getLaneletLength2d(lane);
+    total_length += lanelet::geometry::length2d(lane);
 
     const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
 
@@ -602,7 +602,7 @@ auto get_previous_polygons_with_lane_recursively(
   }
 
   if (route_handler->getPreviousLanelets(target_lanes.front()).empty()) {
-    const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
+    const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
     const auto expand_lanelets =
       lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
     const auto polygon = lanelet::utils::getPolygonFromArcLength(
@@ -616,7 +616,7 @@ auto get_previous_polygons_with_lane_recursively(
       const auto overlap_current_lanes = std::any_of(
         current_lanes.begin(), current_lanes.end(),
         [&prev_lane](const auto & lane) { return lane.id() == prev_lane.id(); });
-      const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
       if (overlap_current_lanes) {
         const auto expand_lanelets =
           lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
@@ -632,7 +632,7 @@ auto get_previous_polygons_with_lane_recursively(
     pushed_lanes.insert(pushed_lanes.begin(), prev_lane);
 
     {
-      const auto total_length = lanelet::utils::getLaneletLength2d(pushed_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(pushed_lanes));
       if (total_length > s2) {
         const auto expand_lanelets =
           lanelet::utils::getExpandedLanelets(pushed_lanes, left_offset, -1.0 * right_offset);

@@ -186,7 +186,7 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
   transient_data.max_prepare_length = calculation::calc_maximum_prepare_length(common_data_ptr_);
 
   transient_data.target_lane_length =
-    lanelet::utils::getLaneletLength2d(common_data_ptr_->lanes_ptr->target);
+    lanelet::geometry::length2d(lanelet::LaneletSequence(common_data_ptr_->lanes_ptr->target));
 
   transient_data.current_lanes_ego_arc = lanelet::utils::getArcCoordinates(
     common_data_ptr_->lanes_ptr->current, common_data_ptr_->get_ego_pose());
@@ -1618,7 +1618,9 @@ bool NormalLaneChange::calcAbortPath()
   const auto lane_changing_end_pose_idx = std::invoke([&]() {
     constexpr double s_start = 0.0;
     const double s_end = std::max(
-      lanelet::utils::getLaneletLength2d(reference_lanelets) - current_min_dist_buffer, 0.0);
+      lanelet::geometry::length2d(lanelet::LaneletSequence(reference_lanelets)) -
+        current_min_dist_buffer,
+      0.0);
 
     const auto ref = route_handler->getCenterLinePath(reference_lanelets, s_start, s_end);
     return autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(

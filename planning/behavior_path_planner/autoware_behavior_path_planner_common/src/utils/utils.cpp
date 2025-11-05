@@ -31,6 +31,7 @@
 
 #include <boost/geometry/algorithms/is_valid.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
@@ -1173,7 +1174,8 @@ PathWithLaneId getCenterLinePath(
   double s_forward = s + forward_path_length;
 
   if (route_handler.isDeadEndLanelet(lanelet_sequence.back())) {
-    const auto lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
+    const auto lane_length =
+      lanelet::geometry::length2d(lanelet::LaneletSequence(lanelet_sequence));
     s_forward = std::clamp(s_forward, 0.0, lane_length);
   }
 
@@ -1388,7 +1390,7 @@ lanelet::ConstLanelets getExtendedCurrentLanes(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      backward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.front());
+      backward_length_sum += lanelet::geometry::length2d(extended_lanes.front());
     } else {
       break;  // no more previous lanes to add
     }
@@ -1408,7 +1410,7 @@ lanelet::ConstLanelets getExtendedCurrentLanes(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      forward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.back());
+      forward_length_sum += lanelet::geometry::length2d(extended_lanes.back());
     } else {
       break;  // no more next lanes to add
     }
@@ -1458,7 +1460,7 @@ lanelet::ConstLanelets getExtendedCurrentLanesFromPath(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      backward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.front());
+      backward_length_sum += lanelet::geometry::length2d(extended_lanes.front());
     } else {
       break;  // no more previous lanes to add
     }
@@ -1478,7 +1480,7 @@ lanelet::ConstLanelets getExtendedCurrentLanesFromPath(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      forward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.back());
+      forward_length_sum += lanelet::geometry::length2d(extended_lanes.back());
     } else {
       break;  // no more next lanes to add
     }

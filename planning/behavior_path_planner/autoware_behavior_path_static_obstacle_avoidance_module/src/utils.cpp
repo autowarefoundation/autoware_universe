@@ -32,6 +32,7 @@
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
@@ -1747,7 +1748,8 @@ lanelet::ConstLanelets getExtendLanes(
   lanelet::ConstLanelets extend_lanelets = lanelets;
 
   while (rclcpp::ok()) {
-    const double lane_length = lanelet::utils::getLaneletLength2d(extend_lanelets);
+    const double lane_length =
+      lanelet::geometry::length2d(lanelet::LaneletSequence(extend_lanelets));
     const auto arc_coordinates = lanelet::utils::getArcCoordinates(extend_lanelets, ego_pose);
     const auto forward_length = lane_length - arc_coordinates.length;
 

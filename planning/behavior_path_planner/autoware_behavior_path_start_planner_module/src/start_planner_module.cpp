@@ -1616,7 +1616,7 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
                                             .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
-      [](double acc, const auto & lane) { return acc + lanelet::utils::getLaneletLength2d(lane); });
+      [](double acc, const auto & lane) { return acc + lanelet::geometry::length2d(lane); });
     const double distance_from_lane_end = length_to_lane_end - backed_pose_arc_length;
     if (distance_from_lane_end < parameters_->ignore_distance_from_lane_end) {
       RCLCPP_WARN_THROTTLE(
