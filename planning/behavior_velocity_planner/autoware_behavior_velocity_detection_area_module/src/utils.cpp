@@ -177,65 +177,13 @@ double feasible_stop_distance_by_max_acceleration(
   return current_velocity * current_velocity / (2.0 * max_acceleration);
 }
 
-namespace
-{
-/// @brief Check if the object type is enabled in target filtering and return the type name
-/// @param label Object classification label
-/// @param target_filtering Target filtering parameters
-/// @return object type string if enabled (e.g., "car", "bus"), empty string otherwise
-std::string get_target_object_type_name(
-  const uint8_t label, const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering)
-{
-  using autoware_perception_msgs::msg::ObjectClassification;
-
-  switch (label) {
-    case ObjectClassification::UNKNOWN:
-      return target_filtering.unknown ? "unknown" : "";
-    case ObjectClassification::CAR:
-      return target_filtering.car ? "car" : "";
-    case ObjectClassification::TRUCK:
-      return target_filtering.truck ? "truck" : "";
-    case ObjectClassification::BUS:
-      return target_filtering.bus ? "bus" : "";
-    case ObjectClassification::TRAILER:
-      return target_filtering.trailer ? "trailer" : "";
-    case ObjectClassification::MOTORCYCLE:
-      return target_filtering.motorcycle ? "motorcycle" : "";
-    case ObjectClassification::BICYCLE:
-      return target_filtering.bicycle ? "bicycle" : "";
-    case ObjectClassification::PEDESTRIAN:
-      return target_filtering.pedestrian ? "pedestrian" : "";
-    case ObjectClassification::ANIMAL:
-      return target_filtering.animal ? "animal" : "";
-    case ObjectClassification::HAZARD:
-      return target_filtering.hazard ? "hazard" : "";
-    case ObjectClassification::OVER_DRIVABLE:
-      return target_filtering.over_drivable ? "over_drivable" : "";
-    case ObjectClassification::UNDER_DRIVABLE:
-      return target_filtering.under_drivable ? "under_drivable" : "";
-    default:
-      return "";
-  }
-}
-}  // namespace
-
 std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_object(
   const lanelet::ConstPolygons3d & detection_areas,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
   const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering)
 {
   for (const auto & object : predicted_objects.objects) {
-    // Filter by object classification
-    if (object.classification.empty()) {
-      continue;
-    }
-
-    const auto label =
-      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-
-    // Check if this object type is a target
-    const auto object_type_name = get_target_object_type_name(label, target_filtering);
-    if (object_type_name.empty()) {
+    if (!is_target_object(object.classification, target_filtering)) {
       continue;
     }
 
@@ -253,6 +201,59 @@ std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_objec
   }
 
   return std::nullopt;  // No object detected
+}
+
+bool is_target_object(
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering)
+{
+  using autoware_perception_msgs::msg::ObjectClassification;
+
+  // Check all classifications (use the one with the highest probability)
+  if (classifications.empty()) {
+    return false;
+  }
+
+  const auto label = autoware::object_recognition_utils::getHighestProbLabel(classifications);
+
+  if (label == ObjectClassification::UNKNOWN && target_filtering.unknown) {
+    return true;
+  }
+  if (label == ObjectClassification::CAR && target_filtering.car) {
+    return true;
+  }
+  if (label == ObjectClassification::TRUCK && target_filtering.truck) {
+    return true;
+  }
+  if (label == ObjectClassification::BUS && target_filtering.bus) {
+    return true;
+  }
+  if (label == ObjectClassification::TRAILER && target_filtering.trailer) {
+    return true;
+  }
+  if (label == ObjectClassification::MOTORCYCLE && target_filtering.motorcycle) {
+    return true;
+  }
+  if (label == ObjectClassification::BICYCLE && target_filtering.bicycle) {
+    return true;
+  }
+  if (label == ObjectClassification::PEDESTRIAN && target_filtering.pedestrian) {
+    return true;
+  }
+  if (label == ObjectClassification::ANIMAL && target_filtering.animal) {
+    return true;
+  }
+  if (label == ObjectClassification::HAZARD && target_filtering.hazard) {
+    return true;
+  }
+  if (label == ObjectClassification::OVER_DRIVABLE && target_filtering.over_drivable) {
+    return true;
+  }
+  if (label == ObjectClassification::UNDER_DRIVABLE && target_filtering.under_drivable) {
+    return true;
+  }
+
+  return false;
 }
 
 std::string object_label_to_string(const uint8_t label)

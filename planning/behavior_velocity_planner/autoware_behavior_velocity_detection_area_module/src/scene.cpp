@@ -121,10 +121,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
         autoware::object_recognition_utils::getHighestProbLabel(detected_object->classification);
       const auto object_type_name = detection_area::object_label_to_string(label);
 
-      // Get first 4 bytes of UUID as hex string
-      detection_source =
-        object_type_name + ":" +
-        autoware_utils_uuid::to_hex_string(detected_object->object_id).substr(0, 4);
+      detection_source = object_type_name;
     }
   }
 

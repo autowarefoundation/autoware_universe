@@ -91,6 +91,14 @@ std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_objec
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
   const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering);
 
+/// @brief check if the object classification matches the target filtering criteria
+/// @param [in] classifications object classifications
+/// @param [in] target_filtering target filtering parameters
+/// @return true if the object matches the filtering criteria
+bool is_target_object(
+  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications,
+  const DetectionAreaModule::PlannerParam::TargetFiltering & target_filtering);
+
 /// @brief convert object classification label to lowercase string
 /// @param [in] label object classification label
 /// @return lowercase string representation (e.g., "car", "bus", "unknown")
