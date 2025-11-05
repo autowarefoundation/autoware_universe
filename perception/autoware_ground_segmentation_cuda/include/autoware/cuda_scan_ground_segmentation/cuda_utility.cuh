@@ -122,7 +122,7 @@ cudaError_t fill(device_vector<T> & input, T val)
   return fill(input.data(), (int)(input.size()), val, input.get_stream());
 }
 
-CUDAH void memcpy(uint8_t * dst, const uint8_t * src, int size)
+CUDA_HOSTDEV void memcpy(uint8_t * dst, const uint8_t * src, int size)
 {
   for (int i = 0; i < size; ++i) {
     dst[i] = src[i];

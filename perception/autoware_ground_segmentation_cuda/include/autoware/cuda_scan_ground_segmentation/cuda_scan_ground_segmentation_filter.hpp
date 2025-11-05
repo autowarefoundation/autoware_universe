@@ -63,7 +63,7 @@ struct alignas(16) ClassifiedPointType
   float radius;
   size_t origin_index;  // index in the original point cloud
 
-  CUDAH ClassifiedPointType() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
+  CUDA_HOSTDEV ClassifiedPointType() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
 };
 
 struct alignas(16) Cell
@@ -74,7 +74,7 @@ struct alignas(16) Cell
   uint32_t num_ground_points;
   // initialize constructor
 
-  CUDAH Cell()
+  CUDA_HOSTDEV Cell()
   : gnd_radius_avg(0.0f), gnd_height_avg(0.0f), gnd_height_min(0.0f), num_ground_points(0)
   {
   }

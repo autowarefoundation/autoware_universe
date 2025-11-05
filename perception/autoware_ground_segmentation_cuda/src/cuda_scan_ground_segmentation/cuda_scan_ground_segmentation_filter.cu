@@ -639,7 +639,7 @@ void CudaScanGroundSegmentationFilter::scanPerSectorGroundReference(
 
 struct NonGroundChecker
 {
-  CUDAH bool operator()(const ClassifiedPointType & p) const
+  CUDA_HOSTDEV bool operator()(const ClassifiedPointType & p) const
   {
     return (p.type != PointType::GROUND);
   }
@@ -647,7 +647,7 @@ struct NonGroundChecker
 
 struct GroundChecker
 {
-  CUDAH bool operator()(const ClassifiedPointType & p) const
+  CUDA_HOSTDEV bool operator()(const ClassifiedPointType & p) const
   {
     return (p.type == PointType::GROUND);
   }

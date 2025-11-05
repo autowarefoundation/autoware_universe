@@ -19,8 +19,8 @@
 
 #include <cuda_runtime.h>
 
-#ifndef CUDAH
-#define CUDAH __forceinline__ __host__ __device__
+#ifndef CUDA_HOSTDEV
+#define CUDA_HOSTDEV __forceinline__ __host__ __device__
 #endif
 
 #ifndef BLOCK_SIZE_X
