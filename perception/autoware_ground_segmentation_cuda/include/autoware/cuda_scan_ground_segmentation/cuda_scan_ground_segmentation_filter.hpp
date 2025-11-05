@@ -63,7 +63,9 @@ struct alignas(16) ClassifiedPointType
   float radius;
   size_t origin_index;  // index in the original point cloud
 
-  CUDA_HOSTDEV ClassifiedPointType() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0) {}
+  CUDA_HOSTDEV ClassifiedPointType() : z(0.0), type(PointType::INIT), radius(-1.0), origin_index(0)
+  {
+  }
 };
 
 struct alignas(16) Cell
