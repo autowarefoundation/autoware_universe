@@ -20,7 +20,10 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/touches.hpp>
 #include <boost/geometry/io/wkt/write.hpp>
+// no longer needed in Jazzy
+#ifdef ROS_DISTRO_HUMBLE
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#endif
 
 #include <gtest/gtest.h>
 

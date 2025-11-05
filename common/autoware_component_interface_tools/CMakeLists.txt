@@ -2,10 +2,15 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_component_interface_tools)
 
 find_package(autoware_cmake REQUIRED)
+find_package(yaml-cpp REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/service_log_checker.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+  yaml-cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
