@@ -31,12 +31,14 @@ class SensorReceivedNoData(Exception):
 
 
 class GenericMeasurement(object):
+
     def __init__(self, data, frame):
         self.data = data
         self.frame = frame
 
 
 class CallBack(object):
+
     def __init__(self, tag, sensor, data_provider):
         self._tag = tag
         self._data_provider = data_provider

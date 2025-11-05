@@ -26,6 +26,7 @@ from sensor_msgs.msg import Image
 
 
 class MultiCameraCombiner(Node):
+
     def __init__(self):
         super().__init__("multi_camera_combiner")
 

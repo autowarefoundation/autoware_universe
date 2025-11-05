@@ -71,4 +71,9 @@ install(DIRECTORY calibration_maps/ DESTINATION share/${PROJECT_NAME}/)
 # Install resource files
 install(DIRECTORY resource DESTINATION share/${PROJECT_NAME}/)
 
+# Skip flake8 test to avoid conflict with black formatter in pre-commit
+if(BUILD_TESTING)
+  set(ament_cmake_flake8_FOUND FALSE)
+endif()
+
 ament_auto_package()

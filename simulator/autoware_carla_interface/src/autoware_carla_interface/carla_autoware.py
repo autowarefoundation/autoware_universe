@@ -28,6 +28,7 @@ from .modules.carla_wrapper import SensorWrapper
 
 
 class SensorLoop(object):
+
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -55,6 +56,7 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
+
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
