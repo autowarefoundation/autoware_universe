@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.6.22">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.6.23">
     
     
       
@@ -20289,11 +20289,13 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <div class="highlight"><pre><span></span><code><span class="nt">sensor_mappings</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">CAM_FRONT/camera_link</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">carla_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sensor.camera.rgb</span>
-<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM_FRONT"</span>
+<span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CAM_FRONT</span>
 <span class="w">    </span><span class="nt">ros_config</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">frame_id</span><span class="p">:</span><span class="w"> </span><span class="s">"CAM_FRONT/camera_optical_link"</span>
-<span class="w">      </span><span class="nt">topic_image</span><span class="p">:</span><span class="w"> </span><span class="s">"/sensing/camera/CAM_FRONT/image_raw"</span>
+<span class="w">      </span><span class="nt">frame_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CAM_FRONT/camera_optical_link</span>
+<span class="w">      </span><span class="nt">topic_image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/sensing/camera/CAM_FRONT/image_raw</span>
+<span class="w">      </span><span class="nt">topic_info</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/sensing/camera/CAM_FRONT/camera_info</span>
 <span class="w">      </span><span class="nt">frequency_hz</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">11</span>
+<span class="w">      </span><span class="nt">qos_profile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reliable</span>
 <span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">image_size_x</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1600</span>
 <span class="w">      </span><span class="nt">image_size_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">900</span>
@@ -20364,7 +20366,6 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <ul>
 <li><strong>Testing on procedural maps (Adv Digital Twin)</strong>: Currently unable to test due to failures in creating the Adv Digital Twin map.</li>
 <li><strong>Traffic light recognition</strong>: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.</li>
-<li><strong>LiDAR concatenation</strong>: When using multiple LiDARs, you may need to uncomment the lidar concatenation relay in the launch file (currently disabled by default).</li>
 </ul></div>
 
 
