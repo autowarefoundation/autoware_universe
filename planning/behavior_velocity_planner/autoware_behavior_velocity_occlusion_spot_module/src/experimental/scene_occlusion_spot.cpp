@@ -212,7 +212,7 @@ std::vector<PredictedObject> extractStuckVehicle(
 }  // namespace
 
 OcclusionSpotModule::OcclusionSpotModule(
-  const int64_t module_id, const PlannerData & planner_data, const PlannerParam & planner_param,
+  const lanelet::Id module_id, const PlannerData & planner_data, const PlannerParam & planner_param,
   const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>

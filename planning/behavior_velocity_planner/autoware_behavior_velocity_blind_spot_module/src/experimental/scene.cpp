@@ -67,7 +67,7 @@ std::string format_blind_spot_decision(const BlindSpotDecision & decision, const
 
 visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
   const std::vector<lanelet::CompoundPolygon3d> & polygons, const std::string & ns,
-  const int64_t lane_id, const double r, const double g, const double b)
+  const lanelet::Id lane_id, const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
 
@@ -102,7 +102,7 @@ visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
 }
 
 visualization_msgs::msg::MarkerArray create_lanelet_linestring_marker_array(
-  const lanelet::ConstLineString3d & linestring, const std::string & ns, const int64_t lane_id,
+  const lanelet::ConstLineString3d & linestring, const std::string & ns, const lanelet::Id lane_id,
   const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
@@ -133,7 +133,7 @@ visualization_msgs::msg::MarkerArray create_lanelet_linestring_marker_array(
 }  // namespace
 
 BlindSpotModule::BlindSpotModule(
-  const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
+  const lanelet::Id module_id, const lanelet::Id lane_id, const TurnDirection turn_direction,
   const PlannerParam & planner_param, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,

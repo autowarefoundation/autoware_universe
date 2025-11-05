@@ -131,7 +131,7 @@ visualization_msgs::msg::MarkerArray createCorrespondenceMarkerArray(
 }  // namespace
 
 DetectionAreaModule::DetectionAreaModule(
-  const int64_t module_id, const int64_t lane_id,
+  const lanelet::Id module_id, const lanelet::Id lane_id,
   const lanelet::autoware::DetectionArea & detection_area_reg_elem,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
   const rclcpp::Clock::SharedPtr clock,

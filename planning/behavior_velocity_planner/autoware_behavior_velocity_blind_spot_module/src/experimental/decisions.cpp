@@ -25,7 +25,7 @@ namespace autoware::behavior_velocity_planner::experimental
 template <typename T>
 void BlindSpotModule::setRTCStatusByDecision(
   const T &, [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const PlannerData & planner_data)
+  [[maybe_unused]] const PlannerData & planner_data)
 {
   static_assert("Unsupported type passed to setRTCStatus");
   return;
@@ -35,7 +35,7 @@ template <typename T>
 void BlindSpotModule::reactRTCApprovalByDecision(
   [[maybe_unused]] const T & decision,
   [[maybe_unused]] autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-  const PlannerData & planner_data)
+  [[maybe_unused]] const PlannerData & planner_data)
 {
   static_assert("Unsupported type passed to reactRTCApprovalByDecision");
 }

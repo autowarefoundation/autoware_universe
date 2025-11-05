@@ -86,7 +86,7 @@ public:
 
     struct Debug
     {
-      std::vector<int64_t> ttc;
+      std::vector<lanelet::Id> ttc;
     } debug;
   };
 
@@ -145,8 +145,8 @@ public:
   };
 
   RoundaboutModule(
-    const int64_t module_id, std::shared_ptr<const lanelet::autoware::Roundabout> roundabout,
-    const int64_t lane_id, const PlannerParam & planner_param,
+    const lanelet::Id module_id, std::shared_ptr<const lanelet::autoware::Roundabout> roundabout,
+    const lanelet::Id lane_id, const PlannerParam & planner_param,
     const std::set<lanelet::Id> & associative_ids, rclcpp::Node & node, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,

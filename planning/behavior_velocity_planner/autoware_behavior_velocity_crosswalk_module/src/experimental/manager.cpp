@@ -201,9 +201,9 @@ void CrosswalkModuleManager::launchNewModules(
 
   const auto rh = planner_data.route_handler_;
 
-  const auto launch = [this, &path_msg, &stamp, &planner_data](
+  const auto launch = [&](
                         const auto road_lanelet_id, const auto crosswalk_lanelet_id,
-                        const std::optional<int64_t> & reg_elem_id) {
+                        const std::optional<lanelet::Id> & reg_elem_id) {
     if (isModuleRegistered(crosswalk_lanelet_id)) {
       return;
     }
@@ -264,7 +264,7 @@ CrosswalkModuleManager::getModuleExpiredFunction(
 
   const auto rh = planner_data.route_handler_;
 
-  std::set<int64_t> crosswalk_id_set;
+  std::set<lanelet::Id> crosswalk_id_set;
 
   crosswalk_id_set = getCrosswalkIdSetOnPath(
     planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),

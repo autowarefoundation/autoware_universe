@@ -40,7 +40,7 @@ using autoware_utils::create_marker_scale;
 
 visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
   const std::vector<lanelet::CompoundPolygon3d> & polygons, const std::string & ns,
-  const int64_t lane_id, const double r, const double g, const double b)
+  const lanelet::Id lane_id, const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
 
@@ -75,8 +75,8 @@ visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
 }
 
 visualization_msgs::msg::MarkerArray createPoseMarkerArray(
-  const geometry_msgs::msg::Pose & pose, const std::string & ns, const int64_t id, const double r,
-  const double g, const double b)
+  const geometry_msgs::msg::Pose & pose, const std::string & ns, const lanelet::Id id,
+  const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
 
@@ -113,7 +113,7 @@ visualization_msgs::msg::MarkerArray createPoseMarkerArray(
 
 visualization_msgs::msg::MarkerArray createArrowLineMarkerArray(
   const geometry_msgs::msg::Point & point_start, const geometry_msgs::msg::Point & point_end,
-  const std::string & ns, const int64_t id, const double r, const double g, const double b)
+  const std::string & ns, const lanelet::Id id, const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
 
@@ -139,7 +139,7 @@ visualization_msgs::msg::MarkerArray createArrowLineMarkerArray(
 
 visualization_msgs::msg::MarkerArray createLineMarkerArray(
   const geometry_msgs::msg::Point & point_start, const geometry_msgs::msg::Point & point_end,
-  const std::string & ns, const int64_t id, const double r, const double g, const double b)
+  const std::string & ns, const lanelet::Id id, const double r, const double g, const double b)
 {
   visualization_msgs::msg::MarkerArray msg;
 
@@ -161,7 +161,7 @@ visualization_msgs::msg::MarkerArray createLineMarkerArray(
 }  // namespace
 
 IntersectionModule::IntersectionModule(
-  const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+  const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
   const std::set<lanelet::Id> & associative_ids, const std::string & turn_direction,
   const bool has_traffic_light, rclcpp::Node & node, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,

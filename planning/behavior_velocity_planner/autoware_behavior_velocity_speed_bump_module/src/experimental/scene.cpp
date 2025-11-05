@@ -36,7 +36,8 @@ using visualization_msgs::msg::Marker;
 namespace
 {
 visualization_msgs::msg::MarkerArray createSpeedBumpMarkers(
-  const SpeedBumpModule::DebugData & debug_data, const rclcpp::Time & now, const int64_t module_id)
+  const SpeedBumpModule::DebugData & debug_data, const rclcpp::Time & now,
+  const lanelet::Id module_id)
 {
   visualization_msgs::msg::MarkerArray msg;
   const int32_t uid = planning_utils::bitShift(module_id);
@@ -96,15 +97,14 @@ visualization_msgs::msg::MarkerArray createSpeedBumpMarkers(
 }  // namespace
 
 SpeedBumpModule::SpeedBumpModule(
-  const int64_t module_id, const int64_t lane_id,
-  const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
-  const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+  const lanelet::Id module_id, const lanelet::autoware::SpeedBump & speed_bump_reg_elem,
+  const PlannerParam & planner_param, const rclcpp::Logger & logger,
+  const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   module_id_(module_id),
-  lane_id_(lane_id),
   speed_bump_reg_elem_(std::move(speed_bump_reg_elem)),
   planner_param_(planner_param),
   debug_data_()

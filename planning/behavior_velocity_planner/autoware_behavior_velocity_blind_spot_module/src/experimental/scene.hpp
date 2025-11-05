@@ -75,7 +75,7 @@ public:
 
 public:
   BlindSpotModule(
-    const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
+    const lanelet::Id module_id, const lanelet::Id lane_id, const TurnDirection turn_direction,
     const PlannerParam & planner_param, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
@@ -97,7 +97,7 @@ public:
 
 private:
   // const variables
-  const int64_t lane_id_;
+  const lanelet::Id lane_id_;
   const PlannerParam planner_param_;
   const TurnDirection turn_direction_;
 

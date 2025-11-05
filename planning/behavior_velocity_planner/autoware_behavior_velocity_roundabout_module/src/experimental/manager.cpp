@@ -99,7 +99,7 @@ RoundaboutModuleManager::RoundaboutModuleManager(rclcpp::Node & node)
                 "collision_point");
   }
 
-  rp.debug.ttc = get_or_declare_parameter<std::vector<int64_t>>(node, ns + ".debug.ttc");
+  rp.debug.ttc = get_or_declare_parameter<std::vector<lanelet::Id>>(node, ns + ".debug.ttc");
 
   decision_state_pub_ =
     node.create_publisher<std_msgs::msg::String>("~/debug/roundabout/decision_state", 1);

@@ -74,7 +74,7 @@ public:
 
 public:
   VirtualTrafficLightModule(
-    const int64_t module_id, const int64_t lane_id,
+    const lanelet::Id module_id, const lanelet::Id lane_id,
     const lanelet::autoware::VirtualTrafficLight & reg_elem, lanelet::ConstLanelet lane,
     const PlannerParam & planner_param, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
@@ -100,11 +100,11 @@ public:
 
   void updateLoggerWithState();
 
-  std::vector<int64_t> getRegulatoryElementIds() const override { return {reg_elem_.id()}; }
-  std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
-  std::vector<int64_t> getLineIds() const override
+  std::vector<lanelet::Id> getRegulatoryElementIds() const override { return {reg_elem_.id()}; }
+  std::vector<lanelet::Id> getLaneletIds() const override { return {lane_id_}; }
+  std::vector<lanelet::Id> getLineIds() const override
   {
-    std::vector<int64_t> line_ids;
+    std::vector<lanelet::Id> line_ids;
 
     line_ids.push_back(reg_elem_.getStartLine().id());
 
@@ -120,7 +120,7 @@ public:
   }
 
 private:
-  const int64_t lane_id_;
+  const lanelet::Id lane_id_;
   const lanelet::autoware::VirtualTrafficLight & reg_elem_;
   const lanelet::ConstLanelet lane_;
   const PlannerParam planner_param_;
@@ -133,7 +133,7 @@ private:
   rclcpp::Logger base_logger_;
 
   void setModuleState(
-    const State new_state, const std::optional<int64_t> end_line_id = std::nullopt);
+    const State new_state, const std::optional<lanelet::Id> end_line_id = std::nullopt);
 
   template <State StateValue>
   void setModuleState()
@@ -145,7 +145,7 @@ private:
   }
 
   template <State StateValue>
-  void setModuleState(const int64_t end_line_id)
+  void setModuleState(const lanelet::Id end_line_id)
   {
     static_assert(
       StateValue == State::FINALIZING || StateValue == State::FINALIZED,
@@ -155,7 +155,7 @@ private:
 
   void updateInfrastructureCommand();
 
-  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine(
+  std::optional<std::pair<size_t, lanelet::Id>> getPathIndexOfFirstEndLine(
     const PlannerData & planner_data);
 
   bool isBeforeStartLine(const size_t end_line_idx, const PlannerData & planner_data);

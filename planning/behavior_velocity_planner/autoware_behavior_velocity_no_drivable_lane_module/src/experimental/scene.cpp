@@ -25,7 +25,7 @@ namespace
 {
 visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
   const NoDrivableLaneModule::DebugData & debug_data, const rclcpp::Time & now,
-  const int64_t module_id)
+  const lanelet::Id module_id)
 {
   using autoware_utils::create_default_marker;
   using autoware_utils::create_marker_color;
@@ -71,7 +71,7 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
 using autoware_utils::create_point;
 
 NoDrivableLaneModule::NoDrivableLaneModule(
-  const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+  const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
   const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>

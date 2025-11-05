@@ -62,7 +62,7 @@ public:
   };
 
   DetectionAreaModule(
-    const int64_t module_id, const int64_t lane_id,
+    const lanelet::Id module_id, const lanelet::Id lane_id,
     const lanelet::autoware::DetectionArea & detection_area_reg_elem,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
@@ -78,19 +78,19 @@ public:
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
-  std::vector<int64_t> getRegulatoryElementIds() const override
+  std::vector<lanelet::Id> getRegulatoryElementIds() const override
   {
     return {detection_area_reg_elem_.id()};
   }
-  std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
-  std::vector<int64_t> getLineIds() const override
+  std::vector<lanelet::Id> getLaneletIds() const override { return {lane_id_}; }
+  std::vector<lanelet::Id> getLineIds() const override
   {
     return {detection_area_reg_elem_.stopLine().id()};
   }
 
 private:
   // Lane id
-  int64_t lane_id_;
+  lanelet::Id lane_id_;
 
   // Key Feature
   const lanelet::autoware::DetectionArea & detection_area_reg_elem_;

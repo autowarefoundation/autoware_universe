@@ -54,7 +54,7 @@ public:
   };
 
   NoDrivableLaneModule(
-    const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+    const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
@@ -70,7 +70,7 @@ public:
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
 private:
-  const int64_t lane_id_;
+  const lanelet::Id lane_id_;
 
   // Parameter
   PlannerParam planner_param_;

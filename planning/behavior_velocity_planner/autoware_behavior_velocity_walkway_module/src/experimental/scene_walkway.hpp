@@ -36,7 +36,7 @@ public:
     double stop_duration;
   };
   WalkwayModule(
-    const int64_t module_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
+    const lanelet::Id module_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
     const PlannerParam & planner_param, const bool use_regulatory_element,
     const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
@@ -52,7 +52,7 @@ public:
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
 private:
-  const int64_t module_id_;
+  const lanelet::Id module_id_;
 
   [[nodiscard]] std::pair<double, geometry_msgs::msg::Point> getStopLine(
     const PathWithLaneId & ego_path, bool & exist_stopline_in_map,

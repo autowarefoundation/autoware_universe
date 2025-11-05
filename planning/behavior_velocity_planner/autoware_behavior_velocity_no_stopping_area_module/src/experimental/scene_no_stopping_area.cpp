@@ -122,7 +122,7 @@ visualization_msgs::msg::MarkerArray create_lanelet_info_marker_array(
 }  // namespace
 
 NoStoppingAreaModule::NoStoppingAreaModule(
-  const int64_t module_id, const int64_t lane_id,
+  const lanelet::Id module_id, const lanelet::Id lane_id,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
   const rclcpp::Clock::SharedPtr clock,

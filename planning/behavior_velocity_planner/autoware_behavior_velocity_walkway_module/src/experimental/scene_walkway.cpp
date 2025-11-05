@@ -41,7 +41,7 @@ using autoware_utils::create_marker_scale;
 using visualization_msgs::msg::Marker;
 
 visualization_msgs::msg::MarkerArray createWalkwayMarkers(
-  const DebugData & debug_data, const rclcpp::Time & now, const int64_t module_id)
+  const DebugData & debug_data, const rclcpp::Time & now, const lanelet::Id module_id)
 {
   int32_t uid = planning_utils::bitShift(module_id);
   visualization_msgs::msg::MarkerArray msg;
@@ -78,7 +78,7 @@ visualization_msgs::msg::MarkerArray createWalkwayMarkers(
 }  // namespace
 
 WalkwayModule::WalkwayModule(
-  const int64_t module_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
+  const lanelet::Id module_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
   const PlannerParam & planner_param, const bool use_regulatory_element,
   const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,

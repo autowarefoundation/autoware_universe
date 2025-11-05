@@ -33,7 +33,7 @@
 namespace autoware::behavior_velocity_planner::experimental
 {
 TrafficLightModule::TrafficLightModule(
-  const int64_t lane_id,
+  const lanelet::Id module_id,
   const lanelet::TrafficLight & traffic_light_reg_elem,  //
   lanelet::ConstLanelet lane,                            //
   const lanelet::ConstLineString3d & initial_stop_line,  //
@@ -42,8 +42,7 @@ TrafficLightModule::TrafficLightModule(
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
-: SceneModuleInterfaceWithRTC(lane_id, logger, clock, time_keeper, planning_factor_interface),
-  lane_id_(lane_id),
+: SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
   stop_line_(initial_stop_line),

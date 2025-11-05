@@ -94,7 +94,7 @@ WalkwayModuleManager::getModuleExpiredFunction(
 
   const auto rh = planner_data.route_handler_;
 
-  std::set<int64_t> walkway_id_set;
+  std::set<lanelet::Id> walkway_id_set;
 
   walkway_id_set = getCrosswalkIdSetOnPath(
     planner_data.current_odometry->pose, path_msg, rh->getLaneletMapPtr(),

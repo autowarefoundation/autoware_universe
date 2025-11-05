@@ -45,7 +45,7 @@ private:
   using PlannerParam = occlusion_spot_utils::PlannerParam;
 
   PlannerParam planner_param_;
-  int64_t module_id_;
+  lanelet::Id module_id_;
 
   void launchNewModules(
     const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data) override;

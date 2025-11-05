@@ -52,8 +52,8 @@ void NoStoppingAreaModuleManager::launchNewModules(
          path_msg, planner_data.route_handler_->getLaneletMapPtr(),
          planner_data.current_odometry->pose)) {
     // Use lanelet_id to unregister module when the route is changed
-    const int64_t module_id = m.first->id();
-    const int64_t lane_id = m.second.id();
+    const lanelet::Id module_id = m.first->id();
+    const lanelet::Id lane_id = m.second.id();
 
     if (!isModuleRegistered(module_id)) {
       // assign 1 no stopping area for each module

@@ -364,8 +364,8 @@ public:
   };
 
   CrosswalkModule(
-    rclcpp::Node & node, const int64_t lane_id, const int64_t module_id,
-    const std::optional<int64_t> & reg_elem_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
+    rclcpp::Node & node, const lanelet::Id lane_id, const lanelet::Id module_id,
+    const std::optional<lanelet::Id> & reg_elem_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
@@ -524,7 +524,7 @@ private:
       stop_watch_.toc("total_processing_time", false));
   }
 
-  const int64_t module_id_;
+  const lanelet::Id module_id_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr
     collision_info_pub_;

@@ -148,7 +148,7 @@ std::vector<Polygon2d> calcOverlappingPoints(const Polygon2d & polygon1, const P
 }
 
 autoware_internal_debug_msgs::msg::StringStamped createStringStampedMessage(
-  const rclcpp::Time & now, const int64_t module_id_,
+  const rclcpp::Time & now, const lanelet::Id module_id_,
   const std::vector<std::tuple<std::string, CollisionPoint, CollisionState>> & collision_points)
 {
   autoware_internal_debug_msgs::msg::StringStamped msg;
@@ -165,7 +165,7 @@ autoware_internal_debug_msgs::msg::StringStamped createStringStampedMessage(
 }
 
 visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
-  const DebugData & debug_data, const rclcpp::Time & now, const int64_t module_id)
+  const DebugData & debug_data, const rclcpp::Time & now, const lanelet::Id module_id)
 {
   visualization_msgs::msg::MarkerArray msg;
   int32_t uid = planning_utils::bitShift(module_id);
@@ -345,8 +345,8 @@ visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
 }  // namespace
 
 CrosswalkModule::CrosswalkModule(
-  rclcpp::Node & node, const int64_t lane_id, const int64_t module_id,
-  const std::optional<int64_t> & reg_elem_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
+  rclcpp::Node & node, const lanelet::Id lane_id, const lanelet::Id module_id,
+  const std::optional<lanelet::Id> & reg_elem_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
   const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
@@ -772,7 +772,7 @@ std::pair<double, double> CrosswalkModule::clampAttentionRangeByNeighborCrosswal
   const auto near_idx = findNearestSegmentIndex(ego_path.points, p_near.value());
   const auto far_idx = findNearestSegmentIndex(ego_path.points, p_far.value()) + 1;
 
-  std::set<int64_t> lane_ids;
+  std::set<lanelet::Id> lane_ids;
   for (size_t i = near_idx; i < far_idx; ++i) {
     for (const auto & id : ego_path.points.at(i).lane_ids) {
       lane_ids.insert(id);

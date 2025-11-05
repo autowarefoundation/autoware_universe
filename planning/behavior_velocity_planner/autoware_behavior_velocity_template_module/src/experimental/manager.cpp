@@ -31,7 +31,7 @@ void TemplateModuleManager::launchNewModules(
   [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
   const PlannerData & planner_data)
 {
-  int64_t module_id = 0;
+  lanelet::Id module_id = 0;
   if (!isModuleRegistered(module_id)) {
     registerModule(
       std::make_shared<TemplateModule>(

@@ -37,7 +37,7 @@ using virtual_traffic_light::SegmentIndexWithPoint;
 using virtual_traffic_light::toAutowarePoints;
 
 VirtualTrafficLightModule::VirtualTrafficLightModule(
-  const int64_t module_id, const int64_t lane_id,
+  const lanelet::Id module_id, const lanelet::Id lane_id,
   const lanelet::autoware::VirtualTrafficLight & reg_elem, lanelet::ConstLanelet lane,
   const PlannerParam & planner_param, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,
@@ -108,7 +108,7 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
 }
 
 void VirtualTrafficLightModule::setModuleState(
-  const State new_state, const std::optional<int64_t> end_line_id)
+  const State new_state, const std::optional<lanelet::Id> end_line_id)
 {
   // +----------+
   // |   NONE   |
@@ -201,8 +201,7 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
   if (!opt_end_line_result) {
     return true;
   }
-  const size_t end_line_idx = opt_end_line_result->first;
-  const int64_t end_line_id = opt_end_line_result->second;
+  const auto [end_line_idx, end_line_id] = *opt_end_line_result;
 
   // Do nothing if vehicle is before start line
   if (isBeforeStartLine(end_line_idx, planner_data)) {
@@ -316,10 +315,10 @@ void VirtualTrafficLightModule::updateInfrastructureCommand()
   setInfrastructureCommand(command_);
 }
 
-std::optional<std::pair<size_t, int64_t>> VirtualTrafficLightModule::getPathIndexOfFirstEndLine(
+std::optional<std::pair<size_t, lanelet::Id>> VirtualTrafficLightModule::getPathIndexOfFirstEndLine(
   const PlannerData & planner_data)
 {
-  std::optional<std::pair<size_t, int64_t>> min_result;
+  std::optional<std::pair<size_t, lanelet::Id>> min_result;
   const auto original_end_lines = reg_elem_.getEndLines();
 
   for (size_t i = 0; i < map_data_.end_lines.size() && i < original_end_lines.size(); ++i) {

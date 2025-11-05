@@ -25,7 +25,7 @@ namespace autoware::behavior_velocity_planner::experimental
 {
 
 SceneModuleInterfaceWithRTC::SceneModuleInterfaceWithRTC(
-  const int64_t module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+  const lanelet::Id module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -76,7 +76,7 @@ void SceneModuleManagerInterfaceWithRTC::setActivation()
   }
 }
 
-UUID SceneModuleManagerInterfaceWithRTC::getUUID(const int64_t & module_id) const
+UUID SceneModuleManagerInterfaceWithRTC::getUUID(const lanelet::Id & module_id) const
 {
   if (map_uuid_.count(module_id) == 0) {
     const UUID uuid;
@@ -85,12 +85,12 @@ UUID SceneModuleManagerInterfaceWithRTC::getUUID(const int64_t & module_id) cons
   return map_uuid_.at(module_id);
 }
 
-void SceneModuleManagerInterfaceWithRTC::generate_uuid(const int64_t & module_id)
+void SceneModuleManagerInterfaceWithRTC::generate_uuid(const lanelet::Id & module_id)
 {
   map_uuid_.insert({module_id, autoware_utils::generate_uuid()});
 }
 
-void SceneModuleManagerInterfaceWithRTC::removeUUID(const int64_t & module_id)
+void SceneModuleManagerInterfaceWithRTC::removeUUID(const lanelet::Id & module_id)
 {
   const auto result = map_uuid_.erase(module_id);
   if (result == 0) {

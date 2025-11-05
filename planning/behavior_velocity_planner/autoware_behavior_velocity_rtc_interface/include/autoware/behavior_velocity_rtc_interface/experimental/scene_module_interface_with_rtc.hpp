@@ -37,7 +37,7 @@ class SceneModuleInterfaceWithRTC : public SceneModuleInterface
 {
 public:
   explicit SceneModuleInterfaceWithRTC(
-    const int64_t module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+    const lanelet::Id module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
@@ -81,7 +81,7 @@ public:
 
 protected:
   RTCInterface rtc_interface_;
-  std::unordered_map<int64_t, UUID> map_uuid_;
+  std::unordered_map<lanelet::Id, UUID> map_uuid_;
 
   ObjectsOfInterestMarkerInterface objects_of_interest_marker_interface_;
 
@@ -105,11 +105,11 @@ protected:
     rtc_interface_.publishCooperateStatus(stamp);
   }
 
-  UUID getUUID(const int64_t & module_id) const;
+  UUID getUUID(const lanelet::Id & module_id) const;
 
-  void generate_uuid(const int64_t & module_id);
+  void generate_uuid(const lanelet::Id & module_id);
 
-  void removeUUID(const int64_t & module_id);
+  void removeUUID(const lanelet::Id & module_id);
 
   void publishObjectsOfInterestMarker();
 

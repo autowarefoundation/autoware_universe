@@ -289,7 +289,7 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       node, ns + ".conservative_merging.merging_judge_angle_threshold");
   }
 
-  ip.debug.ttc = get_or_declare_parameter<std::vector<int64_t>>(node, ns + ".debug.ttc");
+  ip.debug.ttc = get_or_declare_parameter<std::vector<lanelet::Id>>(node, ns + ".debug.ttc");
 
   decision_state_pub_ =
     node.create_publisher<std_msgs::msg::String>("~/debug/intersection/decision_state", 1);
