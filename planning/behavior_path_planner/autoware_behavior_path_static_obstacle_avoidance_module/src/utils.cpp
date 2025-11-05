@@ -583,7 +583,7 @@ std::optional<lanelet::ConstLineString3d> getNearestIntersectionRoadBorder(
   // extract road_border linestring
   std::vector<lanelet::ConstLineString3d> road_border_linestring;
   for (const auto & ls : linestrings) {
-    const lanelet::Attribute & type = ls.attribute(lanelet::AttributeName::Type);
+    const std::string type = ls.attributeOr(lanelet::AttributeName::Type, "none");
     if (type == "road_border") {
       road_border_linestring.push_back(ls);
     }
