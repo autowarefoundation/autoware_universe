@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_OCCLUSION_SPOT_HPP_
-#define SCENE_OCCLUSION_SPOT_HPP_
+#ifndef EXPERIMENTAL__SCENE_OCCLUSION_SPOT_HPP_
+#define EXPERIMENTAL__SCENE_OCCLUSION_SPOT_HPP_
 
 #include "../occlusion_spot_utils.hpp"
 
@@ -65,4 +65,4 @@ protected:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // SCENE_OCCLUSION_SPOT_HPP_
+#endif  // EXPERIMENTAL__SCENE_OCCLUSION_SPOT_HPP_

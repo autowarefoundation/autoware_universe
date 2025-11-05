@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MANAGER_HPP_
-#define MANAGER_HPP_
+#ifndef EXPERIMENTAL__MANAGER_HPP_
+#define EXPERIMENTAL__MANAGER_HPP_
 
 #include "scene_crosswalk.hpp"
 
@@ -56,4 +56,4 @@ class CrosswalkModulePlugin : public PluginWrapper<CrosswalkModuleManager>
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // MANAGER_HPP_
+#endif  // EXPERIMENTAL__MANAGER_HPP_

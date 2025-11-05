@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_
-#define AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_
+#ifndef AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__EXPERIMENTAL__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_  // NOLINT
+#define AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__EXPERIMENTAL__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_  // NOLINT
 
 #include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
@@ -143,4 +143,6 @@ extern template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::r
   const PlannerData & planner_data);
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_
+// clang-format off
+#endif  // AUTOWARE__BEHAVIOR_VELOCITY_RTC_INTERFACE__EXPERIMENTAL__SCENE_MODULE_INTERFACE_WITH_RTC_HPP_  // NOLINT
+// clang-format on

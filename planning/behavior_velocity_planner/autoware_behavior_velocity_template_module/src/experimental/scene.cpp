@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {

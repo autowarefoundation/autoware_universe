@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_WALKWAY_HPP_
-#define SCENE_WALKWAY_HPP_
+#ifndef EXPERIMENTAL__SCENE_WALKWAY_HPP_
+#define EXPERIMENTAL__SCENE_WALKWAY_HPP_
 
 #include "scene_walkway.hpp"
 
@@ -79,4 +79,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // SCENE_WALKWAY_HPP_
+#endif  // EXPERIMENTAL__SCENE_WALKWAY_HPP_

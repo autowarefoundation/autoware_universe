@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_NO_STOPPING_AREA_HPP_
-#define SCENE_NO_STOPPING_AREA_HPP_
+#ifndef EXPERIMENTAL__SCENE_NO_STOPPING_AREA_HPP_
+#define EXPERIMENTAL__SCENE_NO_STOPPING_AREA_HPP_
 
 #include "../utils.hpp"
 
@@ -21,6 +21,7 @@
 #include <autoware/behavior_velocity_rtc_interface/experimental/scene_module_interface_with_rtc.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {
@@ -91,4 +92,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // SCENE_NO_STOPPING_AREA_HPP_
+#endif  // EXPERIMENTAL__SCENE_NO_STOPPING_AREA_HPP_

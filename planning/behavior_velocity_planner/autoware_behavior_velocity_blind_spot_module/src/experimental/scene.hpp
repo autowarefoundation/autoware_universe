@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
-#define AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
+#ifndef EXPERIMENTAL__SCENE_HPP_
+#define EXPERIMENTAL__SCENE_HPP_
 
 #include "autoware/behavior_velocity_blind_spot_module/parameter.hpp"
 #include "autoware/behavior_velocity_blind_spot_module/util.hpp"
@@ -174,4 +174,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__SCENE_HPP_
+#endif  // EXPERIMENTAL__SCENE_HPP_

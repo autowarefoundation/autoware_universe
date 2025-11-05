@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_
-#define AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_
+#ifndef EXPERIMENTAL__MANAGER_HPP_
+#define EXPERIMENTAL__MANAGER_HPP_
 
 #include "scene_intersection.hpp"
 #include "scene_merge_from_private_road.hpp"
@@ -22,6 +22,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {
@@ -107,4 +108,4 @@ class MergeFromPrivateModulePlugin : public PluginWrapper<MergeFromPrivateModule
 
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // AUTOWARE__BEHAVIOR_VELOCITY_INTERSECTION_MODULE__MANAGER_HPP_
+#endif  // EXPERIMENTAL__MANAGER_HPP_

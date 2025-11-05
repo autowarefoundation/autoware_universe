@@ -17,6 +17,7 @@
 #include <autoware_utils/ros/marker_helper.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {

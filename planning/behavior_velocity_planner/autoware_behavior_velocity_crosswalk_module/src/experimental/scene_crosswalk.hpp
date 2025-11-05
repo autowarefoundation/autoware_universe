@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_CROSSWALK_HPP_
-#define SCENE_CROSSWALK_HPP_
+#ifndef EXPERIMENTAL__SCENE_CROSSWALK_HPP_
+#define EXPERIMENTAL__SCENE_CROSSWALK_HPP_
 
 #include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 
@@ -606,4 +606,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // SCENE_CROSSWALK_HPP_
+#endif  // EXPERIMENTAL__SCENE_CROSSWALK_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_HPP_
-#define SCENE_HPP_
+#ifndef EXPERIMENTAL__SCENE_HPP_
+#define EXPERIMENTAL__SCENE_HPP_
 
 #include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
@@ -181,4 +181,4 @@ private:
   std::string stateToString(State state) const;
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
-#endif  // SCENE_HPP_
+#endif  // EXPERIMENTAL__SCENE_HPP_

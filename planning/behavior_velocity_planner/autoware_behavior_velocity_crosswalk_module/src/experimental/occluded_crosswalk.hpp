@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef OCCLUDED_CROSSWALK_HPP_
-#define OCCLUDED_CROSSWALK_HPP_
+#ifndef EXPERIMENTAL__OCCLUDED_CROSSWALK_HPP_
+#define EXPERIMENTAL__OCCLUDED_CROSSWALK_HPP_
 
 #include "scene_crosswalk.hpp"
 
@@ -89,4 +89,4 @@ std::vector<lanelet::BasicPolygon2d> calculate_detection_areas(
   const double detection_range);
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // OCCLUDED_CROSSWALK_HPP_
+#endif  // EXPERIMENTAL__OCCLUDED_CROSSWALK_HPP_

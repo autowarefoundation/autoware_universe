@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__TIME_TO_COLLISION_HPP_
-#define AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__TIME_TO_COLLISION_HPP_
+#ifndef EXPERIMENTAL__TIME_TO_COLLISION_HPP_
+#define EXPERIMENTAL__TIME_TO_COLLISION_HPP_
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 
 #include <autoware_internal_planning_msgs/msg/safety_factor.hpp>
+
+#include <utility>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
 {
@@ -85,4 +88,4 @@ std::optional<double> get_unsafe_time_if_critical(
 
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__TIME_TO_COLLISION_HPP_
+#endif  // EXPERIMENTAL__TIME_TO_COLLISION_HPP_

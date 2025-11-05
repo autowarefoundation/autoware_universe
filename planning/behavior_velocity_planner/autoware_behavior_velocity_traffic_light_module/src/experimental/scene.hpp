@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SCENE_HPP_
-#define SCENE_HPP_
+#ifndef EXPERIMENTAL__SCENE_HPP_
+#define EXPERIMENTAL__SCENE_HPP_
 
 #define EIGEN_MPL2_ONLY
 
@@ -153,4 +153,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // SCENE_HPP_
+#endif  // EXPERIMENTAL__SCENE_HPP_
