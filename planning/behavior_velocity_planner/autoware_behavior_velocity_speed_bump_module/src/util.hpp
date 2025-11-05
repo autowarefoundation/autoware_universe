@@ -15,30 +15,44 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
-#include <boost/geometry/geometries/linestring.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-
-#include <limits>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
 #define EIGEN_MPL2_ONLY
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/point32.hpp>
 
 #include <lanelet2_core/primitives/Polygon.h>
 
-namespace autoware::behavior_velocity_planner
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
+
+namespace autoware::behavior_velocity_planner::speed_bump
 {
 
-namespace bg = boost::geometry;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+
+// the status of intersection between path and speed bump
+struct PolygonIntersection
+{
+  bool is_path_inside_of_polygon = false;  // true if path is completely inside the speed bump
+                                           // polygon (no intersection point)
+  std::optional<double> first_intersection_s;
+  std::optional<double> second_intersection_s;
+};
+
+PolygonIntersection getPathIntersectionWithSpeedBumpPolygon(
+  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const size_t max_num);
+
+bool isNoRelation(const PolygonIntersection & status);
+
+}  // namespace autoware::behavior_velocity_planner::speed_bump
+
+namespace autoware::behavior_velocity_planner
+{
 
 using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;

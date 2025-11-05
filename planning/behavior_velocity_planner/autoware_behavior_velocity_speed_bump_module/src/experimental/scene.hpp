@@ -27,17 +27,16 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 class SpeedBumpModule : public SceneModuleInterface
 {
 public:
   struct DebugData
   {
     double base_link2front;
-    PathPolygonIntersectionStatus path_polygon_intersection_status;
-    std::vector<geometry_msgs::msg::Pose> slow_start_poses;
-    std::vector<geometry_msgs::msg::Point> slow_end_points;
+    std::optional<geometry_msgs::msg::Point> first_intersection_point;
+    std::optional<geometry_msgs::msg::Point> second_intersection_point;
+    std::optional<geometry_msgs::msg::Pose> slow_start_pose;
+    std::optional<geometry_msgs::msg::Point> slow_end_point;
     std::vector<geometry_msgs::msg::Point> speed_bump_polygon;
   };
 
@@ -81,11 +80,10 @@ private:
   DebugData debug_data_;
 
   bool applySlowDownSpeed(
-    PathWithLaneId & output, const float speed_bump_speed,
-    const PathPolygonIntersectionStatus & path_polygon_intersection_status,
+    Trajectory & path, const speed_bump::PolygonIntersection & path_polygon_intersection,
     const PlannerData & planner_data);
 
-  float speed_bump_slow_down_speed_;
+  double speed_bump_slow_down_speed_;
 };
 
 }  // namespace autoware::behavior_velocity_planner::experimental

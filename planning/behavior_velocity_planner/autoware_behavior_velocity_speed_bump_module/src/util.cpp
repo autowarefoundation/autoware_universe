@@ -14,30 +14,90 @@
 
 #include "util.hpp"
 
-#include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry.hpp>
-#include <boost/geometry/geometries/linestring.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
 #include <cmath>
 #include <memory>
-#include <string>
 #include <vector>
+
+namespace autoware::behavior_velocity_planner::speed_bump
+{
+
+namespace bg = boost::geometry;
+using Point = bg::model::d2::point_xy<double>;
+
+PolygonIntersection getPathIntersectionWithSpeedBumpPolygon(
+  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const size_t max_num)
+{
+  PolygonIntersection polygon_intersection;
+
+  auto closed_polygon = polygon;
+  if (closed_polygon.front() != closed_polygon.back()) {
+    closed_polygon.push_back(closed_polygon.front());  // close polygon
+  }
+  auto intersects = experimental::trajectory::crossed(ego_path, closed_polygon);
+
+  std::partial_sort(
+    intersects.begin(), intersects.begin() + std::min(intersects.size(), max_num),
+    intersects.end());
+  intersects.resize(std::min(intersects.size(), max_num));
+
+  const auto & p_last = ego_path.compute(ego_path.length()).point.pose.position;
+  const auto & p_first = ego_path.compute(0).point.pose.position;
+  const Point & last_path_point{p_last.x, p_last.y};
+  const Point & first_path_point{p_first.x, p_first.y};
+
+  const auto & is_first_path_point_inside_polygon = bg::within(first_path_point, polygon);
+  const auto & is_last_path_point_inside_polygon = bg::within(last_path_point, polygon);
+
+  // classify first and second intersection points
+  if (intersects.empty()) {
+    if (is_first_path_point_inside_polygon && is_last_path_point_inside_polygon) {
+      polygon_intersection.is_path_inside_of_polygon = true;
+    } else {
+      // do nothing
+    }
+  } else if (intersects.size() == 1) {
+    const auto & s = intersects.at(0);
+    if (is_last_path_point_inside_polygon) {
+      polygon_intersection.first_intersection_s = s;
+    } else if (is_first_path_point_inside_polygon) {
+      polygon_intersection.second_intersection_s = s;
+    } else {
+      // do nothing
+    }
+  } else if (intersects.size() == 2) {
+    polygon_intersection.first_intersection_s = intersects.at(0);
+    polygon_intersection.second_intersection_s = intersects.at(1);
+  } else {
+    // do nothing
+  }
+
+  return polygon_intersection;
+}
+
+bool isNoRelation(const PolygonIntersection & status)
+{
+  return !status.is_path_inside_of_polygon && !status.first_intersection_s &&
+         !status.second_intersection_s;
+}
+
+}  // namespace autoware::behavior_velocity_planner::speed_bump
 
 namespace autoware::behavior_velocity_planner
 {
 
 namespace bg = boost::geometry;
 using Point = bg::model::d2::point_xy<double>;
-using Polygon = bg::model::polygon<Point>;
 using Line = bg::model::linestring<Point>;
 
 using autoware::motion_utils::calcLongitudinalOffsetPoint;
