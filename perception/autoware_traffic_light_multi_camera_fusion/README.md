@@ -2,7 +2,7 @@
 
 ## Overview
 
-This node fuses traffic light recognition results from multiple cameras to produce a single, reliable traffic light state. By integrating information from different viewpoints, it ensures robust performance even in challenging scenarios, such as partial **occlusions** or recognition errors from an individual camera.
+This node fuses traffic light recognition results from multiple cameras to produce a single, reliable traffic light state. By integrating information from different viewpoints and ROIs, it ensures robust performance even in challenging scenarios, such as partial **occlusions** or recognition errors from an individual camera.
 
 ```mermaid
 graph LR
@@ -47,10 +47,10 @@ graph TD
     end
 
     subgraph "Stage 1: Per-Camera Fusion"
-        D{"Best View Selection<br><br>For each traffic light bulb,<br>select the single most<br>reliable detection result."}
+        D{"Best ROIs Selection<br><br>For each ROI,<br>select the single most<br>reliable detection result."}
     end
 
-    E["Best Detection per Bulb"]
+    E["Best Detection per ROIs"]
 
     subgraph "Stage 2: Group Fusion"
         F{"Group Consensus<br><br>Fuse all 'best detections'<br>into a single state for<br>the entire traffic light group<br>using Bayesian updating."}
@@ -75,15 +75,16 @@ graph TD
 
 ### Stage 1: Best View Selection (Per-Camera Fusion)
 
-First, for each individual traffic light bulb, the node selects the single most reliable detection—the "best shot"—from all available camera views.
+First, for each individual ROIs, the node selects the single most reliable detection—the "best shot"—from all available camera views.
 
 This selection is based on a strict priority queue:
 
+- **Latest Timestamp:** Detections with the most recent timestamp are prioritized for the same sensor.
 - **Known State:** Results with a known color (Red, Green, etc.) are prioritized over 'Unknown'.
-- **Full Visibility:** Detections from non-truncated ROIs (fully visible bulbs) are prioritized.
+- **Full Visibility:** Detections from non-truncated ROIs (fully visible ROIs) are prioritized.
 - **Highest Confidence:** The result with the highest detection confidence score is prioritized.
 
-This process yields the single most plausible recognition for every visible traffic light bulb.
+This process yields the single most plausible recognition for every ROIs.
 
 ### Stage 2: Group Consensus (Bayesian Fusion)
 
