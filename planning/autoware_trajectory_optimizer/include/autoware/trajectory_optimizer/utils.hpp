@@ -84,12 +84,12 @@ void copy_trajectory_orientation(
  * @param traj_points The trajectory points to be interpolated.
  * @param interpolation_resolution_m Interpolation resolution for Akima spline.
  * @param max_distance_discrepancy_m Maximum position deviation allowed for orientation copying.
- * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
- * be copied.
+ * @param preserve_original_orientation Flag to indicate if orientation from original trajectory
+ * should be copied.
  */
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_distance_discrepancy_m, const bool copy_original_orientation);
+  const double max_distance_discrepancy_m, const bool preserve_original_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
