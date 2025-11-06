@@ -43,6 +43,8 @@
 #include <unordered_map>
 #include <vector>
 
+// cspell: ignore Matx
+
 namespace autoware::image_object_locator
 {
 using autoware::universe_utils::TransformListener;
@@ -93,13 +95,53 @@ private:
 
   struct CameraIntrinsics
   {
-    // cspell: ignore Matx
     cv::Matx33d K;
     cv::Mat D;
   };  // struct CameraIntrinsics
 
+  struct RoiValidator
+  {
+    bool enable_validation;
+    bool remove_object_might_be_truncated;
+
+    double image_border_truncation_horizontal_margin_ratio;
+    double image_border_truncation_vertical_margin_ratio;
+
+    // used to decide an actual object whether it might be truncated
+    uint32_t pixel_truncated_top;
+    uint32_t pixel_truncated_bottom;
+    uint32_t pixel_truncated_left;
+    uint32_t pixel_truncated_right;
+  };  // struct RoiValidator
+
+  struct CovarianceControlParams
+  {
+    // tangential (bearing) settings
+    static constexpr double sigma_bearing_deg = 2.5;
+
+    // radial sigma settings
+    static constexpr double radial_sigma_bias = 0.7;
+    static constexpr double radial_sigma_slope = 0.10;
+
+    // coefficient for adding additional sigma values when the ROI is truncated
+    static constexpr double horizontal_bias_coeff = 2;
+    static constexpr double vertical_bias_coeff = 2;
+
+    // SPD floor
+    static constexpr double eps_spd = 1e-6;
+
+    // tentative sigma value for points that are too close to the camera
+    static constexpr double sigma_close_to_camera_2 = 0.2 * 0.2;
+  };  // struct CovarianceControlParams
+
+  bool isRoiValidationParamValid(
+    const size_t rois_number, const std::vector<bool> & validation_enable,
+    const std::vector<bool> & remove_truncated);
   void roiCallback(const DetectedObjectsWithFeature::ConstSharedPtr & msg, int rois_id);
   void cameraInfoCallback(const CameraInfo::ConstSharedPtr & msg, int rois_id);
+  cv::Matx22d computeCovarianceXY(
+    const cv::Vec3d & object_ground_point, const cv::Vec3d & cam_t, const double object_width,
+    const double horizontal_bias_coeff, const double vertical_bias_coeff);
   bool generateROIBasedObject(
     const sensor_msgs::msg::RegionOfInterest & roi, const int & rois_id,
     const geometry_msgs::msg::TransformStamped & tf, const uint8_t & label,
@@ -112,8 +154,11 @@ private:
   // publisher
   std::unordered_map<int, rclcpp::Publisher<DetectedObjects>::SharedPtr> objects_pubs_;
 
+  CovarianceControlParams covariance_config_;
+
   std::string target_frame_;
   LabelSettings label_settings_;
+  std::unordered_map<int, RoiValidator> roi_validator_;
   double roi_confidence_th_;
   double detection_max_range_sq_;
   double pseudo_height_;

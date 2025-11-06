@@ -63,6 +63,42 @@
           "minimum": 0.0,
           "maximum": 1.0
         },
+        "roi_truncation_validation": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              },
+              "description": "Flags to enable validation for each ROI. Must have the same number as the input ROIs.",
+              "default": [false, false, false, false, false, false, false, false]
+            },
+            "remove_truncated": {
+              "type": "array",
+              "items": {
+                "type": "boolean",
+                "default": false
+              },
+              "description": "If this is true, the object will be removed when its ROI is evaluated as truncated. Must have the same number as the input ROIs.",
+              "default": [false, false, false, false, false, false, false, false]
+            },
+            "image_border_truncation_horizontal_margin_ratio": {
+              "type": "number",
+              "description": "Margin ratio used to detect whether the ROI is truncated based on the image width.",
+              "default": 0.0,
+              "minimum": 0.0,
+              "maximum": 0.5
+            },
+            "image_border_truncation_vertical_margin_ratio": {
+              "type": "number",
+              "description": "Margin ratio used to detect whether the ROI is truncated based on the image height.",
+              "default": 0.0,
+              "minimum": 0.0,
+              "maximum": 0.5
+            }
+          }
+        },
         "detection_max_range": {
           "type": "number",
           "description": "Maximum detection range. Objects beyond this distance will not be included in the output [m].",
@@ -87,7 +123,7 @@
             "width_max": {
               "type": "number",
               "description": "If the estimated width is larger than this value, it will be clamped to this value [m].",
-              "width_max": 0.8,
+              "default": 0.8,
               "minimum": 0.3
             }
           }
