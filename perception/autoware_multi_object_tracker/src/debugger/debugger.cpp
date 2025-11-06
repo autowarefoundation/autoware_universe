@@ -33,7 +33,7 @@ TrackerDebugger::TrackerDebugger(
   // initialize debug publishers
   if (debug_settings_.publish_processing_time) {
     processing_time_publisher_ =
-      std::make_unique<autoware_utils::DebugPublisher>(&node_, "multi_object_tracker");
+      std::make_unique<autoware_utils_debug::DebugPublisher>(&node_, "multi_object_tracker");
   }
 
   if (debug_settings_.publish_tentative_objects) {

@@ -19,8 +19,6 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <algorithm>
 #include <array>
@@ -59,7 +57,7 @@ double getFormedYawAngle(
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
@@ -70,7 +68,8 @@ DataAssociation::DataAssociation(const AssociatorConfig & config)
   updateMaxSearchDistances();
 }
 
-void DataAssociation::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+void DataAssociation::setTimeKeeper(
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
 }

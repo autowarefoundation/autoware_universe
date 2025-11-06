@@ -19,8 +19,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
+#include <autoware_utils_geometry/msg/covariance.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #include <tf2/utils.h>
 
@@ -30,7 +30,7 @@ namespace autoware::multi_object_tracker
 {
 namespace uncertainty
 {
-using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 object_model::StateCovariance covarianceFromObjectClass(const ObjectClassification & object_class)
 {
