@@ -1,3 +1,6 @@
 <library path="autoware_behavior_velocity_no_stopping_area_module">
-  <class type="autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin" base_class_type="autoware::behavior_velocity_planner::PluginInterface"/>
+  <class type="autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::PluginInterface" />
+  <class type="autoware::behavior_velocity_planner::experimental::NoStoppingAreaModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::experimental::PluginInterface" />
 </library>

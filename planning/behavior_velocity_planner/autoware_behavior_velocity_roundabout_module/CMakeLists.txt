@@ -14,6 +14,10 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/scene_roundabout_prepare_data.cpp
   src/debug.cpp
   src/scene_roundabout_collision.cpp
+  src/experimental/manager.cpp
+  src/experimental/scene_roundabout.cpp
+  src/experimental/scene_roundabout_prepare_data.cpp
+  src/experimental/scene_roundabout_collision.cpp
 )
 ament_auto_package(INSTALL_TO_SHARE config)
 
