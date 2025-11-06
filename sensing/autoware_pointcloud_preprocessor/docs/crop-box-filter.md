@@ -8,13 +8,13 @@ Further, it can filter out reflections caused by reflective surfaces within the 
 ## Inner-workings / Algorithms
 
 An axis-aligned bounding box in the `input_frame` is specified using the below parameters.
-The pointcloud input in `~/input/points`  is transformed to `input_frame` and then filtered by the bounding box.
+The pointcloud input in `~/input/points` is transformed to `input_frame` and then filtered by the bounding box.
 
 Depending on the `negative` parameter, the filter will either keep the points inside the box or outside the box:
 
-| `negative` | Description |
-| ---------- | ----------- |
-| `false`    | Keep only the points inside the box |
+| `negative` | Description                          |
+| ---------- | ------------------------------------ |
+| `false`    | Keep only the points inside the box  |
 | `true`     | Keep only the points outside the box |
 
 If `use_ray_intersection` is set to `true`, the filter will extend to filter any points whose LiDAR
@@ -28,32 +28,32 @@ the LiDAR only knows the angle it fired the ray at, it cannot distinguish betwee
 non-reflections, and the object shows up behind the reflector - as a so-called "ghost object".
 
 !!! note
-    This is the same for cameras - or humans for that matter. While dealing with reflections can in
-    theory be learnt by a perception model, not all modules can handle LiDAR reflections at this time.
+This is the same for cameras - or humans for that matter. While dealing with reflections can in
+theory be learnt by a perception model, not all modules can handle LiDAR reflections at this time.
 
 To filter out these ghost objects, the ray intersection check ensures that any points behind the
 crop box are filtered out. By definition, a point behind the crop box has to come from a ray that\
 passed through it - which should not be possible if the crop box is tight around the ego vehicle.
 
 !!! warning
-    The ray intersection check only makes sense on point clouds that come from a **single** LiDAR sensor
-    with the point cloud frame being at the origin of the LiDAR sensor.
-    If you are using a multi-LiDAR system, or a transformed point cloud, 
-    the ray intersection check will not work as expected.
+The ray intersection check only makes sense on point clouds that come from a **single** LiDAR sensor
+with the point cloud frame being at the origin of the LiDAR sensor.
+If you are using a multi-LiDAR system, or a transformed point cloud,
+the ray intersection check will not work as expected.
 
 The above `negative` parameter can be used in conjunction with `use_ray_intersection`:
 
-| `negative` | `use_ray_intersection` | Description |
-| ---------- | ---------------------- | ----------- |
-| `false`    | `true`                 | Keep only the points inside the box and any points whose LiDAR ray intersected the bounding box |
+| `negative` | `use_ray_intersection` | Description                                                                                      |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `false`    | `true`                 | Keep only the points inside the box and any points whose LiDAR ray intersected the bounding box  |
 | `true`     | `true`                 | Keep only the points outside the box and any points whose LiDAR ray intersected the bounding box |
 
 Or, visually:
 
-| `negative` \ `use_ray_intersection` | `false` | `true` |
-| ---------- | ------- | ------- |
-| `false`    | ![crop_box-positive.svg](./image/crop_box-positive.svg) | ![crop_box-ray-positive.svg](./image/crop_box-ray-positive.svg) |
-| `true`     | ![crop_box-negative.svg](./image/crop_box-negative.svg) | ![crop_box-ray-negative.svg](./image/crop_box-ray-negative.svg) |
+| `negative` \ `use_ray_intersection` | `false`                                                 | `true`                                                          |
+| ----------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------- |
+| `false`                             | ![crop_box-positive.svg](./image/crop_box-positive.svg) | ![crop_box-ray-positive.svg](./image/crop_box-ray-positive.svg) |
+| `true`                              | ![crop_box-negative.svg](./image/crop_box-negative.svg) | ![crop_box-ray-negative.svg](./image/crop_box-ray-negative.svg) |
 
 ## Inputs / Outputs
 
