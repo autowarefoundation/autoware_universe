@@ -360,8 +360,7 @@ void CropBoxFilterComponent::publish_crop_box_polygon(const TransformInfo & tran
   if (param_.use_ray_intersection) {
     Eigen::Vector4f lidar_origin = {0, 0, 0, 1};
 
-    if (transform_info.need_transform)
-    {
+    if (transform_info.need_transform) {
       lidar_origin = transform_info.eigen_transform * lidar_origin;
     }
 
@@ -377,7 +376,8 @@ void CropBoxFilterComponent::publish_crop_box_polygon(const TransformInfo & tran
       ray_points.push_back(generatePoint(end.x(), end.y(), end.z()));
     }
 
-    polygon_msg.polygon.points.insert(polygon_msg.polygon.points.end(), ray_points.begin(), ray_points.end());
+    polygon_msg.polygon.points.insert(
+      polygon_msg.polygon.points.end(), ray_points.begin(), ray_points.end());
   }
 
   crop_box_polygon_pub_->publish(polygon_msg);
