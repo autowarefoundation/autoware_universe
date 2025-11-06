@@ -15,6 +15,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/common_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
+#include <Eigen/src/Core/Matrix.h>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -43,22 +44,13 @@ __device__ bool does_line_segment_intersect_crop_box(
   // The below algorithm is known as the Slab Method.
   // Further reading: https://tavianator.com/2022/ray_box_boundary.html
 
-  float ray_origin_x = from_x;
-  float ray_origin_y = from_y;
-  float ray_origin_z = from_z;
-  float ray_direction_x = to_x - from_x;
-  float ray_direction_y = to_y - from_y;
-  float ray_direction_z = to_z - from_z;
+  Eigen::Vector3f ray_origin = Eigen::Vector3f(from_x, from_y, from_z);
+  Eigen::Vector3f to_point = Eigen::Vector3f(to_x, to_y, to_z);
+  Eigen::Vector3f ray_direction = to_point - ray_origin;
+  Eigen::Vector3f ray_direction_inv = ray_direction.cwiseInverse();
 
-  // Handle edge case where ray direction is zero (point is at origin)
-  if (ray_direction_x == 0.0f && ray_direction_y == 0.0f && ray_direction_z == 0.0f) {
-    return false;
-  }
-
-  // Compute inverse directions, handling zero components
-  float ray_direction_inv_x = (ray_direction_x != 0.0f) ? (1.0f / ray_direction_x) : 1e30f;
-  float ray_direction_inv_y = (ray_direction_y != 0.0f) ? (1.0f / ray_direction_y) : 1e30f;
-  float ray_direction_inv_z = (ray_direction_z != 0.0f) ? (1.0f / ray_direction_z) : 1e30f;
+  Eigen::Vector3f box_min = Eigen::Vector3f(min_x, min_y, min_z);
+  Eigen::Vector3f box_max = Eigen::Vector3f(max_x, max_y, max_z);
 
   // A line is represented as `l(t) = ray_origin + t * ray_direction`.
   // A line segment is represented as `l(t) = ray_origin + t * ray_direction`, where `t` is in [0,
@@ -69,28 +61,12 @@ __device__ bool does_line_segment_intersect_crop_box(
 
   // For each axis, we intersect the line segment with the min and max planes of the box,
   // keeping only the part of the line segment that is within the box.
-  // X axis
-  {
-    float t1 = (min_x - ray_origin_x) * ray_direction_inv_x;
-    float t2 = (max_x - ray_origin_x) * ray_direction_inv_x;
-    t_min = fmaxf(t_min, fminf(t1, t2));
-    t_max = fminf(t_max, fmaxf(t1, t2));
-  }
+  for (int axis = 0 /* x */; axis < 3 /* z */; ++axis) {
+    float t1 = (box_min[axis] - ray_origin[axis]) * ray_direction_inv[axis];
+    float t2 = (box_max[axis] - ray_origin[axis]) * ray_direction_inv[axis];
 
-  // Y axis
-  {
-    float t1 = (min_y - ray_origin_y) * ray_direction_inv_y;
-    float t2 = (max_y - ray_origin_y) * ray_direction_inv_y;
-    t_min = fmaxf(t_min, fminf(t1, t2));
-    t_max = fminf(t_max, fmaxf(t1, t2));
-  }
-
-  // Z axis
-  {
-    float t1 = (min_z - ray_origin_z) * ray_direction_inv_z;
-    float t2 = (max_z - ray_origin_z) * ray_direction_inv_z;
-    t_min = fmaxf(t_min, fminf(t1, t2));
-    t_max = fminf(t_max, fmaxf(t1, t2));
+    t_min = std::max(t_min, std::min(t1, t2));
+    t_max = std::min(t_max, std::max(t1, t2));
   }
 
   // If, after intersecting with all three pairs of planes, the line segment is still valid,
