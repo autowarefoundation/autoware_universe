@@ -30,6 +30,7 @@
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <lanelet2_core/Attribute.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Point.h>
@@ -511,7 +512,7 @@ static std::vector<std::deque<lanelet::ConstLanelet>> getPrecedingLaneletsUptoIn
   std::vector<std::deque<lanelet::ConstLanelet>> preceding_lanelet_sequences;
 
   const auto prev_lanelets = graph->previous(lanelet);
-  const double lanelet_length = lanelet::utils::getLaneletLength3d(lanelet);
+  const double lanelet_length = lanelet::geometry::length3d(lanelet);
 
   // end condition of the recursive function
   if (prev_lanelets.empty() || lanelet_length >= length) {
