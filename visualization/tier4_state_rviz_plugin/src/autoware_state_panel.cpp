@@ -605,7 +605,7 @@ void AutowareStatePanel::onRoute(const RouteState::ConstSharedPtr msg)
       autoware::state_rviz_plugin::colors::default_colors.surface_container_low_pressed.c_str()),
     QColor(autoware::state_rviz_plugin::colors::default_colors.disabled_button_bg.c_str()),
     QColor(autoware::state_rviz_plugin::colors::default_colors.disabled_button_text.c_str()));
-  if (msg->state == RouteState::SET) {
+  if (msg->state == RouteState::SET || msg->state == RouteState::ARRIVED) {
     activateButton(clear_route_button_ptr_);
   } else {
     deactivateButton(clear_route_button_ptr_);
