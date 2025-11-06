@@ -120,8 +120,8 @@ private:
     static constexpr double sigma_bearing_deg = 2.5;
 
     // radial sigma settings
-    static constexpr double range_sigma_bias = 0.7;
-    static constexpr double range_sigma_slope = 0.10;
+    static constexpr double radial_sigma_bias = 0.7;
+    static constexpr double radial_sigma_slope = 0.10;
 
     // coefficient for adding additional sigma values when the ROI is truncated
     static constexpr double horizontal_bias_coeff = 2;

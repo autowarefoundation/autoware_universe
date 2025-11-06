@@ -399,8 +399,8 @@ cv::Matx22d BboxObjectLocatorNode::computeCovarianceXY(
 
   // radial sigma
   double sigma_r =
-    (covariance_config_.range_sigma_bias * vertical_bias_coeff +
-     covariance_config_.range_sigma_slope * dist_cam2point);
+    (covariance_config_.radial_sigma_bias * vertical_bias_coeff +
+     covariance_config_.radial_sigma_slope * dist_cam2point);
 
   // build sigma_xy rotated by azimuth
   cv::Matx22d S = radialTangentialToXY(sigma_r, sigma_t, theta);
