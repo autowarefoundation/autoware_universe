@@ -15,6 +15,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/common_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
+
 #include <Eigen/src/Core/Matrix.h>
 
 namespace autoware::cuda_pointcloud_preprocessor
