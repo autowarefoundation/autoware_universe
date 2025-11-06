@@ -18,9 +18,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #include <bits/stdc++.h>
 #include <tf2/utils.h>
@@ -58,13 +58,13 @@ UnknownTracker::UnknownTracker(
 
     // Set motion limits
     motion_model_.setMotionLimits(
-      autoware_utils::kmph2mps(60), /* [m/s] maximum velocity, x */
-      autoware_utils::kmph2mps(60)  /* [m/s] maximum velocity, y */
+      autoware_utils_math::kmph2mps(60), /* [m/s] maximum velocity, x */
+      autoware_utils_math::kmph2mps(60)  /* [m/s] maximum velocity, y */
     );
 
     // Set initial state
     {
-      using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+      using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
       const double x = object.pose.position.x;
       const double y = object.pose.position.y;
       auto pose_cov = object.pose_covariance;
@@ -97,8 +97,8 @@ UnknownTracker::UnknownTracker(
       }
 
       if (!object.kinematics.has_twist_covariance) {
-        constexpr double p0_stddev_vx = autoware_utils::kmph2mps(10);  // [m/s]
-        constexpr double p0_stddev_vy = autoware_utils::kmph2mps(10);  // [m/s]
+        constexpr double p0_stddev_vx = autoware_utils_math::kmph2mps(10);  // [m/s]
+        constexpr double p0_stddev_vy = autoware_utils_math::kmph2mps(10);  // [m/s]
         const double p0_cov_vx = std::pow(p0_stddev_vx, 2.0);
         const double p0_cov_vy = std::pow(p0_stddev_vy, 2.0);
         twist_cov[XYZRPY_COV_IDX::X_X] = p0_cov_vx;
@@ -130,7 +130,7 @@ UnknownTracker::UnknownTracker(
     static_motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
 
     // Set initial state
-    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
     auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
       constexpr double p0_stddev_x = 1.5;  // [m]
