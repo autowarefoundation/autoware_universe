@@ -14,6 +14,8 @@
 
 #include "autoware/planning_validator_intersection_collision_checker/utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
@@ -236,8 +238,8 @@ void set_right_turn_target_lanelets(
     const auto overlap_index = get_overlap_index(ll, ego_traj.front_traj, trajectory_ls);
     if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
     const auto mid_idx = (overlap_index->first + overlap_index->second) / 2;
-    const auto overlap_point =
-      lanelet::utils::getClosestCenterPose(ll, ego_traj.front_traj[mid_idx].pose.position);
+    const auto overlap_point = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+      ll, autoware::experimental::lanelet2_utils::from_ros(ego_traj.front_traj[mid_idx].pose));
     std::pair<double, double> overlap_time;
     overlap_time.first =
       rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();
@@ -318,8 +320,9 @@ void set_left_turn_target_lanelets(
     if (id == turn_lanelet_id || ignore_turning(ll)) continue;
     const auto overlap_index = get_overlap_index(ll, ego_traj.front_traj, trajectory_ls);
     if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
-    const auto overlap_point = lanelet::utils::getClosestCenterPose(
-      ll, ego_traj.front_traj[overlap_index->first].pose.position);
+    const auto overlap_point = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+      ll, autoware::experimental::lanelet2_utils::from_ros(
+            ego_traj.front_traj[overlap_index->first].pose));
     std::pair<double, double> overlap_time;
     overlap_time.first =
       rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();

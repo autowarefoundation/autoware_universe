@@ -466,8 +466,8 @@ BehaviorModuleOutput getReferencePath(
   const double backward_length = p.backward_path_length + extra_margin;
   const auto current_lanes_with_backward_margin =
     route_handler->getLaneletSequence(current_lane, backward_length, p.forward_path_length);
-  const auto no_shift_pose =
-    lanelet::utils::getClosestCenterPose(current_lane, current_pose.position);
+  const auto no_shift_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    current_lane, autoware::experimental::lanelet2_utils::from_ros(current_pose));
   reference_path = getCenterLinePath(
     *route_handler, current_lanes_with_backward_margin, no_shift_pose, backward_length,
     p.forward_path_length, p);
