@@ -19843,6 +19843,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#using-the-gnss-estimated-position" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the GNSS estimated position
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#services" class="md-nav__link">
     <span class="md-ellipsis">
       Services
@@ -19868,6 +19877,30 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#service-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Service client
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#registered-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Registered Servers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Registered Servers">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#setting-preferred-lane" class="md-nav__link">
@@ -19904,7 +19937,10 @@
 
 <div><h1 id="manual-lane-change-handler">Manual Lane Change Handler<a class="headerlink" href="#manual-lane-change-handler" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p><code>Manual Lane Change Handler</code> helps shift the preferred-primitives of a route to the left or right.</p>
+<p><code>Manual Lane Change Handler</code> helps shift the preferred-primitives of a route to the left or right. A manual lane-change handler rviz plugin is also available for use for the user.</p>
+<h3 id="using-the-gnss-estimated-position">Using the GNSS estimated position<a class="headerlink" href="#using-the-gnss-estimated-position" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/planning/mission_planning/mission_planner/set_preferred_primitive<span class="w"> </span>autoware_planning_msgs/SetPreferredPrimitive
+</code></pre></div>
 <h3 id="services">Services<a class="headerlink" href="#services" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -19968,6 +20004,36 @@
 <td><code>~/debug/goal_footprint</code></td>
 <td>visualization_msgs/msg/MarkerArray</td>
 <td>goal footprint for debug</td>
+</tr>
+</tbody>
+</table>
+<h2 id="service-client">Service client<a class="headerlink" href="#service-client" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Service Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~/set_preferred_lane</td>
+<td>The service to set the preferred lane</td>
+</tr>
+</tbody>
+</table>
+<h2 id="registered-servers">Registered Servers<a class="headerlink" href="#registered-servers" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Service Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/planning/mission_planning/mission_planner/set_preferred_primitive</td>
+<td>The service to set the preferred primitive</td>
 </tr>
 </tbody>
 </table>
