@@ -130,7 +130,7 @@ private:
     // SPD floor
     static constexpr double eps_spd = 1e-6;
 
-    // tentative sigma value for points that are too close to the camera.
+    // tentative sigma value for points that are too close to the camera
     static constexpr double sigma_close_to_camera_2 = 0.2 * 0.2;
   };  // struct CovarianceControlParams
 
