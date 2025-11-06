@@ -91,13 +91,11 @@ void add_ignore_and_cut_lanelets(
       if (contains_type(params.ignore_objects_lanelet_subtypes, lanelet_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
-        // boost::geometry::correct(polygon);
         data.ignore_objects_polygons.push_back(polygon);
       }
       if (contains_type(params.ignore_collisions_lanelet_subtypes, lanelet_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
-        // boost::geometry::correct(polygon);
         data.ignore_collisions_polygons.push_back(polygon);
       }
     }
@@ -127,13 +125,11 @@ void add_ignore_and_cut_polygons(
       if (contains_type(params.ignore_objects_polygon_types, polygon_type, polygon_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(lanelet::utils::to2D(p.basicPolygon()), polygon);
-        // boost::geometry::correct(polygon);
         data_per_label[label].ignore_objects_polygons.push_back(polygon);
       }
       if (contains_type(params.ignore_collisions_polygon_types, polygon_type, polygon_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(lanelet::utils::to2D(p.basicPolygon()), polygon);
-        // boost::geometry::correct(polygon);
         data_per_label[label].ignore_collisions_polygons.push_back(polygon);
       }
     }
