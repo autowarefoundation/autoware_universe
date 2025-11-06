@@ -18,6 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for to_bg2d
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>  // for planning_utils::
 #include <autoware/interpolation/spline_interpolation_points_2d.hpp>
+#include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
@@ -226,7 +227,8 @@ RoundaboutLanelets RoundaboutModule::generateObjectiveLanelets(
 {
   // get conflicting lanes on assigned lanelet
   const auto & conflicting_lanelets =
-    lanelet::utils::getConflictingLanelets(routing_graph_ptr, assigned_lanelet);
+    autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
+      routing_graph_ptr, assigned_lanelet);
   lanelet::ConstLanelets conflicting_ex_associative_lanelets;
   for (auto && conflicting_lanelet : conflicting_lanelets) {
     if (!lanelet::utils::contains(associative_ids_, conflicting_lanelet.id()))
