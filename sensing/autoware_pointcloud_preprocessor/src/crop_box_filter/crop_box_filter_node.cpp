@@ -81,8 +81,7 @@ bool does_line_segment_intersect_crop_box(
 
   Eigen::Vector3f ray_origin = from_point.head<3>();
   Eigen::Vector3f ray_direction = to_point.head<3>() - from_point.head<3>();
-  Eigen::Vector3f ray_direction_inv = {
-    1.0f / ray_direction.x(), 1.0f / ray_direction.y(), 1.0f / ray_direction.z()};
+  Eigen::Vector3f ray_direction_inv = ray_direction.cwiseInverse();
 
   Eigen::Vector3f box_min = {box.min_x, box.min_y, box.min_z};
   Eigen::Vector3f box_max = {box.max_x, box.max_y, box.max_z};
