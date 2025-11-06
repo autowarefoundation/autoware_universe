@@ -20135,7 +20135,7 @@
 Further, it can filter out reflections caused by reflective surfaces within the box, using a ray intersection check.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>An axis-aligned bounding box in the <code>input_frame</code> is specified using the below parameters.
-The pointcloud input in <code>~/input/points</code>  is transformed to <code>input_frame</code> and then filtered by the bounding box.</p>
+The pointcloud input in <code>~/input/points</code> is transformed to <code>input_frame</code> and then filtered by the bounding box.</p>
 <p>Depending on the <code>negative</code> parameter, the filter will either keep the points inside the box or outside the box:</p>
 <table>
 <thead>
@@ -20164,19 +20164,19 @@ the LiDAR only knows the angle it fired the ray at, it cannot distinguish betwee
 non-reflections, and the object shows up behind the reflector - as a so-called "ghost object".</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
+</div>
 <p>This is the same for cameras - or humans for that matter. While dealing with reflections can in
 theory be learnt by a perception model, not all modules can handle LiDAR reflections at this time.</p>
-</div>
 <p>To filter out these ghost objects, the ray intersection check ensures that any points behind the
 crop box are filtered out. By definition, a point behind the crop box has to come from a ray that\
 passed through it - which should not be possible if the crop box is tight around the ego vehicle.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
+</div>
 <p>The ray intersection check only makes sense on point clouds that come from a <strong>single</strong> LiDAR sensor
 with the point cloud frame being at the origin of the LiDAR sensor.
-If you are using a multi-LiDAR system, or a transformed point cloud, 
+If you are using a multi-LiDAR system, or a transformed point cloud,
 the ray intersection check will not work as expected.</p>
-</div>
 <p>The above <code>negative</code> parameter can be used in conjunction with <code>use_ray_intersection</code>:</p>
 <table>
 <thead>
