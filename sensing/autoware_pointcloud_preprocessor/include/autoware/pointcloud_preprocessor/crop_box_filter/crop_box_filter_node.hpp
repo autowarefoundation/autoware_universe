@@ -110,7 +110,7 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
-  void publish_crop_box_polygon();
+  void publish_crop_box_polygon(const TransformInfo & transform_info);
 
 private:
   struct CropBoxParam

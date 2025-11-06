@@ -55,6 +55,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <algorithm>
@@ -252,7 +253,7 @@ void CropBoxFilterComponent::faster_filter(
   output.width = static_cast<uint32_t>(output.data.size() / output.height / output.point_step);
   output.row_step = static_cast<uint32_t>(output.data.size() / output.height);
 
-  publish_crop_box_polygon();
+  publish_crop_box_polygon(transform_info);
 
   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
   const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
@@ -308,7 +309,7 @@ void CropBoxFilterComponent::publish_diagnostics(
   diagnostics_interface_->publish(this->get_clock()->now());
 }
 
-void CropBoxFilterComponent::publish_crop_box_polygon()
+void CropBoxFilterComponent::publish_crop_box_polygon(const TransformInfo & transform_info)
 {
   auto generatePoint = [](double x, double y, double z) {
     geometry_msgs::msg::Point32 point;
@@ -356,6 +357,29 @@ void CropBoxFilterComponent::publish_crop_box_polygon()
 
   polygon_msg.polygon.points.push_back(generatePoint(x1, y1, z2));
 
+  if (param_.use_ray_intersection) {
+    Eigen::Vector4f lidar_origin = {0, 0, 0, 1};
+
+    if (transform_info.need_transform)
+    {
+      lidar_origin = transform_info.eigen_transform * lidar_origin;
+    }
+
+    auto origin_point = generatePoint(lidar_origin.x(), lidar_origin.y(), lidar_origin.z());
+    std::vector<geometry_msgs::msg::Point32> ray_points;
+
+    // Plot line segments from the LiDAR origin through all crop box corners, extending 100 meters.
+    for (const auto & point : polygon_msg.polygon.points) {
+      Eigen::Vector4f vec = Eigen::Vector4f(point.x, point.y, point.z, 1) - lidar_origin;
+      vec.head<3>() = vec.head<3>().normalized() * 100;
+      Eigen::Vector4f end = lidar_origin + vec;
+      ray_points.push_back(origin_point);
+      ray_points.push_back(generatePoint(end.x(), end.y(), end.z()));
+    }
+
+    polygon_msg.polygon.points.insert(polygon_msg.polygon.points.end(), ray_points.begin(), ray_points.end());
+  }
+
   crop_box_polygon_pub_->publish(polygon_msg);
 }
 
@@ -388,8 +412,8 @@ rcl_interfaces::msg::SetParametersResult CropBoxFilterComponent::param_callback(
         get_logger(), "[%s::param_callback] Setting the filter negative flag to: %s.", get_name(),
         new_param.negative ? "true" : "false");
       RCLCPP_DEBUG(
-        get_logger(), "[%s::param_callback] Setting the use ray intersection flag to: %s.", get_name(),
-        new_param.use_ray_intersection ? "true" : "false");
+        get_logger(), "[%s::param_callback] Setting the use ray intersection flag to: %s.",
+        get_name(), new_param.use_ray_intersection ? "true" : "false");
       param_ = new_param;
     }
   }
