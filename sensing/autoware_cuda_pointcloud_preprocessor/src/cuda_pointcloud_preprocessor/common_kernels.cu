@@ -36,10 +36,80 @@ __global__ void transformPointsKernel(
   }
 }
 
+__device__ bool does_line_segment_intersect_crop_box(
+  float from_x, float from_y, float from_z, float to_x, float to_y, float to_z, float min_x,
+  float max_x, float min_y, float max_y, float min_z, float max_z)
+{
+  // The below algorithm is known as the Slab Method.
+  // Further reading: https://tavianator.com/2022/ray_box_boundary.html
+
+  float ray_origin_x = from_x;
+  float ray_origin_y = from_y;
+  float ray_origin_z = from_z;
+  float ray_direction_x = to_x - from_x;
+  float ray_direction_y = to_y - from_y;
+  float ray_direction_z = to_z - from_z;
+
+  // Handle edge case where ray direction is zero (point is at origin)
+  if (ray_direction_x == 0.0f && ray_direction_y == 0.0f && ray_direction_z == 0.0f) {
+    return false;
+  }
+
+  // Compute inverse directions, handling zero components
+  float ray_direction_inv_x = (ray_direction_x != 0.0f) ? (1.0f / ray_direction_x) : 1e30f;
+  float ray_direction_inv_y = (ray_direction_y != 0.0f) ? (1.0f / ray_direction_y) : 1e30f;
+  float ray_direction_inv_z = (ray_direction_z != 0.0f) ? (1.0f / ray_direction_z) : 1e30f;
+
+  // A line is represented as `l(t) = ray_origin + t * ray_direction`.
+  // A line segment is represented as `l(t) = ray_origin + t * ray_direction`, where `t` is in [0,
+  // 1], given that `ray_direction = (to_point - from_point)` (not normalized). We start with the
+  // full line segment.
+  float t_min = 0.0f;  // from_point
+  float t_max = 1.0f;  // to_point
+
+  // For each axis, we intersect the line segment with the min and max planes of the box,
+  // keeping only the part of the line segment that is within the box.
+  // X axis
+  {
+    float t1 = (min_x - ray_origin_x) * ray_direction_inv_x;
+    float t2 = (max_x - ray_origin_x) * ray_direction_inv_x;
+    t_min = fmaxf(t_min, fminf(t1, t2));
+    t_max = fminf(t_max, fmaxf(t1, t2));
+  }
+
+  // Y axis
+  {
+    float t1 = (min_y - ray_origin_y) * ray_direction_inv_y;
+    float t2 = (max_y - ray_origin_y) * ray_direction_inv_y;
+    t_min = fmaxf(t_min, fminf(t1, t2));
+    t_max = fminf(t_max, fmaxf(t1, t2));
+  }
+
+  // Z axis
+  {
+    float t1 = (min_z - ray_origin_z) * ray_direction_inv_z;
+    float t2 = (max_z - ray_origin_z) * ray_direction_inv_z;
+    t_min = fmaxf(t_min, fminf(t1, t2));
+    t_max = fminf(t_max, fmaxf(t1, t2));
+  }
+
+  // If, after intersecting with all three pairs of planes, the line segment is still valid,
+  // then the line segment intersects the box.
+  return t_min < t_max;
+}
+
+__device__ bool is_point_inside_crop_box(
+  const float x, const float y, const float z, const float min_x, const float max_x,
+  const float min_y, const float max_y, const float min_z, const float max_z)
+{
+  return (x > min_x && x < max_x) && (y > min_y && y < max_y) && (z > min_z && z < max_z);
+}
+
 __global__ void cropBoxKernel(
   InputPointType * __restrict__ d_points, std::uint32_t * __restrict__ output_crop_mask,
   std::uint8_t * __restrict__ output_nan_mask, int num_points,
-  const CropBoxParameters * __restrict__ crop_box_parameters_ptr, int num_crop_boxes)
+  const CropBoxParameters * __restrict__ crop_box_parameters_ptr, int num_crop_boxes,
+  float lidar_origin_x, float lidar_origin_y, float lidar_origin_z)
 {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num_points;
        idx += blockDim.x * gridDim.x) {
@@ -65,8 +135,24 @@ __global__ void cropBoxKernel(
       const float & max_x = crop_box_parameters.max_x;
       const float & max_y = crop_box_parameters.max_y;
       const float & max_z = crop_box_parameters.max_z;
-      passed_crop_box_mask &=
-        (x <= min_x || x >= max_x) || (y <= min_y || y >= max_y) || (z <= min_z || z >= max_z);
+      const bool negative = crop_box_parameters.negative;
+      const bool use_ray_intersection = crop_box_parameters.use_ray_intersection;
+
+      bool point_is_inside{};
+      if (use_ray_intersection) {
+        point_is_inside = does_line_segment_intersect_crop_box(
+          lidar_origin_x, lidar_origin_y, lidar_origin_z, x, y, z, min_x, max_x, min_y, max_y,
+          min_z, max_z);
+      } else {
+        point_is_inside =
+          is_point_inside_crop_box(x, y, z, min_x, max_x, min_y, max_y, min_z, max_z);
+      }
+
+      // If negative is true, we keep points that are NOT inside/intersecting
+      // If negative is false, we keep points that ARE inside/intersecting
+      const bool should_keep_point =
+        (!negative && point_is_inside) || (negative && !point_is_inside);
+      passed_crop_box_mask &= should_keep_point;
     }
 
     output_crop_mask[idx] = passed_crop_box_mask;
@@ -112,11 +198,12 @@ void transformPointsLaunch(
 void cropBoxLaunch(
   InputPointType * d_points, std::uint32_t * output_crop_mask, std::uint8_t * output_nan_mask,
   int num_points, const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  float lidar_origin_x, float lidar_origin_y, float lidar_origin_z, int threads_per_block,
+  int blocks_per_grid, cudaStream_t & stream)
 {
   cropBoxKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     d_points, output_crop_mask, output_nan_mask, num_points, crop_box_parameters_ptr,
-    num_crop_boxes);
+    num_crop_boxes, lidar_origin_x, lidar_origin_y, lidar_origin_z);
 }
 
 void combineMasksLaunch(

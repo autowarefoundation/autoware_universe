@@ -378,13 +378,18 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     num_organized_points_, transform_struct, threads_per_block_, blocks_per_grid, stream_);
 
   // Crop box filter
+  // Compute lidar origin in base frame (transform of (0, 0, 0) is just the translation)
+  float lidar_origin_x = transform_struct.x;
+  float lidar_origin_y = transform_struct.y;
+  float lidar_origin_z = transform_struct.z;
+
   int crop_box_blocks_per_grid = std::min(blocks_per_grid, max_blocks_per_grid_);
   if (device_crop_box_structs_.size() > 0) {
     cropBoxLaunch(
       device_transformed_points, device_crop_mask, device_nan_mask, num_organized_points_,
       thrust::raw_pointer_cast(device_crop_box_structs_.data()),
-      static_cast<int>(device_crop_box_structs_.size()), crop_box_blocks_per_grid,
-      threads_per_block_, stream_);
+      static_cast<int>(device_crop_box_structs_.size()), lidar_origin_x, lidar_origin_y,
+      lidar_origin_z, crop_box_blocks_per_grid, threads_per_block_, stream_);
   } else {
     thrust_stream::fill_n(device_crop_mask_, num_organized_points_, 1U, stream_);
   }

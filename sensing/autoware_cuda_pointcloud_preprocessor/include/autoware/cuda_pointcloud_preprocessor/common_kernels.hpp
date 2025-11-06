@@ -29,6 +29,7 @@ void transformPointsLaunch(
 void cropBoxLaunch(
   InputPointType * d_points, std::uint32_t * output_crop_mask, std::uint8_t * output_nan_mask,
   int num_points, const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes,
+  float lidar_origin_x, float lidar_origin_y, float lidar_origin_z,
   int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 void combineMasksLaunch(
