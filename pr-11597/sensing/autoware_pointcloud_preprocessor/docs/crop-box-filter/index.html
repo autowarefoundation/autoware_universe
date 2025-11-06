@@ -20131,9 +20131,96 @@
 
 <div><h1 id="crop_box_filter">crop_box_filter<a class="headerlink" href="#crop_box_filter" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The <code>crop_box_filter</code> is a node that removes points with in a given box region. This filter is used to remove the points that hit the vehicle itself.</p>
+<p>The <code>crop_box_filter</code> is a node that removes points with in a given box region. This filter is used to remove the points that hit the vehicle itself.
+Further, it can filter out reflections caused by reflective surfaces within the box, using a ray intersection check.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
-<p><code>pcl::CropBox</code> is used, which filters all points inside a given box.</p>
+<p>An axis-aligned bounding box in the <code>input_frame</code> is specified using the below parameters.
+The pointcloud input in <code>~/input/points</code>  is transformed to <code>input_frame</code> and then filtered by the bounding box.</p>
+<p>Depending on the <code>negative</code> parameter, the filter will either keep the points inside the box or outside the box:</p>
+<table>
+<thead>
+<tr>
+<th><code>negative</code></th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>false</code></td>
+<td>Keep only the points inside the box</td>
+</tr>
+<tr>
+<td><code>true</code></td>
+<td>Keep only the points outside the box</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>use_ray_intersection</code> is set to <code>true</code>, the filter will extend to filter any points whose LiDAR
+ray intersected the bounding box. This is useful in the following case:</p>
+<p><img alt="crop_box-ray-usecase.svg" src="../image/crop_box-ray-usecase.svg"></p>
+<p>Consider a reflective surface within the crop box, e.g. a mirror of the ego vehicle. When a LiDAR
+ray hits the mirror, it reflects off at an angle and can hit another object in the scene. Because
+the LiDAR only knows the angle it fired the ray at, it cannot distinguish between reflections and
+non-reflections, and the object shows up behind the reflector - as a so-called "ghost object".</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is the same for cameras - or humans for that matter. While dealing with reflections can in
+theory be learnt by a perception model, not all modules can handle LiDAR reflections at this time.</p>
+</div>
+<p>To filter out these ghost objects, the ray intersection check ensures that any points behind the
+crop box are filtered out. By definition, a point behind the crop box has to come from a ray that\
+passed through it - which should not be possible if the crop box is tight around the ego vehicle.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The ray intersection check only makes sense on point clouds that come from a <strong>single</strong> LiDAR sensor
+with the point cloud frame being at the origin of the LiDAR sensor.
+If you are using a multi-LiDAR system, or a transformed point cloud, 
+the ray intersection check will not work as expected.</p>
+</div>
+<p>The above <code>negative</code> parameter can be used in conjunction with <code>use_ray_intersection</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>negative</code></th>
+<th><code>use_ray_intersection</code></th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>false</code></td>
+<td><code>true</code></td>
+<td>Keep only the points inside the box and any points whose LiDAR ray intersected the bounding box</td>
+</tr>
+<tr>
+<td><code>true</code></td>
+<td><code>true</code></td>
+<td>Keep only the points outside the box and any points whose LiDAR ray intersected the bounding box</td>
+</tr>
+</tbody>
+</table>
+<p>Or, visually:</p>
+<table>
+<thead>
+<tr>
+<th><code>negative</code> \ <code>use_ray_intersection</code></th>
+<th><code>false</code></th>
+<th><code>true</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>false</code></td>
+<td><img alt="crop_box-positive.svg" src="../image/crop_box-positive.svg"></td>
+<td><img alt="crop_box-ray-positive.svg" src="../image/crop_box-ray-positive.svg"></td>
+</tr>
+<tr>
+<td><code>true</code></td>
+<td><img alt="crop_box-negative.svg" src="../image/crop_box-negative.svg"></td>
+<td><img alt="crop_box-ray-negative.svg" src="../image/crop_box-ray-negative.svg"></td>
+</tr>
+</tbody>
+</table>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <p>This implementation inherit <code>autoware::pointcloud_preprocessor::Filter</code> class, please refer <a href="../../">README</a>.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
