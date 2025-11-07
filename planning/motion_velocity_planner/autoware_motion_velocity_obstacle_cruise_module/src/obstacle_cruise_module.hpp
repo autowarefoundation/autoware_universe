@@ -79,7 +79,6 @@ private:
   std::unique_ptr<CruisePlannerInterface> cruise_planner_;
 
   // internal variables
-  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   std::vector<CruiseObstacle> prev_cruise_object_obstacles_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
   bool need_to_clear_velocity_limit_{false};
