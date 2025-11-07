@@ -19843,9 +19843,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#using-the-gnss-estimated-position" class="md-nav__link">
+  <a href="#example-for-using-the-manual-lane-change-handler" class="md-nav__link">
     <span class="md-ellipsis">
-      Using the GNSS estimated position
+      Example for using the Manual Lane Change Handler
     </span>
   </a>
   
@@ -19938,8 +19938,9 @@
 <div><h1 id="manual-lane-change-handler">Manual Lane Change Handler<a class="headerlink" href="#manual-lane-change-handler" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
 <p><code>Manual Lane Change Handler</code> helps shift the preferred-primitives of a route to the left or right. A manual lane-change handler rviz plugin is also available for use for the user.</p>
-<h3 id="using-the-gnss-estimated-position">Using the GNSS estimated position<a class="headerlink" href="#using-the-gnss-estimated-position" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/planning/mission_planning/mission_planner/set_preferred_primitive<span class="w"> </span>autoware_planning_msgs/SetPreferredPrimitive
+<h3 id="example-for-using-the-manual-lane-change-handler">Example for using the Manual Lane Change Handler<a class="headerlink" href="#example-for-using-the-manual-lane-change-handler" title="Permanent link">#</a></h3>
+<p>Service call to shift the preferred-lanes to the left
+</p><div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>service<span class="w"> </span>call<span class="w"> </span>/planning/mission_planning/manual_lane_change_handler/set_preferred_lane<span class="w"> </span>tier4_external_api_msgs/srv/SetPreferredLane<span class="w"> </span>lane_change_direction:<span class="se">\ </span><span class="m">0</span><span class="se">\ </span>
 </code></pre></div>
 <h3 id="services">Services<a class="headerlink" href="#services" title="Permanent link">#</a></h3>
 <table>
