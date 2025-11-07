@@ -124,16 +124,12 @@ void add_ignore_and_cut_polygons(
       }
       if (contains_type(params.ignore_objects_polygon_types, polygon_type, polygon_subtype)) {
         universe_utils::LinearRing2d polygon;
-        for (const auto & pt : p) {
-          polygon.emplace_back(pt.x(), pt.y());
-        }
+        boost::geometry::convert(lanelet::utils::to2D(p.basicPolygon()), polygon);
         data_per_label[label].ignore_objects_polygons.push_back(polygon);
       }
       if (contains_type(params.ignore_collisions_polygon_types, polygon_type, polygon_subtype)) {
         universe_utils::LinearRing2d polygon;
-        for (const auto & pt : p) {
-          polygon.emplace_back(pt.x(), pt.y());
-        }
+        boost::geometry::convert(lanelet::utils::to2D(p.basicPolygon()), polygon);
         data_per_label[label].ignore_collisions_polygons.push_back(polygon);
       }
     }

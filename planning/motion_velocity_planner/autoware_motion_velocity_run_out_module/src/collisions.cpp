@@ -404,12 +404,12 @@ Collision calculate_collision(
   return c;
 }
 
-std::vector<Collision> calculate_interval_collisions(
-  std::vector<TimeOverlapIntervalPair> intervals, const Parameters & params)
+std::vector<TimeOverlapIntervalPair> combine_time_overlap_intervals(
+  std::vector<TimeOverlapIntervalPair> intervals, const double collision_time_overlap_tolerance)
 {
-  std::vector<Collision> collisions;
+  std::vector<TimeOverlapIntervalPair> combined_intervals;
   if (intervals.empty()) {
-    return collisions;
+    return combined_intervals;
   }
   std::sort(
     intervals.begin(), intervals.end(),
@@ -419,16 +419,27 @@ std::vector<Collision> calculate_interval_collisions(
   TimeOverlapInterval object_combined = intervals.front().object;
   TimeOverlapInterval ego_combined = intervals.front().ego;
   for (const auto & interval : intervals) {
-    if (interval.object.overlaps(object_combined, params.collision_time_overlap_tolerance)) {
+    if (interval.object.overlaps(object_combined, collision_time_overlap_tolerance)) {
       object_combined.expand(interval.object);
       ego_combined.expand(interval.ego);
     } else {
-      collisions.push_back(calculate_collision(ego_combined, object_combined, params));
+      combined_intervals.emplace_back(ego_combined, object_combined);
       object_combined = interval.object;
       ego_combined = interval.ego;
     }
   }
-  collisions.push_back(calculate_collision(ego_combined, object_combined, params));
+  combined_intervals.emplace_back(ego_combined, object_combined);
+  return combined_intervals;
+}
+
+std::vector<Collision> calculate_interval_collisions(
+  const std::vector<TimeOverlapIntervalPair> & intervals, const Parameters & params)
+{
+  std::vector<Collision> collisions;
+  collisions.reserve(intervals.size());
+  for (const auto & interval : intervals) {
+    collisions.push_back(calculate_collision(interval.ego, interval.object, params));
+  }
   return collisions;
 }
 
@@ -454,15 +465,13 @@ std::vector<TimeOverlapIntervalPair> filter_time_overlap_intervals(
   for (const auto & interval : intervals) {
     const auto is_before_min_arc_length =
       interval.ego.first_intersection.arc_length <= min_arc_length;
-    const universe_utils::MultiPoint2d interval_intersections = {
-      interval.ego.first_intersection.intersection, interval.ego.last_intersection.intersection};
     const auto can_be_ignored =
       interval.ego.first_intersection.ego_time >= params.start_ignore_collisions_time &&
       interval.ego.first_intersection.arc_length >= params.start_ignore_collisions_distance;
     const auto ignored =
       can_be_ignored &&
       !filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
-        interval_intersections, filtering_data.ignore_collisions_polygons);
+        interval.ego.first_intersection.intersection, filtering_data.ignore_collisions_polygons);
     if (!is_before_min_arc_length && !ignored) {
       filtered_overlap_intervals.push_back(interval);
     }
@@ -476,12 +485,14 @@ void calculate_object_collisions(
   const Parameters & params)
 {
   for (const auto & predicted_path_footprint : object.predicted_path_footprints) {
-    // combining overlap intervals over all corner footprints gives bad results
-    // the current way to calculate collisions independently for each corner footprint is best
+    // combining overlap intervals over all predicted paths gives bad results
+    // the current way to calculate collisions independently for each predicted path is best
     const auto time_overlap_intervals =
       calculate_ego_and_object_time_overlap_intervals(ego_footprint, predicted_path_footprint);
+    const auto combined_time_overlap_intervals = combine_time_overlap_intervals(
+      time_overlap_intervals, params.collision_time_overlap_tolerance);
     const auto filtered_time_overlap_intervals = filter_time_overlap_intervals(
-      time_overlap_intervals, filtering_data[object.label], min_arc_length,
+      combined_time_overlap_intervals, filtering_data[object.label], min_arc_length,
       params.object_parameters_per_label[object.label]);
     const auto collisions = calculate_interval_collisions(filtered_time_overlap_intervals, params);
     for (const auto & c : collisions) {
