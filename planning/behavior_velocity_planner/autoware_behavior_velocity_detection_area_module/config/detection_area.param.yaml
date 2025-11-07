@@ -2,6 +2,20 @@
   ros__parameters:
     detection_area:
       stop_margin: 0.0
+      target_filtering:
+        pointcloud: true
+        unknown: false
+        car: false
+        truck: false
+        bus: false
+        trailer: false
+        motorcycle: false
+        bicycle: false
+        pedestrian: false
+        animal: false
+        hazard: false
+        over_drivable: false
+        under_drivable: false
       use_dead_line: false
       dead_line_margin: 5.0
       use_max_acceleration: true

@@ -120,7 +120,7 @@ void OperationModeTransitionManager::changeOperationMode(std::optional<Operation
 {
   // NOTE: If request_mode is nullopt, indicates to enable autoware control
 
-  const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
+  const bool current_control = getCurrentControlMode();
   const bool request_control = request_mode ? false : true;
 
   if (current_mode_ == request_mode) {
@@ -170,7 +170,7 @@ void OperationModeTransitionManager::cancelTransition()
 
 void OperationModeTransitionManager::processTransition(const InputData & input_data)
 {
-  const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
+  const bool current_control = getCurrentControlMode();
 
   // Check timeout.
   if (transition_timeout_ < (now() - transition_->time).seconds()) {
@@ -316,7 +316,7 @@ InputData OperationModeTransitionManager::subscribeData()
 
 void OperationModeTransitionManager::publishData()
 {
-  const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
+  const bool current_control = getCurrentControlMode();
   const auto time = now();
 
   OperationModeStateAPI::Message state;
@@ -348,6 +348,14 @@ void OperationModeTransitionManager::publishData()
   debug_info.in_autoware_control = current_control;
   debug_info.in_transition = transition_ ? true : false;
   pub_debug_info_->publish(debug_info);
+}
+
+bool OperationModeTransitionManager::getCurrentControlMode() const
+{
+  return (
+    control_mode_report_.mode == ControlModeReport::AUTONOMOUS ||
+    control_mode_report_.mode == ControlModeReport::AUTONOMOUS_VELOCITY_ONLY ||
+    control_mode_report_.mode == ControlModeReport::AUTONOMOUS_STEER_ONLY);
 }
 
 }  // namespace autoware::operation_mode_transition_manager

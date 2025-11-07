@@ -300,7 +300,7 @@ void copy_trajectory_orientation(
 
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_distance_discrepancy_m, const bool copy_original_orientation)
+  const double max_distance_discrepancy_m, const bool preserve_original_orientation)
 {
   constexpr size_t minimum_points_for_akima_spline = 5;
   if (traj_points.size() < minimum_points_for_akima_spline) {
@@ -349,16 +349,9 @@ void apply_spline(
     output_points.push_back(original_trajectory_last_point);
   }
 
-  if (copy_original_orientation) {
-    for (auto & out_point : output_points) {
-      const auto nearest_index_opt = autoware::motion_utils::findNearestIndex(
-        original_traj_points, out_point.pose, max_distance_discrepancy_m, M_PI);
-      if (!nearest_index_opt.has_value()) {
-        continue;
-      }
-      const auto nearest_index = nearest_index_opt.value();
-      out_point.pose.orientation = original_traj_points.at(nearest_index).pose.orientation;
-    }
+  if (preserve_original_orientation) {
+    copy_trajectory_orientation(
+      original_traj_points, output_points, max_distance_discrepancy_m, M_PI);
   }
 
   traj_points = output_points;

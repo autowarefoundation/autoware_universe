@@ -26,7 +26,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_debug/time_keeper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 
@@ -76,7 +76,7 @@ private:
   AssociatorConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
-  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
 
   // R-tree for spatial indexing of trackers
   bgi::rtree<ValueType, bgi::quadratic<16>> rtree_;
@@ -109,7 +109,7 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+  void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 };
 
 }  // namespace autoware::multi_object_tracker

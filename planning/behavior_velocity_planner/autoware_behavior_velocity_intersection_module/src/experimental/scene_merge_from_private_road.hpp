@@ -1,0 +1,94 @@
+// Copyright 2025 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef EXPERIMENTAL__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
+#define EXPERIMENTAL__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_
+
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
+
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
+
+/**
+ * @brief This module makes sure that vehicle will stop before entering public road from private
+ * road. This module is meant to be registered with intersection module, which looks at intersecting
+ * lanes before entering intersection
+ */
+
+namespace autoware::behavior_velocity_planner::experimental
+{
+class MergeFromPrivateRoadModule : public SceneModuleInterface
+{
+public:
+  struct DebugData
+  {
+    geometry_msgs::msg::Pose virtual_wall_pose;
+    geometry_msgs::msg::Pose stop_point_pose;
+  };
+
+public:
+  struct PlannerParam
+  {
+    double attention_area_length;
+    double stopline_margin;
+    double stop_duration_sec;
+    double stop_distance_threshold;
+    double path_interpolation_ds;
+    double occlusion_attention_area_length;
+    bool consider_wrong_direction_vehicle;
+  };
+
+  MergeFromPrivateRoadModule(
+    const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
+    const std::set<lanelet::Id> & associative_ids, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
+
+  /**
+   * @brief plan go-stop velocity at traffic crossing with collision check between reference path
+   * and object predicted path
+   */
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
+
+  visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
+  autoware::motion_utils::VirtualWalls createVirtualWalls() override;
+
+  const std::set<lanelet::Id> & getAssociativeIds() const { return associative_ids_; }
+  lanelet::ConstLanelets getAttentionLanelets(const PlannerData & planner_data) const;
+
+private:
+  const lanelet::Id lane_id_;
+  const std::set<lanelet::Id> associative_ids_;
+
+  // Parameter
+  PlannerParam planner_param_;
+  std::optional<lanelet::ConstLanelet> first_conflicting_lanelet_;
+
+  StateMachine state_machine_;  //! for state
+
+  // Debug
+  mutable DebugData debug_data_;
+};
+}  // namespace autoware::behavior_velocity_planner::experimental
+
+#endif  // EXPERIMENTAL__SCENE_MERGE_FROM_PRIVATE_ROAD_HPP_

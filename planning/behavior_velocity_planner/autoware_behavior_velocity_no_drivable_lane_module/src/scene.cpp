@@ -22,6 +22,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {

@@ -41,7 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -331,14 +331,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
     time_keeper_ =
-      std::make_shared<autoware_utils::TimeKeeper>(detailed_processing_time_publisher_);
+      std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
     processor_->setTimeKeeper(time_keeper_);
   }
 }
