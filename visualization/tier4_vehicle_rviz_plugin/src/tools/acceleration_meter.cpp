@@ -20,6 +20,7 @@
 #include <X11/Xlib.h>
 
 #include <algorithm>
+#include <string>
 namespace rviz_plugins
 {
 AccelerationMeterDisplay::AccelerationMeterDisplay()
@@ -172,10 +173,11 @@ void AccelerationMeterDisplay::update(float wall_dt, float ros_dt)
   std::ostringstream acceleration_ss;
   // Write acceleration in m/s^2 for debugging usage.
   acceleration_ss << std::fixed << std::setprecision(2) << acceleration_x << "m/s^2";
+  const std::string & str = acceleration_ss.str();
   painter.drawText(
     0, std::min(property_value_height_offset_->getInt(), h - 1), w,
     std::max(h - property_value_height_offset_->getInt(), 1), Qt::AlignCenter | Qt::AlignVCenter,
-    acceleration_ss.str().c_str());
+    str.c_str());
 
   painter.end();
   updateVisualization();

@@ -70,12 +70,18 @@ IPluginV3 * IndiceConvPluginCreator::createPlugin(
 
       // Log the attributes parsed from ONNX node.
       std::stringstream ss;
-      ss << name << " plugin Attributes:";
-      logDebug(ss.str().c_str());
+      {
+        ss << name << " plugin Attributes:";
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "is_subm: " << parameters.is_subm;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "is_subm: " << parameters.is_subm;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
       IndiceConvPlugin * const plugin{new IndiceConvPlugin{std::string(name), parameters}};
       return plugin;

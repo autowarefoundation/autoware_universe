@@ -81,24 +81,39 @@ IPluginV3 * QuickCumsumCudaPluginCreator::createPlugin(
 
       // Log the attributes parsed from ONNX node.
       std::stringstream ss;
-      ss << name << " plugin Attributes:";
-      logDebug(ss.str().c_str());
+      {
+        ss << name << " plugin Attributes:";
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "batch_size: " << parameters.batch_size;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "batch_size: " << parameters.batch_size;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "dimension: " << parameters.dimension;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "dimension: " << parameters.dimension;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "height: " << parameters.height;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "height: " << parameters.height;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "width: " << parameters.width;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "width: " << parameters.width;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
       QuickCumsumCudaPlugin * const plugin{
         new QuickCumsumCudaPlugin{std::string(name), parameters}};

@@ -106,8 +106,9 @@ void VoltageMonitor::checkVoltage(diagnostic_updater::DiagnosticStatusWrapper & 
   if (RCUTILS_UNLIKELY(c.exit_code() != 0)) {  // failed to execute sensors
     std::ostringstream os;
     is_err >> os.rdbuf();
+    const std::string & str = os.str();
     stat.summary(DiagStatus::ERROR, "sensors error");
-    stat.add("sensors", os.str().c_str());
+    stat.add("sensors", str.c_str());
     return;
   }
   std::string line;
@@ -170,8 +171,9 @@ void VoltageMonitor::checkBatteryStatus(diagnostic_updater::DiagnosticStatusWrap
   if (RCUTILS_UNLIKELY(c.exit_code() != 0)) {
     std::ostringstream os;
     is_err >> os.rdbuf();
+    const std::string & str = os.str();
     stat.summary(DiagStatus::ERROR, "rtc error");
-    stat.add("rtc", os.str().c_str());
+    stat.add("rtc", str.c_str());
     return;
   }
 

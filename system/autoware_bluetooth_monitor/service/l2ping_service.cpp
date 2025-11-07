@@ -151,7 +151,8 @@ void L2pingService::run()
     boost::archive::text_oarchive archive(out_stream);
     archive << status_list_;
     //  Write N bytes of BUF to FD
-    ret = write(new_sock, out_stream.str().c_str(), out_stream.str().length());
+    const std::string & str = out_stream.str();
+    ret = write(new_sock, str.c_str(), str.length());
     if (ret < 0) {
       syslog(LOG_ERR, "Failed to write N bytes of BUF to FD. %s\n", strerror(errno));
     }
@@ -202,8 +203,9 @@ bool L2pingService::buildDeviceList()
     c.wait();
     if (c.exit_code() != 0) {
       is_err >> os.rdbuf();
-      setFunctionError("bluetoothctl", os.str());
-      syslog(LOG_ERR, "%s\n", os.str().c_str());
+      const std::string & str = os.str();
+      setFunctionError("bluetoothctl", str);
+      syslog(LOG_ERR, "%s\n", str.c_str());
       return false;
     }
   }
@@ -217,8 +219,9 @@ bool L2pingService::buildDeviceList()
     c.wait();
     if (c.exit_code() != 0) {
       is_err >> os.rdbuf();
-      setFunctionError("cut", os.str());
-      syslog(LOG_ERR, "%s\n", os.str().c_str());
+      const std::string & str = os.str();
+      setFunctionError("cut", str);
+      syslog(LOG_ERR, "%s\n", str.c_str());
       return false;
     }
 

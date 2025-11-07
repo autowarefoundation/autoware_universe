@@ -191,7 +191,8 @@ std::string NTPMonitor::executeChronyc(
   if (c.exit_code() != 0) {
     std::ostringstream os;
     is_out >> os.rdbuf();
-    result = os.str().c_str();
+    const std::string & str = os.str();
+    result = str.c_str();
     return result;
   }
 
@@ -209,7 +210,8 @@ std::string NTPMonitor::executeChronyc(
   // System time : conversion string to float
   std::string str_system_time = out_tracking_map["System time"];
   if (std::regex_match(str_system_time.c_str(), match, filter_system_time)) {
-    out_offset = std::atof(match[1].str().c_str());
+    const std::string & str = match[1].str();
+    out_offset = std::atof(str.c_str());
 
     if (match[2].str() == "fast") {
       // "fast" is - value(match to ntpdate)
