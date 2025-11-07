@@ -2040,4 +2040,27 @@ void NormalLaneChange::update_dist_from_intersection()
   path_after_intersection_.clear();
   transient_data.dist_from_prev_intersection = std::numeric_limits<double>::max();
 }
+
+bool NormalLaneChange::is_ego_in_current_or_target_lanes() const
+{
+  lanelet::ConstLanelet current_lane;
+  if (!common_data_ptr_->route_handler_ptr->getClosestLaneletWithinRoute(
+        common_data_ptr_->get_ego_pose(), &current_lane)) {
+    return false;
+  }
+
+  const auto & current_lanes = get_current_lanes();
+  const auto in_current =
+    utils::lane_change::is_lanelet_in_lanelet_collections(current_lanes, current_lane);
+
+  if (in_current) {
+    return true;
+  }
+
+  const auto & target_lanes = get_target_lanes();
+  const auto in_target =
+    utils::lane_change::is_lanelet_in_lanelet_collections(target_lanes, current_lane);
+
+  return in_target;
+}
 }  // namespace autoware::behavior_path_planner

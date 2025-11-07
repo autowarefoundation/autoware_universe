@@ -194,6 +194,14 @@ protected:
 
   void update_dist_from_intersection();
 
+  /**
+   * @brief Check whether the ego vehicle is currently located in either the
+   *        current lanes or the target lanes used for lane change planning.
+   *
+   * @return true   ego vehicle is on one of the current or target lanelets.
+   */
+  bool is_ego_in_current_or_target_lanes() const final;
+
   std::vector<PathPointWithLaneId> path_after_intersection_;
   double stop_time_{0.0};
 };
