@@ -76,6 +76,7 @@ private:
   void cancelTransition();
   void processTransition(const InputData & input_data);
 
+  bool getCurrentControlMode() const;
   double transition_timeout_;
   double input_timeout_;
   OperationMode current_mode_;
