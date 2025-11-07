@@ -136,6 +136,18 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
   recalculate_longitudinal_acceleration(input_trajectory_array);
 }
 
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
+{
+  constexpr double min_dt_threshold = 1e-9;
+
+  const double curr_time = static_cast<double>(current.time_from_start.sec) +
+                           static_cast<double>(current.time_from_start.nanosec) * 1e-9;
+  const double next_time = static_cast<double>(next.time_from_start.sec) +
+                           static_cast<double>(next.time_from_start.nanosec) * 1e-9;
+
+  return std::max(next_time - curr_time, min_dt_threshold);
+}
+
 void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt, const double constant_dt)
 {
@@ -148,11 +160,7 @@ void recalculate_longitudinal_acceleration(
     if (use_constant_dt) {
       return std::max(constant_dt, min_dt_threshold);
     }
-    const double curr_time = static_cast<double>(trajectory[i].time_from_start.sec) +
-                             static_cast<double>(trajectory[i].time_from_start.nanosec) * 1e-9;
-    const double next_time = static_cast<double>(trajectory[i + 1].time_from_start.sec) +
-                             static_cast<double>(trajectory[i + 1].time_from_start.nanosec) * 1e-9;
-    return std::max(next_time - curr_time, min_dt_threshold);
+    return compute_dt(trajectory[i], trajectory[i + 1]);
   };
 
   const size_t size = trajectory.size();

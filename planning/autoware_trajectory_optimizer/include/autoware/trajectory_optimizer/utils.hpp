@@ -141,6 +141,15 @@ void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
 
 /**
+ * @brief Compute time difference between consecutive trajectory points
+ *
+ * @param current Current trajectory point
+ * @param next Next trajectory point
+ * @return Time difference [s]
+ */
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next);
+
+/**
  * @brief Recalculates longitudinal acceleration from velocity differences.
  *
  * @param trajectory The trajectory points with velocities to recalculate accelerations from.
