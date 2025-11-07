@@ -89,7 +89,6 @@ private:
   std::vector<SlowDownOutput> prev_slow_down_output_;
   SlowDownConditionCounter slow_down_condition_counter_;
   Float32MultiArrayStamped slow_down_debug_multi_array_;
-  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
   bool need_to_clear_velocity_limit_{false};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
