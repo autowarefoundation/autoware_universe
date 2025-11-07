@@ -1445,8 +1445,9 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       std::make_pair(initial_velocity, acceleration));
     pull_out_path.partial_paths.push_back(clothoid_path);  // Use validated and cropped path
 
-    pull_out_path.start_pose =
-      clothoid_path.points.empty() ? start_pose : clothoid_path.points.front().point.pose;
+    pull_out_path.start_pose = resampled_combined_path.points.empty()
+                                 ? start_pose
+                                 : resampled_combined_path.points.front().point.pose;
     pull_out_path.end_pose = target_pose;
 
     RCLCPP_INFO(

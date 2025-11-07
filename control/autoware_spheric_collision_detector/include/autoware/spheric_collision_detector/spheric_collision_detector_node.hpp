@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
-#define SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
+#ifndef AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
+#define AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
 
 #include "autoware/spheric_collision_detector/spheric_collision_detector.hpp"
 
@@ -119,4 +119,4 @@ private:
 };
 }  // namespace spheric_collision_detector
 
-#endif  // SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
+#endif  // AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
