@@ -160,9 +160,9 @@ public:
       get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
     rolling_back_vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
     rolling_back_target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    vehicle_vel_lpf{
+    over_velocity_vehicle_vel_lpf{
       get_or_declare_parameter<double>(node, "velocity_validator.vehicle_vel_lpf_gain")},
-    target_vel_lpf{
+    over_velocity_target_vel_lpf{
       get_or_declare_parameter<double>(node, "velocity_validator.target_vel_lpf_gain")} {};
 
   void validate(
@@ -176,8 +176,8 @@ private:
   const bool hold_velocity_error_until_stop;
   autoware::signal_processing::LowpassFilter1d rolling_back_vehicle_vel_lpf;
   autoware::signal_processing::LowpassFilter1d rolling_back_target_vel_lpf;
-  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
-  autoware::signal_processing::LowpassFilter1d target_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d over_velocity_vehicle_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d over_velocity_target_vel_lpf;
 };
 
 /**
