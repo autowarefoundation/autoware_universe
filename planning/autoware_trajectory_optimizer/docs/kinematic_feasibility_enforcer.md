@@ -139,9 +139,10 @@ These are automatically loaded from vehicle configuration:
 
 ### Plugin Parameters
 
-- `trajectory_kinematic_feasibility.max_yaw_rate_rad_s` (default: 0.3 rad/s)
+- `trajectory_kinematic_feasibility.max_yaw_rate_rad_s` (default: 0.7 rad/s)
   - Maximum allowable yaw rate
-  - Typical values: 0.2-0.5 rad/s (≈ 11-29 deg/s)
+  - Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller
+  - Typical values: 0.5-1.0 rad/s (≈ 29-57 deg/s) for autonomous vehicles
   - Higher values → less restrictive, more aggressive turns
   - Lower values → smoother, more conservative trajectories
   - Should be tuned based on vehicle dynamics and comfort requirements
