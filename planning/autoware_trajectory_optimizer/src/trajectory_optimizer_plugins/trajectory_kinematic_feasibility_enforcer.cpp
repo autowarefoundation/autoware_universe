@@ -167,7 +167,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Δψ_rate = ψ_dot_max * Δt
     const double delta_yaw_rate = max_yaw_rate * dt;
 
-    // Take tighter bound (both constraints must be satisfied)
+    // Determine the most restrictive constraint
     const double delta_yaw_max = std::min(delta_yaw_geom, delta_yaw_rate);
 
     // Clamp desired change to feasible range

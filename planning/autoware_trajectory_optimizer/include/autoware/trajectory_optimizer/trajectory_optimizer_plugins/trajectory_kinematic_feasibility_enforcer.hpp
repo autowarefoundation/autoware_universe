@@ -84,7 +84,7 @@ private:
    * @brief Enforce Ackermann and yaw rate constraints on trajectory
    *
    * @param traj_points Trajectory points to adjust (modified in-place)
-   * @param anchor_pose Starting anchor pose (ego vehicle pose)
+   * @param ego_odometry Starting anchor pose (ego vehicle pose)
    * @param dt Average time step between points [s]
    */
   void enforce_ackermann_yaw_rate_constraints(
