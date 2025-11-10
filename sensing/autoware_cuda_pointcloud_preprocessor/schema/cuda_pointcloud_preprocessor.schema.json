@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Parameters for the cuda_pointcloud_preprocessor",
+  "description": "TEST, DON'T MERGE",
   "type": "object",
   "definitions": {
     "cuda_pointcloud_preprocessor": {
