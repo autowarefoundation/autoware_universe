@@ -122,11 +122,6 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   // Maximum curvature from Ackermann constraint
   // κ_max = tan(δ_max) / L
   const double kappa_max = std::tan(max_steer_rad) / wheelbase;
-  std::cerr << "Vehicle parameters:" << std::endl;
-  std::cerr << " wheelbase: " << wheelbase << " m" << std::endl;
-  std::cerr << " max_steer_angle: " << max_steer_rad << " rad" << std::endl;
-  std::cerr << "kappa_max: " << kappa_max << " 1/m" << std::endl;
-  std::cerr << "max_yaw_rate: " << max_yaw_rate << " rad/s" << std::endl;
 
   // Pre-compute all segment distances from ORIGINAL trajectory before modifying any positions
   // This preserves arc lengths throughout the forward propagation
@@ -138,9 +133,6 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   }
 
   // Process each trajectory point
-  std::cerr << "Enforcing kinematic feasibility on trajectory with " << traj_points.size()
-            << " points." << std::endl;
-  std::cerr << "-----------------------------------------" << std::endl;
   for (size_t i = 0; i < traj_points.size() - 1; ++i) {
     // Extract current point position (may have been modified in previous iteration)
     auto & curr_point = traj_points[i];
@@ -169,9 +161,6 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Maximum yaw change based on maximum curvature over distance s
     // Δψ_geom = κ_max * s = (tan(δ_max) / L) * s
     const double delta_yaw_geom = kappa_max * s;
-    std::cerr << "i: " << i << " desired_yaw: " << desired_yaw << " current_yaw: " << current_yaw
-              << " delta_yaw_desired: " << delta_yaw_desired
-              << " delta_yaw_geom: " << delta_yaw_geom << std::endl;
 
     // Compute yaw rate constraint
     // Maximum yaw change based on angular rate limit over time dt
@@ -204,7 +193,6 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Update anchor for next iteration (forward propagation)
     anchor_point = curr_point;
   }
-  std::cerr << "-----------------------------------------" << std::endl;
   // Update last point yaw to match previous point
   traj_points.back().pose.orientation = traj_points[traj_points.size() - 2].pose.orientation;
 }
