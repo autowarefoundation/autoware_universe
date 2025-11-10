@@ -158,8 +158,10 @@ public:
       get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
     hold_velocity_error_until_stop{
       get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
-    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+    vehicle_vel_lpf{
+      get_or_declare_parameter<double>(node, "velocity_validator.vehicle_vel_lpf_gain")},
+    target_vel_lpf{
+      get_or_declare_parameter<double>(node, "velocity_validator.target_vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,

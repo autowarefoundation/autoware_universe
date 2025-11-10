@@ -24,5 +24,9 @@
       yaw_deviation_warn: 0.5
 
     acc_lpf_gain: 0.97 # Time constant 1.11s
-    vel_lpf_gain: 0.9 # Time constant 0.33
+    vel_lpf_gain: 0.9 # Time constant 0.33 (used by LateralJerkValidator and OverrunValidator)
     hold_velocity_error_until_stop: true
+
+    velocity_validator:
+      vehicle_vel_lpf_gain: 0.9512 # Time constant 2.0s (used for filtering measured vehicle velocity)
+      target_vel_lpf_gain: 0.9512 # Time constant 2.0s (used for filtering target velocity from trajectory)

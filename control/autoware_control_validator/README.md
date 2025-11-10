@@ -9,11 +9,11 @@ The `control_validator` is a module that checks the validity of the output of th
 The following features are supported for the validation and can have thresholds set by parameters.
 The listed features below does not always correspond to the latest implementation.
 
-| Description                                                                        | Arguments                                                                                       |                  Diagnostic equation                  |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | :---------------------------------------------------: |
-| Inverse velocity: Measured velocity has a different sign from the target velocity. | measured velocity $v$, target velocity $\hat{v}$, and velocity parameter $c$                    |      $v \hat{v} < 0, \quad \lvert v \rvert > c$       |
-| Overspeed: Measured speed exceeds target speed significantly.                      | measured velocity $v$, target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
-| Overrun estimation: estimate overrun even if decelerate by assumed rate.           | assumed deceleration, assumed delay                                                             |                                                       |
+| Description                                                                                                           | Arguments                                                                                                        |                  Diagnostic equation                  |
+| --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------: |
+| Inverse velocity: Measured velocity has a different sign from the target velocity.                                    | measured velocity $v$, target velocity $\hat{v}$, and velocity parameter $c$                                     |      $v \hat{v} < 0, \quad \lvert v \rvert > c$       |
+| Overspeed: Detects when the vehicle velocity exceeds the target velocity over a sustained period (not instantaneous). | filtered vehicle velocity $v$, filtered target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
+| Overrun estimation: estimate overrun even if decelerate by assumed rate.                                              | assumed deceleration, assumed delay                                                                              |                                                       |
 
 - **Lateral jerk** : invalid when the lateral jerk exceeds the configured threshold. The validation uses the vehicle's velocity and steering angle rate to calculate the resulting lateral jerk. The calculation assumes constant velocity (acceleration is zero).
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
@@ -76,3 +76,5 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | `thresholds.assumed_delay_time`           | double | assumed delay for over run estimation [m]                                                                   | 0.2           |
 | `thresholds.yaw_deviation_error`          | double | threshold angle to validate the vehicle yaw related to the nearest trajectory yaw [rad]                     | 1.0           |
 | `thresholds.yaw_deviation_warn`           | double | threshold angle to trigger a WARN diagnostic [rad]                                                          | 0.5           |
+| `velocity_validator.vehicle_vel_lpf_gain` | double | low-pass filter gain for filtering measured vehicle velocity [*] (time constant 2.0s)                       | 0.9512        |
+| `velocity_validator.target_vel_lpf_gain`  | double | low-pass filter gain for filtering target velocity from trajectory [*] (time constant 2.0s)                 | 0.9512        |
