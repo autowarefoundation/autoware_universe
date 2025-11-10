@@ -12,40 +12,43 @@ This module is activated when there is a detection area on the target lane.
 
 ### Module Parameters
 
-| Parameter                           | Type   | Description                                                                                                                                              |
-| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                                                                      |
-| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                                                                                |
-| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                       |
-| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                             |
-| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                              |
-| `use_max_acceleration`              | bool   | [-] whether to consider feasible stop distance based on maximum acceleration when inserting stop point                                                   |
-| `max_acceleration`                  | double | [m/s^2] maximum acceleration used to calculate feasible stop distance when `use_max_acceleration` is true                                                |
-| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                             |
-| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
-| `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
-| `enable_detected_obstacle_logging`  | bool   | [-] enable/disable logging of detected obstacle positions, time elapsed since last detection, and ego vehicle position when ego-vehicle is in STOP state |
-| `target_filtering.pointcloud`       | bool   | [-] whether to stop for pointcloud detection                                                                                                             |
-| `target_filtering.unknown`          | bool   | [-] whether to stop for UNKNOWN objects area                                                                                                             |
-| `target_filtering.car`              | bool   | [-] whether to stop for CAR objects area                                                                                                                 |
-| `target_filtering.truck`            | bool   | [-] whether to stop for TRUCK objects area                                                                                                               |
-| `target_filtering.bus`              | bool   | [-] whether to stop for BUS objects area                                                                                                                 |
-| `target_filtering.trailer`          | bool   | [-] whether to stop for TRAILER objects area                                                                                                             |
-| `target_filtering.motorcycle`       | bool   | [-] whether to stop for MOTORCYCLE objects area                                                                                                          |
-| `target_filtering.bicycle`          | bool   | [-] whether to stop for BICYCLE objects area                                                                                                             |
-| `target_filtering.pedestrian`       | bool   | [-] whether to stop for PEDESTRIAN objects area                                                                                                          |
-| `target_filtering.animal`           | bool   | [-] whether to stop for ANIMAL objects area                                                                                                              |
-| `target_filtering.hazard`           | bool   | [-] whether to stop for HAZARD objects area                                                                                                              |
-| `target_filtering.over_drivable`    | bool   | [-] whether to stop for OVER_DRIVABLE objects area                                                                                                       |
-| `target_filtering.under_drivable`   | bool   | [-] whether to stop for UNDER_DRIVABLE objects area                                                                                                      |
+| Parameter                           | Type   | Description                                                                                                                                                                                             |
+| ----------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unstoppable_policy`                | string | [-] policy when stopping distance is insufficient: "go" (pass through), "force_stop" (stop at original stop line), or "stop_after_stopline" (move stop point forward to align with deceleration limits) |
+| `max_deceleration`                  | double | [m/s²] maximum deceleration for braking distance calculation in unstoppable situation handling                                                                                                          |
+| `delay_response_time`               | double | [s] system response delay (brake lag + control delay) for braking distance calculation                                                                                                                  |
+| `use_dead_line`                     | bool   | [-] whether to use dead line or not                                                                                                                                                                     |
+| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                                                                      |
+| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                                                                            |
+| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                                                                             |
+| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                                                                            |
+| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                                                                           |
+| `suppress_pass_judge_when_stopping` | bool   | [-] parameter for suppressing pass judge when stopping                                                                                                                                                  |
+| `enable_detected_obstacle_logging`  | bool   | [-] enable/disable logging of detected obstacle positions, time elapsed since last detection, and ego vehicle position when ego-vehicle is in STOP state                                                |
+| `target_filtering.pointcloud`       | bool   | [-] whether to stop for pointcloud detection                                                                                                                                                            |
+| `target_filtering.unknown`          | bool   | [-] whether to stop for UNKNOWN objects area                                                                                                                                                            |
+| `target_filtering.car`              | bool   | [-] whether to stop for CAR objects area                                                                                                                                                                |
+| `target_filtering.truck`            | bool   | [-] whether to stop for TRUCK objects area                                                                                                                                                              |
+| `target_filtering.bus`              | bool   | [-] whether to stop for BUS objects area                                                                                                                                                                |
+| `target_filtering.trailer`          | bool   | [-] whether to stop for TRAILER objects area                                                                                                                                                            |
+| `target_filtering.motorcycle`       | bool   | [-] whether to stop for MOTORCYCLE objects area                                                                                                                                                         |
+| `target_filtering.bicycle`          | bool   | [-] whether to stop for BICYCLE objects area                                                                                                                                                            |
+| `target_filtering.pedestrian`       | bool   | [-] whether to stop for PEDESTRIAN objects area                                                                                                                                                         |
+| `target_filtering.animal`           | bool   | [-] whether to stop for ANIMAL objects area                                                                                                                                                             |
+| `target_filtering.hazard`           | bool   | [-] whether to stop for HAZARD objects area                                                                                                                                                             |
+| `target_filtering.over_drivable`    | bool   | [-] whether to stop for OVER_DRIVABLE objects area                                                                                                                                                      |
+| `target_filtering.under_drivable`   | bool   | [-] whether to stop for UNDER_DRIVABLE objects area                                                                                                                                                     |
 
 ### Inner-workings / Algorithm
 
 1. Gets a detection area and stop line from map information and confirms if there are obstacles in the detection area
-2. Inserts stop point l[m] in front of the stop line
-3. Inserts a pass judge point to a point where the vehicle can stop with a max deceleration
-4. Sets velocity as zero behind the stop line when the ego-vehicle is in front of the pass judge point
-5. If the ego vehicle has passed the pass judge point already, it doesn't stop and pass through.
+2. Calculates required braking distance based on current velocity, `max_deceleration`, and `delay_response_time`
+3. Compares available distance to stop line with required braking distance
+4. If sufficient distance: Inserts stop point with configured margin in front of the stop line
+5. If insufficient distance (unstoppable situation): Applies the configured `unstoppable_policy`:
+   - `"go"`: Ignores the obstacle and continues through
+   - `"force_stop"`: Stops at original stop line (may exceed comfortable deceleration)
+   - `"stop_after_stopline"`: Moves stop point forward to maintain comfortable deceleration
 
 #### Detection Logic
 
@@ -102,13 +105,22 @@ if (state is not stop and ego vehicle over line?) then (yes)
   stop
 endif
 
-if (use pass judge line?) then (yes)
-  if (state is not STOP and not enough braking distance?) then (yes)
-    stop
-  endif
-endif
+:check unstoppable situation;
 
-:set state STOP;
+if (not enough braking distance?) then (yes)
+  :apply unstoppable_policy;
+
+  if (policy is "go"?) then (yes)
+    stop
+  else if (policy is "force_stop"?) then (yes)
+    :set state STOP (emergency);
+  else (policy is "stop_after_stopline")
+    :move stop point forward;
+    :set state STOP;
+  endif
+else (no)
+  :set state STOP;
+endif
 
 :inset stop point;
 
@@ -139,8 +151,28 @@ This module has parameter `hold_stop_margin_distance` in order to prevent from t
   <figcaption>inside the hold_stop_margin_distance</figcaption>
 </figure>
 
-#### Feasible stop distance
+#### Unstoppable Situation Handling
 
-If `use_max_acceleration` is _true_, the module ensures the vehicle can stop within the physical limit set by `max_acceleration`.
+When the required braking distance exceeds the available distance to the stop line, the module applies one of three policies.
 
-Required braking distance: \(d*{req}=v^2/(2a*{max})\). If this exceeds the remaining distance to the stop line \(d*{stop}\), the stop point is shifted forward by \(d*{req}-d\_{stop}\). This adjustment is applied only once, when the module transitions to the STOP state.
+##### Algorithm
+
+1. Calculate required braking distance using `planning_utils::calcJudgeLineDistWithAccLimit` function
+2. Compare with available distance to stop line
+3. Apply `unstoppable_policy` if braking distance is insufficient
+
+##### Policy Options
+
+| Policy                  | Behavior                                                    |
+| ----------------------- | ----------------------------------------------------------- |
+| `"go"`                  | Ignore obstacle and continue through the detection area     |
+| `"force_stop"`          | Stop at original stop line (may exceed `max_deceleration`)  |
+| `"stop_after_stopline"` | Move stop point forward to satisfy `max_deceleration` limit |
+
+##### Parameters
+
+| Parameter             | Type   | Description                                                                                 |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------- |
+| `unstoppable_policy`  | string | Policy when stopping distance is insufficient: "go", "force_stop", or "stop_after_stopline" |
+| `max_deceleration`    | double | [m/s²] Maximum deceleration limit for braking distance calculation                          |
+| `delay_response_time` | double | [s] System response delay for braking distance calculation                                  |
