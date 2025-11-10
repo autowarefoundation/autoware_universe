@@ -19,6 +19,7 @@
 #include <Eigen/Core>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_math/normalization.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -33,18 +34,6 @@ namespace autoware::trajectory_optimizer::plugin
 
 namespace
 {
-// Local helper functions
-
-double normalize_angle(const double angle)
-{
-  // Normalize angle to [-pi, pi]
-  double normalized = std::fmod(angle + M_PI, 2.0 * M_PI);
-  if (normalized < 0.0) {
-    normalized += 2.0 * M_PI;
-  }
-  return normalized - M_PI;
-}
-
 double compute_average_dt(const TrajectoryPoints & traj_points)
 {
   constexpr double default_dt = 0.1;  // Fallback value [s]
@@ -155,7 +144,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
       anchor_point.pose.orientation.z, anchor_point.pose.orientation.w);
     double current_yaw = tf2::getYaw(q_anchor);
     // Compute desired yaw change (normalized to [-pi, pi])
-    double delta_yaw_desired = normalize_angle(desired_yaw - current_yaw);
+    double delta_yaw_desired = autoware_utils_math::normalize_radian(desired_yaw - current_yaw);
 
     // Compute Ackermann geometric constraint
     // Maximum yaw change based on maximum curvature over distance s
