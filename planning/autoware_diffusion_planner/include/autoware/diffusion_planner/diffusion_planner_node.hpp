@@ -118,6 +118,7 @@ struct DiffusionPlannerParams
   std::vector<double> temperature_list;
   int64_t velocity_smoothing_window;
   double stopping_threshold;
+  int64_t unknown_traffic_light_fallback;
 };
 struct DiffusionPlannerDebugParams
 {

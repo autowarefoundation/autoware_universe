@@ -133,6 +133,8 @@ void DiffusionPlanner::set_up_params()
   params_.velocity_smoothing_window =
     this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
   params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.0);
+  params_.unknown_traffic_light_fallback =
+    this->declare_parameter<int64_t>("unknown_traffic_light_fallback", 0);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -165,6 +167,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(
       parameters, "velocity_smoothing_window", temp_params.velocity_smoothing_window);
     update_param<double>(parameters, "stopping_threshold", temp_params.stopping_threshold);
+    update_param<int64_t>(
+      parameters, "unknown_traffic_light_fallback", temp_params.unknown_traffic_light_fallback);
     params_ = temp_params;
   }
 
@@ -473,7 +477,8 @@ InputDataMap DiffusionPlanner::create_input_data()
     const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
       map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
     const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
-      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
+      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE,
+      params_.unknown_traffic_light_fallback);
     input_data_map["lanes"] = replicate_for_batch(lanes);
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
@@ -485,7 +490,8 @@ InputDataMap DiffusionPlanner::create_input_data()
         *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
-        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE,
+        params_.unknown_traffic_light_fallback);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
