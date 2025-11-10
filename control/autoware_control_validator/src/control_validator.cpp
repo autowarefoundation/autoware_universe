@@ -158,16 +158,26 @@ void VelocityValidator::validate(
   ControlValidatorStatus & res, const Trajectory & reference_trajectory,
   const Odometry & kinematics)
 {
+  // For rolling_back validation, use the conventional time constant (vel_lpf_gain)
+  const double rolling_back_v_vel =
+    rolling_back_vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
+  const double rolling_back_t_vel = rolling_back_target_vel_lpf.filter(
+    autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
+      .longitudinal_velocity_mps);
+
+  const bool is_rolling_back = std::signbit(rolling_back_v_vel * rolling_back_t_vel) &&
+                               std::abs(rolling_back_v_vel) > rolling_back_velocity_th;
+  if (
+    !hold_velocity_error_until_stop || !res.is_rolling_back ||
+    std::abs(rolling_back_v_vel) < 0.05) {
+    res.is_rolling_back = is_rolling_back;
+  }
+
+  // For over_velocity validation, use the longer time constant (velocity_validator.vel_lpf_gain)
   const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
   const double t_vel = target_vel_lpf.filter(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
       .longitudinal_velocity_mps);
-
-  const bool is_rolling_back =
-    std::signbit(v_vel * t_vel) && std::abs(v_vel) > rolling_back_velocity_th;
-  if (!hold_velocity_error_until_stop || !res.is_rolling_back || std::abs(v_vel) < 0.05) {
-    res.is_rolling_back = is_rolling_back;
-  }
 
   const bool is_over_velocity =
     std::abs(v_vel) > std::abs(t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
