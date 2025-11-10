@@ -879,7 +879,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
     const double finish_distance = autoware::motion_utils::calcSignedArcLength(
       path.points, planner_data_->self_odometry->pose.pose.position,
       status_.pull_out_path.end_pose.position);
-    updateRTCStatus(start_distance, finish_distance);
+    updateRTCStatus((start_distance < 0.0 ? 0.0 : start_distance), finish_distance);
 
     const auto start_idx = autoware::motion_utils::findNearestIndex(
       path.points, status_.pull_out_path.start_pose.position);
@@ -1039,7 +1039,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     const double finish_distance = autoware::motion_utils::calcSignedArcLength(
       stop_path.points, planner_data_->self_odometry->pose.pose.position,
       status_.pull_out_path.end_pose.position);
-    updateRTCStatus(start_distance, finish_distance);
+    updateRTCStatus((start_distance < 0.0 ? 0.0 : start_distance), finish_distance);
 
     const auto start_idx = autoware::motion_utils::findNearestIndex(
       stop_path.points, status_.pull_out_path.start_pose.position);
@@ -1146,6 +1146,18 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     // Delete stop point if conditions are met
     if (status_.is_safe_dynamic_objects && isStopped()) {
       status_.stop_pose = std::nullopt;
+    } else {  // update the stop pose if it goes behind the current ego pose
+      const double previous_stop_distance = autoware::motion_utils::calcSignedArcLength(
+        status_.prev_stop_path_after_approval->points,
+        planner_data_->self_odometry->pose.pose.position, status_.stop_pose->pose.position);
+      if (previous_stop_distance < 0.0) {
+        const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
+          status_.prev_stop_path_after_approval->points, 0UL,
+          planner_data_->self_odometry->pose.pose.position);
+        status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(getCurrentPath());
+        status_.stop_pose->pose =
+          utils::insertStopPoint(ego_arc_length, *status_.prev_stop_path_after_approval).point.pose;
+      }
     }
     stop_pose_ = status_.stop_pose;
     update_rtc_status(

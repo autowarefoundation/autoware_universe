@@ -347,12 +347,20 @@ TurnSignalInfo NormalLaneChange::get_current_turn_signal_info() const
     return original_turn_signal_info;
   }
 
-  const auto & path = prev_module_output_.path;
+  const auto & prev_path = prev_module_output_.path.points;
+  if (prev_path.empty()) {
+    return original_turn_signal_info;
+  }
+
   const auto & original_command = original_turn_signal_info.turn_signal.command;
   if (
-    !path.points.empty() && original_command != TurnIndicatorsCommand::DISABLE &&
+    original_command != TurnIndicatorsCommand::DISABLE &&
     original_command != TurnIndicatorsCommand::NO_COMMAND) {
     return get_terminal_turn_signal_info();
+  }
+
+  if (!status_.is_valid_path) {
+    return get_turn_signal(getEgoPose(), prev_path.back().point.pose);
   }
 
   set_signal_activation_time();
@@ -2031,5 +2039,28 @@ void NormalLaneChange::update_dist_from_intersection()
 
   path_after_intersection_.clear();
   transient_data.dist_from_prev_intersection = std::numeric_limits<double>::max();
+}
+
+bool NormalLaneChange::is_ego_in_current_or_target_lanes() const
+{
+  lanelet::ConstLanelet current_lane;
+  if (!common_data_ptr_->route_handler_ptr->getClosestLaneletWithinRoute(
+        common_data_ptr_->get_ego_pose(), &current_lane)) {
+    return false;
+  }
+
+  const auto & current_lanes = get_current_lanes();
+  const auto in_current =
+    utils::lane_change::is_lanelet_in_lanelet_collections(current_lanes, current_lane);
+
+  if (in_current) {
+    return true;
+  }
+
+  const auto & target_lanes = get_target_lanes();
+  const auto in_target =
+    utils::lane_change::is_lanelet_in_lanelet_collections(target_lanes, current_lane);
+
+  return in_target;
 }
 }  // namespace autoware::behavior_path_planner

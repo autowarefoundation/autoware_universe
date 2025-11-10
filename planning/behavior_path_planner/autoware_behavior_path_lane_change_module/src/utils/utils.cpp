@@ -1212,4 +1212,12 @@ bool is_moving_object(const CommonDataPtr & common_data_ptr, const ExtendedPredi
   return object.initial_twist.linear.x >
          common_data_ptr->lc_param_ptr->safety.th_stopped_object_velocity;
 }
+
+bool is_lanelet_in_lanelet_collections(
+  const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet)
+{
+  return std::any_of(
+    lanelet_collections.begin(), lanelet_collections.end(),
+    [&](const auto & lane) { return lane.id() == lanelet.id(); });
+}
 }  // namespace autoware::behavior_path_planner::utils::lane_change
