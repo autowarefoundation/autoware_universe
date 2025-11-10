@@ -118,26 +118,26 @@ std::vector<std::vector<size_t>> get_close_proximity_clusters(
   const TrajectoryPoints & traj_points, const double min_dist_m)
 {
   // get clusters of close point indices
-  std::vector<std::vector<size_t>> clusters;
-  std::vector<size_t> current_cluster{0};
+  std::vector<std::vector<size_t>> clusters_indices;
+  std::vector<size_t> current_cluster_indices{0};
   for (size_t i = 1; i < traj_points.size(); ++i) {
     const double dist =
-      autoware_utils::calc_distance2d(traj_points[i], traj_points[current_cluster.back()]);
+      autoware_utils::calc_distance2d(traj_points[i], traj_points[current_cluster_indices.back()]);
     if (dist < min_dist_m) {
-      current_cluster.push_back(i);
+      current_cluster_indices.push_back(i);
       continue;
     }
-    if (current_cluster.size() > 1) {
-      clusters.push_back(current_cluster);
+    if (current_cluster_indices.size() > 1) {
+      clusters_indices.push_back(current_cluster_indices);
     }
-    current_cluster.clear();
-    current_cluster.push_back(i);
+    current_cluster_indices.clear();
+    current_cluster_indices.push_back(i);
   }
 
-  if (current_cluster.size() > 1) {
-    clusters.push_back(current_cluster);
+  if (current_cluster_indices.size() > 1) {
+    clusters_indices.push_back(current_cluster_indices);
   }
-  return clusters;
+  return clusters_indices;
 }
 
 void resample_close_proximity_points(
@@ -146,8 +146,8 @@ void resample_close_proximity_points(
   if (traj_points.size() < 2) {
     return;
   }
-  const auto clusters = get_close_proximity_clusters(traj_points, min_dist_m);
-  if (clusters.empty()) {
+  const auto clusters_of_indices = get_close_proximity_clusters(traj_points, min_dist_m);
+  if (clusters_of_indices.empty()) {
     return;
   }
 
@@ -158,7 +158,7 @@ void resample_close_proximity_points(
   ego_point.longitudinal_velocity_mps = static_cast<float>(current_odometry.twist.twist.linear.x);
 
   auto resample_cluster_points = [&](
-                                   const std::vector<size_t> & cluster,
+                                   const std::vector<size_t> & cluster_of_indices,
                                    TrajectoryPoints & traj_points,
                                    const TrajectoryPoint & ego_point) {
     double sum_x = 0.0;
@@ -166,7 +166,8 @@ void resample_close_proximity_points(
     double sum_velocity = 0.0;
     double sum_acceleration = 0.0;
 
-    for (const auto idx : cluster) {
+    // get sum of positions and velocities
+    for (const auto idx : cluster_of_indices) {
       const auto & point = traj_points[idx];
       sum_x += point.pose.position.x;
       sum_y += point.pose.position.y;
@@ -178,13 +179,13 @@ void resample_close_proximity_points(
 
     // get previous points geometric yaw.
     const double yaw = std::invoke([&]() {
-      if (cluster.front() > 1) {
+      if (cluster_of_indices.front() > 1) {
         Eigen::Vector2d prev_point(
-          traj_points[cluster.front() - 1].pose.position.x,
-          traj_points[cluster.front() - 1].pose.position.y);
+          traj_points[cluster_of_indices.front() - 1].pose.position.x,
+          traj_points[cluster_of_indices.front() - 1].pose.position.y);
         Eigen::Vector2d prev_prev_point(
-          traj_points[cluster.front() - 2].pose.position.x,
-          traj_points[cluster.front() - 2].pose.position.y);
+          traj_points[cluster_of_indices.front() - 2].pose.position.x,
+          traj_points[cluster_of_indices.front() - 2].pose.position.y);
         Eigen::Vector2d dir_vector = prev_point - prev_prev_point;
         return std::atan2(dir_vector.y(), dir_vector.x());
       }
@@ -193,19 +194,48 @@ void resample_close_proximity_points(
       return tf2::getYaw(q);
     });
 
-    const auto cluster_size = static_cast<double>(cluster.size());
+    std::vector<double> arc_lengths = [&]() -> std::vector<double> {
+      std::vector<double> lengths{};
+      lengths.reserve(cluster_of_indices.size());
+      auto prev_point = traj_points[cluster_of_indices.front()];
+      for (const auto idx : cluster_of_indices) {
+        const auto distance =
+          (lengths.empty())
+            ? 0.0
+            : autoware_utils::calc_distance2d(prev_point, traj_points[idx]) + lengths.back();
+        lengths.push_back(distance);
+        prev_point = traj_points[idx];
+      }
+      // sanity check: sort lengths
+      std::sort(lengths.begin(), lengths.end());
+      return lengths;
+    }();
+
+    if (arc_lengths.empty()) {
+      return;
+    }
+
+    auto normalized_arc_lengths = [&]() -> std::vector<double> {
+      std::vector<double> normalized_lengths{};
+      normalized_lengths.reserve(arc_lengths.size());
+      const double total_length = arc_lengths.back();
+      for (const auto length : arc_lengths) {
+        normalized_lengths.push_back(total_length > 1e-6 ? length / total_length : 0.0);
+      }
+      return normalized_lengths;
+    }();
+
+    const auto cluster_size = static_cast<double>(cluster_of_indices.size());
     const auto avg_position_x = sum_x / cluster_size;
     const auto avg_position_y = sum_y / cluster_size;
-    const auto avg_longitudinal_velocity_mps = static_cast<float>(sum_velocity / cluster_size);
-    const auto avg_acceleration_mps2 = static_cast<float>(sum_acceleration / cluster_size);
     tf2::Quaternion orientation_q;
     orientation_q.setRPY(0.0, 0.0, yaw);
 
-    // project every point on the cluster to the line that passes through the average position
-    // with the average yaw
-    // direction vector of the line
+    // Get max projection length
+    std::vector<double> projection_lengths;
+    projection_lengths.reserve(cluster_of_indices.size());
     const Eigen::Vector2d line_dir(std::cos(yaw), std::sin(yaw));
-    for (const auto idx : cluster) {
+    for (const auto idx : cluster_of_indices) {
       auto & point = traj_points[idx];
       // vector from avg position to point
       const Eigen::Vector2d vec_point(
@@ -213,17 +243,38 @@ void resample_close_proximity_points(
 
       // project vec_point onto line_dir
       const double projection_length = vec_point.dot(line_dir);
-      // new point position
-      point.pose.position.x = avg_position_x + projection_length * line_dir.x();
-      point.pose.position.y = avg_position_y + projection_length * line_dir.y();
-      point.longitudinal_velocity_mps = avg_longitudinal_velocity_mps;
-      point.acceleration_mps2 = avg_acceleration_mps2;
+      projection_lengths.push_back(projection_length);
+    }
+
+    // sort projection lengths to fix point order along the line
+    std::sort(projection_lengths.begin(), projection_lengths.end());
+    const auto & largest_projection_length = projection_lengths.back();
+    const auto & smallest_projection_length = projection_lengths.front();
+    const auto projection_length_range = largest_projection_length - smallest_projection_length;
+
+    TrajectoryPoint initial_vector_point;
+    initial_vector_point.pose.position.x =
+      avg_position_x + smallest_projection_length * line_dir.x();
+    initial_vector_point.pose.position.y =
+      avg_position_y + smallest_projection_length * line_dir.y();
+
+    // update points along the line using their normalized arc lengths
+    for (size_t i = 0; i < cluster_of_indices.size(); ++i) {
+      const auto idx = cluster_of_indices[i];
+
+      const auto normalized_projected_length = normalized_arc_lengths[i] * projection_length_range;
+
+      auto & point = traj_points[idx];
+      point.pose.position.x =
+        initial_vector_point.pose.position.x + normalized_projected_length * line_dir.x();
+      point.pose.position.y =
+        initial_vector_point.pose.position.y + normalized_projected_length * line_dir.y();
       point.pose.orientation = tf2::toMsg(orientation_q);
     }
   };
 
-  for (const auto & cluster : clusters) {
-    resample_cluster_points(cluster, traj_points, ego_point);
+  for (const auto & cluster_of_indices : clusters_of_indices) {
+    resample_cluster_points(cluster_of_indices, traj_points, ego_point);
   }
 }
 
