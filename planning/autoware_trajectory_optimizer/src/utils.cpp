@@ -77,7 +77,9 @@ void smooth_trajectory_with_elastic_band(
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
 }
 
-void remove_invalid_points(TrajectoryPoints & input_trajectory)
+void remove_invalid_points(
+  TrajectoryPoints & input_trajectory, const double min_dist_to_remove_m,
+  const double min_dist_to_merge_m)
 {
   // remove points with nan or inf values
   input_trajectory.erase(
@@ -86,7 +88,8 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
       [](const TrajectoryPoint & point) { return !validate_point(point); }),
     input_trajectory.end());
 
-  utils::remove_close_proximity_points(input_trajectory, 1E-2);
+  utils::remove_close_proximity_points(input_trajectory, min_dist_to_remove_m);
+  utils::merge_close_proximity_points(input_trajectory, min_dist_to_merge_m);
 
   if (input_trajectory.size() < 2) {
     log_error_throttle(
@@ -111,6 +114,73 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
         return dist < min_dist;
       }),
     input_trajectory_array.end());
+}
+
+void merge_close_proximity_points(TrajectoryPoints & traj_points, const double min_dist_m)
+{
+  if (traj_points.size() < 2) {
+    return;
+  }
+  // get clusters of close point indices
+  std::vector<std::vector<size_t>> clusters;
+  std::vector<size_t> current_cluster{0};
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    const double dist =
+      autoware_utils::calc_distance2d(traj_points[i], traj_points[current_cluster.back()]);
+    if (dist < min_dist_m) {
+      current_cluster.push_back(i);
+      continue;
+    }
+    if (current_cluster.size() > 1) {
+      clusters.push_back(current_cluster);
+    }
+    current_cluster.clear();
+    current_cluster.push_back(i);
+  }
+
+  if (current_cluster.size() > 1) {
+    clusters.push_back(current_cluster);
+  }
+
+  // get the average point position, speed, acceleration, yaw for each cluster and create new points
+  auto merge_points = [&](const std::vector<size_t> & cluster) {
+    TrajectoryPoint merged_point;
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    double sum_velocity = 0.0;
+    double sum_acceleration = 0.0;
+    double sum_yaw_sin = 0.0;
+    double sum_yaw_cos = 0.0;
+    for (const auto idx : cluster) {
+      const auto & point = traj_points[idx];
+      sum_x += point.pose.position.x;
+      sum_y += point.pose.position.y;
+      sum_velocity += point.longitudinal_velocity_mps;
+      sum_acceleration += point.acceleration_mps2;
+      tf2::Quaternion q;
+      tf2::convert(point.pose.orientation, q);
+      double yaw = tf2::getYaw(q);
+      sum_yaw_sin += std::sin(yaw);
+      sum_yaw_cos += std::cos(yaw);
+    }
+    const size_t cluster_size = cluster.size();
+    merged_point.pose.position.x = sum_x / cluster_size;
+    merged_point.pose.position.y = sum_y / cluster_size;
+    merged_point.longitudinal_velocity_mps = static_cast<float>(sum_velocity / cluster_size);
+    merged_point.acceleration_mps2 = static_cast<float>(sum_acceleration / cluster_size);
+    double avg_yaw = std::atan2(sum_yaw_sin / cluster_size, sum_yaw_cos / cluster_size);
+    tf2::Quaternion q_new;
+    q_new.setRPY(0.0, 0.0, avg_yaw);
+    merged_point.pose.orientation = tf2::toMsg(q_new);
+    return merged_point;
+  };
+
+  if (clusters.empty()) {
+    return;
+  }
+
+  // We need to resample all this trouble points at equal distances instead of replacing with the
+  // average
 }
 
 void clamp_velocities(

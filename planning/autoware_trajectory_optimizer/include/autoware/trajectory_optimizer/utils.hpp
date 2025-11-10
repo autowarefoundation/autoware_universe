@@ -102,8 +102,12 @@ rclcpp::Logger get_logger();
  * @brief Removes invalid points from the input trajectory.
  *
  * @param input_trajectory The trajectory points to be cleaned.
+ * @param min_dist_to_remove_m Minimum distance to remove close proximity points [m].
+ * @param min_dist_to_merge_m Minimum distance to merge close proximity points [m].
  */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
+void remove_invalid_points(
+  std::vector<TrajectoryPoint> & input_trajectory, const double min_dist_to_remove_m = 1E-2,
+  const double min_dist_to_merge_m = 5E-2);
 
 /**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
@@ -172,6 +176,14 @@ void limit_lateral_acceleration(
  */
 void remove_close_proximity_points(
   std::vector<TrajectoryPoint> & input_trajectory_array, const double min_dist = 1E-2);
+
+/**
+ * @brief Merges points from the input trajectory that are too close to each other.
+ *
+ * @param traj_points The trajectory points to be merged.
+ * @param min_dist_m The minimum distance between points.
+ */
+void merge_close_proximity_points(TrajectoryPoints & traj_points, const double min_dist_m);
 
 /**
  * @brief Adds the ego state to the trajectory points.

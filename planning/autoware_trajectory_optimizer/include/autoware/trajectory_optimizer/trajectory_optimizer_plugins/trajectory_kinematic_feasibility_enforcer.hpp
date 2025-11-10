@@ -26,6 +26,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <nav_msgs/msg/detail/odometry__struct.hpp>
 
 #include <memory>
 #include <string>
@@ -35,6 +36,7 @@ namespace autoware::trajectory_optimizer::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using nav_msgs::msg::Odometry;
 
 /**
  * @brief Parameters for kinematic feasibility enforcer
@@ -82,16 +84,11 @@ private:
    * @brief Enforce Ackermann and yaw rate constraints on trajectory
    *
    * @param traj_points Trajectory points to adjust (modified in-place)
-   * @param anchor_pose Starting pose (ego vehicle pose)
-   * @param wheelbase Vehicle wheelbase [m]
-   * @param max_steer_rad Maximum steering angle [rad]
-   * @param max_yaw_rate Maximum yaw rate [rad/s]
+   * @param anchor_pose Starting anchor pose (ego vehicle pose)
    * @param dt Average time step between points [s]
    */
   void enforce_ackermann_yaw_rate_constraints(
-    TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & anchor_pose,
-    const double wheelbase, const double max_steer_rad, const double max_yaw_rate,
-    const double dt) const;
+    TrajectoryPoints & traj_points, const Odometry & ego_odometry, const double dt) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin

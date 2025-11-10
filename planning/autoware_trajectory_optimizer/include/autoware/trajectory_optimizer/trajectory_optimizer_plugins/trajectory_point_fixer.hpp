@@ -37,7 +37,9 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 struct TrajectoryPointFixerParams
 {
   double orientation_threshold_deg{
-    5.0};  // Yaw threshold for removing wrongly oriented points [deg]
+    5.0};                             // Yaw threshold for removing wrongly oriented points [deg]
+  double min_dist_to_remove_m{0.01};  // Minimum distance to remove close proximity points [m]
+  double min_dist_to_merge_m{0.05};   // Minimum distance to merge close proximity points [m]
 };
 
 class TrajectoryPointFixer : public TrajectoryOptimizerPluginBase
@@ -51,6 +53,7 @@ public:
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
+  void merge_close_proximity_points(TrajectoryPoints & traj_points, const double min_dist_m);
 
 private:
   TrajectoryPointFixerParams fixer_params_;

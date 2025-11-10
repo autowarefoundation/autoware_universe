@@ -18,4 +18,4 @@
     fix_invalid_points: true
     optimize_velocity: true
     extend_trajectory_backward: false
-    use_kinematic_feasibility_enforcer: false
+    use_kinematic_feasibility_enforcer: true

@@ -87,7 +87,7 @@ void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   }
 
   // Always use ego pose as anchor (current vehicle state)
-  const auto & anchor_pose = data.current_odometry.pose.pose;
+  const auto & ego_odometry = data.current_odometry;
 
   // Compute average dt from trajectory time stamps
   const double avg_dt = compute_average_dt(traj_points);
@@ -95,46 +95,73 @@ void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   // Apply kinematic feasibility constraints
   // This adjusts positions and headings while preserving segment distances
   // Velocities and time stamps remain unchanged to preserve dt structure for QP smoother
-  enforce_ackermann_yaw_rate_constraints(
-    traj_points, anchor_pose, vehicle_info_.wheel_base_m, vehicle_info_.max_steer_angle_rad,
-    feasibility_params_.max_yaw_rate_rad_s, avg_dt);
+  enforce_ackermann_yaw_rate_constraints(traj_points, ego_odometry, avg_dt);
 }
 
 void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constraints(
-  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & anchor_pose,
-  const double wheelbase, const double max_steer_rad, const double max_yaw_rate,
-  const double dt) const
+  TrajectoryPoints & traj_points, const Odometry & ego_odometry, const double dt) const
 {
+  if (traj_points.size() < 2) {
+    return;
+  }
   // Minimum segment distance for numerical stability
-  constexpr double min_segment_distance = 1e-6;  // 1 micron
+  constexpr double min_segment_distance = 1e-6;  // [m]
 
-  // Extract initial yaw from anchor pose
-  tf2::Quaternion q_anchor;
-  tf2::convert(anchor_pose.orientation, q_anchor);
-  double current_yaw = tf2::getYaw(q_anchor);
+  // Vehicle parameters
+  const double wheelbase = vehicle_info_.wheel_base_m;
+  const double max_steer_rad = vehicle_info_.max_steer_angle_rad;
+  const double max_yaw_rate = feasibility_params_.max_yaw_rate_rad_s;
 
-  // Current anchor position
-  Eigen::Vector2d anchor_pos(anchor_pose.position.x, anchor_pose.position.y);
+  // Get initial anchor pose
+  TrajectoryPoint anchor_point;
+  anchor_point.time_from_start.sec = 0;
+  anchor_point.time_from_start.nanosec = 0;
+  anchor_point.pose = ego_odometry.pose.pose;
+  anchor_point.longitudinal_velocity_mps = static_cast<float>(ego_odometry.twist.twist.linear.x);
 
   // Maximum curvature from Ackermann constraint
   // κ_max = tan(δ_max) / L
   const double kappa_max = std::tan(max_steer_rad) / wheelbase;
+  std::cerr << "Vehicle parameters:" << std::endl;
+  std::cerr << " wheelbase: " << wheelbase << " m" << std::endl;
+  std::cerr << " max_steer_angle: " << max_steer_rad << " rad" << std::endl;
+  std::cerr << "kappa_max: " << kappa_max << " 1/m" << std::endl;
+  std::cerr << "max_yaw_rate: " << max_yaw_rate << " rad/s" << std::endl;
+
+  // Pre-compute all segment distances from ORIGINAL trajectory before modifying any positions
+  // This preserves arc lengths throughout the forward propagation
+  std::vector<double> segment_distances;
+  segment_distances.reserve(traj_points.size() - 1);
+  for (size_t i = 0; i < traj_points.size() - 1; ++i) {
+    const auto dist = autoware_utils::calc_distance2d(traj_points[i], traj_points[i + 1]);
+    segment_distances.push_back(std::max(dist, min_segment_distance));
+  }
 
   // Process each trajectory point
-  for (auto & point : traj_points) {
-    // Extract original point position
-    Eigen::Vector2d orig_point(point.pose.position.x, point.pose.position.y);
+  std::cerr << "Enforcing kinematic feasibility on trajectory with " << traj_points.size()
+            << " points." << std::endl;
+  std::cerr << "-----------------------------------------" << std::endl;
+  for (size_t i = 0; i < traj_points.size() - 1; ++i) {
+    // Extract current point position (may have been modified in previous iteration)
+    auto & curr_point = traj_points[i];
+    auto & next_point = traj_points[i + 1];
 
-    // Compute vector from anchor to original point
-    Eigen::Vector2d v = orig_point - anchor_pos;
+    Eigen::Vector2d curr_point_v(curr_point.pose.position.x, curr_point.pose.position.y);
 
-    // Clamp segment distance to minimum for numerical stability
-    // Don't skip short segments - that would create duplicates
-    const double s = std::max(v.norm(), min_segment_distance);
+    // Original next point position (before modification)
+    const Eigen::Vector2d original_next_pos(next_point.pose.position.x, next_point.pose.position.y);
 
-    // Desired heading from anchor to original point
+    // Use pre-computed segment distance to preserve arc length
+    const double s = segment_distances[i];
+
+    // Desired heading from current position toward original next point
+    const Eigen::Vector2d v = original_next_pos - curr_point_v;
     const double desired_yaw = std::atan2(v.y(), v.x());
 
+    const auto q_anchor = tf2::Quaternion(
+      anchor_point.pose.orientation.x, anchor_point.pose.orientation.y,
+      anchor_point.pose.orientation.z, anchor_point.pose.orientation.w);
+    double current_yaw = tf2::getYaw(q_anchor);
     // Compute desired yaw change (normalized to [-pi, pi])
     double delta_yaw_desired = normalize_angle(desired_yaw - current_yaw);
 
@@ -142,6 +169,9 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Maximum yaw change based on maximum curvature over distance s
     // Δψ_geom = κ_max * s = (tan(δ_max) / L) * s
     const double delta_yaw_geom = kappa_max * s;
+    std::cerr << "i: " << i << " desired_yaw: " << desired_yaw << " current_yaw: " << current_yaw
+              << " delta_yaw_desired: " << delta_yaw_desired
+              << " delta_yaw_geom: " << delta_yaw_geom << std::endl;
 
     // Compute yaw rate constraint
     // Maximum yaw change based on angular rate limit over time dt
@@ -160,20 +190,23 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Compute new point position maintaining segment distance s
     // This preserves the implicit dt = s / v_avg between points
     const Eigen::Vector2d new_point =
-      anchor_pos + s * Eigen::Vector2d(std::cos(current_yaw), std::sin(current_yaw));
-
-    // Update trajectory point
-    point.pose.position.x = new_point.x();
-    point.pose.position.y = new_point.y();
+      curr_point_v + s * Eigen::Vector2d(std::cos(current_yaw), std::sin(current_yaw));
 
     // Update orientation
     tf2::Quaternion q_new;
     q_new.setRPY(0.0, 0.0, current_yaw);
-    point.pose.orientation = tf2::toMsg(q_new);
+    curr_point.pose.orientation = tf2::toMsg(q_new);
+
+    // Update next point position
+    next_point.pose.position.x = new_point.x();
+    next_point.pose.position.y = new_point.y();
 
     // Update anchor for next iteration (forward propagation)
-    anchor_pos = new_point;
+    anchor_point = curr_point;
   }
+  std::cerr << "-----------------------------------------" << std::endl;
+  // Update last point yaw to match previous point
+  traj_points.back().pose.orientation = traj_points[traj_points.size() - 2].pose.orientation;
 }
 
 void TrajectoryKinematicFeasibilityEnforcer::set_up_params()

@@ -30,7 +30,8 @@ void TrajectoryPointFixer::optimize_trajectory(
   if (!params.fix_invalid_points) {
     return;
   }
-  utils::remove_invalid_points(traj_points);
+  utils::remove_invalid_points(
+    traj_points, fixer_params_.min_dist_to_remove_m, fixer_params_.min_dist_to_merge_m);
 }
 
 void TrajectoryPointFixer::set_up_params()
@@ -40,6 +41,10 @@ void TrajectoryPointFixer::set_up_params()
 
   fixer_params_.orientation_threshold_deg =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.orientation_threshold_deg");
+  fixer_params_.min_dist_to_remove_m =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_remove_m");
+  fixer_params_.min_dist_to_merge_m =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_merge_m");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
@@ -50,6 +55,10 @@ rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
   update_param<double>(
     parameters, "trajectory_point_fixer.orientation_threshold_deg",
     fixer_params_.orientation_threshold_deg);
+  update_param<double>(
+    parameters, "trajectory_point_fixer.min_dist_to_remove_m", fixer_params_.min_dist_to_remove_m);
+  update_param<double>(
+    parameters, "trajectory_point_fixer.min_dist_to_merge_m", fixer_params_.min_dist_to_merge_m);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
