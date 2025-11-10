@@ -15,6 +15,7 @@
     temperature: [0.5]
     velocity_smoothing_window: 8
     stopping_threshold: 0.0
+    unknown_traffic_light_fallback: 0  # 0: UNKNOWN, 1: RED, 2: AMBER, 3: GREEN, 4: WHITE
     debug_params:
       publish_debug_route: true
       publish_debug_map: false
