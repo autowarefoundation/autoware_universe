@@ -176,25 +176,6 @@ void remove_close_proximity_points(
   std::vector<TrajectoryPoint> & input_trajectory_array, const double min_dist = 1E-2);
 
 /**
- * @brief Identifies clusters of trajectory points that are closer than the specified minimum
- * distance.
- *
- * @param traj_points The trajectory points to be analyzed.
- * @param min_dist_m The minimum distance threshold for clustering points.
- * @return A vector of clusters, where each cluster is represented as a vector of point indices.
- */
-std::vector<std::vector<size_t>> get_close_proximity_clusters(
-  const TrajectoryPoints & traj_points, const double min_dist_m);
-
-/**
- * @brief Resamples points from the input trajectory that are too close to each other.
- * @param traj_points The trajectory points to be resampled.
- * @param min_dist_m The minimum distance between points.
- */
-void resample_close_proximity_points(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m);
-
-/**
  * @brief Adds the ego state to the trajectory points.
  *
  * @param traj_points The trajectory points to be updated.

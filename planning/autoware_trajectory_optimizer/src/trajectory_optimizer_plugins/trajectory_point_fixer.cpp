@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer_utils.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
@@ -25,14 +26,14 @@ namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  [[maybe_unused]] const TrajectoryOptimizerData & data)
+  const TrajectoryOptimizerData & data)
 {
   if (!params.fix_invalid_points) {
     return;
   }
   utils::remove_invalid_points(traj_points, fixer_params_.min_dist_to_remove_m);
   if (fixer_params_.resample_close_points) {
-    utils::resample_close_proximity_points(
+    trajectory_point_fixer_utils::resample_close_proximity_points(
       traj_points, data.current_odometry, fixer_params_.min_dist_to_merge_m);
   }
 }
