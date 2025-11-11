@@ -65,6 +65,23 @@ public:
     double distance_to_judge_over_stop_line;
     bool suppress_pass_judge_when_stopping;
     bool enable_detected_obstacle_logging;
+
+    struct TargetFiltering
+    {
+      bool pointcloud;
+      bool unknown;
+      bool car;
+      bool truck;
+      bool bus;
+      bool trailer;
+      bool motorcycle;
+      bool bicycle;
+      bool pedestrian;
+      bool animal;
+      bool hazard;
+      bool over_drivable;
+      bool under_drivable;
+    } target_filtering;
   };
 
   DetectionAreaModule(

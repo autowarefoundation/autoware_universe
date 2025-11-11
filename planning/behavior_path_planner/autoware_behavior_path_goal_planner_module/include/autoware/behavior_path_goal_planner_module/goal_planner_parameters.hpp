@@ -94,6 +94,9 @@ struct GoalPlannerParameters
   double decide_path_distance{0.0};
   double maximum_deceleration{0.0};
   double maximum_jerk{0.0};
+  double low_velocity_threshold{0.0};
+  double approximate_pull_over_distance{0.0};
+  double stopping_distance_buffer{0.0};
   std::string path_priority;  // "efficient_path" or "close_goal"
   std::vector<std::string> efficient_path_order{};
   double lane_departure_check_expansion_margin{0.0};

@@ -48,7 +48,6 @@ GoalDistanceCalculatorNode::GoalDistanceCalculatorNode(const rclcpp::NodeOptions
   const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
   timer_ = rclcpp::create_timer(
     this, get_clock(), period_ns, std::bind(&GoalDistanceCalculatorNode::onTimer, this));
-  goal_distance_calculator_ = std::make_unique<GoalDistanceCalculator>();
 }
 
 bool GoalDistanceCalculatorNode::tryGetCurrentPose(

@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "object_manager.hpp"
+#include "autoware/behavior_velocity_intersection_module/object_manager.hpp"
+
+#include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
@@ -29,48 +31,12 @@
 #include <string>
 #include <vector>
 
-namespace
-{
-std::string to_string(const unique_identifier_msgs::msg::UUID & uuid)
-{
-  std::stringstream ss;
-  for (auto i = 0; i < 16; ++i) {
-    ss << std::hex << std::setfill('0') << std::setw(2) << +uuid.uuid[i];
-  }
-  return ss.str();
-}
-
-autoware_utils::Polygon2d createOneStepPolygon(
-  const geometry_msgs::msg::Pose & prev_pose, const geometry_msgs::msg::Pose & next_pose,
-  const autoware_perception_msgs::msg::Shape & shape)
-{
-  namespace bg = boost::geometry;
-  const auto prev_poly = autoware_utils::to_polygon2d(prev_pose, shape);
-  const auto next_poly = autoware_utils::to_polygon2d(next_pose, shape);
-
-  autoware_utils::Polygon2d one_step_poly;
-  for (const auto & point : prev_poly.outer()) {
-    one_step_poly.outer().push_back(point);
-  }
-  for (const auto & point : next_poly.outer()) {
-    one_step_poly.outer().push_back(point);
-  }
-
-  bg::correct(one_step_poly);
-
-  autoware_utils::Polygon2d convex_one_step_poly;
-  bg::convex_hull(one_step_poly, convex_one_step_poly);
-
-  return convex_one_step_poly;
-}
-
-}  // namespace
-
 namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 
-ObjectInfo::ObjectInfo(const unique_identifier_msgs::msg::UUID & uuid) : uuid_str(::to_string(uuid))
+ObjectInfo::ObjectInfo(const unique_identifier_msgs::msg::UUID & uuid)
+: uuid_str(util::to_string(uuid))
 {
 }
 
@@ -249,13 +215,11 @@ std::vector<std::shared_ptr<ObjectInfo>> ObjectInfoManager::allObjects() const
 
 std::optional<CollisionInterval> findPassageInterval(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly,
-  const std::optional<lanelet::ConstLanelet> & first_attention_lane_opt,
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane_opt)
+  const autoware_perception_msgs::msg::Shape & shape, const lanelet::BasicPolygon2d & ego_lane_poly)
 {
   const auto first_itr = std::adjacent_find(
     predicted_path.path.cbegin(), predicted_path.path.cend(), [&](const auto & a, const auto & b) {
-      return bg::intersects(ego_lane_poly, ::createOneStepPolygon(a, b, shape));
+      return bg::intersects(ego_lane_poly, util::createOneStepPolygon(a, b, shape));
     });
   if (first_itr == predicted_path.path.cend()) {
     // even the predicted path end does not collide with the beginning of ego_lane_poly
@@ -264,7 +228,7 @@ std::optional<CollisionInterval> findPassageInterval(
   const auto last_itr = std::adjacent_find(
     predicted_path.path.crbegin(), predicted_path.path.crend(),
     [&](const auto & a, const auto & b) {
-      return bg::intersects(ego_lane_poly, ::createOneStepPolygon(a, b, shape));
+      return bg::intersects(ego_lane_poly, util::createOneStepPolygon(a, b, shape));
     });
   if (last_itr == predicted_path.path.crend()) {
     // even the predicted path start does not collide with the end of ego_lane_poly
@@ -277,30 +241,12 @@ std::optional<CollisionInterval> findPassageInterval(
   const size_t exit_idx = std::distance(predicted_path.path.begin(), last_itr.base()) - 1;
   const double object_exit_time =
     static_cast<double>(exit_idx) * rclcpp::Duration(predicted_path.time_step).seconds();
-  const auto lane_position = [&]() {
-    if (first_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            first_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
-        return CollisionInterval::LanePosition::FIRST;
-      }
-    }
-    if (second_attention_lane_opt) {
-      if (lanelet::geometry::inside(
-            second_attention_lane_opt.value(),
-            lanelet::BasicPoint2d(first_itr->position.x, first_itr->position.y))) {
-        return CollisionInterval::LanePosition::SECOND;
-      }
-    }
-    return CollisionInterval::LanePosition::ELSE;
-  }();
 
   std::vector<geometry_msgs::msg::Pose> path;
   for (const auto & pose : predicted_path.path) {
     path.push_back(pose);
   }
-  return CollisionInterval{
-    lane_position, path, {enter_idx, exit_idx}, {object_enter_time, object_exit_time}};
+  return CollisionInterval{path, {enter_idx, exit_idx}, {object_enter_time, object_exit_time}};
 }
 
 }  // namespace autoware::behavior_velocity_planner

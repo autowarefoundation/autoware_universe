@@ -55,10 +55,10 @@ Marker create_base_marker(
 // Helper to extract point data from lane vector
 struct LanePointData
 {
-  float x, y;
-  float lb_x, lb_y;
-  float rb_x, rb_y;
-  float norm;
+  double x, y;
+  double lb_x, lb_y;
+  double rb_x, rb_y;
+  double norm;
 };
 
 LanePointData extract_lane_point(
@@ -78,19 +78,19 @@ LanePointData extract_lane_point(
 // Helper to transform points
 struct TransformedPoints
 {
-  float x, y, z;
-  float lb_x, lb_y;
-  float rb_x, rb_y;
+  double x, y, z;
+  double lb_x, lb_y;
+  double rb_x, rb_y;
 };
 
 TransformedPoints transform_lane_points(
-  const LanePointData & data, const Eigen::Matrix4f & transform)
+  const LanePointData & data, const Eigen::Matrix4d & transform)
 {
-  Eigen::Matrix<float, 4, 3> points;
-  points << data.x, data.lb_x, data.rb_x, data.y, data.lb_y, data.rb_y, 0.0f, 0.0f, 0.0f, 1.0f,
-    1.0f, 1.0f;
+  Eigen::Matrix<double, 4, 3> points;
+  points << data.x, data.lb_x, data.rb_x, data.y, data.lb_y, data.rb_y, 0.0, 0.0, 0.0, 1.0, 1.0,
+    1.0;
 
-  Eigen::Matrix<float, 4, 3> transformed = transform * points;
+  Eigen::Matrix<double, 4, 3> transformed = transform * points;
 
   TransformedPoints result;
   result.x = transformed(0, 0);
@@ -104,7 +104,7 @@ TransformedPoints transform_lane_points(
 }
 
 // Helper to add point to marker
-void add_point_to_marker(Marker & marker, float x, float y, float z)
+void add_point_to_marker(Marker & marker, double x, double y, double z)
 {
   Point pt;
   pt.x = x;
@@ -140,7 +140,7 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
 };
 
 MarkerArray create_lane_marker(
-  const Eigen::Matrix4f & transform_ego_to_map, const std::vector<float> & lane_vector,
+  const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
   const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
   const std::array<float, 4> colors, const std::string & frame_id,
   const bool set_traffic_light_color)
@@ -150,7 +150,7 @@ MarkerArray create_lane_marker(
   const int64_t D = shape[3];
   const size_t num_segments = lane_vector.size() / (P * D);
   int64_t segment_count = 0;
-  constexpr float near_zero_threshold = 1e-2f;
+  constexpr double near_zero_threshold = 1e-2;
   // Setup colors
   ColorRGBA lane_color;
   lane_color.r = colors[0];

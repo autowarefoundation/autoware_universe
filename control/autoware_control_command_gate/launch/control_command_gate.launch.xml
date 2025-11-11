@@ -4,14 +4,13 @@
   <arg name="output/gear" default="/control/command/gear_cmd"/>
   <arg name="output/turn_indicators" default="/control/command/turn_indicators_cmd"/>
   <arg name="output/hazard_lights" default="/control/command/hazard_lights_cmd"/>
+
+  <!-- Enabled if "main" is listed in config input_names -->
   <arg name="inputs/main/control" default="/control/trajectory_follower/control_cmd"/>
-  // Confirm that "main" is listed in config input_names
   <arg name="inputs/main/gear" default="/control/shift_decider/gear_cmd"/>
-  // Confirm that "main" is listed in config input_names
   <arg name="inputs/main/hazard_lights" default="/planning/hazard_lights_cmd"/>
-  // Confirm that "main" is listed in config input_names
   <arg name="inputs/main/turn_indicators" default="/planning/turn_indicators_cmd"/>
-  // Confirm that "main" is listed in config input_names
+
   <node pkg="autoware_control_command_gate" exec="control_command_gate_node">
     <param from="$(var config)"/>
     <remap from="~/output/control" to="$(var output/control)"/>

@@ -125,12 +125,14 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
       planner_data_->parameters.turn_signal_roundabout_search_distance;
     const double turn_signal_roundabout_angle_threshold_deg =
       planner_data_->parameters.turn_signal_roundabout_angle_threshold_deg;
+    const int turn_signal_roundabout_backward_depth =
+      planner_data_->parameters.turn_signal_roundabout_backward_depth;
     planner_data_->turn_signal_decider.setParameters(
       planner_data_->parameters.base_link2front, turn_signal_intersection_search_distance,
       turn_signal_search_time, turn_signal_intersection_angle_threshold_deg,
       turn_signal_roundabout_on_entry, turn_signal_roundabout_on_exit,
       turn_signal_roundabout_entry_indicator_persistence, turn_signal_roundabout_search_distance,
-      turn_signal_roundabout_angle_threshold_deg);
+      turn_signal_roundabout_angle_threshold_deg, turn_signal_roundabout_backward_depth);
   }
 
   // Start timer

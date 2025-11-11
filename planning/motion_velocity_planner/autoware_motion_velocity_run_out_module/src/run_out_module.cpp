@@ -31,8 +31,11 @@
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/duration.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
 #include <string>
@@ -44,6 +47,15 @@ namespace autoware::motion_velocity_planner
 
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
+
+static autoware_internal_debug_msgs::msg::Float64Stamped create_float64_stamped(
+  const rclcpp::Time & now, const float & data)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped msg;
+  msg.stamp = now;
+  msg.data = data;
+  return msg;
+}
 
 void RunOutModule::init_parameters(rclcpp::Node & node)
 {
@@ -62,23 +74,21 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   logger_ = node.get_logger();
   clock_ = node.get_clock();
 
+  processing_time_publisher_ =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/" + ns_ + "/processing_time_ms", 1);
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
-    &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
-  processing_time_publisher_ =
-    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/debug/" + ns_ + "/processing_time_ms", 1);
   debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
-    "~/" + ns_ + "/processing_time", 1);
+    "~/" + ns_ + "/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
-  diagnostic_updater_->setHardwareID("mvp_run_out");
+  diagnostic_updater_->setHardwareID("run_out");
   diagnostic_updater_->add(
     "unavoidable_run_out_collision", this, &RunOutModule::update_unfeasible_stop_status);
 
@@ -86,7 +96,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, "mvp_run_out");
+      &node, "run_out");
 }
 
 double calculate_keep_stop_distance_range(
@@ -168,28 +178,31 @@ void RunOutModule::add_planning_factors(
   if (trajectory.empty()) {
     return;
   }
-  geometry_msgs::msg::Pose p;
   for (auto i = 0UL; i < result.velocity_planning_result.slowdown_intervals.size(); ++i) {
     const auto & slowdown = result.velocity_planning_result.slowdown_intervals[i];
-    p.position = slowdown.from;
+    const auto length = motion_utils::calcSignedArcLength(trajectory, 0, slowdown.from);
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
     autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
     safety_array.is_safe = false;
     if (safety_factor_per_object.count(result.slowdown_objects[i]) > 0UL) {
       safety_array.factors = {safety_factor_per_object.at(result.slowdown_objects[i])};
     }
     planning_factor_interface_->add(
-      trajectory, trajectory.front().pose, p, PlanningFactor::SLOW_DOWN, safety_array, true,
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::SLOW_DOWN, safety_array, true,
       slowdown.velocity);
   }
   for (auto i = 0UL; i < result.velocity_planning_result.stop_points.size(); ++i) {
-    p.position = result.velocity_planning_result.stop_points[i];
+    const auto length = motion_utils::calcSignedArcLength(
+      trajectory, 0, result.velocity_planning_result.stop_points.at(i));
+    const auto wall_pose = motion_utils::calcInterpolatedPose(trajectory, length);
     autoware_internal_planning_msgs::msg::SafetyFactorArray safety_array;
     safety_array.is_safe = false;
     if (safety_factor_per_object.count(result.stop_objects[i]) > 0UL) {
       safety_array.factors = {safety_factor_per_object.at(result.stop_objects[i])};
     }
     planning_factor_interface_->add(
-      trajectory, trajectory.front().pose, p, PlanningFactor::STOP, safety_array, true, 0.0);
+      trajectory, trajectory.front().pose, wall_pose, PlanningFactor::STOP, safety_array, true,
+      0.0);
   }
 }
 
@@ -199,6 +212,7 @@ VelocityPlanningResult RunOutModule::plan(
   const std::shared_ptr<const PlannerData> planner_data)
 {
   const auto now = clock_->now();
+  stop_watch_.tic();
   time_keeper_->start_track("plan()");
   time_keeper_->start_track("calc_ego_footprint()");
   const auto ego_footprint = calculate_trajectory_corner_footprint(
@@ -267,6 +281,8 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");
+
+  processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
   return result.velocity_planning_result;
 }
 

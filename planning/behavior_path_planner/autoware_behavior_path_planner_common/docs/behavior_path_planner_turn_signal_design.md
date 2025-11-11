@@ -28,12 +28,14 @@ Currently, this algorithm can sometimes give unnatural (not wrong) blinkers in c
 | turn_signal_search_time                            | [s]  | double | search time for to decide activation of blinkers                                                                                                                                                       | 3.0           |
 | turn_signal_shift_length_threshold                 | [m]  | double | shift length threshold to decide activation of blinkers                                                                                                                                                | 0.3           |
 | turn_signal_remaining_shift_length_threshold       | [m]  | double | When the ego's current shift length minus its end shift length is less than this threshold, the turn signal will be turned off.                                                                        | 0.1           |
+| turn_signal_remaining_distance_to_bound_threshold  | [m]  | double | Distance from ego vehicle's front edge to the far-side boundary of the target merging lane. The turn signal will be turned off when the value is less than the threshold.                              | 1.3           |
 | turn_signal_on_swerving                            | [-]  | bool   | flag to activate blinkers when swerving                                                                                                                                                                | true          |
 | turn_signal_roundabout_on_entry                    | [-]  | string | turn signal on entry to roundabout. "None", "Left", "Right"                                                                                                                                            | "None"        |
 | turn_signal_roundabout_entry_indicator_persistence | [-]  | bool   | whether to keep the indicator on after entering the roundabout. If true, the indicator will be kept on until the exit point. If false, the indicator will be turned off after entering the roundabout. | false         |
 | turn_signal_roundabout_on_exit                     | [-]  | string | turn signal on exit from roundabout. "None", "Left", "Right"                                                                                                                                           | "Left"        |
 | turn_signal_roundabout_search_distance             | [m]  | double | constant search distance to decide activation of blinkers at roundabouts                                                                                                                               | 30.0          |
 | turn_signal_roundabout_angle_threshold_degree      | deg  | double | angle threshold to determined the end point of roundabout required section                                                                                                                             | 15.0          |
+| turn_signal_roundabout_backward_depth              | [-]  | int    | maximum number of lanelets to look back when determining the backward length for roundabout turn signal logic. Set to -1 for unlimited depth.                                                          | 50            |
 
 Note that the default values for `turn_signal_intersection_search_distance` and `turn_signal_search_time` is strictly followed by [Japanese Road Traffic Laws](https://www.japaneselawtranslation.go.jp/ja/laws/view/2962). So if your country does not allow to use these default values, you should change these values in configuration files.
 
@@ -131,7 +133,7 @@ Second section
 
 ![section_lane_change](../images/turn_signal_decider/lane_change.drawio.svg)
 
-#### 4. Pull out
+#### 4. Pull out (Start Planner)
 
 - desired start point
   Start point of the path of pull out.
@@ -146,6 +148,12 @@ Second section
   Terminal point of the path of pull out.
 
 ![section_pull_out](../images/turn_signal_decider/pull_out.drawio.svg)
+
+!!! note
+
+    The blinker also deactivate based on the remaining lateral distance to the target lane boundary.
+
+    If this distance is smaller than the configurable parameter `turn_signal_remaining_distance_to_bound_threshold`, the blinker will turn off immediately.
 
 #### 5. Goal Planner
 
@@ -183,18 +191,15 @@ Exit Turn Signal:
 
 Special Features:
 
-- **Exit-based entry signal**: If a specific exit lanelet ID is defined as an attribute in the entry lanelet (e.g., `turn_signal_left` or `turn_signal_right`), the entry turn signal will be overridden accordingly.
 - **Indicator persistence**: When `turn_signal_roundabout_entry_indicator_persistence` is enabled, the entry turn signal remains active until the vehicle exits the roundabout.
-- **Enable exit turn signal**: Lanelets with the `enable_exit_turn_signal` attribute allow early activation of exit turn signals.
 
 ##### Example parameter settings based on country-specific rules
 
-| Country        | Entry (`turn_signal_roundabout_on_entry`) | Exit (`turn_signal_roundabout_on_exit`) | Entry indicator persistence (`turn_signal_roundabout_entry_indicator_persistence`) | Notes                                       |
-| :------------- | :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------------------------- | :------------------------------------------ |
-| Japan          | "None"                                    | "Left"                                  | false                                                                              |                                             |
-| United Kingdom | "None"                                    | "Left"                                  | true                                                                               | Turn signal direction is defined in the map |
-| Germany        | "None"                                    | "Right"                                 | false                                                                              |                                             |
-| South Korea    | "Left"                                    | "Right"                                 | false                                                                              |                                             |
+| Country     | Entry (`turn_signal_roundabout_on_entry`) | Exit (`turn_signal_roundabout_on_exit`) | Entry indicator persistence (`turn_signal_roundabout_entry_indicator_persistence`) | Notes |
+| :---------- | :---------------------------------------- | :-------------------------------------- | :--------------------------------------------------------------------------------- | :---- |
+| Japan       | "None"                                    | "Left"                                  | false                                                                              |       |
+| Germany     | "None"                                    | "Right"                                 | false                                                                              |       |
+| South Korea | "Left"                                    | "Right"                                 | false                                                                              |       |
 
 ### Blinker conflicts
 

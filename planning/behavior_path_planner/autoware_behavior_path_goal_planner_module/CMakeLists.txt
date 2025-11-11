@@ -22,6 +22,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/manager.cpp
   src/thread_data.cpp
   src/decision_state.cpp
+  src/lane_change.cpp
 )
 
 if(BUILD_EXAMPLES)

@@ -1,4 +1,4 @@
-// Copyright 2022-2023 UCI SORA Lab, TIER IV, Inc.
+// Copyright 2022-2025 UCI SORA Lab, TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,11 @@
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 
+#include <lanelet2_core/Exceptions.h>
+
 #include <algorithm>
-#include <iostream>
+#include <charconv>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -75,6 +78,79 @@ bool hasMergeLane(
   }
 
   return false;
+}
+
+/// @brief convert a string to the corresponding traffic signal color
+std::optional<uint8_t> str_to_color(std::string_view str)
+{
+  if (str == "red") {
+    return TrafficSignalElement::RED;
+  }
+  if (str == "green") {
+    return TrafficSignalElement::GREEN;
+  }
+  if (str == "amber") {
+    return TrafficSignalElement::AMBER;
+  }
+  if (str == "white") {
+    return TrafficSignalElement::WHITE;
+  }
+  return std::nullopt;
+}
+
+/// @brief parse the input string and extract a rule to estimate a traffic signal
+/// @details the string is expected to have format "signal_color_relation:color1:color2"
+std::optional<std::pair<uint8_t, uint8_t>> parse_signal_estimation_rules(std::string_view input)
+{
+  constexpr auto delimiter = ':';
+  constexpr std::string_view prefix = "signal_color_relation:";
+  if (input.size() < prefix.size() || input.substr(0, prefix.length()) != prefix) {
+    return std::nullopt;
+  }
+  input.remove_prefix(prefix.length());
+
+  // extract the color mapping
+  const auto delimiter_pos = input.find(delimiter);
+  if (delimiter_pos == std::string_view::npos) {
+    return std::nullopt;
+  }
+
+  std::string_view from_str = input.substr(0, delimiter_pos);
+  std::string_view to_str = input.substr(delimiter_pos + 1);
+
+  if (const auto from_color = str_to_color(from_str)) {
+    if (const auto to_color = str_to_color(to_str)) {
+      return std::make_pair(*from_color, *to_color);
+    }
+  }
+  return std::nullopt;
+}
+
+/// @brief extract ids from the input string
+/// @details the string is expected to have format "id1,id2,...", without any space
+lanelet::Ids parse_ids(std::string_view input)
+{
+  lanelet::Ids ids;
+  if (input.empty()) {
+    return ids;
+  }
+
+  constexpr auto delimiter = ',';
+  size_t start = 0;
+  size_t end = 0;
+  lanelet::Id id{};
+  while ((end = input.find(delimiter, start)) != std::string_view::npos) {
+    const auto [_, err] = std::from_chars(input.data() + start, input.data() + end, id);
+    if (err == std::errc()) {
+      ids.push_back(id);
+    }
+    start = end + 1;
+  }
+  const auto [_, err] = std::from_chars(input.data() + start, input.data() + input.size(), id);
+  if (err == std::errc()) {
+    ids.push_back(id);
+  }
+  return ids;
 }
 }  // namespace
 
@@ -155,26 +231,71 @@ void CrosswalkTrafficLightEstimatorNode::onRoute(const LaneletRoute::ConstShared
   }
 }
 
+void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
+  std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
+  const lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map)
+{
+  const auto traffic_light_it =
+    lanelet_map_ptr_->regulatoryElementLayer.find(traffic_light_group_id);
+  if (traffic_light_it == lanelet_map_ptr_->regulatoryElementLayer.end()) {
+    RCLCPP_WARN(
+      get_logger(), "Traffic light group ID %ld not found in regulatory element layer",
+      traffic_light_group_id);
+    return;
+  }
+  const auto & traffic_light = *traffic_light_it;
+  const auto current_vehicle_traffic_light_color =
+    getHighestConfidenceTrafficSignal(traffic_light->id(), traffic_light_id_map);
+  for (const auto & attribute : traffic_light->attributes()) {
+    const auto & color_mapping = parse_signal_estimation_rules(attribute.first);
+    if (!color_mapping) {
+      continue;
+    }
+    const auto & [from_color, to_color] = *color_mapping;
+    if (from_color != current_vehicle_traffic_light_color) {
+      continue;
+    }
+    for (const auto id : parse_ids(attribute.second.value())) {
+      crosswalk_traffic_signal_overrides[id] = to_color;
+    }
+  }
+}
+
 void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   const TrafficSignalArray::ConstSharedPtr msg)
 {
+  if (lanelet_map_ptr_ == nullptr) {
+    RCLCPP_WARN(get_logger(), "cannot process traffic light array because the map is not received");
+    return;
+  }
+
   StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic("Total");
 
   TrafficSignalArray output = *msg;
 
   TrafficLightIdMap traffic_light_id_map;
+
+  std::unordered_map<lanelet::Id, uint8_t> crosswalk_traffic_signal_overrides;
   for (const auto & traffic_signal : msg->traffic_light_groups) {
     traffic_light_id_map[traffic_signal.traffic_light_group_id] =
       std::pair<TrafficSignal, rclcpp::Time>(traffic_signal, get_clock()->now());
   }
+  // we need the full traffic_light_id_map before calculating overrides from map
+  for (const auto & traffic_signal : msg->traffic_light_groups) {
+    update_crosswalk_overrides_from_map(
+      crosswalk_traffic_signal_overrides, traffic_signal.traffic_light_group_id,
+      traffic_light_id_map);
+  }
+
   for (const auto & crosswalk : conflicting_crosswalks_) {
     constexpr int VEHICLE_GRAPH_ID = 0;
     const auto conflict_lls = overall_graphs_ptr_->conflictingInGraph(crosswalk, VEHICLE_GRAPH_ID);
     const auto non_red_lanelets = getNonRedLanelets(conflict_lls, traffic_light_id_map);
 
     const auto crosswalk_tl_color = estimateCrosswalkTrafficSignal(crosswalk, non_red_lanelets);
-    setCrosswalkTrafficSignal(crosswalk, crosswalk_tl_color, *msg, output);
+    setCrosswalkTrafficSignal(
+      crosswalk, crosswalk_tl_color, *msg, output, crosswalk_traffic_signal_overrides);
   }
 
   removeDuplicateIds(output);
@@ -282,46 +403,82 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignals(
 
 void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
-  TrafficSignalArray & output)
+  TrafficSignalArray & output,
+  const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides)
 {
   const auto tl_reg_elems = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
 
   std::unordered_map<lanelet::Id, size_t> valid_id2idx_map;  // detected traffic light
-
   for (size_t i = 0; i < msg.traffic_light_groups.size(); ++i) {
-    auto signal = msg.traffic_light_groups[i];
+    const auto & signal = msg.traffic_light_groups[i];
     valid_id2idx_map[signal.traffic_light_group_id] = i;
   }
 
+  std::unordered_map<lanelet::Id, size_t> output_id2idx_map;  // to check duplicate
+  for (size_t i = 0; i < output.traffic_light_groups.size(); ++i) {
+    const auto & signal = output.traffic_light_groups[i];
+    output_id2idx_map[signal.traffic_light_group_id] = i;
+  }
+
+  TrafficSignalElement base_traffic_signal_element;
+  base_traffic_signal_element.color = color;
+  base_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
+  base_traffic_signal_element.confidence = 1.0;
+
   for (const auto & tl_reg_elem : tl_reg_elems) {
-    auto id = tl_reg_elem->id();
-    if (valid_id2idx_map.count(id)) {
-      size_t idx = valid_id2idx_map[id];
-      auto signal = msg.traffic_light_groups[idx];
-      // if invalid perception result exists or disable camera recognition, overwrite the estimation
-      if (use_pedestrian_signal_detect_ == false || isInvalidDetectionStatus(signal)) {
-        TrafficSignalElement output_traffic_signal_element;
-        output_traffic_signal_element.color = color;
-        output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
-        output_traffic_signal_element.confidence = 1.0;
-        output.traffic_light_groups[idx].elements.clear();
-        output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
+    const lanelet::Id id = tl_reg_elem->id();
+
+    // helper lambda to get or create output signal
+    auto get_or_create_output_signal = [&](lanelet::Id id) -> TrafficSignal & {
+      if (output_id2idx_map.count(id)) {
+        return output.traffic_light_groups[output_id2idx_map[id]];
+      } else {
+        // element need to be added in later
+        TrafficSignal new_signal;
+        new_signal.traffic_light_group_id = id;
+        output.traffic_light_groups.push_back(new_signal);
+        output_id2idx_map[id] = output.traffic_light_groups.size() - 1;
+        return output.traffic_light_groups.back();
+      }
+    };
+
+    TrafficSignal & out_signal = get_or_create_output_signal(id);
+
+    auto replace_out_signal_elements = [&](const TrafficSignalElement & element) {
+      out_signal.elements.clear();
+      out_signal.elements.push_back(element);
+    };
+
+    // 1. Map-based override (highest priority)
+    if (auto it = crosswalk_traffic_signal_overrides.find(id);
+        it != crosswalk_traffic_signal_overrides.end()) {
+      replace_out_signal_elements(base_traffic_signal_element);
+      out_signal.elements[0].color = it->second;  // override color
+      continue;
+    }
+    // 2. Use detected pedestrian signal if valid
+    if (auto it = valid_id2idx_map.find(id); it != valid_id2idx_map.end()) {
+      const auto & detected = msg.traffic_light_groups[it->second];
+
+      if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(detected)) {
+        // Replace detection with estimated base color
+        replace_out_signal_elements(base_traffic_signal_element);
         continue;
       }
-      // if flashing, update output msg according to flashing and current state
-      updateFlashingState(signal);
-      output.traffic_light_groups[idx].elements[0].color = updateAndGetColorState(signal);
-    } else {
-      // if perception result does not exist, add it estimated by vehicle traffic signals
-      TrafficSignal output_traffic_signal;
-      TrafficSignalElement output_traffic_signal_element;
-      output_traffic_signal_element.color = color;
-      output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
-      output_traffic_signal_element.confidence = 1.0;
-      output_traffic_signal.elements.push_back(output_traffic_signal_element);
-      output_traffic_signal.traffic_light_group_id = id;
-      output.traffic_light_groups.push_back(output_traffic_signal);
+
+      // Update flashing state and apply the most recent color
+      updateFlashingState(detected);
+      if (out_signal.elements
+            .empty()) {  // unnecessary check because msg has detection but for safety
+        out_signal.elements.push_back(base_traffic_signal_element);
+      }
+      out_signal.elements[0].color = updateAndGetColorState(
+        detected);  // TODO(MasatoSaeki): determine what value is good for confidence
+      continue;
     }
+
+    // 3. No detection available → use estimated vehicle-based color
+    replace_out_signal_elements(base_traffic_signal_element);
   }
 }
 
@@ -556,7 +713,7 @@ boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenc
 void CrosswalkTrafficLightEstimatorNode::removeDuplicateIds(TrafficSignalArray & signal_array) const
 {
   auto & signals = signal_array.traffic_light_groups;
-  std::sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
+  std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
     return s1.traffic_light_group_id < s2.traffic_light_group_id;
   });
 

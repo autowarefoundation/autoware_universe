@@ -25,45 +25,27 @@
 
 namespace autoware::diffusion_planner::utils
 {
-std::pair<Eigen::Matrix4f, Eigen::Matrix4f> get_transform_matrix(
-  const nav_msgs::msg::Odometry & msg)
+
+namespace
 {
-  // Extract position
-  double x = msg.pose.pose.position.x;
-  double y = msg.pose.pose.position.y;
-  double z = msg.pose.pose.position.z;
 
-  // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaternionf q = std::invoke([&msg]() -> Eigen::Quaternionf {
-    double qx = msg.pose.pose.orientation.x;
-    double qy = msg.pose.pose.orientation.y;
-    double qz = msg.pose.pose.orientation.z;
-    double qw = msg.pose.pose.orientation.w;
-
-    // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaternionf q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaternionf::Identity()
-                                                              : q.normalized();
-  });
-
-  // Rotation matrix (3x3)
-  Eigen::Matrix3f R = q.toRotationMatrix();
-
-  // Translation vector
-  Eigen::Vector3f t(x, y, z);
-
-  // Base_link → Map (forward)
-  Eigen::Matrix4f bl2map = Eigen::Matrix4f::Identity();
-  bl2map.block<3, 3>(0, 0) = R;
-  bl2map.block<3, 1>(0, 3) = t;
-
-  // Map → Base_link (inverse)
-  Eigen::Matrix4f map2bl = Eigen::Matrix4f::Identity();
-  map2bl.block<3, 3>(0, 0) = R.transpose();
-  map2bl.block<3, 1>(0, 3) = -R.transpose() * t;
-
-  return {bl2map, map2bl};
+inline double square(double x)
+{
+  return x * x;
 }
+
+Eigen::Matrix3d quaternion_to_matrix(const geometry_msgs::msg::Quaternion & q_msg)
+{
+  const double norm =
+    std::sqrt(square(q_msg.w) + square(q_msg.x) + square(q_msg.y) + square(q_msg.z));
+  constexpr double kEpsilon = 1e-6;
+  if (norm < kEpsilon) {
+    throw std::runtime_error("Quaternion norm is too small");
+  }
+
+  return Eigen::Quaterniond(q_msg.w, q_msg.x, q_msg.y, q_msg.z).toRotationMatrix();
+}
+}  // namespace
 
 std::vector<float> create_float_data(const std::vector<int64_t> & shape, float fill)
 {
@@ -92,46 +74,38 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4f pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;
   double y = pose.position.y;
   double z = pose.position.z;
 
-  // Create Eigen quaternion and normalize it just in case
-  Eigen::Quaternionf q = std::invoke([&pose]() -> Eigen::Quaternionf {
-    double qx = pose.orientation.x;
-    double qy = pose.orientation.y;
-    double qz = pose.orientation.z;
-    double qw = pose.orientation.w;
-
-    // Create Eigen quaternion and normalize it just in case
-    Eigen::Quaternionf q(qw, qx, qy, qz);
-    return (q.norm() < std::numeric_limits<float>::epsilon()) ? Eigen::Quaternionf::Identity()
-                                                              : q.normalized();
-  });
-
   // Rotation matrix (3x3)
-  Eigen::Matrix3f R = q.toRotationMatrix();
+  Eigen::Matrix3d R = quaternion_to_matrix(pose.orientation);
 
   // Translation vector
-  Eigen::Vector3f t(x, y, z);
+  Eigen::Vector3d t(x, y, z);
 
   // Create 4x4 transformation matrix
-  Eigen::Matrix4f pose_matrix = Eigen::Matrix4f::Identity();
+  Eigen::Matrix4d pose_matrix = Eigen::Matrix4d::Identity();
   pose_matrix.block<3, 3>(0, 0) = R;
   pose_matrix.block<3, 1>(0, 3) = t;
 
   return pose_matrix;
 }
 
-std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3f & rotation_matrix)
+std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix)
 {
   // Extract yaw angle from rotation matrix and convert to cos/sin
   // Using atan2 to get the yaw angle from the rotation matrix
   const float yaw = std::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
   return {std::cos(yaw), std::sin(yaw)};
+}
+
+Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
+{
+  return Eigen::Isometry3d(mat).inverse().matrix();
 }
 
 }  // namespace autoware::diffusion_planner::utils

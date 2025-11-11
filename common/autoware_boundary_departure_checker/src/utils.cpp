@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -608,24 +609,6 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
   return side;
 }
 
-double compute_braking_distance(
-  double v_init, double v_end, double acc, double jerk, double t_braking_delay)
-{
-  // Phase 1: jerk phase
-  const double t1 = acc / jerk;
-  const double d1 = std::max(v_init * t1 - (acc / 6.0) * t1 * t1, 0.0);
-
-  // Midpoint velocity after jerk phase
-  const double v_mid = std::max(v_init - (acc / 2.0) * t1, 0.0);
-
-  // Phase 2: constant deceleration
-  const double dv2 = std::max(v_mid - v_end, 0.0);
-  const double t2 = dv2 / acc;
-  const double d2 = ((v_mid + v_end) / 2.0) * t2;
-
-  return d1 + d2 + v_init * t_braking_delay;
-}
-
 DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
 {
   DeparturePoints filtered_points;
@@ -763,4 +746,55 @@ double calc_judge_line_dist_with_jerk_limit(
   const double x3 = -1.0 * std::pow(v2, 2) / (2.0 * max_stop_acceleration);
   return std::max(0.0, x1 + x2 + x3);
 }
+
+std::optional<double> calc_signed_lateral_distance_to_boundary(
+  const lanelet::ConstLineString3d & boundary, const Pose & reference_pose)
+{
+  if (boundary.size() < 2) {
+    return std::nullopt;
+  }
+
+  const double yaw = tf2::getYaw(reference_pose.orientation);
+  const Eigen::Vector2d y_axis_direction(-std::sin(yaw), std::cos(yaw));
+  const Eigen::Vector2d reference_point(reference_pose.position.x, reference_pose.position.y);
+
+  double min_distance = std::numeric_limits<double>::max();
+  std::optional<double> signed_lateral_distance;
+
+  for (size_t i = 0; i + 1 < boundary.size(); ++i) {
+    const auto & p1 = boundary[i];
+    const auto & p2 = boundary[i + 1];
+
+    const Eigen::Vector2d segment_start(p1.x(), p1.y());
+    const Eigen::Vector2d segment_end(p2.x(), p2.y());
+    const Eigen::Vector2d segment_direction = segment_end - segment_start;
+
+    // Calculate intersection between Y-axis line and boundary segment
+    const double det = y_axis_direction.x() * (-segment_direction.y()) -
+                       y_axis_direction.y() * (-segment_direction.x());
+
+    if (std::abs(det) < 1e-10) {
+      // this segment and the Y-axis are parallel
+      continue;
+    }
+
+    const Eigen::Vector2d rhs = segment_start - reference_point;
+    const double t =
+      ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
+    const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
+
+    // Check if intersection is within segment bounds
+    if (s >= 0.0 && s <= 1.0) {
+      const double distance = std::abs(t);
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        signed_lateral_distance = t;
+      }
+    }
+  }
+
+  return signed_lateral_distance;
+}
+
 }  // namespace autoware::boundary_departure_checker::utils
