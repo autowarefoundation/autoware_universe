@@ -8,16 +8,15 @@
     default_size_z: 2.0
 
     # classification remapping from RADAR to Perception
-    # Format: [<RADAR label>, <Perception label>]
-    # Need to check autoware_sensing_msgs::msg::RadarClassification for RADAR labels
-    # and autoware_perception_msgs::msg::ObjectClassification for Perception labels
-    classification_remap: [
-      "UNKNOWN", "UNKNOWN",
-      "CAR", "CAR",
-      "TRUCK", "TRUCK",
-      "MOTORCYCLE", "CAR", # temporary remap MOTORCYCLE to CAR due to radar tend to misclassify far cars as motorcycles
-      "BICYCLE", "CAR",    # temporary remap BICYCLE to CAR due to radar tend to misclassify far cars as bicycles
-      "PEDESTRIAN", "PEDESTRIAN",
-      "ANIMAL", "ANIMAL",
-      "HAZARD", "UNKNOWN"
-    ]
+    # Keys:   RADAR labels  (autoware_sensing_msgs::msg::RadarClassification)
+    # Values: Perception labels (autoware_perception_msgs::msg::ObjectClassification)
+    classification_remap:
+      UNKNOWN: UNKNOWN
+      CAR: CAR
+      TRUCK: TRUCK
+      # temporary remap: radar tends to misclassify far cars
+      MOTORCYCLE: CAR
+      BICYCLE: CAR
+      PEDESTRIAN: PEDESTRIAN
+      ANIMAL: ANIMAL
+      HAZARD: UNKNOWN

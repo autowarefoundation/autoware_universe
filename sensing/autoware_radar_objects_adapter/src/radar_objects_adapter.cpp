@@ -81,53 +81,46 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
   }
 
   // Load classification remap policy
-  try {
-    // 1. Load classification_remap as flat list of strings
-    this->declare_parameter<std::vector<std::string>>(
-      "classification_remap", std::vector<std::string>{});
-    auto list_remap = this->get_parameter("classification_remap")
-                        .get_parameter_value()
-                        .get<std::vector<std::string>>();
-    if (list_remap.size() % 2 != 0) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "Parameter 'classification_remap' must have even number of elements "
-        "(found %zu). Each pair represents [input, output].",
-        list_remap.size());
-      throw std::runtime_error("classification_remap format error");
-    }
-    // 2. Convert every pair of [input, output] into map entries
-    for (size_t i = 0; i + 1 < list_remap.size(); i += 2) {
-      const auto & input_str = list_remap[i];
-      const auto & output_str = list_remap[i + 1];
+  // classification_remap_ : std::unordered_map<std::string, std::string>
+  // declare_parameter 用 string → string マップ
+  classification_remap_str_["UNKNOWN"] =
+    declare_parameter<std::string>("classification_remap.UNKNOWN", "UNKNOWN");
+  classification_remap_str_["CAR"] =
+    declare_parameter<std::string>("classification_remap.CAR", "CAR");
+  classification_remap_str_["TRUCK"] =
+    declare_parameter<std::string>("classification_remap.TRUCK", "TRUCK");
+  classification_remap_str_["MOTORCYCLE"] =
+    declare_parameter<std::string>("classification_remap.MOTORCYCLE", "MOTORCYCLE");
+  classification_remap_str_["BICYCLE"] =
+    declare_parameter<std::string>("classification_remap.BICYCLE", "BICYCLE");
+  classification_remap_str_["PEDESTRIAN"] =
+    declare_parameter<std::string>("classification_remap.PEDESTRIAN", "PEDESTRIAN");
+  classification_remap_str_["ANIMAL"] =
+    declare_parameter<std::string>("classification_remap.ANIMAL", "ANIMAL");
+  classification_remap_str_["HAZARD"] =
+    declare_parameter<std::string>("classification_remap.HAZARD", "UNKNOWN");
 
-      const auto it_in = RADAR_LABEL_TO_UINT_MAP.find(input_str);
-      if (it_in == RADAR_LABEL_TO_UINT_MAP.end()) {
-        RCLCPP_WARN(
-          this->get_logger(),
-          "classification_remap: Input key '%s' is not a valid RadarClassification.",
-          input_str.c_str());
-        continue;
-      }
-      const auto it_out = OBJECT_LABEL_TO_UINT_MAP.find(output_str);
-      if (it_out == OBJECT_LABEL_TO_UINT_MAP.end()) {
-        RCLCPP_WARN(
-          this->get_logger(),
-          "classification_remap: Output value '%s' is not a valid ObjectClassification.",
-          output_str.c_str());
-        continue;
-      }
-      classification_remap_[it_in->second] = it_out->second;
+  classification_remap_.clear();
+  for (const auto & kv : classification_remap_str_) {
+    const std::string & radar_label = kv.first;        // e.g. "CAR"
+    const std::string & perception_label = kv.second;  // e.g. "TRUCK"
+
+    // Radar string → uint8
+    uint8_t radar_id = RadarObjectsAdapter::RADAR_LABEL_TO_UINT_MAP.at(radar_label);
+
+    // Perception string → uint8
+    uint8_t perception_id = ObjectClassification::UNKNOWN;
+    auto it = OBJECT_LABEL_TO_UINT_MAP.find(perception_label);
+    if (it != OBJECT_LABEL_TO_UINT_MAP.end()) {
+      perception_id = it->second;
+    } else {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "classification_remap: invalid Perception label '%s' for radar '%s'. Using UNKNOWN.",
+        perception_label.c_str(), radar_label.c_str());
     }
-    RCLCPP_INFO(
-      this->get_logger(), "Loaded classification_remap policy with %zu rules.",
-      classification_remap_.size());
-  } catch (const rclcpp::exceptions::ParameterNotDeclaredException & e) {
-    RCLCPP_ERROR(this->get_logger(), "Parameter 'classification_remap' not declared. %s", e.what());
-    throw;
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to load 'classification_remap'. %s", e.what());
-    throw;
+
+    classification_remap_[radar_id] = perception_id;
   }
 }
 

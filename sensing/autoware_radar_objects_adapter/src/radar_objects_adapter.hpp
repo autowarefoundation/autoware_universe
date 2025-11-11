@@ -97,6 +97,7 @@ private:
   static const std::map<std::string, std::uint8_t> RADAR_LABEL_TO_UINT_MAP;
   static const std::map<std::string, std::uint8_t> OBJECT_LABEL_TO_UINT_MAP;
   std::map<std::uint8_t, std::uint8_t> classification_remap_;
+  std::map<std::string, std::string> classification_remap_str_;
 };
 }  // namespace autoware
 
