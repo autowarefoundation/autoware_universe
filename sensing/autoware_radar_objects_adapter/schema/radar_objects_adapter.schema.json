@@ -39,31 +39,56 @@
           "default": 2.0
         },
         "classification_remap": {
-          "type": "array",
-          "description": "Flat list of [RadarLabel, PerceptionLabel, RadarLabel, PerceptionLabel, ...]. Must contain an even number of elements. Note: This schema cannot enforce the evenness constraint; it must be validated at runtime.",
-          "items": { "type": "string" },
-          "minItems": 2,
-          "x-evenItems": true,
-          "examples": [
-            [
-              "UNKNOWN",
-              "UNKNOWN",
-              "CAR",
-              "CAR",
-              "TRUCK",
-              "TRUCK",
-              "MOTORCYCLE",
-              "MOTORCYCLE",
-              "BICYCLE",
-              "BICYCLE",
-              "PEDESTRIAN",
-              "PEDESTRIAN",
-              "ANIMAL",
-              "ANIMAL",
-              "HAZARD",
-              "UNKNOWN"
-            ]
-          ]
+          "type": "object",
+          "description": "Mapping from RADAR labels (autoware_sensing_msgs::msg::RadarClassification) to Perception labels (autoware_perception_msgs::msg::ObjectClassification).",
+          "properties": {
+            "UNKNOWN": {
+              "type": "string",
+              "default": "UNKNOWN"
+            },
+            "CAR": {
+              "type": "string",
+              "default": "CAR"
+            },
+            "TRUCK": {
+              "type": "string",
+              "default": "TRUCK"
+            },
+            "MOTORCYCLE": {
+              "type": "string",
+              "default": "CAR",
+              "description": "Radar tends to misclassify far cars as MOTORCYCLE; default=CAR"
+            },
+            "BICYCLE": {
+              "type": "string",
+              "default": "CAR",
+              "description": "Radar tends to misclassify far cars as BICYCLE; default=CAR"
+            },
+            "PEDESTRIAN": {
+              "type": "string",
+              "default": "PEDESTRIAN"
+            },
+            "ANIMAL": {
+              "type": "string",
+              "default": "ANIMAL"
+            },
+            "HAZARD": {
+              "type": "string",
+              "default": "UNKNOWN",
+              "description": "HAZARD is not a valid Perception label; fallback=UNKNOWN"
+            }
+          },
+          "required": [
+            "UNKNOWN",
+            "CAR",
+            "TRUCK",
+            "MOTORCYCLE",
+            "BICYCLE",
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
