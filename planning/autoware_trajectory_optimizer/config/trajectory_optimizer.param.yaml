@@ -3,6 +3,7 @@
     # Plugin execution order - plugins will run in this order
     plugin_names:
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
       - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
@@ -17,3 +18,4 @@
     fix_invalid_points: true
     optimize_velocity: true
     extend_trajectory_backward: false
+    use_kinematic_feasibility_enforcer: true

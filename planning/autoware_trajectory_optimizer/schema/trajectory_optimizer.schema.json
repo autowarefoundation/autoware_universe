@@ -13,6 +13,7 @@
           },
           "default": [
             "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
             "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
             "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
             "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
@@ -52,17 +53,46 @@
           "default": true,
           "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
         },
+        "use_kinematic_feasibility_enforcer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
-            "orientation_threshold_deg": {
+            "resample_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable resampling of close proximity points"
+            },
+            "min_dist_to_remove_m": {
               "type": "number",
-              "default": 5.0,
+              "default": 0.01,
               "minimum": 0,
-              "description": "Yaw threshold for removing wrongly oriented points [deg]"
+              "description": "Minimum distance threshold for removing close proximity points [m]"
+            },
+            "min_dist_to_merge_m": {
+              "type": "number",
+              "default": 0.05,
+              "minimum": 0,
+              "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": ["orientation_threshold_deg"]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
+        },
+        "trajectory_kinematic_feasibility": {
+          "type": "object",
+          "properties": {
+            "max_yaw_rate_rad_s": {
+              "type": "number",
+              "default": 0.7,
+              "minimum": 0.1,
+              "maximum": 2.0,
+              "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            }
+          },
+          "required": ["max_yaw_rate_rad_s"]
         },
         "trajectory_extender": {
           "type": "object",
@@ -456,7 +486,8 @@
         "use_qp_smoother",
         "fix_invalid_points",
         "extend_trajectory_backward",
-        "optimize_velocity"
+        "optimize_velocity",
+        "use_kinematic_feasibility_enforcer"
       ]
     }
   },

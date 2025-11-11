@@ -34,7 +34,6 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -77,7 +76,7 @@ void smooth_trajectory_with_elastic_band(
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
 }
 
-void remove_invalid_points(TrajectoryPoints & input_trajectory)
+void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min_dist_to_remove_m)
 {
   // remove points with nan or inf values
   input_trajectory.erase(
@@ -86,7 +85,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
       [](const TrajectoryPoint & point) { return !validate_point(point); }),
     input_trajectory.end());
 
-  utils::remove_close_proximity_points(input_trajectory, 1E-2);
+  utils::remove_close_proximity_points(input_trajectory, min_dist_to_remove_m);
 
   if (input_trajectory.size() < 2) {
     log_error_throttle(
@@ -136,6 +135,18 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
   recalculate_longitudinal_acceleration(input_trajectory_array);
 }
 
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
+{
+  constexpr double min_dt_threshold = 1e-9;
+
+  const double curr_time = static_cast<double>(current.time_from_start.sec) +
+                           static_cast<double>(current.time_from_start.nanosec) * 1e-9;
+  const double next_time = static_cast<double>(next.time_from_start.sec) +
+                           static_cast<double>(next.time_from_start.nanosec) * 1e-9;
+
+  return std::max(next_time - curr_time, min_dt_threshold);
+}
+
 void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt, const double constant_dt)
 {
@@ -148,11 +159,7 @@ void recalculate_longitudinal_acceleration(
     if (use_constant_dt) {
       return std::max(constant_dt, min_dt_threshold);
     }
-    const double curr_time = static_cast<double>(trajectory[i].time_from_start.sec) +
-                             static_cast<double>(trajectory[i].time_from_start.nanosec) * 1e-9;
-    const double next_time = static_cast<double>(trajectory[i + 1].time_from_start.sec) +
-                             static_cast<double>(trajectory[i + 1].time_from_start.nanosec) * 1e-9;
-    return std::max(next_time - curr_time, min_dt_threshold);
+    return compute_dt(trajectory[i], trajectory[i + 1]);
   };
 
   const size_t size = trajectory.size();
