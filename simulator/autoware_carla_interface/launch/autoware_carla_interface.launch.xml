@@ -17,7 +17,7 @@
     <arg name="max_real_delta_seconds" default="0.05"/>
 
     <!-- Extract CARLA map name from map_path (e.g., /home/user/maps/Town01 -> Town01) -->
-    <let name="carla_map" value="$(eval &quot;'$(var map_path)'.rstrip('/').split('/')[-1] if '$(var map_path)' else 'Town01'&quot;)"/>
+    <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)') if '$(var map_path)' else 'Town01'&quot;)"/>
 
     <!-- Sensor Configuration -->
     <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
