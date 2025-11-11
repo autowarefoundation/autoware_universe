@@ -104,11 +104,12 @@ First, setup CARLA following the [autoware_carla_interface](https://github.com/a
 Then launch the E2E VAD system:
 
 ```bash
-ros2 launch autoware_launch e2e_vad_simulator.launch.xml \
+ros2 launch autoware_launch e2e_simulator.launch.xml \
   map_path:=$HOME/autoware_map/Town01 \
   vehicle_model:=sample_vehicle \
   sensor_model:=carla_sensor_kit \
-  carla_map:=Town01
+  simulator_type:=carla \
+  use_e2e_planning:=true
 ```
 
 ---
