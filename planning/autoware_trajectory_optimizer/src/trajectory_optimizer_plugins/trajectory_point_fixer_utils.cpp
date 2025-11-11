@@ -15,7 +15,7 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer_utils.hpp"
 
 #include <Eigen/Core>
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -35,8 +35,8 @@ std::vector<std::vector<size_t>> get_close_proximity_clusters(
   std::vector<size_t> current_cluster_indices{0};
 
   for (size_t i = 1; i < traj_points.size(); ++i) {
-    const double dist =
-      autoware_utils::calc_distance2d(traj_points[i], traj_points[current_cluster_indices.back()]);
+    const double dist = autoware_utils_geometry::calc_distance2d(
+      traj_points[i], traj_points[current_cluster_indices.back()]);
     if (dist < min_dist_m) {
       current_cluster_indices.push_back(i);
       continue;
@@ -92,15 +92,14 @@ std::vector<double> compute_cluster_arc_lengths(
 
   auto prev_point = traj_points[cluster_of_indices.front()];
   for (const auto idx : cluster_of_indices) {
-    const auto distance =
-      (arc_lengths.empty())
-        ? 0.0
-        : autoware_utils::calc_distance2d(prev_point, traj_points[idx]) + arc_lengths.back();
+    const auto distance = (arc_lengths.empty()) ? 0.0
+                                                : autoware_utils_geometry::calc_distance2d(
+                                                    prev_point, traj_points[idx]) +
+                                                    arc_lengths.back();
     arc_lengths.push_back(distance);
     prev_point = traj_points[idx];
   }
 
-  std::sort(arc_lengths.begin(), arc_lengths.end());
   return arc_lengths;
 }
 

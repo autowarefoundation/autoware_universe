@@ -43,8 +43,6 @@ void TrajectoryPointFixer::set_up_params()
   auto node_ptr = get_node_ptr();
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  fixer_params_.orientation_threshold_deg =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.orientation_threshold_deg");
   fixer_params_.resample_close_points =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_point_fixer.resample_close_points");
   fixer_params_.min_dist_to_remove_m =
@@ -58,9 +56,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
 {
   using autoware_utils_rclcpp::update_param;
 
-  update_param<double>(
-    parameters, "trajectory_point_fixer.orientation_threshold_deg",
-    fixer_params_.orientation_threshold_deg);
   update_param<bool>(
     parameters, "trajectory_point_fixer.resample_close_points",
     fixer_params_.resample_close_points);

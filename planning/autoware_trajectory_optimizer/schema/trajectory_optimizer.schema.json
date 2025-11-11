@@ -61,12 +61,6 @@
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
-            "orientation_threshold_deg": {
-              "type": "number",
-              "default": 5.0,
-              "minimum": 0,
-              "description": "Yaw threshold for removing wrongly oriented points [deg]"
-            },
             "resample_close_points": {
               "type": "boolean",
               "default": true,
@@ -85,12 +79,7 @@
               "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": [
-            "orientation_threshold_deg",
-            "resample_close_points",
-            "min_dist_to_remove_m",
-            "min_dist_to_merge_m"
-          ]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
         },
         "trajectory_kinematic_feasibility": {
           "type": "object",

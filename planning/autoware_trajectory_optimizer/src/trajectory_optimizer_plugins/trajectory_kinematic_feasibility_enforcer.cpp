@@ -101,6 +101,15 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   const double max_steer_rad = vehicle_info_.max_steer_angle_rad;
   const double max_yaw_rate = feasibility_params_.max_yaw_rate_rad_s;
 
+  if (wheelbase < 1e-3 || max_steer_rad < 1e-3 || max_yaw_rate <= 1e-3) {
+    RCLCPP_WARN_THROTTLE(
+      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+      "Kinematic Feasibility Enforcer: Invalid vehicle parameters (wheelbase=%.2f, "
+      "max_steer_angle=%.3f rad, max_yaw_rate=%.3f rad/s), skipping enforcement",
+      wheelbase, max_steer_rad, max_yaw_rate);
+    return;
+  }
+
   // Get initial anchor pose
   TrajectoryPoint anchor_point;
   anchor_point.time_from_start.sec = 0;
@@ -117,7 +126,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   std::vector<double> segment_distances;
   segment_distances.reserve(traj_points.size() - 1);
   for (size_t i = 0; i < traj_points.size() - 1; ++i) {
-    const auto dist = autoware_utils::calc_distance2d(traj_points[i], traj_points[i + 1]);
+    const auto dist = autoware_utils_geometry::calc_distance2d(traj_points[i], traj_points[i + 1]);
     segment_distances.push_back(std::max(dist, min_segment_distance));
   }
 
@@ -127,7 +136,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     auto & curr_point = traj_points[i];
     auto & next_point = traj_points[i + 1];
 
-    Eigen::Vector2d curr_point_v(curr_point.pose.position.x, curr_point.pose.position.y);
+    const Eigen::Vector2d curr_point_v(curr_point.pose.position.x, curr_point.pose.position.y);
 
     // Original next point position (before modification)
     const Eigen::Vector2d original_next_pos(next_point.pose.position.x, next_point.pose.position.y);
@@ -144,7 +153,8 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
       anchor_point.pose.orientation.z, anchor_point.pose.orientation.w);
     double current_yaw = tf2::getYaw(q_anchor);
     // Compute desired yaw change (normalized to [-pi, pi])
-    double delta_yaw_desired = autoware_utils_math::normalize_radian(desired_yaw - current_yaw);
+    const double delta_yaw_desired =
+      autoware_utils_math::normalize_radian(desired_yaw - current_yaw);
 
     // Compute Ackermann geometric constraint
     // Maximum yaw change based on maximum curvature over distance s
@@ -163,7 +173,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     const double delta_yaw_clamped = std::clamp(delta_yaw_desired, -delta_yaw_max, delta_yaw_max);
 
     // Update heading
-    current_yaw += delta_yaw_clamped;
+    current_yaw = autoware_utils_math::normalize_radian(current_yaw + delta_yaw_clamped);
 
     // Compute new point position maintaining segment distance s
     // This preserves the implicit dt = s / v_avg between points

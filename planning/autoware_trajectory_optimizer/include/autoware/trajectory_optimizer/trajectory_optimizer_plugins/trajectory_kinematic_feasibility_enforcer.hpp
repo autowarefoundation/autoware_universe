@@ -26,10 +26,8 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <nav_msgs/msg/detail/odometry__struct.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
-#include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin

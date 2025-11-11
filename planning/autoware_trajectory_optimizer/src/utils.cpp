@@ -33,9 +33,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <functional>
 #include <iterator>
-#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
