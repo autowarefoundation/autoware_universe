@@ -41,22 +41,32 @@ using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using unique_identifier_msgs::msg::UUID;
 
 /**
- * @brief Creates PredictedObjects message from tensor prediction and agent data.
+ * @brief Extracts tensor data from tensor prediction into an Eigen matrix.
  *
  * @param prediction The tensor prediction output.
+ * @return An Eigen matrix containing the tensor data in row-major order.
+ */
+Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
+  const std::vector<float> & prediction);
+
+/**
+ * @brief Creates PredictedObjects message from tensor data and agent data.
+ *
+ * @param tensor_data The tensor data (already converted from prediction).
  * @param ego_centric_agent_data The agent data in ego-centric coordinates.
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @return A PredictedObjects message containing predicted paths for each agent.
  */
 PredictedObjects create_predicted_objects(
-  const std::vector<float> & prediction, const AgentData & ego_centric_agent_data,
-  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map);
+  const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> & tensor_data,
+  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
+  const Eigen::Matrix4d & transform_ego_to_map);
 
 /**
- * @brief Creates a Trajectory message from tensor prediction for a specific batch and agent.
+ * @brief Creates a Trajectory message from tensor data for a specific batch and agent.
  *
- * @param prediction The tensor prediction output.
+ * @param tensor_data The tensor data (already converted from prediction).
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to extract.
@@ -66,9 +76,9 @@ PredictedObjects create_predicted_objects(
  * @return A Trajectory message for the specified batch and agent.
  */
 Trajectory create_ego_trajectory(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> & tensor_data,
+  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
+  const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold);
 
 /**

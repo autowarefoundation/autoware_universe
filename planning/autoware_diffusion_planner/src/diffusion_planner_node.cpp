@@ -571,9 +571,12 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   const bool enable_force_stop =
     ego_kinematic_state_.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
 
+  // Convert tensor data once
+  const auto tensor_data = postprocess::get_tensor_data(predictions);
+
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
-      predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
+      tensor_data, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
       enable_force_stop, params_.stopping_threshold);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
@@ -601,12 +604,11 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 
   // Other agents prediction
   if (params_.predict_neighbor_trajectory && ego_centric_neighbor_agent_data_.has_value()) {
-    const size_t single_batch_output_size =
-      std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1UL, std::multiplies<>());
-    const std::vector<float> single_batch_predictions(
-      predictions.begin(), predictions.begin() + single_batch_output_size);
+    // Extract single batch data from tensor_data
+    const int64_t single_batch_rows = MAX_NUM_AGENTS * OUTPUT_T;
+    const auto single_batch_tensor_data = tensor_data.topRows(single_batch_rows);
     auto predicted_objects = postprocess::create_predicted_objects(
-      single_batch_predictions, ego_centric_neighbor_agent_data_.value(), this->now(),
+      single_batch_tensor_data, ego_centric_neighbor_agent_data_.value(), this->now(),
       ego_to_map_transform_);
     pub_objects_->publish(predicted_objects);
   }

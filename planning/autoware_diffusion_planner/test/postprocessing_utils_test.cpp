@@ -47,8 +47,10 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   const int64_t velocity_smoothing_window = 8;
   const bool enable_force_stop = false;
   const double stopping_threshold = 0.0;
+  const auto tensor_data = postprocess::get_tensor_data(data);
   auto traj = postprocess::create_ego_trajectory(
-    data, stamp, transform, 0, velocity_smoothing_window, enable_force_stop, stopping_threshold);
+    tensor_data, stamp, transform, 0, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
   ASSERT_EQ(traj.points.size(), expected_points);
 }
 

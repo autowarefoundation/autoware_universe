@@ -56,15 +56,6 @@ void transform_output_matrix(
   int64_t row_idx, bool do_translation = true);
 
 /**
- * @brief Extracts tensor data from tensor prediction into an Eigen matrix.
- *
- * @param prediction The tensor prediction output.
- * @return An Eigen matrix containing the tensor data in row-major order.
- */
-Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
-  const std::vector<float> & prediction);
-
-/**
  * @brief Converts a prediction matrix to a Trajectory message.
  *
  * @param prediction_matrix The prediction matrix for a single agent.
@@ -81,9 +72,33 @@ Trajectory get_trajectory_from_prediction_matrix(
   const double stopping_threshold);
 };  // namespace
 
+Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
+  const std::vector<float> & prediction)
+{
+  const int64_t batch = prediction.size() / (MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM);
+
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
+    batch * MAX_NUM_AGENTS * OUTPUT_T, POSE_DIM);
+  tensor_data.setZero();
+
+  // Ensure prediction has enough data
+  const size_t required_size = tensor_data.size();
+  if (prediction.size() < required_size) {
+    throw std::runtime_error(
+      "Prediction vector size (" + std::to_string(prediction.size()) +
+      ") is smaller than required (" + std::to_string(required_size) + ")");
+  }
+
+  for (size_t i = 0; i < required_size; ++i) {
+    tensor_data.data()[i] = static_cast<double>(prediction[i]);
+  }
+  return tensor_data;
+}
+
 PredictedObjects create_predicted_objects(
-  const std::vector<float> & prediction, const AgentData & ego_centric_agent_data,
-  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map)
+  const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> & tensor_data,
+  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
+  const Eigen::Matrix4d & transform_ego_to_map)
 {
   auto trajectory_path_to_pose_path = [&](const Trajectory & trajectory, const double object_z)
     -> std::vector<geometry_msgs::msg::Pose> {
@@ -105,9 +120,6 @@ PredictedObjects create_predicted_objects(
   predicted_objects.header.frame_id = "map";
 
   constexpr double time_step{0.1};
-
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
 
   // ego_centric_agent_data contains neighbor history information ordered by distance.
   for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
@@ -164,15 +176,12 @@ PredictedObjects create_predicted_objects(
 }
 
 Trajectory create_ego_trajectory(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> & tensor_data,
+  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
+  const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold)
 {
   const int64_t ego_index = 0;
-
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data =
-    get_tensor_data(prediction);
 
   // Validate indices before accessing block
   const int64_t start_row = batch_index * MAX_NUM_AGENTS * OUTPUT_T + ego_index * OUTPUT_T;
@@ -265,29 +274,6 @@ int64_t count_valid_elements(
 
 namespace
 {
-Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> get_tensor_data(
-  const std::vector<float> & prediction)
-{
-  const int64_t batch = prediction.size() / (MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM);
-
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tensor_data(
-    batch * MAX_NUM_AGENTS * OUTPUT_T, POSE_DIM);
-  tensor_data.setZero();
-
-  // Ensure prediction has enough data
-  const size_t required_size = tensor_data.size();
-  if (prediction.size() < required_size) {
-    throw std::runtime_error(
-      "Prediction vector size (" + std::to_string(prediction.size()) +
-      ") is smaller than required (" + std::to_string(required_size) + ")");
-  }
-
-  for (size_t i = 0; i < required_size; ++i) {
-    tensor_data.data()[i] = static_cast<double>(prediction[i]);
-  }
-  return tensor_data;
-}
-
 Trajectory get_trajectory_from_prediction_matrix(
   const Eigen::MatrixXd & prediction_matrix, const Eigen::Matrix4d & transform_ego_to_map,
   const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,

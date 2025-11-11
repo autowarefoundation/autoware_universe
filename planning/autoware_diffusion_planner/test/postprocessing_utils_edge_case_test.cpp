@@ -71,7 +71,8 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_EmptyAgentData)
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
-  auto result = postprocess::create_predicted_objects(prediction, agent_data, stamp, transform);
+  const auto tensor_data = postprocess::get_tensor_data(prediction);
+  auto result = postprocess::create_predicted_objects(tensor_data, agent_data, stamp, transform);
 
   EXPECT_EQ(result.objects.size(), 0);
   EXPECT_EQ(result.header.frame_id, "map");
@@ -95,7 +96,8 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_MorePredictionsTh
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
-  auto result = postprocess::create_predicted_objects(prediction, agent_data, stamp, transform);
+  const auto tensor_data = postprocess::get_tensor_data(prediction);
+  auto result = postprocess::create_predicted_objects(tensor_data, agent_data, stamp, transform);
 
   // Should only create predictions for available objects (2)
   EXPECT_EQ(result.objects.size(), 2);
