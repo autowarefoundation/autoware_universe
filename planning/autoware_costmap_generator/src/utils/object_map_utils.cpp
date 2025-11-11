@@ -34,8 +34,7 @@
 
 #include <autoware/grid_map_utils/polygon_iterator.hpp>
 #include <grid_map_core/Polygon.hpp>
-
-#include <tf2/time.h>
+#include <tf2/time.hpp>
 
 #include <string>
 #include <vector>

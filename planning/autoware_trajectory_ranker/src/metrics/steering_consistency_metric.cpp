@@ -16,7 +16,7 @@
 
 #include "autoware/trajectory_ranker/metrics/metrics_utils.hpp"
 
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <cmath>

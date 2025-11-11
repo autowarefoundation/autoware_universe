@@ -20,11 +20,10 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <rclcpp/duration.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
-
-#include <tf2/utils.h>
 
 #include <memory>
 

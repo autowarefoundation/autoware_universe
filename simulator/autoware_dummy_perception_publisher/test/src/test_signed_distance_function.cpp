@@ -14,10 +14,11 @@
 
 #include "autoware/dummy_perception_publisher/signed_distance_function.hpp"
 
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
+
 #include <gtest/gtest.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/LinearMath/Vector3.h>
 
 #include <cmath>
 #include <limits>

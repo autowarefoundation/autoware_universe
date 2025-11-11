@@ -20,13 +20,13 @@
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 #include "autoware_utils/ros/uuid_helper.hpp"
 
+#include <tf2/utils.hpp>
+
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/algorithms/overlaps.hpp>
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>

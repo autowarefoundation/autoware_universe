@@ -19,10 +19,9 @@
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
-
-#include <tf2/utils.h>
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
 {

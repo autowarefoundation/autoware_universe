@@ -17,6 +17,7 @@
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/io/wkt/write.hpp>
 
@@ -27,7 +28,6 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Point.h>
-#include <tf2/utils.h>
 
 #include <memory>
 #include <string>

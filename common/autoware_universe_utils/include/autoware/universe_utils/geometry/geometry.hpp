@@ -26,6 +26,7 @@
 
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
+#include <tf2/utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_planning_msgs/msg/path.hpp>
@@ -39,8 +40,6 @@
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/utils.h>
 
 // TODO(wep21): Remove these apis
 //              after they are implemented in ros2 geometry2.
