@@ -19,6 +19,9 @@
 #include "autoware_utils_geometry/geometry.hpp"
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
 
 #include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
@@ -28,9 +31,6 @@
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/LinearMath/Vector3.h>
 
 #include <cmath>
 #include <cstddef>

@@ -27,9 +27,9 @@
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Transform.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
-#include <tf2/LinearMath/Transform.h>
 
 namespace autoware::behavior_velocity_planner
 {
