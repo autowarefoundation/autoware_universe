@@ -114,7 +114,7 @@ public:
 
   bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const;
 
-  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+  void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 };
 
 }  // namespace autoware::multi_object_tracker

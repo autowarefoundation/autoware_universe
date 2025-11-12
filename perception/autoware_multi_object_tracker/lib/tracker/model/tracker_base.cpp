@@ -278,7 +278,7 @@ bool Tracker::createPseudoMeasurement(
 
   // Enlarge covariance if requested (for weak updates)
   if (enlarge_covariance) {
-    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
     constexpr double additional_position_cov = 9.0;     // [m^2] additional variance
     constexpr double additional_orientation_cov = 0.5;  // [rad^2] additional variance
     constexpr double additional_velocity_cov = 25.0;    // [m^2/s^2] additional variance
