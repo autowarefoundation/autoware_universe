@@ -15,6 +15,11 @@
           "type": "boolean",
           "description": "Whether to work in Approximate Synchronization Mode.",
           "default": false
+        },
+        "prior_log_odds": {
+          "type": "number",
+          "description": "The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 (log(1)) means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.",
+          "default": 0.0
         }
       },
       "required": ["message_lifespan", "approximate_sync"],
