@@ -189,7 +189,7 @@ lanelet::ConstLanelets MergeFromPrivateRoadModule::getAttentionLanelets() const
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto conflicting_lanelets =
     autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
-      routing_graph_ptr, assigned_lanelet);
+      assigned_lanelet, routing_graph_ptr);
   lanelet::ConstLanelets sibling_lanelets;
   for (const auto & previous_lanelet : routing_graph_ptr->previous(assigned_lanelet)) {
     sibling_lanelets.push_back(previous_lanelet);

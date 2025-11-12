@@ -228,7 +228,7 @@ RoundaboutLanelets RoundaboutModule::generateObjectiveLanelets(
   // get conflicting lanes on assigned lanelet
   const auto & conflicting_lanelets =
     autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
-      routing_graph_ptr, assigned_lanelet);
+      assigned_lanelet, routing_graph_ptr);
   lanelet::ConstLanelets conflicting_ex_associative_lanelets;
   for (auto && conflicting_lanelet : conflicting_lanelets) {
     if (!lanelet::utils::contains(associative_ids_, conflicting_lanelet.id()))

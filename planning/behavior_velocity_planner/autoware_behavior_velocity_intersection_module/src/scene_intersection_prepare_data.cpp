@@ -622,7 +622,7 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
   // get conflicting lanes on assigned lanelet
   const auto & conflicting_lanelets =
     autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
-      routing_graph_ptr, assigned_lanelet);
+      assigned_lanelet, routing_graph_ptr);
   std::vector<lanelet::ConstLanelet> adjacent_followings;
 
   for (const auto & conflicting_lanelet : conflicting_lanelets) {

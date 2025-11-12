@@ -535,7 +535,7 @@ lanelet::ConstLanelets LaneDepartureCheckerNode::getAllSharedLineStringLanelets(
   if (is_conflicting) {
     const auto conflicting_lanelets =
       autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
-        routing_graph_, current_lane);
+        current_lane, routing_graph_);
     shared.insert(shared.end(), conflicting_lanelets.begin(), conflicting_lanelets.end());
   }
   return shared;

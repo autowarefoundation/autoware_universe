@@ -571,7 +571,7 @@ void MergeFromPrivateModuleManager::launchNewModules(
     } else {
       const auto routing_graph_ptr = planner_data_->route_handler_->getRoutingGraphPtr();
       const auto conflicting_lanelets =
-        autoware::experimental::lanelet2_utils::get_conflicting_lanelets(routing_graph_ptr, ll);
+        autoware::experimental::lanelet2_utils::get_conflicting_lanelets(ll, routing_graph_ptr);
       for (auto && conflicting_lanelet : conflicting_lanelets) {
         const std::string conflicting_attr = conflicting_lanelet.attributeOr("location", "else");
         if (conflicting_attr == "urban") {
