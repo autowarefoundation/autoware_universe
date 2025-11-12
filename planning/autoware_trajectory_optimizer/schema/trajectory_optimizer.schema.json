@@ -6,6 +6,23 @@
     "trajectory_optimizer_node": {
       "type": "object",
       "properties": {
+        "plugin_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+          ],
+          "description": "List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified."
+        },
         "use_akima_spline_interpolation": {
           "type": "boolean",
           "default": false,
@@ -36,17 +53,46 @@
           "default": true,
           "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
         },
+        "use_kinematic_feasibility_enforcer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
-            "orientation_threshold_deg": {
+            "resample_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable resampling of close proximity points"
+            },
+            "min_dist_to_remove_m": {
               "type": "number",
-              "default": 5.0,
+              "default": 0.01,
               "minimum": 0,
-              "description": "Yaw threshold for removing wrongly oriented points [deg]"
+              "description": "Minimum distance threshold for removing close proximity points [m]"
+            },
+            "min_dist_to_merge_m": {
+              "type": "number",
+              "default": 0.05,
+              "minimum": 0,
+              "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": ["orientation_threshold_deg"]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
+        },
+        "trajectory_kinematic_feasibility": {
+          "type": "object",
+          "properties": {
+            "max_yaw_rate_rad_s": {
+              "type": "number",
+              "default": 0.7,
+              "minimum": 0.1,
+              "maximum": 2.0,
+              "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            }
+          },
+          "required": ["max_yaw_rate_rad_s"]
         },
         "trajectory_extender": {
           "type": "object",
@@ -85,29 +131,22 @@
               "exclusiveMinimum": 0,
               "description": "Interpolation resolution for Akima spline [m]"
             },
-            "max_yaw_discrepancy_deg": {
-              "type": "number",
-              "default": 2.5,
-              "minimum": 0,
-              "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
-            },
             "max_distance_discrepancy_m": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Maximum position deviation allowed for spline outlier detection [m]"
+              "description": "Maximum position deviation allowed for orientation copying [m]"
             },
-            "copy_original_orientation": {
+            "preserve_input_trajectory_orientation": {
               "type": "boolean",
               "default": true,
-              "description": "Copy orientation from original trajectory to spline-interpolated trajectory"
+              "description": "Copy orientations from input trajectory to spline output"
             }
           },
           "required": [
             "interpolation_resolution_m",
-            "max_yaw_discrepancy_deg",
             "max_distance_discrepancy_m",
-            "copy_original_orientation"
+            "preserve_input_trajectory_orientation"
           ]
         },
         "trajectory_qp_smoother": {
@@ -154,16 +193,16 @@
               "default": false,
               "description": "Enable OSQP verbose solver output"
             },
-            "fix_orientation": {
+            "preserve_input_trajectory_orientation": {
               "type": "boolean",
               "default": true,
-              "description": "Enable orientation correction for QP solver output"
+              "description": "Copy orientations from input trajectory to smoothed output"
             },
-            "orientation_correction_threshold_deg": {
+            "max_distance_for_orientation_m": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Yaw threshold for correcting QP solver output orientation [deg]"
+              "description": "Max distance for nearest neighbor matching when copying orientations [m]"
             },
             "use_velocity_based_fidelity": {
               "type": "boolean",
@@ -215,8 +254,8 @@
             "osqp_eps_rel",
             "osqp_max_iter",
             "osqp_verbose",
-            "fix_orientation",
-            "orientation_correction_threshold_deg",
+            "preserve_input_trajectory_orientation",
+            "max_distance_for_orientation_m",
             "use_velocity_based_fidelity",
             "velocity_threshold_mps",
             "sigmoid_sharpness",
@@ -447,7 +486,8 @@
         "use_qp_smoother",
         "fix_invalid_points",
         "extend_trajectory_backward",
-        "optimize_velocity"
+        "optimize_velocity",
+        "use_kinematic_feasibility_enforcer"
       ]
     }
   },

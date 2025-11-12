@@ -15,17 +15,12 @@
 #ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_HPP_
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_HPP_
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_eb_smoother_optimizer.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_extender.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_spline_smoother.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_velocity_optimizer.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
@@ -35,6 +30,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer
@@ -54,6 +50,7 @@ private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
   void set_up_params();
   void initialize_optimizers();
+  void load_plugin(const std::string & plugin_name);
   bool initialized_optimizers_{false};
 
   /**
@@ -64,13 +61,9 @@ private:
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters);
 
-  // Optimizer pointers
-  std::shared_ptr<plugin::TrajectoryEBSmootherOptimizer> eb_smoother_optimizer_ptr_;
-  std::shared_ptr<plugin::TrajectoryExtender> trajectory_extender_ptr_;
-  std::shared_ptr<plugin::TrajectoryPointFixer> trajectory_point_fixer_ptr_;
-  std::shared_ptr<plugin::TrajectoryQPSmoother> trajectory_qp_smoother_ptr_;
-  std::shared_ptr<plugin::TrajectorySplineSmoother> trajectory_spline_smoother_ptr_;
-  std::shared_ptr<plugin::TrajectoryVelocityOptimizer> trajectory_velocity_optimizer_ptr_;
+  // Pluginlib loader and plugin storage
+  std::unique_ptr<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>> plugin_loader_;
+  std::vector<std::shared_ptr<plugin::TrajectoryOptimizerPluginBase>> plugins_;
 
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
