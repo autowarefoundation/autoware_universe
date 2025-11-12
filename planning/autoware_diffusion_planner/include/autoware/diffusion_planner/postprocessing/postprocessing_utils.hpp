@@ -41,34 +41,45 @@ using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using unique_identifier_msgs::msg::UUID;
 
 /**
- * @brief Creates PredictedObjects message from tensor prediction and agent data.
+ * @brief Parses raw prediction data into structured pose matrices.
  *
- * @param prediction The tensor prediction output.
+ * @param prediction The raw tensor prediction output (x, y, cos(yaw), sin(yaw) for each timestep).
+ * @return A 3D vector structure: [batch][agent][timestep] -> Eigen::Matrix4d (4x4 pose matrix).
+ */
+std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
+  const std::vector<float> & prediction);
+
+/**
+ * @brief Creates PredictedObjects message from parsed agent poses.
+ *
+ * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
  * @param ego_centric_agent_data The agent data in ego-centric coordinates.
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
+ * @param batch_index The batch index to use.
  * @return A PredictedObjects message containing predicted paths for each agent.
  */
 PredictedObjects create_predicted_objects(
-  const std::vector<float> & prediction, const AgentData & ego_centric_agent_data,
-  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map);
+  const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
+  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
+  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
 
 /**
- * @brief Creates a Trajectory message from tensor prediction for a specific batch and agent.
+ * @brief Creates a Trajectory message from parsed agent poses for a specific batch and ego agent.
  *
- * @param prediction The tensor prediction output.
+ * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to extract.
  * @param velocity_smoothing_window The window size for velocity smoothing.
  * @param enable_force_stop Whether to enable force stop logic.
  * @param stopping_threshold The threshold for keeping the stopping state [m/s].
- * @return A Trajectory message for the specified batch and agent.
+ * @return A Trajectory message for the ego agent in the specified batch.
  */
 Trajectory create_ego_trajectory(
-  const std::vector<float> & prediction, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index,
-  const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
+  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
+  const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold);
 
 /**
