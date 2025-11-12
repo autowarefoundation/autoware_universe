@@ -141,10 +141,11 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
 
 MarkerArray create_lane_marker(
   const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
-  const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
-  const std::array<float, 4> colors, const std::string & frame_id,
-  const bool set_traffic_light_color)
+  const std::vector<int64_t> & shape, const Time & stamp, const std::array<float, 4> colors,
+  const std::string & frame_id, const bool set_traffic_light_color)
 {
+  const rclcpp::Duration lifetime = rclcpp::Duration::from_seconds(0.2);
+
   MarkerArray marker_array;
   const int64_t P = shape[2];
   const int64_t D = shape[3];
