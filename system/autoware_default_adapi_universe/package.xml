@@ -20,6 +20,7 @@
   <depend>autoware_component_interface_specs_universe</depend>
   <depend>autoware_component_interface_utils</depend>
   <depend>autoware_geography_utils</depend>
+  <depend>autoware_qos_utils</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
