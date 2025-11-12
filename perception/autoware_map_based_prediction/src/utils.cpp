@@ -511,7 +511,8 @@ double lateral_distance_to_lanelet_bounds(
   auto distance = std::numeric_limits<double>::max();
   for (const auto & bound : {ll.leftBound(), ll.rightBound()}) {
     const auto p = lanelet::BasicPoint2d(point.x, point.y);
-    const auto nearest_segment = lanelet::utils::getClosestSegment(p, bound);
+    const auto nearest_segment = autoware::experimental::lanelet2_utils::get_closest_segment(
+      bound, autoware::experimental::lanelet2_utils::from_ros(point));
     if (nearest_segment.size() < 2) {
       continue;
     }
