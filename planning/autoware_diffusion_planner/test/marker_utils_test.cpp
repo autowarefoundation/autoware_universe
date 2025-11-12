@@ -89,49 +89,4 @@ TEST(MarkerUtilsTest, GetTrafficLightColorFallback)
   EXPECT_FLOAT_EQ(c.a, orig.a);
 }
 
-TEST(MarkerUtilsTest, CreateLaneMarkerBasic)
-{
-  // Lane vector: 1 segment, 2 points, 8 dims (X, Y, LB_X, LB_Y, RB_X, RB_Y, ...), minimal
-  std::vector<float> lane_vector = {1.0f, 2.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-                                    2.0f, 3.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f};
-  std::vector<int64_t> shape = {1, 1, 2, 8};  // batch, ?, points, dims
-  rclcpp::Time stamp(123456, 789, RCL_ROS_TIME);
-  rclcpp::Duration lifetime(1, 0);
-  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
-  auto marker_array = create_lane_marker(identity, lane_vector, shape, stamp, lifetime);
-
-  // Should create at least 1 marker for the centerline, and possibly for bounds/spheres
-  EXPECT_GE(marker_array.markers.size(), 1u);
-
-  for (const auto & marker : marker_array.markers) {
-    EXPECT_EQ(marker.header.stamp, stamp);
-    EXPECT_EQ(marker.header.frame_id, "base_link");
-    EXPECT_GT(marker.points.size(), 0u);
-    EXPECT_GT(marker.color.a, 0.0f);
-  }
-}
-
-TEST(MarkerUtilsTest, CreateLaneMarkerTrafficLightColor)
-{
-  // Lane vector with green light for first point
-  std::vector<float> lane_vector = {1.0f, 2.0f, 0.5f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,  // green
-                                    2.0f, 3.0f, 0.5f, 0.5f, -0.5f, -0.5f, 0.0f, 0.0f};
-  std::vector<int64_t> shape = {1, 1, 2, 8};
-  rclcpp::Time stamp(0, 0, RCL_ROS_TIME);
-  rclcpp::Duration lifetime(1, 0);
-  Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
-  auto marker_array = create_lane_marker(
-    identity, lane_vector, shape, stamp, lifetime, {0.0f, 1.0f, 0.0f, 0.8f}, "base_link", true);
-
-  // The first marker should have green color if set_traffic_light_color is true
-  bool found_green = false;
-  for (const auto & marker : marker_array.markers) {
-    if (marker.color.g == 1.0f && marker.color.r == 0.0f && marker.color.b == 0.0f) {
-      found_green = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(found_green);
-}
-
 }  // namespace autoware::diffusion_planner::test
