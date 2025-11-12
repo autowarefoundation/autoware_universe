@@ -17,7 +17,6 @@
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/lanelet2_utils/topology.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>

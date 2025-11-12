@@ -20,7 +20,6 @@
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>

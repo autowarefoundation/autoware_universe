@@ -18,8 +18,6 @@
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/route_checker.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>

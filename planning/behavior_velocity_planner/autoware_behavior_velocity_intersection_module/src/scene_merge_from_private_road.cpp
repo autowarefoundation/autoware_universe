@@ -21,7 +21,6 @@
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>

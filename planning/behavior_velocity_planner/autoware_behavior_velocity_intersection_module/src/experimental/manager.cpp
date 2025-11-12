@@ -15,7 +15,6 @@
 #include "manager.hpp"
 
 #include <autoware/lanelet2_utils/topology.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
