@@ -23,14 +23,17 @@ namespace autoware::multi_object_tracker
 
 ExponentialMovingAverageShape::ExponentialMovingAverageShape(
   double alpha_weak, double alpha_strong, double shape_variation_threshold,
-  int stable_streak_threshold)
+  int stable_streak_threshold, int consecutive_noisy_threshold)
 : initialized_(false),
   stable_(false),
   alpha_weak_(alpha_weak),
   alpha_strong_(alpha_strong),
   shape_variation_threshold_(shape_variation_threshold),
   stable_streak_(0),
-  stable_streak_threshold_(stable_streak_threshold)
+  stable_streak_threshold_(stable_streak_threshold),
+  consecutive_noisy_frames_(0),
+  consecutive_noisy_threshold_(consecutive_noisy_threshold),
+  normal_frame_interruptions_(0)
 {
   // Initialize latest_shape_ with safe defaults
   latest_shape_.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
@@ -52,16 +55,17 @@ void ExponentialMovingAverageShape::clear()
   initialized_ = false;
   stable_ = false;
   stable_streak_ = 0;
+  consecutive_noisy_frames_ = 0;
+  normal_frame_interruptions_ = 0;
 }
 
 void ExponentialMovingAverageShape::processNoisyMeasurement(
   const types::DynamicObject & measurement)
 {
-  // Store the latest shape
-  latest_shape_ = measurement.shape;
-
   // Apply EMA smoothing for BOUNDING_BOX
   if (measurement.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    stable_ = false;
+    latest_shape_ = measurement.shape;
     return;
   }
 
@@ -75,28 +79,52 @@ void ExponentialMovingAverageShape::processNoisyMeasurement(
     return;
   }
 
+  // Track consecutive noisy measurements - builds confidence in new shape
+  ++consecutive_noisy_frames_;
+  normal_frame_interruptions_ = 0;  // Reset normal frame counter
+
   // Update shape dimensions using dual-rate EMA
   Eigen::Vector3d rel = (meas - value_).cwiseAbs().cwiseQuotient(value_.cwiseMax(1e-3));
   if (rel.maxCoeff() < shape_variation_threshold_) {
+    // Noisy measurement is close to current EMA - shape is converging
     value_ = alpha_strong_ * meas + (1.0 - alpha_strong_) * value_;
     ++stable_streak_;
-    if (stable_streak_ >= stable_streak_threshold_) {
+
+    // Require both: stable_streak AND sufficient consecutive noisy frames
+    // This ensures the new shape has been consistently observed
+    if (
+      stable_streak_ >= stable_streak_threshold_ &&
+      consecutive_noisy_frames_ >= consecutive_noisy_threshold_) {
       stable_ = true;
     }
   } else {
+    // Noisy measurement differs from EMA - shape still changing
     stable_streak_ = 0;
     stable_ = false;
-    // Use weaker update even when measurement shape is noisy
+    // Use weaker update when shape is still varying
     value_ = alpha_weak_ * meas + (1.0 - alpha_weak_) * value_;
+  }
+}
+
+void ExponentialMovingAverageShape::processNormalMeasurement(
+  const types::DynamicObject & measurement)
+{
+  latest_shape_ = measurement.shape;
+
+  // Normal measurement interrupts the noisy sequence
+  ++normal_frame_interruptions_;
+
+  // Reset the EMA if it was likely tracking a temporary noisy shape
+  if (normal_frame_interruptions_ >= 2) {
+    consecutive_noisy_frames_ = 0;
+    stable_ = false;
   }
 }
 
 autoware_perception_msgs::msg::Shape ExponentialMovingAverageShape::getShape() const
 {
-  // For non-BOUNDING_BOX types, return the latest shape as-is (no smoothing)
-  if (latest_shape_.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    return latest_shape_;
-  }
+  // if not stable, return the latest shape as-is (no smoothing)
+  if (!stable_) return latest_shape_;
 
   // For BOUNDING_BOX type, return smoothed dimensions
   autoware_perception_msgs::msg::Shape shape;

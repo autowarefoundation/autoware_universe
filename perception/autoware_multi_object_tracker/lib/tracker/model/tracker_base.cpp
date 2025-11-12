@@ -171,30 +171,38 @@ bool Tracker::updateWithMeasurement(
   }
 
   if (!significant_shape_change) {
+    // Input normal measurement for EMA
+    ema_shape_.processNormalMeasurement(object);
+
     // Update object normally
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
   } else {
     ema_shape_.processNoisyMeasurement(object);
     if (ema_shape_.isStable()) {
-      setObjectShape(ema_shape_.getShape());
+      autoware_perception_msgs::msg::Shape smoothed_shape = ema_shape_.getShape();
+
+      setObjectShape(smoothed_shape);
       // Update object normally
-      measure(object, measurement_time, channel_info);
-      object_.trust_extension = object.trust_extension;
+      auto smoothed_object = object;
+      smoothed_object.shape = smoothed_shape;
+      measure(smoothed_object, measurement_time, channel_info);
+      object_.trust_extension = smoothed_object.trust_extension;
 
       // Renew ema_shape_
       ema_shape_.clear();
     } else {
+      const auto tracker_shape = object_.shape;
+
       // Get predicted object
       types::DynamicObject predicted_object;
       getTrackedObject(measurement_time, predicted_object);
 
-      const auto smoothed_shape = ema_shape_.getShape();
-
       // Perform conditioned update
-      conditionedUpdate(object, predicted_object, smoothed_shape, measurement_time, channel_info);
+      conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
     }
   }
+
   // Update object status
   getTrackedObject(measurement_time, object_);
 
@@ -226,14 +234,14 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 
 bool Tracker::createPseudoMeasurement(
   const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & smoothed_shape, const bool enlarge_covariance)
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
 {
   // Apply linear fall‑off weight on dist square
   const double dx = meas.pose.position.x - pred.pose.position.x;
   const double dy = meas.pose.position.y - pred.pose.position.y;
   const double dist2 = dx * dx + dy * dy;
   constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
-  constexpr double min_w = 0.05;
+  constexpr double min_w = 0.0;
   const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
 
   // Blend position
@@ -241,8 +249,8 @@ bool Tracker::createPseudoMeasurement(
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
 
   // Use smoothed shape and its area
-  pred.shape = smoothed_shape;
-  pred.area = types::getArea(smoothed_shape);
+  pred.shape = tracker_shape;
+  pred.area = types::getArea(tracker_shape);
 
   // Blend orientation
   if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
@@ -582,12 +590,12 @@ double Tracker::getPositionCovarianceDeterminant() const
 
 bool Tracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & smoothed_shape,
-  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
+  const types::InputChannel & channel_info)
 {
   // For non-vehicle trackers, create pseudo measurement
   types::DynamicObject pseudo_measurement = prediction;
-  createPseudoMeasurement(measurement, pseudo_measurement, smoothed_shape);
+  createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
 
   // Apply the measurement update directly
   measure(pseudo_measurement, measurement_time, channel_info);

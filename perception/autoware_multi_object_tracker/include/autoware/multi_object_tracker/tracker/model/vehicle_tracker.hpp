@@ -62,7 +62,7 @@ public:
 
   bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
 
   bool getTrackedObject(
@@ -72,8 +72,7 @@ public:
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
   WheelInfo estimateUpdateWheel(
-    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-    const autoware_perception_msgs::msg::Shape & smoothed_shape) const;
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
 };
 
 }  // namespace autoware::multi_object_tracker

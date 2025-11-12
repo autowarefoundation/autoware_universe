@@ -71,7 +71,7 @@ private:
   // EMA/ema below are abbreviation for exponential moving average
   static constexpr double EMA_ALPHA_WEAK = 0.05;
   static constexpr double EMA_ALPHA_STRONG = 0.2;
-  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.2;
+  static constexpr double SHAPE_VARIATION_THRESHOLD = 0.1;
   static constexpr size_t STABLE_STREAK_THRESHOLD = 4;
 
   ExponentialMovingAverageShape ema_shape_{
@@ -160,7 +160,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   bool createPseudoMeasurement(
     const types::DynamicObject & meas, types::DynamicObject & pred,
-    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
     const bool enlarge_covariance = false);
 
 protected:
@@ -201,7 +201,7 @@ protected:
 
   virtual bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-    const autoware_perception_msgs::msg::Shape & smoothed_shape,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info);
 
 public:
