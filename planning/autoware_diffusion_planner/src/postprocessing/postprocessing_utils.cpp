@@ -326,6 +326,11 @@ Trajectory get_trajectory_from_poses(
   bool force_stop = false;
   const float threshold_velocity = static_cast<float>(stopping_threshold);
   const int64_t num_points = static_cast<int64_t>(poses.size());
+
+  if (num_points <= velocity_smoothing_window) {
+    throw std::invalid_argument("velocity_smoothing_window must be smaller than number of points");
+  }
+
   for (int64_t i = 0; i + velocity_smoothing_window <= num_points; ++i) {
     double sum_velocity = 0.0;
     for (int64_t w = 0; w < velocity_smoothing_window; ++w) {
