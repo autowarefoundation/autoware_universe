@@ -62,13 +62,11 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
  * @param lane_vector A vector of floats representing the lane geometry or points.
  * @param shape A vector of longs specifying the shape or dimensions of the lane data.
  * @param stamp The timestamp to assign to the marker messages.
- * @param colors An array of 4 floats specifying the RGBA color of the lane markers (default: green
- * with alpha 0.8).
+ * @param colors An array of 4 floats specifying the RGBA color of the lane markers.
  * @return MarkerArray containing the generated lane markers.
  */
 MarkerArray create_lane_marker(
   const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
-  const std::vector<int64_t> & shape, const Time & stamp,
-  const std::array<float, 4> colors = {0.0f, 1.0f, 0.0f, 0.8f});
+  const std::vector<int64_t> & shape, const Time & stamp, const std::array<float, 4> colors);
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__MARKER_UTILS_HPP_
