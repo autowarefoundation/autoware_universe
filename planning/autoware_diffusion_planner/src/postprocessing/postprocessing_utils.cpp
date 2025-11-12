@@ -200,6 +200,7 @@ Trajectory create_ego_trajectory(
 
   // Extract ego poses (ego_index = 0)
   std::vector<Eigen::Matrix4d> ego_poses;
+  ego_poses.reserve(OUTPUT_T);
   for (int64_t time_idx = 0; time_idx < OUTPUT_T; ++time_idx) {
     // Transform to map frame
     Eigen::Matrix4d pose_in_map =
