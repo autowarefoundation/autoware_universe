@@ -52,29 +52,6 @@ Marker create_base_marker(
   return marker;
 }
 
-// Helper to extract point data from lane vector
-struct LanePointData
-{
-  double x, y;
-  double lb_x, lb_y;
-  double rb_x, rb_y;
-  double norm;
-};
-
-LanePointData extract_lane_point(
-  const std::vector<float> & lane_vector, int64_t l, int64_t p, int64_t P, int64_t D)
-{
-  LanePointData data;
-  data.x = lane_vector[P * D * l + p * D + X];
-  data.y = lane_vector[P * D * l + p * D + Y];
-  data.lb_x = lane_vector[P * D * l + p * D + LB_X] + data.x;
-  data.lb_y = lane_vector[P * D * l + p * D + LB_Y] + data.y;
-  data.rb_x = lane_vector[P * D * l + p * D + RB_X] + data.x;
-  data.rb_y = lane_vector[P * D * l + p * D + RB_Y] + data.y;
-  data.norm = std::sqrt(data.x * data.x + data.y * data.y);
-  return data;
-}
-
 // Helper to transform points
 struct TransformedPoints
 {
@@ -84,11 +61,12 @@ struct TransformedPoints
 };
 
 TransformedPoints transform_lane_points(
-  const LanePointData & data, const Eigen::Matrix4d & transform)
+  const Eigen::Vector3d & center, const Eigen::Vector3d & left_bound,
+  const Eigen::Vector3d & right_bound, const Eigen::Matrix4d & transform)
 {
   Eigen::Matrix<double, 4, 3> points;
-  points << data.x, data.lb_x, data.rb_x, data.y, data.lb_y, data.rb_y, 0.0, 0.0, 0.0, 1.0, 1.0,
-    1.0;
+  points << center(0), left_bound(0), right_bound(0), center(1), left_bound(1), right_bound(1), 0.0,
+    0.0, 0.0, 1.0, 1.0, 1.0;
 
   Eigen::Matrix<double, 4, 3> transformed = transform * points;
 
@@ -200,17 +178,26 @@ MarkerArray create_lane_marker(
     // Process points for this segment
     float total_norm = 0.0f;
     for (int64_t p = 0; p < P; ++p) {
-      // Extract point data
-      LanePointData point_data = extract_lane_point(lane_vector, l, p, P, D);
-      total_norm += point_data.norm;
+      const Eigen::Vector3d center(
+        lane_vector[P * D * l + p * D + X], lane_vector[P * D * l + p * D + Y], 0.0);
+      const Eigen::Vector3d left_bound(
+        lane_vector[P * D * l + p * D + LB_X] + center(0),
+        lane_vector[P * D * l + p * D + LB_Y] + center(1), 0.0);
+      const Eigen::Vector3d right_bound(
+        lane_vector[P * D * l + p * D + RB_X] + center(0),
+        lane_vector[P * D * l + p * D + RB_Y] + center(1), 0.0);
+
+      const double norm = center.head<2>().norm();
+      total_norm += norm;
 
       // Skip near-zero points (likely padding)
-      if (point_data.norm < near_zero_threshold) {
+      if (norm < near_zero_threshold) {
         continue;
       }
 
       // Transform points from ego to map frame
-      TransformedPoints transformed = transform_lane_points(point_data, transform_ego_to_map);
+      const TransformedPoints transformed =
+        transform_lane_points(center, left_bound, right_bound, transform_ego_to_map);
 
       // Add points to respective markers
       add_point_to_marker(marker_centerline, transformed.x, transformed.y, transformed.z);
