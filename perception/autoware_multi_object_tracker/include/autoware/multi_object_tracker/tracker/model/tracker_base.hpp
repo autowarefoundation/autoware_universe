@@ -22,8 +22,8 @@
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
-#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
-#include "autoware/multi_object_tracker/tracker/util/exponential_moving_average_shape.hpp"
+#include "autoware/multi_object_tracker/tracker/components/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/tracker/components/exponential_moving_average_shape.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>

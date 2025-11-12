@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/util/exponential_moving_average_shape.hpp"
+#include "autoware/multi_object_tracker/tracker/components/exponential_moving_average_shape.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
