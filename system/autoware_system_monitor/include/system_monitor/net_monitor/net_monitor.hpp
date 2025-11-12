@@ -23,6 +23,7 @@
 #include "system_monitor/net_monitor/nl80211.hpp"
 #include "system_monitor/traffic_reader/traffic_reader_common.hpp"
 
+#include <rclcpp/rclcpp.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <tier4_external_api_msgs/msg/network_interface_status.hpp>

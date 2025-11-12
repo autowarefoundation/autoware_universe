@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_diagnostic_graph_aggregator)
 
 find_package(autoware_cmake REQUIRED)
+find_package(yaml-cpp REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -33,9 +34,12 @@ ament_auto_add_library(converter SHARED
 )
 target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
 target_include_directories(aggregator PRIVATE "src/common")
+target_link_libraries(${PROJECT_NAME} yaml-cpp)
+target_link_libraries(aggregator yaml-cpp)
 
 ament_auto_add_executable(tree "src/tool/tree.cpp")
 target_include_directories(tree PRIVATE "src/common")
+target_link_libraries(tree yaml-cpp)
 
 ament_auto_add_library(${PROJECT_NAME}_test SHARED
   src/tests/tests.cpp
@@ -64,6 +68,7 @@ if(BUILD_TESTING)
   )
   target_compile_definitions(gtest_${PROJECT_NAME} PRIVATE TEST_RESOURCE_PATH="${RESOURCE_PATH}")
   target_include_directories(gtest_${PROJECT_NAME} PRIVATE "src/common")
+  target_link_libraries(gtest_${PROJECT_NAME} ${PROJECT_NAME} yaml-cpp)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config example launch)
