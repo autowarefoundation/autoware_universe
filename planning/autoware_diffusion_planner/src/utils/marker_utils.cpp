@@ -53,12 +53,12 @@ Marker create_base_marker(
 }
 
 // Helper to add point to marker
-void add_point_to_marker(Marker & marker, double x, double y, double z)
+void add_point_to_marker(Marker & marker, const Eigen::Vector4d & point)
 {
   Point pt;
-  pt.x = x;
-  pt.y = y;
-  pt.z = z;
+  pt.x = point.x();
+  pt.y = point.y();
+  pt.z = point.z();
   marker.points.push_back(pt);
 }
 
@@ -174,13 +174,11 @@ MarkerArray create_lane_marker(
       const Eigen::Vector4d right_bound_in_map =
         transform_ego_to_map * right_bound_in_base_link.homogeneous();
 
-      const double z = center_in_map(2) + 0.1;
-
       // Add points to respective markers
-      add_point_to_marker(marker_centerline, center_in_map(0), center_in_map(1), z);
-      add_point_to_marker(marker_left_bound, left_bound_in_map(0), left_bound_in_map(1), z);
-      add_point_to_marker(marker_right_bound, right_bound_in_map(0), right_bound_in_map(1), z);
-      add_point_to_marker(marker_sphere, center_in_map(0), center_in_map(1), z + 0.1);
+      add_point_to_marker(marker_centerline, center_in_map);
+      add_point_to_marker(marker_left_bound, left_bound_in_map);
+      add_point_to_marker(marker_right_bound, right_bound_in_map);
+      add_point_to_marker(marker_sphere, center_in_map);
     }
 
     // Skip empty segments
