@@ -15,9 +15,9 @@
 #include <autoware/costmap_generator/utils/objects_to_costmap.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <gtest/gtest.h>
-#include <tf2/utils.h>
 
 #include <memory>
 
