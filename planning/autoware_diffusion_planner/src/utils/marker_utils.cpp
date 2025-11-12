@@ -141,8 +141,7 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
 
 MarkerArray create_lane_marker(
   const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
-  const std::vector<int64_t> & shape, const Time & stamp, const std::array<float, 4> colors,
-  const bool set_traffic_light_color)
+  const std::vector<int64_t> & shape, const Time & stamp, const std::array<float, 4> colors)
 {
   const rclcpp::Duration lifetime = rclcpp::Duration::from_seconds(0.2);
   const std::string frame_id = "map";
@@ -192,13 +191,11 @@ MarkerArray create_lane_marker(
     marker_sphere.scale.y = 0.5;
     marker_sphere.scale.z = 0.5;
 
-    // Apply traffic light color if requested
-    if (set_traffic_light_color) {
-      const auto g = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_GREEN];
-      const auto y = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_YELLOW];
-      const auto r = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_RED];
-      marker_centerline.color = get_traffic_light_color(g, y, r, lane_color);
-    }
+    // Apply traffic light color
+    const auto g = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_GREEN];
+    const auto y = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_YELLOW];
+    const auto r = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_RED];
+    marker_centerline.color = get_traffic_light_color(g, y, r, lane_color);
 
     // Process points for this segment
     float total_norm = 0.0f;
