@@ -22,8 +22,8 @@
 
 #include "system_monitor/hdd_reader/hdd_reader.hpp"
 
-#include <rclcpp/rclcpp.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/hdd_device_status.hpp>
 #include <tier4_external_api_msgs/msg/hdd_partition_status.hpp>

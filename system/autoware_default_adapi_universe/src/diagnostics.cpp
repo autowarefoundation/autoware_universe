@@ -15,6 +15,7 @@
 #include "diagnostics.hpp"
 
 #include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <memory>
 #include <unordered_map>
 
