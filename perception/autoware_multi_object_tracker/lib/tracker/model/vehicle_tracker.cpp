@@ -303,11 +303,11 @@ bool VehicleTracker::getTrackedObject(
 
 bool VehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & smoothed_shape,
-  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
+  const types::InputChannel & channel_info)
 {
   // Determine wheel to update
-  WheelInfo wheel_info = estimateUpdateWheel(measurement, prediction, smoothed_shape);
+  WheelInfo wheel_info = estimateUpdateWheel(measurement, prediction);
 
   // No edge is well-aligned
   if (wheel_info.strategy == UpdateStrategy::BODY) {
@@ -315,7 +315,7 @@ bool VehicleTracker::conditionedUpdate(
     types::DynamicObject pseudo_measurement = prediction;
 
     // Create pseudo measurement with enlarged covariance for weak update
-    createPseudoMeasurement(measurement, pseudo_measurement, smoothed_shape, true);
+    createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
 
     // Apply the weak measurement update using existing mechanism
     measure(pseudo_measurement, measurement_time, channel_info);
@@ -348,8 +348,7 @@ bool VehicleTracker::conditionedUpdate(
 }
 
 WheelInfo VehicleTracker::estimateUpdateWheel(
-  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & smoothed_shape) const
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction) const
 {
   WheelInfo wheel_info;
 
@@ -365,7 +364,6 @@ WheelInfo VehicleTracker::estimateUpdateWheel(
   // Get dimensions
   const double measured_length = measurement.shape.dimensions.x;
   const double predicted_length = prediction.shape.dimensions.x;
-  const double smoothed_length = smoothed_shape.dimensions.x;
 
   // Calculate edge center points in world coordinates
   const double measured_half_length = measured_length * 0.5;
@@ -398,7 +396,7 @@ WheelInfo VehicleTracker::estimateUpdateWheel(
   // Check if any edge is well-aligned using distance-to-length ratio threshold
   const double min_alignment_dist = std::min(front_dist, rear_dist);
   constexpr double alignment_ratio_threshold =
-    0.15;  // error in moving direction to be considered aligned
+    0.09;  // error in moving direction to be considered aligned
   const bool is_edge_aligned = (min_alignment_dist / predicted_length) < alignment_ratio_threshold;
 
   if (!is_edge_aligned) {
@@ -418,9 +416,9 @@ WheelInfo VehicleTracker::estimateUpdateWheel(
     const double wheel_min_dist =
       use_front_wheel ? bicycle_state.wheel_pos_front_min : bicycle_state.wheel_pos_rear_min;
 
-    // Calculate wheel offset from edge (not center) using smoothed length
+    // Calculate wheel offset from edge (not center) using predicted length (not noisy smoothed)
     const double edge_to_wheel_offset = std::max(
-      smoothed_length * (0.5 - wheel_offset_ratio), wheel_min_dist - smoothed_length * 0.5);
+      predicted_length * (0.5 - wheel_offset_ratio), wheel_min_dist - predicted_length * 0.5);
 
     // Calculate wheel position from selected edge center (use measurement yaw for wheel offset)
     if (use_front_wheel) {
@@ -445,9 +443,11 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   object_.area = types::getArea(shape);
 
   // For vehicle trackers, update bicycle model wheel positions to maintain consistency
-  // with the new shape length while preserving center position and yaw
-  const double new_length = shape.dimensions.x;
-  motion_model_.updateStateLength(new_length);
+  // with the new bbox shape length while preserving center position and yaw
+  if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    const double new_length = shape.dimensions.x;
+    motion_model_.updateStateLength(new_length);
+  }
 }
 
 }  // namespace autoware::multi_object_tracker
