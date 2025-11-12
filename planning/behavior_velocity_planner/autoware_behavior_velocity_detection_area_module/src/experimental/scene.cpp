@@ -257,7 +257,7 @@ bool DetectionAreaModule::modifyPathVelocity(
     modified_stop_point_s = *self_s;
   }
 
-  setDistance(modified_stop_poitn_s - *self_s);
+  setDistance(modified_stop_point_s - *self_s);
 
   // Check state
   const auto prev_state = state_;  // used to log the state change
