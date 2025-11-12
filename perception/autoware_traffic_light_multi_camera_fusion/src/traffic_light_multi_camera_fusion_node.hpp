@@ -20,9 +20,12 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <lanelet2_core/Forward.h>
@@ -41,6 +44,17 @@
 namespace autoware::traffic_light
 {
 namespace mf = message_filters;
+
+using StateKey = std::pair<uint8_t, uint8_t>;
+
+struct GroupFusionInfo
+{
+  std::map<StateKey, double> accumulated_log_odds;
+  std::map<StateKey, utils::FusionRecord> best_record_for_state;
+};
+
+using GroupFusionInfoMap =
+  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
 class MultiCameraFusion : public rclcpp::Node
 {
@@ -74,6 +88,46 @@ private:
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
+  /**
+   * @brief Accumulates log-odds evidence for each traffic light group from individual fused
+   * records.
+   */
+  GroupFusionInfoMap accumulateGroupEvidence(
+    const std::map<IdType, utils::FusionRecord> & fused_record_map);
+
+  /**
+   * @brief Processes a single fused record and updates the group_fusion_info_map.
+   */
+  void processFusedRecord(
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
+
+  /**
+   * @brief Updates the map for a single (element, regulatory_id) combination.
+   */
+  void updateGroupInfoForElement(
+    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
+    const tier4_perception_msgs::msg::TrafficLightElement & element,
+    const utils::FusionRecord & record);
+
+  /**
+   * @brief Handles the log-odds accumulation logic.
+   */
+  void updateLogOdds(
+    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
+
+  /**
+   * @brief Handles the logic for tracking the best record for a given state.
+   */
+  void updateBestRecord(
+    std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
+    double confidence, const utils::FusionRecord & record);
+  /**
+   * @brief Determines the best state for each group based on accumulated evidence.
+   */
+  void determineBestGroupState(
+    const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
   using ApproximateSyncPolicy =
@@ -89,21 +143,25 @@ private:
 
   rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
   /*
-  the mapping from traffic light id (instance id) to regulatory element id (group id)
+  Mapping from traffic light instance id to regulatory element id (group id)
   */
   std::map<lanelet::Id, std::vector<lanelet::Id>> traffic_light_id_to_regulatory_ele_id_;
   /*
-  save record arrays by increasing timestamp order.
-  use multiset in case there are multiple cameras publishing images at exactly the same time
+  Store record arrays in increasing timestamp order.
+  Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
   bool is_approximate_sync_;
   /*
-  for every input message input_m, if the timestamp difference between input_m and the latest
+  For every input message input_m, if the timestamp difference between input_m and the latest
   message is smaller than message_lifespan_, then input_m would be used for the fusion. Otherwise,
-  it would be discarded
+  it would be discarded.
   */
   double message_lifespan_;
+  /**
+   * @brief The prior log-odds for a traffic light state.
+   */
+  double prior_log_odds_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
