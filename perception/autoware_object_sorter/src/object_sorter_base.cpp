@@ -14,7 +14,7 @@
 
 #include "object_sorter_base.hpp"
 
-#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
@@ -22,26 +22,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-namespace
-{
-template <class T>
-bool update_param(
-  const std::vector<rclcpp::Parameter> & params, const std::string & name, T & value)
-{
-  const auto itr = std::find_if(
-    params.cbegin(), params.cend(),
-    [&name](const rclcpp::Parameter & p) { return p.get_name() == name; });
-
-  // Not found
-  if (itr == params.cend()) {
-    return false;
-  }
-
-  value = itr->template get_value<T>();
-  return true;
-}
-}  // namespace
 
 namespace autoware::object_sorter
 {
@@ -52,16 +32,16 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
 : Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
-  // Parameter Server
-  set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&ObjectSorterBase::onSetParam, this, std::placeholders::_1));
-
   // Node Parameter
-  range_calc_frame_id = declare_parameter<std::string>("range_calc_frame_id");
-  node_param_.min_velocity_threshold = declare_parameter<double>("min_velocity_threshold");
-  node_param_.min_range_threshold = declare_parameter<double>("min_range_threshold");
+  range_calc_frame_id_ = declare_parameter<std::string>("range_calc_frame_id");
+  range_calc_offset_x_ = declare_parameter<double>("range_calc_offset.x");
+  range_calc_offset_y_ = declare_parameter<double>("range_calc_offset.y");
 
-  min_range_threshold_sq_ = node_param_.min_range_threshold * node_param_.min_range_threshold;
+  bool use_distance_thresholding =
+    declare_parameter<std::string>("range_thresholding_mode") == "distance";
+
+  // Read the class dependent parameters
+  setupSortTarget(use_distance_thresholding);
 
   // Subscriber
   sub_objects_ = create_subscription<ObjsMsgType>(
@@ -70,6 +50,59 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
 
   // Publisher
   pub_output_objects_ = create_publisher<ObjsMsgType>("~/output/objects", rclcpp::QoS{1});
+}
+
+template <typename ObjsMsgType>
+void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholding)
+{
+  const std::array<std::string, 8> label_names{"UNKNOWN", "CAR",        "TRUCK",   "BUS",
+                                               "TRAILER", "MOTORCYCLE", "BICYCLE", "PEDESTRIAN"};
+  const std::array<uint8_t, 8> label_number{Label::UNKNOWN, Label::CAR,       Label::TRUCK,
+                                            Label::BUS,     Label::TRAILER,   Label::MOTORCYCLE,
+                                            Label::BICYCLE, Label::PEDESTRIAN};
+
+  // read each label settings
+  for (size_t i = 0; i < label_names.size(); i++) {
+    std::string sort_target_label = "sort_target." + label_names[i];
+    LabelSettings label_settings;
+
+    label_settings.publish = declare_parameter<bool>(sort_target_label + ".publish");
+    label_settings.min_velocity =
+      declare_parameter<double>(sort_target_label + ".min_velocity_threshold");
+
+    if (use_distance_thresholding) {
+      const double max_dist =
+        declare_parameter<double>(sort_target_label + ".range_threshold.max_distance");
+      const double min_dist =
+        declare_parameter<double>(sort_target_label + ".range_threshold.min_distance");
+
+      const double max_dist_sq = max_dist * max_dist;
+      const double min_dist_sq = min_dist * min_dist;
+
+      // Check distance
+      label_settings.isInTargetRange = [min_dist_sq, max_dist_sq](double dx, double dy) {
+        const double dist_sq = dx * dx + dy * dy;
+        if (dist_sq < min_dist_sq || dist_sq > max_dist_sq) {
+          // Outside the target distance
+          return false;
+        } else {
+          return true;
+        }
+      };
+    } else {
+      const double max_x = declare_parameter<double>(sort_target_label + ".range_threshold.max_x");
+      const double min_x = declare_parameter<double>(sort_target_label + ".range_threshold.min_x");
+      const double max_y = declare_parameter<double>(sort_target_label + ".range_threshold.max_y");
+      const double min_y = declare_parameter<double>(sort_target_label + ".range_threshold.min_y");
+
+      // Check object's relative position
+      label_settings.isInTargetRange = [min_x, max_x, min_y, max_y](double dx, double dy) {
+        return (min_x <= dx && dx <= max_x && min_y <= dy && dy <= max_y);
+      };
+    }
+
+    label_settings_[label_number[i]] = label_settings;
+  }
 }
 
 template <typename ObjsMsgType>
@@ -84,40 +117,60 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   ObjsMsgType output_objects;
   output_objects.header = input_msg->header;
 
+  double tx;
+  double ty;
+  double cos_yaw;
+  double sin_yaw;
+  // Even when it failed to get the transform, we still can do the velocity check
   bool transform_success = false;
-  geometry_msgs::msg::Vector3 ego_pos;
   try {
-    const geometry_msgs::msg::TransformStamped ts = tf_buffer_.lookupTransform(
-      input_msg->header.frame_id, range_calc_frame_id, input_msg->header.stamp,
-      rclcpp::Duration::from_seconds(0.5));
-    // Use the ego's position in the topic's frame id for computing the distance
-    ego_pos = ts.transform.translation;
+    const geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame =
+      tf_buffer_.lookupTransform(
+        range_calc_frame_id_,        // target frame
+        input_msg->header.frame_id,  // source frame
+        input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
+
+    // Extract translation
+    tx = tf_input_frame_to_target_frame.transform.translation.x;
+    ty = tf_input_frame_to_target_frame.transform.translation.y;
+
+    // Extract yaw from quaternion
+    const geometry_msgs::msg::Quaternion & q = tf_input_frame_to_target_frame.transform.rotation;
+    const tf2::Quaternion tf_q(q.x, q.y, q.z, q.w);
+    const double yaw = tf2::getYaw(tf_q);
+
+    cos_yaw = std::cos(yaw);
+    sin_yaw = std::sin(yaw);
+
     transform_success = true;
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
   }
 
   for (const auto & object : input_msg->objects) {
-    // Filter by velocity
-    if (
-      // NOTE: use the raw velocity in the topic for now
-      std::abs(
-        autoware_utils_geometry::calc_norm(object.kinematics.twist_with_covariance.twist.linear)) <
-      node_param_.min_velocity_threshold) {
-      // Low velocity object
+    const uint8_t label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    const LabelSettings & label_settings = label_settings_[label];
+
+    if (!label_settings.publish) {
+      continue;
+    }
+
+    if (!label_settings.isInTargetVelocity(object.kinematics.twist_with_covariance.twist.linear)) {
       continue;
     }
 
     if (transform_success) {
-      const double object_pos_x =
-        object.kinematics.pose_with_covariance.pose.position.x - ego_pos.x;
-      const double object_pos_y =
-        object.kinematics.pose_with_covariance.pose.position.y - ego_pos.y;
+      // We will check the condition in 2D (x-y)
+      const double object_x = object.kinematics.pose_with_covariance.pose.position.x;
+      const double object_y = object.kinematics.pose_with_covariance.pose.position.y;
+      const double object_x_in_target_frame = object_x * cos_yaw - object_y * sin_yaw + tx;
+      const double object_y_in_target_frame = object_x * sin_yaw + object_y * cos_yaw + ty;
 
-      // Filter by range
-      const auto object_sq_dist = object_pos_x * object_pos_x + object_pos_y * object_pos_y;
-      if (object_sq_dist < min_range_threshold_sq_) {
-        // Short range object
+      const double object_diff_x = object_x_in_target_frame - range_calc_offset_x_;
+      const double object_diff_y = object_y_in_target_frame - range_calc_offset_y_;
+
+      if (!label_settings.isInTargetRange(object_diff_x, object_diff_y)) {
         continue;
       }
     }
@@ -127,32 +180,6 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
 
   // Publish
   pub_output_objects_->publish(output_objects);
-}
-
-template <typename ObjsMsgType>
-rcl_interfaces::msg::SetParametersResult ObjectSorterBase<ObjsMsgType>::onSetParam(
-  const std::vector<rclcpp::Parameter> & params)
-{
-  rcl_interfaces::msg::SetParametersResult result;
-
-  try {
-    {
-      auto & p = node_param_;
-
-      update_param(params, "min_velocity_threshold", p.min_velocity_threshold);
-      update_param(params, "min_range_threshold", p.min_range_threshold);
-    }
-  } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
-    result.successful = false;
-    result.reason = e.what();
-    return result;
-  }
-
-  min_range_threshold_sq_ = node_param_.min_range_threshold * node_param_.min_range_threshold;
-
-  result.successful = true;
-  result.reason = "success";
-  return result;
 }
 
 // Explicit instantiation
