@@ -546,17 +546,13 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 {
   if (debug_params_.publish_debug_route) {
     auto route_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["route_lanes"],
-      std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(),
-      {0.8, 0.8, 0.8, 0.8});
+      ego_to_map_transform_, input_data_map["route_lanes"], this->now(), {0.8, 0.8, 0.8, 0.8});
     pub_route_marker_->publish(route_markers);
   }
 
   if (debug_params_.publish_debug_map) {
     auto lane_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["lanes"],
-      std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(),
-      {0.1, 0.1, 0.7, 0.8});
+      ego_to_map_transform_, input_data_map["lanes"], this->now(), {0.1, 0.1, 0.7, 0.8});
     pub_lane_marker_->publish(lane_markers);
   }
 }
