@@ -13,6 +13,7 @@
   <arg name="trajectory_spline_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_spline_smoother.param.yaml"/>
   <arg name="trajectory_qp_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_qp_smoother.param.yaml"/>
   <arg name="trajectory_velocity_optimizer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_velocity_optimizer.param.yaml"/>
+  <arg name="trajectory_kinematic_feasibility_enforcer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml"/>
 
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
@@ -30,6 +31,7 @@
     <param from="$(var trajectory_spline_smoother_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_qp_smoother_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_velocity_optimizer_param_path)" allow_substs="true"/>
+    <param from="$(var trajectory_kinematic_feasibility_enforcer_param_path)" allow_substs="true"/>
     <remap from="~/output/trajectory" to="$(var output_traj)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/traj" to="$(var input_traj)"/>

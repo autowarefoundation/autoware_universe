@@ -18,9 +18,8 @@
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
-
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/convert.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/convert.hpp>
 
 #include <algorithm>
 #include <cmath>
