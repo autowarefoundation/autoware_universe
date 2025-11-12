@@ -20,8 +20,8 @@
 #ifndef SYSTEM_MONITOR__NTP_MONITOR__NTP_MONITOR_HPP_
 #define SYSTEM_MONITOR__NTP_MONITOR__NTP_MONITOR_HPP_
 
-#include <rclcpp/rclcpp.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <climits>
 #include <map>
