@@ -52,35 +52,6 @@ Marker create_base_marker(
   return marker;
 }
 
-// Helper to transform points
-struct TransformedPoints
-{
-  double x, y, z;
-  double lb_x, lb_y;
-  double rb_x, rb_y;
-};
-
-TransformedPoints transform_lane_points(
-  const Eigen::Vector3d & center, const Eigen::Vector3d & left_bound,
-  const Eigen::Vector3d & right_bound, const Eigen::Matrix4d & transform)
-{
-  Eigen::Matrix<double, 4, 3> points;
-  points << center(0), left_bound(0), right_bound(0), center(1), left_bound(1), right_bound(1), 0.0,
-    0.0, 0.0, 1.0, 1.0, 1.0;
-
-  Eigen::Matrix<double, 4, 3> transformed = transform * points;
-
-  TransformedPoints result;
-  result.x = transformed(0, 0);
-  result.y = transformed(1, 0);
-  result.lb_x = transformed(0, 1);
-  result.lb_y = transformed(1, 1);
-  result.rb_x = transformed(0, 2);
-  result.rb_y = transformed(1, 2);
-  result.z = transformed(2, 0) + 0.1f;
-  return result;
-}
-
 // Helper to add point to marker
 void add_point_to_marker(Marker & marker, double x, double y, double z)
 {
@@ -178,16 +149,16 @@ MarkerArray create_lane_marker(
     // Process points for this segment
     float total_norm = 0.0f;
     for (int64_t p = 0; p < P; ++p) {
-      const Eigen::Vector3d center(
+      const Eigen::Vector3d center_in_base_link(
         lane_vector[P * D * l + p * D + X], lane_vector[P * D * l + p * D + Y], 0.0);
-      const Eigen::Vector3d left_bound(
-        lane_vector[P * D * l + p * D + LB_X] + center(0),
-        lane_vector[P * D * l + p * D + LB_Y] + center(1), 0.0);
-      const Eigen::Vector3d right_bound(
-        lane_vector[P * D * l + p * D + RB_X] + center(0),
-        lane_vector[P * D * l + p * D + RB_Y] + center(1), 0.0);
+      const Eigen::Vector3d left_bound_in_base_link(
+        lane_vector[P * D * l + p * D + LB_X] + center_in_base_link(0),
+        lane_vector[P * D * l + p * D + LB_Y] + center_in_base_link(1), 0.0);
+      const Eigen::Vector3d right_bound_in_base_link(
+        lane_vector[P * D * l + p * D + RB_X] + center_in_base_link(0),
+        lane_vector[P * D * l + p * D + RB_Y] + center_in_base_link(1), 0.0);
 
-      const double norm = center.head<2>().norm();
+      const double norm = center_in_base_link.head<2>().norm();
       total_norm += norm;
 
       // Skip near-zero points (likely padding)
@@ -195,15 +166,21 @@ MarkerArray create_lane_marker(
         continue;
       }
 
-      // Transform points from ego to map frame
-      const TransformedPoints transformed =
-        transform_lane_points(center, left_bound, right_bound, transform_ego_to_map);
+      // Transform points from base_link to map frame
+      const Eigen::Vector4d center_in_map =
+        transform_ego_to_map * center_in_base_link.homogeneous();
+      const Eigen::Vector4d left_bound_in_map =
+        transform_ego_to_map * left_bound_in_base_link.homogeneous();
+      const Eigen::Vector4d right_bound_in_map =
+        transform_ego_to_map * right_bound_in_base_link.homogeneous();
+
+      const double z = center_in_map(2) + 0.1;
 
       // Add points to respective markers
-      add_point_to_marker(marker_centerline, transformed.x, transformed.y, transformed.z);
-      add_point_to_marker(marker_left_bound, transformed.lb_x, transformed.lb_y, transformed.z);
-      add_point_to_marker(marker_right_bound, transformed.rb_x, transformed.rb_y, transformed.z);
-      add_point_to_marker(marker_sphere, transformed.x, transformed.y, transformed.z + 0.1f);
+      add_point_to_marker(marker_centerline, center_in_map(0), center_in_map(1), z);
+      add_point_to_marker(marker_left_bound, left_bound_in_map(0), left_bound_in_map(1), z);
+      add_point_to_marker(marker_right_bound, right_bound_in_map(0), right_bound_in_map(1), z);
+      add_point_to_marker(marker_sphere, center_in_map(0), center_in_map(1), z + 0.1);
     }
 
     // Skip empty segments
