@@ -300,7 +300,7 @@ Trajectory get_trajectory_from_poses(
     TrajectoryPoint p;
     p.time_from_start.sec = static_cast<int>(dt * static_cast<double>(i));
     p.time_from_start.nanosec =
-      static_cast<int>((dt * static_cast<double>(i) - p.time_from_start.sec) * 1e9);
+      static_cast<uint32_t>((dt * static_cast<double>(i) - p.time_from_start.sec) * 1e9);
 
     // Extract position from transformation matrix
     p.pose.position.x = poses[i](0, 3);
