@@ -112,13 +112,9 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-<<<<<<< HEAD
-  void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
-=======
   bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const;
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
->>>>>>> 0d53ea2b0 (refactor: rebase to latest version and solve conflict)
 };
 
 }  // namespace autoware::multi_object_tracker
