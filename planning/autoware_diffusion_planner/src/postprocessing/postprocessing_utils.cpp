@@ -110,7 +110,7 @@ PredictedObjects create_predicted_objects(
   const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index)
 {
-  auto trajectory_path_to_pose_path = [&](const Trajectory & trajectory, const double object_z)
+  auto trajectory_path_to_pose_path = [](const Trajectory & trajectory, const double object_z)
     -> std::vector<geometry_msgs::msg::Pose> {
     std::vector<geometry_msgs::msg::Pose> pose_path;
     std::for_each(trajectory.points.begin(), trajectory.points.end(), [&](const auto & p) {
