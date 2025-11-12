@@ -22985,6 +22985,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-best-view-selection-per-camera-fusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1: Best View Selection (Per-Camera Fusion)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-group-consensus-bayesian-fusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2: Group Consensus (Bayesian Fusion)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#input-topics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23039,18 +23078,85 @@
 
 <div><h1 id="autoware_traffic_light_multi_camera_fusion">autoware_traffic_light_multi_camera_fusion<a class="headerlink" href="#autoware_traffic_light_multi_camera_fusion" title="Permanent link">#</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p><code>autoware_traffic_light_multi_camera_fusion</code> performs traffic light signal fusion which can be summarized as the following two tasks:</p>
-<ol>
-<li>Multi-Camera-Fusion: fusion each traffic light signal detected by different cameras.</li>
-<li>Group-Fusion: Fusion each traffic light signal within the same group, which means traffic lights share the same regulatory element ID defined in lanelet2 map.</li>
-</ol>
-<p>The fusion method is below.</p>
-<ol>
-<li>Use the results of the new timestamp if the results are from the same sensor</li>
-<li>Use the results that are not <code>elements.size() == 1 &amp;&amp; color == UNKNOWN &amp;&amp; shape == UNKNOWN</code></li>
-<li>Use the results that each vertex of ROI is not at the edge of the image</li>
-<li>Use the results of high confidence</li>
-</ol>
+<p>This node fuses traffic light recognition results from multiple cameras to produce a single, reliable traffic light state. By integrating information from different viewpoints and ROIs, it ensures robust performance even in challenging scenarios, such as partial <strong>occlusions</strong> or recognition errors from an individual camera.</p>
+<pre class="mermaid"><code>graph LR
+    subgraph "Multi Camera Feeds"
+        direction TB
+        Cam1[" &lt;br&gt; &lt;b&gt;Camera 1&lt;/b&gt; &lt;br&gt; State: GREEN &lt;br&gt; Confidence: 0.95"]
+        Cam2[" &lt;br&gt; &lt;b&gt;Camera 2&lt;/b&gt; &lt;br&gt; State: GREEN &lt;br&gt; Confidence: 0.94"]
+        Cam3[" &lt;br&gt; &lt;b&gt;Camera 3&lt;/b&gt; &lt;br&gt; State: RED &lt;br&gt; Confidence: 0.95"]
+    end
+
+    subgraph "Processing"
+        direction TB
+        Fusion["&lt;b&gt;Multi-Camera Fusion Node&lt;/b&gt; &lt;br&gt;&lt;i&gt;Fuses evidence using &lt;br&gt; Bayesian updating&lt;/i&gt;"]
+    end
+
+    subgraph "Unified &amp; Robust State"
+        direction TB
+        Result[" &lt;br&gt; &lt;b&gt;Final State: GREEN&lt;/b&gt;"]
+    end
+
+    Cam1 --&gt; Fusion
+    Cam2 --&gt; Fusion
+    Cam3 --&gt; Fusion
+    Fusion --&gt; Result
+
+    style Fusion fill:#e0f7fa,stroke:#00796b,stroke-width:2px,color:#004d40
+    style Result fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:#1b5e20</code></pre>
+<hr>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">#</a></h2>
+<p>The fusion algorithm operates in two main stages.</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "Input: Multiple Camera Results"
+        A["Camera 1&lt;br&gt;Recognition Result"]
+        B["Camera 2&lt;br&gt;Recognition Result"]
+        C["..."]
+    end
+
+    subgraph "Stage 1: Per-Camera Fusion"
+        D{"Best ROIs Selection&lt;br&gt;&lt;br&gt;For each ROI,&lt;br&gt;select the single most&lt;br&gt;reliable detection result."}
+    end
+
+    E["Best Detection per ROIs"]
+
+    subgraph "Stage 2: Group Fusion"
+        F{"Group Consensus&lt;br&gt;&lt;br&gt;Fuse all 'best detections'&lt;br&gt;into a single state for&lt;br&gt;the entire traffic light group&lt;br&gt;using Bayesian updating."}
+    end
+
+    subgraph "Final Output"
+        G["Final Group State&lt;br&gt;(e.g., GREEN)"]
+    end
+
+    A --&gt; D
+    B --&gt; D
+    C --&gt; D
+    D --&gt; E
+    E --&gt; F
+    F --&gt; G
+
+    style D fill:#e0f7fa,stroke:#00796b,stroke-width:2px,color:black
+    style F fill:#e0f7fa,stroke:#00796b,stroke-width:2px,color:black
+    style E fill:#fff,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:black
+    style G fill:#e8f5e9,stroke:#2e7d32,stroke-width:3px,color:black</code></pre>
+<h3 id="stage-1-best-view-selection-per-camera-fusion">Stage 1: Best View Selection (Per-Camera Fusion)<a class="headerlink" href="#stage-1-best-view-selection-per-camera-fusion" title="Permanent link">#</a></h3>
+<p>First, for each individual ROIs, the node selects the single most reliable detection—the "best shot"—from all available camera views.</p>
+<p>This selection is based on a strict priority queue:</p>
+<ul>
+<li><strong>Latest Timestamp:</strong> Detections with the most recent timestamp are prioritized for the same sensor.</li>
+<li><strong>Known State:</strong> Results with a known color (Red, Green, etc.) are prioritized over 'Unknown'.</li>
+<li><strong>Full Visibility:</strong> Detections from non-truncated ROIs (fully visible ROIs) are prioritized.</li>
+<li><strong>Highest Confidence:</strong> The result with the highest detection confidence score is prioritized.</li>
+</ul>
+<p>This process yields the single most plausible recognition for every ROIs.</p>
+<h3 id="stage-2-group-consensus-bayesian-fusion">Stage 2: Group Consensus (Bayesian Fusion)<a class="headerlink" href="#stage-2-group-consensus-bayesian-fusion" title="Permanent link">#</a></h3>
+<p>Next, the "best shot" detections from Stage 1 are fused to determine a single, coherent state for the entire traffic light group. Instead of simple voting or averaging, this node employs a more principled method: <strong>Bayesian updating</strong>.</p>
+<ul>
+<li><strong>Belief Score:</strong> Each color (Red, Green, Yellow) maintains a "belief score" represented in <strong>log-odds</strong> for numerical stability and ease of updating.</li>
+<li><strong>Evidence Update:</strong> Each selected detection from Stage 1 is treated as a piece of "evidence." Its confidence score is converted into a log-odds value representing the strength of that evidence.</li>
+<li><strong>Score Accumulation:</strong> This evidence is <strong>added</strong> to the corresponding color's belief score.</li>
+<li><strong>Final Decision:</strong> After accumulating all evidence, the color with the highest final score is chosen as the definitive state for the group.</li>
+</ul>
 <h2 id="input-topics">Input topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h2>
 <p>For every camera, the following three topics are subscribed:</p>
 <table>
@@ -23120,6 +23226,13 @@
 <td>approximate_sync</td>
 <td>boolean</td>
 <td>Whether to work in Approximate Synchronization Mode.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>prior_log_odds</td>
+<td>float</td>
+<td>The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 (log(1)) means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
