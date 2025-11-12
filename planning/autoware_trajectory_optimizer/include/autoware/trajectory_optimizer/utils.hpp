@@ -65,31 +65,31 @@ void smooth_trajectory_with_elastic_band(
 bool validate_point(const TrajectoryPoint & point);
 
 /**
- * @brief Corrects the orientation of output trajectory points when they deviate significantly from
- * input trajectory.
+ * @brief Copies orientations from input trajectory to output trajectory points.
  * @param input_trajectory The reference input trajectory points.
- * @param output_trajectory The output trajectory points to be corrected.
- * @param yaw_threshold_rad The yaw difference threshold in radians. Orientations are corrected when
- * difference exceeds this value.
+ * @param output_trajectory The output trajectory points to be updated.
+ * @param max_distance_m Maximum position deviation allowed for nearest neighbor matching.
+ * @param max_yaw_rad Maximum yaw deviation allowed for nearest neighbor matching.
+ *
+ * For each output point, finds the nearest input point within the distance and yaw constraints
+ * and copies its orientation. If no match is found, the output orientation is preserved.
  */
-void fix_trajectory_orientation(
+void copy_trajectory_orientation(
   const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
-  const double yaw_threshold_rad);
+  const double max_distance_m, const double max_yaw_rad);
 
 /**
  * @brief Interpolates the given trajectory points based on trajectory length.
  *
  * @param traj_points The trajectory points to be interpolated.
  * @param interpolation_resolution_m Interpolation resolution for Akima spline.
- * @param max_yaw_discrepancy_deg Maximum yaw deviation allowed for spline outlier detection.
- * @param max_distance_discrepancy_m Maximum position deviation allowed for spline outlier
- * detection.
- * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
- * be copied.
+ * @param max_distance_discrepancy_m Maximum position deviation allowed for orientation copying.
+ * @param preserve_original_orientation Flag to indicate if orientation from original trajectory
+ * should be copied.
  */
 void apply_spline(
-  TrajectoryPoints & traj_points, double interpolation_resolution_m, double max_yaw_discrepancy_deg,
-  double max_distance_discrepancy_m, bool copy_original_orientation);
+  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
+  const double max_distance_discrepancy_m, const bool preserve_original_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
@@ -102,8 +102,10 @@ rclcpp::Logger get_logger();
  * @brief Removes invalid points from the input trajectory.
  *
  * @param input_trajectory The trajectory points to be cleaned.
+ * @param min_dist_to_remove_m Minimum distance to remove close proximity points [m].
  */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
+void remove_invalid_points(
+  std::vector<TrajectoryPoint> & input_trajectory, const double min_dist_to_remove_m = 1E-2);
 
 /**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
@@ -139,6 +141,26 @@ void clamp_velocities(
  */
 void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
+
+/**
+ * @brief Compute time difference between consecutive trajectory points
+ *
+ * @param current Current trajectory point
+ * @param next Next trajectory point
+ * @return Time difference [s]
+ */
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next);
+
+/**
+ * @brief Recalculates longitudinal acceleration from velocity differences.
+ *
+ * @param trajectory The trajectory points with velocities to recalculate accelerations from.
+ * @param use_constant_dt If true, use constant_dt; if false, use time_from_start spacing.
+ * @param constant_dt Constant time step in seconds (used only if use_constant_dt is true).
+ */
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_constant_dt = false,
+  const double constant_dt = 0.1);
 
 void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,

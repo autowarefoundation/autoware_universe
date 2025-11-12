@@ -306,23 +306,15 @@ std::map<lanelet::Id, size_t> create_lane_id_to_array_index_map(
 
 bool is_segment_inside(const LaneSegment & segment, const double center_x, const double center_y)
 {
-  auto is_inside = [&](const double x, const double y) {
-    using autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
-    return (
-      x > center_x - LANE_MASK_RANGE_M && x < center_x + LANE_MASK_RANGE_M &&
-      y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
-  };
+  for (const auto & point : segment.centerline) {
+    if (
+      std::abs(point.x() - center_x) <= autoware::diffusion_planner::constants::LANE_MASK_RANGE_M &&
+      std::abs(point.y() - center_y) <= autoware::diffusion_planner::constants::LANE_MASK_RANGE_M) {
+      return true;
+    }
+  }
 
-  const double mean_x = segment.mean_point.x();
-  const double mean_y = segment.mean_point.y();
-  const double first_x = segment.centerline.front().x();
-  const double first_y = segment.centerline.front().y();
-  const double last_x = segment.centerline.back().x();
-  const double last_y = segment.centerline.back().y();
-
-  const bool inside =
-    is_inside(mean_x, mean_y) || is_inside(first_x, first_y) || is_inside(last_x, last_y);
-  return inside;
+  return false;
 }
 
 uint8_t identify_current_light_status(

@@ -48,11 +48,13 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   [[maybe_unused]] const BehaviorModuleOutput & upstream_module_output)
 {
   const auto & route_handler = planner_data->route_handler;
+  const double backward_path_length = planner_data->parameters.backward_path_length;
 
   const auto & goal_pose = modified_goal_pose.goal_pose;
   // prepare road nad shoulder lanes
   const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
-    upstream_module_output.path, planner_data, parameters_.backward_goal_search_length,
+    upstream_module_output.path, planner_data,
+    backward_path_length + parameters_.backward_goal_search_length,
     parameters_.forward_goal_search_length);
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, parameters_.backward_goal_search_length,

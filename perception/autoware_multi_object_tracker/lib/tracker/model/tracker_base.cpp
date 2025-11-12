@@ -18,7 +18,7 @@
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -301,7 +301,7 @@ void Tracker::getPositionCovarianceEigenSq(
   if (object.time.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
     getTrackedObject(time, object);
   }
-  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object.pose_covariance;
 
   // principal component of the position covariance matrix
@@ -463,7 +463,7 @@ float Tracker::getKnownObjectProbability() const
 
 double Tracker::getPositionCovarianceDeterminant() const
 {
-  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
 
   // The covariance size is defined as the square of the dominant eigenvalue

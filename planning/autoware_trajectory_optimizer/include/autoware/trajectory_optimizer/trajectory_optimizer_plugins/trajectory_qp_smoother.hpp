@@ -55,10 +55,10 @@ struct QPSmootherParams
   int osqp_max_iter{4000};
   bool osqp_verbose{false};
 
-  // Orientation correction
-  bool fix_orientation{true};  // Enable orientation correction
-  double orientation_correction_threshold_deg{
-    5.0};  // Yaw threshold for orientation correction [deg]
+  // Orientation preservation
+  bool preserve_input_trajectory_orientation{
+    true};  // Copy orientations from input trajectory to smoothed output
+  double max_distance_for_orientation_m{5.0};  // Max distance for nearest neighbor matching [m]
 
   // Velocity-based fidelity weighting
   bool use_velocity_based_fidelity{false};  // Master switch for velocity-based weighting
@@ -67,8 +67,10 @@ struct QPSmootherParams
   double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
   double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
 
-  // Endpoint constraints
-  bool constrain_last_point{true};  // Fix last point as hard constraint
+  // Point constraints
+  // Number of points from start to constrain (preserve initial state)
+  int num_constrained_points_start{3};
+  int num_constrained_points_end{3};  // Number of points from end to constrain
 };
 
 /**
@@ -87,11 +89,7 @@ struct QPSmootherParams
 class TrajectoryQPSmoother : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectoryQPSmoother(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params);
-
+  TrajectoryQPSmoother() = default;
   ~TrajectoryQPSmoother() = default;
 
   void optimize_trajectory(
