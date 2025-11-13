@@ -56,9 +56,16 @@ Marker create_base_marker(
 void add_point_to_marker(Marker & marker, const Eigen::Vector4d & point)
 {
   Point pt;
-  pt.x = point.x();
-  pt.y = point.y();
-  pt.z = point.z();
+  const double w = point.w();
+  if (w != 0.0) {
+    pt.x = point.x() / w;
+    pt.y = point.y() / w;
+    pt.z = point.z() / w;
+  } else {
+    pt.x = point.x();
+    pt.y = point.y();
+    pt.z = point.z();
+  }
   marker.points.push_back(pt);
 }
 
