@@ -173,7 +173,8 @@ void VelocityValidator::validate(
     res.is_rolling_back = is_rolling_back;
   }
 
-  // For over_velocity validation, use the longer time constant (velocity_validator.vel_lpf_gain)
+  // For over_velocity validation, use the longer time constant
+  // (over_velocity_validator.vel_lpf_gain)
   const double v_vel = over_velocity_vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
   const double t_vel = over_velocity_target_vel_lpf.filter(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
