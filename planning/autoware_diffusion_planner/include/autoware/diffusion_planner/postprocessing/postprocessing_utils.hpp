@@ -80,7 +80,7 @@ Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
   const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold);
+  const double stopping_threshold, const std::vector<float> & route_lanes_with_z);
 
 /**
  * @brief Converts turn indicator logit to TurnIndicatorsCommand message.

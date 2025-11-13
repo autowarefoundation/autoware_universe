@@ -568,7 +568,8 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
   }
 }
 
-void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
+void DiffusionPlanner::publish_predictions(
+  const std::vector<float> & predictions, const std::vector<float> & route_lanes_with_z) const
 {
   CandidateTrajectories candidate_trajectories;
 
@@ -582,7 +583,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
       agent_poses, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
-      enable_force_stop, params_.stopping_threshold);
+      enable_force_stop, params_.stopping_threshold, route_lanes_with_z);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
@@ -867,7 +868,7 @@ void DiffusionPlanner::on_timer()
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
-  publish_predictions(predictions);
+  publish_predictions(predictions, input_data_map["route_lanes_with_z"]);
 
   // Publish turn indicators
   const auto turn_indicator_logit = get_turn_indicator_logit();

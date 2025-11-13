@@ -187,7 +187,7 @@ Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
   const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold)
+  const double stopping_threshold, const std::vector<float> & route_lanes_with_z)
 {
   const int64_t ego_index = 0;
 
@@ -198,13 +198,51 @@ Trajectory create_ego_trajectory(
       ", batch_size=" + std::to_string(agent_poses.size()));
   }
 
-  // Extract ego poses (ego_index = 0)
+  // Helper function to find closest Z coordinate from route_lanes_with_z (in ego frame)
+  auto find_closest_z = [&route_lanes_with_z](double x_ego, double y_ego) -> double {
+    const int64_t num_points = route_lanes_with_z.size() / SEGMENT_POINT_DIM;
+    double min_dist_sq = std::numeric_limits<double>::max();
+    double closest_z = 0.0;
+    constexpr double epsilon = 1e-6;
+
+    for (int64_t pt = 0; pt < num_points; ++pt) {
+      const int64_t base_idx = pt * SEGMENT_POINT_DIM;
+      const double lane_x = route_lanes_with_z[base_idx + X];
+      const double lane_y = route_lanes_with_z[base_idx + Y];
+      const double lane_z = route_lanes_with_z[base_idx + Z];
+
+      // Skip points that are all zeros (padding)
+      if (std::abs(lane_x) < epsilon && std::abs(lane_y) < epsilon && std::abs(lane_z) < epsilon) {
+        continue;
+      }
+
+      const double dx = x_ego - lane_x;
+      const double dy = y_ego - lane_y;
+      const double dist_sq = dx * dx + dy * dy;
+
+      if (dist_sq < min_dist_sq) {
+        min_dist_sq = dist_sq;
+        closest_z = lane_z;
+      }
+    }
+
+    return closest_z;
+  };
+
+  // Extract ego poses (ego_index = 0) and set Z coordinates
   std::vector<Eigen::Matrix4d> ego_poses;
   ego_poses.reserve(OUTPUT_T);
   for (int64_t time_idx = 0; time_idx < OUTPUT_T; ++time_idx) {
+    Eigen::Matrix4d pose_ego = agent_poses[batch_index][ego_index][time_idx];
+
+    // Set Z coordinate from route_lanes_with_z (both in ego frame)
+    const double x_ego = pose_ego(0, 3);
+    const double y_ego = pose_ego(1, 3);
+    const double z_ego = find_closest_z(x_ego, y_ego);
+    pose_ego(2, 3) = z_ego;
+
     // Transform to map frame
-    Eigen::Matrix4d pose_in_map =
-      transform_ego_to_map * agent_poses[batch_index][ego_index][time_idx];
+    Eigen::Matrix4d pose_in_map = transform_ego_to_map * pose_ego;
     ego_poses.push_back(pose_in_map);
   }
 

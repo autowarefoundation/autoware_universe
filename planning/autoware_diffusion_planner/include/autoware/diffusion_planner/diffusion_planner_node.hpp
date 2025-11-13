@@ -213,8 +213,10 @@ private:
   /**
    * @brief Publish model predictions.
    * @param predictions Output from the model.
+   * @param route_lanes_with_z Route lane data with Z coordinates for trajectory Z interpolation.
    */
-  void publish_predictions(const std::vector<float> & predictions) const;
+  void publish_predictions(
+    const std::vector<float> & predictions, const std::vector<float> & route_lanes_with_z) const;
 
   /**
    * @brief Run inference on input data output is stored on member output_d_.
