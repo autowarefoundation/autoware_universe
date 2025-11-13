@@ -18,9 +18,9 @@
         under_drivable: false
       use_dead_line: false
       dead_line_margin: 5.0
-      use_max_acceleration: true
-      max_acceleration: 1.0
-      use_pass_judge_line: false
+      unstoppable_policy: "go" # "go" or "force_stop" or "stop_after_stopline"
+      max_deceleration: 1.0
+      delay_response_time: 0.5
       state_clear_time: 2.0
       hold_stop_margin_distance: 0.0
       distance_to_judge_over_stop_line: 0.5
