@@ -300,6 +300,12 @@ struct AvoidanceParameters
   // line.
   double lateral_small_shift_threshold{0.0};
 
+  // threshold for checking difference between new shift path and previous ego shift state
+  double th_ego_shift_path_difference{0.1};
+
+  // threshold for checking lateral distance between actual ego position and new shift path
+  double th_ego_path_lateral_distance{0.1};
+
   // use for return shift approval.
   double ratio_for_return_shift_approval{0.0};
 

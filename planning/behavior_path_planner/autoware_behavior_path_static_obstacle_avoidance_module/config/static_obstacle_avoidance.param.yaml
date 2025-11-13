@@ -238,6 +238,8 @@
         lateral:
           th_avoid_execution: 0.09                      # [m] FOR DEVELOPER
           th_small_shift_length: 0.101                  # [m] FOR DEVELOPER
+          th_ego_shift_path_difference: 0.1             # [m] threshold for checking difference between new shift path and previous ego shift state
+          th_ego_path_lateral_distance: 0.1             # [m] threshold for checking lateral distance between actual ego position and new shift path
           soft_drivable_bound_margin: 0.3               # [m]
           hard_drivable_bound_margin: 0.3               # [m]
           max_right_shift_length: 5.0                   # [m] FOR DEVELOPER

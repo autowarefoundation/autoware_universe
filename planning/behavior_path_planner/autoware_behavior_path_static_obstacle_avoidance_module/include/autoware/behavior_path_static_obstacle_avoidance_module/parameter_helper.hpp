@@ -280,6 +280,10 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       get_or_declare_parameter<double>(*node, ns + "th_avoid_execution");
     p.lateral_small_shift_threshold =
       get_or_declare_parameter<double>(*node, ns + "th_small_shift_length");
+    p.th_ego_shift_path_difference =
+      get_or_declare_parameter<double>(*node, ns + "th_ego_shift_path_difference");
+    p.th_ego_path_lateral_distance =
+      get_or_declare_parameter<double>(*node, ns + "th_ego_path_lateral_distance");
     p.max_right_shift_length =
       get_or_declare_parameter<double>(*node, ns + "max_right_shift_length");
     p.max_left_shift_length = get_or_declare_parameter<double>(*node, ns + "max_left_shift_length");

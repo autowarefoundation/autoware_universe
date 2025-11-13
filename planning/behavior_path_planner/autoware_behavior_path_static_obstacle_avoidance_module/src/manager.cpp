@@ -171,6 +171,10 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "th_small_shift_length", p->lateral_small_shift_threshold);
     update_param<double>(
+      parameters, ns + "th_ego_shift_path_difference", p->th_ego_shift_path_difference);
+    update_param<double>(
+      parameters, ns + "th_ego_path_lateral_distance", p->th_ego_path_lateral_distance);
+    update_param<double>(
       parameters, ns + "soft_drivable_bound_margin", p->soft_drivable_bound_margin);
     update_param<double>(
       parameters, ns + "hard_drivable_bound_margin", p->hard_drivable_bound_margin);

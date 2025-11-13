@@ -1427,15 +1427,13 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
 
   debug_data_.proposed_spline_shift = proposed_shift_path.shift_length;
 
-  constexpr double THRESHOLD = 0.1;
-
   // check offset between new shift path and ego position.
   {
     const auto new_idx = planner_data_->findEgoIndex(proposed_shift_path.path.points);
     const auto new_shift_length = proposed_shift_path.shift_length.at(new_idx);
 
     const auto offset = std::abs(new_shift_length - helper_->getEgoShift());
-    if (offset > THRESHOLD) {
+    if (offset > parameters_->th_ego_shift_path_difference) {
       RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 1000, "new shift line is invalid. [HUGE OFFSET (%.2f)]", offset);
       return false;
@@ -1446,7 +1444,7 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
   {
     const auto distance =
       motion_utils::calcLateralOffset(proposed_shift_path.path.points, helper_->getEgoPosition());
-    if (std::abs(distance) > THRESHOLD) {
+    if (std::abs(distance) > parameters_->th_ego_path_lateral_distance) {
       RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 1000, "new shift line is invalid. [HUGE OFFSET (%.2f)]", distance);
       return false;
