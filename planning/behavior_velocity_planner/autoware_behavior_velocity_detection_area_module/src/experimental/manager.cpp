@@ -51,6 +51,34 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<bool>(node, ns + ".suppress_pass_judge_when_stopping");
   planner_param_.enable_detected_obstacle_logging =
     get_or_declare_parameter<bool>(node, ns + ".enable_detected_obstacle_logging");
+
+  // Target filtering parameters
+  planner_param_.target_filtering.pointcloud =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.pointcloud");
+  planner_param_.target_filtering.unknown =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.unknown");
+  planner_param_.target_filtering.car =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.car");
+  planner_param_.target_filtering.truck =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.truck");
+  planner_param_.target_filtering.bus =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.bus");
+  planner_param_.target_filtering.trailer =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.trailer");
+  planner_param_.target_filtering.motorcycle =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.motorcycle");
+  planner_param_.target_filtering.bicycle =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.bicycle");
+  planner_param_.target_filtering.pedestrian =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.pedestrian");
+  planner_param_.target_filtering.animal =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.animal");
+  planner_param_.target_filtering.hazard =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.hazard");
+  planner_param_.target_filtering.over_drivable =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.over_drivable");
+  planner_param_.target_filtering.under_drivable =
+    get_or_declare_parameter<bool>(node, ns + ".target_filtering.under_drivable");
 }
 
 void DetectionAreaModuleManager::launchNewModules(
