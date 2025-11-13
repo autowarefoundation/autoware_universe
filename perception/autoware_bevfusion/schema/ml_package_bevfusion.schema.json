@@ -163,7 +163,7 @@
           "default": 118,
           "minimum": 0
         },
-        "image_feature_dim": {
+        "image_feature_channel": {
           "type": "integer",
           "description": "Image feature dimension (output channels of the image backbone).",
           "default": 256,
@@ -197,7 +197,7 @@
         "features_height",
         "features_width",
         "num_depth_features",
-        "image_feature_dim",
+        "image_feature_channel",
         "use_intensity"
       ],
       "additionalProperties": false

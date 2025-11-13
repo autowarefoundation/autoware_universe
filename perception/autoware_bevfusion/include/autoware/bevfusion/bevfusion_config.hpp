@@ -41,7 +41,7 @@ public:
     const float img_aug_scale_x, const float img_aug_scale_y, const std::int64_t roi_height,
     const std::int64_t roi_width, const std::int64_t features_height,
     const std::int64_t features_width, const std::int64_t num_depth_features,
-    const std::int64_t image_feature_dim, const std::int64_t num_proposals,
+    const std::int64_t image_feature_channel, const std::int64_t num_proposals,
     const float circle_nms_dist_threshold, const std::vector<double> & yaw_norm_thresholds,
     const float score_threshold, const bool use_intensity)
   {
@@ -64,10 +64,10 @@ public:
     sensor_fusion_ = all_non_empty;
 
     if (use_intensity) {
-      // x, y, z, intensity, lag
+      // x, y, z, intensity, timestamp_lag
       num_point_feature_size_ = 5;
     } else {
-      // x, y, z, lag
+      // x, y, z, timestamp_lag
       num_point_feature_size_ = 4;
     }
     use_intensity_ = use_intensity;
@@ -116,7 +116,7 @@ public:
     features_height_ = features_height;
     features_width_ = features_width;
     num_depth_features_ = num_depth_features;
-    image_feature_dim_ = image_feature_dim;
+    image_feature_channel_ = image_feature_channel;
     resized_height_ = raw_image_height_ * img_aug_scale_y_;
     resized_width_ = raw_image_width_ * img_aug_scale_x_;
 
@@ -165,7 +165,7 @@ public:
   std::int64_t max_num_voxels_{};
   std::int64_t max_points_per_voxel_;
 
-  std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, lag
+  std::int64_t num_point_feature_size_{4};  // x, y, z, timestamp_lag
 
   // Pointcloud range in meters
   float min_x_range_{};
@@ -207,7 +207,7 @@ public:
   std::int64_t features_height_{};
   std::int64_t features_width_{};
   std::int64_t num_depth_features_{};
-  std::int64_t image_feature_dim_{256};  // Image feature dimension
+  std::int64_t image_feature_channel_{256};  // Image feature dimension
 
   // Head parameters
   std::int64_t num_proposals_{};

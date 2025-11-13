@@ -23,4 +23,4 @@
     features_height: 48
     features_width: 72
     num_depth_features: 95
-    image_feature_dim: 256
+    image_feature_channel: 256

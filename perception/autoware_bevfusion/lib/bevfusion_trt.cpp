@@ -122,7 +122,7 @@ void BEVFusionTRT::initPtr()
 
     // buffers for fusion model with separate image backbone
     image_feats_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.num_cameras_ * config_.image_feature_dim_ * config_.features_height_ *
+      config_.num_cameras_ * config_.image_feature_channel_ * config_.features_height_ *
       config_.features_width_);
     img_aug_matrix_d_ = autoware::cuda_utils::make_unique<float[]>(
       config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
@@ -145,7 +145,7 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
     image_backbone_io.emplace_back(
       "image_feats",
       nvinfer1::Dims{
-        4, {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+        4, {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
 
     std::vector<autoware::tensorrt_common::ProfileDims> image_backbone_profiles;
     image_backbone_profiles.emplace_back(
@@ -196,7 +196,7 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
     network_io.emplace_back(
       "image_feats",
       nvinfer1::Dims{
-        4, {-1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}});
+        4, {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
     network_io.emplace_back(
       "img_aug_matrix",
       nvinfer1::Dims{
@@ -250,14 +250,14 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
     profile_dims.emplace_back(
       "image_feats",
       nvinfer1::Dims{
-        4, {1, config_.image_feature_dim_, config_.features_height_, config_.features_width_}},
+        4, {1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}},
       nvinfer1::Dims{
         4,
-        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+        {config_.num_cameras_, config_.image_feature_channel_, config_.features_height_,
          config_.features_width_}},
       nvinfer1::Dims{
         4,
-        {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+        {config_.num_cameras_, config_.image_feature_channel_, config_.features_height_,
          config_.features_width_}});
 
     profile_dims.emplace_back(
@@ -586,7 +586,7 @@ bool BEVFusionTRT::preProcess(
     network_trt_ptr_->setInputShape(
       "image_feats", nvinfer1::Dims{
                        4,
-                       {config_.num_cameras_, config_.image_feature_dim_, config_.features_height_,
+                       {config_.num_cameras_, config_.image_feature_channel_, config_.features_height_,
                         config_.features_width_}});
     network_trt_ptr_->setInputShape(
       "img_aug_matrix", nvinfer1::Dims{

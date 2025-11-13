@@ -53,10 +53,10 @@ PreprocessCuda::PreprocessCuda(
   }
 }
 
+template <bool USE_INTENSITY>
 __global__ void generateSweepPoints_kernel(
   const InputPointType * __restrict__ input_points, std::size_t points_size, float time_lag,
-  const float * transform_array, int num_features, bool use_intensity,
-  float * __restrict__ output_points)
+  const float * transform_array, int num_features, float * __restrict__ output_points)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
@@ -65,7 +65,6 @@ __global__ void generateSweepPoints_kernel(
   float input_x = input_point->x;
   float input_y = input_point->y;
   float input_z = input_point->z;
-  auto input_intensity = static_cast<float>(input_point->intensity);
 
   // Transform x, y, z coordinates
   output_points[point_idx * num_features] = transform_array[0] * input_x +
@@ -79,7 +78,8 @@ __global__ void generateSweepPoints_kernel(
                                                 transform_array[10] * input_z + transform_array[14];
 
   // Conditionally include intensity feature
-  if (use_intensity) {
+  if (USE_INTENSITY) {
+    auto input_intensity = static_cast<float>(input_point->intensity);
     output_points[point_idx * num_features + 3] = input_intensity;
     output_points[point_idx * num_features + 4] = time_lag;
   } else {
@@ -94,9 +94,9 @@ cudaError_t PreprocessCuda::generateSweepPoints_launch(
   dim3 blocks(divup(points_size, config_.threads_per_block_));
   dim3 threads(config_.threads_per_block_);
 
-  generateSweepPoints_kernel<<<blocks, threads, 0, stream_>>>(
+  generateSweepPoints_kernel<config_.use_intensity_><<<blocks, threads, 0, stream_>>>(
     input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
-    config_.use_intensity_, output_points);
+    output_points);
 
   cudaError_t err = cudaGetLastError();
   return err;

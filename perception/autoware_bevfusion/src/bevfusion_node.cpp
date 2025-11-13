@@ -88,8 +88,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   const auto features_height = this->declare_parameter<std::int64_t>("features_height", descriptor);
   const auto features_width = this->declare_parameter<int>("features_width", descriptor);
   const auto num_depth_features = this->declare_parameter<int>("num_depth_features", descriptor);
-  const auto image_feature_dim =
-    this->declare_parameter<std::int64_t>("image_feature_dim", descriptor);
+  const auto image_feature_channel =
+    this->declare_parameter<std::int64_t>("image_feature_channel", descriptor);
   const auto use_intensity = this->declare_parameter<bool>("use_intensity", descriptor);
   // Head parameters
   const auto num_proposals = this->declare_parameter<std::int64_t>("num_proposals", descriptor);
@@ -135,7 +135,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
     point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
-    features_height, features_width, num_depth_features, image_feature_dim, num_proposals,
+    features_height, features_width, num_depth_features, image_feature_channel, num_proposals,
     circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
 
   // Determine sensor_fusion mode based on config
