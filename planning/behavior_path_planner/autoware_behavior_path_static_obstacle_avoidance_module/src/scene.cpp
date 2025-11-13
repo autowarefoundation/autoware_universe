@@ -24,6 +24,7 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/debug.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -1426,16 +1427,28 @@ bool StaticObstacleAvoidanceModule::isValidShiftLine(
 
   debug_data_.proposed_spline_shift = proposed_shift_path.shift_length;
 
+  constexpr double THRESHOLD = 0.1;
+
   // check offset between new shift path and ego position.
   {
     const auto new_idx = planner_data_->findEgoIndex(proposed_shift_path.path.points);
     const auto new_shift_length = proposed_shift_path.shift_length.at(new_idx);
 
-    constexpr double THRESHOLD = 0.1;
     const auto offset = std::abs(new_shift_length - helper_->getEgoShift());
     if (offset > THRESHOLD) {
       RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 1000, "new shift line is invalid. [HUGE OFFSET (%.2f)]", offset);
+      return false;
+    }
+  }
+
+  // check offset between new shift path and actual ego position.
+  {
+    const auto distance =
+      motion_utils::calcLateralOffset(proposed_shift_path.path.points, helper_->getEgoPosition());
+    if (std::abs(distance) > THRESHOLD) {
+      RCLCPP_DEBUG_THROTTLE(
+        getLogger(), *clock_, 1000, "new shift line is invalid. [HUGE OFFSET (%.2f)]", distance);
       return false;
     }
   }
