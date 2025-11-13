@@ -1145,6 +1145,8 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     status_.prev_stop_path_after_approval = nullptr;
   }
 
+  auto current_path = getCurrentPath();
+
   if (stop_pose_ && status_.prev_stop_path_after_approval) {
     update_rtc_status(
       status_.prev_stop_path_after_approval->points,
@@ -1165,9 +1167,10 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
       const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
         status_.prev_stop_path_after_approval->points, 0UL,
         planner_data_->self_odometry->pose.pose.position);
-      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(getCurrentPath());
       stop_pose_->pose =
-        utils::insertStopPoint(ego_arc_length, *status_.prev_stop_path_after_approval).point.pose;
+        utils::insertStopPoint(ego_arc_length, current_path).point.pose;
+
+      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
     }
     return *status_.prev_stop_path_after_approval;
   }
@@ -1179,16 +1182,15 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   waitApproval();
   removeRTCStatus();
 
-  auto current_path = getCurrentPath();
   stop_pose_ = utils::insert_feasible_stop_point(
     current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop);
+    parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
 
   if (stop_pose_) {
-    stop_pose_->detail = "unsafe against dynamic objects";
-
     RCLCPP_DEBUG_THROTTLE(
       getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
+
+    status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
   }
 
   update_rtc_status(
