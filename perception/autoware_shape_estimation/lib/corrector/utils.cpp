@@ -45,8 +45,6 @@ bool correctWithDefaultValue(
   const CorrectionBBParameters & param, autoware_perception_msgs::msg::Shape & shape,
   geometry_msgs::msg::Pose & pose)
 {
-  // TODO(Yukihiro Saito): refactor following code
-
   Eigen::Translation<double, 2> trans =
     Eigen::Translation<double, 2>(pose.position.x, pose.position.y);
   Eigen::Rotation2Dd rotate(tf2::getYaw(pose.orientation));
@@ -114,9 +112,7 @@ bool correctWithDefaultValue(
       static_cast<int>(first_most_distant_index) - static_cast<int>(second_most_distant_index))) %
       2 ==
     0) {
-    if (
-      param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-      (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
+    if ((v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
       if ((v_point.at(third_most_distant_index) * 2.0).norm() < param.max_length) {
         correction_vector = v_point.at(third_most_distant_index);
         if (correction_vector.x() == 0.0) {
@@ -158,27 +154,32 @@ bool correctWithDefaultValue(
   }
   // fit width
   else if (  // NOLINT
-    (param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-     (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) &&
-    (param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
-     (v_point.at(second_most_distant_index) * 2.0).norm() <
-       param.max_width))  // both of edge is within width threshold
+    (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width &&
+    (v_point.at(second_most_distant_index) * 2.0).norm() < param.max_width)
   {                       // NOLINT
-    correction_vector = v_point.at(first_most_distant_index);
-    if (correction_vector.x() == 0.0) {
-      correction_vector.y() =
-        std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
-          (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.y();
-    } else if (correction_vector.y() == 0.0) {
-      correction_vector.x() =
-        std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
-          (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
-        correction_vector.x();
+    if (
+      (v_point.at(first_most_distant_index) * 2.0).norm() > param.min_width ||
+      (v_point.at(second_most_distant_index) * 2.0).norm() > param.min_width) {
+      correction_vector = v_point.at(first_most_distant_index);
+      if (correction_vector.x() == 0.0) {
+        correction_vector.y() =
+          std::max(std::abs(correction_vector.y()), param.default_length / 2.0) *
+            (correction_vector.y() < 0.0 ? -1.0 : 1.0) -
+          correction_vector.y();
+      } else if (correction_vector.y() == 0.0) {
+        correction_vector.x() =
+          std::max(std::abs(correction_vector.x()), param.default_length / 2.0) *
+            (correction_vector.x() < 0.0 ? -1.0 : 1.0) -
+          correction_vector.x();
+      }
+    } else {
+      return false;
     }
   } else if (  // NOLINT
     param.min_width < (v_point.at(first_most_distant_index) * 2.0).norm() &&
-    (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width) {
+    (v_point.at(first_most_distant_index) * 2.0).norm() < param.max_width &&
+    param.max_width < (v_point.at(second_most_distant_index) * 2.0).norm())
+  {
     correction_vector = v_point.at(second_most_distant_index);
     if (correction_vector.x() == 0.0) {
       correction_vector.y() =
