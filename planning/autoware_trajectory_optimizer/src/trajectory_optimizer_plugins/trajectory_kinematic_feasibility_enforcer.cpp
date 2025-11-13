@@ -101,7 +101,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   const double max_steer_rad = vehicle_info_.max_steer_angle_rad;
   const double max_yaw_rate = feasibility_params_.max_yaw_rate_rad_s;
 
-  if (wheelbase < 1e-3 || max_steer_rad < 1e-3 || max_yaw_rate <= 1e-3) {
+  if (wheelbase < 1e-3 || max_steer_rad < 1e-3 || max_yaw_rate < 1e-3) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
       "Kinematic Feasibility Enforcer: Invalid vehicle parameters (wheelbase=%.2f, "
@@ -124,7 +124,11 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   // Pre-compute all segment distances from ORIGINAL trajectory before modifying any positions
   // This preserves arc lengths throughout the forward propagation
   std::vector<double> segment_distances;
-  segment_distances.reserve(traj_points.size() - 1);
+  segment_distances.reserve(traj_points.size());
+  // First segment distance is between ego and first point
+  const auto anchor_first_point_dist =
+    autoware_utils_geometry::calc_distance2d(anchor_point, traj_points.front());
+  segment_distances.push_back(std::max(anchor_first_point_dist, min_segment_distance));
   for (size_t i = 0; i < traj_points.size() - 1; ++i) {
     const auto dist = autoware_utils_geometry::calc_distance2d(traj_points[i], traj_points[i + 1]);
     segment_distances.push_back(std::max(dist, min_segment_distance));
@@ -132,7 +136,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
 
   // Process each trajectory point
   for (size_t i = 0; i < traj_points.size() - 1; ++i) {
-    // Extract current point position (may have been modified in previous iteration)
+    // Extract current point positions
     auto & curr_point = traj_points[i];
     auto & next_point = traj_points[i + 1];
 
@@ -142,7 +146,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     const Eigen::Vector2d original_next_pos(next_point.pose.position.x, next_point.pose.position.y);
 
     // Use pre-computed segment distance to preserve arc length
-    const double s = segment_distances[i];
+    const double s_anchor_current_point = segment_distances[i];
 
     // Desired heading from current position toward original next point
     const Eigen::Vector2d v = original_next_pos - curr_point_v;
@@ -159,7 +163,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
     // Compute Ackermann geometric constraint
     // Maximum yaw change based on maximum curvature over distance s
     // Δψ_geom = κ_max * s = (tan(δ_max) / L) * s
-    const double delta_yaw_geom = kappa_max * s;
+    const double delta_yaw_geom = kappa_max * s_anchor_current_point;
 
     // Compute yaw rate constraint
     // Maximum yaw change based on angular rate limit over time dt
@@ -177,8 +181,10 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
 
     // Compute new point position maintaining segment distance s
     // This preserves the implicit dt = s / v_avg between points
+    const auto s_original_current_next_point = segment_distances[i + 1];
     const Eigen::Vector2d new_point =
-      curr_point_v + s * Eigen::Vector2d(std::cos(current_yaw), std::sin(current_yaw));
+      curr_point_v +
+      s_original_current_next_point * Eigen::Vector2d(std::cos(current_yaw), std::sin(current_yaw));
 
     // Update orientation
     tf2::Quaternion q_new;
