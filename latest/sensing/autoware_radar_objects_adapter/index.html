@@ -25,7 +25,7 @@
     
     
       
-        <title>autoware_radar_objects_adapter - Autoware Universe Documentation</title>
+        <title>Macro Rendering Error - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware_radar_objects_adapter" class="md-skip">
+        <a href="#macro-rendering-error" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              autoware_radar_objects_adapter
+              Macro Rendering Error
             
           </span>
         </div>
@@ -22853,64 +22853,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#purpose" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Purpose
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#radarobjectsadapter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RadarObjectsAdapter
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="RadarObjectsAdapter">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#inputs-outputs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inputs / Outputs
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -22929,107 +22871,27 @@
   
 
 
-<div><h1 id="autoware_radar_objects_adapter">autoware_radar_objects_adapter<a class="headerlink" href="#autoware_radar_objects_adapter" title="Permanent link">#</a></h1>
-<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>This package converts <code>autoware_sensing_msgs::msg::RadarObjects</code> into <code>autoware_perception_msgs::msg::DetectedObjects</code>, acting as a simple integration of radars into the perception pipeline.</p>
-<h2 id="radarobjectsadapter">RadarObjectsAdapter<a class="headerlink" href="#radarobjectsadapter" title="Permanent link">#</a></h2>
-<p>A node that converts radar objects from the sensing definition into a perception friendly format with no filtering involved.</p>
-<h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
-<h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>~/input/objects</td>
-<td>autoware_sensing_msgs::msg::RadarObjects</td>
-<td>Input radar objects as defined in sensing.</td>
-</tr>
-<tr>
-<td>~/input/radar_info</td>
-<td>autoware_sensing_msgs::msg::RadarInfo</td>
-<td>Input radar info.</td>
-</tr>
-</tbody>
-</table>
-<h4 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h4>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>~/output/objects</td>
-<td>autoware_perception_msgs::msg::DetectedObjects</td>
-<td>Output radar objects in the perception format.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>default_position_z</td>
-<td>float</td>
-<td>The default z-coordinate in meters of the position of radar objects in the case the radar does not provide it.</td>
-<td>0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>default_velocity_z</td>
-<td>float</td>
-<td>The default z-coordinate in meters per second of the velocity of radar objects in the case the radar does not provide it.</td>
-<td>0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>default_acceleration_z</td>
-<td>float</td>
-<td>The default z-coordinate in meters per squared second of the acceleration of radar objects in the case the radar does not provide it.</td>
-<td>0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>default_size_x</td>
-<td>float</td>
-<td>The default x-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
-<td>5</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>default_size_y</td>
-<td>float</td>
-<td>The default y-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
-<td>2</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>default_size_z</td>
-<td>float</td>
-<td>The default z-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
-<td>2</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table></div>
+<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
+<p><em>File</em>: <code>sensing/autoware_radar_objects_adapter/README.md</code></p>
+<p><em>KeyError</em>: 'description'</p>
+<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
+    return md_template.render(**page_variables)
+  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "&lt;template&gt;", line 37, in top-level template code
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
+    return format_json(data)
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
+    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
+    params.extend(extract_parameter_info(v["properties"], k + "."))
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
+    param["Description"] = v["description"]
+KeyError: 'description'
+</code></pre></div></div>
 
 
 
