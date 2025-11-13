@@ -1171,6 +1171,16 @@
                   "description": "The shift lines whose lateral offset is less than this will be applied with other ones.",
                   "default": 0.101
                 },
+                "th_ego_shift_path_difference": {
+                  "type": "number",
+                  "description": "Threshold for checking difference between new shift path and previous ego shift state.",
+                  "default": 0.1
+                },
+                "th_ego_path_lateral_distance": {
+                  "type": "number",
+                  "description": "Threshold for checking lateral distance between actual ego position and new shift path.",
+                  "default": 0.1
+                },
                 "soft_drivable_bound_margin": {
                   "type": "number",
                   "description": "Keep distance to drivable bound.",
@@ -1207,6 +1217,8 @@
               "required": [
                 "th_avoid_execution",
                 "th_small_shift_length",
+                "th_ego_shift_path_difference",
+                "th_ego_path_lateral_distance",
                 "soft_drivable_bound_margin",
                 "hard_drivable_bound_margin",
                 "max_deviation_from_lane",
