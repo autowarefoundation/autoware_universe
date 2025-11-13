@@ -248,7 +248,7 @@ void MissionPlanner::on_modified_goal(const PoseWithUuidStamped::ConstSharedPtr 
   }
 
   original_route_ = std::nullopt;
-  
+
   change_route(route);
   change_state(RouteState::SET);
   RCLCPP_INFO(get_logger(), "Changed the route with the modified goal");
