@@ -145,7 +145,7 @@ default,0.0,2.0,4.0,6.0,8.0,10.0,12.0,14.0,16.0,18.0,20.0
 
 1. **Custom Actuator Control**: Control non-standard actuators requiring acceleration to be mapped to custom control values
 2. **Simulation Environment**: Convert acceleration to simulator-specific input format
-3. **Testing and Development**: Test control algorithms by converting acceleration commands to visualizable or recordable values
+3. **Testing and Development**: Test control algorithms by converting acceleration commands to visualizing or recordable values
 4. **Sensor Fusion**: Map acceleration to other sensor input ranges
 
 ## Integration Examples

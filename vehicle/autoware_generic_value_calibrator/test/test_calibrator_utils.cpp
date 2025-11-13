@@ -36,7 +36,7 @@
  * - Map consistency/monotonicity checks
  * - RLS (Recursive Least Squares) update algorithm
  *
- * @note Most functions in GenericValueCalibrator are private and require ROS2 node context.
+ * @note Most functions in GenericValueCalibrator are private and require ROS 2 node context.
  *       These tests use lambda functions to mirror the private function logic for testing.
  *       For full node behavior, consider using FakeTestNode for integration tests.
  *

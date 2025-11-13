@@ -87,23 +87,19 @@ The calibrator supports flexible input value ranges through parameters. You can 
 
 1. **Value Range**: `value_min`, `value_max`, `value_num`
 
-   - Example: For a custom control signal ranging from -10 to 10:
-
-     ```yaml
-     value_min: -10.0
-     value_max: 10.0
-     value_num: 21 # Creates 21 points from -10 to 10
-     ```
+   ```yaml
+   value_min: -10.0
+   value_max: 10.0
+   value_num: 21 # Creates 21 points from -10 to 10
+   ```
 
 2. **Velocity Range**: `velocity_min`, `velocity_max`, `velocity_num`
 
-   - Example: For high-speed vehicles (0-30 m/s):
-
-     ```yaml
-     velocity_min: 0.0
-     velocity_max: 30.0
-     velocity_num: 16 # Creates 16 points
-     ```
+   ```yaml
+   velocity_min: 0.0
+   velocity_max: 30.0
+   velocity_num: 16 # Creates 16 points
+   ```
 
 **Important**:
 
