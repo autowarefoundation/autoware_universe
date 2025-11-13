@@ -1012,7 +1012,6 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   stop_pose_ = utils::insert_feasible_stop_point(
     stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
     parameters_->maximum_jerk_for_stop, stop_reason);
-  status_.stop_pose = stop_pose_;
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
@@ -1142,29 +1141,34 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
 
   if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return getCurrentPath();
 
-  if (status_.stop_pose && status_.prev_stop_path_after_approval) {
-    // Delete stop point if conditions are met
-    if (status_.is_safe_dynamic_objects && isStopped()) {
-      status_.stop_pose = std::nullopt;
-    } else {  // update the stop pose if it goes behind the current ego pose
-      const double previous_stop_distance = autoware::motion_utils::calcSignedArcLength(
-        status_.prev_stop_path_after_approval->points,
-        planner_data_->self_odometry->pose.pose.position, status_.stop_pose->pose.position);
-      if (previous_stop_distance < 0.0) {
-        const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
-          status_.prev_stop_path_after_approval->points, 0UL,
-          planner_data_->self_odometry->pose.pose.position);
-        status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(getCurrentPath());
-        status_.stop_pose->pose =
-          utils::insertStopPoint(ego_arc_length, *status_.prev_stop_path_after_approval).point.pose;
-      }
-    }
-    stop_pose_ = status_.stop_pose;
+  if (!stop_pose_) {
+    status_.prev_stop_path_after_approval = nullptr;
+  }
+
+  if (stop_pose_ && status_.prev_stop_path_after_approval) {
     update_rtc_status(
       status_.prev_stop_path_after_approval->points,
       planner_data_->self_odometry->pose.pose.position, status_.pull_out_path.start_pose.position,
-      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects,
-      tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects);
+
+    // Delete stop point if conditions are met
+    if (status_.is_safe_dynamic_objects && isStopped()) {
+      stop_pose_ = std::nullopt;
+      status_.prev_stop_path_after_approval = nullptr;
+      return getCurrentPath();
+    }
+    // update the stop pose if it goes behind the current ego pose
+    const double previous_stop_distance = autoware::motion_utils::calcSignedArcLength(
+      status_.prev_stop_path_after_approval->points,
+      planner_data_->self_odometry->pose.pose.position, stop_pose_->pose.position);
+    if (previous_stop_distance < 0.0) {
+      const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
+        status_.prev_stop_path_after_approval->points, 0UL,
+        planner_data_->self_odometry->pose.pose.position);
+      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(getCurrentPath());
+      stop_pose_->pose =
+        utils::insertStopPoint(ego_arc_length, *status_.prev_stop_path_after_approval).point.pose;
+    }
     return *status_.prev_stop_path_after_approval;
   }
 
@@ -1185,11 +1189,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
 
     RCLCPP_DEBUG_THROTTLE(
       getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
-
-    status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
   }
-
-  status_.stop_pose = stop_pose_;
 
   update_rtc_status(
     current_path.points, planner_data_->self_odometry->pose.pose.position,
@@ -2334,7 +2334,7 @@ void StartPlannerModule::logPullOutStatus(rclcpp::Logger::Level log_level) const
     status_.prev_is_safe_dynamic_objects ? "true" : "false");
   logFunc("  Driving Forward: %s", status_.driving_forward ? "true" : "false");
   logFunc("  Backward Driving Complete: %s", status_.backward_driving_complete ? "true" : "false");
-  logFunc("  Has Stop Pose: %s", status_.stop_pose ? "true" : "false");
+  logFunc("  Has Stop Pose: %s", stop_pose_ ? "true" : "false");
 
   logFunc("[Module State]");
   logFunc("  isActivated: %s", isActivated() ? "true" : "false");
