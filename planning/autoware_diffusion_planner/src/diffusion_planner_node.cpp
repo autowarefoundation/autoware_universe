@@ -472,9 +472,14 @@ InputDataMap DiffusionPlanner::create_input_data()
   {
     const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
       map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
-    const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
-      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
+    const auto [lanes_with_z, lanes_speed_limit] =
+      lane_segment_context_->create_tensor_data_from_indices(
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
+    // Remove Z coordinates for network input (33D)
+    const auto lanes =
+      preprocess::LaneSegmentContext::remove_z_coords(lanes_with_z, NUM_SEGMENTS_IN_LANE);
     input_data_map["lanes"] = replicate_for_batch(lanes);
+    input_data_map["lanes_with_z"] = replicate_for_batch(lanes_with_z);  // For debug markers (37D)
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
 
@@ -483,10 +488,15 @@ InputDataMap DiffusionPlanner::create_input_data()
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
         *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
-    const auto [route_lanes, route_lanes_speed_limit] =
+    const auto [route_lanes_with_z, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
+    // Remove Z coordinates for network input (33D)
+    const auto route_lanes =
+      preprocess::LaneSegmentContext::remove_z_coords(route_lanes_with_z, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
+    input_data_map["route_lanes_with_z"] =
+      replicate_for_batch(route_lanes_with_z);  // For debug markers (37D)
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
 
@@ -546,13 +556,14 @@ void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) cons
 {
   if (debug_params_.publish_debug_route) {
     auto route_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["route_lanes"], this->now(), {0.8, 0.8, 0.8, 0.8});
+      ego_to_map_transform_, input_data_map["route_lanes_with_z"], this->now(),
+      {0.8, 0.8, 0.8, 0.8});
     pub_route_marker_->publish(route_markers);
   }
 
   if (debug_params_.publish_debug_map) {
     auto lane_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["lanes"], this->now(), {0.1, 0.1, 0.7, 0.8});
+      ego_to_map_transform_, input_data_map["lanes_with_z"], this->now(), {0.1, 0.1, 0.7, 0.8});
     pub_lane_marker_->publish(lane_markers);
   }
 }
@@ -615,17 +626,12 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   auto ego_current_state = input_data_map["ego_current_state"];
   auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
   auto static_objects = input_data_map["static_objects"];
-  auto lanes_with_z = input_data_map["lanes"];
+  auto lanes = input_data_map["lanes"];
   auto lanes_speed_limit = input_data_map["lanes_speed_limit"];
-  auto route_lanes_with_z = input_data_map["route_lanes"];
+  auto route_lanes = input_data_map["route_lanes"];
   auto route_lanes_speed_limit = input_data_map["route_lanes_speed_limit"];
   auto goal_pose = input_data_map["goal_pose"];
   auto ego_shape = input_data_map["ego_shape"];
-
-  // Remove Z coordinates from lanes and route_lanes for network input
-  auto lanes = preprocess::LaneSegmentContext::remove_z_coords(lanes_with_z, NUM_SEGMENTS_IN_LANE);
-  auto route_lanes =
-    preprocess::LaneSegmentContext::remove_z_coords(route_lanes_with_z, NUM_SEGMENTS_IN_ROUTE);
 
   // Allocate bool array for lane speed limits
   // Note: Using std::vector<uint8_t> instead of std::vector<bool> to ensure contiguous memory
