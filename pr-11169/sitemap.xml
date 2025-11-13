@@ -876,6 +876,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11169/planning/autoware_trajectory_optimizer/docs/kinematic_feasibility_enforcer/</loc>
+         <lastmod>2025-11-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11169/planning/autoware_trajectory_optimizer/docs/qp_smoother/</loc>
          <lastmod>2025-11-13</lastmod>
          <changefreq>daily</changefreq>

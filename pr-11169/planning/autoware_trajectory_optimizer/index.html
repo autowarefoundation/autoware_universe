@@ -14,7 +14,7 @@
         <link rel="prev" href="../autoware_trajectory_modifier/">
       
       
-        <link rel="next" href="docs/qp_smoother/">
+        <link rel="next" href="docs/kinematic_feasibility_enforcer/">
       
       
         
@@ -8496,7 +8496,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    bbox_object_locator
   
 
     
@@ -23064,7 +23064,7 @@
 <td>plugin_names</td>
 <td>array</td>
 <td>List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified.</td>
-<td>['autoware::trajectory_optimizer::plugin::TrajectoryPointFixer', 'autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectoryExtender', 'autoware::trajectory_optimizer::plugin::TrajectoryPointFixer']</td>
+<td>['autoware::trajectory_optimizer::plugin::TrajectoryPointFixer', 'autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer', 'autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother', 'autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer', 'autoware::trajectory_optimizer::plugin::TrajectoryExtender', 'autoware::trajectory_optimizer::plugin::TrajectoryPointFixer']</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23110,11 +23110,39 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.orientation_threshold_deg</td>
+<td>use_kinematic_feasibility_enforcer</td>
+<td>boolean</td>
+<td>Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_point_fixer.resample_close_points</td>
+<td>boolean</td>
+<td>Enable resampling of close proximity points</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>trajectory_point_fixer.min_dist_to_remove_m</td>
 <td>float</td>
-<td>Yaw threshold for removing wrongly oriented points [deg]</td>
-<td>5.0</td>
+<td>Minimum distance threshold for removing close proximity points [m]</td>
+<td>0.01</td>
 <td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_point_fixer.min_dist_to_merge_m</td>
+<td>float</td>
+<td>Minimum distance threshold for merging close proximity points [m]</td>
+<td>0.05</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>trajectory_kinematic_feasibility.max_yaw_rate_rad_s</td>
+<td>float</td>
+<td>Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles.</td>
+<td>0.7</td>
+<td>≥0.1<br>≤2.0</td>
 </tr>
 <tr>
 <td>trajectory_extender.nearest_dist_threshold_m</td>
@@ -23525,13 +23553,13 @@
         
         
           
-          <a href="docs/qp_smoother/" class="md-footer__link md-footer__link--next" aria-label="Next: QP-Based Trajectory Smoother">
+          <a href="docs/kinematic_feasibility_enforcer/" class="md-footer__link md-footer__link--next" aria-label="Next: Ackermann Kinematic Feasibility Enforcer">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                QP-Based Trajectory Smoother
+                Ackermann Kinematic Feasibility Enforcer
               </div>
             </div>
             <div class="md-footer__button md-icon">

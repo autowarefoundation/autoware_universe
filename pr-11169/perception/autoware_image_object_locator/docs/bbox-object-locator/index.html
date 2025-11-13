@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>bbox_object_locator - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#bbox_object_locator" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              bbox_object_locator
             
           </span>
         </div>
@@ -8542,6 +8542,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bbox_object_locator
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -8549,7 +8567,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    bbox_object_locator
   
 
     
@@ -8558,6 +8576,69 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inner Workings / Algorithms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -22977,6 +23058,58 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inner Workings / Algorithms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22995,27 +23128,194 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>perception/autoware_image_object_locator/docs/bbox-object-locator.md</code></p>
-<p><em>KeyError</em>: 'default'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 704, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 14, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
-    params.extend(extract_parameter_info(v["properties"], k + "."))
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 53, in extract_parameter_info
-    param["Default"] = v["default"]
-KeyError: 'default'
-</code></pre></div></div>
+<div><h1 id="bbox_object_locator">bbox_object_locator<a class="headerlink" href="#bbox_object_locator" title="Permanent link">#</a></h1>
+<h2 id="inner-workings-algorithms">Inner Workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>This node produces 3D object detection from a 2D image bounding box (bbox) through the following steps:</p>
+<ol>
+<li>Back-project the bottom-center pixel of a bbox onto the ground plane (<code>z=0</code> in the target coordinate system). This point is used as the object's bottom center.</li>
+<li>Back-project the top-center pixel of the bbox to a point near the one computed in step 1 for height estimation.</li>
+<li>Back-project the bottom-left and bottom-right pixels of the bbox to estimate the object’s width (diameter).</li>
+<li>Use these four points to determine the object’s position and size.</li>
+</ol>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target_frame</td>
+<td>string</td>
+<td>Transform target frame.</td>
+<td>base_link</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.UNKNOWN</td>
+<td>boolean</td>
+<td>If true, objects with the 'UNKNOWN' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.CAR</td>
+<td>boolean</td>
+<td>If true, objects with the 'CAR' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.TRUCK</td>
+<td>boolean</td>
+<td>If true, objects with the 'TRUCK' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.BUS</td>
+<td>boolean</td>
+<td>If true, objects with the 'BUS' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.TRAILER</td>
+<td>boolean</td>
+<td>If true, objects with the 'TRAILER' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.MOTORCYCLE</td>
+<td>boolean</td>
+<td>If true, objects with the 'MOTORCYCLE' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.BICYCLE</td>
+<td>boolean</td>
+<td>If true, objects with the 'BICYCLE' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.PEDESTRIAN</td>
+<td>boolean</td>
+<td>If true, objects with the 'PEDESTRIAN' label will be ignored during processing.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>roi_confidence_threshold</td>
+<td>float</td>
+<td>Threshold value for whether to trust and use the ROI. If the confidence of an ROI is below this value, it will not be used.</td>
+<td>0.8</td>
+<td>≥0.0<br>≤1.0</td>
+</tr>
+<tr>
+<td>roi_truncation_validation.enabled</td>
+<td>array</td>
+<td>Flags to enable validation for each ROI. Must have the same number as the input ROIs.</td>
+<td>[False, False, False, False, False, False, False, False]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>roi_truncation_validation.remove_truncated</td>
+<td>array</td>
+<td>If this is true, the object will be removed when its ROI is evaluated as truncated. Must have the same number as the input ROIs.</td>
+<td>[False, False, False, False, False, False, False, False]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>roi_truncation_validation.image_border_truncation_horizontal_margin_ratio</td>
+<td>float</td>
+<td>Margin ratio used to detect whether the ROI is truncated based on the image width.</td>
+<td>0.0</td>
+<td>≥0.0<br>≤0.5</td>
+</tr>
+<tr>
+<td>roi_truncation_validation.image_border_truncation_vertical_margin_ratio</td>
+<td>float</td>
+<td>Margin ratio used to detect whether the ROI is truncated based on the image height.</td>
+<td>0.0</td>
+<td>≥0.0<br>≤0.5</td>
+</tr>
+<tr>
+<td>detection_max_range</td>
+<td>float</td>
+<td>Maximum detection range. Objects beyond this distance will not be included in the output [m].</td>
+<td>30.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>pseudo_height</td>
+<td>float</td>
+<td>If height was not able to compute, this value will used as pseudo height of a object [m].</td>
+<td>1.5</td>
+<td>≥0.1</td>
+</tr>
+<tr>
+<td>pedestrian_detection_config.width_min</td>
+<td>float</td>
+<td>If the estimated width is smaller than this value, it will be clamped to this value [m].</td>
+<td>0.5</td>
+<td>≥0.3</td>
+</tr>
+<tr>
+<td>pedestrian_detection_config.width_max</td>
+<td>float</td>
+<td>If the estimated width is larger than this value, it will be clamped to this value [m].</td>
+<td>0.8</td>
+<td>≥0.3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input/rois&lt;id&gt;</code></td>
+<td>tier4_perception_msgs::msg::DetectedObjectsWithFeature</td>
+<td><id>'s input ROI</id></td>
+</tr>
+<tr>
+<td><code>input/camera_info&lt;id&gt;</code></td>
+<td>sensor_msgs::msg::CameraInfo</td>
+<td><id>'s camera info</id></td>
+</tr>
+</tbody>
+</table>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>output/rois&lt;id&gt;/objects</code></td>
+<td>autoware_perception_msgs::msg::DetectedObjects</td>
+<td>The object generated from <id>'s 2D ROI</id></td>
+</tr>
+</tbody>
+</table></div>
 
 
 

@@ -8540,7 +8540,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    bbox_object_locator
   
 
     
@@ -23071,17 +23071,472 @@
 </thead>
 <tbody>
 <tr>
-<td>velocity_threshold</td>
-<td>float</td>
-<td>Velocity threshold (in m/s) used to split objects.</td>
-<td>3</td>
+<td>range_calc_frame_id</td>
+<td>string</td>
+<td>Target frame of the calculations.</td>
+<td>base_link</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>range_threshold</td>
+<td>range_calc_offset.x</td>
 <td>float</td>
-<td>Range threshold (in m) used to split objects.</td>
-<td>30</td>
+<td>An offset value for the x-axis in the target frame when calculating the range [m].</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_calc_offset.y</td>
+<td>float</td>
+<td>An offset value for the y-axis in the target frame when calculating the range [m].</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>UNKNOWN.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'UNKNOWN' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>UNKNOWN.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>CAR.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'CAR' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>CAR.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>TRUCK.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'TRUCK' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>TRUCK.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>BUS.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'BUS' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>BUS.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>TRAILER.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'TRAILER' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>TRAILER.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>MOTORCYCLE.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'MOTORCYCLE' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>MOTORCYCLE.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>BICYCLE.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'BICYCLE' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>BICYCLE.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>PEDESTRIAN.publish</td>
+<td>boolean</td>
+<td>If true, objects with the 'PEDESTRIAN' label will be published.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>PEDESTRIAN.min_velocity_threshold</td>
+<td>float</td>
+<td>Minimum velocity threshold for retaining objects [m/s].</td>
+<td>0.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>range_threshold.max_distance</td>
+<td>float</td>
+<td>Maximum distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_distance</td>
+<td>float</td>
+<td>Minimum distance threshold for retaining objects [m].</td>
+<td>30.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_x</td>
+<td>float</td>
+<td>Maximum x-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_x</td>
+<td>float</td>
+<td>Minimum x-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.max_y</td>
+<td>float</td>
+<td>Maximum y-axis distance threshold for retaining objects [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>range_threshold.min_y</td>
+<td>float</td>
+<td>Minimum y-axis distance threshold for retaining objects [m].</td>
+<td>-100.0</td>
 <td>N/A</td>
 </tr>
 </tbody>
