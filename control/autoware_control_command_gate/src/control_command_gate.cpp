@@ -36,13 +36,19 @@ VehicleCmdFilterParam declare_filter_params(rclcpp::Node & node, const std::stri
   VehicleCmdFilterParam p;
   p.vel_lim = node.declare_parameter<double>(ns + "vel_lim");
   p.reference_speed_points = node.declare_parameter<LimitArray>(ns + "reference_speed_points");
-  p.steer_lim = node.declare_parameter<LimitArray>(ns + "steer_lim");
-  p.steer_rate_lim = node.declare_parameter<LimitArray>(ns + "steer_rate_lim");
-  p.lon_acc_lim = node.declare_parameter<LimitArray>(ns + "lon_acc_lim");
-  p.lon_jerk_lim = node.declare_parameter<LimitArray>(ns + "lon_jerk_lim");
-  p.lat_acc_lim = node.declare_parameter<LimitArray>(ns + "lat_acc_lim");
-  p.lat_jerk_lim = node.declare_parameter<LimitArray>(ns + "lat_jerk_lim");
-  p.actual_steer_diff_lim = node.declare_parameter<LimitArray>(ns + "actual_steer_diff_lim");
+  p.lon_acc_lim_for_lon_vel = node.declare_parameter<LimitArray>(ns + "lon_acc_lim_for_lon_vel");
+  p.lon_jerk_lim_for_lon_acc = node.declare_parameter<LimitArray>(ns + "lon_jerk_lim_for_lon_acc");
+  p.lat_acc_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "lat_acc_lim_for_steer_cmd");
+  p.lat_jerk_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "lat_jerk_lim_for_steer_cmd");
+  p.steer_cmd_lim = node.declare_parameter<LimitArray>(ns + "steer_cmd_lim");
+  p.steer_rate_lim_for_steer_cmd =
+    node.declare_parameter<LimitArray>(ns + "steer_rate_lim_for_steer_cmd");
+  p.steer_cmd_diff_lim_from_current_steer =
+    node.declare_parameter<LimitArray>(ns + "steer_cmd_diff_lim_from_current_steer");
+  p.lat_jerk_lim_for_steer_rate =
+    node.declare_parameter<double>(ns + "lat_jerk_lim_for_steer_rate");
   return p;
 }
 
