@@ -60,6 +60,17 @@
         optional:
           name: "pointpainting"
           short_name: "Lpp"
+      # CAMERA - DNN
+      camera_streampetr:
+        flags:
+          can_spawn_new_tracker: true
+          can_trust_existence_probability: true
+          can_trust_extension: true
+          can_trust_classification: true
+          can_trust_orientation: true
+        optional:
+          name: "camera_streampetr"
+          short_name: "Csp"
       # CAMERA-LIDAR
       camera_lidar_fusion:
         flags:
