@@ -40,21 +40,28 @@ inline constexpr int64_t EGO_AGENT_PAST_IDX_SIN = 3;
 // Index for each field
 inline constexpr int64_t X = 0;
 inline constexpr int64_t Y = 1;
-inline constexpr int64_t dX = 2;
-inline constexpr int64_t dY = 3;
-inline constexpr int64_t LB_X = 4;
-inline constexpr int64_t LB_Y = 5;
-inline constexpr int64_t RB_X = 6;
-inline constexpr int64_t RB_Y = 7;
-inline constexpr int64_t TRAFFIC_LIGHT = 8;
-inline constexpr int64_t TRAFFIC_LIGHT_GREEN = 8;
-inline constexpr int64_t TRAFFIC_LIGHT_YELLOW = 9;
-inline constexpr int64_t TRAFFIC_LIGHT_RED = 10;
-inline constexpr int64_t TRAFFIC_LIGHT_WHITE = 11;
-inline constexpr int64_t TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT = 12;
-inline constexpr int64_t LINE_TYPE_LEFT_START = 13;
+inline constexpr int64_t Z = 2;
+inline constexpr int64_t dX = 3;
+inline constexpr int64_t dY = 4;
+inline constexpr int64_t dZ = 5;
+inline constexpr int64_t LB_X = 6;
+inline constexpr int64_t LB_Y = 7;
+inline constexpr int64_t LB_Z = 8;
+inline constexpr int64_t RB_X = 9;
+inline constexpr int64_t RB_Y = 10;
+inline constexpr int64_t RB_Z = 11;
+inline constexpr int64_t TRAFFIC_LIGHT = 12;
+inline constexpr int64_t TRAFFIC_LIGHT_GREEN = 12;
+inline constexpr int64_t TRAFFIC_LIGHT_YELLOW = 13;
+inline constexpr int64_t TRAFFIC_LIGHT_RED = 14;
+inline constexpr int64_t TRAFFIC_LIGHT_WHITE = 15;
+inline constexpr int64_t TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT = 16;
+inline constexpr int64_t LINE_TYPE_LEFT_START = 17;
 inline constexpr int64_t LINE_TYPE_RIGHT_START = LINE_TYPE_LEFT_START + LINE_TYPE_NUM;
 inline constexpr int64_t SEGMENT_POINT_DIM = LINE_TYPE_RIGHT_START + LINE_TYPE_NUM;
+
+// Network input dimension (without Z coordinates)
+inline constexpr int64_t SEGMENT_POINT_DIM_NETWORK = 33;
 
 inline constexpr int64_t INPUT_T = 20;
 inline constexpr int64_t OUTPUT_T = 80;  // Output timestamp number
@@ -69,11 +76,11 @@ inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
 inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
 inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, 5, 10};
 inline constexpr std::array<int64_t, 4> LANES_SHAPE = {
-  1, NUM_SEGMENTS_IN_LANE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
+  1, NUM_SEGMENTS_IN_LANE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM_NETWORK};
 inline constexpr std::array<int64_t, 3> LANES_HAS_SPEED_LIMIT_SHAPE = {1, NUM_SEGMENTS_IN_LANE, 1};
 inline constexpr std::array<int64_t, 3> LANES_SPEED_LIMIT_SHAPE = {1, NUM_SEGMENTS_IN_LANE, 1};
 inline constexpr std::array<int64_t, 4> ROUTE_LANES_SHAPE = {
-  1, NUM_SEGMENTS_IN_ROUTE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
+  1, NUM_SEGMENTS_IN_ROUTE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM_NETWORK};
 inline constexpr std::array<int64_t, 3> ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE = {
   1, NUM_SEGMENTS_IN_ROUTE, 1};
 inline constexpr std::array<int64_t, 3> ROUTE_LANES_SPEED_LIMIT_SHAPE = {

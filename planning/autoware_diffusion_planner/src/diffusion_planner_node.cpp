@@ -615,12 +615,17 @@ std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_
   auto ego_current_state = input_data_map["ego_current_state"];
   auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
   auto static_objects = input_data_map["static_objects"];
-  auto lanes = input_data_map["lanes"];
+  auto lanes_with_z = input_data_map["lanes"];
   auto lanes_speed_limit = input_data_map["lanes_speed_limit"];
-  auto route_lanes = input_data_map["route_lanes"];
+  auto route_lanes_with_z = input_data_map["route_lanes"];
   auto route_lanes_speed_limit = input_data_map["route_lanes_speed_limit"];
   auto goal_pose = input_data_map["goal_pose"];
   auto ego_shape = input_data_map["ego_shape"];
+
+  // Remove Z coordinates from lanes and route_lanes for network input
+  auto lanes = preprocess::LaneSegmentContext::remove_z_coords(lanes_with_z, NUM_SEGMENTS_IN_LANE);
+  auto route_lanes =
+    preprocess::LaneSegmentContext::remove_z_coords(route_lanes_with_z, NUM_SEGMENTS_IN_ROUTE);
 
   // Allocate bool array for lane speed limits
   // Note: Using std::vector<uint8_t> instead of std::vector<bool> to ensure contiguous memory

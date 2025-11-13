@@ -150,13 +150,16 @@ MarkerArray create_lane_marker(
     float total_norm = 0.0f;
     for (int64_t p = 0; p < P; ++p) {
       const Eigen::Vector3d center_in_base_link(
-        lane_vector[P * D * l + p * D + X], lane_vector[P * D * l + p * D + Y], 0.0);
+        lane_vector[P * D * l + p * D + X], lane_vector[P * D * l + p * D + Y],
+        lane_vector[P * D * l + p * D + Z]);
       const Eigen::Vector3d left_bound_in_base_link(
         lane_vector[P * D * l + p * D + LB_X] + center_in_base_link(0),
-        lane_vector[P * D * l + p * D + LB_Y] + center_in_base_link(1), 0.0);
+        lane_vector[P * D * l + p * D + LB_Y] + center_in_base_link(1),
+        lane_vector[P * D * l + p * D + LB_Z] + center_in_base_link(2));
       const Eigen::Vector3d right_bound_in_base_link(
         lane_vector[P * D * l + p * D + RB_X] + center_in_base_link(0),
-        lane_vector[P * D * l + p * D + RB_Y] + center_in_base_link(1), 0.0);
+        lane_vector[P * D * l + p * D + RB_Y] + center_in_base_link(1),
+        lane_vector[P * D * l + p * D + RB_Z] + center_in_base_link(2));
 
       const double norm = center_in_base_link.head<2>().norm();
       total_norm += norm;
