@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/planning_evaluator/metrics/metrics_utils.hpp"
+
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
-#include "autoware_utils/geometry/geometry.hpp"
+
+#include <boost/geometry.hpp>
 
 namespace planning_diagnostics
 {
@@ -22,10 +24,7 @@ namespace metrics
 {
 namespace utils
 {
-using autoware_planning_msgs::msg::Trajectory;
-using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::calc_distance2d;
-using geometry_msgs::msg::Pose;
+namespace bg = boost::geometry;
 
 size_t getIndexAfterDistance(const Trajectory & traj, const size_t curr_id, const double distance)
 {
@@ -34,7 +33,7 @@ size_t getIndexAfterDistance(const Trajectory & traj, const size_t curr_id, cons
 
   size_t target_id = curr_id;
   for (size_t traj_id = curr_id + 1; traj_id < traj.points.size(); ++traj_id) {
-    double current_distance = calc_distance2d(traj.points.at(traj_id), curr_p);
+    double current_distance = autoware_utils::calc_distance2d(traj.points.at(traj_id), curr_p);
     if (current_distance >= distance) {
       target_id = traj_id;
       break;
@@ -89,6 +88,23 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
   }
 
   return dist;
+}
+
+double calc_ego_object_distance(
+  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
+  const PredictedObject & object)
+{
+  // create ego polygon
+  const autoware_utils::LinearRing2d ego_footprint =
+    autoware_utils::transform_vector(local_ego_footprint, autoware_utils::pose2transform(ego_pose));
+  autoware_utils::Polygon2d ego_polygon;
+  ego_polygon.outer() = ego_footprint;
+  bg::correct(ego_polygon);
+
+  // create object polygon
+  const auto object_polygon = autoware_utils::to_polygon2d(object);
+
+  return bg::distance(ego_polygon, object_polygon);
 }
 }  // namespace utils
 }  // namespace metrics

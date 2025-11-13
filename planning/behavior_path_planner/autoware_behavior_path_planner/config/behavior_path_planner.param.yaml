@@ -24,6 +24,7 @@
     turn_signal_search_time: 3.0
     turn_signal_shift_length_threshold: 0.3
     turn_signal_remaining_shift_length_threshold: 0.1
+    turn_signal_remaining_distance_to_bound_threshold: 1.3 # Distance from ego vehicle's front edge to the far-side boundary of the target merging lane. The turn signal will be turned off when the value is less than the threshold.
     turn_signal_on_swerving: true
 
     enable_akima_spline_first: false
