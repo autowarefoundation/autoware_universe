@@ -31,26 +31,20 @@ This rule-based geometric algorithms applies object-type-specific shape fitting 
 The shape fitting algorithm pipeline consists of following three stages.
 
 1. Shape Estimation
-
    - Vehicle Objects (CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE):
-
      - **L-shape Fitting Algorithm (`fitLShape` function)**:
-
        - Implements search-based rectangle fitting from IV2017 paper by Zhang et al.
 
        - **Angle Optimization**:
-
          - Default search range: 0 to 90 degrees for full angular sweep
          - Reference yaw constraint: +/-search_angle_range around reference when available
          - Two optimization methods: Standard iterative search or Boost-based Brent optimization
 
        - **Closeness Criterion**: Evaluates fitting quality using Algorithm 4 from referenced paper
-
          - Distance thresholds: d_min (0.01m squared), d_max (0.16m squared)
          - Point-to-boundary distance calculation for quality assessment
 
        - **3D Bounding Box Construction**:
-
          - Projects points onto orthogonal axes e1 and e2
          - Calculates intersection points to determine center and dimensions
          - Height derived from point cloud Z-range with minimum epsilon (0.001m)
@@ -58,16 +52,13 @@ The shape fitting algorithm pipeline consists of following three stages.
        - **Output Validation**: Ensures minimum dimensions to prevent degenerate boxes
 
    - Pedestrian (PEDESTRIAN):
-
      - Cylinder shape estimation using cv::minEnclosingCircle
 
    - Other/Unknown Objects:
      - Convex hull shape estimation using cv::convexHull
 
 2. Filtering
-
    - Vehicle Type-specific Filtering:
-
      - Car Filter: Vehicle size validity verification
      - Truck Filter: Truck-specific shape constraints
      - Bus Filter: Bus-specific dimension checks
@@ -78,20 +69,15 @@ The shape fitting algorithm pipeline consists of following three stages.
    - Exclusion of invalid estimation results
 
 3. Corrector
-
    - **Reference Information-based Correction**:
-
      - Orientation correction using reference yaw information
      - Dimension correction using reference shape size (minimum/fixed value modes)
 
    - **Shape Correction Algorithm (`correctWithDefaultValue` function)**:
-
      - **Purpose**: Rule-based bounding box correction using default vehicle dimensions when estimated shapes violate physical constraints
 
      - **Correction Vector Application**:
-
        - Computes correction vector based on conditions by correctWithDefaultValue Function
-
          - ![correctWithDefaultValueFunction](resource/correctWithDefaultValue.svg)
 
        - Updates shape dimensions: `shape.dimensions += correction_vector * 2.0`
@@ -100,7 +86,6 @@ The shape fitting algorithm pipeline consists of following three stages.
      - **Orientation Normalization**: Ensures longest dimension aligns with x-axis (90 degree rotation if needed)
 
    - **Vehicle Type-specific Correctors**:
-
      - Vehicle Corrector: General vehicle correction
      - Dedicated correction logic for each vehicle type
 
