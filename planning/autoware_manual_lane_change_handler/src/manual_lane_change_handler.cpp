@@ -108,11 +108,7 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
       sort_primitives_left_to_right(route_handler, segment.preferred_primitive, segment.primitives);
   });
 
-  current_route_ = std::make_shared<LaneletRoute>(route);
-  planner_->updateRoute(*current_route_);
-
-  if (msg->uuid != current_route_->uuid) {
-    RCLCPP_WARN(logger_, "Resetting shift number due to route UUID change.");
+  if (!current_route_) {
     shift_number_ = 0;
     autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
     shift_msg.stamp = get_clock()->now();
@@ -120,6 +116,19 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
 
     pub_shift_number_->publish(shift_msg);
   }
+
+  if (current_route_ && msg->uuid != current_route_->uuid) {
+    RCLCPP_INFO(logger_, "Resetting shift number due to route UUID change.");
+    shift_number_ = 0;
+    autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
+    shift_msg.stamp = get_clock()->now();
+    shift_msg.data = shift_number_;
+
+    pub_shift_number_->publish(shift_msg);
+  }
+
+  current_route_ = std::make_shared<LaneletRoute>(route);
+  planner_->updateRoute(*current_route_);
 }
 
 void ManualLaneChangeHandler::set_preferred_lane(
@@ -341,7 +350,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
   }
 
   if (override_direction == DIRECTION::MANUAL_LEFT) {
-    shift_number_ += 1;
+    shift_number_ -= 1;
 
     autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
     shift_msg.stamp = get_clock()->now();
@@ -349,7 +358,7 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
     pub_shift_number_->publish(shift_msg);
   } else {
-    shift_number_ -= 1;
+    shift_number_ += 1;
 
     autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
     shift_msg.stamp = get_clock()->now();
