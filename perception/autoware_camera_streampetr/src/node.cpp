@@ -18,9 +18,8 @@
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
-
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/convert.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/convert.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -169,8 +168,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
-    declare_parameter<bool>("is_distorted_image"),
-    declare_parameter<double>("downsample_factor", 1.0));
+    declare_parameter<bool>("is_distorted_image"));
 
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;

@@ -23,7 +23,6 @@
 
 #include <Eigen/Dense>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/route_handler/route_handler.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
@@ -85,11 +84,11 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
-using autoware::route_handler::RouteHandler;
 using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;
@@ -116,10 +115,13 @@ struct DiffusionPlannerParams
   bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
+  std::vector<double> temperature_list;
+  int64_t velocity_smoothing_window;
+  double stopping_threshold;
 };
 struct DiffusionPlannerDebugParams
 {
-  bool publish_debug_route{false};
+  bool publish_debug_route{true};
   bool publish_debug_map{false};
 };
 
@@ -152,16 +154,12 @@ struct DiffusionPlannerDebugParams
  * - do_inference: Run inference on input data and return predictions.
  * - on_parameter: Callback for dynamic parameter updates.
  * - create_input_data: Prepare input data for inference.
- * - get_ego_centric_agent_data: Extract ego-centric agent data from tracked objects.
+ * - get_ego_centric_neighbor_agent_data: Extract ego-centric agent data from tracked objects.
  * - create_trajectory: Convert predictions to a trajectory in map coordinates.
  * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
  *
  * @section Internal State
  * @brief
- * - route_handler_: Handles route-related operations.
- * - transforms_: Stores transformation matrices between map and ego frames.
- * - ego_kinematic_state_: Current odometry state of the ego vehicle.
- * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
  * - Lanelet map and routing members: route_ptr_, routing_graph_ptr_,
@@ -175,6 +173,8 @@ class DiffusionPlanner : public rclcpp::Node
 public:
   explicit DiffusionPlanner(const rclcpp::NodeOptions & options);
   ~DiffusionPlanner();
+
+private:
   /**
    * @brief Initialize and declare node parameters.
    */
@@ -242,9 +242,8 @@ public:
   InputDataMap create_input_data();
 
   // preprocessing
-  std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
-  AgentData get_ego_centric_agent_data(
+  Eigen::Matrix4d ego_to_map_transform_;
+  AgentData get_ego_centric_neighbor_agent_data(
     const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
 
   /**
@@ -254,16 +253,14 @@ public:
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
 
-  // current state
-  Odometry ego_kinematic_state_;
-
   // ego history for ego_agent_past
-  std::deque<Odometry> ego_history_;
+  std::deque<Pose> ego_history_;
 
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;
@@ -281,7 +278,9 @@ public:
   cudaStream_t stream_{nullptr};
 
   // Model input data
+  nav_msgs::msg::Odometry ego_kinematic_state_;
   std::optional<AgentData> agent_data_{std::nullopt};
+  std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;

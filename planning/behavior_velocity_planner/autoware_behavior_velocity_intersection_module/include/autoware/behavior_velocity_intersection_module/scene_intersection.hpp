@@ -63,7 +63,6 @@ public:
       double max_accel;
       double max_jerk;
       double delay_response_time;
-      bool enable_pass_judge_before_default_stopline;
     } common;
 
     struct TurnDirection
@@ -163,11 +162,6 @@ public:
       double denoise_kernel;
       double attention_lane_crop_curvature_threshold;
       double attention_lane_curvature_calculation_ds;
-      struct CreepDuringPeeking
-      {
-        bool enable;
-        double creep_velocity;
-      } creep_during_peeking;
       double peeking_offset;
       double occlusion_required_clearance_distance;
       std::vector<double> possible_object_bbox;
@@ -217,10 +211,8 @@ public:
     std::optional<geometry_msgs::msg::Pose> collision_stop_wall_pose{std::nullopt};
     std::optional<geometry_msgs::msg::Pose> occlusion_stop_wall_pose{std::nullopt};
     std::optional<geometry_msgs::msg::Pose> occlusion_first_stop_wall_pose{std::nullopt};
-    std::optional<geometry_msgs::msg::Pose> first_pass_judge_wall_pose{std::nullopt};
-    std::optional<geometry_msgs::msg::Pose> second_pass_judge_wall_pose{std::nullopt};
-    bool passed_first_pass_judge{false};
-    bool passed_second_pass_judge{false};
+    std::optional<geometry_msgs::msg::Pose> pass_judge_wall_pose{std::nullopt};
+    bool passed_pass_judge{false};
     std::optional<geometry_msgs::msg::Pose> absence_traffic_light_creep_wall{std::nullopt};
     std::optional<geometry_msgs::msg::Pose> too_late_stop_wall_pose{std::nullopt};
 
@@ -228,7 +220,6 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> occlusion_attention_area{std::nullopt};
     std::optional<std::vector<lanelet::CompoundPolygon3d>> adjacent_area{std::nullopt};
     std::optional<lanelet::CompoundPolygon3d> first_attention_area{std::nullopt};
-    std::optional<lanelet::CompoundPolygon3d> second_attention_area{std::nullopt};
     std::optional<lanelet::CompoundPolygon3d> ego_lane{std::nullopt};
     std::optional<geometry_msgs::msg::Polygon> stuck_vehicle_detect_area{std::nullopt};
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
@@ -282,17 +273,11 @@ public:
    */
   struct PassJudgeStatus
   {
-    //! true if ego is over the 1st pass judge line
-    const bool is_over_1st_pass_judge;
+    //! true if ego is over the pass judge line
+    const bool is_over_pass_judge;
 
-    //! true if second_attention_lane exists and ego is over the 2nd pass judge line
-    const std::optional<bool> is_over_2nd_pass_judge;
-
-    //! true only when ego passed 1st pass judge line safely for the first time
-    const bool safely_passed_1st_judge_line;
-
-    //! true only when ego passed 2nd pass judge line safely for the first time
-    const bool safely_passed_2nd_judge_line;
+    //! true only when ego passed pass judge line safely for the first time
+    const bool safely_passed_judge_line;
   };
 
   /**
@@ -300,14 +285,9 @@ public:
    */
   struct CollisionStatus
   {
-    enum BlameType {
-      BLAME_AT_FIRST_PASS_JUDGE,
-      BLAME_AT_SECOND_PASS_JUDGE,
-    };
     const bool collision_detected;
-    const CollisionInterval::LanePosition collision_position;
-    const std::vector<std::pair<BlameType, std::shared_ptr<ObjectInfo>>> too_late_detect_objects;
-    const std::vector<std::pair<BlameType, std::shared_ptr<ObjectInfo>>> misjudge_objects;
+    const std::vector<std::shared_ptr<ObjectInfo>> too_late_detect_objects;
+    const std::vector<std::shared_ptr<ObjectInfo>> misjudge_objects;
   };
 
   IntersectionModule(
@@ -425,23 +405,30 @@ private:
    * following variables are state variables that depends on how the vehicle passed the intersection
    * @{
    */
+  IntersectionStopLines::PreviousStopPose previous_stop_pose_{};
+
   //! if true, this module never commands to STOP anymore
   bool is_permanent_go_{false};
 
   //! for checking if ego is over the pass judge lines because previously the situation was SAFE
   DecisionResult prev_decision_result_{InternalError{""}};
 
-  //! flag if ego passed the 1st_pass_judge_line while peeking. If this is true, 1st_pass_judge_line
+  //! flag if ego passed the pass_judge_line while peeking. If this is true, pass_judge_line
   //! is treated as the same position as occlusion_peeking_stopline
-  bool passed_1st_judge_line_while_peeking_{false};
+  bool passed_judge_line_while_peeking_{false};
 
-  //! save the time and ego position when ego passed the 1st/2nd_pass_judge_line with safe
+  //! save the time and ego position when ego passed the pass_judge_line with safe
   //! decision. If collision is expected after these variables are non-null, then it is the fault of
   //! past perception failure at these time.
-  std::optional<std::pair<rclcpp::Time, geometry_msgs::msg::Pose>>
-    safely_passed_1st_judge_line_time_{std::nullopt};
-  std::optional<std::pair<rclcpp::Time, geometry_msgs::msg::Pose>>
-    safely_passed_2nd_judge_line_time_{std::nullopt};
+  std::optional<std::pair<rclcpp::Time, geometry_msgs::msg::Pose>> safely_passed_judge_line_time_{
+    std::nullopt};
+
+  /**
+   * @brief this function is used to check if target stop position is feasible
+   */
+  bool can_smoothly_stop_at(
+    const PathWithLaneId & path, const size_t closest_idx, const size_t target_stop_idx) const;
+
   /** @}*/
 
 private:
@@ -474,18 +461,6 @@ private:
 
   //! save previous priority level to detect change from NotPrioritized to Prioritized
   TrafficPrioritizedLevel previous_prioritized_level_{TrafficPrioritizedLevel::NOT_PRIORITIZED};
-  /** @} */
-
-private:
-  /**
-   ***********************************************************
-   ***********************************************************
-   ***********************************************************
-   * @defgroup stuck-variables [var] stuck detection
-   * @{
-   */
-  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
-  bool was_stopping_for_stuck_{false};
   /** @} */
 
 private:
@@ -605,8 +580,8 @@ private:
     lanelet::ConstLanelet assigned_lanelet,
     const lanelet::CompoundPolygon3d & first_conflicting_area,
     const lanelet::ConstLanelet & first_attention_lane,
-    const std::optional<lanelet::CompoundPolygon3d> & second_attention_area_opt,
     const InterpolatedPathInfo & interpolated_path_info,
+    const IntersectionStopLines::PreviousStopPose & previous_stop_pose,
     autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
 
   /**
@@ -757,8 +732,8 @@ private:
    */
   /**
    * @brief check if ego is already over the pass judge line
-   * @return if ego is over both 1st/2nd pass judge lines, return InternalError, else return
-   * (is_over_1st_pass_judge, is_over_2nd_pass_judge)
+   * @return if ego is over both pass judge lines, return InternalError, else return
+   * (is_over_pass_judge)
    * @attention this function has access to value() of intersection_stoplines.default_stopline,
    * intersection_stoplines.occlusion_stopline
    */
@@ -791,7 +766,7 @@ private:
   void updateObjectInfoManagerCollision(
     const PathLanelets & path_lanelets, const TimeDistanceArray & time_distance_array,
     const TrafficPrioritizedLevel & traffic_prioritized_level,
-    const bool passed_1st_judge_line_first_time, const bool passed_2nd_judge_line_first_time,
+    const bool passed_judge_line_first_time,
     autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array);
 
   void cutPredictPathWithinDuration(
@@ -807,8 +782,7 @@ private:
    * intersection_stoplines.occlusion_peeking_stopline
    */
   std::optional<NonOccludedCollisionStop> isGreenPseudoCollisionStatus(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
-    const size_t collision_stopline_idx,
+    const size_t closest_idx, const size_t collision_stopline_idx,
     const IntersectionStopLines & intersection_stoplines) const;
 
   /**
@@ -816,10 +790,8 @@ private:
    * blame past perception fault
    */
   std::string generateDetectionBlameDiagnosis(
-    const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-      too_late_detect_objects,
-    const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-      misjudge_objects) const;
+    const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
+    const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects) const;
 
   /**
    * @brief generate the message explaining how much ego should accelerate to avoid future dangerous
@@ -828,17 +800,13 @@ private:
   std::string generateEgoRiskEvasiveDiagnosis(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
     const TimeDistanceArray & ego_time_distance_array,
-    const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-      too_late_detect_objects,
-    const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
-      misjudge_objects) const;
+    const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
+    const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects) const;
 
   /**
    * @brief return if collision is detected and the collision position
    */
-  CollisionStatus detectCollision(
-    const bool is_over_1st_pass_judge_line,
-    const std::optional<bool> is_over_2nd_pass_judge_line) const;
+  CollisionStatus detectCollision(const bool is_over_pass_judge_line) const;
 
   std::optional<size_t> checkAngleForTargetLanelets(
     const geometry_msgs::msg::Pose & pose, const lanelet::ConstLanelets & target_lanelets,
@@ -863,11 +831,6 @@ private:
     ego_ttc_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr
     object_ttc_pub_;
-
-  template <class T>
-  std::pair<size_t, geometry_msgs::msg::Pose> holdStopPoseIfNecessary(
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const size_t current_collision_stopline_idx) const;
 };
 
 }  // namespace autoware::behavior_velocity_planner

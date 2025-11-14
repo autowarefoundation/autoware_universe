@@ -202,7 +202,7 @@ struct AgentHistory
    * @param current_time The current timestamp.
    * @param object The object info.
    */
-  void update(double current_time, TrackedObject & object);
+  void update(double current_time, const TrackedObject & object);
   /**
    * @brief Update history with input state and latest time.
    *

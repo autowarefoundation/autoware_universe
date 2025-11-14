@@ -41,7 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -59,18 +59,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Get parameters
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
-  std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
+  ego_frame_id_ = declare_parameter<std::string>("ego_frame_id");
   enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
-
-  // ROS interface - Publisher
-  tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-    "output/objects", rclcpp::QoS{1});
+  publish_merged_objects_ = declare_parameter<bool>("publish_merged_objects");
 
   // Odometry manager
   odometry_ =
-    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id, enable_odometry_uncertainty);
+    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id_, enable_odometry_uncertainty);
 
   // ROS interface - Input channels
   // define input channel parameters
@@ -143,6 +140,27 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   input_manager_->setTriggerFunction(
     std::bind(&MultiObjectTracker::onTrigger, this));  // Set trigger function
 
+  // ROS interface - Publisher
+  tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "output/objects", rclcpp::QoS{1});
+  if (publish_merged_objects_) {
+    // if the input is multi-channel, export fused merged (detected) objects
+    merged_objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+      "output/merged_objects", rclcpp::QoS{1});
+    for (const auto & channel : input_channels_config_) {
+      // check if merged_objects_pub_ is in topics of input channel
+      if (channel.input_topic == merged_objects_pub_->get_topic_name()) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Merged objects publisher topic is set in input channel: %s, topic: %s"
+          ", disabling merged objects publisher.",
+          channel.long_name.c_str(), channel.input_topic.c_str());
+        publish_merged_objects_ = false;
+        merged_objects_pub_ = nullptr;
+        break;
+      }
+    }
+  }
   // Create ROS time based timer.
   // If the delay compensation is enabled, the timer is used to publish the output at the correct
   // time.
@@ -313,14 +331,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
     time_keeper_ =
-      std::make_shared<autoware_utils::TimeKeeper>(detailed_processing_time_publisher_);
+      std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
     processor_->setTimeKeeper(time_keeper_);
   }
 }
@@ -446,11 +464,7 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   debugger_->startPublishTime(this->now());
-  const auto subscriber_count = tracked_objects_pub_->get_subscription_count() +
-                                tracked_objects_pub_->get_intra_process_subscription_count();
-  if (subscriber_count < 1) {
-    return;
-  }
+
   // Create output msg
   autoware_perception_msgs::msg::TrackedObjects output_msg;
   output_msg.header.frame_id = world_frame_id_;
@@ -458,13 +472,23 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   processor_->getTrackedObjects(object_time, output_msg);
 
   // Publish
-  {
-    std::unique_ptr<ScopedTimeTrack> st_pub_ptr;
-    if (time_keeper_)
-      st_pub_ptr = std::make_unique<ScopedTimeTrack>("tracker_publish", *time_keeper_);
-    tracked_objects_pub_->publish(output_msg);
+  tracked_objects_pub_->publish(output_msg);
+
+  if (publish_merged_objects_) {
+    const auto tf_base_to_world = odometry_->getTransform(time);
+    if (tf_base_to_world) {
+      autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
+      processor_->getMergedObjects(time, *tf_base_to_world, merged_output_msg);
+      merged_output_msg.header.frame_id = ego_frame_id_;
+      merged_objects_pub_->publish(merged_output_msg);
+    } else {
+      RCLCPP_WARN(
+        this->get_logger(), "No odometry information available at the publishing time: %.9f",
+        time.seconds());
+    }
   }
 
+  // Publish debug messages
   {
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
     if (time_keeper_)

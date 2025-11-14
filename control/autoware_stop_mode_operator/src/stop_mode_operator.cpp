@@ -46,9 +46,6 @@ StopModeOperator::StopModeOperator(const rclcpp::NodeOptions & options)
 
   const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
-
-  publish_turn_indicators_command();
-  publish_hazard_lights_command();
 }
 
 void StopModeOperator::on_timer()
@@ -57,6 +54,8 @@ void StopModeOperator::on_timer()
 
   publish_control_command();
   publish_gear_command();
+  publish_turn_indicators_command();
+  publish_hazard_lights_command();
 }
 
 void StopModeOperator::publish_control_command()
@@ -82,13 +81,10 @@ void StopModeOperator::publish_gear_command()
     parking = parking_route_state && parking_vehicle_stop;
   }
 
-  if (last_parking_ != parking) {
-    GearCommand gear;
-    gear.stamp = now();
-    gear.command = parking ? GearCommand::PARK : GearCommand::NONE;
-    pub_gear_->publish(gear);
-  }
-  last_parking_ = parking;
+  GearCommand gear;
+  gear.stamp = now();
+  gear.command = parking ? GearCommand::PARK : GearCommand::NONE;
+  pub_gear_->publish(gear);
 }
 
 void StopModeOperator::publish_turn_indicators_command()
