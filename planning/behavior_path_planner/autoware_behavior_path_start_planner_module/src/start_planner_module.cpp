@@ -863,10 +863,6 @@ BehaviorModuleOutput StartPlannerModule::plan()
   path_candidate_ = std::make_shared<PathWithLaneId>(getFullPath());
   path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
-  if (!status_.prev_approved_path && status_.driving_forward) {
-    status_.prev_approved_path = std::make_shared<PathWithLaneId>(output.path);
-  }
-
   setDrivableAreaInfo(output);
   set_longitudinal_planning_factor(output.path);
 
@@ -1139,13 +1135,17 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     incrementPathIndex();
   }
 
-  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return getCurrentPath();
+  auto current_path = getCurrentPath();
+
+  if (!status_.prev_approved_path && status_.driving_forward && !current_path.points.empty()) {
+    status_.prev_approved_path = std::make_shared<PathWithLaneId>(current_path);
+  }
+
+  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return current_path;
 
   if (!stop_pose_) {
     status_.prev_stop_path_after_approval = nullptr;
   }
-
-  auto current_path = getCurrentPath();
 
   if (stop_pose_ && status_.prev_stop_path_after_approval) {
     update_rtc_status(
@@ -1167,8 +1167,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
       const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
         status_.prev_stop_path_after_approval->points, 0UL,
         planner_data_->self_odometry->pose.pose.position);
-      stop_pose_->pose =
-        utils::insertStopPoint(ego_arc_length, current_path).point.pose;
+      stop_pose_->pose = utils::insertStopPoint(ego_arc_length, current_path).point.pose;
 
       status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
     }
