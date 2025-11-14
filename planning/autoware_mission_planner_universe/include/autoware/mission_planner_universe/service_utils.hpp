@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MISSION_PLANNER__SERVICE_UTILS_HPP_
-#define MISSION_PLANNER__SERVICE_UTILS_HPP_
+#ifndef AUTOWARE__MISSION_PLANNER_UNIVERSE__SERVICE_UTILS_HPP_
+#define AUTOWARE__MISSION_PLANNER_UNIVERSE__SERVICE_UTILS_HPP_
 
 #include <autoware_utils/system/stop_watch.hpp>
 
@@ -82,4 +82,4 @@ ResponseStatus sync_call(T & client, Req req)
 
 }  // namespace service_utils
 
-#endif  // MISSION_PLANNER__SERVICE_UTILS_HPP_
+#endif  // AUTOWARE__MISSION_PLANNER_UNIVERSE__SERVICE_UTILS_HPP_
