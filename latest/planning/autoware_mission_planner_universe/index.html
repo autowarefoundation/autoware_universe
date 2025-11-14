@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_mission_planner_universe/">
       
       
-        <link rel="prev" href="../autoware_hazard_lights_selector/">
+        <link rel="prev" href="../autoware_manual_lane_change_handler/">
       
       
         <link rel="next" href="../autoware_path_optimizer/">
@@ -23118,6 +23118,11 @@ It distributes route requests and planning results according to current MRM oper
 <td>route request with pose waypoints.</td>
 </tr>
 <tr>
+<td><code>/planning/mission_planning/mission_planner/set_preferred_primitive</code></td>
+<td>tier4_planning_msgs/srv/SetPreferredPrimitive</td>
+<td>preferred-lane change request</td>
+</tr>
+<tr>
 <td><code>/planning/mission_planning/route_selector/main/clear_route</code></td>
 <td>tier4_planning_msgs/srv/ClearRoute</td>
 <td>main route clear request</td>
@@ -23289,6 +23294,8 @@ If the ego vehicle is not on autonomous driving state, the safety checking proce
 <h5 id="goal-modification">Goal modification<a class="headerlink" href="#goal-modification" title="Permanent link">#</a></h5>
 <p>This is a goal change to pull over, avoid parked vehicles, and so on by a planning component. If the modified goal is outside the calculated route, a reroute is required. This goal modification is executed by checking the local environment and path safety as the vehicle actually approaches the destination. And this modification is allowed for both normal_route and mrm_route.
 The new route generated here is sent to the AD API so that it can also be referenced by the application. Note, however, that the specifications here are subject to change in the future.</p>
+<h4 id="setting-preferred-lane">Setting Preferred Lane<a class="headerlink" href="#setting-preferred-lane" title="Permanent link">#</a></h4>
+<p>The manual lane change service allows external modification to the preferred-lanes of the current-route.</p>
 <h4 id="rerouting-limitations">Rerouting Limitations<a class="headerlink" href="#rerouting-limitations" title="Permanent link">#</a></h4>
 <ul>
 <li>The safety judgment of rerouting is not guaranteed to the level of trajectory or control. Therefore, the distance to the reroute change must be large for the safety.</li>
@@ -23334,7 +23341,7 @@ The new route generated here is sent to the AD API so that it can also be refere
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_hazard_lights_selector/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autoware Hazard Lights Selector">
+          <a href="../autoware_manual_lane_change_handler/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Manual Lane Change Handler">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23344,7 +23351,7 @@ The new route generated here is sent to the AD API so that it can also be refere
                 Previous
               </span>
               <div class="md-ellipsis">
-                Autoware Hazard Lights Selector
+                Manual Lane Change Handler
               </div>
             </div>
           </a>
