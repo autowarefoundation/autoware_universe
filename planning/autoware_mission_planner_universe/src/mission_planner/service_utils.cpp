@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "service_utils.hpp"
+#include <autoware/mission_planner_universe/service_utils.hpp>
 
 #include <string>
 

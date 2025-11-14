@@ -14,7 +14,7 @@
 
 #include "route_selector.hpp"
 
-#include "service_utils.hpp"
+#include <autoware/mission_planner_universe/service_utils.hpp>
 
 #include <array>
 #include <memory>
