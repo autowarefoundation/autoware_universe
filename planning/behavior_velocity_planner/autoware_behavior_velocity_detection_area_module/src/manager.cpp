@@ -41,12 +41,6 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
   planner_param_.use_dead_line = get_or_declare_parameter<bool>(node, ns + ".use_dead_line");
   planner_param_.dead_line_margin =
     get_or_declare_parameter<double>(node, ns + ".dead_line_margin");
-  planner_param_.use_max_acceleration =
-    get_or_declare_parameter<bool>(node, ns + ".use_max_acceleration");
-  planner_param_.max_acceleration =
-    get_or_declare_parameter<double>(node, ns + ".max_acceleration");
-  planner_param_.use_pass_judge_line =
-    get_or_declare_parameter<bool>(node, ns + ".use_pass_judge_line");
   planner_param_.state_clear_time =
     get_or_declare_parameter<double>(node, ns + ".state_clear_time");
   planner_param_.hold_stop_margin_distance =
@@ -57,6 +51,14 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<bool>(node, ns + ".suppress_pass_judge_when_stopping");
   planner_param_.enable_detected_obstacle_logging =
     get_or_declare_parameter<bool>(node, ns + ".enable_detected_obstacle_logging");
+
+  // Unified unstoppable situation handling parameters
+  planner_param_.unstoppable_policy =
+    get_or_declare_parameter<std::string>(node, ns + ".unstoppable_policy");
+  planner_param_.max_deceleration =
+    get_or_declare_parameter<double>(node, ns + ".max_deceleration");
+  planner_param_.delay_response_time =
+    get_or_declare_parameter<double>(node, ns + ".delay_response_time");
 
   // Target filtering parameters
   planner_param_.target_filtering.pointcloud =
