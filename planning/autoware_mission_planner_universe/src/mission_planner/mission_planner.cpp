@@ -405,10 +405,7 @@ void MissionPlanner::on_set_preferred_primitive(
           "The preferred_primitive at index {} does not belong to the lanelet segment.", i));
     }
 
-    segment.preferred_primitive = preferred_primitive;
-  }
-
-  original_route_ = std::nullopt;
+    segment.preferred_primitive = p
 
   change_route(current_route);
   res->status.message = "Successfully set preferred primitive.";
