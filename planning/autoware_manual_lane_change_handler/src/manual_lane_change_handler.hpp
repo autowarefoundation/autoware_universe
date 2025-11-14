@@ -95,6 +95,8 @@ private:
   rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Int32Stamped>::SharedPtr
+    pub_shift_number_;
 
   pluginlib::ClassLoader<PlannerPlugin> plugin_loader_;
   std::shared_ptr<PlannerPlugin> planner_;
@@ -104,6 +106,8 @@ private:
   std::optional<LaneletRoute::ConstSharedPtr> original_route_;
   rclcpp::Client<autoware_planning_msgs::srv::SetPreferredPrimitive>::SharedPtr client_;
   rclcpp::Logger logger_;
+
+  int8_t shift_number_{0};
 };
 
 }  // namespace autoware::manual_lane_change_handler

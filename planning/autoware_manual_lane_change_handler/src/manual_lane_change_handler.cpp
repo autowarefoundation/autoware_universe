@@ -109,6 +109,11 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
 
   current_route_ = std::make_shared<LaneletRoute>(route);
   planner_->updateRoute(*current_route_);
+
+  shift_number_ = 0;
+
+  pub_shift_number_->publish(
+    autoware_internal_debug_msgs::msg::Int32Stamped{get_clock()->now(), shift_number_});
 }
 
 void ManualLaneChangeHandler::set_preferred_lane(
@@ -187,6 +192,10 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
                                                                      : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
     std::vector<autoware_planning_msgs::msg::LaneletPrimitive> preferred_primitives;
+    shift_number_ = 0;
+
+    pub_shift_number_->publish(
+      autoware_internal_debug_msgs::msg::Int32Stamped{get_clock()->now(), shift_number_});
 
     return {{}, true, "Manual lane selection to AUTO is commanded and executed successfully."};
   }
@@ -294,6 +303,10 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       // shift to the primitive on the left
       route_updated = true;
       current_segment.preferred_primitive = current_segment.primitives.at(current_index - 1);
+      shift_number_ += 1;
+      pub_shift_number_->publish(
+        autoware_internal_debug_msgs::msg::Int32Stamped{get_clock()->now(), shift_number_});
+
       RCLCPP_INFO_STREAM(
         logger_, "Shifted left from "
                    << current_segment.primitives.at(current_index).id
@@ -304,6 +317,10 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       // shift to the primitive on the right
       route_updated = true;
       current_segment.preferred_primitive = current_segment.primitives.at(current_index + 1);
+      shift_number_ -= 1;
+      pub_shift_number_->publish(
+        autoware_internal_debug_msgs::msg::Int32Stamped{get_clock()->now(), shift_number_});
+
       RCLCPP_INFO_STREAM(
         logger_, "Shifted right from "
                    << current_segment.primitives.at(current_index).id
