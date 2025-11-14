@@ -6,3 +6,17 @@
     default_size_x: 5.0
     default_size_y: 2.0
     default_size_z: 2.0
+
+    # classification remapping from RADAR to Perception
+    # Keys:   RADAR labels  (autoware_sensing_msgs::msg::RadarClassification)
+    # Values: Perception labels (autoware_perception_msgs::msg::ObjectClassification)
+    classification_remap:
+      UNKNOWN: UNKNOWN
+      CAR: CAR
+      TRUCK: TRUCK
+      # temporary remap: radar tends to misclassify far cars
+      MOTORCYCLE: CAR
+      BICYCLE: CAR
+      PEDESTRIAN: PEDESTRIAN
+      ANIMAL: ANIMAL
+      HAZARD: UNKNOWN
