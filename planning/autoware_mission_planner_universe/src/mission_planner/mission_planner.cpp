@@ -408,8 +408,6 @@ void MissionPlanner::on_set_preferred_primitive(
     segment.preferred_primitive = preferred_primitive;
   }
 
-  original_route_ = std::nullopt;
-
   change_route(current_route);
   res->status.message = "Successfully set preferred primitive.";
   res->status.success = true;

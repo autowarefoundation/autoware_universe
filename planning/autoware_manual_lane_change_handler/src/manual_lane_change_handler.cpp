@@ -27,7 +27,6 @@ ManualLaneChangeHandler::ManualLaneChangeHandler(const rclcpp::NodeOptions & opt
   plugin_loader_(
     "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   current_route_(nullptr),
-  original_route_{std::nullopt},
   logger_(rclcpp::get_logger("ManualLaneChangeHandler"))
 {
   planner_ = plugin_loader_.createSharedInstance(
@@ -51,6 +50,8 @@ ManualLaneChangeHandler::ManualLaneChangeHandler(const rclcpp::NodeOptions & opt
 
   pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
+  pub_shift_number_ = this->create_publisher<autoware_internal_debug_msgs::msg::Int32Stamped>(
+    "~/debug/shift_number", 1);
 }
 
 std::vector<autoware_planning_msgs::msg::LaneletPrimitive>
@@ -109,6 +110,16 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
 
   current_route_ = std::make_shared<LaneletRoute>(route);
   planner_->updateRoute(*current_route_);
+
+  if (msg->uuid != current_route_->uuid) {
+    RCLCPP_WARN(logger_, "Resetting shift number due to route UUID change.");
+    shift_number_ = 0;
+    autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
+    shift_msg.stamp = get_clock()->now();
+    shift_msg.data = shift_number_;
+
+    pub_shift_number_->publish(shift_msg);
+  }
 }
 
 void ManualLaneChangeHandler::set_preferred_lane(
@@ -187,6 +198,13 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
                                                                      : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
     std::vector<autoware_planning_msgs::msg::LaneletPrimitive> preferred_primitives;
+    shift_number_ = 0;
+
+    autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
+    shift_msg.stamp = get_clock()->now();
+    shift_msg.data = shift_number_;
+
+    pub_shift_number_->publish(shift_msg);
 
     return {{}, true, "Manual lane selection to AUTO is commanded and executed successfully."};
   }
@@ -321,6 +339,25 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
                                                          : std::string("unknown")) +
         " is not possible for the current preferred primitive configuration."};
   }
+
+  if (override_direction == DIRECTION::MANUAL_LEFT) {
+    shift_number_ += 1;
+
+    autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
+    shift_msg.stamp = get_clock()->now();
+    shift_msg.data = shift_number_;
+
+    pub_shift_number_->publish(shift_msg);
+  } else {
+    shift_number_ -= 1;
+
+    autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
+    shift_msg.stamp = get_clock()->now();
+    shift_msg.data = shift_number_;
+
+    pub_shift_number_->publish(shift_msg);
+  }
+
   std::vector<LaneletPrimitive> preferred_primitives;
   preferred_primitives.reserve(route.segments.size());
   std::transform(
