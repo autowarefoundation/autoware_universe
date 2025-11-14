@@ -74,6 +74,7 @@ void smooth_trajectory_with_elastic_band(
     return;
   }
   traj_points = eb_path_smoother_ptr->smoothTrajectory(traj_points, current_odometry.pose.pose);
+  eb_path_smoother_ptr->resetPreviousData();
 }
 
 void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min_dist_to_remove_m)
