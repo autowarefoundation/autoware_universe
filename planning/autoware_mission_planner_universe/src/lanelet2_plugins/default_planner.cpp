@@ -29,6 +29,7 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/difference.hpp>
@@ -38,7 +39,6 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/geometry/Lanelet.h>
-#include <tf2/utils.h>
 
 #include <limits>
 #include <vector>
@@ -116,7 +116,8 @@ void DefaultPlanner::map_callback(const LaneletMapBin::ConstSharedPtr msg)
   is_graph_ready_ = true;
 }
 
-PlannerPlugin::MarkerArray DefaultPlanner::visualize(const LaneletRoute & route) const
+PlannerPlugin::MarkerArray DefaultPlanner::visualize(
+  const LaneletRoute & route, float goal_lanelet_transparency) const
 {
   lanelet::ConstLanelets route_lanelets;
   lanelet::ConstLanelets end_lanelets;
@@ -139,7 +140,8 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(const LaneletRoute & route)
   const std_msgs::msg::ColorRGBA cl_ll_borders =
     autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.999);
   const std_msgs::msg::ColorRGBA cl_end = autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
-  const std_msgs::msg::ColorRGBA cl_goal = autoware_utils::create_marker_color(0.2, 0.4, 0.4, 0.05);
+  const std_msgs::msg::ColorRGBA cl_goal =
+    autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
   visualization_msgs::msg::MarkerArray route_marker_array;
   insert_marker_array(
@@ -345,6 +347,7 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
   for (std::size_t i = 1; i < points.size(); i++) {
     const auto start_check_point = points.at(i - 1);
     const auto goal_check_point = points.at(i);
+
     lanelet::ConstLanelets path_lanelets;
     if (!route_handler_.planPathLaneletsBetweenCheckpoints(
           start_check_point, goal_check_point, &path_lanelets, param_.consider_no_drivable_lanes)) {
