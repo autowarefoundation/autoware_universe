@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
 * fix(crosswalk): set object classification label before making decision (`#11504 <https://github.com/autowarefoundation/autoware_universe/issues/11504>`_)

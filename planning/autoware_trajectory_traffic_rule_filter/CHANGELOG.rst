@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_traffic_rule_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat: add traffic rule validation for generator-selector framework (`#11426 <https://github.com/autowarefoundation/autoware_universe/issues/11426>`_)
   * bring packages from new planning framework

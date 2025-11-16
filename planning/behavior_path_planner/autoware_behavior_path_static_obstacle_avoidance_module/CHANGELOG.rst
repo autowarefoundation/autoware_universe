@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(staitc_obstacle_avoidance): fix crashes due to an exception (`#11591 <https://github.com/autowarefoundation/autoware_universe/issues/11591>`_)
   fix exception

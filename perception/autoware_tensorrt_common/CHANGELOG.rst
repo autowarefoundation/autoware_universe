@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(tensorrt_common): resolve error message of clang (`#11434 <https://github.com/autowarefoundation/autoware_universe/issues/11434>`_)
   fix: resolve error message by clang

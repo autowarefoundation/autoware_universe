@@ -2,8 +2,8 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
 * feat(autoware_camera_streampetr): cuda based undistortion with rectification   (`#11420 <https://github.com/autowarefoundation/autoware_universe/issues/11420>`_)

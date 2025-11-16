@@ -2,8 +2,8 @@
 Changelog for package yabloc_pose_initializer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(autoware_lanelet2_extension): remove redundant autoware_lanelet2_extension depend from packages (`#11492 <https://github.com/autowarefoundation/autoware_universe/issues/11492>`_)
 * feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in localization component (`#11388 <https://github.com/autowarefoundation/autoware_universe/issues/11388>`_)

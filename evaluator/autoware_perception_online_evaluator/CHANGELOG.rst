@@ -2,8 +2,8 @@
 Changelog for package autoware_perception_online_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * perf(perception_online_evaluator): reduce TF loolup fail logging level. (`#11227 <https://github.com/autowarefoundation/autoware_universe/issues/11227>`_)
   * perf(PerceptionOnlineEvaluator): reduce TF loolup fail logging level.

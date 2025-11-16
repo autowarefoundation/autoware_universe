@@ -2,8 +2,8 @@
 Changelog for package autoware_ptv3
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(autoware_ptv3): implemented an inference node for ptv3 using tensorrt (`#10600 <https://github.com/autowarefoundation/autoware_universe/issues/10600>`_)
   * feat: implemented an inference node for ptv3 using tensorrt

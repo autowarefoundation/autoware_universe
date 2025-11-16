@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(radar_objects_adapter): enable to class remap and relocate bike labels into car (`#11570 <https://github.com/autowarefoundation/autoware_universe/issues/11570>`_)
   * feat: add radar class remap function to radar remap

@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(autoware_traffic_light_arbiter): properly (bilaterally) treat priority (`#11514 <https://github.com/autowarefoundation/autoware_universe/issues/11514>`_)
 * feat(autoware_traffic_light_arbiter): priority switch (`#11494 <https://github.com/autowarefoundation/autoware_universe/issues/11494>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_diagnostic_graph_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(diagnostic_graph_utils): use raw level for leaf node (`#11327 <https://github.com/autowarefoundation/autoware_universe/issues/11327>`_)
   Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>

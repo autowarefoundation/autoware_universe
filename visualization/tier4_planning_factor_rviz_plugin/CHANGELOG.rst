@@ -2,8 +2,8 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(planning_factor_rviz_plugin): add wall visualization of UNKNOWN behavior (`#11344 <https://github.com/autowarefoundation/autoware_universe/issues/11344>`_)
   add wall visualization of UNKNOWN behavior

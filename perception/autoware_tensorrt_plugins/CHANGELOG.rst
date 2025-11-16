@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(autoware_tensorrt_plugins): install cuda_ops to be available when autoware_tensorrt_plugins installs (`#11354 <https://github.com/autowarefoundation/autoware_universe/issues/11354>`_)
   * fix(cmake): install cuda_ops to be available when autoware_tensorrt_plugins installs

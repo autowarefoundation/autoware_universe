@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_road_user_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
 * docs(road_user_stop): add parameter docs (`#11539 <https://github.com/autowarefoundation/autoware_universe/issues/11539>`_)

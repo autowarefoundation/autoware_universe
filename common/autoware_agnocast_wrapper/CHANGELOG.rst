@@ -2,8 +2,8 @@
 Changelog for package autoware_agnocast_wrapper
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(agnocast_wrapper): fix const rvalue reference binding error in AgnocastPollingSubscriber (`#11425 <https://github.com/autowarefoundation/autoware_universe/issues/11425>`_)
   fix AgnocastPollingSubscriber in agnocast_wrapper

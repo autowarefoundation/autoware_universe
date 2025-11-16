@@ -2,8 +2,8 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(autoware_crosswalk_traffic_light_estimator): remove old traffic light groups (`#11536 <https://github.com/autowarefoundation/autoware_universe/issues/11536>`_)
   * remove old traffic light groups

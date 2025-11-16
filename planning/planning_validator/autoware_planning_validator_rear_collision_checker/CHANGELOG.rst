@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(rear_collision_checker): correct deviation judgment logic from current driving lane (`#11286 <https://github.com/autowarefoundation/autoware_universe/issues/11286>`_)
   fix: correct deviation judgment logic from current driving lane

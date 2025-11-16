@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(autoware_command_mode_decider): fix operation mode timeout to manual (`#11379 <https://github.com/autowarefoundation/autoware_universe/issues/11379>`_)
   fix operation mode timeout to manual

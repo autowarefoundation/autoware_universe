@@ -2,8 +2,8 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(vehicle_cmd_gate): use throttle log (`#10424 <https://github.com/autowarefoundation/autoware_universe/issues/10424>`_)
   * feat(vehicle_cmd_gate): use throttle log

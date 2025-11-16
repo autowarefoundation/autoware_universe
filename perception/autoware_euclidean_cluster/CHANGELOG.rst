@@ -2,8 +2,8 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(autoware_euclidean_cluster): created the schema file, updated the readme file and deleted the default parameter in node files code (`#10085 <https://github.com/autowarefoundation/autoware_universe/issues/10085>`_)
   * feat(autoware_euclidean_cluster): Created the schema file, updated the readme file and deleted the default paramter in node files code

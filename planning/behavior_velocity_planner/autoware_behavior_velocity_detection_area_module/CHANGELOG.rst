@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(detection_area): implement unified handling for unstoppable situations (`#11638 <https://github.com/autowarefoundation/autoware_universe/issues/11638>`_)
   * feat(detection_area): implement unified handling for unstoppable situations

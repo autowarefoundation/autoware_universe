@@ -2,8 +2,8 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(net_monitor): autoware_system_monitor should report ERROR as the status summary for Network Usage when a connection is down (`#11488 <https://github.com/autowarefoundation/autoware_universe/issues/11488>`_)
   * If any network on the "devices:" list in the "net_monitor.param.yaml" configuration file is disconnected or unavailable,

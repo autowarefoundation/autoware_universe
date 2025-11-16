@@ -2,8 +2,8 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(run_out, processing_time_checker): support processing_time for run_out and update processing time list (`#11515 <https://github.com/autowarefoundation/autoware_universe/issues/11515>`_)
   update processing time list and support run_out

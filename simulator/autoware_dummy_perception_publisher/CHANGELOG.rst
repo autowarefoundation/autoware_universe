@@ -2,8 +2,8 @@
 Changelog for package autoware_dummy_perception_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
 * feat(autoware_dummy_perception_publisher): dummy object predicted path functionality (`#11011 <https://github.com/autowarefoundation/autoware_universe/issues/11011>`_)

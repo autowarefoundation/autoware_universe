@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * docs(boundary_departure): update documentation (`#11229 <https://github.com/autowarefoundation/autoware_universe/issues/11229>`_)
   * docs(boundary_departure): update documentation

@@ -2,8 +2,8 @@
 Changelog for package autoware_carla_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix: carla interface config and docs (`#11571 <https://github.com/autowarefoundation/autoware_universe/issues/11571>`_)
   * fix(autoware_carla_interface): correct config file installation paths

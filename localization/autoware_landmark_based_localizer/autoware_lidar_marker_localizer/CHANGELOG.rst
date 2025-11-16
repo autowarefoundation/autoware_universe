@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_marker_localizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(autoware_lidar_marker_localizer): fix deprecated autoware_utils header (`#10514 <https://github.com/autowarefoundation/autoware_universe/issues/10514>`_)
   * fix autoware_utils header

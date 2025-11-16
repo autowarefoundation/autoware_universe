@@ -2,8 +2,8 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
 * fix(map_based_prediction): check fence for default crosswalk user path (`#11568 <https://github.com/autowarefoundation/autoware_universe/issues/11568>`_)

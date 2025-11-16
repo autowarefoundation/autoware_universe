@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(autoware_trajectory_smoother): reset eb smoother after each iter (`#11643 <https://github.com/autowarefoundation/autoware_universe/issues/11643>`_)
 * fix(trajectory_optimizer): set_max_velocity (`#11642 <https://github.com/autowarefoundation/autoware_universe/issues/11642>`_)

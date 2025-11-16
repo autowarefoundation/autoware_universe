@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(planning_validator): update QoS settings for operational mode state subscriber (`#11401 <https://github.com/autowarefoundation/autoware_universe/issues/11401>`_)
 * fix: use the correct jerk computation formula (`#11306 <https://github.com/autowarefoundation/autoware_universe/issues/11306>`_)

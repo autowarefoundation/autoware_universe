@@ -2,8 +2,8 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(image_object_locator): add near range camera VRU detector to perception pipeline (`#11622 <https://github.com/autowarefoundation/autoware_universe/issues/11622>`_)
   add near range camera VRU detector to perception pipeline

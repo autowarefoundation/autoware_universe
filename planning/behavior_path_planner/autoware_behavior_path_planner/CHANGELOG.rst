@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker (`#11519 <https://github.com/autowarefoundation/autoware_universe/issues/11519>`_)
   * feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker

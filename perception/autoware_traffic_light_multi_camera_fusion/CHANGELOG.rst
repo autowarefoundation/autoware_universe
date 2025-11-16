@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_multi_camera_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(traffic_light_camera_fusion): change group fusion algorithm (`#11297 <https://github.com/autowarefoundation/autoware_universe/issues/11297>`_)
   * fix(traffic_light_camera_fusion): change group fusion algorithm

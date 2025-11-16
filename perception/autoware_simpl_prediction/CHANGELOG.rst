@@ -2,8 +2,8 @@
 Changelog for package autoware_simpl_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * docs(simpl_prediction): modify incorrect parameter schema file (`#11422 <https://github.com/autowarefoundation/autoware_universe/issues/11422>`_)
   * docs: modify incorrect parameter schema file

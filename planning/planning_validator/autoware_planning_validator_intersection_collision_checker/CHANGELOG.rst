@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_intersection_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(intersection_collision_checker): use traffic light context for intersection collision detection (`#11238 <https://github.com/autowarefoundation/autoware_universe/issues/11238>`_)
   * fix: subscribe traffic singals

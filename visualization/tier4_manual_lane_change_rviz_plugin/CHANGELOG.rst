@@ -2,8 +2,8 @@
 Changelog for package tier4_manual_lane_change_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(mission_planner): manual lane selection (`#11169 <https://github.com/autowarefoundation/autoware_universe/issues/11169>`_)
   * manual lane change

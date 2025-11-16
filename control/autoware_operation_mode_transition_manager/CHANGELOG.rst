@@ -2,8 +2,8 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(operation_mode_transition_manager): modify the autonomous mode condition (`#11603 <https://github.com/autowarefoundation/autoware_universe/issues/11603>`_)
   * fix(operation_mode_transition_manager): modify the autonomous mode condition

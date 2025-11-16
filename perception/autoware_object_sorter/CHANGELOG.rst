@@ -2,8 +2,8 @@
 Changelog for package autoware_object_sorter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat(object_sorter): add per-axis min-max range filter for each class label (`#11563 <https://github.com/autowarefoundation/autoware_universe/issues/11563>`_)
   * add min max detection range and class settings

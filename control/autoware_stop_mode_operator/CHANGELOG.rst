@@ -2,8 +2,8 @@
 Changelog for package autoware_stop_mode_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * feat: add turn_indicator and hazard_light publishing to stop_mode's on_timer (`#11444 <https://github.com/autowarefoundation/autoware_universe/issues/11444>`_)
   * feat: add turn_indicator and hazard_light publishing to stop_mode's on_timer

@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-16)
+-------------------
 * Merge remote-tracking branch 'origin/main' to humble
 * fix(obstacle_slow_down): fix left/right judgment, update of deceleration constraint calculation (`#11590 <https://github.com/autowarefoundation/autoware_universe/issues/11590>`_)
 * feat(obstacle_slow_down): update velocity calclation (`#11502 <https://github.com/autowarefoundation/autoware_universe/issues/11502>`_)
