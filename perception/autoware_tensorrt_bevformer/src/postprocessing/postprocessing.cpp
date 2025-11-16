@@ -38,7 +38,8 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::tensorrt_bevformer {
+namespace autoware::tensorrt_bevformer
+{
 
 PostProcessor::PostProcessor(
   int nb_dec, int num_query, int cls_out_channels, int bbox_dims, int bev_h, int bev_w,
