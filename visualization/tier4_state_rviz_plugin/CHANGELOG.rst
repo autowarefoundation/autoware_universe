@@ -2,6 +2,16 @@
 Changelog for package tier4_state_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* chore(tier4_state_rviz_plugin): change ClearRoute button activation rule (`#11598 <https://github.com/autowarefoundation/autoware_universe/issues/11598>`_)
+  feat(autoware_state_panel): allow route button activation for ARRIVED state
+* Contributors: Autumn60, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(tier4_state_rviz_plugin): save & load config of VelocitySteeringFactorsPanel (`#10026 <https://github.com/autowarefoundation/autoware_universe/issues/10026>`_)

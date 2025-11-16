@@ -2,6 +2,27 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* fix(rear_collision_checker): correct deviation judgment logic from current driving lane (`#11286 <https://github.com/autowarefoundation/autoware_universe/issues/11286>`_)
+  fix: correct deviation judgment logic from current driving lane
+* fix(rear_collision_checker): collision detection not triggered when no stop point before conflict area (`#11179 <https://github.com/autowarefoundation/autoware_universe/issues/11179>`_)
+  * fix: collision detection not triggered when no stop point before conflict area
+  * fix: incorrect distance calculation accuracy
+  * chore: add doxygen
+  ---------
+* feat(rear_collision_checker): add parameter to make collision detection behavior configurable (`#11151 <https://github.com/autowarefoundation/autoware_universe/issues/11151>`_)
+  * feat: add parameter to control diag output when stopping before conflict area is impossible
+  * feat: add lane-end yaw threshold for blind spot collision detection
+  * fix: base on review comment
+  * docs: README
+  ---------
+* Contributors: Satoshi OTA, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(rear_collision_checker): support selecting safety metric from TTC or RSS (`#11072 <https://github.com/autowarefoundation/autoware_universe/issues/11072>`_)

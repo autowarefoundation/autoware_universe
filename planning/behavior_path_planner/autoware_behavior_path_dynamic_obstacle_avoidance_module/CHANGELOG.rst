@@ -2,6 +2,15 @@
 Changelog for package autoware_behavior_path_dynamic_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* fix(autoware_behavior_path_dynamic_obstacle_avoidance_module): remove unused function (`#11191 <https://github.com/autowarefoundation/autoware_universe/issues/11191>`_)
+* Contributors: Ryuta Kambe, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

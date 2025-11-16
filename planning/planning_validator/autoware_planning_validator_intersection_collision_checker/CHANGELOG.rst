@@ -2,6 +2,29 @@
 Changelog for package autoware_planning_validator_intersection_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* fix(intersection_collision_checker): use traffic light context for intersection collision detection (`#11238 <https://github.com/autowarefoundation/autoware_universe/issues/11238>`_)
+  * fix: subscribe traffic singals
+  * fix: add flag to check traffic signal
+  * fix: change traffic light check logic
+  * fix: use node clock
+  * fix: amber
+  * docs: validator
+  * docs: icc
+  * docs: icc
+  * docs: icc
+  * fix: typo
+  * docs: validator
+  * fix: add param
+  ---------
+* fix(planning_validator): remove unused function (`#11176 <https://github.com/autowarefoundation/autoware_universe/issues/11176>`_)
+* Contributors: Ryuta Kambe, Satoshi OTA, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(planning_validator): refactor planning validator configuration and error handling (`#11081 <https://github.com/autowarefoundation/autoware_universe/issues/11081>`_)

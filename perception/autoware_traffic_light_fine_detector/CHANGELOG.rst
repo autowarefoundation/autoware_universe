@@ -2,6 +2,24 @@
 Changelog for package autoware_traffic_light_fine_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* refactor(autoware_traffic_light_fine_detector): split utils and add test (`#10365 <https://github.com/autowarefoundation/autoware_universe/issues/10365>`_)
+  * split and add test
+  * add file
+  * style(pre-commit): autofix
+  * refactor
+  * refactor
+  * fix name
+  * chore
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masato Saeki, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

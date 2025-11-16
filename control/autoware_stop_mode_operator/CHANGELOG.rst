@@ -2,6 +2,24 @@
 Changelog for package autoware_stop_mode_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* feat: add turn_indicator and hazard_light publishing to stop_mode's on_timer (`#11444 <https://github.com/autowarefoundation/autoware_universe/issues/11444>`_)
+  * feat: add turn_indicator and hazard_light publishing to stop_mode's on_timer
+  * chore: remove publishing hazard and turn_indicator from constructor
+  ---------
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* fix(stop_mode_operator): fix stop condition (`#11466 <https://github.com/autowarefoundation/autoware_universe/issues/11466>`_)
+* feat(stop_mode_operator): shift gear to park on stop mode (`#11257 <https://github.com/autowarefoundation/autoware_universe/issues/11257>`_)
+  * add auto parking
+  * add readme
+  ---------
+* Contributors: SHtokuda, Takagi, Isamu, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

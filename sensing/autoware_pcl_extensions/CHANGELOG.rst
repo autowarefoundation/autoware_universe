@@ -2,6 +2,19 @@
 Changelog for package autoware_pcl_extensions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* chore(pcl_extensions): add maintainer (`#11377 <https://github.com/autowarefoundation/autoware_universe/issues/11377>`_)
+  * chore: remove maintainer from pcl_extensions
+  * chore: replace maintainer
+  of pcl_extensions
+  ---------
+* Contributors: Motz, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

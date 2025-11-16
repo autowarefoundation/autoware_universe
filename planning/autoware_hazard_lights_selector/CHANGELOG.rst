@@ -2,6 +2,19 @@
 Changelog for package autoware_hazard_lights_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' to humble
+* feat(planning, perception): replace wall_timer with generic timer (`#11005 <https://github.com/autowarefoundation/autoware_universe/issues/11005>`_)
+  * feat(planning, perception): replace wall_timer with generic timer
+  * use rclcpp::create_timer
+  * remove period_ns
+  ---------
+* Contributors: Mamoru Sobue, mitsudome-r
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 
