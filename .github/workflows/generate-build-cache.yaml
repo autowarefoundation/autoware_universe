@@ -7,7 +7,7 @@ on:
 
 jobs:
   generate-cache:
-    runs-on: "['self-hosted', 'Linux', 'X64']"
+    runs-on: [self-hosted, Linux, X64]
     container: ghcr.io/autowarefoundation/autoware:universe-devel
     env:
       rosdistro: humble
