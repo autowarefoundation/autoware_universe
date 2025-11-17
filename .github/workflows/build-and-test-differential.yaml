@@ -28,6 +28,10 @@ on:
         required: false
         default: ""
         type: string
+      free-disks-space:
+        default: false
+        required: false
+        type: boolean
     secrets:
       codecov-token:
         required: true
@@ -55,6 +59,10 @@ jobs:
       - name: Show disk space before the tasks
         run: df -h
         shell: bash
+
+      - name: Free disks space
+        if: ${{ inputs.free-disks-space }}
+        uses: ./.github/actions/free-disk-space/action.yaml
 
       - name: Show machine specs
         run: lscpu && free -h
