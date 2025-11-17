@@ -48,6 +48,7 @@ jobs:
     with:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
+      free-disks-space: true
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
