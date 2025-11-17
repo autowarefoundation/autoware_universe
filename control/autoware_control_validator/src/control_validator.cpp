@@ -187,8 +187,10 @@ void VelocityValidator::validate(
     res.is_over_velocity = is_over_velocity;
   }
 
-  res.vehicle_vel = over_velocity_v_vel;
-  res.target_vel = over_velocity_t_vel;
+  res.vehicle_vel = v_vel;
+  res.target_vel = t_vel;
+  res.over_velocity_vehicle_vel = over_velocity_v_vel;
+  res.over_velocity_target_vel = over_velocity_t_vel;
 }
 
 void OverrunValidator::validate(
