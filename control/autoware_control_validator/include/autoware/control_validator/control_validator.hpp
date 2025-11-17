@@ -161,9 +161,9 @@ public:
     vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
     target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
     over_velocity_vehicle_vel_lpf{
-      get_or_declare_parameter<double>(node, "over_velocity.vehicle_vel_lpf_gain")},
+      get_or_declare_parameter<double>(node, "over_velocity.vel_lpf_gain")},
     over_velocity_target_vel_lpf{
-      get_or_declare_parameter<double>(node, "over_velocity.target_vel_lpf_gain")} {};
+      get_or_declare_parameter<double>(node, "over_velocity.vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
