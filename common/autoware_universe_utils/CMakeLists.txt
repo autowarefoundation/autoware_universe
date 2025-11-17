@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_universe_utils)
 
+# test for ci/valkey-test
+
 option(BUILD_EXAMPLES "Build examples" OFF)
 
 find_package(autoware_cmake REQUIRED)
