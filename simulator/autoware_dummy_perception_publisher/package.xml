@@ -22,6 +22,7 @@
   <test_depend>autoware_lint_common</test_depend>
 
   <depend>autoware_perception_msgs</depend>
+  <depend>autoware_point_types</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_rclcpp</depend>
