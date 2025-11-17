@@ -158,8 +158,8 @@ public:
       get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
     hold_velocity_error_until_stop{
       get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
-    rolling_back_vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    rolling_back_target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
+    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
+    target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
     over_velocity_vehicle_vel_lpf{
       get_or_declare_parameter<double>(node, "over_velocity_validator.vehicle_vel_lpf_gain")},
     over_velocity_target_vel_lpf{
@@ -174,8 +174,8 @@ private:
   const double over_velocity_ratio_th;
   const double over_velocity_offset_th;
   const bool hold_velocity_error_until_stop;
-  autoware::signal_processing::LowpassFilter1d rolling_back_vehicle_vel_lpf;
-  autoware::signal_processing::LowpassFilter1d rolling_back_target_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d target_vel_lpf;
   autoware::signal_processing::LowpassFilter1d over_velocity_vehicle_vel_lpf;
   autoware::signal_processing::LowpassFilter1d over_velocity_target_vel_lpf;
 };
