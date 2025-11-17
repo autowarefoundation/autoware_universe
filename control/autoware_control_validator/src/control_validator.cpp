@@ -171,7 +171,7 @@ void VelocityValidator::validate(
   }
 
   // For over_velocity validation, use the longer time constant
-  // (over_velocity_validator.vel_lpf_gain)
+  // (over_velocity.vel_lpf_gain)
   const double over_velocity_v_vel =
     over_velocity_vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
   const double over_velocity_t_vel = over_velocity_target_vel_lpf.filter(

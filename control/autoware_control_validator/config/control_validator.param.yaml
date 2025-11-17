@@ -27,6 +27,6 @@
     vel_lpf_gain: 0.9 # Time constant 0.33 (used by LateralJerkValidator and OverrunValidator)
     hold_velocity_error_until_stop: true
 
-    over_velocity_validator:
+    over_velocity:
       vehicle_vel_lpf_gain: 0.985 # Time constant 2.0s at 30msec sampling period
       target_vel_lpf_gain: 0.985 # Time constant 2.0s at 30msec sampling period
