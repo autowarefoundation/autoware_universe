@@ -19,7 +19,10 @@
 #include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+
+#include <boost/geometry/algorithms/intersects.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
@@ -228,14 +231,14 @@ std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_objec
       continue;
     }
 
-    // Get object position
-    const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+    // Get object polygon
+    const auto & pose = object.kinematics.initial_pose_with_covariance.pose;
+    const auto object_polygon = autoware_utils::to_polygon2d(pose, object.shape);
 
-    // Check if the object is within any detection area
+    // Check if the object polygon overlaps with any detection area
     for (const auto & detection_area : detection_areas) {
-      const lanelet::BasicPoint2d obj_point(position.x, position.y);
       const auto detection_area_2d = lanelet::utils::to2D(detection_area);
-      if (lanelet::geometry::within(obj_point, detection_area_2d.basicPolygon())) {
+      if (boost::geometry::intersects(object_polygon, detection_area_2d.basicPolygon())) {
         return object;  // Return the detected object
       }
     }
