@@ -21,6 +21,8 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp>
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -340,8 +342,10 @@ void StartPlannerModule::updateData()
     DEBUG_PRINT("StartPlannerModule::updateData() completed backward driving");
   }
 
-  status_.is_safe_dynamic_objects =
-    (!requiresDynamicObjectsCollisionDetection()) ? true : !hasCollisionWithDynamicObjects();
+  status_.is_safe_dynamic_objects = !requiresDynamicObjectsCollisionDetection() ? true
+                                    : !canDepartConsideringPrevLightInfo()
+                                      ? false
+                                      : !hasCollisionWithDynamicObjects();
 }
 
 bool StartPlannerModule::hasFinishedBackwardDriving() const
@@ -1726,6 +1730,9 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
   const auto path = getFullPath();
   if (path.points.empty()) return getPreviousModuleOutput().turn_signal_info;
 
+  if (requiresDynamicObjectsCollisionDetection() && !canDepartConsideringPrevLightInfo())
+    return getPreviousModuleOutput().turn_signal_info;
+
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
   const auto shift_start_idx = autoware::motion_utils::findNearestIndex(
     path.points, status_.pull_out_path.start_pose.position);
@@ -1793,6 +1800,112 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     planner_data_->parameters.ego_nearest_yaw_threshold);
 
   return output_turn_signal_info;
+}
+
+bool StartPlannerModule::canDepartConsideringPrevLightInfo()
+{
+  // No need to check or search previous traffic light info
+  if (status_.has_departed || parameters_->prev_light_check_distance <= 0.0) return true;
+
+  const auto & rh = planner_data_->route_handler;
+  const auto & lanelet_map_ptr = rh->getLaneletMapPtr();
+  const Pose & current_pose = planner_data_->self_odometry->pose.pose;
+
+  // Get max speed around ego current pose
+  const auto max_speed_around_ego = std::invoke([&]() -> std::optional<double> {
+    const auto vehicle_footprint = autoware_utils::transform_vector(
+      vehicle_info_.createFootprint(), autoware_utils::pose2transform(current_pose));
+    lanelet::BasicPolygon2d footprint_polygon;
+    for (const auto & point : vehicle_footprint) {
+      footprint_polygon.push_back({point.x(), point.y()});
+    }
+
+    // Find lanelets that intersect with the current vehicle footprint
+    const auto & lanelets_distance_pair = lanelet::geometry::findWithin2d(
+      planner_data_->route_handler->getLaneletMapPtr()->laneletLayer, footprint_polygon, 0.0);
+    if (lanelets_distance_pair.empty()) return {};
+
+    double max_speed = 0.0;
+    // Check intersecting lanelets and their neighbor lanelets
+    for (const auto & [_, lanelet] : lanelets_distance_pair) {
+      const double lanelet_speed = lanelet.attributeOr(lanelet::AttributeName::SpeedLimit, 0.0);
+      max_speed = std::max(max_speed, lanelet_speed);
+
+      const auto right_neighbor_lanelets =
+        lanelet_map_ptr->laneletLayer.findUsages(lanelet.rightBound());
+      for (const auto & right_lanelet : right_neighbor_lanelets) {
+        const double right_lanelet_speed =
+          right_lanelet.attributeOr(lanelet::AttributeName::SpeedLimit, 0.0);
+        max_speed = std::max(max_speed, right_lanelet_speed);
+      }
+    }
+    return max_speed;
+  });
+
+  if (!max_speed_around_ego) return true;
+
+  // Ego is not going to pull out into a high-speed road
+  if (max_speed_around_ego.value() < parameters_->threshold_speed_for_prev_light_check) return true;
+
+  lanelet::ConstLanelet current_lanelet;
+  rh->getClosestLaneletWithinRoute(current_pose, &current_lanelet);
+
+  // Calculate ego arc coordinates on current lanelet
+  const auto ego_arc_coordinate =
+    lanelet::utils::getArcCoordinates({current_lanelet}, current_pose);
+
+  const double search_distance_before_current_lanelet =
+    parameters_->prev_light_check_distance - ego_arc_coordinate.length;
+  if (search_distance_before_current_lanelet <= 0.0) return true;
+
+  std::vector<lanelet::ConstLanelets> lanelet_sequences =
+    rh->getPrecedingLaneletSequence(current_lanelet, search_distance_before_current_lanelet);
+  if (lanelet_sequences.empty()) return true;
+
+  // Get closest traffic light info within the allowed distance range
+  // This search considers only first straight lanelet with traffic light in the intersection
+  const auto traffic_signal_stamped = std::invoke([&]() -> std::optional<TrafficSignalStamped> {
+    for (auto & lanelet_sequence : lanelet_sequences) {
+      double distance_to_stop_line = 0.0;
+      std::reverse(lanelet_sequence.begin(), lanelet_sequence.end());
+      for (const auto & preceding_lanelet : lanelet_sequence) {
+        const std::string turn_direction = preceding_lanelet.attributeOr("turn_direction", "none");
+        const auto & tl_reg_elements =
+          preceding_lanelet.regulatoryElementsAs<lanelet::TrafficLight>();
+        if (turn_direction == "straight") {
+          for (const auto & reg_elem : tl_reg_elements) {
+            const auto tl_stop_line = reg_elem->stopLine();
+
+            if (!tl_stop_line.has_value()) continue;
+
+            distance_to_stop_line +=
+              lanelet::utils::getLaneletLength2d(preceding_lanelet) -
+              lanelet::geometry::toArcCoordinates(
+                lanelet::utils::to2D(preceding_lanelet.centerline()),
+                lanelet::utils::to2D(tl_stop_line.value()).front().basicPoint())
+                .length;
+
+            if (distance_to_stop_line <= search_distance_before_current_lanelet) {
+              return planner_data_->getTrafficSignal(reg_elem->id());
+            }
+          }
+        }
+        distance_to_stop_line += lanelet::utils::getLaneletLength2d(preceding_lanelet);
+      }
+    }
+    return {};
+  });
+
+  // Related traffic light info is not available
+  if (!traffic_signal_stamped) return true;
+
+  // Related traffic light is not green
+  if (!autoware::traffic_light_utils::hasTrafficLightCircleColor(
+        traffic_signal_stamped->signal.elements,
+        autoware_perception_msgs::msg::TrafficLightElement::GREEN))
+    return true;
+
+  return false;
 }
 
 bool StartPlannerModule::isSafePath() const

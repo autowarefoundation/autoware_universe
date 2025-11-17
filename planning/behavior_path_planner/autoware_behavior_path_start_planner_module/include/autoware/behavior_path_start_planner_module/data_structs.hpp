@@ -351,6 +351,8 @@ struct StartPlannerParameters
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};
   utils::path_safety_checker::ObjectsFilteringParams objects_filtering_params{};
   utils::path_safety_checker::SafetyCheckParams safety_check_params{};
+  double prev_light_check_distance{0.0};
+  double threshold_speed_for_prev_light_check{0.0};
 
   // surround moving obstacle check
   double search_radius{0.0};

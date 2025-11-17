@@ -352,6 +352,11 @@ void StartPlannerModuleManager::updateModuleParams(
       parameters, safety_check_ns + "enable_safety_check",
       p->safety_check_params.enable_safety_check);
     update_param<double>(
+      parameters, safety_check_ns + "prev_light_check_distance", p->prev_light_check_distance);
+    update_param<double>(
+      parameters, safety_check_ns + "threshold_speed_for_prev_light_check",
+      p->threshold_speed_for_prev_light_check);
+    update_param<double>(
       parameters, safety_check_ns + "hysteresis_factor_expand_rate",
       p->safety_check_params.hysteresis_factor_expand_rate);
     update_param<double>(
