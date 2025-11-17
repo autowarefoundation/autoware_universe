@@ -19,7 +19,7 @@
       osqp_verbose: false                     # Print solver output to console
 
       # Orientation preservation
-      preserve_input_trajectory_orientation: true  # Copy orientations from input trajectory to smoothed output
+      preserve_input_trajectory_orientation: false  # Copy orientations from input trajectory to smoothed output
       max_distance_for_orientation_m: 5.0          # Max distance for nearest neighbor matching when copying orientations [m]
 
       # Velocity-based fidelity weighting

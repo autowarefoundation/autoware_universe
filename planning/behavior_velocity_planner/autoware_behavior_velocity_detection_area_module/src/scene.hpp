@@ -18,6 +18,7 @@
 #include <boost/optional.hpp>
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -27,9 +28,9 @@
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Transform.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
-#include <tf2/LinearMath/Transform.h>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -57,14 +58,33 @@ public:
     double stop_margin;
     bool use_dead_line;
     double dead_line_margin;
-    bool use_max_acceleration;
-    double max_acceleration;
-    bool use_pass_judge_line;
     double state_clear_time;
     double hold_stop_margin_distance;
     double distance_to_judge_over_stop_line;
     bool suppress_pass_judge_when_stopping;
     bool enable_detected_obstacle_logging;
+
+    // Unified unstoppable situation handling
+    std::string unstoppable_policy;  // "go", "force_stop", or "stop_after_stopline"
+    double max_deceleration;
+    double delay_response_time;
+
+    struct TargetFiltering
+    {
+      bool pointcloud;
+      bool unknown;
+      bool car;
+      bool truck;
+      bool bus;
+      bool trailer;
+      bool motorcycle;
+      bool bicycle;
+      bool pedestrian;
+      bool animal;
+      bool hazard;
+      bool over_drivable;
+      bool under_drivable;
+    } target_filtering;
   };
 
   DetectionAreaModule(
@@ -118,6 +138,63 @@ private:
   void print_detected_obstacle(
     const std::vector<geometry_msgs::msg::Point> & obstacle_points,
     const geometry_msgs::msg::Pose & self_pose) const;
+
+  /**
+   * @brief Finalize stop point by inserting it, logging, and creating stop reason
+   * @param path Path to modify
+   * @param stop_pose Original stop pose
+   * @param modified_stop_pose Modified stop pose to insert
+   * @param modified_stop_line_seg_idx Modified stop line segment index
+   * @param self_pose Current vehicle pose
+   * @param detection_source Source of detection
+   * @param policy_name Name of policy being applied (for logging)
+   * @param prev_state Previous state before this operation
+   */
+  void finalizeStopPoint(
+    PathWithLaneId * path, const geometry_msgs::msg::Pose & stop_pose,
+    const geometry_msgs::msg::Pose & modified_stop_pose, const size_t modified_stop_line_seg_idx,
+    const geometry_msgs::msg::Pose & self_pose, const std::string & detection_source,
+    const std::string & policy_name, const State & prev_state);
+
+  /**
+   * @brief Handle "go" policy for unstoppable situation
+   * @return true if should pass through
+   */
+  bool handleUnstoppableGoPolicy();
+
+  /**
+   * @brief Handle "force_stop" policy for unstoppable situation
+   * @param path Path to modify
+   * @param stop_pose Original stop pose
+   * @param modified_stop_pose Modified stop pose
+   * @param modified_stop_line_seg_idx Modified stop line segment index
+   * @param self_pose Current vehicle pose
+   * @param detection_source Source of detection
+   * @return true if stop point was inserted
+   */
+  bool handleUnstoppableForceStopPolicy(
+    PathWithLaneId * path, const geometry_msgs::msg::Pose & stop_pose,
+    const geometry_msgs::msg::Pose & modified_stop_pose, const size_t modified_stop_line_seg_idx,
+    const geometry_msgs::msg::Pose & self_pose, const std::string & detection_source);
+
+  /**
+   * @brief Handle "stop_after_stopline" policy for unstoppable situation
+   * @param path Path to modify
+   * @param original_path Original path
+   * @param stop_pose Original stop pose
+   * @param modified_stop_pose Modified stop pose (will be updated)
+   * @param modified_stop_line_seg_idx Modified stop line segment index (will be updated)
+   * @param self_pose Current vehicle pose
+   * @param current_velocity Current vehicle velocity
+   * @param stop_dist Distance to stop line
+   * @param detection_source Source of detection
+   * @return true if stop point was inserted
+   */
+  bool handleUnstoppableStopAfterLinePolicy(
+    PathWithLaneId * path, const PathWithLaneId & original_path,
+    const geometry_msgs::msg::Pose & stop_pose, geometry_msgs::msg::Pose & modified_stop_pose,
+    size_t & modified_stop_line_seg_idx, const geometry_msgs::msg::Pose & self_pose,
+    const double current_velocity, const double stop_dist, const std::string & detection_source);
 };
 }  // namespace autoware::behavior_velocity_planner
 

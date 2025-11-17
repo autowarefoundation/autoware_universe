@@ -29,6 +29,7 @@
 #include <autoware_utils/system/lru_cache.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -40,7 +41,6 @@
 #include <lanelet2_routing/Forward.h>
 #include <lanelet2_routing/LaneletPath.h>
 #include <lanelet2_traffic_rules/TrafficRules.h>
-#include <tf2/LinearMath/Quaternion.h>
 
 #include <algorithm>
 #include <deque>
