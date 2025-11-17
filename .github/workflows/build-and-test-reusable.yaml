@@ -130,18 +130,6 @@ jobs:
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
-      - name: Resolve exact dependencies
-        run: |
-          vcs import dependency_ws < build_depends.repos
-          vcs export dependency_ws --exact-with-tags > build-depends-exact.repos
-
-      - name: Build dependencies
-        uses: autowarefoundation/autoware-github-actions/colcon-build@v1
-        with:
-          rosdistro: ${{ env.rosdistro }}
-          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          base-paths: dependency_ws
-
       - name: Build
         if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
