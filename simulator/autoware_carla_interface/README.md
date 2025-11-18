@@ -159,11 +159,13 @@ Example sensor mapping:
 sensor_mappings:
   CAM_FRONT/camera_link:
     carla_type: sensor.camera.rgb
-    id: "CAM_FRONT"
+    id: CAM_FRONT
     ros_config:
-      frame_id: "CAM_FRONT/camera_optical_link"
-      topic_image: "/sensing/camera/CAM_FRONT/image_raw"
+      frame_id: CAM_FRONT/camera_optical_link
+      topic_image: /sensing/camera/CAM_FRONT/image_raw
+      topic_info: /sensing/camera/CAM_FRONT/camera_info
       frequency_hz: 11
+      qos_profile: reliable
     parameters:
       image_size_x: 1600
       image_size_y: 900
@@ -234,4 +236,3 @@ The maps provided by the Carla Simulator ([Carla Lanelet2 Maps](https://bitbucke
 
 - **Testing on procedural maps (Adv Digital Twin)**: Currently unable to test due to failures in creating the Adv Digital Twin map.
 - **Traffic light recognition**: The default CARLA Lanelet2 maps lack proper traffic light regulatory elements. See the "Traffic Light Recognition" section above for workarounds.
-- **LiDAR concatenation**: When using multiple LiDARs, you may need to uncomment the lidar concatenation relay in the launch file (currently disabled by default).

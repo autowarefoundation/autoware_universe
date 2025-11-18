@@ -287,12 +287,15 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * @param [in] input original path
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
+ * @param [in] route_handler Route handler.
  * @param [in] output_ptr output path with modified points for the goal
  */
 bool set_goal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id, PathWithLaneId * output_ptr);
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id,
+  PathWithLaneId * output_ptr);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which
@@ -312,12 +315,14 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
  * @param input Input path.
  * @param goal Goal pose.
  * @param goal_lane_id Lane ID of goal lanelet.
+ * @param get_lanelet_by_id Function to get lanelet by ID.
  * @return Recreated path
  */
 PathWithLaneId refinePathForGoal(
   const double search_radius_range, const double search_rad_range,
   const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
-  const int64_t goal_lane_id);
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id);
 
 bool isAllowedGoalModification(const std::shared_ptr<RouteHandler> & route_handler);
 bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_handler);
@@ -579,6 +584,23 @@ PoseWithDetailOpt insert_feasible_stop_point(
   PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
   const double maximum_deceleration, const double maximum_jerk,
   const std::string & stop_reason = "");
+
+/**
+ * @brief Calculates the signed lateral distance from the ego vehicle's specified corner point
+ * to the closest lane boundary (left or right).
+ *
+ * @param route_handler Reference to the RouteHandler object for map and route lookup.
+ * @param ego_baselink_pose The pose of the ego vehicle's base_link frame.
+ * @param vehicle_info The VehicleInfo object containing vehicle dimensions (used to determine
+ * footprint).
+ * @param direction The side of the vehicle to check ("left" or "right").
+ * @return std::optional<double> The signed lateral distance [m] from the corner point to the lane
+ * boundary, or std::nullopt if the direction is invalid or no valid lanelet is found near the
+ * corner.
+ */
+std::optional<double> calc_point_dist_to_closest_lane_boundary(
+  const RouteHandler & route_handler, const Pose & ego_baselink_pose,
+  const vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & direction);
 }  // namespace autoware::behavior_path_planner::utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__UTILS_HPP_

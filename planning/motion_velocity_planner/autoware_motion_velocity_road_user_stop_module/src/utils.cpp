@@ -18,11 +18,10 @@
 #include <autoware/motion_velocity_planner_common/polygon_utils.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/correct.hpp>
-
-#include <tf2/utils.h>
 
 #include <limits>
 #include <utility>

@@ -60,7 +60,7 @@
 #else
 #include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
 #endif
-#include <tf2/LinearMath/Transform.h>
+#include <tf2/LinearMath/Transform.hpp>
 
 #include <algorithm>
 #include <limits>

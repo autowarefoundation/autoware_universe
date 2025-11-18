@@ -52,10 +52,15 @@ public:
   LaneletRoute plan(const RoutePoints & points) override;
   void updateRoute(const PlannerPlugin::LaneletRoute & route) override;
   void clearRoute() override;
-  [[nodiscard]] MarkerArray visualize(const LaneletRoute & route) const override;
+  [[nodiscard]] MarkerArray visualize(
+    const LaneletRoute & route, float goal_lanelet_transparency = 0.05) const override;
   [[nodiscard]] static MarkerArray visualize_debug_footprint(
     autoware_utils::LinearRing2d goal_footprint);
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+  const autoware::route_handler::RouteHandler & getRouteHandler() const override
+  {
+    return route_handler_;
+  }
 
 protected:
   using RouteSections = std::vector<autoware_planning_msgs::msg::LaneletSegment>;

@@ -47,6 +47,7 @@ std::optional<PullOverPath> ShiftPullOver::plan(
   const BehaviorModuleOutput & upstream_module_output)
 {
   const auto & route_handler = planner_data->route_handler;
+  const double backward_path_length = planner_data->parameters.backward_path_length;
   const double min_jerk = parameters_.minimum_lateral_jerk;
   const double max_jerk = parameters_.maximum_lateral_jerk;
   const double backward_search_length = parameters_.backward_goal_search_length;
@@ -55,7 +56,8 @@ std::optional<PullOverPath> ShiftPullOver::plan(
   const double jerk_resolution = std::abs(max_jerk - min_jerk) / shift_sampling_num;
 
   const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length);
+    upstream_module_output.path, planner_data, backward_path_length + backward_search_length,
+    forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -221,15 +223,18 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   }
 
   // set lane_id and velocity to shifted_path
-  for (size_t i = path_shifter.getShiftLines().front().start_idx;
-       i < shifted_path.path.points.size() - 1; ++i) {
+  if (path_shifter.getShiftLines().empty()) {
+    return std::nullopt;
+  }
+  const size_t start_idx = path_shifter.getShiftLines().front().start_idx;
+  for (size_t i = start_idx; i < shifted_path.path.points.size() - 1; ++i) {
     auto & point = shifted_path.path.points.at(i);
     point.point.longitudinal_velocity_mps =
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
     lanelet::Lanelet lanelet{};
     if (lanelet::utils::query::getClosestLanelet(lanes, point.point.pose, &lanelet)) {
       point.lane_ids = {lanelet.id()};  // overwrite lane_ids
-    } else {
+    } else if (i > 0) {
       point.lane_ids = shifted_path.path.points.at(i - 1).lane_ids;
     }
   }
