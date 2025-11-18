@@ -1,0 +1,27 @@
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package autoware_lidar_frnet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lidar_frnet): add FRNet for LiDAR semantic segmentation (`#10503 <https://github.com/autowarefoundation/autoware_universe/issues/10503>`_)
+  * feat(autoware_lidar_frnet): add FRNet for LiDAR semantic segmentation
+  * docs(autoware_lidar_frnet): style
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@gmail.com>
+  * feat(autoware_lidar_frnet): store cloud layouts in minimal type
+  * feat(autoware_lidar_frnet): use clear async
+  * fix(autoware_lidar_frnet): correct value for cuda mem set & use clear async
+  * fix(autoware_lidar_frnet): remove redundant stream sync
+  * fix(autoware_lidar_frnet): avoid cuda memory allocation
+  * fix(autoware_lidar_frnet): avoid cuda memory allocation (2)
+  * fix(autoware_lidar_frnet): precess only output clouds with active subscribers
+  * fix(autoware_lidar_frnet): atomic operation for fp precision point (x, y, z, intensity)
+  * fix(autoware_lidar_frnet): explicit device stream sync for thrust
+  * feat(autoware_lidar_frnet): use cub::DeviceRadixSort
+  * feat(autoware_lidar_frnet): avoid host vectors
+  * feat(autoware_lidar_frnet): update cuda flags
+  * fix(autoware_lidar_frnet): final adjustment
+  ---------
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@gmail.com>
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
