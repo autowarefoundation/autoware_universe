@@ -14,7 +14,7 @@ jobs:
       container-suffix: -cuda
       concurrency-group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
-      pull-ccache: true
+      pull-ccache: false
       push-ccache: true
       codecov-flag: total-cuda
     secrets:
