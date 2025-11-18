@@ -2,8 +2,8 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(launch): update input topic parameters to allow dynamic configuration (`#11389 <https://github.com/autowarefoundation/autoware_universe/issues/11389>`_)
 * refactor(launch):  topic remapping for object recognition and point cloud input to planning/control module (`#11242 <https://github.com/autowarefoundation/autoware_universe/issues/11242>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(out_of_lane): add Zulfaqar Azmi as maintainer (`#11553 <https://github.com/autowarefoundation/autoware_universe/issues/11553>`_)
 * fix(out_of_lane): improve logic to ignore some lanelets (`#11542 <https://github.com/autowarefoundation/autoware_universe/issues/11542>`_)

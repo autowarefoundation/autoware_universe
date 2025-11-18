@@ -2,8 +2,8 @@
 Changelog for package autoware_ad_api_visualizers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_default_adapi_universe): add roundabout handling to planning factors (`#11300 <https://github.com/autowarefoundation/autoware_universe/issues/11300>`_)
   feat(planning): add roundabout handling to planning factors and conversion map

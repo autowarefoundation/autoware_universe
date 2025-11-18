@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * revert(autoware_trajectory_optimizer): "fix(trajectory_optimizer): set_max_velocity (`#11642 <https://github.com/autowarefoundation/autoware_universe/issues/11642>`_)" (`#11657 <https://github.com/autowarefoundation/autoware_universe/issues/11657>`_)
   Revert "fix(trajectory_optimizer): set_max_velocity (`#11642 <https://github.com/autowarefoundation/autoware_universe/issues/11642>`_)"

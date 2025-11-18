@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_bevformer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix: cppcheck for struct Detection (`#11649 <https://github.com/autowarefoundation/autoware_universe/issues/11649>`_)
   * fix: remove unused Detection struct

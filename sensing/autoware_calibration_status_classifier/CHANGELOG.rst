@@ -2,8 +2,8 @@
 Changelog for package autoware_calibration_status_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
 * feat(autoware_calibration_status_classifier): add ML-based miscalibration detection module (`#11222 <https://github.com/autowarefoundation/autoware_universe/issues/11222>`_)

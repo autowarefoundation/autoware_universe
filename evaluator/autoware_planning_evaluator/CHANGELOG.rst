@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(planning_evaluator): refactor the obstacle_distance and obstacle_ttc metric (`#11478 <https://github.com/autowarefoundation/autoware_universe/issues/11478>`_)
   * tmp save

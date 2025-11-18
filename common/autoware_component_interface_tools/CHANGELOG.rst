@@ -2,8 +2,8 @@
 Changelog for package autoware_component_interface_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: add common interface tools test (`#5815 <https://github.com/autowarefoundation/autoware_universe/issues/5815>`_)
 * Contributors: Ryohsuke Mitsudome, shulanbushangshu

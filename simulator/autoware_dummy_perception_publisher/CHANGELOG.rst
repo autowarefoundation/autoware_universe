@@ -2,8 +2,8 @@
 Changelog for package autoware_dummy_perception_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(dummy_perception_publisher): add conversion to PointXYZIRC for output clouds (`#11453 <https://github.com/autowarefoundation/autoware_universe/issues/11453>`_)
   * feat(dummy_perception_publisher): Add conversion to PointXYZIRC for output clouds

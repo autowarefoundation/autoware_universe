@@ -2,8 +2,8 @@
 Changelog for package autoware_shift_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(shift_decider): integrate generate_parameter_library (`#8871 <https://github.com/autowarefoundation/autoware_universe/issues/8871>`_)
 * Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome

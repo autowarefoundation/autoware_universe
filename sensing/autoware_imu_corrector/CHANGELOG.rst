@@ -2,8 +2,8 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: on off scale and bias correction (`#11314 <https://github.com/autowarefoundation/autoware_universe/issues/11314>`_)
   * feat: adding parameter to turn on or off scale and bias correction

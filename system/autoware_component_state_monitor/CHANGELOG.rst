@@ -2,8 +2,8 @@
 Changelog for package autoware_component_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(component_state_monitor): use topic_state_monitor component (`#11308 <https://github.com/autowarefoundation/autoware_universe/issues/11308>`_)
   * move private headers

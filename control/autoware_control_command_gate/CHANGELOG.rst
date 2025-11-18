@@ -2,8 +2,8 @@
 Changelog for package autoware_control_command_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(control_command_gate): sync command filter  (`#11196 <https://github.com/autowarefoundation/autoware_universe/issues/11196>`_)
   * feat(control_command_gate): sync command filter

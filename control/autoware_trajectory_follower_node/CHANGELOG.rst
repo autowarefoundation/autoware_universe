@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_follower_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(simple_trajectory_follower): update remapping (`#11645 <https://github.com/autowarefoundation/autoware_universe/issues/11645>`_)
   * move private headers

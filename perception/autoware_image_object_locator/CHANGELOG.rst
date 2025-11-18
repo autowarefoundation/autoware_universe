@@ -2,8 +2,8 @@
 Changelog for package autoware_image_object_locator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(image_object_locator): add covariance calculation (`#11522 <https://github.com/autowarefoundation/autoware_universe/issues/11522>`_)
   * add covariance calculation

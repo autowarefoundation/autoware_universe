@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_frnet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_lidar_frnet): add FRNet for LiDAR semantic segmentation (`#10503 <https://github.com/autowarefoundation/autoware_universe/issues/10503>`_)
   * feat(autoware_lidar_frnet): add FRNet for LiDAR semantic segmentation

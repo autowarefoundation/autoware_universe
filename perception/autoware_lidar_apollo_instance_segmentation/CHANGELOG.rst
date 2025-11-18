@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_apollo_instance_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(autoware_lidar_apollo_instance_segmentation): refactor launch and parameter (`#11405 <https://github.com/autowarefoundation/autoware_universe/issues/11405>`_)
   refactor params

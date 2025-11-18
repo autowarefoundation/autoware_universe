@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_cuda_pointcloud_preprocessor): cuda/polar voxel filter (`#11122 <https://github.com/autowarefoundation/autoware_universe/issues/11122>`_)
   * feat(cuda_utils): support device memory allocation from memory pool

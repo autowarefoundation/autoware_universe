@@ -2,8 +2,8 @@
 Changelog for package autoware_freespace_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_freespace_planner): utilize all 3 components of velocity (`#11427 <https://github.com/autowarefoundation/autoware_universe/issues/11427>`_)
   fix:the stopping speed judgments of freespace_planner and mission_planner are consistent, taking into account the speed in xyz direction Signed-off-by: yangzesong <15340400289@163.com>

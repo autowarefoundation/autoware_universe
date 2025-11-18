@@ -2,8 +2,8 @@
 Changelog for package autoware_landmark_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_landmark_manager): fix deprecated autoware_utils header (`#10515 <https://github.com/autowarefoundation/autoware_universe/issues/10515>`_)
   * fix autoware_utils header

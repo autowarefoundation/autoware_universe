@@ -2,8 +2,8 @@
 Changelog for package tier4_dummy_object_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_dummy_perception_publisher): dummy object predicted path functionality (`#11011 <https://github.com/autowarefoundation/autoware_universe/issues/11011>`_)
   * feat: implement euclidean distance-based mapping for dummy perception publisher

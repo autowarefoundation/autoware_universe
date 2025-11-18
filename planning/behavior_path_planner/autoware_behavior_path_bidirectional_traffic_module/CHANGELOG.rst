@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_bidirectional_traffic_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(bidirectional_traffic): suppress warning (`#11221 <https://github.com/autowarefoundation/autoware_universe/issues/11221>`_)
 * fix(autoware_behavior_path_bidirectional_traffic_module): remove unused function (`#11185 <https://github.com/autowarefoundation/autoware_universe/issues/11185>`_)

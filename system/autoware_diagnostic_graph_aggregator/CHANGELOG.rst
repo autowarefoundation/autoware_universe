@@ -2,8 +2,8 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * docs(diagnostic_graph_aggregator): add readme for latch and hysteresis (`#11174 <https://github.com/autowarefoundation/autoware_universe/issues/11174>`_)
   * docs(diagnostic_graph_aggregator): add readme for latch and hysteresis

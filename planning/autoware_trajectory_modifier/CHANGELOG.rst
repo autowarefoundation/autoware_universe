@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_modifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(trajectory modifier): add trajectory modifier (`#11277 <https://github.com/autowarefoundation/autoware_universe/issues/11277>`_)
   * first commit, add general plugin structure

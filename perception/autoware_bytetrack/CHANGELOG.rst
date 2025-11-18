@@ -2,8 +2,8 @@
 Changelog for package autoware_bytetrack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(tier4_perception_launch): add yolox 2d detection launch with bytetrack (`#11104 <https://github.com/autowarefoundation/autoware_universe/issues/11104>`_)
   * fix(tensorrt_yolox): add bytetrack option for launch

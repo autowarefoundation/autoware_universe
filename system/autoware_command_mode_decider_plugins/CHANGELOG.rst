@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_decider_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(command_mode_decider): fix mode continuation condition (`#11158 <https://github.com/autowarefoundation/autoware_universe/issues/11158>`_)
 * Contributors: Ryohsuke Mitsudome, Takagi, Isamu

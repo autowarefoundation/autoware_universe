@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_avoidance_by_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(static_obstacle_avoidance): enhance overhang distance calculation with vehicle dimensions (`#11487 <https://github.com/autowarefoundation/autoware_universe/issues/11487>`_)
   * Revert "fix(static_obstacle_avoidance): ensure sufficient avoidance margin on high-curvature paths for parked vehicle avoidance (`#10902 <https://github.com/autowarefoundation/autoware_universe/issues/10902>`_)"

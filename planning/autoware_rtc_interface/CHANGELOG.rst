@@ -2,8 +2,8 @@
 Changelog for package autoware_rtc_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(roundabout): add autoware_behavior_velocity_roundabout_module (`#11142 <https://github.com/autowarefoundation/autoware_universe/issues/11142>`_)
   * feat(behavior_velocity_roundabout_module): add roundabout behavior velocity planner module

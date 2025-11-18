@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.48.0 (2025-11-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(trajectory_adapter): add trajectory adapter (`#11324 <https://github.com/autowarefoundation/autoware_universe/issues/11324>`_)
   * add trajectory adaptor
