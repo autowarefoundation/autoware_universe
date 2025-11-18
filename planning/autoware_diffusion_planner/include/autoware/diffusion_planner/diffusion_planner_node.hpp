@@ -313,7 +313,7 @@ private:
     this, "~/input/tracked_objects"};
   autoware_utils::InterProcessPollingSubscriber<
     autoware_perception_msgs::msg::TrafficLightGroupArray, autoware_utils::polling_policy::All>
-    sub_traffic_signals_{this, "~/input/traffic_signals"};
+    sub_traffic_signals_{this, "~/input/traffic_signals", rclcpp::QoS{10}};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
