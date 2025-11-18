@@ -26,6 +26,60 @@ The following processors are supported:
 | ------------------ | ------------------------------------------------- | ----------------- |
 | `~/output/objects` | `autoware_perception_msgs::msg::PredictedObjects` | Processed objects |
 
+## Quick Start
+
+### Launch ROS 2 Node
+
+To use this package, you can launch it with the following command:
+
+```bash
+ros2 launch autoware_predicted_path_postprocessor autoware_predicted_path_postprocessor.launch.xml
+```
+
+### Leverage Processor in Your Codebase
+
+You can leverage the processor in your codebase by including the appropriate headers and using the `ComposableProcessor` class:
+
+```cpp
+#include <autoware/predicted_path_postprocessor/processor/composable.hpp>
+#include <autoware/predicted_path_postprocessor/processor/interface.hpp>
+
+class SomeNode final : public rclcpp::Node
+{
+public:
+  explicit SomeNode(const rclcpp::NodeOptions& options)
+    : Node("some_node", options)
+  {
+    // Initialize your node here
+    auto processors = declare_parameter<std::vector<std::string>>("processors");
+    context_ = std::make_unique<autoware::predicted_path_postprocessor::processor::Context>();
+    processor_ = std::make_unique<autoware::predicted_path_postprocessor::processor::ComposableProcessor>(this, processors);
+  }
+
+private:
+  void callback(const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & msg)
+  {
+    auto objects = std::make_shared<autoware_perception_msgs::msg::PredictedObjects>(*msg);
+
+    // update the context with the predicted objects
+    context_->update(objects);
+
+    // process the predicted objects using the processor
+    const auto result = processor_->process(objects, context_);
+    if (result) {
+      const auto processed_objects = result.ok();
+      // do something with the processed objects
+      // ...
+    } else {
+      RCLCPP_ERROR(get_logger(), "Failed to process predicted objects");
+    }
+  }
+
+  std::unique_ptr<autoware::predicted_path_postprocessor::processor::Context> context_;
+  std::unique_ptr<autoware::predicted_path_postprocessor::processor::ComposableProcessor> processor_;
+};
+```
+
 ## How to Add New Processor
 
 Processors in this package should follow a structured naming convention as below:
@@ -39,7 +93,7 @@ As an example, let's see how to add a new processor by using a processor called 
 
 1. Create a new processor class that inherits from `ProcessorInterface`:
 
-   ```c++:processor/filter_by_something.hpp
+   ```cpp
    class FilterBySomething final : public ProcessorInterface
    {
      public:
@@ -72,7 +126,7 @@ As an example, let's see how to add a new processor by using a processor called 
 
 2. Register the new processor in `build_processors(...)` function:
 
-   ```c++:processor/builder.hpp
+   ```cpp
    std::vector<ProcessorInterface::UniquePtr> build_processors(rclcpp::Node * node_ptr, const std::string & processor_name)
    {
      std::vector<ProcessorInterface::UniquePtr> outputs;
@@ -92,14 +146,14 @@ As an example, let's see how to add a new processor by using a processor called 
    The parameters must be grouped under the processor's string identifier.
    The processors specified in the `processors` array are launched in runtime.
 
-   ```yaml:config/predicted_path_postprocessor.param.yaml
+   ```yaml
    /**:
      ros__parameters:
-      processors: [filter_by_something]
-      # --- FilterBySomething ---
-      filter_by_something:
+       processors: [filter_by_something]
+       # --- FilterBySomething ---
+       filter_by_something:
          double_param: 100.0
          string_param: I'm a processor!!
-      # --- Parameters for other processors ---
-      # ...
+       # --- Parameters for other processors ---
+       # ...
    ```
