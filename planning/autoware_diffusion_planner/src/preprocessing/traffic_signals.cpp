@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 
 namespace autoware::diffusion_planner::preprocess
 {
