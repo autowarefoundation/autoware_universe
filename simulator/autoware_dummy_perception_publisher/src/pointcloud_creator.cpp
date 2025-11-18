@@ -14,6 +14,7 @@
 
 #include "autoware/dummy_perception_publisher/node.hpp"
 #include "autoware/dummy_perception_publisher/signed_distance_function.hpp"
+#include "autoware/point_types/types.hpp"
 
 #include <pcl/impl/point_types.hpp>
 #include <tf2/LinearMath/Transform.hpp>
