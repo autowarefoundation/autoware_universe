@@ -76,16 +76,14 @@ uint16_t CommandModeDecider::to_mrm_behavior(uint16_t command_mode)
 std::vector<uint16_t> CommandModeDecider::decide(
   const RequestModeStatus & request, const CommandModeStatusTable & table)
 {
-  const auto modes = decide(request, table, last_modes_, last_autoware_control_);
+  const auto modes = decide(request, table, last_modes_);
   last_modes_ = std::unordered_set<uint16_t>(modes.begin(), modes.end());
-  last_autoware_control_ = request.autoware_control;
   return modes;
 }
 
 std::vector<uint16_t> CommandModeDecider::decide(
   const RequestModeStatus & request, const CommandModeStatusTable & table,
-  const std::unordered_set<uint16_t> & last_modes,
-  const std::optional<bool> & last_autoware_control) const
+  const std::unordered_set<uint16_t> & last_modes) const
 {
   const auto create_vector = [](uint16_t mode) {
     std::vector<uint16_t> result;
@@ -93,16 +91,13 @@ std::vector<uint16_t> CommandModeDecider::decide(
     return result;
   };
 
-  // Use the requested operation mode if it is available.
-  // Check additional conditions only when changing to operation modes under autoware control.
+  // Use the specified operation mode if available.
   {
-    const auto is_same_mode = last_modes.count(request.operation_mode);
-    const auto is_same_ctrl = last_autoware_control == request.autoware_control;
-    const auto is_same = is_same_mode && is_same_ctrl;
-    const auto is_manual = !request.autoware_control;
-    const auto available = table.available(request.operation_mode, is_manual || is_same);
+    const auto mode = request.operation_mode;
+    const auto same = last_modes.count(mode);
+    const auto available = table.available(mode, !request.autoware_control || same);
     if (available) {
-      return create_vector(request.operation_mode);
+      return create_vector(mode);
     }
   }
 
