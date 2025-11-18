@@ -2,6 +2,42 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(net_monitor): autoware_system_monitor should report ERROR as the status summary for Network Usage when a connection is down (`#11488 <https://github.com/autowarefoundation/autoware_universe/issues/11488>`_)
+  * If any network on the "devices:" list in the "net_monitor.param.yaml" configuration file is disconnected or unavailable,
+  the status summary of "Network Usage" is reported as ERROR (level = ERROR(2) and message = "down").
+* feat(cpu_monitor): enable CPU temperature warning and error only on NVIDIA Tegra platforms (`#11335 <https://github.com/autowarefoundation/autoware_universe/issues/11335>`_)
+  * Enable CPU temperature warning and error from autoware_system_monitor node only on NVIDIA Tegra platforms.
+* fix(gpu_monitor): report gpu usage successfully on nvidia jetson agx orin (`#11326 <https://github.com/autowarefoundation/autoware_universe/issues/11326>`_)
+  Read GPU load from "/sys/devices/platform/gpu.0" instead of "/sys/devices/gpu.0"
+  because Jetson AGX Orin doesn't have the latter and gpu_monitor fails to read "GPU Usage" on Orin.
+* fix(gpu_monitor): stop false warning messages reported by gpu_monitor when the GPU is idle (`#11291 <https://github.com/autowarefoundation/autoware_universe/issues/11291>`_)
+  Do not warn about NVML_ERROR_NOT_FOUND returned by nvmlDeviceGetProcessUtilization() when the GPU is idle because it is one of the expected result.
+* fix(hdd_monitor,cpu_monitor): use unix sockets for IPC with helper applications (`#11199 <https://github.com/autowarefoundation/autoware_universe/issues/11199>`_)
+  * Use AF_UNIX socket for IPC between cpu_monitor (for x86_64) and msr_reader.
+  * Add the "msr_reader_socket_path" parameter to the "cpu_monitor" node (Intel/AMD x86_64)
+  * Remove the "port" parameter from the "cpu_monitor" node.
+  * Use AF_UNIX socket for IPC between hdd_monitor and hdd_reader.
+  * Add the "hdd_reader_socket_path" parameter to the "hdd_monitor" node.
+  * Remove the "port" parameter from the "hdd_monitor" node.
+  * Update configuration ".yaml" files about parameters.
+  * Update autoware_system_monitor documents for changes of node parameters.
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(hdd monitor): eMMC storage device type support (`#11160 <https://github.com/autowarefoundation/autoware_universe/issues/11160>`_)
+  * Add "mmcblk" (for eMMC and SD card) as a storage device name base
+  * Fix the problem with which /dev/mmcblk0p10 (/blk/efi) is reported in addition to the expected /dev/mmcblkp1 (/) file-system.
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(gpu_monitor): explicitly qualify a function call to stop error from the cppcheck-differential CI workflow  (`#11279 <https://github.com/autowarefoundation/autoware_universe/issues/11279>`_)
+  * Explicitly qualify the function call in the base-class destructor so that "cppcheck_differential" CI workflow won't complain.
+  * Add some extra comments to make things clearer.
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, nishikawa-masaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_system_monitor): publish gpu_status (`#11022 <https://github.com/autowarefoundation/autoware_universe/issues/11022>`_)

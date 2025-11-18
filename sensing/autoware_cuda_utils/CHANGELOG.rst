@@ -2,6 +2,100 @@
 Changelog for package autoware_cuda_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_cuda_pointcloud_preprocessor): cuda/polar voxel filter (`#11122 <https://github.com/autowarefoundation/autoware_universe/issues/11122>`_)
+  * feat(cuda_utils): support device memory allocation from memory pool
+  * feat(cuda_pointcloud_preprocessor): support polar_voxel_outlier_filter
+  WIP: use cuda::std::optional. compile passed
+  wip: version 1
+  wip: update
+  wip: update launcher
+  * feat(cuda_pointcloud_preprocessor): add a flag to enable/disable ring outlier filter in cuda_pointcloud_preprocessor
+  * chore: clean up the code
+  * docs: update documents briefly
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * feat(cuda_polar_voxel_outlier_filter): add xyzirc format support
+  * fix(cuda_polar_voxel_outlier_filter): move sync point to avoid unexpected memory release during async copy
+  * chore(cuda_polar_voxel_outlier_filter): update parameters
+  - add SI unit postfix
+  - deprecate `secondary_return_type`
+  - and think points with non-primary return value as points with secondary return
+  * refactor(cuda_polar_voxel_outlier_filter): explicity specify index integer type
+  * refactor(cuda_polar_voxel_outlier_filter): snake case for functions
+  * refactor(cuda_polar_voxel_outlier_filter): std::optional for visibility and filter ratio
+  And update related task functions for diagnostics
+  * fix(cuda_polar_voxel_outlier_filter): register parameters_callback
+  * refactor(cuda_polar_voxel_outlier_filter): remove log spam and unneccesary comments
+  * refactor(cuda_polar_voxel_outlier_filter): rename `valid_points_mask`
+  * feat(cuda_polar_voxel_outlier_filter): make noise pointcloud publishing optional
+  Because all parameters are now compatible with
+  `autoware_pointcloud_preprocessor::polar_voxel_outlier_filter`,
+  this commit also removes the parameter files named
+  `cuda_polar_voxel_outlier_filter.param.yaml` to avoid duplicated file copying.
+  * refactor(cuda_polar_voxel_outlier_filter): simplify by enforcing use of XYZIRC or XYZIRCAEDT
+  * feat(cuda_polar_voxel_outlier_filter): limit range in visibility calculation
+  * refactor(cuda_polar_voxel_outlier_filter): use array of int for return_type instead of int64
+  * refactor(cuda_polar_voxel_outlier_filter): update parameter callback to align with the CPU implementation
+  And small clean up the codes
+  * fix(cuda_polar_voxel_outlier_filter): return when invalid index
+  fix the error revealed by `compute-sanitizer --tool memcheck`
+  * feat(cuda_polar_voxel_outlier_filter): add visibility estimation parameters
+  And update visibility calculation to align with the CPU implementation
+  * feat(cuda_polar_voxel_outlier_filter): add option to not publish a filtered pointcloud (only estimate visibility)
+  * fix(cuda_polar_voxel_outlier_filter): ensure zero started positive values for indices
+  * feat(cuda_polar_voxel_outlier_filter): add input validation. align diag format to the CPU implementation
+  * perf(cuda_polar_voxel_outlier_filter): skip output generation if visualization_estimation_only==true
+  * refactor(cuda_polar_voxel_outlier_filter): clean up the code
+  * feat(cuda_polar_voxel_outlier_filter): add intensity parameter for secondary returns
+  * fix(cuda_polar_voxel_outlier_filter): update param name to align CPU impl.
+  * feat(cuda_polar_voxel_outlier_filter): update codes to align CPU impl.
+  * fix(cuda_polar_voxel_outlier_filter): correct unintended comparison
+  * fix(cuda_polar_voxel_outlier_filter): correct meaningless cast
+  * refactor(cuda_polar_voxel_outlier_filter): unify common calculation
+  * chore(cuda_polar_voxel_outlier_filter): use auto for CUDA thread index
+  As CUDA grid/block/thread indices, such as threadIdx are defined using unsigned
+  int, using size_t is overkill
+  * docs(cuda_polar_voxel_outlier_filter): add description for numerical discrepancies
+  * fix(cuda_polar_voxel_outlier_filter): guard processing if input size is zero
+  * fix(cuda_utils): pass stream and memory bool objects by value to follow CUDA API fashion
+  * refactor(cuda_polar_voxel_outlier_filter): restrict variables' scope more precisely
+  * chore(cuda_polar_voxel_outlier_filter): clean up the code and add comments
+  * docs(cuda_polar_voxel_outlier_filter): apply pre-commit update
+  * style(pre-commit): autofix
+  * chore(cuda_polar_voxel_outlier_filter): fix typos
+  * chore(cuda_polar_voxel_outlier_filter): fix typos
+  * chore(cuda_polar_voxel_outlier_filter): remove default params in node construction
+  * docs: correct schema path and add missing schema
+  * refactor(cuda_polar_voxel_outlier_filter): unmark explicit for the zero-parameter constructor
+  * refactor(cuda_polar_voxel_outlier_filter): include what I use
+  * style(pre-commit): autofix
+  * fix(cuda_polar_voxel_outlier_filter): always count valid points for filter_ratio
+  * docs: apply sophisticated suggestions from the reviewer
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * Apply suggestions from code review
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * feat(cuda_utils): remove default values related to the  memory pool
+  * refactor(cuda_polar_voxel_outlier_filter): rename a subscriber for clarity
+  * refactor(cuda_polar_voxel_outlier_filter): use unique_ptr::operator bool for nullptr check
+  * refactor(cuda_polar_voxel_outlier_filter): make nested condition in one liner
+  `lhs.value() != rhs.value()` will not be evaluated if one of `lhs` or `rhs` is
+  std::nullopt due to C++ short-circuit rules
+  * fix(cuda_polar_voxel_outlier_filter): returns empty results for empty input
+  * refactor(cuda_polar_voxel_outlier_filter): remove redundant comments
+  * refactor(cuda_polar_voxel_outlier_filter): separate logic into small functions
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* Contributors: Manato Hirabayashi, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_cuda_utils): add thrust utils (`#10997 <https://github.com/autowarefoundation/autoware_universe/issues/10997>`_)

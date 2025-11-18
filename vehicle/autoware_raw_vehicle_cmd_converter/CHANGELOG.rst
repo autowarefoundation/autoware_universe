@@ -2,6 +2,12 @@
 Changelog for package autoware_raw_vehicle_cmd_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(raw_vehicle_cmd_converter): add control component latency measuremement and publisher (`#11044 <https://github.com/autowarefoundation/autoware_universe/issues/11044>`_)

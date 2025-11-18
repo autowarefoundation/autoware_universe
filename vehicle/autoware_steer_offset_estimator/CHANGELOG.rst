@@ -2,6 +2,18 @@
 Changelog for package autoware_steer_offset_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(steer_offset_estimator): integrate twist estimation function to steer_offset_estimator node (`#11315 <https://github.com/autowarefoundation/autoware_universe/issues/11315>`_)
+* chore(autoware_steer_offset_estimator): add maintainer (`#11313 <https://github.com/autowarefoundation/autoware_universe/issues/11313>`_)
+  add maintainer
+* feat(steer_offset_estimator): load initial steer offset from arbitrary file and publish steering_offset_error (`#11249 <https://github.com/autowarefoundation/autoware_universe/issues/11249>`_)
+* Contributors: Ryohsuke Mitsudome, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

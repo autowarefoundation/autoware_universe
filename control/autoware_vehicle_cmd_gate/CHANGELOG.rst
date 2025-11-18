@@ -2,6 +2,22 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(vehicle_cmd_gate): use throttle log (`#10424 <https://github.com/autowarefoundation/autoware_universe/issues/10424>`_)
+  * feat(vehicle_cmd_gate): use throttle log
+  * feat(vehicle_cmd_gate): use throttle log
+  ---------
+* fix(autoware_control_command_gate, autoware_vehicle_cmd_gate): remove unused function  (`#11207 <https://github.com/autowarefoundation/autoware_universe/issues/11207>`_)
+  * fix(autoware_control_command_gate): remove unused function
+  * remove unused function
+  ---------
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_vehicle_cmd_gate): steer rate limit with lateral jerk constraint (`#11057 <https://github.com/autowarefoundation/autoware_universe/issues/11057>`_)

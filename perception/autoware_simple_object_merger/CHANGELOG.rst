@@ -2,6 +2,21 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(image_object_locator): add near range camera VRU detector to perception pipeline (`#11622 <https://github.com/autowarefoundation/autoware_universe/issues/11622>`_)
+  add near range camera VRU detector to perception pipeline
+* fix(simple_object_merger): replace unexpected std::const_pointer_cast() into std::make_shared() (`#11399 <https://github.com/autowarefoundation/autoware_universe/issues/11399>`_)
+  fix: replace unexpected const_pointer_cast() into make_shared()
+  Co-authored-by: Masaki Baba <masaki.baba.2@tier4.jp>
+* chore(perception): add maintainer (`#11458 <https://github.com/autowarefoundation/autoware_universe/issues/11458>`_)
+  add maintainer
+* Contributors: Kotaro Uetake, Masaki Baba, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

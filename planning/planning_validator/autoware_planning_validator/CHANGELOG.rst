@@ -2,6 +2,37 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): update QoS settings for operational mode state subscriber (`#11401 <https://github.com/autowarefoundation/autoware_universe/issues/11401>`_)
+* fix(intersection_collision_checker): use traffic light context for intersection collision detection (`#11238 <https://github.com/autowarefoundation/autoware_universe/issues/11238>`_)
+  * fix: subscribe traffic singals
+  * fix: add flag to check traffic signal
+  * fix: change traffic light check logic
+  * fix: use node clock
+  * fix: amber
+  * docs: validator
+  * docs: icc
+  * docs: icc
+  * docs: icc
+  * fix: typo
+  * docs: validator
+  * fix: add param
+  ---------
+* refactor(launch):  topic remapping for object recognition and point cloud input to planning/control module (`#11242 <https://github.com/autowarefoundation/autoware_universe/issues/11242>`_)
+  * feat(planning): introduce dynamic topic remapping for input objects and pointcloud
+  ---------
+* feat(planning_validator): add operational mode state handling and validation filtering (`#11216 <https://github.com/autowarefoundation/autoware_universe/issues/11216>`_)
+  * feat(planning_validator): add operational mode state handling and validation filtering
+  * refactor(planning_validator):  unused validation_filtering method and initialize validation status with existing function
+  * feat(planning_validator): add operational mode state handling and publisher for test
+  ---------
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

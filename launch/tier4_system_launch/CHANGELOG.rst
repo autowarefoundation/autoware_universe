@@ -2,6 +2,12 @@
 Changelog for package tier4_system_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_pipeline_latency_monitor): add autoware_pipeline_latency_monitor package (`#10798 <https://github.com/autowarefoundation/autoware_universe/issues/10798>`_)

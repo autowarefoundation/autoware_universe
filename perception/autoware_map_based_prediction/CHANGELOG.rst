@@ -2,6 +2,23 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(map_based_prediction): check fence for default crosswalk user path (`#11568 <https://github.com/autowarefoundation/autoware_universe/issues/11568>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in perception component  (`#11387 <https://github.com/autowarefoundation/autoware_universe/issues/11387>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(map_based_prediction): use lateral distance with crosswalks (`#11481 <https://github.com/autowarefoundation/autoware_universe/issues/11481>`_)
+* feat(map_based_prediction): max distance for on road crosswalk users (`#11459 <https://github.com/autowarefoundation/autoware_universe/issues/11459>`_)
+* fix(map_based_prediction): better fence prunning for crosswalk users (`#11457 <https://github.com/autowarefoundation/autoware_universe/issues/11457>`_)
+* Contributors: Mamoru Sobue, Maxime CLEMENT, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

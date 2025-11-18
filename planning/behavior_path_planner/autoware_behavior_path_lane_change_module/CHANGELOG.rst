@@ -2,6 +2,55 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(lane_change): prevent path distortion by resetting lane change module when ego is not in either current or target lanes (`#11599 <https://github.com/autowarefoundation/autoware_universe/issues/11599>`_)
+  fix(lane_change): negating path distortion when ego is not in target lanes
+* fix(lane_change): turn signal when valid path is not available (`#11545 <https://github.com/autowarefoundation/autoware_universe/issues/11545>`_)
+  * fix(lane_change): turn signal when valid path is not available
+  * minor refactoring
+* feat(start_planner): supprt rtc force approval to bypass safety check  (`#11482 <https://github.com/autowarefoundation/autoware_universe/issues/11482>`_)
+  feat(start_planner): rtc force approval
+* fix(lane_change): include stopping object beside ego as target (`#11342 <https://github.com/autowarefoundation/autoware_universe/issues/11342>`_)
+  * fix(lane_change): include stopping object beside ego as target
+  * ahead car is completely ahead of ego
+  * compare ego min vertex against object's max vertex
+  * check all paths
+  * include header
+  * check all path and fix trailing object uses deceleration sampling
+  * updating readme
+  ---------
+* fix(lane_change): fix predicted path exceeding end point after approval (`#11360 <https://github.com/autowarefoundation/autoware_universe/issues/11360>`_)
+* feat(bpp, lane_change): enable prepare phase check even when ego is preparing (`#11307 <https://github.com/autowarefoundation/autoware_universe/issues/11307>`_)
+  * feat(bpp, lane_change): enable prepare phase check even when ego is preparing
+  * fix cpp check error
+  ---------
+* feat(lane_change_module): set none planning_factor behavior (`#11328 <https://github.com/autowarefoundation/autoware_universe/issues/11328>`_)
+* fix(bpp_common, lane_change): generate extended objects directly with highest confidence path. (`#11304 <https://github.com/autowarefoundation/autoware_universe/issues/11304>`_)
+  * fix(bpp_common, lane_change): generate extended objects directly with highest confidence path.
+  * handles multiple paths has equal highest confidence
+  ---------
+* docs(lane_change): correct sentence (`#11233 <https://github.com/autowarefoundation/autoware_universe/issues/11233>`_)
+  * docs(lane_change): correct sentence
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_lane_change_module/README.md
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Shumpei Wakabayashi, Tim Clephas, Yuki TAKAGI, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(lane_change): properly handle force activation when there is no valid LC path (`#11059 <https://github.com/autowarefoundation/autoware_universe/issues/11059>`_)

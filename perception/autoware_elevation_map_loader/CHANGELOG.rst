@@ -2,6 +2,19 @@
 Changelog for package autoware_elevation_map_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(planning, perception): replace wall_timer with generic timer (`#11005 <https://github.com/autowarefoundation/autoware_universe/issues/11005>`_)
+  * feat(planning, perception): replace wall_timer with generic timer
+  * use rclcpp::create_timer
+  * remove period_ns
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

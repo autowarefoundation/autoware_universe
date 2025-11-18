@@ -2,6 +2,27 @@
 Changelog for package autoware_motion_velocity_road_user_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(road_user_stop): delete path_length_buffer (`#11653 <https://github.com/autowarefoundation/autoware_universe/issues/11653>`_)
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* docs(road_user_stop): add parameter docs (`#11539 <https://github.com/autowarefoundation/autoware_universe/issues/11539>`_)
+  add parameters docs
+* feat(road_user_stop): exclude ego vehicle's sides from detection area (`#11496 <https://github.com/autowarefoundation/autoware_universe/issues/11496>`_)
+  * exclude ego side polygon
+  * fix typo
+  * delete polygon_utils copy function
+  ---------
+* feat(road_user_stop): pass for stop vru (`#11491 <https://github.com/autowarefoundation/autoware_universe/issues/11491>`_)
+  * pass for stop vru
+  * fix cppcheck
+  ---------
+* Contributors: Kotakku, Ryohsuke Mitsudome, Tim Clephas, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(road_user_stop): remove generate_parameter_library's default_value parameters (`#11117 <https://github.com/autowarefoundation/autoware_universe/issues/11117>`_)

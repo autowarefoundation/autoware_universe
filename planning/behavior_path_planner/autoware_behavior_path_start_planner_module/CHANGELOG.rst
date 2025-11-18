@@ -2,6 +2,100 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* revert(start_planner): "ensure the pose is not behind the ego vehicle" (`#11656 <https://github.com/autowarefoundation/autoware_universe/issues/11656>`_)
+* refactor(start_planner): remove redundant member variable and setting stop path pointer to null (`#11637 <https://github.com/autowarefoundation/autoware_universe/issues/11637>`_)
+  * refactor(start_planner): remove redundant member variable and setting stop path pointer to null
+  * refactoring
+  * update prev_approved_path
+  ---------
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(start_planner): preventing RTC start value from publishing negative value (`#11582 <https://github.com/autowarefoundation/autoware_universe/issues/11582>`_)
+  fix(start_planner): Preventing RTC start value from publishing negative value
+* feat(start_planner): write document of the clothoid pull out (`#11538 <https://github.com/autowarefoundation/autoware_universe/issues/11538>`_)
+  * docs: add path generation flow and diagram to README
+  * add a figure of clothoid path generation flow
+  * add limitation note of the clothoid pull out
+  * add clothoid pullout overview figure
+  * change number and fix typo
+  ---------
+* fix(start_planner): ensure the pose is not behind the ego vehicle (`#11548 <https://github.com/autowarefoundation/autoware_universe/issues/11548>`_)
+* refactor(start_planner): use new function to simplify function (`#11486 <https://github.com/autowarefoundation/autoware_universe/issues/11486>`_)
+* feat(start_planner): supprt rtc force approval to bypass safety check  (`#11482 <https://github.com/autowarefoundation/autoware_universe/issues/11482>`_)
+  feat(start_planner): rtc force approval
+* feat(start planner): support transit from running state to waiting approval state when unsafe (`#11477 <https://github.com/autowarefoundation/autoware_universe/issues/11477>`_)
+  * transit to waiting approval when unsafe
+  * only works if ego is moving forward
+  ---------
+* feat(start planner): replace zero velocity with stop line on candidate path (`#11476 <https://github.com/autowarefoundation/autoware_universe/issues/11476>`_)
+  * fix(start_planner): insert stop point on planWaitingApproval path
+  * slight refactoring
+  * remove empty space
+  * fix value issue
+  * fix test fail
+  ---------
+* fix(start_planner): keep blinker after switching from stop path to pull out path after engage (`#11473 <https://github.com/autowarefoundation/autoware_universe/issues/11473>`_)
+* feat(start_planner): add plotting feature for the failed test cases. (`#11403 <https://github.com/autowarefoundation/autoware_universe/issues/11403>`_)
+  * success to plot failed path, and increase the time out limit
+  * disable the failed route, and organize the format
+  * combine plot_and_seve_path method
+  * refactor(start_planner_test_helper): optimize lanelet handling with emplace_back and const references
+  ---------
+  Co-authored-by: Kyoichi Sugahara <kyoichi.sugahara@tier4.jp>
+* feat(start_planner): add plotting functionality for the test of geometric, clothoid, and freespace planner with additional yaml data (`#11261 <https://github.com/autowarefoundation/autoware_universe/issues/11261>`_)
+  * update plot_and_save_path function to plot the lanelet of the start pose
+  * enhance FreespacePullOut tests with YAML files and visualization
+  * enhance Geometric and Clothoid pull out tests with YAML files and visualization
+  * addd test cases varying in yaw orientation
+  * add test cases to shift pullout
+  ---------
+  Co-authored-by: Kyoichi Sugahara <kyoichi.sugahara@tier4.jp>
+* fix(start_planner): increase lateral gap to furthest bound when checking target object passing (`#11350 <https://github.com/autowarefoundation/autoware_universe/issues/11350>`_)
+  * fix(start_planner): increase lateral gap to furthest bound when checking target object passing
+  * type change Lanelet → ConstLanelet
+  type change in function getGapBetweenEgoAndLaneBorder
+  Co-authored-by: Kyoichi Sugahara <32741405+kyoichi-sugahara@users.noreply.github.com>
+  * type change auto → double
+  Co-authored-by: Kyoichi Sugahara <32741405+kyoichi-sugahara@users.noreply.github.com>
+  * fix build error
+  ---------
+  Co-authored-by: Kyoichi Sugahara <32741405+kyoichi-sugahara@users.noreply.github.com>
+* feat(start_planner): add plotting functionality with lanelet and vehicle foot print to specific output directory (`#11127 <https://github.com/autowarefoundation/autoware_universe/issues/11127>`_)
+  * feat: add plotting functionality with lanelet and vehicle foot print to specific output directories
+  * update test output directory and add test from multiple yaml file
+  * update plot_and_save_path function to plot the lanelet of the start pose
+  ---------
+  Co-authored-by: Kyoichi Sugahara <32741405+kyoichi-sugahara@users.noreply.github.com>
+* fix(start_planner): check collision from start_pose (`#11311 <https://github.com/autowarefoundation/autoware_universe/issues/11311>`_)
+  * fix(start_planner): check collision from start_pose
+  * fix(pull_out_planner): change PullOutPath parameter to const reference
+  ---------
+* feat(start_planner): prioritize planner type with list (`#11275 <https://github.com/autowarefoundation/autoware_universe/issues/11275>`_)
+  * feat(start_planner): implement customizable planner priority and search policy
+  * refactor(start_planner): remove unused clothoid fallback logic from path planning
+  * fix(start_planner): update search policy terminology from "short_back_distance" to "distance_priority"
+  * fix(start_planner): update terminology from "search_priority" to "search_policy" and refine related descriptions
+  * fix(start_planner): update search policy and priority parameters in configuration files
+  ---------
+* fix(start_planner): clothoid collision check offset parameter (`#11274 <https://github.com/autowarefoundation/autoware_universe/issues/11274>`_)
+  fix(behavior_path_planner): add clothoid collision check distance parameter
+* fix(autoware_behavior_path_start_planner_module): remove unused function (`#11204 <https://github.com/autowarefoundation/autoware_universe/issues/11204>`_)
+* fix(autoware_behavior_path_start_planner_module): remove unused function (`#11205 <https://github.com/autowarefoundation/autoware_universe/issues/11205>`_)
+* fix(autoware_behavior_path_start_planner_module): remove unused function (`#11195 <https://github.com/autowarefoundation/autoware_universe/issues/11195>`_)
+* fix(behavior_path_planner): narrow down variable scope (`#11188 <https://github.com/autowarefoundation/autoware_universe/issues/11188>`_)
+  * fix(behavior_path_planner): narrow down variable scope
+  * use const
+  ---------
+* fix(behavior_path_planner): remove unused function (`#11187 <https://github.com/autowarefoundation/autoware_universe/issues/11187>`_)
+* Contributors: Kosuke Takeuchi, Kyoichi Sugahara, Maxime CLEMENT, Ryohsuke Mitsudome, Ryuta Kambe, Sarun MUKDAPITAK, TakumIto, Tim Clephas, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(start_planner): incorrect function call (`#11107 <https://github.com/autowarefoundation/autoware_universe/issues/11107>`_)

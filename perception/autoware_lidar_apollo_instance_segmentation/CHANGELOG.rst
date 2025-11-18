@@ -2,6 +2,60 @@
 Changelog for package autoware_lidar_apollo_instance_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(autoware_lidar_apollo_instance_segmentation): refactor launch and parameter (`#11405 <https://github.com/autowarefoundation/autoware_universe/issues/11405>`_)
+  refactor params
+* fix(autoware_lidar_apollo_instance_segmentation): remove invalid key and change variable int to double (`#11396 <https://github.com/autowarefoundation/autoware_universe/issues/11396>`_)
+  * remove invalid key and change variable int to double
+  * change type to int
+  * update schema
+  ---------
+* fix(lidar_apollo_instance_segmentation): revert apollo parameter pr 10097 (`#11357 <https://github.com/autowarefoundation/autoware_universe/issues/11357>`_)
+  * Revert "feat(autoware_lidar_apollo_instance_segmentation): created the schema file, updated the readme file and deleted the default parameter in node files (`#10097 <https://github.com/autowarefoundation/autoware_universe/issues/10097>`_)"
+  This reverts commit dcb9739b5c684afaede1f164f259b7364a7c32cf.
+  * feat(autoware_lidar_apollo_instance_segmentation): created the schema file, updated the readme file and deleted the default parameter in node files (`#10097 <https://github.com/autowarefoundation/autoware_universe/issues/10097>`_)
+  * feat(autoware_lidar_apollo_instance_segmentation): Created the schema file, updated the readme file and deleted the default parameter in node files
+  * style(pre-commit): autofix
+  * Update hdl-64.schema.json
+  * Update vlp-16.schema.json
+  * Update vls-128.schema.json
+  * Update hdl-64.param.yaml
+  * Update vlp-16.param.yaml
+  * Update vls-128.param.yaml
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * fix(apollo_instance_segmentation): nest params under lidar_instance_segmentation; remove stray pipe
+  * fix(apollo_instance_segmentation): nest params under lidar_instance_segmentation for schema compliance
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_lidar_apollo_instance_segmentation): created the schema file, updated the readme file and deleted the default parameter in node files (`#10097 <https://github.com/autowarefoundation/autoware_universe/issues/10097>`_)
+  * feat(autoware_lidar_apollo_instance_segmentation): Created the schema file, updated the readme file and deleted the default parameter in node files
+  * style(pre-commit): autofix
+  * Update hdl-64.schema.json
+  * Update vlp-16.schema.json
+  * Update vls-128.schema.json
+  * Update hdl-64.param.yaml
+  * Update vlp-16.param.yaml
+  * Update vls-128.param.yaml
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * fix(apollo_instance_segmentation): nest params under lidar_instance_segmentation; remove stray pipe
+  * fix(apollo_instance_segmentation): nest params under lidar_instance_segmentation for schema compliance
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Masato Saeki, Ryohsuke Mitsudome, Taekjin LEE, Vishal Chauhan
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

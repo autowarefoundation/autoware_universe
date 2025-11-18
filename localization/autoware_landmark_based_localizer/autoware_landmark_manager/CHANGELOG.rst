@@ -2,6 +2,30 @@
 Changelog for package autoware_landmark_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_landmark_manager): fix deprecated autoware_utils header (`#10515 <https://github.com/autowarefoundation/autoware_universe/issues/10515>`_)
+  * fix autoware_utils header
+  * fix: remove '\'
+  * fix geometry includes
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore: update maintainer (`#11373 <https://github.com/autowarefoundation/autoware_universe/issues/11373>`_)
+  * chore: update maintainer
+  remove Ryu Yamamoto
+  * chore: update maintainer
+  remove Kento Yabuuchi
+  * chore: update maintainer
+  remove Shintaro Sakoda
+  ---------
+* Contributors: Kazusa Hashimoto, Motz, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

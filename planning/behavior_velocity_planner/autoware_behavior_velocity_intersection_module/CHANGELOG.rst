@@ -2,6 +2,43 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* feat(intersection): use fixed threshold for checking stop duration (`#11552 <https://github.com/autowarefoundation/autoware_universe/issues/11552>`_)
+* chore(intersection): change logging severity for stopline overrun (`#11543 <https://github.com/autowarefoundation/autoware_universe/issues/11543>`_)
+* feat(intersection): consider braking distance for all stoplines and stabilize stopline position (`#11445 <https://github.com/autowarefoundation/autoware_universe/issues/11445>`_)
+* feat(autoware_lanelet2_extension): remove redundant autoware_lanelet2_extension depend from packages (`#11492 <https://github.com/autowarefoundation/autoware_universe/issues/11492>`_)
+* fix(intersection): fix a parameter assignment bug (`#11484 <https://github.com/autowarefoundation/autoware_universe/issues/11484>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in planning component (`#11374 <https://github.com/autowarefoundation/autoware_universe/issues/11374>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(intersection): remove second attention area handling (`#11438 <https://github.com/autowarefoundation/autoware_universe/issues/11438>`_)
+* feat(intersection): revert stop position calculation as before temporarily (`#11432 <https://github.com/autowarefoundation/autoware_universe/issues/11432>`_)
+* feat(intersection): ignore precited path overtaking ego (`#11361 <https://github.com/autowarefoundation/autoware_universe/issues/11361>`_)
+* feat(RTC, behavior_velocity_planner): set manual RTC via the lanelet map (`#11340 <https://github.com/autowarefoundation/autoware_universe/issues/11340>`_)
+  * first attempt at a solution to set the auto/manual mode for a module
+  * implementation for crosswalk and intersections modules
+  * update READMEs
+  * fix crosswalk -> intersection
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* fix(intersection): hold collision stop pose (`#11247 <https://github.com/autowarefoundation/autoware_universe/issues/11247>`_)
+  * hold collision stop pose
+  * fix spell miss
+  ---------
+* fix(intersection): move header files to include directory (`#11124 <https://github.com/autowarefoundation/autoware_universe/issues/11124>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Y.Hisaki <yhisaki31@gmail.com>
+* Contributors: Kotakku, Mamoru Sobue, Maxime CLEMENT, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Sho Iwasawa, Tim Clephas, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

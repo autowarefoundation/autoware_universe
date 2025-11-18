@@ -2,6 +2,30 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(control_evaluator): add lateral_acceleration_abs metric (`#11402 <https://github.com/autowarefoundation/autoware_universe/issues/11402>`_)
+  * add lateral_acceleration metric
+  * rename to _abs
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* fix(control_evaluator, planning_evaluator): fix goal-related metrics calculation (`#11337 <https://github.com/autowarefoundation/autoware_universe/issues/11337>`_)
+  * fix stop condition
+  * fix include
+  ---------
+* feat(control_evaluator): add longitudinal_velocity evaluation (`#11094 <https://github.com/autowarefoundation/autoware_universe/issues/11094>`_)
+  * feat(control_evaluator): add longitudinal_velocity evaluation
+  fix
+  fix
+  * fix
+  ---------
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome, Takayuki Murooka, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

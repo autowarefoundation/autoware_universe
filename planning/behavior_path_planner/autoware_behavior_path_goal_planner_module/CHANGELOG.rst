@@ -2,6 +2,118 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(goal_planner): fix bezier path first yaw angle (`#11601 <https://github.com/autowarefoundation/autoware_universe/issues/11601>`_)
+* fix(goal_planner): prevent out_of_range crashes with bounds checking (`#11580 <https://github.com/autowarefoundation/autoware_universe/issues/11580>`_)
+* fix(goal_planner): hasPreviousModulePathShapeChanged die (`#11579 <https://github.com/autowarefoundation/autoware_universe/issues/11579>`_)
+* fix(goal_planner): failed to generate candidate paths when entering another lane for avoidance (`#11560 <https://github.com/autowarefoundation/autoware_universe/issues/11560>`_)
+* feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker (`#11519 <https://github.com/autowarefoundation/autoware_universe/issues/11519>`_)
+  * feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker
+  * fix default value in readme
+  * Update readme
+  * update parameter description
+  ---------
+* fix(goal_planner): fix iterator bug (`#11551 <https://github.com/autowarefoundation/autoware_universe/issues/11551>`_)
+* fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11544 <https://github.com/autowarefoundation/autoware_universe/issues/11544>`_)
+  * fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)
+  * feat(goal_planner): enhance goal refinement with route handler integration
+  - Updated `set_goal` and `refinePathForGoal` functions to include a `route_handler` parameter for improved path refinement.
+  - Introduced utility functions to fill lane IDs and longitudinal velocities based on the input path.
+  - Removed redundant lane ID filling logic to streamline goal setting process.
+  This change aims to enhance the accuracy of goal positioning and path planning by leveraging route information.
+  * fix(utils): enhance longitudinal velocity handling in fillLongitudinalVelocityFromInputPath
+  - Added a check to ensure the input path has at least two points before processing.
+  - Removed the last point from the input path to avoid zero velocity issues.
+  - Updated lane ID and longitudinal velocity assignment logic in set_goal to streamline the process.
+  These changes improve the robustness of the path planning by ensuring valid input and clearer handling of velocity data.
+  * refactor(utils): enhance lanelet handling in path processing
+  - Introduced a template function to retrieve unique lanelets from a given path, improving modularity and reusability.
+  - Updated `fillLaneIdsFromMap` to utilize the new lanelet retrieval function, streamlining lane ID assignment.
+  - Enhanced `set_goal` to incorporate the unique lanelets for more accurate lane ID filling.
+  These changes aim to improve the efficiency and clarity of lanelet management within the path planning process.
+  * refactor(utils): reorder parameters in set_goal function for clarity
+  ---------
+  * fix(utils): update lane ID assignment in fillLaneIdsFromMap function
+  * fix(utils): add TODO comment regarding potential segmentation fault in lane ID assignment
+  ---------
+* fix(goal_planner): fix path safe state chattering (`#11530 <https://github.com/autowarefoundation/autoware_universe/issues/11530>`_)
+* fix(goal_planner): remove duplicated process (`#11535 <https://github.com/autowarefoundation/autoware_universe/issues/11535>`_)
+* feat(goal_planner): change debug marker color when DECIDING (`#11526 <https://github.com/autowarefoundation/autoware_universe/issues/11526>`_)
+  * feat(goal_planner): change debug marker color when DECIDING
+  * change to orange
+  ---------
+* feat(goal_planner): consider previous module signal when preempt signal before stop (`#11531 <https://github.com/autowarefoundation/autoware_universe/issues/11531>`_)
+  feat(goal_planner): consider previous module signal when preempt signal while stopped
+* Revert "fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)" (`#11527 <https://github.com/autowarefoundation/autoware_universe/issues/11527>`_)
+  This reverts commit 98e1bec71bd6c7e783a5e099887a2cc87a92ce83.
+* feat(goal_planner): start blinker at deceleration start (`#11512 <https://github.com/autowarefoundation/autoware_universe/issues/11512>`_)
+* fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)
+  * feat(goal_planner): enhance goal refinement with route handler integration
+  - Updated `set_goal` and `refinePathForGoal` functions to include a `route_handler` parameter for improved path refinement.
+  - Introduced utility functions to fill lane IDs and longitudinal velocities based on the input path.
+  - Removed redundant lane ID filling logic to streamline goal setting process.
+  This change aims to enhance the accuracy of goal positioning and path planning by leveraging route information.
+  * fix(utils): enhance longitudinal velocity handling in fillLongitudinalVelocityFromInputPath
+  - Added a check to ensure the input path has at least two points before processing.
+  - Removed the last point from the input path to avoid zero velocity issues.
+  - Updated lane ID and longitudinal velocity assignment logic in set_goal to streamline the process.
+  These changes improve the robustness of the path planning by ensuring valid input and clearer handling of velocity data.
+  * refactor(utils): enhance lanelet handling in path processing
+  - Introduced a template function to retrieve unique lanelets from a given path, improving modularity and reusability.
+  - Updated `fillLaneIdsFromMap` to utilize the new lanelet retrieval function, streamlining lane ID assignment.
+  - Enhanced `set_goal` to incorporate the unique lanelets for more accurate lane ID filling.
+  These changes aim to improve the efficiency and clarity of lanelet management within the path planning process.
+  * refactor(utils): reorder parameters in set_goal function for clarity
+  ---------
+* fix(goal_planner): prevent sudden path change by regenerating path in IDLE (`#11510 <https://github.com/autowarefoundation/autoware_universe/issues/11510>`_)
+  * fix(goal_planner): Prevent sudden path change by regenerating path in IDLE
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/include/autoware/behavior_path_goal_planner_module/util.hpp
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+  * pre commit
+  ---------
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* refactor(goal_planner): remove redundant path construction in planPullOverAsCandidate (`#11501 <https://github.com/autowarefoundation/autoware_universe/issues/11501>`_)
+* fix(goal_planner): fix sudden path change after lane change by using ego position (`#11516 <https://github.com/autowarefoundation/autoware_universe/issues/11516>`_)
+* fix(goal_planner): keep decided pull over path (`#11517 <https://github.com/autowarefoundation/autoware_universe/issues/11517>`_)
+* fix(goal_planner): fix node crash due to freespace planner multithreading (`#11456 <https://github.com/autowarefoundation/autoware_universe/issues/11456>`_)
+* fix(goal_planner): fix virtual wall and debug marker publishing (`#11497 <https://github.com/autowarefoundation/autoware_universe/issues/11497>`_)
+  fix(goal_planner): fix virtual wall and debug marker pulishing
+* fix(goal_planner): insert stop point if no pull over path candidates (`#11495 <https://github.com/autowarefoundation/autoware_universe/issues/11495>`_)
+* fix(goal_planner): fix sudden path change after lane change (`#11489 <https://github.com/autowarefoundation/autoware_universe/issues/11489>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in planning component (`#11374 <https://github.com/autowarefoundation/autoware_universe/issues/11374>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(goal_planner): suppress warn message (`#11460 <https://github.com/autowarefoundation/autoware_universe/issues/11460>`_)
+* feat(goal_planner): parameterize approximate_pull_over_distance (`#11417 <https://github.com/autowarefoundation/autoware_universe/issues/11417>`_)
+  parameterize approximate_pull_over_distance of goal_planner module.
+* fix(goal_planner): smooth goal connection for goal_planner (`#11381 <https://github.com/autowarefoundation/autoware_universe/issues/11381>`_)
+  * fix smooth goal connection of behavior path planner
+  * fix
+  * fix to keep path length
+  * fix unit test
+  ---------
+* docs(goal_planner): add explanation for  paramter (`#11394 <https://github.com/autowarefoundation/autoware_universe/issues/11394>`_)
+* feat(goal_planner): make parameters for stopping buffer (`#11287 <https://github.com/autowarefoundation/autoware_universe/issues/11287>`_)
+* feat(goal_planner): ignore parked object in bus_stop (`#11270 <https://github.com/autowarefoundation/autoware_universe/issues/11270>`_)
+* feat(goal_planner): improve lane change coordination by monitoring lane change completion (`#11210 <https://github.com/autowarefoundation/autoware_universe/issues/11210>`_)
+* feat(goal_planner): relax braking constraint at low speeds to improve goal position stability (`#11271 <https://github.com/autowarefoundation/autoware_universe/issues/11271>`_)
+  feat(goal_planner): relax braking constraint at low speeds to improve goal position stability
+* fix(goal_planner): generate goal candidates using lane boundary to fix wrong validation (`#11224 <https://github.com/autowarefoundation/autoware_universe/issues/11224>`_)
+  * fix(goal_planner): generate goal candidates using lane boundary to fix wrong validation
+  tmp
+  * fix duplicated lines
+  * Accurately calculate the signed distance from pose to boundary on the y-axis
+  * run pre commit
+  ---------
+* Contributors: Kosuke Takeuchi, Kotakku, Mamoru Sobue, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tim Clephas, Yukinari Hisaki, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

@@ -2,6 +2,18 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* chore(obstacle\_*_module): add maintainer (`#11506 <https://github.com/autowarefoundation/autoware_universe/issues/11506>`_)
+* feat(obstacle_slow_down_module, obstacle_cruise_module): add safety_factor (`#10990 <https://github.com/autowarefoundation/autoware_universe/issues/10990>`_)
+  add safety factor, add planning factor test
+* Contributors: Ryohsuke Mitsudome, Tim Clephas, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

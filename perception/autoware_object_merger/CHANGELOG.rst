@@ -2,6 +2,20 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(planning, perception): replace wall_timer with generic timer (`#11005 <https://github.com/autowarefoundation/autoware_universe/issues/11005>`_)
+  * feat(planning, perception): replace wall_timer with generic timer
+  * use rclcpp::create_timer
+  * remove period_ns
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_object_merger): add merger priority_mode (`#11042 <https://github.com/autowarefoundation/autoware_universe/issues/11042>`_)
