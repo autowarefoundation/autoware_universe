@@ -37,9 +37,11 @@ public:
 private:
   std::vector<uint16_t> decide(
     const RequestModeStatus & request, const CommandModeStatusTable & table,
-    const std::unordered_set<uint16_t> & last_modes) const;
+    const std::unordered_set<uint16_t> & last_modes,
+    const std::optional<bool> & last_autoware_control) const;
 
   std::unordered_set<uint16_t> last_modes_;
+  std::optional<bool> last_autoware_control_;
 };
 
 }  // namespace autoware::command_mode_decider
