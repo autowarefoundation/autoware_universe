@@ -25,6 +25,7 @@
   <exec_depend>autoware_elevation_map_loader</exec_depend>
   <exec_depend>autoware_euclidean_cluster</exec_depend>
   <exec_depend>autoware_ground_segmentation</exec_depend>
+  <exec_depend>autoware_image_object_locator</exec_depend>
   <exec_depend>autoware_image_projection_based_fusion</exec_depend>
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
   <exec_depend>autoware_lidar_apollo_instance_segmentation</exec_depend>
