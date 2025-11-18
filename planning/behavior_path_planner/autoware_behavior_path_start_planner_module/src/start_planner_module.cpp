@@ -1159,18 +1159,6 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
       status_.prev_stop_path_after_approval = nullptr;
       return getCurrentPath();
     }
-    // update the stop pose if it goes behind the current ego pose
-    const double previous_stop_distance = autoware::motion_utils::calcSignedArcLength(
-      status_.prev_stop_path_after_approval->points,
-      planner_data_->self_odometry->pose.pose.position, stop_pose_->pose.position);
-    if (previous_stop_distance < 0.0) {
-      const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
-        status_.prev_stop_path_after_approval->points, 0UL,
-        planner_data_->self_odometry->pose.pose.position);
-      stop_pose_->pose = utils::insertStopPoint(ego_arc_length, current_path).point.pose;
-
-      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
-    }
     return *status_.prev_stop_path_after_approval;
   }
 
