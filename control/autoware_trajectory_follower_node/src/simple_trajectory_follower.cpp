@@ -29,7 +29,7 @@ using autoware_utils::calc_yaw_deviation;
 SimpleTrajectoryFollower::SimpleTrajectoryFollower(const rclcpp::NodeOptions & options)
 : Node("simple_trajectory_follower", options)
 {
-  pub_cmd_ = create_publisher<Control>("output/control_cmd", 1);
+  pub_cmd_ = create_publisher<Control>("~/output/control_cmd", 1);
 
   use_external_target_vel_ = declare_parameter<bool>("use_external_target_vel");
   external_target_vel_ = declare_parameter<float>("external_target_vel");
