@@ -129,11 +129,12 @@
     <let name="input/detection06/channel" value="$(var input/radar/channel)"/>
     <let name="input/detection06/objects" value="$(var input/radar/far_objects)"/>
 
-    <let name="input/detection08/channel" value="$(var input/camera_only/channel)"/>
-    <let name="input/detection08/objects" value="$(var input/camera_only/objects)"/>
     <let name="input/detection07/channel" value="$(var input/camera_vru/channel)"/>
     <let name="input/detection07/channel" value="none" unless="$(var use_camera_vru_detector)"/>
     <let name="input/detection07/objects" value="$(var input/camera_vru/objects)"/>
+
+    <let name="input/detection08/channel" value="$(var input/camera_only/channel)"/>
+    <let name="input/detection08/objects" value="$(var input/camera_only/objects)"/>
 
     <!-- camera lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
