@@ -17,13 +17,13 @@
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/route_checker.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <fmt/format.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <algorithm>
@@ -714,7 +714,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
-    const double lanelet_length = lanelet::utils::getLaneletLength2d(closest_lanelet);
+    const double lanelet_length = lanelet::geometry::length2d(closest_lanelet);
     accumulated_length = lanelet_length - dist_to_current_pose;
   } else {
     // compute distance from the current pose to the end of the current lanelet
@@ -737,7 +737,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
-    const double lanelet_length = lanelet::utils::getLaneletLength2d(closest_lanelet);
+    const double lanelet_length = lanelet::geometry::length2d(closest_lanelet);
     accumulated_length = lanelet_length - dist_to_current_pose;
   }
 
@@ -752,7 +752,7 @@ bool MissionPlanner::check_reroute_safety(
     for (size_t primitive_idx = 0; primitive_idx < primitives.size(); ++primitive_idx) {
       const auto & primitive = primitives.at(primitive_idx);
       const auto & lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
-      lanelets_length.at(primitive_idx) = (lanelet::utils::getLaneletLength2d(lanelet));
+      lanelets_length.at(primitive_idx) = (lanelet::geometry::length2d(lanelet));
     }
     accumulated_length += *std::min_element(lanelets_length.begin(), lanelets_length.end());
   }
@@ -769,7 +769,7 @@ bool MissionPlanner::check_reroute_safety(
                                     lanelet::utils::to2D(lanelet.centerline()),
                                     lanelet::utils::to2D(target_goal_position).basicPoint())
                                     .length;
-      const double target_lanelet_length = lanelet::utils::getLaneletLength2d(lanelet);
+      const double target_lanelet_length = lanelet::geometry::length2d(lanelet);
       // NOTE: `accumulated_length` here contains the length of the entire target_end_primitive, so
       // the remaining distance from the goal to the end of the target_end_primitive needs to be
       // subtracted.

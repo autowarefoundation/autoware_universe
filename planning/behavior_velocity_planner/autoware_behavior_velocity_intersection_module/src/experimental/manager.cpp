@@ -14,7 +14,7 @@
 
 #include "manager.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/topology.hpp>
 
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
@@ -580,7 +580,7 @@ void MergeFromPrivateModuleManager::launchNewModules(
     } else {
       const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
       const auto conflicting_lanelets =
-        lanelet::utils::getConflictingLanelets(routing_graph_ptr, ll);
+        autoware::experimental::lanelet2_utils::get_conflicting_lanelets(ll, routing_graph_ptr);
       for (auto && conflicting_lanelet : conflicting_lanelets) {
         const std::string conflicting_attr = conflicting_lanelet.attributeOr("location", "else");
         if (conflicting_attr == "urban") {

@@ -19,6 +19,7 @@
 
   <depend>autoware_control_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_learning_based_vehicle_model</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
