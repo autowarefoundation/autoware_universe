@@ -64,6 +64,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int64_t>("vote_threshold_for_detect_marker");
   param_.marker_to_vehicle_offset_y = this->declare_parameter<double>("marker_to_vehicle_offset_y");
   param_.marker_height_from_ground = this->declare_parameter<double>("marker_height_from_ground");
+  param_.lower_ring_id_init = this->declare_parameter<int64_t>("lower_ring_id_init");
+  param_.upper_ring_id_init = this->declare_parameter<int64_t>("upper_ring_id_init");
   param_.self_pose_timeout_sec = this->declare_parameter<double>("self_pose_timeout_sec");
   param_.self_pose_distance_tolerance_m =
     this->declare_parameter<double>("self_pose_distance_tolerance_m");
@@ -422,8 +424,9 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     return std::vector<landmark_manager::Landmark>{};
   }
 
-  uint16_t lower_ring_id = 128;
-  uint16_t upper_ring_id = 0;
+  // Use parameters for initial lower/upper ring id
+  uint16_t lower_ring_id = static_cast<uint16_t>(param_.lower_ring_id_init);
+  uint16_t upper_ring_id = static_cast<uint16_t>(param_.upper_ring_id_init);
   for (const auto & point : points_ptr->points) {
     lower_ring_id = std::min(get_ring_id(point), lower_ring_id);
     upper_ring_id = std::max(get_ring_id(point), upper_ring_id);
