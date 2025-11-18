@@ -47,11 +47,6 @@
 #include <string>
 #include <vector>
 
-typedef struct Detection
-{
-  float x, y, w, h, prob;
-} Detection;
-
 namespace autoware::traffic_light
 {
 class TrafficLightFineDetectorNode : public rclcpp::Node
