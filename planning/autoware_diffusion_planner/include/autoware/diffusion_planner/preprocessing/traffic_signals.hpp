@@ -27,6 +27,7 @@
 #include <lanelet2_traffic_rules/TrafficRules.h>
 
 #include <map>
+#include <vector>
 
 namespace autoware::diffusion_planner::preprocess
 {
