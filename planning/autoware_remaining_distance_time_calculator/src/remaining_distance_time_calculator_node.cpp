@@ -23,6 +23,8 @@
 
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <functional>
@@ -122,7 +124,7 @@ void RemainingDistanceTimeCalculatorNode::compute_route()
   current_lanes_lengths_.clear();
   current_lanes_lengths_.reserve(shortest_path.size());
   for (const auto & llt : shortest_path) {
-    current_lanes_lengths_.push_back(lanelet::utils::getLaneletLength2d(llt));
+    current_lanes_lengths_.push_back(lanelet::geometry::length2d(llt));
     current_lanes_.push_back(llt);
   }
 }
@@ -209,7 +211,7 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
     // remaining distance in current lanelet (if it is not the goal lanelet)
     lanelet::ArcCoordinates arc_coord =
       lanelet::utils::getArcCoordinates({current_lanelet}, current_vehicle_pose_);
-    double this_lanelet_length = lanelet::utils::getLaneletLength2d(current_lanelet);
+    double this_lanelet_length = lanelet::geometry::length2d(current_lanelet);
     double dist_in_current_lanelet =
       (current_lanelet.id() != goal_lanelet_.id()) ? this_lanelet_length - arc_coord.length : 0.0;
 

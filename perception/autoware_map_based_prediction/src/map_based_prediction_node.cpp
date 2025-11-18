@@ -23,8 +23,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/constants.hpp>
@@ -944,7 +942,7 @@ std::vector<LaneletPathWithPathInfo> MapBasedPredictionNode::getPredictedReferen
       double search_dist = (final_speed_surpasses_limit && !object_has_surpassed_limit_already)
                              ? get_search_distance_with_partial_acc(target_speed_limit)
                              : get_search_distance_with_decaying_acc();
-      search_dist += lanelet::utils::getLaneletLength3d(current_lanelet_data.lanelet);
+      search_dist += lanelet::geometry::length3d(current_lanelet_data.lanelet);
       possible_params.routingCostLimit = search_dist;
     }
 

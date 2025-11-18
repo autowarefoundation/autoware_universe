@@ -32,6 +32,7 @@
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
@@ -384,8 +385,9 @@ bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> 
 
 bool isParallelToEgoLane(const ObjectData & object, const double threshold)
 {
-  const auto closest_pose =
-    lanelet::utils::getClosestCenterPose(object.overhang_lanelet, object.getPosition());
+  const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    object.overhang_lanelet,
+    autoware::experimental::lanelet2_utils::from_ros(object.getPosition()));
   const auto yaw_deviation = std::abs(calc_yaw_deviation(closest_pose, object.getPose()));
 
   return yaw_deviation < threshold || yaw_deviation > M_PI - threshold;
@@ -393,8 +395,9 @@ bool isParallelToEgoLane(const ObjectData & object, const double threshold)
 
 bool isMergingToEgoLane(const ObjectData & object)
 {
-  const auto closest_pose =
-    lanelet::utils::getClosestCenterPose(object.overhang_lanelet, object.getPosition());
+  const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    object.overhang_lanelet,
+    autoware::experimental::lanelet2_utils::from_ros(object.getPosition()));
   const auto yaw_deviation = calc_yaw_deviation(closest_pose, object.getPose());
 
   if (isOnRight(object)) {
@@ -436,7 +439,10 @@ double getShiftableRatio(
   using lanelet::utils::conversion::toLaneletPoint;
 
   const auto centerline_pos =
-    lanelet::utils::getClosestCenterPose(object.overhang_lanelet, object.getPosition()).position;
+    autoware::experimental::lanelet2_utils::get_closest_center_pose(
+      object.overhang_lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(object.getPosition()))
+      .position;
 
   if (!isOnRight(object)) {
     const auto most_left_lanelet = [&]() {
@@ -1275,8 +1281,9 @@ double getRoadShoulderDistance(
     return 0.0;
   }
 
-  const auto centerline_pose =
-    lanelet::utils::getClosestCenterPose(object.overhang_lanelet, object.getPosition());
+  const auto centerline_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    object.overhang_lanelet,
+    autoware::experimental::lanelet2_utils::from_ros(object.getPosition()));
   // TODO(Satoshi OTA): check if the basic point is on right or left of bound.
   const auto bound = isOnRight(object) ? data.left_bound : data.right_bound;
   const auto envelope_polygon_width = boost::geometry::area(object.envelope_poly) /
@@ -1747,7 +1754,8 @@ lanelet::ConstLanelets getExtendLanes(
   lanelet::ConstLanelets extend_lanelets = lanelets;
 
   while (rclcpp::ok()) {
-    const double lane_length = lanelet::utils::getLaneletLength2d(extend_lanelets);
+    const double lane_length =
+      lanelet::geometry::length2d(lanelet::LaneletSequence(extend_lanelets));
     const auto arc_coordinates = lanelet::utils::getArcCoordinates(extend_lanelets, ego_pose);
     const auto forward_length = lane_length - arc_coordinates.length;
 

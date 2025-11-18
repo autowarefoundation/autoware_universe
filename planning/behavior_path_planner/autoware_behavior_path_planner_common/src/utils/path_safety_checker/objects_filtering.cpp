@@ -87,7 +87,8 @@ bool isCentroidWithinLanelet(
     return false;
   }
 
-  const auto closest_pose = lanelet::utils::getClosestCenterPose(lanelet, object_pose.position);
+  const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    lanelet, autoware::experimental::lanelet2_utils::from_ros(object_pose.position));
   return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, object_pose)) < yaw_threshold;
 }
 
@@ -100,7 +101,8 @@ bool isPolygonOverlapLanelet(
   }
 
   const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
-  const auto closest_pose = lanelet::utils::getClosestCenterPose(lanelet, object_pose.position);
+  const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    lanelet, autoware::experimental::lanelet2_utils::from_ros(object_pose));
   return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, object_pose)) < yaw_threshold;
 }
 

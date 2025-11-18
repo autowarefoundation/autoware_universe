@@ -52,7 +52,7 @@ double getDistanceToNextTrafficLight(
     }
   }
 
-  double distance = lanelet::utils::getLaneletLength3d(current_lanelet);
+  double distance = lanelet::geometry::length3d(current_lanelet);
 
   bool found_current_lane = false;
   for (const auto & llt : lanelets) {
@@ -77,7 +77,7 @@ double getDistanceToNextTrafficLight(
       return distance + to_stop_line.length - to_object.length;
     }
 
-    distance += lanelet::utils::getLaneletLength3d(llt);
+    distance += lanelet::geometry::length3d(llt);
   }
 
   return std::numeric_limits<double>::infinity();

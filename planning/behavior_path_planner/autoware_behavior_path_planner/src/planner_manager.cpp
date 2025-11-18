@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <magic_enum.hpp>
 
@@ -276,10 +277,13 @@ void PlannerManager::updateCurrentRouteLanelet(
   const auto lanelet_sequence = route_handler->getLaneletSequence(
     current_route_lanelet_->value(), pose, backward_length, p.forward_path_length);
 
+  auto opt = autoware::experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
+    lanelet_sequence, pose, p.ego_nearest_dist_threshold, p.ego_nearest_yaw_threshold);
+  if (opt.has_value()) {
+    closest_lane = *opt;
+  }
   const auto could_calculate_closest_lanelet =
-    lanelet::utils::query::getClosestLaneletWithConstrains(
-      lanelet_sequence, pose, &closest_lane, p.ego_nearest_dist_threshold,
-      p.ego_nearest_yaw_threshold) ||
+    opt.has_value() ||
     lanelet::utils::query::getClosestLanelet(lanelet_sequence, pose, &closest_lane);
 
   if (could_calculate_closest_lanelet) {
