@@ -7,8 +7,6 @@
     ignore_neighbors: false
     ignore_unknown_neighbors: true
     predict_neighbor_trajectory: true
-    update_traffic_light_group_info: true
-    keep_last_traffic_light_group_info: true
     traffic_light_group_msg_timeout_seconds: 0.2
     build_only: false
     batch_size: 1
