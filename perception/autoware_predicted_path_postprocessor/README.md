@@ -39,7 +39,7 @@ As an example, let's see how to add a new processor by using a processor called 
 
 1. Create a new processor class that inherits from `ProcessorInterface`:
 
-   ```c++:processor/filter_by_something.hpp
+   ```c++
    class FilterBySomething final : public ProcessorInterface
    {
      public:
@@ -72,7 +72,7 @@ As an example, let's see how to add a new processor by using a processor called 
 
 2. Register the new processor in `build_processors(...)` function:
 
-   ```c++:processor/builder.hpp
+   ```c++
    std::vector<ProcessorInterface::UniquePtr> build_processors(rclcpp::Node * node_ptr, const std::string & processor_name)
    {
      std::vector<ProcessorInterface::UniquePtr> outputs;
@@ -92,14 +92,14 @@ As an example, let's see how to add a new processor by using a processor called 
    The parameters must be grouped under the processor's string identifier.
    The processors specified in the `processors` array are launched in runtime.
 
-   ```yaml:config/predicted_path_postprocessor.param.yaml
+   ```yaml
    /**:
      ros__parameters:
-      processors: [filter_by_something]
-      # --- FilterBySomething ---
-      filter_by_something:
+       processors: [filter_by_something]
+       # --- FilterBySomething ---
+       filter_by_something:
          double_param: 100.0
          string_param: I'm a processor!!
-      # --- Parameters for other processors ---
-      # ...
+       # --- Parameters for other processors ---
+       # ...
    ```
