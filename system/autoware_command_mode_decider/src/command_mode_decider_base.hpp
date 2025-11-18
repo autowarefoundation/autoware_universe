@@ -83,7 +83,7 @@ private:
     ChangeAutowareControl::Request::SharedPtr req, ChangeAutowareControl::Response::SharedPtr res);
 
   ResponseStatus check_mode_exists(uint16_t mode);
-  ResponseStatus check_mode_request(uint16_t mode);
+  ResponseStatus check_mode_request(const RequestModeStatus & request);
 
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<CommandModeRequest>::SharedPtr pub_command_mode_request_;
