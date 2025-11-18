@@ -1198,7 +1198,7 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
         break;
       }
       result.push_back(current_lane);
-      acc_dist += lanelet::utils::getLaneletLength3d(current_lane);
+      acc_dist += lanelet::geometry::length3d(current_lane);
     }
   };
 

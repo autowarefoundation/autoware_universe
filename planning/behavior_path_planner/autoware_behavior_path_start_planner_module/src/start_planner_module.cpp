@@ -21,7 +21,6 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -863,10 +862,6 @@ BehaviorModuleOutput StartPlannerModule::plan()
   path_candidate_ = std::make_shared<PathWithLaneId>(getFullPath());
   path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
-  if (!status_.prev_approved_path && status_.driving_forward) {
-    status_.prev_approved_path = std::make_shared<PathWithLaneId>(output.path);
-  }
-
   setDrivableAreaInfo(output);
   set_longitudinal_planning_factor(output.path);
 
@@ -1012,7 +1007,6 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   stop_pose_ = utils::insert_feasible_stop_point(
     stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
     parameters_->maximum_jerk_for_stop, stop_reason);
-  status_.stop_pose = stop_pose_;
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
@@ -1140,31 +1134,30 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     incrementPathIndex();
   }
 
-  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return getCurrentPath();
+  auto current_path = getCurrentPath();
 
-  if (status_.stop_pose && status_.prev_stop_path_after_approval) {
-    // Delete stop point if conditions are met
-    if (status_.is_safe_dynamic_objects && isStopped()) {
-      status_.stop_pose = std::nullopt;
-    } else {  // update the stop pose if it goes behind the current ego pose
-      const double previous_stop_distance = autoware::motion_utils::calcSignedArcLength(
-        status_.prev_stop_path_after_approval->points,
-        planner_data_->self_odometry->pose.pose.position, status_.stop_pose->pose.position);
-      if (previous_stop_distance < 0.0) {
-        const auto ego_arc_length = autoware::motion_utils::calcSignedArcLength(
-          status_.prev_stop_path_after_approval->points, 0UL,
-          planner_data_->self_odometry->pose.pose.position);
-        status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(getCurrentPath());
-        status_.stop_pose->pose =
-          utils::insertStopPoint(ego_arc_length, *status_.prev_stop_path_after_approval).point.pose;
-      }
-    }
-    stop_pose_ = status_.stop_pose;
+  if (!status_.prev_approved_path && status_.driving_forward && !current_path.points.empty()) {
+    status_.prev_approved_path = std::make_shared<PathWithLaneId>(current_path);
+  }
+
+  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return current_path;
+
+  if (!stop_pose_) {
+    status_.prev_stop_path_after_approval = nullptr;
+  }
+
+  if (stop_pose_ && status_.prev_stop_path_after_approval) {
     update_rtc_status(
       status_.prev_stop_path_after_approval->points,
       planner_data_->self_odometry->pose.pose.position, status_.pull_out_path.start_pose.position,
-      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects,
-      tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects);
+
+    // Delete stop point if conditions are met
+    if (status_.is_safe_dynamic_objects && isStopped()) {
+      stop_pose_ = std::nullopt;
+      status_.prev_stop_path_after_approval = nullptr;
+      return getCurrentPath();
+    }
     return *status_.prev_stop_path_after_approval;
   }
 
@@ -1175,21 +1168,16 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   waitApproval();
   removeRTCStatus();
 
-  auto current_path = getCurrentPath();
   stop_pose_ = utils::insert_feasible_stop_point(
     current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop);
+    parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
 
   if (stop_pose_) {
-    stop_pose_->detail = "unsafe against dynamic objects";
-
     RCLCPP_DEBUG_THROTTLE(
       getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
 
     status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
   }
-
-  status_.stop_pose = stop_pose_;
 
   update_rtc_status(
     current_path.points, planner_data_->self_odometry->pose.pose.position,
@@ -1616,7 +1604,7 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
                                             .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
-      [](double acc, const auto & lane) { return acc + lanelet::utils::getLaneletLength2d(lane); });
+      [](double acc, const auto & lane) { return acc + lanelet::geometry::length2d(lane); });
     const double distance_from_lane_end = length_to_lane_end - backed_pose_arc_length;
     if (distance_from_lane_end < parameters_->ignore_distance_from_lane_end) {
       RCLCPP_WARN_THROTTLE(
@@ -2334,7 +2322,7 @@ void StartPlannerModule::logPullOutStatus(rclcpp::Logger::Level log_level) const
     status_.prev_is_safe_dynamic_objects ? "true" : "false");
   logFunc("  Driving Forward: %s", status_.driving_forward ? "true" : "false");
   logFunc("  Backward Driving Complete: %s", status_.backward_driving_complete ? "true" : "false");
-  logFunc("  Has Stop Pose: %s", status_.stop_pose ? "true" : "false");
+  logFunc("  Has Stop Pose: %s", stop_pose_ ? "true" : "false");
 
   logFunc("[Module State]");
   logFunc("  isActivated: %s", isActivated() ? "true" : "false");
