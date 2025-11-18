@@ -111,8 +111,6 @@ struct DiffusionPlannerParams
   bool ignore_neighbors;
   bool ignore_unknown_neighbors;
   bool predict_neighbor_trajectory;
-  bool update_traffic_light_group_info;
-  bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
   std::vector<double> temperature_list;
@@ -314,8 +312,8 @@ private:
   autoware_utils::InterProcessPollingSubscriber<TrackedObjects> sub_tracked_objects_{
     this, "~/input/tracked_objects"};
   autoware_utils::InterProcessPollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>
-    sub_traffic_signals_{this, "~/input/traffic_signals"};
+    autoware_perception_msgs::msg::TrafficLightGroupArray, autoware_utils::polling_policy::All>
+    sub_traffic_signals_{this, "~/input/traffic_signals", rclcpp::QoS{10}};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};

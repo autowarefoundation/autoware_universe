@@ -122,10 +122,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("ignore_unknown_neighbors", false);
   params_.predict_neighbor_trajectory =
     this->declare_parameter<bool>("predict_neighbor_trajectory", false);
-  params_.update_traffic_light_group_info =
-    this->declare_parameter<bool>("update_traffic_light_group_info", false);
-  params_.keep_last_traffic_light_group_info =
-    this->declare_parameter<bool>("keep_last_traffic_light_group_info", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
@@ -152,11 +148,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
     update_param<bool>(
       parameters, "predict_neighbor_trajectory", temp_params.predict_neighbor_trajectory);
-    update_param<bool>(
-      parameters, "update_traffic_light_group_info", temp_params.update_traffic_light_group_info);
-    update_param<bool>(
-      parameters, "keep_last_traffic_light_group_info",
-      temp_params.keep_last_traffic_light_group_info);
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
@@ -404,16 +395,13 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   ego_kinematic_state_ = *ego_kinematic_state;
 
-  if (params_.update_traffic_light_group_info) {
-    const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
-    preprocess::process_traffic_signals(
-      traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s,
-      params_.keep_last_traffic_light_group_info);
-    if (!traffic_signals) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-        "no traffic signal received. traffic light info will not be updated/used");
-    }
+  const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
+  preprocess::process_traffic_signals(
+    traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s);
+  if (traffic_signals.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
+      "no traffic signal received. traffic light info will not be updated/used");
   }
 
   // random sample trajectories

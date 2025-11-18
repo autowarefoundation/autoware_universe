@@ -47,11 +47,6 @@
           "default": true,
           "description": "Predict trajectories for neighbor agents"
         },
-        "update_traffic_light_group_info": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable updating of traffic light group info"
-        },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
           "default": 0.2,
@@ -111,7 +106,6 @@
         "args_path",
         "planning_frequency_hz",
         "predict_neighbor_trajectory",
-        "update_traffic_light_group_info",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
         "temperature",
