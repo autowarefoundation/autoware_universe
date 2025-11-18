@@ -133,8 +133,6 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
     });
 
   // recalculate acceleration after velocity change
-  autoware::motion_utils::calculate_time_from_start(
-    input_trajectory_array, input_trajectory_array.front().pose.position);
   recalculate_longitudinal_acceleration(input_trajectory_array);
 }
 
