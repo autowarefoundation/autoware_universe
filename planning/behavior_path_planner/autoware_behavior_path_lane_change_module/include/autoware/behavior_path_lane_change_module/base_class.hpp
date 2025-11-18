@@ -189,6 +189,7 @@ public:
     common_data_ptr_->lc_param_ptr = lane_change_parameters_;
     common_data_ptr_->lc_type = type_;
     common_data_ptr_->direction = direction_;
+    common_data_ptr_->current_acceleration = data->self_acceleration;
   }
 
   void setTimeKeeper(const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper)
@@ -233,6 +234,8 @@ public:
   virtual TurnSignalInfo get_current_turn_signal_info() const = 0;
 
   virtual bool is_near_regulatory_element() const = 0;
+
+  virtual bool is_ego_in_current_or_target_lanes() const = 0;
 
 protected:
   virtual bool isValidPath(const PathWithLaneId & path) const = 0;

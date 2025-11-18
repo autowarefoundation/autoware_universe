@@ -2,6 +2,21 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(autoware_traffic_light_classifier): split utils and add test (`#10633 <https://github.com/autowarefoundation/autoware_universe/issues/10633>`_)
+  * first commit
+  * split data convert
+  * chore
+  * style(pre-commit): autofix
+  * move function
+  * add const
+  * add const
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Masato Saeki, Ryohsuke Mitsudome
+
 0.47.1 (2025-08-14)
 -------------------
 

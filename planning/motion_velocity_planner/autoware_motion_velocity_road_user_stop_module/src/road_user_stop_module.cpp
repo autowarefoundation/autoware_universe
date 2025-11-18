@@ -35,6 +35,7 @@
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
 #include <pluginlib/class_list_macros.hpp>
+#include <tf2/utils.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -48,7 +49,6 @@
 #include <boost/geometry/strategies/buffer.hpp>
 
 #include <lanelet2_routing/RoutingGraphContainer.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -174,28 +174,208 @@ bool RoadUserStopModule::has_minimum_detection_duration(
   return detection_duration >= param.obstacle_filtering.min_detection_duration;
 }
 
+void RoadUserStopModule::update_stopped_object_tracking(
+  const std::string & object_id, const geometry_msgs::msg::Point & current_position,
+  const double current_velocity, const rclcpp::Time & current_time)
+{
+  const auto param = param_listener_->get_params();
+  const double velocity_threshold = param.stopped_object_tracking.stopped_velocity_threshold;
+  const double distance_threshold = param.stopped_object_tracking.stopped_position_tolerance;
+
+  auto it = tracked_objects_.find(object_id);
+  if (it == tracked_objects_.end()) {
+    return;
+  }
+
+  auto & tracked_obj = it->second;
+
+  // check if the object is currently stopped
+  const bool is_stopped_by_velocity = std::abs(current_velocity) < velocity_threshold;
+
+  if (!tracked_obj.is_currently_stopped) {
+    // object was not stopped before
+    if (is_stopped_by_velocity) {
+      // object just stopped, start tracking
+      tracked_obj.is_currently_stopped = true;
+      tracked_obj.stopped_start_time = current_time;
+      tracked_obj.stopped_position = current_position;
+      RCLCPP_DEBUG(
+        logger_, "Object %s started being stopped (vel=%.2f m/s)", object_id.c_str(),
+        current_velocity);
+    }
+  } else {
+    // object was stopped before
+    if (!is_stopped_by_velocity) {
+      // object started moving again
+      tracked_obj.is_currently_stopped = false;
+      RCLCPP_DEBUG(
+        logger_, "Object %s started moving again (vel=%.2f m/s)", object_id.c_str(),
+        current_velocity);
+    } else {
+      // object is still stopped, check if it moved too much
+      const double distance_from_stopped_position =
+        autoware_utils_geometry::calc_distance2d(current_position, tracked_obj.stopped_position);
+
+      if (distance_from_stopped_position > distance_threshold) {
+        // object moved too much, reset stopped tracking
+        tracked_obj.is_currently_stopped = true;
+        tracked_obj.stopped_start_time = current_time;
+        tracked_obj.stopped_position = current_position;
+        RCLCPP_DEBUG(
+          logger_, "Object %s moved too much (dist=%.2fm), reset stopped tracking",
+          object_id.c_str(), distance_from_stopped_position);
+      }
+    }
+  }
+}
+
+void RoadUserStopModule::update_ego_reached_virtual_wall(
+  const std::string & object_id, const geometry_msgs::msg::Point & virtual_wall_position,
+  const geometry_msgs::msg::Pose & ego_pose, const rclcpp::Time & current_time)
+{
+  const auto param = param_listener_->get_params();
+  const double distance_threshold =
+    param.stopped_object_tracking.ego_reached_wall_distance_threshold;
+
+  auto it = tracked_objects_.find(object_id);
+  if (it == tracked_objects_.end()) {
+    return;
+  }
+
+  auto & tracked_obj = it->second;
+
+  // save the virtual wall position for this frame
+  tracked_obj.last_virtual_wall_position = virtual_wall_position;
+  tracked_obj.has_virtual_wall_position = true;
+
+  // calculate distance from ego to virtual wall
+  const double distance =
+    autoware_utils_geometry::calc_distance2d(ego_pose.position, virtual_wall_position);
+
+  // check if ego has reached the virtual wall (within threshold distance)
+  if (distance <= distance_threshold && !tracked_obj.ego_reached_virtual_wall) {
+    // ego just reached the virtual wall
+    tracked_obj.ego_reached_virtual_wall = true;
+    tracked_obj.ego_reached_virtual_wall_time = current_time;
+    RCLCPP_DEBUG(
+      logger_, "ego reached virtual wall for object %s at distance %.2fm, wall_pos=(%.2f, %.2f)",
+      object_id.c_str(), distance, virtual_wall_position.x, virtual_wall_position.y);
+  } else if (distance > distance_threshold * 2.0 && tracked_obj.ego_reached_virtual_wall) {
+    // ego moved away from the virtual wall, reset the flag
+    tracked_obj.ego_reached_virtual_wall = false;
+    RCLCPP_DEBUG(
+      logger_, "ego moved away from virtual wall for object %s (dist=%.2fm)", object_id.c_str(),
+      distance);
+  }
+}
+
+bool RoadUserStopModule::is_object_stopped_for_duration_after_ego_arrival(
+  const std::string & object_id, const rclcpp::Time & current_time,
+  const geometry_msgs::msg::Pose & ego_pose, const double duration_threshold) const
+{
+  auto it = tracked_objects_.find(object_id);
+  if (it == tracked_objects_.end()) {
+    return false;
+  }
+
+  const auto & tracked_obj = it->second;
+
+  // check if ego has reached the virtual wall
+  if (!tracked_obj.ego_reached_virtual_wall) {
+    RCLCPP_DEBUG(logger_, "ego has NOT reached virtual wall for object %s", object_id.c_str());
+    return false;
+  } else {
+    const double distance_ego_to_wall = autoware_utils_geometry::calc_distance2d(
+      tracked_obj.last_virtual_wall_position, ego_pose.position);
+
+    RCLCPP_DEBUG(
+      logger_, "ego reached virtual wall for object %s distance to virtual wall %.2f [m]",
+      object_id.c_str(), distance_ego_to_wall);
+  }
+
+  // check if object has been stopped for the required duration after ego reached the wall
+  const double duration_after_ego_arrival =
+    (current_time - tracked_obj.ego_reached_virtual_wall_time).seconds();
+
+  // check if object is currently stopped
+  if (!tracked_obj.is_currently_stopped) {
+    RCLCPP_DEBUG(
+      logger_, "object %s is NOT stopped (is_currently_stopped=false)", object_id.c_str());
+    return false;
+  }
+
+  const double stopped_duration = (current_time - tracked_obj.stopped_start_time).seconds();
+  RCLCPP_DEBUG(
+    logger_, "object %s is stopped for %.2f seconds", object_id.c_str(), stopped_duration);
+
+  const double stopped_duration_after_ego_arrival =
+    std::min(stopped_duration, duration_after_ego_arrival);
+
+  const bool is_stopped_long_enough = stopped_duration_after_ego_arrival >= duration_threshold;
+
+  RCLCPP_DEBUG(
+    logger_,
+    "object %s: stopped for %.2fs after ego arrival (threshold=%.2fs), is_stopped_long_enough=%s",
+    object_id.c_str(), stopped_duration_after_ego_arrival, duration_threshold,
+    is_stopped_long_enough ? "PASS" : "NOT ENOUGH");
+
+  return is_stopped_long_enough;
+}
+
 std::vector<StopObstacle> RoadUserStopModule::filter_stop_obstacles(
   const std::shared_ptr<const PlannerData> planner_data,
   const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
-  const std::vector<Polygon2d> & decimated_traj_polygons, const RelevantLaneletData & lanelet_data,
-  const rclcpp::Time & current_time, const double dist_to_bumper)
+  const std::vector<Polygon2d> & decimated_traj_polygons,
+  const std::vector<Polygon2d> & decimated_traj_polygons_no_margin,
+  const RelevantLaneletData & lanelet_data, const rclcpp::Time & current_time,
+  const double dist_to_bumper)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   update_tracked_objects(planner_data->objects, current_time);
 
-  std::set<std::string> current_object_ids;
+  const auto param = param_listener_->get_params();
+  const double stopped_duration_threshold =
+    param.stopped_object_tracking.stopped_duration_after_ego_arrival;
 
+  std::set<std::string> current_object_ids;
   std::vector<StopObstacle> stop_obstacles;
   for (const auto & object : planner_data->objects) {
     if (
       auto stop_obstacle = pick_stop_obstacle_from_predicted_object(
         planner_data, object, traj_points, decimated_traj_points, decimated_traj_polygons,
-        lanelet_data, current_time, dist_to_bumper)) {
-      stop_obstacles.push_back(stop_obstacle.value());
+        decimated_traj_polygons_no_margin, lanelet_data, current_time, dist_to_bumper)) {
       const std::string object_id =
         autoware::universe_utils::toHexString(object->predicted_object.object_id);
       current_object_ids.insert(object_id);
+
+      // update stopped object tracking
+      const auto & obj_pose = object->get_predicted_current_pose(
+        clock_->now(), planner_data->predicted_objects_header.stamp);
+      const auto & obj_twist =
+        object->predicted_object.kinematics.initial_twist_with_covariance.twist.linear;
+      const Eigen::Vector2d obj_twist2d(obj_twist.x, obj_twist.y);
+      update_stopped_object_tracking(
+        object_id, obj_pose.position, obj_twist2d.norm(), current_time);
+
+      // check if object has been stopped for the configured duration AFTER ego reached virtual wall
+      // BUT NOT if the object is in no-margin polygon (certain collision)
+      if (
+        !stop_obstacle->is_in_no_margin_polygon &&
+        is_object_stopped_for_duration_after_ego_arrival(
+          object_id, current_time, planner_data->current_odometry.pose.pose,
+          stopped_duration_threshold)) {
+        // object has been stopped after ego reached the wall
+        // and is not in certain collision area, so allow passage
+        RCLCPP_DEBUG(
+          logger_,
+          "Object %s has been stopped for more than %.1f seconds after ego reached virtual wall "
+          "(not in no-margin polygon), allowing passage",
+          object_id.c_str(), stopped_duration_threshold);
+        continue;
+      }
+
+      stop_obstacles.push_back(stop_obstacle.value());
 
       // Update last_stop_obstacle_time for this object
       auto tracked_it = tracked_objects_.find(object_id);
@@ -220,7 +400,6 @@ std::vector<StopObstacle> RoadUserStopModule::filter_stop_obstacles(
     }
 
     // Check if object was lost recently (within threshold)
-    const auto param = param_listener_->get_params();
     // Use last_stop_obstacle_time to check how long it's been since this object was a stop obstacle
     const double lost_duration =
       (current_time - tracked_it->second.last_stop_obstacle_time).seconds();
@@ -306,8 +485,15 @@ VelocityPlanningResult RoadUserStopModule::plan(
   const auto decimated_traj_polygons = get_trajectory_polygons(
     decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
     param.obstacle_filtering.trajectory_lateral_margin, p.enable_to_consider_current_pose,
-    p.time_to_convergence, p.decimate_trajectory_step_length);
+    p.time_to_convergence, p.decimate_trajectory_step_length, true /* from front bumper */);
   debug_data_.trajectory_polygons = decimated_traj_polygons;
+
+  // Create trajectory polygons without lateral margin (0m width) for certain collision check
+  const auto decimated_traj_polygons_no_margin = get_trajectory_polygons(
+    decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
+    0.0, /* no lateral margin */ p.enable_to_consider_current_pose, p.time_to_convergence,
+    p.decimate_trajectory_step_length, false /* from front bumper */);
+  debug_data_.trajectory_polygons_no_margin = decimated_traj_polygons_no_margin;
 
   // 2. Get relevant lanelets for VRU and opposite traffic detection
   const auto lanelet_data = get_relevant_lanelet_data(ego_lanelets, planner_data);
@@ -321,8 +507,8 @@ VelocityPlanningResult RoadUserStopModule::plan(
 
   // 3. Filter objects and create stop obstacles
   const auto stop_obstacles = filter_stop_obstacles(
-    planner_data, trajectory_points, decimated_traj_points, decimated_traj_polygons, lanelet_data,
-    current_time, dist_to_bumper);
+    planner_data, trajectory_points, decimated_traj_points, decimated_traj_polygons,
+    decimated_traj_polygons_no_margin, lanelet_data, current_time, dist_to_bumper);
 
   // 4. Calculate stop point based on filtered obstacles
   const auto stop_point =
@@ -742,26 +928,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
   const auto stop_point = calc_stop_point(
     planner_data, trajectory_points, determined_stop_obstacle, determined_zero_vel_dist);
 
-  if (determined_stop_obstacle.has_value() && determined_stop_obstacle.value().velocity >= -0.5) {
-    return stop_point;
-  }
-
-  path_length_buffer_.update_buffer(
-    stop_point,
-    [trajectory_points](const Point & point) {
-      return autoware::motion_utils::calcSignedArcLength(trajectory_points, 0, point);
-    },
-    clock_->now(), determined_stop_obstacle.value(), determined_desired_stop_margin.value());
-
-  const auto buffered_stop = path_length_buffer_.get_nearest_active_item();
-  if (buffered_stop.has_value()) {
-    debug_data_.stop_index = std::nullopt;
-    debug_data_.stop_point = buffered_stop.value().stop_point;
-
-    return std::make_optional(buffered_stop.value().stop_point);
-  }
-
-  return std::nullopt;
+  return stop_point;
 }
 
 std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicted_object(
@@ -769,8 +936,10 @@ std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicte
   const std::shared_ptr<PlannerData::Object> object,
   const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
-  const std::vector<Polygon2d> & decimated_traj_polygons, const RelevantLaneletData & lanelet_data,
-  const rclcpp::Time & current_time, const double dist_to_bumper)
+  const std::vector<Polygon2d> & decimated_traj_polygons,
+  const std::vector<Polygon2d> & decimated_traj_polygons_no_margin,
+  const RelevantLaneletData & lanelet_data, const rclcpp::Time & current_time,
+  const double dist_to_bumper)
 {
   const auto & predicted_object = object->predicted_object;
   const auto & predicted_objects_stamp = planner_data->predicted_objects_header.stamp;
@@ -838,7 +1007,19 @@ std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicte
     return std::nullopt;
   }
 
-  return StopObstacle{
+  // check if object is in no-margin polygon (certain collision)
+  bool is_in_no_margin_polygon = false;
+  auto collision_point_no_margin = polygon_utils::get_collision_point(
+    decimated_traj_points, decimated_traj_polygons_no_margin, obj_pose.position, clock_->now(),
+    autoware_utils_geometry::to_polygon2d(obj_pose, predicted_object.shape), dist_to_bumper);
+
+  if (collision_point_no_margin.has_value()) {
+    is_in_no_margin_polygon = true;
+    RCLCPP_DEBUG(
+      logger_, "object %s is in no-margin polygon (certain collision)", object_id_str.c_str());
+  }
+
+  const StopObstacle stop_obstacle{
     predicted_object.object_id,
     predicted_objects_stamp,
     is_opposing_traffic,
@@ -848,7 +1029,10 @@ std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicte
     predicted_object.shape,
     object->get_lon_vel_relative_to_traj(traj_points),
     collision_point.value().first,
-    collision_point.value().second};
+    collision_point.value().second,
+    is_in_no_margin_polygon};
+
+  return stop_obstacle;
 };
 
 void RoadUserStopModule::hold_previous_stop_if_necessary(
@@ -907,6 +1091,14 @@ std::optional<Point> RoadUserStopModule::calc_stop_point(
   // update debug data
   debug_data_.stop_index = zero_vel_idx.value();
   debug_data_.stop_point = stop_point;
+
+  // update virtual wall position for the object in TrackedObject
+  if (determined_stop_obstacle.has_value()) {
+    const std::string object_id =
+      autoware::universe_utils::toHexString(determined_stop_obstacle.value().uuid);
+    update_ego_reached_virtual_wall(
+      object_id, stop_point, planner_data->current_odometry.pose.pose, clock_->now());
+  }
 
   // update planning factor
   const auto stop_pose = output_traj_points.at(zero_vel_idx.value()).pose;
@@ -1080,14 +1272,21 @@ std::vector<Polygon2d> RoadUserStopModule::get_trajectory_polygons(
   const std::vector<TrajectoryPoint> & decimated_traj_points, const VehicleInfo & vehicle_info,
   const Pose & current_ego_pose, const double lat_margin,
   const bool enable_to_consider_current_pose, const double time_to_convergence,
-  const double decimate_trajectory_step_length) const
+  const double decimate_trajectory_step_length, const bool is_from_front_bumper) const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   if (trajectory_polygon_for_inside_map_.count(lat_margin) == 0) {
-    const auto traj_polys = polygon_utils::create_one_step_polygons(
-      decimated_traj_points, vehicle_info, current_ego_pose, lat_margin,
-      enable_to_consider_current_pose, time_to_convergence, decimate_trajectory_step_length);
-    trajectory_polygon_for_inside_map_.emplace(lat_margin, traj_polys);
+    if (is_from_front_bumper) {
+      const auto traj_polys = road_user_stop::utils::create_one_step_polygons_from_front(
+        decimated_traj_points, vehicle_info, current_ego_pose, lat_margin,
+        enable_to_consider_current_pose, time_to_convergence, decimate_trajectory_step_length);
+      trajectory_polygon_for_inside_map_.emplace(lat_margin, traj_polys);
+    } else {
+      const auto traj_polys = polygon_utils::create_one_step_polygons(
+        decimated_traj_points, vehicle_info, current_ego_pose, lat_margin,
+        enable_to_consider_current_pose, time_to_convergence, decimate_trajectory_step_length);
+      trajectory_polygon_for_inside_map_.emplace(lat_margin, traj_polys);
+    }
   }
   return trajectory_polygon_for_inside_map_.at(lat_margin);
 }

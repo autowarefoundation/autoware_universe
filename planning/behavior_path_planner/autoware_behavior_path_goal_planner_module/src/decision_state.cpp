@@ -106,38 +106,45 @@ PathDecisionState PathDecisionStateController::get_next_state(
   }
 
   const auto & current_path = pull_over_path.getCurrentPath();
-  if (current_state_.state == PathDecisionState::DecisionKind::DECIDING) {
-    const double hysteresis_factor = 0.9;
+  const bool is_deciding = current_state_.state == PathDecisionState::DecisionKind::DECIDING;
+  // To prevent chattering between NOT_DECIDED and DECIDING states,
+  // apply hysteresis to the collision check margin
+  const double hysteresis_factor = is_deciding ? 0.9 : 1.0;
 
-    const auto & modified_goal = pull_over_path.modified_goal();
-    // check goal pose collision
-    if (!goal_searcher.isSafeGoalWithMarginScaleFactor(
-          modified_goal, hysteresis_factor, occupancy_grid_map, planner_data,
-          static_target_objects)) {
+  // check goal pose collision
+  const auto & modified_goal = pull_over_path.modified_goal();
+  if (!goal_searcher.isSafeGoalWithMarginScaleFactor(
+        modified_goal, hysteresis_factor, occupancy_grid_map, planner_data,
+        static_target_objects)) {
+    if (is_deciding) {
       RCLCPP_INFO(logger_, "[DecidingPathStatus]: DECIDING->NOT_DECIDED. goal is not safe");
-      next_state.state = PathDecisionState::DecisionKind::NOT_DECIDED;
-      next_state.deciding_start_time = std::nullopt;
-      return next_state;
     }
+    next_state.state = PathDecisionState::DecisionKind::NOT_DECIDED;
+    next_state.deciding_start_time = std::nullopt;
+    return next_state;
+  }
 
-    // check current parking path collision
-    const auto & parking_path = pull_over_path.parking_path();
-    const auto & parking_path_curvatures = pull_over_path.parking_path_curvatures();
-    const double margin =
-      parameters.object_recognition_collision_check_hard_margins.back() * hysteresis_factor;
-    if (goal_planner_utils::checkObjectsCollision(
-          parking_path, parking_path_curvatures, static_target_objects, dynamic_target_objects,
-          planner_data->parameters, margin,
-          /*extract_static_objects=*/false, parameters.maximum_deceleration,
-          parameters.object_recognition_collision_check_max_extra_stopping_margin,
-          parameters.collision_check_outer_margin_factor, ego_polygons_expanded, true)) {
+  // check current parking path collision
+  const auto & parking_path = pull_over_path.parking_path();
+  const auto & parking_path_curvatures = pull_over_path.parking_path_curvatures();
+  const double margin =
+    parameters.object_recognition_collision_check_hard_margins.back() * hysteresis_factor;
+  if (goal_planner_utils::checkObjectsCollision(
+        parking_path, parking_path_curvatures, static_target_objects, dynamic_target_objects,
+        planner_data->parameters, margin,
+        /*extract_static_objects=*/false, parameters.maximum_deceleration,
+        parameters.object_recognition_collision_check_max_extra_stopping_margin,
+        parameters.collision_check_outer_margin_factor, ego_polygons_expanded, true)) {
+    if (is_deciding) {
       RCLCPP_INFO(
         logger_, "[DecidingPathStatus]: DECIDING->NOT_DECIDED. path has collision with objects");
-      next_state.state = PathDecisionState::DecisionKind::NOT_DECIDED;
-      next_state.deciding_start_time = std::nullopt;
-      return next_state;
     }
+    next_state.state = PathDecisionState::DecisionKind::NOT_DECIDED;
+    next_state.deciding_start_time = std::nullopt;
+    return next_state;
+  }
 
+  if (is_deciding) {
     if (!next_state.is_stable_safe) {
       RCLCPP_INFO(
         logger_,

@@ -2,6 +2,15 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(default_adapi_universe): add a maintainer (`#11619 <https://github.com/autowarefoundation/autoware_universe/issues/11619>`_)
+* feat(autoware_default_adapi_universe): add roundabout handling to planning factors (`#11300 <https://github.com/autowarefoundation/autoware_universe/issues/11300>`_)
+  feat(planning): add roundabout handling to planning factors and conversion map
+* fix(autoware_default_adapi_universe): comment out unused functions (`#11305 <https://github.com/autowarefoundation/autoware_universe/issues/11305>`_)
+* Contributors: Junya Sasaki, Ryohsuke Mitsudome, Sho Iwasawa, Takagi, Isamu
+
 0.47.1 (2025-08-14)
 -------------------
 

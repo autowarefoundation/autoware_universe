@@ -28,26 +28,11 @@ See the [original design](https://github.com/ApolloAuto/apollo/blob/r6.0.0/docs/
 
 ## Parameters
 
-### Node Parameters
+{{ json_to_markdown("perception/autoware_lidar_apollo_instance_segmentation/schema/hdl-64.schema.json") }}
 
-None
+{{ json_to_markdown("perception/autoware_lidar_apollo_instance_segmentation/schema/vlp-16.schema.json") }}
 
-### Core Parameters
-
-| Name                    | Type   | Default Value        | Description                                                                        |
-| ----------------------- | ------ | -------------------- | ---------------------------------------------------------------------------------- |
-| `score_threshold`       | double | 0.8                  | If the score of a detected object is lower than this value, the object is ignored. |
-| `range`                 | int    | 60                   | Half of the length of feature map sides. [m]                                       |
-| `width`                 | int    | 640                  | The grid width of feature map.                                                     |
-| `height`                | int    | 640                  | The grid height of feature map.                                                    |
-| `engine_file`           | string | "vls-128.engine"     | The name of TensorRT engine file for CNN model.                                    |
-| `prototxt_file`         | string | "vls-128.prototxt"   | The name of prototxt file for CNN model.                                           |
-| `caffemodel_file`       | string | "vls-128.caffemodel" | The name of caffemodel file for CNN model.                                         |
-| `use_intensity_feature` | bool   | true                 | The flag to use intensity feature of pointcloud.                                   |
-| `use_constant_feature`  | bool   | false                | The flag to use direction and distance feature of pointcloud.                      |
-| `target_frame`          | string | "base_link"          | Pointcloud data is transformed into this frame.                                    |
-| `z_offset`              | int    | 2                    | z offset from target frame. [m]                                                    |
-| `build_only`            | bool   | `false`              | shutdown the node after TensorRT engine file is built                              |
+{{ json_to_markdown("perception/autoware_lidar_apollo_instance_segmentation/schema/vls-128.schema.json") }}
 
 ## Assumptions / Known limits
 

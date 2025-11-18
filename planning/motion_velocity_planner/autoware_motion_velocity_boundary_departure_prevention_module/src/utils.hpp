@@ -27,36 +27,6 @@ namespace autoware::motion_velocity_planner::experimental::utils
 {
 
 /**
- * @brief Erase elements from an associative container if they match a given predicate.
- *
- * This function iterates over a `std::map` or `std::unordered_map` and removes all key-value
- * pairs for which the predicate returns true. The predicate must accept a `std::pair<Key, Value>`.
- *
- * @tparam Container Must be either `std::map` or `std::unordered_map`.
- * @tparam Predicate Unary function or lambda that returns true for elements to be removed.
- * @param container The map to remove elements from.
- * @param pred      The predicate used to test elements for removal.
- */
-template <
-  typename Container, typename Predicate,
-  typename = std::enable_if_t<
-    std::is_same_v<
-      Container, std::map<typename Container::key_type, typename Container::mapped_type>> ||
-    std::is_same_v<
-      Container,
-      std::unordered_map<typename Container::key_type, typename Container::mapped_type>>>>
-void erase_if(Container & container, Predicate pred)
-{
-  for (auto it = container.begin(); it != container.end();) {
-    if (pred(*it)) {  // For map, *it is a std::pair, so pred should handle pair<Key, Value>
-      it = container.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-/**
  * @brief Remove elements from a sequential container based on a predicate.
  *
  * This utility function uses `std::remove_if` followed by `erase` to remove all elements
@@ -84,17 +54,6 @@ void remove_if(Container & container, Predicate pred)
 inline geometry_msgs::msg::Point to_geom_pt(const Point2d & point)
 {
   return autoware_utils::to_msg(point.to_3d(0.0));
-}
-
-/**
- * @brief Convert a ROS 3D point into a 2D point by discarding the z-component.
- *
- * @param point A ROS point with x, y, z coordinates.
- * @return A 2D point containing only the x and y values.
- */
-inline Point2d to_pt2d(const geometry_msgs::msg::Point & point)
-{
-  return {point.x, point.y};
 }
 
 /**
@@ -134,7 +93,7 @@ DepartureIntervals init_departure_intervals(
  * @param[in,out] departure_points Per-side departure points; may be marked removable.
  * @param[in] aw_ref_traj Reference trajectory.
  * @param[in] vehicle_length_m Used to extend intervals if points are nearby.
- * @param[in] ref_traj_fr_pt First trajectory point (used when interval starts at front).
+ * @param[in] raw_ref_traj Reference trajectory (raw points).
  * @param[in] ego_dist_from_traj_front Ego’s current distance along the trajectory.
  * @param[in] th_pt_shift_dist_m Threshold distance for detecting shifted points.
  * @param[in] th_pt_shift_angle_rad Threshold angle for detecting shifted points.
@@ -146,7 +105,7 @@ DepartureIntervals init_departure_intervals(
 void update_departure_intervals(
   DepartureIntervals & departure_intervals, Side<DeparturePoints> & departure_points,
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const double vehicle_length_m,
-  const TrajectoryPoint & ref_traj_fr_pt, const double ego_dist_from_traj_front,
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double ego_dist_from_traj_front,
   const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad,
   const std::unordered_set<DepartureType> & enable_type, const bool is_reset_interval,
   const bool is_departure_persist);
@@ -165,12 +124,10 @@ void update_departure_intervals(
  * @param[in] th_pt_shift_dist_m Threshold distance to detect point drift.
  * @param[in] th_pt_shift_angle_rad Threshold angle to detect pose change.
  */
-void update_critical_departure_points(
+CriticalDeparturePoints find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
-  CriticalDeparturePoints & critical_departure_points,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
-  const double th_point_merge_distance_m, const double offset_from_ego,
-  const double th_pt_shift_dist_m, const double th_pt_shift_angle_rad);
+  const CriticalDeparturePoints & critical_departure_points,
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);
 
 /**
  * @brief Build slow-down segments ahead of the ego vehicle.

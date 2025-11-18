@@ -20,13 +20,13 @@
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 #include "autoware_utils/ros/uuid_helper.hpp"
 
+#include <tf2/utils.hpp>
+
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/algorithms/overlaps.hpp>
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -34,6 +34,19 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace
+{
+bool is_yaw_diff_within_threshold(
+  const geometry_msgs::msg::Pose & ego_pose, const geometry_msgs::msg::Pose & obj_pose,
+  const double yaw_difference_th)
+{
+  const auto ego_yaw = tf2::getYaw(ego_pose.orientation);
+  const auto object_yaw = tf2::getYaw(obj_pose.orientation);
+  const auto yaw_difference = autoware_utils::normalize_radian(ego_yaw - object_yaw);
+  return std::abs(yaw_difference) > yaw_difference_th;
+};
+}  // namespace
 
 namespace autoware::behavior_path_planner::utils::path_safety_checker
 {
@@ -84,7 +97,7 @@ bool isTargetObjectFront(
 Polygon2d createExtendedPolygon(
   const Pose & base_link_pose, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const double lon_length, const double lat_margin, const bool is_stopped_obj,
-  CollisionCheckDebug & debug)
+  CollisionCheckDebug * debug)
 {
   const double & base_to_front = vehicle_info.max_longitudinal_offset_m;
   const double & width = vehicle_info.vehicle_width_m;
@@ -96,10 +109,10 @@ Polygon2d createExtendedPolygon(
     -base_to_rear - (is_stopped_obj ? lon_length / 2 : 0);  // minus value
   const double lat_offset = width / 2.0 + lat_margin;
 
-  {
-    debug.forward_lon_offset = forward_lon_offset;
-    debug.backward_lon_offset = backward_lon_offset;
-    debug.lat_offset = lat_offset;
+  if (debug) {
+    debug->forward_lon_offset = forward_lon_offset;
+    debug->backward_lon_offset = backward_lon_offset;
+    debug->lat_offset = lat_offset;
   }
 
   const auto p1 =
@@ -124,7 +137,7 @@ Polygon2d createExtendedPolygon(
 
 Polygon2d createExtendedPolygon(
   const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const double lon_length,
-  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug & debug)
+  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug * debug)
 {
   const auto & obj_polygon = obj_pose_with_poly.poly;
   if (obj_polygon.outer().empty()) {
@@ -154,10 +167,10 @@ Polygon2d createExtendedPolygon(
   const double left_lat_offset = max_y + lat_margin;
   const double right_lat_offset = min_y - lat_margin;
 
-  {
-    debug.forward_lon_offset = forward_lon_offset;
-    debug.backward_lon_offset = backward_lon_offset;
-    debug.lat_offset = std::max(std::abs(left_lat_offset), std::abs(right_lat_offset));
+  if (debug) {
+    debug->forward_lon_offset = forward_lon_offset;
+    debug->backward_lon_offset = backward_lon_offset;
+    debug->lat_offset = std::max(std::abs(left_lat_offset), std::abs(right_lat_offset));
   }
 
   const auto p1 =
@@ -183,7 +196,7 @@ Polygon2d createExtendedPolygon(
 Polygon2d create_extended_polygon_along_path(
   const PathWithLaneId & planned_path, const Pose & base_link_pose,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double lon_length,
-  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug & debug)
+  const double lat_margin, const bool is_stopped_obj, CollisionCheckDebug * debug = nullptr)
 {
   const double & base_to_front = vehicle_info.max_longitudinal_offset_m;
   const double & width = vehicle_info.vehicle_width_m;
@@ -195,10 +208,10 @@ Polygon2d create_extended_polygon_along_path(
     -base_to_rear - (is_stopped_obj ? lon_length / 2 : 0);  // minus value
   const double lat_offset = width / 2.0 + lat_margin;
 
-  {
-    debug.forward_lon_offset = forward_lon_offset;
-    debug.backward_lon_offset = backward_lon_offset;
-    debug.lat_offset = lat_offset;
+  if (debug) {
+    debug->forward_lon_offset = forward_lon_offset;
+    debug->backward_lon_offset = backward_lon_offset;
+    debug->lat_offset = lat_offset;
   }
 
   const auto lon_offset_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
@@ -577,6 +590,119 @@ bool checkCollision(
   return collided_polygons.empty();
 }
 
+std::optional<Polygon2d> extend_ego_polygon(
+  const PathWithLaneId & planned_path, const Pose & ego_pose, const Polygon2d & ego_polygon,
+  const VehicleInfo & vehicle_info, const double lon_offset, const double lat_margin,
+  const RSSparams & rss_parameters, const bool is_front, const bool is_stopping_object,
+  CollisionCheckDebug * debug)
+{
+  if (!is_front) {
+    return ego_polygon;
+  }
+
+  if (rss_parameters.extended_polygon_policy == "rectangle") {
+    return createExtendedPolygon(
+      ego_pose, vehicle_info, lon_offset, lat_margin, is_stopping_object, debug);
+  }
+
+  if (rss_parameters.extended_polygon_policy == "along_path") {
+    return create_extended_polygon_along_path(
+      planned_path, ego_pose, vehicle_info, lon_offset, lat_margin, is_stopping_object, debug);
+  }
+
+  return std::nullopt;
+}
+
+std::optional<Polygon2d> check_collision(
+  const PathWithLaneId & planned_path, const VehicleInfo & vehicle_info,
+  const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
+  const PoseWithVelocityAndPolygonStamped & obj_pose_with_poly, const RSSparams & rss_parameters,
+  const double yaw_difference_th, const double max_velocity_limit, const double hysteresis_factor,
+  CollisionCheckDebug * debug)
+{
+  const auto & current_time = obj_pose_with_poly.time;
+  const auto & obj_pose = obj_pose_with_poly.pose;
+  const auto & obj_polygon = obj_pose_with_poly.poly;
+
+  // get ego information at current time
+  // Note: we can create these polygons in advance. However, it can decrease the readability and
+  // variability
+  const auto & ego_vehicle_info = vehicle_info;
+  const auto interpolated_data = get_interpolated_pose_with_velocity_and_polygon_stamped(
+    predicted_ego_path, current_time, ego_vehicle_info);
+
+  if (!interpolated_data) {
+    return std::nullopt;
+  }
+
+  const auto & ego_pose = interpolated_data->pose;
+  const auto & ego_polygon = interpolated_data->poly;
+
+  if (is_yaw_diff_within_threshold(ego_pose, obj_pose, yaw_difference_th)) {
+    return std::nullopt;
+  }
+
+  if (boost::geometry::intersects(ego_polygon, obj_polygon)) {
+    if (debug) {
+      debug->unsafe_reason = "overlap_polygon";
+      debug->expected_ego_pose = ego_pose;
+      debug->expected_obj_pose = obj_pose;
+      debug->extended_ego_polygon = ego_polygon;
+      debug->extended_obj_polygon = obj_polygon;
+    }
+    return obj_polygon;
+  }
+
+  const auto is_object_front =
+    isTargetObjectFront(ego_pose, obj_polygon, ego_vehicle_info.max_longitudinal_offset_m);
+
+  const auto ego_velocity = std::min(interpolated_data->velocity, max_velocity_limit);
+  const auto object_velocity = obj_pose_with_poly.velocity;
+  const auto & [front_object_velocity, rear_object_velocity] =
+    is_object_front ? std::pair{object_velocity, ego_velocity}
+                    : std::pair{ego_velocity, object_velocity};
+
+  const auto rss_dist =
+    calcRssDistance(front_object_velocity, rear_object_velocity, rss_parameters);
+
+  const auto min_lon_length =
+    calc_minimum_longitudinal_length(front_object_velocity, rear_object_velocity, rss_parameters);
+
+  const auto lon_offset = std::max(rss_dist, min_lon_length) * hysteresis_factor;
+  const auto lat_margin = rss_parameters.lateral_distance_max_threshold * hysteresis_factor;
+  const auto is_stopping_object = object_velocity < 0.3;
+
+  const auto extended_ego_polygon_opt = extend_ego_polygon(
+    planned_path, ego_pose, ego_polygon, vehicle_info, lon_offset, lat_margin, rss_parameters,
+    is_object_front, is_stopping_object, debug);
+
+  if (!extended_ego_polygon_opt) {
+    return std::nullopt;
+  }
+
+  const auto & extended_obj_polygon =
+    is_object_front ? obj_polygon
+                    : createExtendedPolygon(
+                        obj_pose_with_poly, lon_offset, lat_margin, is_stopping_object, debug);
+
+  // check intersects with extended polygon
+  if (!boost::geometry::intersects(*extended_ego_polygon_opt, extended_obj_polygon)) {
+    return std::nullopt;
+  }
+
+  if (debug) {
+    debug->unsafe_reason = "overlap_extended_polygon";
+    debug->rss_longitudinal = rss_dist;
+    debug->inter_vehicle_distance = min_lon_length;
+    debug->expected_ego_pose = ego_pose;
+    debug->expected_obj_pose = obj_pose;
+    debug->extended_ego_polygon = *extended_ego_polygon_opt;
+    debug->extended_obj_polygon = extended_obj_polygon;
+    debug->is_front = is_object_front;
+  }
+  return obj_polygon;
+}
+
 std::vector<Polygon2d> get_collided_polygons(
   [[maybe_unused]] const PathWithLaneId & planned_path,
   const std::vector<PoseWithVelocityStamped> & predicted_ego_path,
@@ -594,100 +720,13 @@ std::vector<Polygon2d> get_collided_polygons(
   std::vector<Polygon2d> collided_polygons{};
   collided_polygons.reserve(target_object_path.path.size());
   for (const auto & obj_pose_with_poly : target_object_path.path) {
-    const auto & current_time = obj_pose_with_poly.time;
+    CollisionCheckDebug * debug_ptr = collided_polygons.empty() ? &debug : nullptr;
 
-    // get object information at current time
-    const auto & obj_pose = obj_pose_with_poly.pose;
-    const auto & obj_polygon = obj_pose_with_poly.poly;
-    const auto object_velocity = obj_pose_with_poly.velocity;
-
-    // get ego information at current time
-    // Note: we can create these polygons in advance. However, it can decrease the readability and
-    // variability
-    const auto & ego_vehicle_info = vehicle_info;
-    const auto interpolated_data = get_interpolated_pose_with_velocity_and_polygon_stamped(
-      predicted_ego_path, current_time, ego_vehicle_info);
-    if (!interpolated_data) {
-      continue;
-    }
-    const auto & ego_pose = interpolated_data->pose;
-    const auto & ego_polygon = interpolated_data->poly;
-    const auto ego_velocity = std::min(interpolated_data->velocity, max_velocity_limit);
-
-    const double ego_yaw = tf2::getYaw(ego_pose.orientation);
-    const double object_yaw = tf2::getYaw(obj_pose.orientation);
-    const double yaw_difference = autoware_utils::normalize_radian(ego_yaw - object_yaw);
-    if (std::abs(yaw_difference) > yaw_difference_th) continue;
-
-    // check intersects
-    if (boost::geometry::intersects(ego_polygon, obj_polygon)) {
-      if (collided_polygons.empty()) {
-        debug.unsafe_reason = "overlap_polygon";
-        debug.expected_ego_pose = ego_pose;
-        debug.expected_obj_pose = obj_pose;
-        debug.extended_ego_polygon = ego_polygon;
-        debug.extended_obj_polygon = obj_polygon;
-      }
-      collided_polygons.push_back(obj_polygon);
-
-      continue;
-    }
-
-    // compute which one is at the front of the other
-    const bool is_object_front =
-      isTargetObjectFront(ego_pose, obj_polygon, ego_vehicle_info.max_longitudinal_offset_m);
-    const auto & [front_object_velocity, rear_object_velocity] =
-      is_object_front ? std::make_pair(object_velocity, ego_velocity)
-                      : std::make_pair(ego_velocity, object_velocity);
-
-    // compute rss dist
-    const auto rss_dist =
-      calcRssDistance(front_object_velocity, rear_object_velocity, rss_parameters);
-
-    // minimum longitudinal length
-    const auto min_lon_length =
-      calc_minimum_longitudinal_length(front_object_velocity, rear_object_velocity, rss_parameters);
-
-    const auto & lon_offset = std::max(rss_dist, min_lon_length) * hysteresis_factor;
-    const auto & lat_margin = rss_parameters.lateral_distance_max_threshold * hysteresis_factor;
-    // TODO(watanabe) fix hard coding value
-    const bool is_stopped_object = object_velocity < 0.3;
-    const auto extended_ego_polygon = [&]() {
-      if (!is_object_front) {
-        return ego_polygon;
-      }
-
-      if (rss_parameters.extended_polygon_policy == "rectangle") {
-        return createExtendedPolygon(
-          ego_pose, ego_vehicle_info, lon_offset, lat_margin, is_stopped_object, debug);
-      }
-
-      if (rss_parameters.extended_polygon_policy == "along_path") {
-        return create_extended_polygon_along_path(
-          planned_path, ego_pose, ego_vehicle_info, lon_offset, lat_margin, is_stopped_object,
-          debug);
-      }
-
-      throw std::domain_error("invalid rss parameter. please select 'rectangle' or 'along_path'.");
-    }();
-    const auto & extended_obj_polygon =
-      is_object_front ? obj_polygon
-                      : createExtendedPolygon(
-                          obj_pose_with_poly, lon_offset, lat_margin, is_stopped_object, debug);
-
-    // check intersects with extended polygon
-    if (boost::geometry::intersects(extended_ego_polygon, extended_obj_polygon)) {
-      if (collided_polygons.empty()) {
-        debug.unsafe_reason = "overlap_extended_polygon";
-        debug.rss_longitudinal = rss_dist;
-        debug.inter_vehicle_distance = min_lon_length;
-        debug.expected_ego_pose = ego_pose;
-        debug.expected_obj_pose = obj_pose;
-        debug.extended_ego_polygon = extended_ego_polygon;
-        debug.extended_obj_polygon = extended_obj_polygon;
-        debug.is_front = is_object_front;
-      }
-      collided_polygons.push_back(obj_polygon);
+    if (
+      const auto collided_polygon_opt = check_collision(
+        planned_path, vehicle_info, predicted_ego_path, obj_pose_with_poly, rss_parameters,
+        yaw_difference_th, max_velocity_limit, hysteresis_factor, debug_ptr)) {
+      collided_polygons.push_back(*collided_polygon_opt);
     }
   }
 

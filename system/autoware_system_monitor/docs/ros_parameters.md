@@ -4,17 +4,17 @@
 
 cpu_monitor:
 
-| Name              | Type  |  Unit   | Default | Notes                                                                                                      |
-| :---------------- | :---: | :-----: | :-----: | :--------------------------------------------------------------------------------------------------------- |
-| temp_warn         | float |  DegC   |  90.0   | Generates warning when CPU temperature reaches a specified value or higher.                                |
-| temp_error        | float |  DegC   |  95.0   | Generates error when CPU temperature reaches a specified value or higher.                                  |
-| usage_warn        | float | %(1e-2) |  0.90   | Generates warning when CPU usage reaches a specified value or higher and last for usage_warn_count counts. |
-| usage_error       | float | %(1e-2) |  1.00   | Generates error when CPU usage reaches a specified value or higher and last for usage_error_count counts.  |
-| usage_warn_count  |  int  |   n/a   |    2    | Generates warning when CPU usage reaches usage_warn value or higher and last for a specified counts.       |
-| usage_error_count |  int  |   n/a   |    2    | Generates error when CPU usage reaches usage_error value or higher and last for a specified counts.        |
-| load1_warn        | float | %(1e-2) |  0.90   | Generates warning when load average 1min reaches a specified value or higher.                              |
-| load5_warn        | float | %(1e-2) |  0.80   | Generates warning when load average 5min reaches a specified value or higher.                              |
-| msr_reader_port   |  int  |   n/a   |  7634   | Port number to connect to msr_reader.                                                                      |
+| Name                   |  Type  |  Unit   |       Default        | Notes                                                                                                      |
+| :--------------------- | :----: | :-----: | :------------------: | :--------------------------------------------------------------------------------------------------------- |
+| temp_warn              | float  |  DegC   |         90.0         | Generates warning when CPU temperature reaches a specified value or higher.                                |
+| temp_error             | float  |  DegC   |         95.0         | Generates error when CPU temperature reaches a specified value or higher.                                  |
+| usage_warn             | float  | %(1e-2) |         0.90         | Generates warning when CPU usage reaches a specified value or higher and last for usage_warn_count counts. |
+| usage_error            | float  | %(1e-2) |         1.00         | Generates error when CPU usage reaches a specified value or higher and last for usage_error_count counts.  |
+| usage_warn_count       |  int   |   n/a   |          2           | Generates warning when CPU usage reaches usage_warn value or higher and last for a specified counts.       |
+| usage_error_count      |  int   |   n/a   |          2           | Generates error when CPU usage reaches usage_error value or higher and last for a specified counts.        |
+| load1_warn             | float  | %(1e-2) |         0.90         | Generates warning when load average 1min reaches a specified value or higher.                              |
+| load5_warn             | float  | %(1e-2) |         0.80         | Generates warning when load average 5min reaches a specified value or higher.                              |
+| msr_reader_socket_path | string |   n/a   | /tmp/msr_reader.sock | UNIX domain socket path to connect to msr_reader.                                                          |
 
 ## <u>HDD Monitor</u>
 
@@ -42,11 +42,11 @@ hdd_monitor:
 
 hdd_monitor:
 
-| Name            | Type  |  Unit   | Default | Notes                                                                  |
-| :-------------- | :---: | :-----: | :-----: | :--------------------------------------------------------------------- |
-| hdd_reader_port |  int  |   n/a   |  7635   | Port number to connect to hdd_reader.                                  |
-| usage_warn      | float | %(1e-2) |  0.95   | Generates warning when disk usage reaches a specified value or higher. |
-| usage_error     | float | %(1e-2) |  0.99   | Generates error when disk usage reaches a specified value or higher.   |
+| Name                   |  Type  |  Unit   |       Default        | Notes                                                                  |
+| :--------------------- | :----: | :-----: | :------------------: | :--------------------------------------------------------------------- |
+| hdd_reader_socket_path | string |   n/a   | /tmp/hdd_reader.sock | UNIX domain socket path to connect to hdd_reader.                      |
+| usage_warn             | float  | %(1e-2) |         0.95         | Generates warning when disk usage reaches a specified value or higher. |
+| usage_error            | float  | %(1e-2) |         0.99         | Generates error when disk usage reaches a specified value or higher.   |
 
 ## <u>Memory Monitor</u>
 

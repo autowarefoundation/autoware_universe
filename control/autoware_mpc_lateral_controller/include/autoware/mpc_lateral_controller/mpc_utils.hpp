@@ -16,9 +16,9 @@
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 
 #include "rclcpp/rclcpp.hpp"
-#include "tf2/utils.h"
 
 #include <Eigen/Core>
+#include <tf2/utils.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -81,9 +81,10 @@ MPCTrajectory convertToMPCTrajectory(const Trajectory & input);
 /**
  * @brief convert the given MPCTrajectory to a Trajectory msg
  * @param [in] input MPCTrajectory to be converted
+ * @param [in] wheelbase [m] wheelbase of the vehicle
  * @return output converted Trajectory msg
  */
-Trajectory convertToAutowareTrajectory(const MPCTrajectory & input);
+Trajectory convertToAutowareTrajectory(const MPCTrajectory & input, const double wheelbase = 0.0);
 
 /**
  * @brief calculate the arc length at each point of the given trajectory

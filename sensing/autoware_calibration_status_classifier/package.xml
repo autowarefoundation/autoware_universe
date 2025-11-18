@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_calibration_status_classifier</name>
+  <version>0.48.0</version>
+  <description>A node for LiDAR camera miscalibration detection</description>
+  <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
+
+  <license>Apache License 2.0</license>
+  <author email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</author>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_cuda_utils</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_utils</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>libopencv-dev</depend>
+  <depend>message_filters</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
+
+  <exec_depend>autoware_image_transport_decompressor</exec_depend>
+
+  <test_depend>ament_index_cpp</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+  <test_depend>autoware_point_types</test_depend>
+  <test_depend>pcl_ros</test_depend>
+  <test_depend>point_cloud_msg_wrapper</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

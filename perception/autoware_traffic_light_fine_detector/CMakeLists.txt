@@ -76,6 +76,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/traffic_light_fine_detector_node.cpp
+    src/traffic_light_fine_detector_process.cpp
   )
 
   target_include_directories(${PROJECT_NAME} PUBLIC
@@ -102,6 +103,13 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     launch
     config
   )
+
+  if(BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+    ament_auto_add_gtest(test_utils
+      test/test_utils.cpp
+    )
+  endif()
 
 else()
   message(STATUS "TrafficLightFineDetector won't be built, CUDA and/or TensorRT were not found.")

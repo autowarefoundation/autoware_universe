@@ -2,6 +2,13 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_mrm_handler): remove duplicate return (`#11194 <https://github.com/autowarefoundation/autoware_universe/issues/11194>`_)
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
 0.47.1 (2025-08-14)
 -------------------
 

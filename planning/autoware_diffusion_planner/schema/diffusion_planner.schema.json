@@ -63,6 +63,32 @@
           "default": false,
           "description": "On build only, do not run the planner"
         },
+        "batch_size": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "description": "Batch size for multi-batch inference"
+        },
+        "temperature": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "default": [0.5],
+          "description": "List of temperature for sampling trajectories. Its length must be the same as `batch_size`. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature"
+        },
+        "velocity_smoothing_window": {
+          "type": "integer",
+          "default": 8,
+          "minimum": 1,
+          "description": "Window size for velocity smoothing. Set to 1 to disable smoothing."
+        },
+        "stopping_threshold": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Threshold for keeping the stopping state [m/s]"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
@@ -73,7 +99,7 @@
             },
             "publish_debug_route": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "description": "Publish debug route markers"
             }
           },
@@ -87,6 +113,10 @@
         "predict_neighbor_trajectory",
         "update_traffic_light_group_info",
         "traffic_light_group_msg_timeout_seconds",
+        "batch_size",
+        "temperature",
+        "velocity_smoothing_window",
+        "stopping_threshold",
         "debug_params"
       ]
     }

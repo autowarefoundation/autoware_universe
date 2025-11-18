@@ -105,8 +105,6 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
         this->create_subscription<autoware_map_msgs::msg::PointCloudMapMetaData>(
           "input/pointcloud_map_metadata", durable_qos,
           std::bind(&ElevationMapLoaderNode::onPointCloudMapMetaData, this, _1));
-      constexpr auto period_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(1.0));
       group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       pcd_loader_client_ = create_client<autoware_map_msgs::srv::GetSelectedPointCloudMap>(
         "service/get_selected_pointcloud_map", rmw_qos_profile_services_default, group_);
@@ -117,8 +115,9 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
           "Waiting for pcd map loader service. Check if the enable_selected_load in "
           "pointcloud_map_loader is set `true`.");
       }
-      timer_ =
-        this->create_wall_timer(period_ns, std::bind(&ElevationMapLoaderNode::timerCallback, this));
+      using namespace std::literals::chrono_literals;
+      timer_ = rclcpp::create_timer(
+        this, get_clock(), 1.0s, std::bind(&ElevationMapLoaderNode::timerCallback, this));
     }
 
     if (data_manager_.isInitialized()) {
