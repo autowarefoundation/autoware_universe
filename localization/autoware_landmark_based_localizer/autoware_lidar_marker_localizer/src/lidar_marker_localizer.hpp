@@ -87,6 +87,9 @@ class LidarMarkerLocalizer : public rclcpp::Node
     std::array<double, 36> base_covariance;
 
     double marker_width;
+    // Parameters for initial lower/upper ring id
+    int64_t lower_ring_id_init;
+    int64_t upper_ring_id_init;
 
     bool enable_save_log;
     std::string save_file_directory_path;
