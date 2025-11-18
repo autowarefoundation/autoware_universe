@@ -46,7 +46,7 @@ struct TrafficSignalStamped
  * map of traffic signals with the latest information, and removes outdated signals based on the
  * specified time threshold.
  *
- * @param msg Shared pointer to the incoming TrafficLightGroupArray message.
+ * @param msgs Vector of shared pointers to the incoming TrafficLightGroupArray messages.
  * @param traffic_signal_id_map Reference to the map storing traffic signal information, keyed by
  * lanelet ID.
  * @param current_time The current ROS time used for timestamp comparison.
@@ -54,10 +54,9 @@ struct TrafficSignalStamped
  * the map.
  */
 void process_traffic_signals(
-  const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr msg,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr> & msgs,
   std::map<lanelet::Id, TrafficSignalStamped> & traffic_signal_id_map,
-  const rclcpp::Time & current_time, const double time_threshold_seconds,
-  const bool keep_last_observation);
+  const rclcpp::Time & current_time, const double time_threshold_seconds);
 
 }  // namespace autoware::diffusion_planner::preprocess
 #endif  // AUTOWARE__DIFFUSION_PLANNER__PREPROCESSING__TRAFFIC_SIGNALS_HPP_
