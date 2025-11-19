@@ -6,6 +6,29 @@
     "lidar_marker_localizer": {
       "type": "object",
       "properties": {
+        "enable_read_all_target_ids": {
+          "type": "boolean",
+          "description": "",
+          "default": true
+        },
+        "target_ids": {
+          "type": "array",
+          "description": "List of target marker IDs to be detected.",
+          "default": [
+            "0000",
+            "0001",
+            "0002",
+            "0003",
+            "0004",
+            "0005"
+          ]
+        },
+        "queue_size_for_output_pose": {
+          "type": "number",
+          "description": "Queue size for output/pose_with_covariance publisher",
+          "default": 10,
+          "minimum": 0
+        },
         "marker_name": {
           "type": "string",
           "description": "The name of the markers listed in the HD map.",
@@ -20,7 +43,19 @@
         "intensity_pattern": {
           "type": "array",
           "description": "A sequence of high/low intensity to perform pattern matching. 1: high intensity (positive match), 0: not consider, -1: low intensity (negative match)",
-          "default": [-1, -1, 0, 1, 1, 1, 1, 1, 0, -1, -1]
+          "default": [
+            -1,
+            -1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            -1,
+            -1
+          ]
         },
         "match_intensity_difference_threshold": {
           "type": "number",
@@ -48,7 +83,7 @@
         },
         "marker_to_vehicle_offset_y": {
           "type": "number",
-          "description": "Y-axiz offset from the center of the marker to vehicle. [m]",
+          "description": "Y-axis offset from the center of the marker to vehicle. [m]",
           "default": 0.0
         },
         "marker_height_from_ground": {
@@ -56,10 +91,22 @@
           "description": "Height from the ground to the center of the marker. [m]",
           "default": 1.075
         },
+        "lower_ring_id_init": {
+          "type": "number",
+          "description": "Initial value when searching for the lowest ring ID within the point cloud",
+          "default": 128,
+          "minimum": 0
+        },
+        "upper_ring_id_init": {
+          "type": "number",
+          "description": "Initial value when searching for the highest ring ID within the point cloud",
+          "default": 0,
+          "minimum": 0
+        },
         "reference_ring_number": {
           "type": "number",
           "description": "Reference ring number when detecting the marker. Set 255 to disable ring filtering",
-          "default": 5
+          "default": 255
         },
         "self_pose_timeout_sec": {
           "type": "number",
@@ -95,9 +142,42 @@
           "type": "array",
           "description": "Output covariance in the base_link coordinate.",
           "default": [
-            0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.00007569, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.00007569, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.00030625
+            0.04,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.04,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.01,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.00007569,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.00007569,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.00030625
           ]
         },
         "marker_width": {
@@ -125,6 +205,18 @@
           "type": "string",
           "description": "",
           "default": "velodyne_top"
+        },
+        "radius_for_extracting_marker_pointcloud": {
+          "type": "number",
+          "description": "Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]",
+          "default": 0.4,
+          "minimum": 0.0
+        },
+        "queue_size_for_debug_pub_msg": {
+          "type": "number",
+          "description": "Queue size for debug publishers",
+          "default": 10,
+          "minimum": 0.0
         }
       },
       "required": [
@@ -160,10 +252,14 @@
           "$ref": "#/definitions/lidar_marker_localizer"
         }
       },
-      "required": ["ros__parameters"],
+      "required": [
+        "ros__parameters"
+      ],
       "additionalProperties": false
     }
   },
-  "required": ["/**"],
+  "required": [
+    "/**"
+  ],
   "additionalProperties": false
 }
