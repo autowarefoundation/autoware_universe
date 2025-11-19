@@ -8,11 +8,11 @@
 
 #### Input
 
-| Name                   | Type                                            | Description      |
-| :--------------------- | :---------------------------------------------- | :--------------- |
-| `~/input/lanelet2_map` | `autoware_map_msgs::msg::HADMapBin`             | Data of lanelet2 |
-| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointType: `PointXYZIRC` is recommended in Autoware, but `PointXYZIRADRT` are also supported in this node.[^1]   |
-| `~/input/ekf_pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | EKF Pose         |
+| Name                   | Type                                            | Description                                                                                                    |
+| :--------------------- | :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `~/input/lanelet2_map` | `autoware_map_msgs::msg::HADMapBin`             | Data of lanelet2                                                                                               |
+| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointType: `PointXYZIRC` is recommended in Autoware, but `PointXYZIRADRT` are also supported in this node.[^1] |
+| `~/input/ekf_pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | EKF Pose                                                                                                       |
 
 [^1]: Assumed `ring` of `PointXYZIRADRT` as `channel` of `PointXYZIRC`.
 
@@ -31,14 +31,13 @@
 
 The following debug topics are also published if `enable_save_log` parameter is set to `true`.
 
-| Name                                 | Type                              | Description                                 |
-| :----------------------------------- | :-------------------------------- | :------------------------------------------ |
-| `~/debug/center_intensity_grid`      | `nav_msgs::msg::OccupancyGrid`    | Center intensity grid for debug             |
-| `~/debug/positive_grid`              | `nav_msgs::msg::OccupancyGrid`    | Positive match grid for debug               |
-| `~/debug/negative_grid`              | `nav_msgs::msg::OccupancyGrid`    | Negative match grid for debug               |
-| `~/debug/matched_grid`               | `nav_msgs::msg::OccupancyGrid`    | Matched pattern grid for debug              |
-| `~/debug/vote_grid`                  | `nav_msgs::msg::OccupancyGrid`    | Vote grid for marker detection debug        |
-
+| Name                            | Type                           | Description                          |
+| :------------------------------ | :----------------------------- | :----------------------------------- |
+| `~/debug/center_intensity_grid` | `nav_msgs::msg::OccupancyGrid` | Center intensity grid for debug      |
+| `~/debug/positive_grid`         | `nav_msgs::msg::OccupancyGrid` | Positive match grid for debug        |
+| `~/debug/negative_grid`         | `nav_msgs::msg::OccupancyGrid` | Negative match grid for debug        |
+| `~/debug/matched_grid`          | `nav_msgs::msg::OccupancyGrid` | Matched pattern grid for debug       |
+| `~/debug/vote_grid`             | `nav_msgs::msg::OccupancyGrid` | Vote grid for marker detection debug |
 
 ## Parameters
 
