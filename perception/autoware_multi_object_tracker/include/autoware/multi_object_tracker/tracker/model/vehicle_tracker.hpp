@@ -88,8 +88,8 @@ private:
 
   struct EdgeAlignmentDistances
   {
-    double front_alignment_dist;
-    double rear_alignment_dist;
+    double front_alignment_distance;
+    double rear_alignment_distance;
   };
 
   // Helper functions for determineUpdateStrategy
