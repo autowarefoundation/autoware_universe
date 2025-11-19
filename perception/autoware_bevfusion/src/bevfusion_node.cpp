@@ -133,11 +133,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 
   TrtBEVFusionConfig trt_bevfusion_config =
     sensor_fusion_
-      ? TrtBEVFusionConfig{
-          tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-          tensorrt_common::TrtCommonConfig(
-            image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
-            1ULL << 32U)}
+      ? TrtBEVFusionConfig{tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U), tensorrt_common::TrtCommonConfig(image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path, 1ULL << 32U)}
       : TrtBEVFusionConfig{
           tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
           std::nullopt};
