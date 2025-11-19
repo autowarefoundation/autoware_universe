@@ -361,15 +361,16 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   const EdgePositions meas_edges = calculateEdgeCenters(measurement);
 
   // 2. Calculate alignment distances between measurement and prediction edges
-  const EdgeAlignmentDistances alignment_dists =
+  const EdgeAlignmentDistances alignment_distances =
     calculateAlignmentDistances(meas_edges, prediction);
 
   // 3. Check if any edge is well-aligned (within threshold ratio of vehicle length)
   const double predicted_length = prediction.shape.dimensions.x;
-  const double min_alignment_dist =
-    std::min(alignment_dists.front_alignment_dist, alignment_dists.rear_alignment_dist);
+  const double min_alignment_distance = std::min(
+    alignment_distances.front_alignment_distance, alignment_distances.rear_alignment_distance);
   constexpr double alignment_ratio_threshold = 0.09;  // 9% of length tolerance
-  const bool is_edge_aligned = (min_alignment_dist / predicted_length) < alignment_ratio_threshold;
+  const bool is_edge_aligned =
+    (min_alignment_distance / predicted_length) < alignment_ratio_threshold;
 
   // 4. If no edge is aligned, use weak update strategy
   if (!is_edge_aligned) {
@@ -379,7 +380,7 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
 
   // 5. Determine aligned edge and calculate anchor point
   const bool use_front_wheel =
-    (alignment_dists.front_alignment_dist <= alignment_dists.rear_alignment_dist);
+    (alignment_distances.front_alignment_distance <= alignment_distances.rear_alignment_distance);
   strategy.type = use_front_wheel ? UpdateStrategyType::FRONT_WHEEL_UPDATE
                                   : UpdateStrategyType::REAR_WHEEL_UPDATE;
   strategy.anchor_point =
@@ -407,7 +408,7 @@ VehicleTracker::EdgePositions VehicleTracker::calculateEdgeCenters(
 VehicleTracker::EdgeAlignmentDistances VehicleTracker::calculateAlignmentDistances(
   const EdgePositions & meas_edges, const types::DynamicObject & prediction) const
 {
-  EdgeAlignmentDistances dists;
+  EdgeAlignmentDistances distances;
 
   // Project edges onto predicted vehicle's longitudinal axis for comparison
   const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
@@ -430,12 +431,12 @@ VehicleTracker::EdgeAlignmentDistances VehicleTracker::calculateAlignmentDistanc
   const double pred_rear_axis = pred_center_axis - predicted_half_length;
 
   // Find minimum alignment distance for front and rear edges
-  dists.front_alignment_dist = std::min(
+  distances.front_alignment_distance = std::min(
     std::abs(meas_front_axis - pred_front_axis), std::abs(meas_rear_axis - pred_front_axis));
-  dists.rear_alignment_dist =
+  distances.rear_alignment_distance =
     std::min(std::abs(meas_front_axis - pred_rear_axis), std::abs(meas_rear_axis - pred_rear_axis));
 
-  return dists;
+  return distances;
 }
 
 geometry_msgs::msg::Point VehicleTracker::calculateAnchorPoint(
