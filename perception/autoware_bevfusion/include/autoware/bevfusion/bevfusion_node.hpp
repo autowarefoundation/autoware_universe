@@ -64,6 +64,27 @@ private:
   void cameraInfoCallback(const sensor_msgs::msg::CameraInfo & msg, std::size_t camera_id);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
+  // Helper methods for constructor
+  TrtBEVFusionConfig createTrtConfig(
+    const std::string & onnx_path, const std::string & trt_precision,
+    const std::string & engine_path, const std::string & image_backbone_onnx_path,
+    const std::string & image_backbone_trt_precision,
+    const std::string & image_backbone_engine_path);
+  void initializeSensorFusionSubscribers(std::int64_t num_cameras);
+  void validateParameters(
+    const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size);
+
+  // Helper methods for cloudCallback
+  bool checkSensorFusionReadiness();
+  void precomputeIntrinsicsExtrinsics();
+  void computeCameraMasks(double lidar_stamp);
+  void publishDetectionResults(
+    const autoware_perception_msgs::msg::DetectedObjects & output_msg,
+    const std_msgs::msg::Header & header);
+  void publishDebugInfo(
+    const std::unordered_map<std::string, double> & proc_timing,
+    const std_msgs::msg::Header & header);
+
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     cloud_sub_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::ConstSharedPtr> image_subs_;
