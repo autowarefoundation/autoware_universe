@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__COMPONENTS__EXPONENTIAL_MOVING_AVERAGE_SHAPE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__COMPONENTS__EXPONENTIAL_MOVING_AVERAGE_SHAPE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -24,7 +24,7 @@
 namespace autoware::multi_object_tracker
 {
 
-class ExponentialMovingAverageShape
+class UnstableShapeFilter
 {
 private:
   bool initialized_;
@@ -43,7 +43,7 @@ private:
   int normal_frame_interruptions_;   // Count of normal frames interrupting noisy sequence
 
 public:
-  ExponentialMovingAverageShape(
+  UnstableShapeFilter(
     double alpha_weak, double alpha_strong, double shape_variation_threshold,
     int stable_streak_threshold, int consecutive_noisy_threshold = 3);
 
@@ -58,4 +58,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__COMPONENTS__EXPONENTIAL_MOVING_AVERAGE_SHAPE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_

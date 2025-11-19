@@ -100,10 +100,10 @@ void TrackerProcessor::update(
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
 
       // do conditioned update based on significant shape change info
-      bool significant_shape_change =
+      bool has_significant_shape_change =
         association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
       (*(tracker_itr))
-        ->updateWithMeasurement(associated_object, time, channel_info, significant_shape_change);
+        ->updateWithMeasurement(associated_object, time, channel_info, has_significant_shape_change);
     } else {
       // not found
       (*(tracker_itr))->updateWithoutMeasurement(time);

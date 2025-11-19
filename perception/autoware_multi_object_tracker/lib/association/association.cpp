@@ -230,13 +230,13 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       const auto & tracked_object = tracked_objects[tracker_idx];
       const auto tracker_label = tracker_labels[tracker_idx];
 
-      bool significant_shape_change = false;
+      bool has_significant_shape_change = false;
       double score = calculateScore(
         tracked_object, tracker_label, measurement_object, measurement_label,
-        tracker_inverse_covariances[tracker_idx], significant_shape_change);
+        tracker_inverse_covariances[tracker_idx], has_significant_shape_change);
       score_matrix(tracker_idx, measurement_idx) = score;
 
-      if (significant_shape_change) {
+      if (has_significant_shape_change) {
         // hash the tracker and measurement index pair
         significant_shape_change_set_.insert(
           (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx);
@@ -250,7 +250,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
   const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-  const InverseCovariance2D & inv_cov, bool & significant_shape_change) const
+  const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
@@ -318,7 +318,7 @@ double DataAssociation::calculateScore(
     const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
 
     if (area_ratio > AreaRatioThreshold) {
-      significant_shape_change = true;
+      has_significant_shape_change = true;
     }
   }
 

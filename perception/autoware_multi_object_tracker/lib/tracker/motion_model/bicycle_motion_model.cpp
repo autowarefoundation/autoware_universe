@@ -354,9 +354,7 @@ bool BicycleMotionModel::updateStateLength(const double & new_length)
   // Calculate new wheel positions directly from current rear wheel position
   // Rear wheel moves by the difference in lr distances
   const double current_length = getLength();
-  const double lr_current = current_length * motion_params_.lr_ratio;
-  const double lr_new = new_length * motion_params_.lr_ratio;
-  const double lr_delta = lr_new - lr_current;
+  const double lr_delta = (new_length - current_length) * motion_params_.lr_ratio;
 
   const double new_x1 = X_t(IDX::X1) - lr_delta * cos_yaw;
   const double new_y1 = X_t(IDX::Y1) - lr_delta * sin_yaw;

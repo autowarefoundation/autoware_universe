@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/components/exponential_moving_average_shape.hpp"
+#include "autoware/multi_object_tracker/tracker/util/unstable_shape_filter.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -21,7 +21,7 @@
 namespace autoware::multi_object_tracker
 {
 
-ExponentialMovingAverageShape::ExponentialMovingAverageShape(
+UnstableShapeFilter::UnstableShapeFilter(
   double alpha_weak, double alpha_strong, double shape_variation_threshold,
   int stable_streak_threshold, int consecutive_noisy_threshold)
 : initialized_(false),
@@ -42,7 +42,7 @@ ExponentialMovingAverageShape::ExponentialMovingAverageShape(
   latest_shape_.dimensions.z = 0.0;
 }
 
-void ExponentialMovingAverageShape::initialize(const Eigen::Vector3d & initial_shape)
+void UnstableShapeFilter::initialize(const Eigen::Vector3d & initial_shape)
 {
   value_ = initial_shape;
   initialized_ = true;
@@ -50,7 +50,7 @@ void ExponentialMovingAverageShape::initialize(const Eigen::Vector3d & initial_s
   stable_streak_ = 0;
 }
 
-void ExponentialMovingAverageShape::clear()
+void UnstableShapeFilter::clear()
 {
   initialized_ = false;
   stable_ = false;
@@ -59,7 +59,7 @@ void ExponentialMovingAverageShape::clear()
   normal_frame_interruptions_ = 0;
 }
 
-void ExponentialMovingAverageShape::processNoisyMeasurement(
+void UnstableShapeFilter::processNoisyMeasurement(
   const types::DynamicObject & measurement)
 {
   // Apply EMA smoothing for BOUNDING_BOX
@@ -106,7 +106,7 @@ void ExponentialMovingAverageShape::processNoisyMeasurement(
   }
 }
 
-void ExponentialMovingAverageShape::processNormalMeasurement(
+void UnstableShapeFilter::processNormalMeasurement(
   const types::DynamicObject & measurement)
 {
   latest_shape_ = measurement.shape;
@@ -121,7 +121,7 @@ void ExponentialMovingAverageShape::processNormalMeasurement(
   }
 }
 
-autoware_perception_msgs::msg::Shape ExponentialMovingAverageShape::getShape() const
+autoware_perception_msgs::msg::Shape UnstableShapeFilter::getShape() const
 {
   // if not stable, return the latest shape as-is (no smoothing)
   if (!stable_) return latest_shape_;

@@ -58,8 +58,8 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/unknown_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
-  lib/tracker/components/adaptive_threshold_cache.cpp
-  lib/tracker/components/exponential_moving_average_shape.cpp
+  lib/tracker/util/adaptive_threshold_cache.cpp
+  lib/tracker/util/unstable_shape_filter.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}
@@ -91,6 +91,7 @@ if(BUILD_TESTING)
     test/test_bench.cpp
     test/test_utils.cpp
     test/test_bench_association.cpp
+    test/test_vehicle_tracker.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
