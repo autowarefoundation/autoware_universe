@@ -169,11 +169,12 @@ bool Tracker::updateWithMeasurement(
     // availability to SIGN_UNKNOWN
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
-  
+
   // Update strategies:
   // 1. Normal update: Update position and shape by Kalman filter
   // 2. Extension update: Apply the new stable shape and update position
-  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3 conditions
+  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3
+  // conditions
   //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
   //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
   //    - WEAK_UPDATE: Update tending to predicted position
@@ -605,7 +606,9 @@ bool Tracker::conditionedUpdate(
   (void)tracker_shape;
   (void)measurement_time;
   (void)channel_info;
-  RCLCPP_ERROR(rclcpp::get_logger("Tracker"), "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
+  RCLCPP_ERROR(
+    rclcpp::get_logger("Tracker"),
+    "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
   return false;
 
   // NOTE: The following default implementation is commented out as it not well-tested yet.

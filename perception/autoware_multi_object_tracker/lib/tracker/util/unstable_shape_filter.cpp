@@ -59,8 +59,7 @@ void UnstableShapeFilter::clear()
   normal_frame_interruptions_ = 0;
 }
 
-void UnstableShapeFilter::processNoisyMeasurement(
-  const types::DynamicObject & measurement)
+void UnstableShapeFilter::processNoisyMeasurement(const types::DynamicObject & measurement)
 {
   // Apply EMA smoothing for BOUNDING_BOX
   if (measurement.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
@@ -106,8 +105,7 @@ void UnstableShapeFilter::processNoisyMeasurement(
   }
 }
 
-void UnstableShapeFilter::processNormalMeasurement(
-  const types::DynamicObject & measurement)
+void UnstableShapeFilter::processNormalMeasurement(const types::DynamicObject & measurement)
 {
   latest_shape_ = measurement.shape;
 
