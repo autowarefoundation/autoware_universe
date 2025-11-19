@@ -174,7 +174,8 @@ bool AutonomousMode::isModeChangeCompleted(const InputData & input_data)
   return is_system_stable;
 }
 
-bool AutonomousMode::hasDangerAcceleration(const Odometry & kinematics, const Control & control_cmd)
+bool AutonomousMode::hasDangerAcceleration(
+  const Odometry & kinematics, const Control & control_cmd) const
 {
   const bool is_stopping = std::abs(kinematics.twist.twist.linear.x) < 0.01;
   if (is_stopping) {
