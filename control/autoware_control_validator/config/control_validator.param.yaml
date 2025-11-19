@@ -26,3 +26,7 @@
     acc_lpf_gain: 0.97 # Time constant 1.11s
     vel_lpf_gain: 0.9 # Time constant 0.33
     hold_velocity_error_until_stop: true
+
+    over_velocity:
+      # Longer time constant to avoid reacting to instantaneous velocity changes
+      vel_lpf_gain: 0.985 # Time constant 2.0s at 30msec sampling period
