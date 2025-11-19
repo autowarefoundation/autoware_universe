@@ -126,4 +126,4 @@ The reflectors were installed by [Taisei Corporation](https://www.taisei.co.jp/e
 
 - [TIER IV](https://tier4.jp/en/)
 - [Taisei Corporation](https://www.taisei.co.jp/english/)
-- [Yuri Shimizu](https://github.com/YuriShimizu824)
+  - [Yuri Shimizu](https://github.com/YuriShimizu824)
