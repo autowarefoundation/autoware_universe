@@ -310,7 +310,7 @@ void BEVFusionNode::cloudCallback(
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
-  
+
   lidar_frame_ = pc_msg_ptr->header.frame_id;
   if (objects_sub_count < 1 || !checkSensorFusionReadiness()) {
     return;
@@ -319,7 +319,6 @@ void BEVFusionNode::cloudCallback(
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
   }
-
 
   precomputeIntrinsicsExtrinsics();
 
