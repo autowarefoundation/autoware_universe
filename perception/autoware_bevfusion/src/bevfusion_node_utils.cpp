@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/bevfusion/bevfusion_node.hpp"
-
 #include "autoware/bevfusion/utils.hpp"
 
 #include <cstddef>
@@ -22,8 +21,8 @@
 #include <unordered_map>
 #include <vector>
 
-// Contains implementations of functions other than constructor,destructor, topic callbacks for BEVFusionNode
-// Separated to reduce code complexity of bevfusion_node.cpp
+// Contains implementations of functions other than constructor,destructor, topic callbacks for
+// BEVFusionNode Separated to reduce code complexity of bevfusion_node.cpp
 namespace autoware::bevfusion
 {
 
