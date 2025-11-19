@@ -23,6 +23,7 @@
 
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/util/index_pair_checker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -38,7 +39,6 @@
 #include <list>
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -88,8 +88,8 @@ private:
   // Cache of squared distances for each class pair to avoid sqrt in inner loop
   Eigen::MatrixXd squared_distance_matrix_;
 
-  /// Hash-set for (tracker_idx, measurement_idx) pairs flagged for significant shape change
-  std::unordered_set<uint64_t> significant_shape_change_set_;
+  /// Checker for (tracker_idx, measurement_idx) pairs flagged for significant shape change
+  IndexPairChecker significant_shape_change_checker_;
 
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
@@ -112,7 +112,10 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-  bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const;
+  bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
+  {
+    return significant_shape_change_checker_.hasPair(tracker_idx, measurement_idx);
+  }
 
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 };
