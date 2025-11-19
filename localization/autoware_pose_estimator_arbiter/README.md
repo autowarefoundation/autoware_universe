@@ -195,6 +195,7 @@ Please see the table below for details.
 | `pose_source:=yabloc_ndt_ndt_ndt`           | `["ndt","yabloc"]`                                            |
 | `pose_source:=ndt_yabloc_eagleye`           | `["ndt","yabloc","eagleye"]`                                  |
 | `pose_source:=ndt_yabloc_nan_eagleye_artag` | `["ndt","yabloc","eagleye","artag"]`                          |
+| `pose_source:=ndt_lidar-marker` | `["ndt","lidar-marker"]`                          |
 
 </details>
 
@@ -256,6 +257,7 @@ This table's usage is described from three perspectives:
 |     ndt, eagleye, artag     | ndt                           | true          | false            | true           | /sensing/gnss/pose_with_covariance           |
 |   yabloc, eagleye, artag    | yabloc                        | false         | true             | true           | /sensing/gnss/pose_with_covariance           |
 | ndt, yabloc, eagleye, artag | ndt                           | true          | true             | true           | /sensing/gnss/pose_with_covariance           |
+| ndt, lidar-marker | ndt                           | true          | false            | true           | /sensing/gnss/pose_with_covariance           |
 
 </details>
 
