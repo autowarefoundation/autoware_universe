@@ -103,6 +103,7 @@ private:
 
   void initialize_diagnostics();
   void main_process(const PointCloud2::ConstSharedPtr & points_msg_ptr);
+  template <typename PointType>
   std::vector<landmark_manager::Landmark> detect_landmarks(
     const PointCloud2::ConstSharedPtr & points_msg_ptr);
   sensor_msgs::msg::PointCloud2::SharedPtr extract_marker_pointcloud(
