@@ -212,14 +212,12 @@ void BEVFusionTRT::setupImageBackbone(const TrtBEVFusionConfig & trt_config)
 
   std::vector<autoware::tensorrt_common::NetworkIO> image_backbone_io;
   image_backbone_io.emplace_back(
-    "imgs",
-    nvinfer1::Dims{
-      4, {-1, BEVFusionConfig::kNumRGBChannels, config_.roi_height_, config_.roi_width_}});
+    "imgs", nvinfer1::Dims{
+              4, {-1, BEVFusionConfig::kNumRGBChannels, config_.roi_height_, config_.roi_width_}});
   image_backbone_io.emplace_back(
     "image_feats",
     nvinfer1::Dims{
-      4,
-      {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
+      4, {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
 
   std::vector<autoware::tensorrt_common::ProfileDims> image_backbone_profiles;
   image_backbone_profiles.emplace_back(
@@ -238,8 +236,7 @@ void BEVFusionTRT::setupImageBackbone(const TrtBEVFusionConfig & trt_config)
   auto image_backbone_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(image_backbone_io);
   auto image_backbone_profiles_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(
-      image_backbone_profiles);
+    std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(image_backbone_profiles);
 
   image_backbone_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
     trt_config.image_backbone.value(), std::make_shared<autoware::tensorrt_common::Profiler>(),
@@ -265,8 +262,7 @@ void BEVFusionTRT::addCameraNetworkIO(
   network_io.emplace_back(
     "image_feats",
     nvinfer1::Dims{
-      4,
-      {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
+      4, {-1, config_.image_feature_channel_, config_.features_height_, config_.features_width_}});
   network_io.emplace_back(
     "img_aug_matrix",
     nvinfer1::Dims{
