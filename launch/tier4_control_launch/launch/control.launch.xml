@@ -307,7 +307,7 @@
     <!-- control evaluator -->
     <group if="$(var launch_control_evaluator)">
       <include file="$(find-pkg-share autoware_control_evaluator)/launch/control_evaluator.launch.xml">
-        <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
+        <arg name="input/objects" value="$(var input_objects_topic_name)"/>
       </include>
     </group>
   </group>
