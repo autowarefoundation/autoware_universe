@@ -188,8 +188,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     densification_world_frame_id, densification_num_past_frames);
 
   TrtBEVFusionConfig trt_bevfusion_config = createTrtConfig(
-    onnx_path, trt_precision, engine_path, image_backbone_onnx_path,
-    image_backbone_trt_precision, image_backbone_engine_path);
+    onnx_path, trt_precision, engine_path, image_backbone_onnx_path, image_backbone_trt_precision,
+    image_backbone_engine_path);
 
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
@@ -320,7 +320,7 @@ void BEVFusionNode::cloudCallback(
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
-  
+
   lidar_frame_ = pc_msg_ptr->header.frame_id;
   if (objects_sub_count < 1 || !checkSensorFusionReadiness()) {
     return;
@@ -329,7 +329,6 @@ void BEVFusionNode::cloudCallback(
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
   }
-
 
   precomputeIntrinsicsExtrinsics();
 
