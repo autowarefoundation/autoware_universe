@@ -66,13 +66,18 @@ void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
   }
 }
 
+bool BEVFusionNode::areAllSensorDataAvailable() const
+{
+  return extrinsics_available_ && images_available_ && intrinsics_available_;
+}
+
 bool BEVFusionNode::checkSensorFusionReadiness()
 {
   if (!sensor_fusion_) {
     return true;
   }
 
-  if (!extrinsics_available_ || !images_available_ || !intrinsics_available_) {
+  if (!areAllSensorDataAvailable()) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000,
       "Sensor fusion mode enabled but missing required data: extrinsics_available=%s, "
@@ -159,6 +164,63 @@ void BEVFusionNode::publishDebugInfo(
   }
 }
 
+void BEVFusionNode::addNoInferenceDiagnostics(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message)
+{
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  stat.add("processing_time_ms", 0.0);
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", 0.0);
+  message << "Waiting for the node to perform inference.";
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkProcessingTimeStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now)
+{
+  if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
+    stat.add("is_processing_time_ms_in_expected_range", false);
+
+    message.clear();
+    message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
+            << " ms by " << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_)
+            << " ms.";
+
+    if (!last_in_time_processing_timestamp_) {
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+
+    return diagnostic_msgs::msg::DiagnosticStatus::WARN;
+  }
+
+  stat.add("is_processing_time_ms_in_expected_range", true);
+  last_in_time_processing_timestamp_ = timestamp_now;
+  return diagnostic_msgs::msg::DiagnosticStatus::OK;
+}
+
+diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkConsecutiveDelays(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+  const rclcpp::Time & timestamp_now,
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level)
+{
+  const double delayed_state_duration =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+    stat.add("is_consecutive_processing_delay_in_range", false);
+    message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+    return diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+  }
+
+  stat.add("is_consecutive_processing_delay_in_range", true);
+  stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  return current_level;
+}
+
 // Check the processing time and delayed timestamp
 // If the node is consistently delayed, publish an error diagnostic message
 void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat)
@@ -168,53 +230,12 @@ void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusW
     diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::stringstream message{"OK"};
 
-  // Check if the node has performed inference
-  if (last_processing_time_ms_) {
-    // check processing time is acceptable
-    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
-      stat.add("is_processing_time_ms_in_expected_range", false);
-
-      message.clear();
-      message << "Processing time exceeds the acceptable limit of "
-              << max_allowed_processing_time_ms_ << " ms by "
-              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
-
-      // in case the processing starts with a delayed inference
-      if (!last_in_time_processing_timestamp_) {
-        last_in_time_processing_timestamp_ = timestamp_now;
-      }
-
-      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-    } else {
-      stat.add("is_processing_time_ms_in_expected_range", true);
-      last_in_time_processing_timestamp_ = timestamp_now;
-    }
-    stat.add("processing_time_ms", last_processing_time_ms_.value());
-
-    const double delayed_state_duration =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
-        .count();
-
-    // check consecutive delays
-    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
-      stat.add("is_consecutive_processing_delay_in_range", false);
-
-      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
-
-      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    } else {
-      stat.add("is_consecutive_processing_delay_in_range", true);
-    }
-    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  if (!last_processing_time_ms_) {
+    addNoInferenceDiagnostics(stat, message);
   } else {
-    stat.add("is_processing_time_ms_in_expected_range", true);
-    stat.add("processing_time_ms", 0.0);
-    stat.add("is_consecutive_processing_delay_in_range", true);
-    stat.add("consecutive_processing_delay_ms", 0.0);
-
-    message << "Waiting for the node to perform inference.";
+    diag_level = checkProcessingTimeStatus(stat, message, timestamp_now);
+    stat.add("processing_time_ms", last_processing_time_ms_.value());
+    diag_level = checkConsecutiveDelays(stat, message, timestamp_now, diag_level);
   }
 
   stat.summary(diag_level, message.str());

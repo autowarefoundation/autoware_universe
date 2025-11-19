@@ -71,6 +71,7 @@ private:
 
   // Helper methods for cloudCallback
   bool checkSensorFusionReadiness();
+  bool areAllSensorDataAvailable() const;
   void precomputeIntrinsicsExtrinsics();
   void computeCameraMasks(double lidar_stamp);
   void publishDetectionResults(
@@ -79,6 +80,17 @@ private:
   void publishDebugInfo(
     const std::unordered_map<std::string, double> & proc_timing,
     const std_msgs::msg::Header & header);
+
+  // Helper methods for diagnoseProcessingTime
+  void addNoInferenceDiagnostics(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message);
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type checkProcessingTimeStatus(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+    const rclcpp::Time & timestamp_now);
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type checkConsecutiveDelays(
+    diagnostic_updater::DiagnosticStatusWrapper & stat, std::stringstream & message,
+    const rclcpp::Time & timestamp_now,
+    diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level);
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     cloud_sub_;
