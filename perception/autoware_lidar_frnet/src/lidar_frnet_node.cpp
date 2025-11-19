@@ -61,9 +61,10 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options)
   frnet_ = std::make_unique<LidarFRNet>(
     trt_config, model_params, preprocessing_params, postprocessing_params, get_logger());
 
-  cloud_in_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&LidarFRNetNode::cloudCallback, this, std::placeholders::_1));
+  cloud_in_sub_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/pointcloud",
+      std::bind(&LidarFRNetNode::cloudCallback, this, std::placeholders::_1));
 
   cloud_seg_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(
     "~/output/pointcloud/segmentation", rclcpp::SensorDataQoS{}.keep_last(1));
@@ -98,7 +99,8 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options)
   }
 }
 
-void LidarFRNetNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+void LidarFRNetNode::cloudCallback(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
 {
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
@@ -120,12 +122,15 @@ void LidarFRNetNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSha
   }
 
   std::unordered_map<std::string, double> proc_timing;
-  auto cloud_seg_msg = ros_utils::getMsgFromLayout(*msg, cloud_seg_layout_);
-  auto cloud_viz_msg = ros_utils::getMsgFromLayout(*msg, cloud_viz_layout_);
-  auto cloud_filtered_msg = ros_utils::getMsgFromLayout(*msg, cloud_filtered_layout_);
+  auto cloud_seg_msg =
+    ros_utils::getMsgFromLayout(msg->header, msg->height, msg->width, cloud_seg_layout_);
+  auto cloud_viz_msg =
+    ros_utils::getMsgFromLayout(msg->header, msg->height, msg->width, cloud_viz_layout_);
+  auto cloud_filtered_msg =
+    ros_utils::getMsgFromLayout(msg->header, msg->height, msg->width, cloud_filtered_layout_);
 
   if (!frnet_->process(
-        *msg, cloud_seg_msg, cloud_viz_msg, cloud_filtered_msg, active_comm, proc_timing))
+        msg, cloud_seg_msg, cloud_viz_msg, cloud_filtered_msg, active_comm, proc_timing))
     return;
 
   cloud_seg_pub_->publish(cloud_seg_msg);

@@ -81,18 +81,19 @@ LidarFRNet::LidarFRNet(
 }
 
 bool LidarFRNet::process(
-  const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
-  sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered,
-  const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
+  sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
+  sensor_msgs::msg::PointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
+  std::unordered_map<std::string, double> & proc_timing)
 {
   stop_watch_ptr_->toc("processing/inner", true);
   std::call_once(init_cloud_, [&cloud_in]() {
-    if (!point_types::is_data_layout_compatible_with_point_xyzirc(cloud_in.fields)) {
+    if (!point_types::is_data_layout_compatible_with_point_xyzirc(cloud_in->fields)) {
       throw std::runtime_error("Unsupported point cloud type. Expected XYZIRC type.");
     }
   });
 
-  const auto input_num_points = cloud_in.width * cloud_in.height;
+  const auto input_num_points = cloud_in->width * cloud_in->height;
   if (
     input_num_points < network_params_.num_points_profile.min ||
     input_num_points > network_params_.num_points_profile.max) {
@@ -107,8 +108,8 @@ bool LidarFRNet::process(
 
   cuda_utils::clear_async(cloud_in_d_.get(), network_params_.num_points_profile.max, stream_);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_in_d_.get(), cloud_in.data.data(), sizeof(InputPointType) * input_num_points,
-    cudaMemcpyHostToDevice));
+    cloud_in_d_.get(), cloud_in->data.get(), sizeof(InputPointType) * input_num_points,
+    cudaMemcpyDeviceToDevice, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (!preprocess(input_num_points)) {

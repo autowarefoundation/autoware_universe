@@ -23,6 +23,8 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -39,11 +41,12 @@ class LIDAR_FRNET_PUBLIC LidarFRNetNode : public rclcpp::Node
 public:
   explicit LidarFRNetNode(const rclcpp::NodeOptions & options);
 
-  void cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
+  void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 private:
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_in_sub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    cloud_in_sub_{nullptr};
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_seg_pub_{nullptr};
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_viz_pub_{nullptr};
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_filtered_pub_{nullptr};

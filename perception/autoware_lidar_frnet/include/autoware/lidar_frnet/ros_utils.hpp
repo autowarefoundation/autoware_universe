@@ -48,6 +48,22 @@ sensor_msgs::msg::PointCloud2 getMsgFromLayout(
   return new_msg;
 }
 
+sensor_msgs::msg::PointCloud2 getMsgFromLayout(
+  const std_msgs::msg::Header & header, const uint32_t height, const uint32_t width,
+  const PointCloudLayout & pointcloud_layout)
+{
+  auto new_msg = sensor_msgs::msg::PointCloud2();
+  new_msg.fields = pointcloud_layout.fields;
+  const auto msg_size = pointcloud_layout.point_step * width * height;
+  new_msg.point_step = pointcloud_layout.point_step;
+  new_msg.header = header;
+  new_msg.height = height;
+  new_msg.width = width;
+  new_msg.row_step = msg_size;
+  new_msg.data.resize(msg_size);
+  return new_msg;
+}
+
 PointCloudLayout generateSegmentationPointCloudLayout()
 {
   sensor_msgs::msg::PointCloud2 msg;
