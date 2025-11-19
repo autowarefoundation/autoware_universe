@@ -18,24 +18,24 @@
 
 #### Output
 
-| Name                            | Type                                            | Description                                                        |
-| :------------------------------ | :---------------------------------------------- | :----------------------------------------------------------------- |
-| `~/output/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose                                                     |
-| `/diagnostics`                  | `diagnostic_msgs::msg::DiagnosticArray`         | Diagnostics outputs                                                |
+| Name                            | Type                                            | Description         |
+| :------------------------------ | :---------------------------------------------- | :------------------ |
+| `~/output/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose      |
+| `/diagnostics`                  | `diagnostic_msgs::msg::DiagnosticArray`         | Diagnostics outputs |
 
 ##### For debug
 
-| Name                             | Type                                            | Description                                                        |
-| :--------------------------------| :-----------------------------------------------| :------------------------------------------------------------------|
-| `~/debug/pose_with_covariance`   | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose                                                     |
-| `~/debug/marker_detected`        | `geometry_msgs::msg::PoseArray`                 | Detected marker poses                                              |
-| `~/debug/marker_mapped`          | `visualization_msgs::msg::MarkerArray`          | Loaded landmarks to visualize in Rviz as thin boards               |
-| `~/debug/marker_pointcloud`      | `sensor_msgs::msg::PointCloud2`                 | PointCloud of the detected marker                                  |
-| `~/debug/center_intensity_grid`  | `nav_msgs::msg::OccupancyGrid`                  | Center intensity grid for debug                                    |
-| `~/debug/positive_grid`          | `nav_msgs::msg::OccupancyGrid`                  | Positive match grid for debug                                      |
-| `~/debug/negative_grid`          | `nav_msgs::msg::OccupancyGrid`                  | Negative match grid for debug                                      |
-| `~/debug/matched_grid`           | `nav_msgs::msg::OccupancyGrid`                  | Matched pattern grid for debug                                     |
-| `~/debug/vote_grid`              | `nav_msgs::msg::OccupancyGrid`                  | Vote grid for marker detection debug                               |
+| Name                            | Type                                            | Description                                          |
+| :------------------------------ | :---------------------------------------------- | :--------------------------------------------------- |
+| `~/debug/pose_with_covariance`  | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose                                       |
+| `~/debug/marker_detected`       | `geometry_msgs::msg::PoseArray`                 | Detected marker poses                                |
+| `~/debug/marker_mapped`         | `visualization_msgs::msg::MarkerArray`          | Loaded landmarks to visualize in Rviz as thin boards |
+| `~/debug/marker_pointcloud`     | `sensor_msgs::msg::PointCloud2`                 | PointCloud of the detected marker                    |
+| `~/debug/center_intensity_grid` | `nav_msgs::msg::OccupancyGrid`                  | Center intensity grid for debug                      |
+| `~/debug/positive_grid`         | `nav_msgs::msg::OccupancyGrid`                  | Positive match grid for debug                        |
+| `~/debug/negative_grid`         | `nav_msgs::msg::OccupancyGrid`                  | Negative match grid for debug                        |
+| `~/debug/matched_grid`          | `nav_msgs::msg::OccupancyGrid`                  | Matched pattern grid for debug                       |
+| `~/debug/vote_grid`             | `nav_msgs::msg::OccupancyGrid`                  | Vote grid for marker detection debug                 |
 
 ## Parameters
 
