@@ -171,23 +171,23 @@ bool Tracker::updateWithMeasurement(
   }
   
   // Update strategies:
-  // 1. NORMAL UPDATE: Update position and shape by Kalman filter
-  // 2. EXTENSION UPDATE: Apply the new stable shape and update position
-  // 3. CONDITIONED UPDATE: Ignore the noisy shape info and partially update position with below 3 conditions
+  // 1. Normal update: Update position and shape by Kalman filter
+  // 2. Extension update: Apply the new stable shape and update position
+  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3 conditions
   //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
   //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
   //    - WEAK_UPDATE: Update tending to predicted position
 
   if (!has_significant_shape_change) {
     unstable_shape_filter_.processNormalMeasurement(object);
-    // 1. NORMAL UPDATE
+    // 1. Normal update
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
 
   } else {
     unstable_shape_filter_.processNoisyMeasurement(object);
     if (unstable_shape_filter_.isStable()) {
-      // 2. EXTENSION UPDATE
+      // 2. Extension update
       autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
 
       setObjectShape(smoothed_shape);
@@ -200,7 +200,7 @@ bool Tracker::updateWithMeasurement(
       unstable_shape_filter_.clear();
 
     } else {
-      // 3. CONDITIONED UPDATE
+      // 3. Conditioned update
       const auto tracker_shape = object_.shape;
 
       types::DynamicObject predicted_object;

@@ -27,7 +27,7 @@
 namespace autoware::multi_object_tracker
 {
 
-// Vehicle update strategy type for partial updates
+// Vehicle update strategy type for conditioned updates
 enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDATE };
 
 struct UpdateStrategy
@@ -47,6 +47,9 @@ private:
 
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
+
+  // determine anchor point for shape updates by last update strategy
+  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
 
 public:
   VehicleTracker(

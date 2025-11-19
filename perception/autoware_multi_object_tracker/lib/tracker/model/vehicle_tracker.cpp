@@ -62,6 +62,9 @@ VehicleTracker::VehicleTracker(
   //   the observed velocity is used as the measurement.
   velocity_deviation_threshold_ = autoware_utils_math::kmph2mps(10);  // [m/s]
 
+  // default anchor point for shape updates
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+
   if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     // set default initial size
     auto & object_extension = object_.shape.dimensions;
@@ -246,6 +249,9 @@ bool VehicleTracker::measure(
   // remove cached object
   removeCache();
 
+  // reset anchor point for shape updates
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+
   return true;
 }
 
@@ -329,10 +335,14 @@ bool VehicleTracker::conditionedUpdate(
 
   bool is_updated = false;
   if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
+
     is_updated = motion_model_.updateStatePoseFront(
       strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   } else {
     // Must be REAR_WHEEL_UPDATE (only remaining option after WEAK_UPDATE check)
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
+
     is_updated = motion_model_.updateStatePoseRear(
       strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   }
@@ -471,10 +481,15 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   object_.area = types::getArea(shape);
 
   // For vehicle trackers, update bicycle model wheel positions to maintain consistency
-  // with the new bbox shape length while preserving center position and yaw
+  // with the new bbox shape length
   if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     const double new_length = shape.dimensions.x;
-    motion_model_.updateStateLength(new_length);
+
+    // Use stored anchor point from last update strategy
+    motion_model_.updateStateLength(new_length, shape_update_anchor_);
+
+    // Reset to default (CENTER) after applying the shape update
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   }
 }
 
