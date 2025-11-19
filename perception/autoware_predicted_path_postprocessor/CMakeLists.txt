@@ -32,7 +32,8 @@ if(BUILD_TESTING)
     ament_auto_find_test_dependencies()
 
     ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
-        test/test_refine_by_speed.cpp)
+        test/test_refine_by_speed.cpp
+        test/test_refine_penetration_by_static_objects.cpp)
 
     target_link_libraries(test_${PROJECT_NAME}
       ${PROJECT_NAME}
