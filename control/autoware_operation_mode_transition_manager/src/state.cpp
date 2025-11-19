@@ -254,7 +254,6 @@ bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
     debug_info_ = DebugInfo{};  // all false
     return false;               // closest trajectory point not found.
   }
-
   const auto closest_point = trajectory.points.at(*closest_idx);
   const auto target_planning_speed = closest_point.longitudinal_velocity_mps;
 
