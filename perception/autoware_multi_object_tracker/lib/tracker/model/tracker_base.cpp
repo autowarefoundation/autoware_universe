@@ -116,7 +116,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info, bool significant_shape_change)
+  const types::InputChannel & channel_info, bool has_significant_shape_change)
 {
   // Update existence probability
   {
@@ -170,17 +170,17 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  if (!significant_shape_change) {
+  if (!has_significant_shape_change) {
     // Input normal measurement for EMA
-    ema_shape_.processNormalMeasurement(object);
+    unstable_shape_filter_.processNormalMeasurement(object);
 
     // Update object normally
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
   } else {
-    ema_shape_.processNoisyMeasurement(object);
-    if (ema_shape_.isStable()) {
-      autoware_perception_msgs::msg::Shape smoothed_shape = ema_shape_.getShape();
+    unstable_shape_filter_.processNoisyMeasurement(object);
+    if (unstable_shape_filter_.isStable()) {
+      autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
 
       setObjectShape(smoothed_shape);
       // Update object normally
@@ -189,8 +189,8 @@ bool Tracker::updateWithMeasurement(
       measure(smoothed_object, measurement_time, channel_info);
       object_.trust_extension = smoothed_object.trust_extension;
 
-      // Renew ema_shape_
-      ema_shape_.clear();
+      // Renew unstable_shape_filter_
+      unstable_shape_filter_.clear();
     } else {
       const auto tracker_shape = object_.shape;
 
@@ -593,14 +593,24 @@ bool Tracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
-  // For non-vehicle trackers, create pseudo measurement
-  types::DynamicObject pseudo_measurement = prediction;
-  createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
+  (void)measurement;
+  (void)prediction;
+  (void)tracker_shape;
+  (void)measurement_time;
+  (void)channel_info;
+  RCLCPP_ERROR(rclcpp::get_logger("Tracker"), "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
+  return false;
 
-  // Apply the measurement update directly
-  measure(pseudo_measurement, measurement_time, channel_info);
-
-  return true;
+  // NOTE: The following default implementation is commented out as it not well-tested yet.
+  //
+  // // For non-vehicle trackers, create pseudo measurement
+  // types::DynamicObject pseudo_measurement = prediction;
+  // createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
+  //
+  // // Apply the measurement update directly
+  // measure(pseudo_measurement, measurement_time, channel_info);
+  //
+  // return true;
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -27,13 +27,13 @@
 namespace autoware::multi_object_tracker
 {
 
-// Vehicle update strategy for partial updates
-enum class UpdateStrategy { FRONT_WHEEL, REAR_WHEEL, BODY };
+// Vehicle update strategy type for partial updates
+enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDATE };
 
-struct WheelInfo
+struct UpdateStrategy
 {
-  UpdateStrategy strategy;
-  geometry_msgs::msg::Point wheel_position;  // Only used for FRONT_WHEEL and REAR_WHEEL
+  UpdateStrategyType type;
+  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
 };
 
 class VehicleTracker : public Tracker
@@ -71,8 +71,30 @@ public:
 
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
-  WheelInfo estimateUpdateWheel(
+  UpdateStrategy determineUpdateStrategy(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
+
+private:
+  // Helper structs for determineUpdateStrategy
+  struct EdgePositions
+  {
+    double front_x, front_y;
+    double rear_x, rear_y;
+  };
+
+  struct EdgeAlignmentDistances
+  {
+    double front_alignment_dist;
+    double rear_alignment_dist;
+  };
+
+  // Helper functions for determineUpdateStrategy
+  EdgePositions calculateEdgeCenters(const types::DynamicObject & obj) const;
+  EdgeAlignmentDistances calculateAlignmentDistances(
+    const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
+  geometry_msgs::msg::Point calculateAnchorPoint(
+    const EdgePositions & meas_edges, bool use_front_wheel, double predicted_length,
+    const types::DynamicObject & measurement) const;
 };
 
 }  // namespace autoware::multi_object_tracker

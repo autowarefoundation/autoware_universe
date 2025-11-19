@@ -22,8 +22,8 @@
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
-#include "autoware/multi_object_tracker/tracker/components/adaptive_threshold_cache.hpp"
-#include "autoware/multi_object_tracker/tracker/components/exponential_moving_average_shape.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/tracker/util/unstable_shape_filter.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -74,7 +74,7 @@ private:
   static constexpr double SHAPE_VARIATION_THRESHOLD = 0.1;
   static constexpr size_t STABLE_STREAK_THRESHOLD = 4;
 
-  ExponentialMovingAverageShape ema_shape_{
+  UnstableShapeFilter unstable_shape_filter_{
     EMA_ALPHA_WEAK, EMA_ALPHA_STRONG, SHAPE_VARIATION_THRESHOLD, STABLE_STREAK_THRESHOLD};
 
   // cache
@@ -101,7 +101,7 @@ public:
   // object update
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-    const types::InputChannel & channel_info, bool significant_shape_change = false);
+    const types::InputChannel & channel_info, bool has_significant_shape_change = false);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);

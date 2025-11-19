@@ -106,7 +106,7 @@ public:
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
     const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-    const InverseCovariance2D & inv_cov, bool & significant_shape_change) const;
+    const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 
   Eigen::MatrixXd calcScoreMatrix(
     const types::DynamicObjectList & measurements,
