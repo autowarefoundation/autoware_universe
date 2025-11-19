@@ -46,6 +46,8 @@
   <arg name="input/radar/far_objects" default="/perception/object_recognition/detection/radar/far_objects"/>
   <arg name="input/radar/objects" default="/perception/object_recognition/detection/radar/objects"/>
   <arg name="input/radar/tracked_objects" default="/sensing/radar/tracked_objects"/>
+  <arg name="input/camera_only/objects" default="/perception/object_recognition/detection/camera_only/objects"/>
+  <arg name="input/camera_only/channel" default="camera_streampetr"/>
   <arg name="input/camera_vru/channel" default="camera_vru"/>
   <arg name="input/camera_vru/objects" default="/perception/object_recognition/detection/camera_vru/objects"/>
 
@@ -130,6 +132,9 @@
     <let name="input/detection07/channel" value="$(var input/camera_vru/channel)"/>
     <let name="input/detection07/channel" value="none" unless="$(var use_camera_vru_detector)"/>
     <let name="input/detection07/objects" value="$(var input/camera_vru/objects)"/>
+
+    <let name="input/detection08/channel" value="$(var input/camera_only/channel)"/>
+    <let name="input/detection08/objects" value="$(var input/camera_only/objects)"/>
 
     <!-- camera lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
