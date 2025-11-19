@@ -527,6 +527,10 @@ bool BEVFusionTRT::preProcess(
         camera_streams_[camera_id]);
     }
 
+    for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
+      cudaStreamSynchronize(camera_streams_[i]);
+    }
+
     cudaMemcpyAsync(
       camera_masks_d_.get(), camera_masks.data(), config_.num_cameras_ * sizeof(float),
       cudaMemcpyHostToDevice, stream_);
@@ -604,10 +608,7 @@ bool BEVFusionTRT::preProcess(
     network_trt_ptr_->setInputShape("kept", nvinfer1::Dims{1, {num_kept_}});
     network_trt_ptr_->setInputShape("ranks", nvinfer1::Dims{1, {num_ranks_}});
     network_trt_ptr_->setInputShape("indices", nvinfer1::Dims{1, {num_indices_}});
-  }
-
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    cudaStreamSynchronize(camera_streams_[i]);
+  
   }
 
   // Debug: Save ROI images after preprocessing

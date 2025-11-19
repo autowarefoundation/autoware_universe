@@ -94,9 +94,14 @@ cudaError_t PreprocessCuda::generateSweepPoints_launch(
   dim3 blocks(divup(points_size, config_.threads_per_block_));
   dim3 threads(config_.threads_per_block_);
 
-  generateSweepPoints_kernel<config_.use_intensity_><<<blocks, threads, 0, stream_>>>(
-    input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
-    output_points);
+  if(config_.use_intensity_) 
+    generateSweepPoints_kernel<true><<<blocks, threads, 0, stream_>>>(
+      input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
+      output_points);
+  else
+    generateSweepPoints_kernel<false><<<blocks, threads, 0, stream_>>>(
+      input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
+      output_points);
 
   cudaError_t err = cudaGetLastError();
   return err;
