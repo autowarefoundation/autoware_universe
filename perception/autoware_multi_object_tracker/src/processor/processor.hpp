@@ -20,7 +20,7 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
-#include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -47,6 +47,9 @@ struct TrackerProcessorConfig
   bool enable_unknown_object_motion_output;
   std::unordered_map<LabelType, double> pruning_giou_thresholds;
   std::unordered_map<LabelType, double> pruning_distance_thresholds;  // [m]
+  double pruning_static_object_speed;                                 // [m/s]
+  double pruning_moving_object_speed;                                 // [m/s]
+  double pruning_static_iou_threshold;                                // [ratio]
 };
 
 class TrackerProcessor
@@ -79,7 +82,11 @@ public:
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const;
 
-  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+  void getMergedObjects(
+    const rclcpp::Time & time, const geometry_msgs::msg::Transform & tf_base_to_world,
+    autoware_perception_msgs::msg::DetectedObjects & merged_objects) const;
+
+  void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
   const TrackerProcessorConfig config_;
@@ -97,7 +104,7 @@ private:
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
-  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::optional<geometry_msgs::msg::Pose> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
 };

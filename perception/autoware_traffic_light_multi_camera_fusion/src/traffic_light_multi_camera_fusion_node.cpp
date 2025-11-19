@@ -18,6 +18,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -27,112 +28,27 @@
 namespace
 {
 
-bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
+double probabilityToLogOdds(double prob)
 {
-  return signal.elements.size() == 1 &&
-         signal.elements[0].color == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN &&
-         signal.elements[0].shape == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-}
-
-/**
- * @brief Currently the visible score only considers the truncation.
- * If the detection roi is very close to the image boundary, it would be considered as truncated.
- *
- * @param record    fusion record
- * @return 0 if traffic light is truncated, otherwise 1
- */
-int calVisibleScore(const autoware::traffic_light::FusionRecord & record)
-{
-  const uint32_t boundary = 5;
-  uint32_t x1 = record.roi.roi.x_offset;
-  uint32_t x2 = record.roi.roi.x_offset + record.roi.roi.width;
-  uint32_t y1 = record.roi.roi.y_offset;
-  uint32_t y2 = record.roi.roi.y_offset + record.roi.roi.height;
-  if (
-    x1 <= boundary || (record.cam_info.width - x2) <= boundary || y1 <= boundary ||
-    (record.cam_info.height - y2) <= boundary) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
-
-int compareRecord(
-  const autoware::traffic_light::FusionRecord & r1,
-  const autoware::traffic_light::FusionRecord & r2)
-{
-  /*
-  if both records are from the same sensor but different stamp, trust the latest one
-  */
-  double t1 = rclcpp::Time(r1.header.stamp).seconds();
-  double t2 = rclcpp::Time(r2.header.stamp).seconds();
-  const double dt_thres = 1e-3;
-  if (r1.header.frame_id == r2.header.frame_id && std::abs(t1 - t2) >= dt_thres) {
-    return t1 < t2 ? -1 : 1;
-  }
-  bool r1_is_unknown = isUnknown(r1.signal);
-  bool r2_is_unknown = isUnknown(r2.signal);
-  /*
-  if both are unknown, they are of the same priority
-  */
-  if (r1_is_unknown && r2_is_unknown) {
-    return 0;
-  } else if (r1_is_unknown ^ r2_is_unknown) {
-    /*
-    if either is unknown, the unknown is of lower priority
-    */
-    return r1_is_unknown ? -1 : 1;
-  }
-  int visible_score_1 = calVisibleScore(r1);
-  int visible_score_2 = calVisibleScore(r2);
-  if (visible_score_1 == visible_score_2) {
-    double confidence_1 = r1.signal.elements[0].confidence;
-    double confidence_2 = r2.signal.elements[0].confidence;
-    return confidence_1 < confidence_2 ? -1 : 1;
-  } else {
-    return visible_score_1 < visible_score_2 ? -1 : 1;
-  }
-}
-
-template <class K, class V>
-V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
-{
-  return map.count(key) ? map.at(key) : value;
-}
-
-autoware_perception_msgs::msg::TrafficLightElement convert(
-  const tier4_perception_msgs::msg::TrafficLightElement & input)
-{
-  using OldElem = tier4_perception_msgs::msg::TrafficLightElement;
-  using NewElem = autoware_perception_msgs::msg::TrafficLightElement;
-  static const std::unordered_map<OldElem::_color_type, NewElem::_color_type> color_map(
-    {{OldElem::RED, NewElem::RED},
-     {OldElem::AMBER, NewElem::AMBER},
-     {OldElem::GREEN, NewElem::GREEN},
-     {OldElem::WHITE, NewElem::WHITE}});
-  static const std::unordered_map<OldElem::_shape_type, NewElem::_shape_type> shape_map(
-    {{OldElem::CIRCLE, NewElem::CIRCLE},
-     {OldElem::LEFT_ARROW, NewElem::LEFT_ARROW},
-     {OldElem::RIGHT_ARROW, NewElem::RIGHT_ARROW},
-     {OldElem::UP_ARROW, NewElem::UP_ARROW},
-     {OldElem::UP_LEFT_ARROW, NewElem::UP_LEFT_ARROW},
-     {OldElem::UP_RIGHT_ARROW, NewElem::UP_RIGHT_ARROW},
-     {OldElem::DOWN_ARROW, NewElem::DOWN_ARROW},
-     {OldElem::DOWN_LEFT_ARROW, NewElem::DOWN_LEFT_ARROW},
-     {OldElem::DOWN_RIGHT_ARROW, NewElem::DOWN_RIGHT_ARROW},
-     {OldElem::CROSS, NewElem::CROSS}});
-  static const std::unordered_map<OldElem::_status_type, NewElem::_status_type> status_map(
-    {{OldElem::SOLID_OFF, NewElem::SOLID_OFF},
-     {OldElem::SOLID_ON, NewElem::SOLID_ON},
-     {OldElem::FLASHING, NewElem::FLASHING}});
-  // clang-format on
-
-  NewElem output;
-  output.color = at_or(color_map, input.color, NewElem::UNKNOWN);
-  output.shape = at_or(shape_map, input.shape, NewElem::UNKNOWN);
-  output.status = at_or(status_map, input.status, NewElem::UNKNOWN);
-  output.confidence = input.confidence;
-  return output;
+  /**
+   * @brief Converts a probability value to log-odds.
+   *
+   * Log-odds is the logarithm of the odds ratio, i.e., log(p / (1-p)).
+   * This function is essential for Bayesian updating in log-space, as it allows
+   * evidence to be additively combined.
+   *
+   * The function handles edge cases where the probability `p` is very close to
+   * 0 or 1. As `p` -> 1, log-odds -> +inf. As `p` -> 0, log-odds -> -inf.
+   * To prevent floating-point divergence (infinity), the input probability is
+   * "clamped" to a safe range slightly away from the boundaries. The bounds
+   * [1e-9, 1.0 - 1e-9] are chosen as a small epsilon to ensure numerical
+   * stability while having a negligible impact on non-extreme probability values.
+   *
+   * @param prob The input probability, expected to be in the range [0.0, 1.0].
+   * @return The corresponding log-odds value.
+   */
+  prob = std::clamp(prob, 1e-9, 1.0 - 1e-9);
+  return std::log(prob / (1.0 - prob));
 }
 
 }  // namespace
@@ -151,6 +67,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
+  prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
     std::string roi_topic = camera_ns + "/detection/rois";
@@ -178,7 +95,9 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
 
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&MultiCameraFusion::mapCallback, this, _1));
+    [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
+      this->mapCallback(msg);
+    });
   signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 }
 
@@ -192,9 +111,9 @@ void MultiCameraFusion::trafficSignalRoiCallback(
   Attention should be payed that this record array might not have the newest timestamp
   */
   record_arr_set_.insert(
-    FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
+    utils::FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
 
-  std::map<IdType, FusionRecord> fused_record_map, grouped_record_map;
+  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
   multiCameraFusion(fused_record_map);
   groupFusion(fused_record_map, grouped_record_map);
 
@@ -225,7 +144,7 @@ void MultiCameraFusion::mapCallback(
 }
 
 void MultiCameraFusion::convertOutputMsg(
-  const std::map<IdType, FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
+  const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
 {
   msg_out.traffic_light_groups.clear();
   for (const auto & p : grouped_record_map) {
@@ -234,13 +153,13 @@ void MultiCameraFusion::convertOutputMsg(
     NewSignalType signal_out;
     signal_out.traffic_light_group_id = reg_ele_id;
     for (const auto & ele : signal.elements) {
-      signal_out.elements.push_back(convert(ele));
+      signal_out.elements.push_back(utils::convertT4toAutoware(ele));
     }
     msg_out.traffic_light_groups.push_back(signal_out);
   }
 }
 
-void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused_record_map)
+void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   fused_record_map.clear();
   /*
@@ -264,7 +183,7 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
       /*
       generate fused record result with the saved records
       */
-      const FusionRecordArr & record_arr = *it;
+      const utils::FusionRecordArr & record_arr = *it;
       for (size_t i = 0; i < record_arr.rois.rois.size(); i++) {
         const RoiType & roi = record_arr.rois.rois[i];
         auto signal_it = std::find_if(
@@ -276,14 +195,14 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
         if (signal_it == record_arr.signals.signals.end()) {
           continue;
         }
-        FusionRecord record{record_arr.header, record_arr.cam_info, roi, *signal_it};
+        utils::FusionRecord record{record_arr.header, record_arr.cam_info, roi, *signal_it};
         /*
         if this traffic light is not detected yet or can be updated by higher priority record,
         update it
         */
         if (
           fused_record_map.find(roi.traffic_light_id) == fused_record_map.end() ||
-          ::compareRecord(record, fused_record_map[roi.traffic_light_id]) >= 0) {
+          utils::compareRecord(record, fused_record_map[roi.traffic_light_id]) >= 0) {
           fused_record_map[roi.traffic_light_id] = record;
         }
       }
@@ -293,33 +212,141 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, FusionRecord> & fused
 }
 
 void MultiCameraFusion::groupFusion(
-  const std::map<IdType, FusionRecord> & fused_record_map,
-  std::map<IdType, FusionRecord> & grouped_record_map)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
   grouped_record_map.clear();
+
+  // Stage 1: Accumulate evidence from all fused records
+  const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
+    accumulateGroupEvidence(fused_record_map);
+
+  // Stage 2: Determine the best state for each group from the accumulated evidence
+  determineBestGroupState(group_fusion_info_map, grouped_record_map);
+}
+
+GroupFusionInfoMap MultiCameraFusion::accumulateGroupEvidence(
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
+{
+  GroupFusionInfoMap group_fusion_info_map;
   for (const auto & p : fused_record_map) {
-    IdType roi_id = p.second.roi.traffic_light_id;
-    /*
-    this should not happen
-    */
-    if (traffic_light_id_to_regulatory_ele_id_.count(roi_id) == 0) {
-      RCLCPP_WARN_STREAM(
-        get_logger(), "Found Traffic Light Id = " << roi_id << " which is not defined in Map");
+    processFusedRecord(group_fusion_info_map, p.second);
+  }
+  return group_fusion_info_map;
+}
+
+/**
+ * @brief Processes a single fused record and updates the group_fusion_info_map.
+ * (This function contains the logic from the outer loop)
+ */
+void MultiCameraFusion::processFusedRecord(
+  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record)
+{
+  const IdType roi_id = record.roi.traffic_light_id;
+
+  // Guard Clause 1: Check if traffic light ID is in the map
+  const auto it = traffic_light_id_to_regulatory_ele_id_.find(roi_id);
+  if (it == traffic_light_id_to_regulatory_ele_id_.end()) {
+    RCLCPP_WARN_STREAM(
+      get_logger(), "Found Traffic Light Id = " << roi_id << " which is not defined in Map");
+    return;
+  }
+
+  // Guard Clause 2: Check for elements
+  if (record.signal.elements.empty()) {
+    return;
+  }
+
+  const auto & reg_ele_id_vec = it->second;  // Use the iterator
+
+  // Loop over all elements in this record
+  for (const auto & element : record.signal.elements) {
+    // Loop over all regulatory IDs associated with this traffic light
+    for (const auto & reg_ele_id : reg_ele_id_vec) {
+      // Delegate the innermost logic to another helper
+      updateGroupInfoForElement(group_fusion_info_map, reg_ele_id, element, record);
+    }
+  }
+}
+
+/**
+ * @brief Updates the map for a single (element, regulatory_id) combination.
+ */
+void MultiCameraFusion::updateGroupInfoForElement(
+  GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
+  const tier4_perception_msgs::msg::TrafficLightElement & element,
+  const utils::FusionRecord & record)
+{
+  const StateKey state_key = {element.color, element.shape};
+  const double confidence = element.confidence;
+  auto & group_info = group_fusion_info_map[reg_ele_id];
+
+  // Update Log-Odds
+  updateLogOdds(group_info.accumulated_log_odds, state_key, confidence);
+
+  // Update Best Record
+  updateBestRecord(group_info.best_record_for_state, state_key, confidence, record);
+}
+
+/**
+ * @brief Handles the log-odds accumulation logic.
+ */
+void MultiCameraFusion::updateLogOdds(
+  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence)
+{
+  // try_emplace ensures we only add the 0.0 prior (from a 0.5 probability) once.
+  log_odds_map.try_emplace(state_key, 0.0);
+
+  const double evidence_log_odds = probabilityToLogOdds(confidence);
+
+  // Accumulate evidence
+  log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
+}
+
+/**
+ * @brief Handles the logic for tracking the best record for a given state.
+ */
+void MultiCameraFusion::updateBestRecord(
+  std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
+  double confidence, const utils::FusionRecord & record)
+{
+  const auto it = best_record_map.find(state_key);
+
+  if (it == best_record_map.end()) {
+    best_record_map[state_key] = record;
+    return;
+  }
+
+  auto & existing_record = it->second;
+
+  if (existing_record.signal.elements.empty()) {
+    return;
+  }
+
+  if (confidence > existing_record.signal.elements[0].confidence) {
+    best_record_map[state_key] = record;
+  }
+}
+
+void MultiCameraFusion::determineBestGroupState(
+  const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+{
+  for (const auto & pair : group_fusion_info_map) {
+    const IdType reg_ele_id = pair.first;
+    const auto & group_info = pair.second;
+
+    if (group_info.accumulated_log_odds.empty()) {
       continue;
     }
 
-    /*
-    keep the best record for every regulatory element id
-    */
-    const auto reg_ele_id_vec =
-      traffic_light_id_to_regulatory_ele_id_[p.second.roi.traffic_light_id];
-    for (const auto & reg_ele_id : reg_ele_id_vec) {
-      if (
-        grouped_record_map.count(reg_ele_id) == 0 ||
-        ::compareRecord(p.second, grouped_record_map[reg_ele_id]) >= 0) {
-        grouped_record_map[reg_ele_id] = p.second;
-      }
-    }
+    // The color with the highest logarithmic odds is the most probable one.
+    auto best_element = std::max_element(
+      group_info.accumulated_log_odds.begin(), group_info.accumulated_log_odds.end(),
+      [](const auto & a, const auto & b) { return a.second < b.second; });
+
+    const StateKey best_state_key = best_element->first;
+    grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
   }
 }
 

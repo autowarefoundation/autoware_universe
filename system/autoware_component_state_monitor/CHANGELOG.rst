@@ -2,6 +2,17 @@
 Changelog for package autoware_component_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(component_state_monitor): use topic_state_monitor component (`#11308 <https://github.com/autowarefoundation/autoware_universe/issues/11308>`_)
+  * move private headers
+  * use component
+  * remove empty line
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.47.1 (2025-08-14)
 -------------------
 

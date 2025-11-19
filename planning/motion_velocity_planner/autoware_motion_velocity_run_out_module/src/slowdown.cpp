@@ -40,12 +40,15 @@ geometry_msgs::msg::Point interpolated_point_at_time(
     [&](const autoware_planning_msgs::msg::TrajectoryPoint & t) {
       return rclcpp::Duration(t.time_from_start).seconds() >= time;
     });
+  if (prev_it == trajectory.end()) {
+    return trajectory.back().pose.position;
+  }
   const auto prev_time = rclcpp::Duration(prev_it->time_from_start).seconds();
-  if (prev_time == time) {
+  if (std::next(prev_it) == trajectory.end() || std::abs(prev_time - time) < 1e-3) {
     return prev_it->pose.position;
   }
   const auto next_time = rclcpp::Duration(std::next(prev_it)->time_from_start).seconds();
-  if (next_time == prev_time) {
+  if (std::abs(next_time - prev_time) < 1e-3) {
     return std::next(prev_it)->pose.position;
   }
   const auto t_delta = next_time - prev_time;
@@ -75,13 +78,15 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
   double current_velocity, std::optional<double> & unfeasible_stop_deceleration,
   const Parameters & params)
 {
-  const auto & update_unfeasible_stop = [&](const auto stop_distance) {
+  const auto & check_unfeasible_stop = [&](const auto stop_distance) -> bool {
     const auto stop_decel = (current_velocity * current_velocity) / (2 * stop_distance);
-    if (
-      stop_decel > params.stop_deceleration_limit &&
-      stop_decel > unfeasible_stop_deceleration.value_or(0.0)) {
-      unfeasible_stop_deceleration = stop_decel;
+    if (stop_decel > params.stop_deceleration_limit) {
+      if (stop_decel > unfeasible_stop_deceleration.value_or(0.0)) {
+        unfeasible_stop_deceleration = stop_decel;
+      }
+      return true;
     }
+    return false;
   };
   const auto max_time = rclcpp::Duration(trajectory.back().time_from_start).seconds();
   auto & current_decision = history.decisions.back();
@@ -91,11 +96,11 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
       if (!most_recent_slowdown_point) {
         return std::nullopt;
       }
-      const auto stop_point_length =
-        motion_utils::calcSignedArcLength(trajectory, 0, *most_recent_slowdown_point);
+      const auto stop_point_length = std::max(
+        0.0, motion_utils::calcSignedArcLength(trajectory, 0, *most_recent_slowdown_point));
       current_decision.stop_point =
         motion_utils::calcInterpolatedPose(trajectory, stop_point_length).position;
-      update_unfeasible_stop(stop_point_length);
+      check_unfeasible_stop(stop_point_length);
       return current_decision.stop_point;
     }
     const auto t_coll = current_decision.collision->ego_collision_time;
@@ -103,13 +108,20 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
       return std::nullopt;
     }
     const auto t_stop = std::max(0.0, t_coll);
-    const auto base_link_point = interpolated_point_at_time(trajectory, t_stop);
-    const auto stop_point_length =
-      motion_utils::calcSignedArcLength(trajectory, 0, base_link_point) -
-      params.stop_distance_buffer;
+    const auto base_link_stop_point = interpolated_point_at_time(trajectory, t_stop);
+    const auto stop_point_length = std::max(
+      0.0, motion_utils::calcSignedArcLength(trajectory, 0, base_link_stop_point) -
+             params.stop_distance_buffer);
     current_decision.stop_point =
       motion_utils::calcInterpolatedPose(trajectory, stop_point_length).position;
-    update_unfeasible_stop(stop_point_length);
+    if (check_unfeasible_stop(stop_point_length)) {
+      constexpr auto control_delay = 0.1;  // assumed delay for the stop to be applied
+      const auto feasible_stop_distance =
+        (current_velocity * current_velocity) / (2 * params.stop_deceleration_limit) +
+        control_delay * current_velocity;
+      current_decision.stop_point =
+        motion_utils::calcInterpolatedPose(trajectory, feasible_stop_distance).position;
+    }
   }
   return current_decision.stop_point;
 }

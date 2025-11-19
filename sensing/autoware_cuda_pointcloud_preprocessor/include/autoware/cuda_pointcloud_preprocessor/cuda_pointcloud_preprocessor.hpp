@@ -54,6 +54,7 @@ public:
 
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
+  void setRingOutlierFilterActive(const bool enable_filter);
   void setUndistortionType(const UndistortionType & undistortion_type);
 
   void preallocateOutput();
@@ -75,6 +76,7 @@ private:
   CropBoxParameters mirror_crop_box_parameters_{};
   RingOutlierFilterParameters ring_outlier_parameters_{};
   UndistortionType undistortion_type_{UndistortionType::Invalid};
+  bool enable_ring_outlier_filter_{true};
 
   int num_rings_{};
   int max_points_per_ring_{};

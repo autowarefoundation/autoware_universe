@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_goal_planner_module/decision_state.hpp"
 #include "autoware/behavior_path_goal_planner_module/fixed_goal_planner_base.hpp"
 #include "autoware/behavior_path_goal_planner_module/goal_planner_parameters.hpp"
+#include "autoware/behavior_path_goal_planner_module/lane_change.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/bezier_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/freespace_pull_over.hpp"
 #include "autoware/behavior_path_goal_planner_module/thread_data.hpp"
@@ -35,6 +36,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace autoware::behavior_path_planner
@@ -118,10 +120,6 @@ struct PullOverContextData
   }
 };
 
-bool isOnModifiedGoal(
-  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
-  const GoalPlannerParameters & parameters);
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,
@@ -178,8 +176,7 @@ private:
   std::atomic<bool> & is_lane_parking_cb_running_;
   rclcpp::Logger logger_;
 
-  // last_lane_change_trigger_time of the request which was used when this was waken-up previously
-  std::optional<rclcpp::Time> last_lane_change_trigger_time_saved_;
+  LaneChangeContext::State lane_change_state_last_wakeup_{LaneChangeContext::NotLaneChanging{}};
 
   std::vector<std::shared_ptr<PullOverPlannerBase>> pull_over_planners_;
   BehaviorModuleOutput
@@ -307,9 +304,7 @@ private:
   bool trigger_thread_on_approach_{false};
 
   // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
-  std::optional<rclcpp::Time> last_lane_change_trigger_time_{};
-  std::optional<bool> prev_lane_change_detected_{};
-  bool lane_change_status_changed_{false};
+  LaneChangeContext lane_change_ctx_{};
 
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
@@ -349,11 +344,13 @@ private:
   PathDecisionStateController path_decision_controller_{getLogger()};
   std::optional<rclcpp::Time> decided_time_{};
 
-  // approximate distance from the start point to the end point of pull_over.
-  // this is used as an assumed value to decelerate, etc., before generating the actual path.
-  const double approximate_pull_over_distance_{20.0};
-  // ego may exceed the stop distance, so add a buffer
-  const double stop_distance_buffer_{2.0};
+  // save the frontmost deceleration start position before approve phase
+  struct BlinkerBeforePullOver
+  {
+    Pose desired;
+    std::optional<Pose> required;
+  };
+  std::optional<BlinkerBeforePullOver> blinker_before_pull_over_{};
 
   // debug
   mutable GoalPlannerDebugData debug_data_;
@@ -393,11 +390,11 @@ private:
 
   // stop or decelerate
   void deceleratePath(PullOverPath & pull_over_path) const;
-  void decelerateForTurnSignal(const Pose & stop_pose, PathWithLaneId & path) const;
+  std::optional<Pose> decelerateForTurnSignal(const Pose & stop_pose, PathWithLaneId & path) const;
   void decelerateBeforeSearchStart(
     const Pose & search_start_offset_pose, PathWithLaneId & path) const;
   PathWithLaneId generateStopPath(
-    const PullOverContextData & context_data, const std::string & detail) const;
+    const PullOverContextData & context_data, const std::string & detail);
   PathWithLaneId generateFeasibleStopPath(
     const PathWithLaneId & path, const std::string & detail) const;
 
@@ -444,6 +441,11 @@ private:
   void setModifiedGoal(
     const PullOverContextData & context_data, BehaviorModuleOutput & output) const;
   void setTurnSignalInfo(const PullOverContextData & context_data, BehaviorModuleOutput & output);
+  void setTurnSignalInfoForStopPath(
+    const BehaviorModuleOutput & stop_path, const Pose & decel_start_pose,
+    const std::optional<Pose> & stop_pose, BehaviorModuleOutput & output);
+  void set_blinker_decel_start_pose(
+    const std::optional<Pose> & decel_start_pose, const std::optional<Pose> & stop_pose);
 
   // new turn signal
   TurnSignalInfo calcTurnSignalInfo(const PullOverContextData & context_data);

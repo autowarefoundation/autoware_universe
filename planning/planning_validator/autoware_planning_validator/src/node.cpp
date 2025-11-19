@@ -76,6 +76,7 @@ void PlanningValidatorNode::setupParameters()
 
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
   p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
+  p.th_traffic_light_timeout = declare_parameter<double>("th_traffic_light_timeout");
 }
 
 bool PlanningValidatorNode::isDataReady()
@@ -98,6 +99,7 @@ void PlanningValidatorNode::setData(const Trajectory::ConstSharedPtr & traj_msg)
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
   data->obstacle_pointcloud = sub_pointcloud_.take_data();
+  data->traffic_signals = sub_traffic_signals_.take_data();
   data->set_current_trajectory(traj_msg);
   data->set_route(sub_route_.take_data());
   data->set_map(sub_lanelet_map_bin_.take_data());
@@ -111,6 +113,12 @@ void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj
 
   if (!isDataReady()) return;
 
+  // Check operational mode state
+  OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_.take_data();
+  if (operation_mode_msg) {
+    flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
+  }
+
   context_->init_validation_status();
   context_->reset_handling();
 
@@ -121,6 +129,16 @@ void PlanningValidatorNode::onTrajectory(const Trajectory::ConstSharedPtr & traj
   manager_.validate();
 
   auto & s = context_->validation_status;
+
+  if (!flag_autonomous_control_enabled_) {
+    // if warnings or errors are being suppressed, printing simple logs
+    if (!isAllValid(*s)) {
+      RCLCPP_DEBUG_THROTTLE(
+        get_logger(), *get_clock(), 3000, "Suppressing planning validation during manual driving");
+    }
+    context_->init_validation_status();
+  }
+
   s->invalid_count = isAllValid(*s) ? 0 : s->invalid_count + 1;
 
   context_->update_diag();
@@ -273,6 +291,12 @@ void PlanningValidatorNode::displayStatus()
     s->is_valid_intersection_collision_check,
     "planning trajectory leads to collision!! (intersection objects)");
   warn(s->is_valid_rear_collision_check, "planning trajectory leads to collision!! (rear objects)");
+}
+
+bool PlanningValidatorNode::infer_autonomous_control_state(
+  const OperationModeState::ConstSharedPtr msg)
+{
+  return (msg->mode == OperationModeState::AUTONOMOUS) && (msg->is_autoware_control_enabled);
 }
 
 }  // namespace autoware::planning_validator

@@ -16,9 +16,9 @@
 
 #include "autoware_utils_geometry/geometry.hpp"
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -49,6 +49,15 @@ PoseInstabilityDetector::PoseInstabilityDetector(const rclcpp::NodeOptions & opt
   pose_estimator_angular_tolerance_(
     this->declare_parameter<double>("pose_estimator_angular_tolerance"))
 {
+  // Define enable flags
+  enable_validation_flags_ = {
+    this->declare_parameter<bool>("enable_validation.position_x"),
+    this->declare_parameter<bool>("enable_validation.position_y"),
+    this->declare_parameter<bool>("enable_validation.position_z"),
+    this->declare_parameter<bool>("enable_validation.angle_x"),
+    this->declare_parameter<bool>("enable_validation.angle_y"),
+    this->declare_parameter<bool>("enable_validation.angle_z")};
+
   // Define subscribers, publishers and a timer.
   odometry_sub_ = this->create_subscription<Odometry>(
     "~/input/odometry", 10,
@@ -156,9 +165,12 @@ void PoseInstabilityDetector::callback_timer()
   bool all_ok = true;
 
   for (size_t i = 0; i < values.size(); ++i) {
-    const bool ok = (std::abs(values[i]) < thresholds[i]);
+    const bool ok = (std::abs(values[i]) < thresholds[i]) || !enable_validation_flags_[i];
     all_ok &= ok;
     diagnostic_msgs::msg::KeyValue kv;
+    kv.key = labels[i] + ":validation_enabled";
+    kv.value = enable_validation_flags_[i] ? "True" : "False";
+    status.values.push_back(kv);
     kv.key = labels[i] + ":threshold";
     kv.value = std::to_string(thresholds[i]);
     status.values.push_back(kv);

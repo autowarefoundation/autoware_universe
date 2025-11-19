@@ -24,16 +24,6 @@
 namespace autoware::command_mode_decider
 {
 
-void logging_mode_change(
-  const rclcpp::Logger & logger, const std::string & name, uint16_t prev, uint16_t next)
-{
-  if (prev != next) {
-    const auto prev_text = std::to_string(prev);
-    const auto next_text = std::to_string(next);
-    RCLCPP_INFO_STREAM(logger, name << " mode changed: " << prev_text << " -> " << next_text);
-  }
-}
-
 std::string text(const std::vector<uint16_t> & modes)
 {
   std::string result;
@@ -300,7 +290,8 @@ void CommandModeDeciderBase::detect_operation_mode_timeout()
     system_request_.autoware_control = false;
   }
 
-  RCLCPP_INFO_STREAM(get_logger(), "Mode transition is canceled due to timeout.");
+  publish_autoware_control_request(system_request_.autoware_control);
+  RCLCPP_INFO_STREAM(get_logger(), "Mode transition is canceled due to timeout: " << last_mode_);
 }
 
 void CommandModeDeciderBase::update_request_mode()
@@ -466,6 +457,14 @@ void CommandModeDeciderBase::publish_decider_debug()
   pub_debug_->publish(msg);
 }
 
+void CommandModeDeciderBase::publish_autoware_control_request(bool autoware_control)
+{
+  CommandModeRequest msg;
+  msg.stamp = now();
+  msg.vehicle = autoware_control ? CommandModeRequest::AUTOWARE : CommandModeRequest::MANUAL;
+  pub_command_mode_request_->publish(msg);
+}
+
 ResponseStatus make_response(bool success, const std::string & message = "")
 {
   ResponseStatus res;
@@ -485,13 +484,15 @@ ResponseStatus CommandModeDeciderBase::check_mode_exists(uint16_t mode)
   return make_response(true);
 }
 
-ResponseStatus CommandModeDeciderBase::check_mode_request(uint16_t mode)
+ResponseStatus CommandModeDeciderBase::check_mode_request(const RequestModeStatus & request)
 {
+  const auto manual = !request.autoware_control;
+  const auto mode = request.operation_mode;
   const auto result = check_mode_exists(mode);
   if (!result.success) {
     return result;
   }
-  const auto available = command_mode_status_.available(mode, curr_manual_control_);
+  const auto available = command_mode_status_.available(mode, manual);
   if (!available) {
     return make_response(false, "Mode is not available: " + std::to_string(mode));
   }
@@ -502,7 +503,7 @@ void CommandModeDeciderBase::on_change_operation_mode(
   ChangeOperationMode::Request::SharedPtr req, ChangeOperationMode::Response::SharedPtr res)
 {
   const auto mode = plugin_->from_operation_mode(req->mode);
-  res->status = check_mode_request(mode);
+  res->status = check_mode_request(RequestModeStatus{system_request_.autoware_control, mode});
   if (!res->status.success) {
     RCLCPP_WARN_STREAM(get_logger(), res->status.message);
     return;
@@ -521,19 +522,14 @@ void CommandModeDeciderBase::on_change_autoware_control(
 
   // Assume the driver is always ready.
   if (req->autoware_control) {
-    res->status = check_mode_request(system_request_.operation_mode);
+    res->status = check_mode_request(RequestModeStatus{true, system_request_.operation_mode});
     if (!res->status.success) {
       RCLCPP_WARN_STREAM(get_logger(), res->status.message);
       return;
     }
   }
   system_request_.autoware_control = req->autoware_control;
-
-  // Request vehicle mode to switcher nodes.
-  CommandModeRequest msg;
-  msg.stamp = now();
-  msg.vehicle = req->autoware_control ? CommandModeRequest::AUTOWARE : CommandModeRequest::MANUAL;
-  pub_command_mode_request_->publish(msg);
+  publish_autoware_control_request(system_request_.autoware_control);
 
   RCLCPP_INFO_STREAM(get_logger(), "Change autoware control: " << req->autoware_control);
   update();

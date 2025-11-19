@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+  <arg
+    name="filter_param_path"
+    default="$(find-pkg-share autoware_trajectory_traffic_rule_filter)/config/trajectory_traffic_rule_filter.param.yaml"
+    description="path to the parameter file for traffic rule filter"
+  />
+  <arg name="input_trajectories" default="~/input/trajectories"/>
+  <arg name="output_trajectories" default="~/output/trajectories"/>
+  <arg name="input_map" default="/map/vector_map"/>
+  <arg name="input_traffic_signals" default="/perception/traffic_light_recognition/traffic_signals"/>
+
+  <node pkg="autoware_trajectory_traffic_rule_filter" exec="autoware_trajectory_traffic_rule_filter_node" name="trajectory_traffic_rule_filter" output="screen">
+    <param from="$(var filter_param_path)"/>
+    <remap from="~/input/candidate_trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/input/lanelet2_map" to="$(var input_map)"/>
+    <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
+    <remap from="~/output/candidate_trajectories" to="$(var output_trajectories)"/>
+  </node>
+</launch>

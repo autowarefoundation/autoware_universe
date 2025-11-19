@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "collector_info.hpp"
 #include "combine_cloud_handler.hpp"
 
 #include <memory>
@@ -28,29 +29,6 @@ class PointCloudConcatenateDataSynchronizerComponentTemplated;
 
 template <typename MsgTraits>
 class CombineCloudHandler;
-
-struct CollectorInfoBase
-{
-  virtual ~CollectorInfoBase() = default;
-};
-
-struct NaiveCollectorInfo : public CollectorInfoBase
-{
-  double timestamp;
-
-  explicit NaiveCollectorInfo(double timestamp = 0.0) : timestamp(timestamp) {}
-};
-
-struct AdvancedCollectorInfo : public CollectorInfoBase
-{
-  double timestamp;
-  double noise_window;
-
-  explicit AdvancedCollectorInfo(double timestamp = 0.0, double noise_window = 0.0)
-  : timestamp(timestamp), noise_window(noise_window)
-  {
-  }
-};
 
 enum class CollectorStatus { Idle, Processing, Finished };
 template <typename MsgTraits>

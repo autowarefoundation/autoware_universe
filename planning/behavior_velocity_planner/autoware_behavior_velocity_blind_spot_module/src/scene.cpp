@@ -128,8 +128,7 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto & last_blind_spot_lanelet_before_turning = blind_spot_lanelets_before_turning.back();
   if (!virtual_blind_lane_boundary_after_turning_) {
     virtual_blind_lane_boundary_after_turning_ = generate_virtual_blind_side_boundary_after_turning(
-      last_blind_spot_lanelet_before_turning, turn_direction_,
-      lanelet::utils::getLaneletLength3d(assigned_lanelet));
+      last_blind_spot_lanelet_before_turning, assigned_lanelet, turn_direction_);
   }
   const auto & virtual_blind_lane_boundary_after_turning =
     virtual_blind_lane_boundary_after_turning_.value();
@@ -194,8 +193,15 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto & ego_passage_time_interval = ego_passage_time_interval_opt.value();
   debug_data_.ego_passage_interval = ego_passage_time_interval;
 
-  const auto attention_objects =
-    filter_attention_objects(lanelet::utils::to2D(attention_area).basicPolygon());
+  const auto ego_footprint = autoware_utils::transform_vector(
+    planner_data_->vehicle_info_.createFootprint(),
+    autoware_utils::pose2transform(planner_data_->current_odometry->pose));
+  const auto ego_to_blind_side_lat_gap_opt = calc_ego_to_blind_spot_lanelet_lateral_gap(
+    ego_footprint, blind_spot_lanelets_before_turning, turn_direction_);
+
+  const auto attention_objects = filter_attention_objects(
+    lanelet::utils::to2D(attention_area).basicPolygon(),
+    ego_to_blind_side_lat_gap_opt.value_or(std::numeric_limits<double>::max()));
 
   const auto unsafe_objects = collect_unsafe_objects(
     attention_objects, ego_intersection_path_lanelet, ego_passage_time_interval);
@@ -253,7 +259,27 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   }
 
   if (is_safe_now) {
-    return Unsafe{default_stopline.value_or(critical_stopline)};
+    // 1st, try to stop at the traffic light stopline smoothly
+    if (
+      default_stopline.has_value() &&
+      can_smoothly_stop_at(
+        default_stopline.value(), planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{default_stopline.value()};
+    }
+
+    // otherwise, try to stop at instant_stopline before critical_stopline. if it is impossible,
+    // ego would stop inside the conflict_area in vain
+    if (
+      instant_stopline <= critical_stopline &&
+      can_smoothly_stop_at(
+        instant_stopline, planner_param_.brake.critical.deceleration,
+        planner_param_.brake.critical.jerk)) {
+      return Unsafe{instant_stopline};
+    }
+
+    is_over_pass_judge_line_ = true;
+    return OverPassJudge{"the situation is unsafe, but too late to stop before conflicting_area"};
   }
 
   const auto & most_unsafe_object = unsafe_objects.front();
@@ -373,7 +399,8 @@ std::vector<UnsafeObject> BlindSpotModule::collect_unsafe_objects(
 }
 
 std::vector<autoware_perception_msgs::msg::PredictedObject>
-BlindSpotModule::filter_attention_objects(const lanelet::BasicPolygon2d & attention_area) const
+BlindSpotModule::filter_attention_objects(
+  const lanelet::BasicPolygon2d & attention_area, const double lateral_gap) const
 {
   std::vector<autoware_perception_msgs::msg::PredictedObject> result;
   for (const auto & object : planner_data_->predicted_objects->objects) {
@@ -382,8 +409,13 @@ BlindSpotModule::filter_attention_objects(const lanelet::BasicPolygon2d & attent
     }
     const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
     // NOTE: use position of the object because vru object polygon around blind_spot is unstable
-    if (boost::geometry::within(
-          autoware_utils_geometry::Point2d{position.x, position.y}, attention_area)) {
+    const auto is_within_attention_area = boost::geometry::within(
+      autoware_utils_geometry::Point2d{position.x, position.y}, attention_area);
+
+    // if object is not VRU, check lateral clearance
+    if (
+      is_within_attention_area &&
+      (is_vru_object_type(object) || object.shape.dimensions.y < lateral_gap)) {
       result.push_back(object);
     }
   }
@@ -393,21 +425,55 @@ BlindSpotModule::filter_attention_objects(const lanelet::BasicPolygon2d & attent
 bool BlindSpotModule::isTargetObjectType(
   const autoware_perception_msgs::msg::PredictedObject & object) const
 {
+  auto detect_non_vru = [&]() {
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::CAR &&
+      planner_param_.detect_non_vru.car) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRUCK &&
+      planner_param_.detect_non_vru.truck) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::BUS &&
+      planner_param_.detect_non_vru.bus) {
+      return true;
+    }
+    if (
+      object.classification.at(0).label ==
+        autoware_perception_msgs::msg::ObjectClassification::TRAILER &&
+      planner_param_.detect_non_vru.trailer) {
+      return true;
+    }
+    return false;
+  };
   if (
-    object.classification.at(0).label == autoware_perception_msgs::msg::ObjectClassification::CAR ||
-    object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::TRUCK ||
-    object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::TRAILER ||
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
     object.classification.at(0).label ==
       autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN ||
     object.classification.at(0).label ==
-      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE) {
+      autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE ||
+    detect_non_vru()) {
     return true;
   }
   return false;
+}
+
+bool BlindSpotModule::is_vru_object_type(
+  const autoware_perception_msgs::msg::PredictedObject & object)
+{
+  return object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::BICYCLE ||
+         object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN ||
+         object.classification.at(0).label ==
+           autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE;
 }
 
 std::pair<double, double> BlindSpotModule::compute_decel_and_jerk_from_ttc(const double ttc) const

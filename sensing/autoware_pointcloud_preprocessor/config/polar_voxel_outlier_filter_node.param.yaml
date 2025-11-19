@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    # Core filtering parameters
+    radial_resolution_m: 0.5                     # Resolution in radial direction (meters)
+    azimuth_resolution_rad: 0.0175               # Resolution in azimuth direction (radians)
+    elevation_resolution_rad: 0.0175             # Resolution in elevation direction (radians)
+    voxel_points_threshold: 2                    # Minimum points required per voxel
+    min_radius_m: 0.5                            # Minimum radius to consider (meters)
+    max_radius_m: 300.0                          # Maximum radius to consider (meters)
+    intensity_threshold: 2                       # Maximum intensity threshold for secondary returns (primary returns are not affected)
+    visibility_estimation_max_range_m: 20.0      # Maximum range for visibility estimation (meters)
+    visibility_estimation_min_azimuth_rad: 0.0     # Minimum azimuth for estimating point cloud visibility, in radius
+    visibility_estimation_max_azimuth_rad: 6.28    # Maximum azimuth for estimating point cloud visibility, in radius
+    visibility_estimation_min_elevation_rad: -1.57 # Minimum elevation for estimating point cloud visibility, in radius
+    visibility_estimation_max_elevation_rad: 1.57  # Maximum elevation for estimating point cloud visibility, in radius
+
+    # Return type classification parameters
+    use_return_type_classification: true         # Whether to use return type classification
+    filter_secondary_returns: false              # Whether to filter secondary returns (keep only primary when true)
+    secondary_noise_threshold: 4                 # Threshold for classifying primary vs secondary returns
+    visibility_estimation_max_secondary_voxel_count: 500  # Maximum secondary voxel count for visibility estimation
+    primary_return_types: [1, 6, 8, 10]          # Return types considered as primary returns (all others are secondary)
+
+    # Performance and debug control
+    visibility_estimation_only: false           # Run filter for visibility estimation only (no point cloud output)
+    publish_noise_cloud: true                    # Generate and publish noise cloud for debugging (true for development)
+    publish_area_marker: false                   # Publish a marker to visualize region used for visibility estimation
+
+    # Diagnostic thresholds
+    filter_ratio_error_threshold: 0.5            # Error threshold for filter ratio diagnostics
+    filter_ratio_warn_threshold: 0.7             # Warning threshold for filter ratio diagnostics
+    visibility_error_threshold: 0.8              # Error threshold for visibility diagnostics
+    visibility_warn_threshold: 0.9               # Warning threshold for visibility diagnostics
+    num_frames_hysteresis_transition: 1          # The number of frames to be required to transition judgement
+    immediate_report_error: false                # Whether to report error state immediately if a single frame categorized as error
+    immediate_relax_state: false                 # Whether to relax state if observed state is better than the current one

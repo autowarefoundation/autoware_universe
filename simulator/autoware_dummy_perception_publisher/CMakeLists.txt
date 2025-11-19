@@ -4,11 +4,14 @@ project(autoware_dummy_perception_publisher)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(autoware_point_types REQUIRED)
+
 # See ndt_omp package for documentation on why PCL is special
 find_package(PCL REQUIRED COMPONENTS common filters)
 
 set(${PROJECT_NAME}_DEPENDENCIES
   autoware_perception_msgs
+  autoware_point_types
   tier4_perception_msgs
   pcl_conversions
   rclcpp
@@ -26,7 +29,11 @@ ament_auto_add_library(signed_distance_function SHARED
 ament_auto_add_executable(${PROJECT_NAME}_node
   src/main.cpp
   src/node.cpp
+  src/object_info.cpp
+  src/movement_utils.cpp
   src/pointcloud_creator.cpp
+  src/straight_line_object_movement_plugin.cpp
+  src/predicted_object_movement_plugin.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_node
@@ -68,5 +75,7 @@ endif()
 
 ament_auto_package(
   INSTALL_TO_SHARE
+  config
   launch
+  schema
 )

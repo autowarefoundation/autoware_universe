@@ -192,9 +192,22 @@ void LaserscanBasedOccupancyGridMapNode::onLaserscanPointCloud2WithObstacleAndRa
       inner_st_ptr = std::make_unique<ScopedTimeTrack>("transformPointcloud", *time_keeper_);
 
     try {
-      utils::transformPointcloud(*laserscan_pc_ptr, *tf2_, map_frame_, trans_laserscan_pc);
-      utils::transformPointcloud(filtered_obstacle_pc, *tf2_, map_frame_, trans_obstacle_pc);
-      utils::transformPointcloud(filtered_raw_pc, *tf2_, map_frame_, trans_raw_pc);
+      bool ok_ls =
+        utils::transformPointcloud(*laserscan_pc_ptr, *tf2_, map_frame_, trans_laserscan_pc);
+      bool ok_obs =
+        utils::transformPointcloud(filtered_obstacle_pc, *tf2_, map_frame_, trans_obstacle_pc);
+      bool ok_raw = utils::transformPointcloud(filtered_raw_pc, *tf2_, map_frame_, trans_raw_pc);
+
+      // check if tf is available
+      if (!ok_ls || !ok_obs || !ok_raw) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Skip frame: TF unavailable (ls:%d obs:%d raw:%d). from [%s] to [%s] at %.3f", ok_ls,
+          ok_obs, ok_raw, filtered_obstacle_pc.header.frame_id.c_str(), map_frame_.c_str(),
+          rclcpp::Time(filtered_obstacle_pc.header.stamp).seconds());
+        return;
+      }
+
       gridmap_origin =
         utils::getPose(laserscan_pc_ptr->header.stamp, *tf2_, gridmap_origin_frame_, map_frame_);
       scan_origin =

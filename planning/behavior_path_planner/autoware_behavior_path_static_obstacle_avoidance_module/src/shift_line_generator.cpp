@@ -355,7 +355,16 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
       al_avoid.start_shift_length = helper_->getLinearShift(al_avoid.start.position);
 
       // end point
-      al_avoid.end_shift_length = feasible_shift_profile.value().first;
+      const auto end_idx = utils::static_obstacle_avoidance::findPathIndexFromArclength(
+        data.arclength_from_ego, to_shift_end);
+      const auto end = data.reference_path.points.at(end_idx).point.pose;
+      if (utils::static_obstacle_avoidance::isOnRight(o)) {
+        al_avoid.end_shift_length =
+          std::max(feasible_shift_profile.value().first, helper_->getLinearShift(end.position));
+      } else {
+        al_avoid.end_shift_length =
+          std::min(feasible_shift_profile.value().first, helper_->getLinearShift(end.position));
+      }
       al_avoid.end_longitudinal = to_shift_end;
 
       // misc
@@ -370,7 +379,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
       const auto to_shift_start = o.longitudinal + constant_distance;
 
       // start point
-      al_return.start_shift_length = feasible_shift_profile.value().first;
+      al_return.start_shift_length = al_avoid.end_shift_length;
       al_return.start_longitudinal = to_shift_start;
 
       // end point

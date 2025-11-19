@@ -21,7 +21,6 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -56,6 +55,49 @@ using autoware_utils::calc_offset_pose;
 #define DEBUG_PRINT(...) \
   RCLCPP_DEBUG_EXPRESSION(getLogger(), parameters_->print_debug_info, __VA_ARGS__)
 
+namespace
+{
+double calc_absolute_lateral_offset(
+  const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
+{
+  std::vector<geometry_msgs::msg::Point> boundary_path;
+  std::for_each(
+    boundary_line.begin(), boundary_line.end(), [&boundary_path](const auto & boundary_point) {
+      const double x = boundary_point.x();
+      const double y = boundary_point.y();
+      boundary_path.push_back(autoware_utils::create_point(x, y, 0.0));
+    });
+
+  return std::abs(calcLateralOffset(boundary_path, search_pose.position));
+}
+
+std::pair<lanelet::ConstLineString2d, lanelet::ConstLineString2d> get_lane_bound(
+  const bool is_merging_from_left, const lanelet::ConstLanelet & lanelet)
+{
+  return is_merging_from_left ? std::pair{lanelet.rightBound2d(), lanelet.leftBound2d()}
+                              : std::pair{lanelet.leftBound2d(), lanelet.rightBound2d()};
+}
+
+lanelet::ConstLineString2d get_farthest_lane_bound(
+  const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler_ptr,
+  const bool is_merging_from_left, const lanelet::ConstLanelet & lanelet)
+{
+  if (!route_handler_ptr) {
+    return is_merging_from_left ? lanelet.rightBound2d() : lanelet.leftBound2d();
+  }
+
+  constexpr auto include_opposite_direction_lanes = true;
+  const auto shared_linestring_lanes = is_merging_from_left
+                                         ? route_handler_ptr->getAllRightSharedLinestringLanelets(
+                                             lanelet, !include_opposite_direction_lanes)
+                                         : route_handler_ptr->getAllLeftSharedLinestringLanelets(
+                                             lanelet, !include_opposite_direction_lanes);
+  auto farthest_lane = shared_linestring_lanes.empty() ? lanelet : shared_linestring_lanes.back();
+  return is_merging_from_left ? farthest_lane.rightBound2d() : farthest_lane.leftBound2d();
+};
+
+}  // namespace
+
 namespace autoware::behavior_path_planner
 {
 StartPlannerModule::StartPlannerModule(
@@ -70,16 +112,34 @@ StartPlannerModule::StartPlannerModule(
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
   is_freespace_planner_cb_running_{false}
 {
-  // set enabled planner
-  if (parameters_->enable_shift_pull_out) {
-    start_planners_.push_back(std::make_shared<ShiftPullOut>(node, *parameters, time_keeper_));
+  // set enabled planner based on search_priority list
+  for (const auto & planner_type_str : parameters_->search_priority) {
+    const auto planner_type = magic_enum::enum_cast<PlannerType>(planner_type_str);
+    if (!planner_type.has_value()) {
+      RCLCPP_WARN(getLogger(), "Unknown planner type: %s", planner_type_str.c_str());
+      continue;
+    }
+
+    switch (planner_type.value()) {
+      case PlannerType::SHIFT:
+        start_planners_.push_back(std::make_shared<ShiftPullOut>(node, *parameters, time_keeper_));
+        break;
+      case PlannerType::GEOMETRIC:
+        start_planners_.push_back(
+          std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
+        break;
+      case PlannerType::CLOTHOID:
+        start_planners_.push_back(
+          std::make_shared<ClothoidPullOut>(node, *parameters, time_keeper_));
+        break;
+      default:
+        RCLCPP_WARN(
+          getLogger(), "Planner type %s is not supported for initialization",
+          planner_type_str.c_str());
+        break;
+    }
   }
-  if (parameters_->enable_geometric_pull_out) {
-    start_planners_.push_back(std::make_shared<GeometricPullOut>(node, *parameters, time_keeper_));
-  }
-  if (parameters_->enable_clothoid_fallback) {
-    start_planners_.push_back(std::make_shared<ClothoidPullOut>(node, *parameters, time_keeper_));
-  }
+
   if (start_planners_.empty()) {
     RCLCPP_ERROR(getLogger(), "Not found enabled planner");
   }
@@ -156,7 +216,10 @@ void StartPlannerModule::onFreespacePlannerTimer()
 BehaviorModuleOutput StartPlannerModule::run()
 {
   updateData();
-  if (!isActivated() || needToPrepareBlinkerBeforeStartDrivingForward()) {
+  check_force_approval();
+  if (
+    !status_.is_safety_check_override_by_rtc &&
+    (!isActivated() || needToPrepareBlinkerBeforeStartDrivingForward())) {
     return planWaitingApproval();
   }
 
@@ -250,8 +313,17 @@ void StartPlannerModule::updateData()
 
   if (
     planner_data_->operation_mode->mode == OperationModeState::AUTONOMOUS &&
-    status_.driving_forward && !status_.first_engaged_and_driving_forward_time) {
-    status_.first_engaged_and_driving_forward_time = clock_->now();
+    status_.driving_forward && status_.found_pull_out_path) {
+    if (!status_.first_engaged_and_driving_forward_time) {
+      status_.first_engaged_and_driving_forward_time = clock_->now();
+      RCLCPP_INFO(
+        getLogger(),
+        "The vehicle switched to autonomous mode while a forward pull out path was found. "
+        "Start waiting for blinker turn on. time: %f",
+        status_.first_engaged_and_driving_forward_time->seconds());
+    }
+  } else {
+    status_.first_engaged_and_driving_forward_time = std::nullopt;
   }
 
   constexpr double moving_velocity_threshold = 0.1;
@@ -491,21 +563,6 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
   const auto target_lanes = utils::getCurrentLanes(planner_data_);
   if (target_lanes.empty()) return false;
 
-  // Define functions to get distance between a point and a lane's boundaries.
-  auto calc_absolute_lateral_offset = [&](
-                                        const lanelet::ConstLineString2d & boundary_line,
-                                        const geometry_msgs::msg::Pose & search_pose) {
-    std::vector<geometry_msgs::msg::Point> boundary_path;
-    std::for_each(
-      boundary_line.begin(), boundary_line.end(), [&boundary_path](const auto & boundary_point) {
-        const double x = boundary_point.x();
-        const double y = boundary_point.y();
-        boundary_path.push_back(autoware_utils::create_point(x, y, 0.0));
-      });
-
-    return std::fabs(calcLateralOffset(boundary_path, search_pose.position));
-  };
-
   // Check from what side of the road the ego is merging
   const auto centerline_path =
     route_handler->getCenterLinePath(target_lanes, 0.0, std::numeric_limits<double>::max());
@@ -523,83 +580,35 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
 
   // Get the ego's overhang point closest to the centerline path and the gap between said point and
   // the lane's border.
-  auto get_gap_between_ego_and_lane_border =
-    [&](
-      geometry_msgs::msg::Pose & ego_overhang_point_as_pose,
-      const bool ego_is_merging_from_the_left) -> std::optional<std::pair<double, double>> {
-    const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-    const auto vehicle_footprint = autoware_utils::transform_vector(
-      local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
-    double smallest_lateral_gap_between_ego_and_border = std::numeric_limits<double>::max();
-    double corresponding_lateral_gap_with_other_lane_bound = std::numeric_limits<double>::max();
+  const auto gaps_with_lane_borders_opt =
+    getGapBetweenEgoAndLaneBorder(ego_pose, target_lanes, starting_pose_lateral_offset);
 
-    for (const auto & point : vehicle_footprint) {
-      geometry_msgs::msg::Pose point_pose;
-      point_pose.position.x = point.x();
-      point_pose.position.y = point.y();
-      point_pose.position.z = 0.0;
-
-      lanelet::Lanelet closest_lanelet;
-      lanelet::utils::query::getClosestLanelet(target_lanes, point_pose, &closest_lanelet);
-      lanelet::ConstLanelet closest_lanelet_const(closest_lanelet.constData());
-
-      const auto [current_lane_bound, other_side_lane_bound] =
-        (ego_is_merging_from_the_left)
-          ? std::make_pair(
-              closest_lanelet_const.rightBound2d(), closest_lanelet_const.leftBound2d())
-          : std::make_pair(
-              closest_lanelet_const.leftBound2d(), closest_lanelet_const.rightBound2d());
-      const double current_point_lateral_gap =
-        calc_absolute_lateral_offset(current_lane_bound, point_pose);
-      if (current_point_lateral_gap < smallest_lateral_gap_between_ego_and_border) {
-        smallest_lateral_gap_between_ego_and_border = current_point_lateral_gap;
-        ego_overhang_point_as_pose.position.x = point.x();
-        ego_overhang_point_as_pose.position.y = point.y();
-        ego_overhang_point_as_pose.position.z = 0.0;
-        corresponding_lateral_gap_with_other_lane_bound =
-          calc_absolute_lateral_offset(other_side_lane_bound, point_pose);
-      }
-    }
-
-    if (smallest_lateral_gap_between_ego_and_border == std::numeric_limits<double>::max()) {
-      return std::nullopt;
-    }
-    return std::make_pair(
-      (smallest_lateral_gap_between_ego_and_border),
-      (corresponding_lateral_gap_with_other_lane_bound));
-  };
-
-  geometry_msgs::msg::Pose ego_overhang_point_as_pose;
-  const bool ego_is_merging_from_the_left = (starting_pose_lateral_offset > 0.0);
-  const auto gaps_with_lane_borders_pair =
-    get_gap_between_ego_and_lane_border(ego_overhang_point_as_pose, ego_is_merging_from_the_left);
-
-  if (!gaps_with_lane_borders_pair.has_value()) {
+  if (!gaps_with_lane_borders_opt) {
     return false;
   }
 
-  const auto & gap_between_ego_and_lane_border = gaps_with_lane_borders_pair.value().first;
-  const auto & corresponding_lateral_gap_with_other_lane_bound =
-    gaps_with_lane_borders_pair.value().second;
-
+  const auto ego_has_crossed_middle_of_the_lane = std::get<0>(gaps_with_lane_borders_opt.value());
   // middle of the lane is crossed, no need to check for collisions anymore
-  if (gap_between_ego_and_lane_border < corresponding_lateral_gap_with_other_lane_bound) {
+  if (ego_has_crossed_middle_of_the_lane) {
     return true;
   }
+
+  const auto & gap_between_ego_and_lane_border = std::get<1>(gaps_with_lane_borders_opt.value());
+  const auto & ego_overhang_point_as_pose = std::get<2>(gaps_with_lane_borders_opt.value());
+
   // Get the lanelets that will be queried for target objects
   const auto relevant_lanelets = std::invoke([&]() -> std::optional<lanelet::ConstLanelets> {
-    lanelet::Lanelet closest_lanelet;
-    const bool is_closest_lanelet = lanelet::utils::query::getClosestLanelet(
-      target_lanes, ego_overhang_point_as_pose, &closest_lanelet);
-    if (!is_closest_lanelet) return std::nullopt;
-    lanelet::ConstLanelet closest_lanelet_const(closest_lanelet.constData());
+    lanelet::ConstLanelet closest_lanelet;
+    if (!lanelet::utils::query::getClosestLanelet(
+          target_lanes, ego_overhang_point_as_pose, &closest_lanelet))
+      return std::nullopt;
     // Check backwards just in case the Vehicle behind ego is in a different lanelet
     constexpr double backwards_length = 200.0;
-    const auto prev_lanes = autoware::behavior_path_planner::utils::getBackwardLanelets(
+    auto prev_lanes = autoware::behavior_path_planner::utils::getBackwardLanelets(
       *route_handler, target_lanes, ego_pose, backwards_length);
     // return all the relevant lanelets
-    lanelet::ConstLanelets relevant_lanelets{closest_lanelet_const};
-    relevant_lanelets.insert(relevant_lanelets.end(), prev_lanes.begin(), prev_lanes.end());
+    lanelet::ConstLanelets relevant_lanelets{closest_lanelet};
+    std::move(prev_lanes.begin(), prev_lanes.end(), std::back_inserter(relevant_lanelets));
     return relevant_lanelets;
   });
   if (!relevant_lanelets) return false;
@@ -635,6 +644,72 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
   // Decide if the closest object does not fit in the gap left by the ego vehicle.
   return closest_object_width.value() + parameters_->extra_width_margin_for_rear_obstacle >
          gap_between_ego_and_lane_border;
+}
+
+std::optional<std::tuple<bool, double, geometry_msgs::msg::Pose>>
+StartPlannerModule::getGapBetweenEgoAndLaneBorder(
+  const geometry_msgs::msg::Pose & ego_pose, const lanelet::ConstLanelets & target_lanes,
+  const double starting_pose_lateral_offset) const
+{
+  geometry_msgs::msg::Pose ego_overhang_point_as_pose;
+  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
+  const auto vehicle_footprint = autoware_utils::transform_vector(
+    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  std::optional<double> smallest_lateral_gap_between_ego_and_border;
+  std::optional<double> smallest_lateral_gap_between_ego_and_farthest_border;
+  auto corresponding_lateral_gap_with_other_lane_bound = std::numeric_limits<double>::max();
+
+  const auto ego_is_merging_from_the_left = (starting_pose_lateral_offset > 0.0);
+  for (const auto & point : vehicle_footprint) {
+    geometry_msgs::msg::Pose point_pose;
+    point_pose.position = autoware_utils::to_msg(point.to_3d());
+    point_pose.orientation = ego_pose.orientation;
+
+    lanelet::ConstLanelet closest_lanelet;
+    if (!lanelet::utils::query::getClosestLanelet(target_lanes, point_pose, &closest_lanelet)) {
+      return std::nullopt;
+    }
+
+    const auto [current_lane_bound, other_side_lane_bound] =
+      get_lane_bound(ego_is_merging_from_the_left, closest_lanelet);
+
+    const auto farthest_lane_bound = get_farthest_lane_bound(
+      planner_data_->route_handler, ego_is_merging_from_the_left, closest_lanelet);
+
+    const auto current_point_lateral_gap =
+      calc_absolute_lateral_offset(current_lane_bound, point_pose);
+    const auto current_point_to_farthest_bound_gap =
+      calc_absolute_lateral_offset(farthest_lane_bound, point_pose);
+
+    if (
+      current_point_lateral_gap <
+      smallest_lateral_gap_between_ego_and_border.value_or(std::numeric_limits<double>::max())) {
+      smallest_lateral_gap_between_ego_and_border = current_point_lateral_gap;
+      ego_overhang_point_as_pose = point_pose;
+      corresponding_lateral_gap_with_other_lane_bound =
+        calc_absolute_lateral_offset(other_side_lane_bound, point_pose);
+    }
+
+    if (
+      current_point_to_farthest_bound_gap <
+      smallest_lateral_gap_between_ego_and_farthest_border.value_or(
+        std::numeric_limits<double>::max())) {
+      smallest_lateral_gap_between_ego_and_farthest_border = current_point_to_farthest_bound_gap;
+    }
+  }
+
+  if (
+    !smallest_lateral_gap_between_ego_and_border ||
+    !smallest_lateral_gap_between_ego_and_farthest_border) {
+    return std::nullopt;
+  }
+
+  const auto has_crossed_middle_of_lane = smallest_lateral_gap_between_ego_and_border.value() <=
+                                          corresponding_lateral_gap_with_other_lane_bound;
+
+  return std::make_tuple(
+    has_crossed_middle_of_lane, smallest_lateral_gap_between_ego_and_farthest_border.value(),
+    ego_overhang_point_as_pose);
 }
 
 bool StartPlannerModule::isCloseToOriginalStartPose() const
@@ -778,49 +853,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
     return output;
   }
 
-  const auto path = std::invoke([&]() {
-    autoware_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
-
-    if (!status_.driving_forward && !status_.backward_driving_complete) {
-      return status_.backward_path;
-    }
-
-    // Increment path index if the current path is finished
-    if (hasFinishedCurrentPath()) {
-      RCLCPP_INFO(getLogger(), "Increment path index");
-      incrementPathIndex();
-    }
-
-    if (isWaitingApproval()) return getCurrentPath();
-
-    if (status_.stop_pose) {
-      // Delete stop point if conditions are met
-      if (status_.is_safe_dynamic_objects && isStopped()) {
-        status_.stop_pose = std::nullopt;
-      }
-      stop_pose_ = status_.stop_pose;
-      return *status_.prev_stop_path_after_approval;
-    }
-
-    if (!status_.is_safe_dynamic_objects) {
-      auto current_path = getCurrentPath();
-      const auto stop_path =
-        autoware::behavior_path_planner::utils::parking_departure::generateFeasibleStopPath(
-          current_path, planner_data_, stop_pose_, parameters_->maximum_deceleration_for_stop,
-          parameters_->maximum_jerk_for_stop);
-
-      if (!stop_path.has_value()) return current_path;
-      // Insert stop point in the path if needed
-      RCLCPP_DEBUG_THROTTLE(
-        getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
-      status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
-      std::string stop_reason = "unsafe against dynamic objects";
-      stop_pose_ = PoseWithDetail(stop_pose_.value().pose, stop_reason);
-      status_.stop_pose = stop_pose_;
-      return stop_path.value();
-    }
-    return getCurrentPath();
-  });
+  const auto path = getCurrentOutputPath();
 
   BehaviorModuleOutput output;
   output.path = path;
@@ -830,7 +863,6 @@ BehaviorModuleOutput StartPlannerModule::plan()
   path_reference_ = std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
   setDrivableAreaInfo(output);
-
   set_longitudinal_planning_factor(output.path);
 
   const auto planning_factor_direction = getPlanningFactorDirection(output);
@@ -842,7 +874,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
     const double finish_distance = autoware::motion_utils::calcSignedArcLength(
       path.points, planner_data_->self_odometry->pose.pose.position,
       status_.pull_out_path.end_pose.position);
-    updateRTCStatus(start_distance, finish_distance);
+    updateRTCStatus((start_distance < 0.0 ? 0.0 : start_distance), finish_distance);
 
     const auto start_idx = autoware::motion_utils::findNearestIndex(
       path.points, status_.pull_out_path.start_pose.position);
@@ -948,7 +980,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 5000, "Not found safe pull out path, publish stop path");
     clearWaitingApproval();
-    const auto output = generateStopOutput();
+    auto output = generateStopOutput();
     setDebugData();  // use status updated in generateStopOutput()
     updateRTCStatus(0, 0);
     return output;
@@ -962,15 +994,25 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     planner_data_, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  auto stop_path = status_.driving_forward ? getCurrentPath() : status_.backward_path;
+  auto stop_path = std::invoke([&]() {
+    if (status_.prev_approved_path) {
+      return *status_.prev_approved_path;
+    }
+    return status_.driving_forward ? getCurrentPath() : status_.backward_path;
+  });
+
+  const std::string stop_reason =
+    !status_.is_safe_dynamic_objects ? "unsafe against dynamic objects" : "waiting approval";
+
+  stop_pose_ = utils::insert_feasible_stop_point(
+    stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+    parameters_->maximum_jerk_for_stop, stop_reason);
+
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
   const auto expanded_lanes = utils::expandLanelets(
     drivable_lanes, dp.drivable_area_left_bound_offset, dp.drivable_area_right_bound_offset,
     dp.drivable_area_types_to_skip);
-  for (auto & p : stop_path.points) {
-    p.point.longitudinal_velocity_mps = 0.0;
-  }
 
   BehaviorModuleOutput output;
   output.path = stop_path;
@@ -981,6 +1023,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
 
   setDrivableAreaInfo(output);
 
+  set_longitudinal_planning_factor(output.path);
   const auto planning_factor_direction = getPlanningFactorDirection(output);
 
   if (status_.driving_forward) {
@@ -990,7 +1033,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     const double finish_distance = autoware::motion_utils::calcSignedArcLength(
       stop_path.points, planner_data_->self_odometry->pose.pose.position,
       status_.pull_out_path.end_pose.position);
-    updateRTCStatus(start_distance, finish_distance);
+    updateRTCStatus((start_distance < 0.0 ? 0.0 : start_distance), finish_distance);
 
     const auto start_idx = autoware::motion_utils::findNearestIndex(
       stop_path.points, status_.pull_out_path.start_pose.position);
@@ -1069,19 +1112,103 @@ PathWithLaneId StartPlannerModule::getCurrentPath() const
   if (status_.pull_out_path.partial_paths.size() <= status_.current_path_idx) {
     return PathWithLaneId{};
   }
+
+  if (status_.prev_approved_path) {
+    return *status_.prev_approved_path;
+  }
+
   return status_.pull_out_path.partial_paths.at(status_.current_path_idx);
+}
+
+PathWithLaneId StartPlannerModule::getCurrentOutputPath()
+{
+  autoware_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
+
+  if (!status_.driving_forward && !status_.backward_driving_complete) {
+    return status_.backward_path;
+  }
+
+  // Increment path index if the current path is finished
+  if (hasFinishedCurrentPath()) {
+    RCLCPP_INFO(getLogger(), "Increment path index");
+    incrementPathIndex();
+  }
+
+  auto current_path = getCurrentPath();
+
+  if (!status_.prev_approved_path && status_.driving_forward && !current_path.points.empty()) {
+    status_.prev_approved_path = std::make_shared<PathWithLaneId>(current_path);
+  }
+
+  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return current_path;
+
+  if (!stop_pose_) {
+    status_.prev_stop_path_after_approval = nullptr;
+  }
+
+  if (stop_pose_ && status_.prev_stop_path_after_approval) {
+    update_rtc_status(
+      status_.prev_stop_path_after_approval->points,
+      planner_data_->self_odometry->pose.pose.position, status_.pull_out_path.start_pose.position,
+      status_.pull_out_path.end_pose.position, status_.is_safe_dynamic_objects);
+
+    // Delete stop point if conditions are met
+    if (status_.is_safe_dynamic_objects && isStopped()) {
+      stop_pose_ = std::nullopt;
+      status_.prev_stop_path_after_approval = nullptr;
+      return getCurrentPath();
+    }
+    return *status_.prev_stop_path_after_approval;
+  }
+
+  if (status_.is_safe_dynamic_objects) {
+    return getCurrentPath();
+  }
+
+  waitApproval();
+  removeRTCStatus();
+
+  stop_pose_ = utils::insert_feasible_stop_point(
+    current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+    parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
+
+  if (stop_pose_) {
+    RCLCPP_DEBUG_THROTTLE(
+      getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
+
+    status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(current_path);
+  }
+
+  update_rtc_status(
+    current_path.points, planner_data_->self_odometry->pose.pose.position,
+    status_.pull_out_path.start_pose.position, status_.pull_out_path.end_pose.position,
+    status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
+
+  return current_path;
+}
+
+void StartPlannerModule::check_force_approval()
+{
+  if (is_rtc_force_activated()) {
+    status_.is_safety_check_override_by_rtc = true;
+  }
+
+  if (is_rtc_force_deactivated()) {
+    status_.is_safety_check_override_by_rtc = false;
+  }
 }
 
 void StartPlannerModule::planWithPriority(
   const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
-  const Pose & goal_pose, const std::string & search_priority)
+  const Pose & goal_pose, const std::vector<std::string> & priority_list,
+  const std::string & search_policy)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (start_pose_candidates.empty()) return;
 
   const PriorityOrder order_priority =
-    determinePriorityOrder(search_priority, start_pose_candidates.size());
+    determinePriorityOrder(priority_list, search_policy, start_pose_candidates.size());
 
   std::vector<PlannerDebugData> debug_data_vector;
   {  // create a scope for the scoped time track
@@ -1099,67 +1226,75 @@ void StartPlannerModule::planWithPriority(
         }
       }
     }
-
-    // If no path found with collision margins and clothoid fallback is enabled, try clothoid
-    // planner
-    // NOTE: Clothoid fallback is only enabled when enable_back is false because safety validation
-    // for backward paths in clothoid planner is not yet implemented
-    if (parameters_->enable_clothoid_fallback && !parameters_->enable_back) {
-      RCLCPP_INFO(
-        getLogger(), "No path found with collision margins. Trying clothoid fallback search.");
-
-      // Find clothoid planner from available planners
-      std::shared_ptr<PullOutPlannerBase> clothoid_planner = nullptr;
-      for (const auto & planner : start_planners_) {
-        if (planner->getPlannerType() == PlannerType::CLOTHOID) {
-          clothoid_planner = planner;
-          break;
-        }
-      }
-
-      // Try clothoid planner with minimum collision margin
-      const double min_margin = *std::min_element(
-        parameters_->collision_check_margins.begin(), parameters_->collision_check_margins.end());
-
-      for (size_t index = 0; index < start_pose_candidates.size(); ++index) {
-        if (findPullOutPath(
-              start_pose_candidates[index], clothoid_planner, refined_start_pose, goal_pose,
-              min_margin, debug_data_vector)) {
-          debug_data_.selected_start_pose_candidate_index = index;
-          debug_data_.margin_for_start_pose_candidate = min_margin;
-          set_planner_evaluation_table(debug_data_vector);
-          return;
-        }
-      }
-    }
   }
   set_planner_evaluation_table(debug_data_vector);
   updateStatusIfNoSafePathFound();
 }
 
 PriorityOrder StartPlannerModule::determinePriorityOrder(
-  const std::string & search_priority, const size_t start_pose_candidates_num)
+  const std::vector<std::string> & priority_list, const std::string & search_policy,
+  const size_t start_pose_candidates_num)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   PriorityOrder order_priority;
-  if (search_priority == "efficient_path") {
+
+  // Get valid planners from priority list
+  std::vector<std::shared_ptr<PullOutPlannerBase>> valid_planners;
+  for (const auto & planner_type_str : priority_list) {
+    const auto planner_type = magic_enum::enum_cast<PlannerType>(planner_type_str);
+    const auto planner_type_enum = planner_type.value();
+
+    if (!isPlannerEnabled(planner_type_enum)) {
+      continue;
+    }
+
+    // Find the corresponding planner in start_planners_
     for (const auto & planner : start_planners_) {
-      for (size_t i = 0; i < start_pose_candidates_num; i++) {
-        order_priority.emplace_back(i, planner);
+      if (planner->getPlannerType() == planner_type_enum) {
+        valid_planners.push_back(planner);
+        break;
       }
     }
-  } else if (search_priority == "short_back_distance") {
-    for (size_t i = 0; i < start_pose_candidates_num; i++) {
-      for (const auto & planner : start_planners_) {
-        order_priority.emplace_back(i, planner);
-      }
-    }
-  } else {
-    RCLCPP_ERROR(getLogger(), "Invalid search_priority: %s", search_priority.c_str());
-    throw std::domain_error("[start_planner] invalid search_priority");
   }
+
+  if (valid_planners.empty()) {
+    RCLCPP_ERROR(getLogger(), "No enabled planners found in priority list");
+    throw std::runtime_error("[start_planner] No enabled planners available");
+  }
+
+  // Generate priority order based on search policy
+  if (search_policy == "distance_priority") {
+    // Candidate-first: try all planners for each candidate
+    // Order: (candidate0, planner0), (candidate0, planner1), ..., (candidate1, planner0), ...
+    for (size_t candidate_idx = 0; candidate_idx < start_pose_candidates_num; ++candidate_idx) {
+      for (const auto & planner : valid_planners) {
+        order_priority.emplace_back(candidate_idx, planner);
+      }
+    }
+  } else {  // planner_priority
+    // Planner-first: try all candidates for each planner
+    // Order: (candidate0, planner0), (candidate1, planner0), ..., (candidate0, planner1), ...
+    for (const auto & planner : valid_planners) {
+      for (size_t candidate_idx = 0; candidate_idx < start_pose_candidates_num; ++candidate_idx) {
+        order_priority.emplace_back(candidate_idx, planner);
+      }
+    }
+  }
+
   return order_priority;
+}
+
+bool StartPlannerModule::isPlannerEnabled(const PlannerType & planner_type) const
+{
+  // PlannerType::FREESPACE is checked by direct parameter reference,
+  // while other planners are checked by their existence in the search_priority list
+
+  // Check if the planner type is in the search_priority list
+  const std::string planner_type_str = std::string(magic_enum::enum_name(planner_type));
+  return std::find(
+           parameters_->search_priority.begin(), parameters_->search_priority.end(),
+           planner_type_str) != parameters_->search_priority.end();
 }
 
 bool StartPlannerModule::findPullOutPath(
@@ -1357,9 +1492,10 @@ void StartPlannerModule::updatePullOutStatus()
     return {current_pose};
   });
 
-  if (!status_.backward_driving_complete) {
+  if (!status_.backward_driving_complete && !status_.prev_approved_path) {
     planWithPriority(
-      start_pose_candidates, *refined_start_pose, goal_pose, parameters_->search_priority);
+      start_pose_candidates, *refined_start_pose, goal_pose, parameters_->search_priority,
+      parameters_->search_policy);
   }
 
   debug_data_.refined_start_pose = *refined_start_pose;
@@ -1468,7 +1604,7 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
                                             .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
-      [](double acc, const auto & lane) { return acc + lanelet::utils::getLaneletLength2d(lane); });
+      [](double acc, const auto & lane) { return acc + lanelet::geometry::length2d(lane); });
     const double distance_from_lane_end = length_to_lane_end - backed_pose_arc_length;
     if (distance_from_lane_end < parameters_->ignore_distance_from_lane_end) {
       RCLCPP_WARN_THROTTLE(
@@ -1981,7 +2117,8 @@ void StartPlannerModule::setDebugData()
   {
     std::map<PlannerType, double> collision_check_distances = {
       {PlannerType::SHIFT, parameters_->shift_collision_check_distance_from_end},
-      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end}};
+      {PlannerType::GEOMETRIC, parameters_->geometric_collision_check_distance_from_end},
+      {PlannerType::CLOTHOID, parameters_->clothoid_collision_check_distance_from_end}};
 
     double collision_check_distance_from_end = collision_check_distances[status_.planner_type];
     const auto collision_check_end_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
@@ -2185,7 +2322,7 @@ void StartPlannerModule::logPullOutStatus(rclcpp::Logger::Level log_level) const
     status_.prev_is_safe_dynamic_objects ? "true" : "false");
   logFunc("  Driving Forward: %s", status_.driving_forward ? "true" : "false");
   logFunc("  Backward Driving Complete: %s", status_.backward_driving_complete ? "true" : "false");
-  logFunc("  Has Stop Pose: %s", status_.stop_pose ? "true" : "false");
+  logFunc("  Has Stop Pose: %s", stop_pose_ ? "true" : "false");
 
   logFunc("[Module State]");
   logFunc("  isActivated: %s", isActivated() ? "true" : "false");

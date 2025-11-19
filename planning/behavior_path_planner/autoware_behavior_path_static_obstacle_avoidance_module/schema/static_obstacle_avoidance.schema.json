@@ -854,6 +854,45 @@
               "required": ["policy", "condition", "ignore_area", "wait_and_see"],
               "additionalProperties": false
             },
+            "avoidance_for_parking_violation_vehicle": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": ["auto", "manual", "ignore"],
+                  "description": "Ego behavior policy for parking violation vehicle.",
+                  "default": "ignore"
+                },
+                "condition": {
+                  "type": "object",
+                  "properties": {
+                    "th_road_border_distance": {
+                      "type": "number",
+                      "description": "Distance threshold from road border to determine parking violation.",
+                      "default": 0.8,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["th_road_border_distance"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["policy", "condition"],
+              "additionalProperties": false
+            },
+            "avoidance_for_adjacent_lane_stop_vehicle": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": ["auto", "manual", "ignore"],
+                  "description": "Ego behavior policy for adjacent lane stop vehicle.",
+                  "default": "auto"
+                }
+              },
+              "required": ["policy"],
+              "additionalProperties": false
+            },
             "intersection": {
               "type": "object",
               "properties": {

@@ -1,0 +1,28 @@
+/**:
+  ros__parameters:
+    target_frame: "base_link"
+    detection_target_class:
+      UNKNOWN : false
+      CAR : false
+      TRUCK : false
+      BUS : false
+      TRAILER : false
+      MOTORCYCLE : false
+      BICYCLE : false
+      PEDESTRIAN : true
+
+    roi_confidence_threshold: 0.80 # [0.0, 1.0]
+    roi_truncation_validation:
+      enabled: [false, false, false, false, false, false, false, false]
+      remove_truncated: [false, false, false, false, false, false, false, false]
+      image_border_truncation_horizontal_margin_ratio: 0.0 # [0.0, 0.5]
+      image_border_truncation_vertical_margin_ratio: 0.0 # [0.0, 0.5]
+
+    # if an object is detected farther than this, it will be filtered out
+    detection_max_range: 10.0 # [m]
+    # if object height is unavailable, this will be used instead
+    pseudo_height: 1.5 # [m]
+
+    pedestrian_detection_config:
+      width_min: 0.5 # [m]
+      width_max: 0.8 # [m]

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_agnocast_wrapper</name>
-  <version>0.47.1</version>
+  <version>0.48.0</version>
   <description>Wrapper macros for Agnocast (true zero-copy communication library)</description>
   <maintainer email="sykwer@gmail.com">Takahiro Ishikawa-Aso</maintainer>
   <license>Apache License 2.0</license>
@@ -14,7 +14,7 @@
   <build_depend>rclcpp</build_depend>
 
   <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
