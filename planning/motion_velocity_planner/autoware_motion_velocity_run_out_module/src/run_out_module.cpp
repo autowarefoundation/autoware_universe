@@ -48,15 +48,6 @@ namespace autoware::motion_velocity_planner
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-static autoware_internal_debug_msgs::msg::Float64Stamped create_float64_stamped(
-  const rclcpp::Time & now, const float & data)
-{
-  autoware_internal_debug_msgs::msg::Float64Stamped msg;
-  msg.stamp = now;
-  msg.data = data;
-  return msg;
-}
-
 void RunOutModule::init_parameters(rclcpp::Node & node)
 {
   params_.initialize(node, ns_);
@@ -74,9 +65,6 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   logger_ = node.get_logger();
   clock_ = node.get_clock();
 
-  processing_time_publisher_ =
-    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/debug/" + ns_ + "/processing_time_ms", 1);
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
@@ -212,7 +200,6 @@ VelocityPlanningResult RunOutModule::plan(
   const std::shared_ptr<const PlannerData> planner_data)
 {
   const auto now = clock_->now();
-  stop_watch_.tic();
   time_keeper_->start_track("plan()");
   time_keeper_->start_track("calc_ego_footprint()");
   const auto ego_footprint = calculate_trajectory_corner_footprint(
@@ -282,7 +269,6 @@ VelocityPlanningResult RunOutModule::plan(
 
   time_keeper_->end_track("plan()");
 
-  processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
   return result.velocity_planning_result;
 }
 

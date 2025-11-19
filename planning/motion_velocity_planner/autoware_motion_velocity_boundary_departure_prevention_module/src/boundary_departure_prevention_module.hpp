@@ -41,6 +41,7 @@ public:
     const TrajectoryPoints & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; };
+  std::string get_short_module_name() const override { return "boundary_departure_prevention"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     return RequiredSubscriptionInfo{};
