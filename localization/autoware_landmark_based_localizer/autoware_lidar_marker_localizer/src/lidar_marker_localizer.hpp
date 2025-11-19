@@ -17,7 +17,7 @@
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware/qos_utils/qos_compatibility.hpp"
-#include "autoware_utils_diagnostics/diagnostics_interface.hpp"
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 
 #include <autoware/landmark_manager/landmark_manager.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -146,7 +146,7 @@ private:
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_debug_pose_with_covariance_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_marker_pointcloud_;
 
-  std::shared_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
+  std::shared_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
 
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_center_intensity_grid;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_positive_grid;
