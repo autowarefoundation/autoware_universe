@@ -10,8 +10,7 @@
     <param name="lidar_marker_instance_names" value="[
       /localization/pose_estimator/lidar_marker_localizer/top_left,
       /localization/pose_estimator/lidar_marker_localizer/top_right
-    ]"
-    />
+    ]"/>
 
     <!-- ndt -->
     <remap from="~/input/ndt/pointcloud" to="$(var input_pointcloud)"/>
