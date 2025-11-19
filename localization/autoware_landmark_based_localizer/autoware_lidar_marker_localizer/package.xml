@@ -17,9 +17,9 @@
   <depend>autoware_localization_util</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_point_types</depend>
+  <depend>autoware_pointcloud_preprocessor</depend>
   <depend>autoware_qos_utils</depend>
   <depend>autoware_utils</depend>
-  <depend>autoware_pointcloud_preprocessor</depend>
   <depend>pcl_conversions</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
