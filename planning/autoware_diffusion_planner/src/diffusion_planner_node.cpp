@@ -122,10 +122,6 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("ignore_unknown_neighbors", false);
   params_.predict_neighbor_trajectory =
     this->declare_parameter<bool>("predict_neighbor_trajectory", false);
-  params_.update_traffic_light_group_info =
-    this->declare_parameter<bool>("update_traffic_light_group_info", false);
-  params_.keep_last_traffic_light_group_info =
-    this->declare_parameter<bool>("keep_last_traffic_light_group_info", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
@@ -152,11 +148,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
     update_param<bool>(
       parameters, "predict_neighbor_trajectory", temp_params.predict_neighbor_trajectory);
-    update_param<bool>(
-      parameters, "update_traffic_light_group_info", temp_params.update_traffic_light_group_info);
-    update_param<bool>(
-      parameters, "keep_last_traffic_light_group_info",
-      temp_params.keep_last_traffic_light_group_info);
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
@@ -404,16 +395,13 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   ego_kinematic_state_ = *ego_kinematic_state;
 
-  if (params_.update_traffic_light_group_info) {
-    const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
-    preprocess::process_traffic_signals(
-      traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s,
-      params_.keep_last_traffic_light_group_info);
-    if (!traffic_signals) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-        "no traffic signal received. traffic light info will not be updated/used");
-    }
+  const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
+  preprocess::process_traffic_signals(
+    traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s);
+  if (traffic_signals.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
+      "no traffic signal received. traffic light info will not be updated/used");
   }
 
   // random sample trajectories
@@ -571,9 +559,12 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   const bool enable_force_stop =
     ego_kinematic_state_.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
 
+  // Parse predictions once: [batch][agent][timestep] -> pose
+  const auto agent_poses = postprocess::parse_predictions(predictions);
+
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
-      predictions, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
+      agent_poses, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
       enable_force_stop, params_.stopping_threshold);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
@@ -601,13 +592,11 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
 
   // Other agents prediction
   if (params_.predict_neighbor_trajectory && ego_centric_neighbor_agent_data_.has_value()) {
-    const size_t single_batch_output_size =
-      std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1UL, std::multiplies<>());
-    const std::vector<float> single_batch_predictions(
-      predictions.begin(), predictions.begin() + single_batch_output_size);
+    // Use batch 0 for neighbor predictions
+    constexpr int64_t batch_idx = 0;
     auto predicted_objects = postprocess::create_predicted_objects(
-      single_batch_predictions, ego_centric_neighbor_agent_data_.value(), this->now(),
-      ego_to_map_transform_);
+      agent_poses, ego_centric_neighbor_agent_data_.value(), this->now(), ego_to_map_transform_,
+      batch_idx);
     pub_objects_->publish(predicted_objects);
   }
 }

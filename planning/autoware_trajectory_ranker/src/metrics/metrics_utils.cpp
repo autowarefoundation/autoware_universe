@@ -20,9 +20,8 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
-
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/utils.h>
+#include <tf2/LinearMath/Vector3.hpp>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <cmath>

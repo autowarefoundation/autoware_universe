@@ -35,6 +35,7 @@
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
 #include <pluginlib/class_list_macros.hpp>
+#include <tf2/utils.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -48,7 +49,6 @@
 #include <boost/geometry/strategies/buffer.hpp>
 
 #include <lanelet2_routing/RoutingGraphContainer.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -928,26 +928,7 @@ std::optional<Point> RoadUserStopModule::plan_stop(
   const auto stop_point = calc_stop_point(
     planner_data, trajectory_points, determined_stop_obstacle, determined_zero_vel_dist);
 
-  if (determined_stop_obstacle.has_value() && determined_stop_obstacle.value().velocity >= -0.5) {
-    return stop_point;
-  }
-
-  path_length_buffer_.update_buffer(
-    stop_point,
-    [trajectory_points](const Point & point) {
-      return autoware::motion_utils::calcSignedArcLength(trajectory_points, 0, point);
-    },
-    clock_->now(), determined_stop_obstacle.value(), determined_desired_stop_margin.value());
-
-  const auto buffered_stop = path_length_buffer_.get_nearest_active_item();
-  if (buffered_stop.has_value()) {
-    debug_data_.stop_index = std::nullopt;
-    debug_data_.stop_point = buffered_stop.value().stop_point;
-
-    return std::make_optional(buffered_stop.value().stop_point);
-  }
-
-  return std::nullopt;
+  return stop_point;
 }
 
 std::optional<StopObstacle> RoadUserStopModule::pick_stop_obstacle_from_predicted_object(

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_multi_object_tracker</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The ROS 2 autoware_multi_object_tracker package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
@@ -16,7 +16,9 @@
 
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_math</depend>
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>glog</depend>
@@ -28,6 +30,7 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>unique_identifier_msgs</depend>
+  <depend>visualization_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>

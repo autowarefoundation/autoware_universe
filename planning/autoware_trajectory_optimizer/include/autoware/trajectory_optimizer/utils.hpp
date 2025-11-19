@@ -84,12 +84,12 @@ void copy_trajectory_orientation(
  * @param traj_points The trajectory points to be interpolated.
  * @param interpolation_resolution_m Interpolation resolution for Akima spline.
  * @param max_distance_discrepancy_m Maximum position deviation allowed for orientation copying.
- * @param copy_original_orientation Flag to indicate if orientation from original trajectory should
- * be copied.
+ * @param preserve_original_orientation Flag to indicate if orientation from original trajectory
+ * should be copied.
  */
 void apply_spline(
   TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_distance_discrepancy_m, const bool copy_original_orientation);
+  const double max_distance_discrepancy_m, const bool preserve_original_orientation);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
@@ -102,8 +102,10 @@ rclcpp::Logger get_logger();
  * @brief Removes invalid points from the input trajectory.
  *
  * @param input_trajectory The trajectory points to be cleaned.
+ * @param min_dist_to_remove_m Minimum distance to remove close proximity points [m].
  */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
+void remove_invalid_points(
+  std::vector<TrajectoryPoint> & input_trajectory, const double min_dist_to_remove_m = 1E-2);
 
 /**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
@@ -139,6 +141,15 @@ void clamp_velocities(
  */
 void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
+
+/**
+ * @brief Compute time difference between consecutive trajectory points
+ *
+ * @param current Current trajectory point
+ * @param next Next trajectory point
+ * @return Time difference [s]
+ */
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next);
 
 /**
  * @brief Recalculates longitudinal acceleration from velocity differences.

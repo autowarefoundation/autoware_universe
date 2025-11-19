@@ -235,6 +235,8 @@ public:
 
   virtual bool is_near_regulatory_element() const = 0;
 
+  virtual bool is_ego_in_current_or_target_lanes() const = 0;
+
 protected:
   virtual bool isValidPath(const PathWithLaneId & path) const = 0;
 
