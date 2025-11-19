@@ -11,8 +11,10 @@
 | Name                   | Type                                            | Description      |
 | :--------------------- | :---------------------------------------------- | :--------------- |
 | `~/input/lanelet2_map` | `autoware_map_msgs::msg::HADMapBin`             | Data of lanelet2 |
-| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointCloud       |
+| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointType: `PointXYZIRC` is recommended in Autoware, but `PointXYZIRADRT` are also supported in this node.[^1]   |
 | `~/input/ekf_pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | EKF Pose         |
+
+[^1]: Assumed `ring` of `PointXYZIRADRT` as `channel` of `PointXYZIRC`.
 
 #### Output
 
@@ -24,6 +26,19 @@
 | `~/debug/marker_mapped`         | `visualization_msgs::msg::MarkerArray`          | [debug topic] Loaded landmarks to visualize in Rviz as thin boards |
 | `~/debug/marker_pointcloud`     | `sensor_msgs::msg::PointCloud2`                 | [debug topic] PointCloud of the detected marker                    |
 | `/diagnostics`                  | `diagnostic_msgs::msg::DiagnosticArray`         | Diagnostics outputs                                                |
+
+##### For debug
+
+The following debug topics are also published if `enable_save_log` parameter is set to `true`.
+
+| Name                                 | Type                              | Description                                 |
+| :----------------------------------- | :-------------------------------- | :------------------------------------------ |
+| `~/debug/center_intensity_grid`      | `nav_msgs::msg::OccupancyGrid`    | Center intensity grid for debug             |
+| `~/debug/positive_grid`              | `nav_msgs::msg::OccupancyGrid`    | Positive match grid for debug               |
+| `~/debug/negative_grid`              | `nav_msgs::msg::OccupancyGrid`    | Negative match grid for debug               |
+| `~/debug/matched_grid`               | `nav_msgs::msg::OccupancyGrid`    | Matched pattern grid for debug              |
+| `~/debug/vote_grid`                  | `nav_msgs::msg::OccupancyGrid`    | Vote grid for marker detection debug        |
+
 
 ## Parameters
 
