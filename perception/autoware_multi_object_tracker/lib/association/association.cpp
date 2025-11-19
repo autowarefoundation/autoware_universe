@@ -147,7 +147,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
 
   // Clear previous tracker/measurement pair that shape significantly changed
-  significant_shape_change_set_.clear();
+  significant_shape_change_checker_.clear();
 
   // Pre-allocate vectors to avoid reallocations
   std::vector<types::DynamicObject> tracked_objects;
@@ -237,9 +237,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       score_matrix(tracker_idx, measurement_idx) = score;
 
       if (has_significant_shape_change) {
-        // hash the tracker and measurement index pair
-        significant_shape_change_set_.insert(
-          (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx);
+        significant_shape_change_checker_.addPair(tracker_idx, measurement_idx);
       }
     }
   }
@@ -324,12 +322,6 @@ double DataAssociation::calculateScore(
 
   // rescale score to [0, 1]
   return (iou_score - min_iou) / (1.0 - min_iou);
-}
-
-bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
-{
-  uint64_t key = (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx;
-  return significant_shape_change_set_.count(key);
 }
 
 }  // namespace autoware::multi_object_tracker
