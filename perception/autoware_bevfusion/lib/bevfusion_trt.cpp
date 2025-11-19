@@ -470,16 +470,9 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   }
 }
 
-bool BEVFusionTRT::preProcess(
-  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
-  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
-  const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
-  bool & is_num_voxels_within_range)
+bool BEVFusionTRT::validatePointCloud(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr)
 {
-  using autoware::cuda_utils::clear_async;
-
-  is_num_voxels_within_range = true;
-
   if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg_ptr->fields)) {
     RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Invalid point type. Skipping detection.");
     return false;
@@ -490,9 +483,12 @@ bool BEVFusionTRT::preProcess(
     return false;
   }
 
-  if (!vg_ptr_->enqueuePointCloud(pc_msg_ptr, tf_buffer)) {
-    return false;
-  }
+  return true;
+}
+
+void BEVFusionTRT::clearDeviceMemory()
+{
+  using autoware::cuda_utils::clear_async;
 
   // TODO(knzo25): these should be able to be removed as they are filled by TensorRT
   clear_async(label_pred_output_d_.get(), config_.num_proposals_, stream_);
@@ -504,49 +500,49 @@ bool BEVFusionTRT::preProcess(
   clear_async(num_points_per_voxel_d_.get(), config_.max_num_voxels_, stream_);
   clear_async(points_d_.get(), config_.cloud_capacity_ * config_.num_point_feature_size_, stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+}
+
+void BEVFusionTRT::processImages(
+  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  const std::vector<float> & camera_masks)
+{
+  if (!config_.sensor_fusion_) {
+    return;
+  }
 
   // TODO(knzo25): move this to each image callback
-  if (config_.sensor_fusion_) {
-    int start_x =
-      std::max(0, static_cast<int>(config_.resized_width_) - static_cast<int>(config_.roi_width_)) /
-      2;
+  const int start_x =
+    std::max(0, static_cast<int>(config_.resized_width_) - static_cast<int>(config_.roi_width_)) /
+    2;
 
-    for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      int start_y = roi_start_y_vector_[camera_id];
-      cudaMemcpyAsync(
-        image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
-        config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels,
-        cudaMemcpyHostToDevice, stream_);
-
-      pre_ptr_->resizeAndExtractRoi_launch(
-        image_buffers_d_[camera_id].get(),
-        &roi_tensor_d_
-          [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
-        config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
-        config_.resized_width_, config_.roi_height_, config_.roi_width_, start_y, start_x,
-        camera_streams_[camera_id]);
-    }
-
-    for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-      cudaStreamSynchronize(camera_streams_[i]);
-    }
-
+  for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+    const int start_y = roi_start_y_vector_[camera_id];
     cudaMemcpyAsync(
-      camera_masks_d_.get(), camera_masks.data(), config_.num_cameras_ * sizeof(float),
+      image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
+      config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels,
       cudaMemcpyHostToDevice, stream_);
+
+    pre_ptr_->resizeAndExtractRoi_launch(
+      image_buffers_d_[camera_id].get(),
+      &roi_tensor_d_
+        [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
+      config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
+      config_.resized_width_, config_.roi_height_, config_.roi_width_, start_y, start_x,
+      camera_streams_[camera_id]);
   }
 
-  const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
-
-  if (num_points == 0) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("bevfusion"),
-      "Empty sweep points (check the capacity of the buffer). Skipping detection.");
-    return false;
+  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
+    cudaStreamSynchronize(camera_streams_[i]);
   }
 
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  cudaMemcpyAsync(
+    camera_masks_d_.get(), camera_masks.data(), config_.num_cameras_ * sizeof(float),
+    cudaMemcpyHostToDevice, stream_);
+}
 
+std::int64_t BEVFusionTRT::processPointCloudVoxelization(
+  std::size_t num_points, bool & is_num_voxels_within_range)
+{
   auto num_voxels = static_cast<std::int64_t>(pre_ptr_->generateVoxels(
     points_d_.get(), num_points, voxel_features_d_.get(), voxel_coords_d_.get(),
     num_points_per_voxel_d_.get()));
@@ -558,7 +554,7 @@ bool BEVFusionTRT::preProcess(
       rclcpp::get_logger("bevfusion"), "Too few voxels ("
                                          << num_voxels << ") for the actual optimization profile ("
                                          << config_.min_num_voxels_ << ")");
-    return false;
+    return -1;
   }
 
   // Check the actual number of pillars after inference to avoid unnecessary synchronization.
@@ -574,6 +570,11 @@ bool BEVFusionTRT::preProcess(
     num_voxels = config_.max_num_voxels_;
   }
 
+  return num_voxels;
+}
+
+void BEVFusionTRT::configureTensorRTInputs(std::int64_t num_voxels, std::size_t num_points)
+{
   network_trt_ptr_->setInputShape(
     "voxels", nvinfer1::Dims{
                 3, {num_voxels, config_.max_points_per_voxel_, config_.num_point_feature_size_}});
@@ -581,35 +582,74 @@ bool BEVFusionTRT::preProcess(
   network_trt_ptr_->setInputShape(
     "coors", nvinfer1::Dims{2, {num_voxels, BEVFusionConfig::kNum3DCoords}});
 
-  if (config_.sensor_fusion_) {
-    network_trt_ptr_->setInputShape(
-      "points",
-      nvinfer1::Dims{2, {static_cast<std::int64_t>(num_points), config_.num_point_feature_size_}});
-
-    // Separate image backbone: set image_feats and img_aug_matrix inputs
-    network_trt_ptr_->setInputShape(
-      "image_feats", nvinfer1::Dims{
-                       4,
-                       {config_.num_cameras_, config_.image_feature_channel_,
-                        config_.features_height_, config_.features_width_}});
-    network_trt_ptr_->setInputShape(
-      "img_aug_matrix", nvinfer1::Dims{
-                          3,
-                          {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
-                           BEVFusionConfig::kTransformMatrixDim}});
-    network_trt_ptr_->setInputShape(
-      "lidar2image", nvinfer1::Dims{
-                       3,
-                       {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
-                        BEVFusionConfig::kTransformMatrixDim}});
-
-    network_trt_ptr_->setInputShape(
-      "geom_feats", nvinfer1::Dims{2, {num_ranks_, BEVFusionConfig::kTransformMatrixDim}});
-    network_trt_ptr_->setInputShape("kept", nvinfer1::Dims{1, {num_kept_}});
-    network_trt_ptr_->setInputShape("ranks", nvinfer1::Dims{1, {num_ranks_}});
-    network_trt_ptr_->setInputShape("indices", nvinfer1::Dims{1, {num_indices_}});
-  
+  if (!config_.sensor_fusion_) {
+    return;
   }
+
+  network_trt_ptr_->setInputShape(
+    "points",
+    nvinfer1::Dims{2, {static_cast<std::int64_t>(num_points), config_.num_point_feature_size_}});
+
+  // Separate image backbone: set image_feats and img_aug_matrix inputs
+  network_trt_ptr_->setInputShape(
+    "image_feats", nvinfer1::Dims{
+                     4,
+                     {config_.num_cameras_, config_.image_feature_channel_,
+                      config_.features_height_, config_.features_width_}});
+  network_trt_ptr_->setInputShape(
+    "img_aug_matrix", nvinfer1::Dims{
+                        3,
+                        {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+                         BEVFusionConfig::kTransformMatrixDim}});
+  network_trt_ptr_->setInputShape(
+    "lidar2image", nvinfer1::Dims{
+                     3,
+                     {config_.num_cameras_, BEVFusionConfig::kTransformMatrixDim,
+                      BEVFusionConfig::kTransformMatrixDim}});
+
+  network_trt_ptr_->setInputShape(
+    "geom_feats", nvinfer1::Dims{2, {num_ranks_, BEVFusionConfig::kTransformMatrixDim}});
+  network_trt_ptr_->setInputShape("kept", nvinfer1::Dims{1, {num_kept_}});
+  network_trt_ptr_->setInputShape("ranks", nvinfer1::Dims{1, {num_ranks_}});
+  network_trt_ptr_->setInputShape("indices", nvinfer1::Dims{1, {num_indices_}});
+}
+
+bool BEVFusionTRT::preProcess(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
+  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
+  bool & is_num_voxels_within_range)
+{
+  is_num_voxels_within_range = true;
+
+  if (!validatePointCloud(pc_msg_ptr)) {
+    return false;
+  }
+
+  if (!vg_ptr_->enqueuePointCloud(pc_msg_ptr, tf_buffer)) {
+    return false;
+  }
+
+  clearDeviceMemory();
+  processImages(image_msgs, camera_masks);
+
+  const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
+  if (num_points == 0) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("bevfusion"),
+      "Empty sweep points (check the capacity of the buffer). Skipping detection.");
+    return false;
+  }
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  const std::int64_t num_voxels =
+    processPointCloudVoxelization(num_points, is_num_voxels_within_range);
+  if (num_voxels < 0) {
+    return false;
+  }
+
+  configureTensorRTInputs(num_voxels, num_points);
 
   // Debug: Save ROI images after preprocessing
   if (config_.sensor_fusion_) {

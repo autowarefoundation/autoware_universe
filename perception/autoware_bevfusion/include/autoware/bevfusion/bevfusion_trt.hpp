@@ -106,6 +106,20 @@ protected:
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
     bool & is_num_voxels_within_range);
 
+  bool validatePointCloud(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr);
+
+  void clearDeviceMemory();
+
+  void processImages(
+    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+    const std::vector<float> & camera_masks);
+
+  std::int64_t processPointCloudVoxelization(
+    std::size_t num_points, bool & is_num_voxels_within_range);
+
+  void configureTensorRTInputs(std::int64_t num_voxels, std::size_t num_points);
+
   bool inference();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);
