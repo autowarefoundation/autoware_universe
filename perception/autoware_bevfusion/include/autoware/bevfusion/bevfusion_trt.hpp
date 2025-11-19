@@ -120,6 +120,14 @@ protected:
 
   void configureTensorRTInputs(std::int64_t num_voxels, std::size_t num_points);
 
+  void setupImageBackbone(const TrtBEVFusionConfig & trt_config);
+
+  void addCameraNetworkIO(std::vector<autoware::tensorrt_common::NetworkIO> & network_io);
+
+  void addCameraProfileDims(std::vector<autoware::tensorrt_common::ProfileDims> & profile_dims);
+
+  void setSensorFusionTensorAddresses();
+
   bool inference();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);

@@ -38,23 +38,6 @@ void BEVFusionNode::validateParameters(
   }
 }
 
-TrtBEVFusionConfig BEVFusionNode::createTrtConfig(
-  const std::string & onnx_path, const std::string & trt_precision, const std::string & engine_path,
-  const std::string & image_backbone_onnx_path, const std::string & image_backbone_trt_precision,
-  const std::string & image_backbone_engine_path)
-{
-  if (sensor_fusion_) {
-    return TrtBEVFusionConfig{
-      tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-      tensorrt_common::TrtCommonConfig(
-        image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
-        1ULL << 32U)};
-  }
-  return TrtBEVFusionConfig{
-    tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-    std::nullopt};
-}
-
 void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
 {
   if (!sensor_fusion_) {
@@ -187,9 +170,16 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
 
-  TrtBEVFusionConfig trt_bevfusion_config = createTrtConfig(
-    onnx_path, trt_precision, engine_path, image_backbone_onnx_path,
-    image_backbone_trt_precision, image_backbone_engine_path);
+  TrtBEVFusionConfig trt_bevfusion_config =
+    sensor_fusion_
+      ? TrtBEVFusionConfig{
+          tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
+          tensorrt_common::TrtCommonConfig(
+            image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path,
+            1ULL << 32U)}
+      : TrtBEVFusionConfig{
+          tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
+          std::nullopt};
 
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =

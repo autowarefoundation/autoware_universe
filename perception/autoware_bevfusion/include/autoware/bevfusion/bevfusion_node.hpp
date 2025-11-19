@@ -65,11 +65,6 @@ private:
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Helper methods for constructor
-  TrtBEVFusionConfig createTrtConfig(
-    const std::string & onnx_path, const std::string & trt_precision,
-    const std::string & engine_path, const std::string & image_backbone_onnx_path,
-    const std::string & image_backbone_trt_precision,
-    const std::string & image_backbone_engine_path);
   void initializeSensorFusionSubscribers(std::int64_t num_cameras);
   void validateParameters(
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size);
