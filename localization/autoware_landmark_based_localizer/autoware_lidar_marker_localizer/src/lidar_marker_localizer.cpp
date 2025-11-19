@@ -17,6 +17,7 @@
 #include <autoware/point_types/types.hpp>
 #include <autoware/pointcloud_preprocessor/utility/memory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/qos.hpp>
