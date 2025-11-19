@@ -13632,8 +13632,6 @@
       
         
       
-        
-      
     
     
     
@@ -14654,130 +14652,6 @@
           </ul>
         </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_6_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_8_6_6" id="__nav_8_6_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Velocity Smoother
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_8_6_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8_6_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Velocity Smoother
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../planning/autoware_velocity_smoother" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    About Velocity Smoother
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../planning/autoware_velocity_smoother/README.ja" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    About Velocity Smoother (Japanese)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -23202,6 +23076,12 @@ The listed features below does not always correspond to the latest implementatio
 <td align="left">double</td>
 <td align="left">threshold angle to trigger a WARN diagnostic [rad]</td>
 <td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left"><code>over_velocity.vel_lpf_gain</code></td>
+<td align="left">double</td>
+<td align="left">low-pass filter gain for filtering vehicle and target velocity [*] (time constant 2.0s at 30msec sampling period)</td>
+<td align="left">0.985</td>
 </tr>
 </tbody>
 </table></div>
