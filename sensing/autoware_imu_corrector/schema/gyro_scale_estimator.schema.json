@@ -182,7 +182,7 @@
             "correct_for_static_bias": {
               "type": "boolean",
               "description": "Enable/disable static bias correction.",
-              "default": false
+              "default": true
             },
             "correct_for_dynamic_bias": {
               "type": "boolean",

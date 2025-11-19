@@ -138,12 +138,31 @@ In order to test the result of the scale and bias estimation for the gyro, an op
 
 ## IMU Correction control
 
-These 2 parameters control the correction of the bias and scale for the gyroscope. Please note that only one bias correction should be enabled, the offset values `angular_velocity_offset_` are used when using the static bias calibration and the dynamic bias correction uses the estimated values in `~/output/gyro_bias`; if both bias correction flags are enabled automatically static correction will be disabled.
+These parameters control how gyroscope bias and scale are corrected. **Only one bias-correction method should be enabled at a time.**  
+If both flags are enabled, **static bias correction is automatically disabled**.
+
+### Static Bias Correction (`correct_for_static_bias`)
+
+- Offset values must be precomputed and stored in the configuration file under the parameter:
+  `angular_velocity_offset_[x, y, z]`
+- Applies these offsets directly to the raw gyroscope data:
+  `~/input/imu_raw`
+  -Should be used only if the gyroscope offset doesn't change along the time.
+
+### Dynamic Bias Correction (`correct_for_dynamic_bias`)
+
+- Uses bias estimates published on:
+  `~/output/gyro_bias`
+- Bias is estimated with the help of the odometry data:
+  `~/input/odometry`
+- The estimated bias is applied to correct the raw gyroscope data:
+  `~/input/imu_raw`
+  -Should be used when the gyroscope offset is changing along the time and odometry data is accessible.
 
 ### Parameters
 
 | Name                                         | Type | Description                                                |
 | -------------------------------------------- | ---- | ---------------------------------------------------------- |
-| `on_off_correction.correct_for_static_bias`  | bool | Enable or disable static bias correction (default: false)  |
+| `on_off_correction.correct_for_static_bias`  | bool | Enable or disable static bias correction (default: true)   |
 | `on_off_correction.correct_for_dynamic_bias` | bool | Enable or disable dynamic bias correction (default: false) |
 | `on_off_correction.correct_for_scale`        | bool | Enable or disable scale correction (default: false)        |

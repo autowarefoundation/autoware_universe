@@ -76,7 +76,7 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   accel_stddev_imu_link_ = declare_parameter<double>("acceleration_stddev", 10000.0);
 
   correct_for_static_bias_ =
-    declare_parameter<bool>("on_off_correction.correct_for_static_bias", false);
+    declare_parameter<bool>("on_off_correction.correct_for_static_bias", true);
   correct_for_dynamic_bias_ =
     declare_parameter<bool>("on_off_correction.correct_for_dynamic_bias", false);
   correct_for_scale_ = declare_parameter<bool>("on_off_correction.correct_for_scale", false);
@@ -127,9 +127,9 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
   }
 
   if (correct_for_static_bias_) {
-    imu_msg.angular_velocity.x = imu_msg.angular_velocity.x - angular_velocity_offset_x_imu_link_;
-    imu_msg.angular_velocity.y = imu_msg.angular_velocity.y - angular_velocity_offset_y_imu_link_;
-    imu_msg.angular_velocity.z = imu_msg.angular_velocity.z - angular_velocity_offset_z_imu_link_;
+    imu_msg.angular_velocity.x -= angular_velocity_offset_x_imu_link_;
+    imu_msg.angular_velocity.y -= angular_velocity_offset_y_imu_link_;
+    imu_msg.angular_velocity.z -= angular_velocity_offset_z_imu_link_;
   }
 
   if (correct_for_dynamic_bias_) {
