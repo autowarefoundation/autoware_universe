@@ -13728,8 +13728,6 @@
       
         
       
-        
-      
     
     
     
@@ -14750,130 +14748,6 @@
           </ul>
         </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8_6_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_8_6_6" id="__nav_8_6_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Velocity Smoother
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_8_6_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8_6_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Velocity Smoother
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../planning/autoware_velocity_smoother" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    About Velocity Smoother
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../planning/autoware_velocity_smoother/README.ja" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    About Velocity Smoother (Japanese)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -23035,6 +22909,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#launch-ros-2-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Launch ROS 2 Node
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leverage-processor-in-your-codebase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leverage Processor in Your Codebase
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-add-new-processor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23116,6 +23029,51 @@
 </tr>
 </tbody>
 </table>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">#</a></h2>
+<h3 id="launch-ros-2-node">Launch ROS 2 Node<a class="headerlink" href="#launch-ros-2-node" title="Permanent link">#</a></h3>
+<p>To use this package, you can launch it with the following command:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_predicted_path_postprocessor<span class="w"> </span>autoware_predicted_path_postprocessor.launch.xml
+</code></pre></div>
+<h3 id="leverage-processor-in-your-codebase">Leverage Processor in Your Codebase<a class="headerlink" href="#leverage-processor-in-your-codebase" title="Permanent link">#</a></h3>
+<p>You can leverage the processor in your codebase by including the appropriate headers and using the <code>ComposableProcessor</code> class:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;autoware/predicted_path_postprocessor/processor/composable.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;autoware/predicted_path_postprocessor/processor/interface.hpp&gt;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SomeNode</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Node</span>
+<span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="k">explicit</span><span class="w"> </span><span class="n">SomeNode</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">rclcpp</span><span class="o">::</span><span class="n">NodeOptions</span><span class="o">&amp;</span><span class="w"> </span><span class="n">options</span><span class="p">)</span>
+<span class="w">    </span><span class="o">:</span><span class="w"> </span><span class="n">Node</span><span class="p">(</span><span class="s">"some_node"</span><span class="p">,</span><span class="w"> </span><span class="n">options</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Initialize your node here</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">processors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">declare_parameter</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="s">"processors"</span><span class="p">);</span>
+<span class="w">    </span><span class="n">context_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">autoware</span><span class="o">::</span><span class="n">predicted_path_postprocessor</span><span class="o">::</span><span class="n">processor</span><span class="o">::</span><span class="n">Context</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="n">processor_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">autoware</span><span class="o">::</span><span class="n">predicted_path_postprocessor</span><span class="o">::</span><span class="n">processor</span><span class="o">::</span><span class="n">ComposableProcessor</span><span class="o">&gt;</span><span class="p">(</span><span class="k">this</span><span class="p">,</span><span class="w"> </span><span class="n">processors</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="k">private</span><span class="o">:</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">callback</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">autoware_perception_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">PredictedObjects</span><span class="o">::</span><span class="n">ConstSharedPtr</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">msg</span><span class="p">)</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">objects</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">autoware_perception_msgs</span><span class="o">::</span><span class="n">msg</span><span class="o">::</span><span class="n">PredictedObjects</span><span class="o">&gt;</span><span class="p">(</span><span class="o">*</span><span class="n">msg</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// update the context with the predicted objects</span>
+<span class="w">    </span><span class="n">context_</span><span class="o">-&gt;</span><span class="n">update</span><span class="p">(</span><span class="n">objects</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// process the predicted objects using the processor</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">processor_</span><span class="o">-&gt;</span><span class="n">process</span><span class="p">(</span><span class="n">objects</span><span class="p">,</span><span class="w"> </span><span class="n">context_</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="n">processed_objects</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">result</span><span class="p">.</span><span class="n">ok</span><span class="p">();</span>
+<span class="w">      </span><span class="c1">// do something with the processed objects</span>
+<span class="w">      </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">RCLCPP_ERROR</span><span class="p">(</span><span class="n">get_logger</span><span class="p">(),</span><span class="w"> </span><span class="s">"Failed to process predicted objects"</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">autoware</span><span class="o">::</span><span class="n">predicted_path_postprocessor</span><span class="o">::</span><span class="n">processor</span><span class="o">::</span><span class="n">Context</span><span class="o">&gt;</span><span class="w"> </span><span class="n">context_</span><span class="p">;</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">unique_ptr</span><span class="o">&lt;</span><span class="n">autoware</span><span class="o">::</span><span class="n">predicted_path_postprocessor</span><span class="o">::</span><span class="n">processor</span><span class="o">::</span><span class="n">ComposableProcessor</span><span class="o">&gt;</span><span class="w"> </span><span class="n">processor_</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div>
 <h2 id="how-to-add-new-processor">How to Add New Processor<a class="headerlink" href="#how-to-add-new-processor" title="Permanent link">#</a></h2>
 <p>Processors in this package should follow a structured naming convention as below:</p>
 <table>
@@ -23143,66 +23101,66 @@
 <ol>
 <li>
 <p>Create a new processor class that inherits from <code>ProcessorInterface</code>:</p>
-<p>```c++:processor/filter_by_something.hpp
- class FilterBySomething final : public ProcessorInterface
- {
-   public:
-     FilterBySomething(rclcpp::Node * node_ptr, const std::string &amp; processor_name)
-     : ProcessorInterface(processor_name)
-     {
-       // Load parameters
-       double_param_ = node_ptr-&gt;declare_parameter<double>(processor_name + ".double_param");
-       string_param_ = node_ptr-&gt;declare_parameter<std::string>(processor_name + ".string_param");
-     }</std::string></double></p>
-<p>private:
-     result_type check_context(const Context &amp; context)
-     {
-       // ...Check context if it contains the required information
-       return make_ok<error_type>();
-     }</error_type></p>
-<div class="codehilite"><pre><span></span><code> result_type process(target_type &amp; target, const Context &amp; context) override
- {
-   // ...Execute processor specific logic
-   return make_ok&lt;error_type&gt;();
- }
-</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">FilterBySomething</span><span class="w"> </span><span class="k">final</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">ProcessorInterface</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="n">FilterBySomething</span><span class="p">(</span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Node</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">node_ptr</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">processor_name</span><span class="p">)</span>
+<span class="w">    </span><span class="o">:</span><span class="w"> </span><span class="n">ProcessorInterface</span><span class="p">(</span><span class="n">processor_name</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// Load parameters</span>
+<span class="w">      </span><span class="n">double_param_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_ptr</span><span class="o">-&gt;</span><span class="n">declare_parameter</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">processor_name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">".double_param"</span><span class="p">);</span>
+<span class="w">      </span><span class="n">string_param_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">node_ptr</span><span class="o">-&gt;</span><span class="n">declare_parameter</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span><span class="p">(</span><span class="n">processor_name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">".string_param"</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
 
-<p>private:
-    double double_param_;
-    std::string string_param_;
- };
- ```</p>
+<span class="w"> </span><span class="k">private</span><span class="o">:</span>
+<span class="w">    </span><span class="n">result_type</span><span class="w"> </span><span class="n">check_context</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">context</span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// ...Check context if it contains the required information</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">make_ok</span><span class="o">&lt;</span><span class="n">error_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">result_type</span><span class="w"> </span><span class="n">process</span><span class="p">(</span><span class="n">target_type</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">context</span><span class="p">)</span><span class="w"> </span><span class="k">override</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// ...Execute processor specific logic</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">make_ok</span><span class="o">&lt;</span><span class="n">error_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w"> </span><span class="k">private</span><span class="o">:</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">double_param_</span><span class="p">;</span>
+<span class="w">   </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">string_param_</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div>
 </li>
 <li>
 <p>Register the new processor in <code>build_processors(...)</code> function:</p>
-<p><code>c++:processor/builder.hpp
- std::vector&lt;ProcessorInterface::UniquePtr&gt; build_processors(rclcpp::Node * node_ptr, const std::string &amp; processor_name)
- {
-   std::vector&lt;ProcessorInterface::UniquePtr&gt; outputs;
-   for (const auto &amp; name : processor_names) {
-     if ( /* ... */) {
-       // ...
-     } else if (name == "filter_by_something") {
-       outputs.push_back(std::make_unique&lt;FilterBySomething&gt;(node_ptr, name));
-     }
-   }
-   return outputs;
- }</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ProcessorInterface</span><span class="o">::</span><span class="n">UniquePtr</span><span class="o">&gt;</span><span class="w"> </span><span class="n">build_processors</span><span class="p">(</span><span class="n">rclcpp</span><span class="o">::</span><span class="n">Node</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">node_ptr</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">processor_name</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ProcessorInterface</span><span class="o">::</span><span class="n">UniquePtr</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outputs</span><span class="p">;</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">processor_names</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="cm">/* ... */</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"filter_by_something"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">outputs</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">FilterBySomething</span><span class="o">&gt;</span><span class="p">(</span><span class="n">node_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">outputs</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
 </li>
 <li>
 <p>Add parameter to the <code>config/predicted_path_postprocessor.param.yaml</code>:</p>
 <p>The parameters must be grouped under the processor's string identifier.
  The processors specified in the <code>processors</code> array are launched in runtime.</p>
-<p><code>yaml:config/predicted_path_postprocessor.param.yaml
- /**:
-   ros__parameters:
-    processors: [filter_by_something]
-    # --- FilterBySomething ---
-    filter_by_something:
-       double_param: 100.0
-       string_param: I'm a processor!!
-    # --- Parameters for other processors ---
-    # ...</code></p>
+<div class="highlight"><pre><span></span><code><span class="nt">/**</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">processors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">filter_by_something</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="c1"># --- FilterBySomething ---</span>
+<span class="w">    </span><span class="nt">filter_by_something</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">double_param</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100.0</span>
+<span class="w">      </span><span class="nt">string_param</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">I'm a processor!!</span>
+<span class="w">    </span><span class="c1"># --- Parameters for other processors ---</span>
+<span class="w">    </span><span class="c1"># ...</span>
+</code></pre></div>
 </li>
 </ol></div>
 
