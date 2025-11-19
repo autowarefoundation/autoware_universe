@@ -103,7 +103,8 @@ void TrackerProcessor::update(
       bool has_significant_shape_change =
         association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
       (*(tracker_itr))
-        ->updateWithMeasurement(associated_object, time, channel_info, has_significant_shape_change);
+        ->updateWithMeasurement(
+          associated_object, time, channel_info, has_significant_shape_change);
     } else {
       // not found
       (*(tracker_itr))->updateWithoutMeasurement(time);

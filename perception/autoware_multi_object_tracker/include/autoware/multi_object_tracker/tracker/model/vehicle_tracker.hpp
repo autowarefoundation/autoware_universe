@@ -33,7 +33,8 @@ enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDA
 struct UpdateStrategy
 {
   UpdateStrategyType type;
-  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
+  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for
+                                           // FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
 };
 
 class VehicleTracker : public Tracker

@@ -343,8 +343,8 @@ bool VehicleTracker::conditionedUpdate(
     // Must be REAR_WHEEL_UPDATE (only remaining option after WEAK_UPDATE check)
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
 
-    is_updated = motion_model_.updateStatePoseRear(
-      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+    is_updated =
+      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   }
 
   removeCache();
@@ -381,7 +381,7 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   const bool use_front_wheel =
     (alignment_dists.front_alignment_dist <= alignment_dists.rear_alignment_dist);
   strategy.type = use_front_wheel ? UpdateStrategyType::FRONT_WHEEL_UPDATE
-                                   : UpdateStrategyType::REAR_WHEEL_UPDATE;
+                                  : UpdateStrategyType::REAR_WHEEL_UPDATE;
   strategy.anchor_point =
     calculateAnchorPoint(meas_edges, use_front_wheel, predicted_length, measurement);
 
@@ -432,8 +432,8 @@ VehicleTracker::EdgeAlignmentDistances VehicleTracker::calculateAlignmentDistanc
   // Find minimum alignment distance for front and rear edges
   dists.front_alignment_dist = std::min(
     std::abs(meas_front_axis - pred_front_axis), std::abs(meas_rear_axis - pred_front_axis));
-  dists.rear_alignment_dist = std::min(
-    std::abs(meas_front_axis - pred_rear_axis), std::abs(meas_rear_axis - pred_rear_axis));
+  dists.rear_alignment_dist =
+    std::min(std::abs(meas_front_axis - pred_rear_axis), std::abs(meas_rear_axis - pred_rear_axis));
 
   return dists;
 }
