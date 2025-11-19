@@ -167,7 +167,7 @@
           "type": "integer",
           "description": "Image feature dimension (output channels of the image backbone).",
           "default": 256,
-          "minimum": 1
+          "minimum": 0
         },
         "use_intensity": {
           "type": "boolean",

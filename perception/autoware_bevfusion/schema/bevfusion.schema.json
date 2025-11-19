@@ -57,7 +57,7 @@
           "type": "string",
           "description": "A precision of TensorRT engine for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
           "default": "fp16",
-          "enum": ["fp16", "fp32"]
+          "enum": ["fp16", "fp32", ""]
         },
         "densification_num_past_frames": {
           "type": "integer",
