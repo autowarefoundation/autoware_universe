@@ -222,12 +222,16 @@ bool CenterPointTRT::preprocess(
     return false;
   }
 
+  const auto points_capacity_size = config_.cloud_capacity_ * config_.point_feature_size_;
+  clear_async(points_aux_d_.get(), points_capacity_size, stream_);
+  clear_async(points_d_.get(), points_capacity_size, stream_);
   clear_async(num_voxels_d_.get(), 1, stream_);
   clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
   clear_async(mask_d_.get(), mask_size_, stream_);
   clear_async(voxels_d_.get(), voxels_size_, stream_);
   clear_async(coordinates_d_.get(), coordinates_size_, stream_);
   clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
+
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get());
