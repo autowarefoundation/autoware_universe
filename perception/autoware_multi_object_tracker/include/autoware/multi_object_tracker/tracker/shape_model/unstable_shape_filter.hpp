@@ -59,4 +59,3 @@ public:
 }  // namespace autoware::multi_object_tracker
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
-

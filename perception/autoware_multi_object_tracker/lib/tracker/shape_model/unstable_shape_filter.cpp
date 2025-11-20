@@ -136,4 +136,3 @@ autoware_perception_msgs::msg::Shape UnstableShapeFilter::getShape() const
 }
 
 }  // namespace autoware::multi_object_tracker
-
