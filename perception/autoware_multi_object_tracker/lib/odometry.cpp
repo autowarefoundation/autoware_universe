@@ -147,26 +147,26 @@ std::optional<types::DynamicObjectList> Odometry::transformObjects(
   // transform to world coordinate
   if (input_objects.header.frame_id != world_frame_id_) {
     output_objects.header.frame_id = world_frame_id_;
-    tf2::Transform tf_target2objects_world;
-    tf2::Transform tf_target2objects;
-    tf2::Transform tf_objects_world2objects;
+    tf2::Transform tf_input2world;
+    tf2::Transform tf_object2world;
+    tf2::Transform tf_object2input;
     {
-      const auto ros_target2objects_world =
+      const auto ros_input2world =
         getTransform(input_objects.header.frame_id, input_objects.header.stamp);
-      if (!ros_target2objects_world) {
+      if (!ros_input2world) {
         return std::nullopt;
       }
-      tf2::fromMsg(*ros_target2objects_world, tf_target2objects_world);
+      tf2::fromMsg(*ros_input2world, tf_input2world);
     }
     for (auto & object : output_objects.objects) {
       auto & pose = object.pose;
       auto & pose_cov = object.pose_covariance;
-      tf2::fromMsg(pose, tf_objects_world2objects);
-      tf_target2objects = tf_target2objects_world * tf_objects_world2objects;
+      tf2::fromMsg(pose, tf_object2input);
+      tf_object2world = tf_input2world * tf_object2input;
       // transform pose, frame difference and object pose
-      tf2::toMsg(tf_target2objects, pose);
+      tf2::toMsg(tf_object2world, pose);
       // transform covariance, frame difference and object pose
-      pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects);
+      pose_cov = tf2::transformCovariance(pose_cov, tf_object2world);
     }
   }
   // Add the odometry uncertainty to the object uncertainty
