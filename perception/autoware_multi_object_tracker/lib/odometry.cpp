@@ -165,8 +165,8 @@ std::optional<types::DynamicObjectList> Odometry::transformObjects(
       tf_target2objects = tf_target2objects_world * tf_objects_world2objects;
       // transform pose, frame difference and object pose
       tf2::toMsg(tf_target2objects, pose);
-      // transform covariance, only the frame difference
-      pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects_world);
+      // transform covariance, frame difference and object pose
+      pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects);
     }
   }
   // Add the odometry uncertainty to the object uncertainty
