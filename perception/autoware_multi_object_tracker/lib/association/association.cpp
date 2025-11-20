@@ -307,15 +307,12 @@ double DataAssociation::calculateScore(
   if (iou_score < min_iou) return INVALID_SCORE;
 
   // check if shape changes too much for vehicle labels
-  constexpr double CheckGiouThreshold = 0.7;
-  constexpr double AreaRatioThreshold = 1.3;
-
-  if (iou_score < CheckGiouThreshold && is_vehicle_tracker) {
+  if (iou_score < CHECK_GIOU_THRESHOLD && is_vehicle_tracker) {
     // BEV‑area ratio
     const double area_trk = tracked_object.area;
     const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
 
-    if (area_ratio > AreaRatioThreshold) {
+    if (area_ratio > AREA_RATIO_THRESHOLD) {
       has_significant_shape_change = true;
     }
   }

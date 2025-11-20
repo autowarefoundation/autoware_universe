@@ -265,20 +265,18 @@ bool Tracker::createPseudoMeasurement(
     double yaw_pred = tf2::getYaw(pred.pose.orientation);
     double yaw_meas = tf2::getYaw(meas.pose.orientation);
 
-    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°] to prevent sudden rotations
+    double yaw_diff = yaw_meas - yaw_pred;
+    // Normalize yaw_diff to [-π, π] using fmod
+    yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
+    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°]
     if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
-      double yaw_diff = yaw_meas - yaw_pred;
-      // Normalize yaw_diff to [-π, π] using fmod
-      yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
       if (yaw_diff > M_PI_2) {
         yaw_diff -= M_PI;
       } else if (yaw_diff < -M_PI_2) {
         yaw_diff += M_PI;
       }
-      yaw_meas = yaw_pred + yaw_diff;
     }
-
-    double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    double yaw_fused = yaw_pred + yaw_diff * w_pose;
     tf2::Quaternion q;
     q.setRPY(0, 0, yaw_fused);
     pred.pose.orientation = tf2::toMsg(q);

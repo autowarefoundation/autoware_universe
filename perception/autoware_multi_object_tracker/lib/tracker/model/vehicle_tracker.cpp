@@ -368,9 +368,8 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   const double predicted_length = prediction.shape.dimensions.x;
   const double min_alignment_distance = std::min(
     alignment_distances.front_alignment_distance, alignment_distances.rear_alignment_distance);
-  constexpr double alignment_ratio_threshold = 0.09;  // 9% of length tolerance
   const bool is_edge_aligned =
-    (min_alignment_distance / predicted_length) < alignment_ratio_threshold;
+    (min_alignment_distance / predicted_length) < ALIGNMENT_RATIO_THRESHOLD;
 
   // 4. If no edge is aligned, use weak update strategy
   if (!is_edge_aligned) {

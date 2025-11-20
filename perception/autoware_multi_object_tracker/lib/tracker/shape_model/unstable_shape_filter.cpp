@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/util/unstable_shape_filter.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -61,7 +61,7 @@ void UnstableShapeFilter::clear()
 
 void UnstableShapeFilter::processNoisyMeasurement(const types::DynamicObject & measurement)
 {
-  // Apply EMA smoothing for BOUNDING_BOX
+  // Apply exponential moving average (EMA) smoothing for BOUNDING_BOX
   if (measurement.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     stable_ = false;
     latest_shape_ = measurement.shape;
@@ -72,7 +72,7 @@ void UnstableShapeFilter::processNoisyMeasurement(const types::DynamicObject & m
   const Eigen::Vector3d meas{
     measurement.shape.dimensions.x, measurement.shape.dimensions.y, measurement.shape.dimensions.z};
 
-  // Initialize EMA if not already done
+  // Initialize the filter if not already done
   if (!initialized_) {
     initialize(meas);
     return;
@@ -85,7 +85,7 @@ void UnstableShapeFilter::processNoisyMeasurement(const types::DynamicObject & m
   // Update shape dimensions using dual-rate EMA
   Eigen::Vector3d rel = (meas - value_).cwiseAbs().cwiseQuotient(value_.cwiseMax(1e-3));
   if (rel.maxCoeff() < shape_variation_threshold_) {
-    // Noisy measurement is close to current EMA - shape is converging
+    // Noisy measurement is close to current value_ - shape is converging
     value_ = alpha_strong_ * meas + (1.0 - alpha_strong_) * value_;
     ++stable_streak_;
 
@@ -97,7 +97,7 @@ void UnstableShapeFilter::processNoisyMeasurement(const types::DynamicObject & m
       stable_ = true;
     }
   } else {
-    // Noisy measurement differs from EMA - shape still changing
+    // Noisy measurement differs from value_ - shape still changing
     stable_streak_ = 0;
     stable_ = false;
     // Use weaker update when shape is still varying
@@ -112,7 +112,7 @@ void UnstableShapeFilter::processNormalMeasurement(const types::DynamicObject & 
   // Normal measurement interrupts the noisy sequence
   ++normal_frame_interruptions_;
 
-  // Reset the EMA if it was likely tracking a temporary noisy shape
+  // Reset the filter if it was likely tracking a temporary noisy shape
   if (normal_frame_interruptions_ >= 2) {
     consecutive_noisy_frames_ = 0;
     stable_ = false;
@@ -124,11 +124,10 @@ autoware_perception_msgs::msg::Shape UnstableShapeFilter::getShape() const
   // if not stable, return the latest shape as-is (no smoothing)
   if (!stable_) return latest_shape_;
 
-  // For BOUNDING_BOX type, return smoothed dimensions
+  // For BOUNDING_BOX type, return the smoothed shape - value_
   autoware_perception_msgs::msg::Shape shape;
   shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
 
-  // Set dimensions from smoothed EMA values
   shape.dimensions.x = value_(0);  // length
   shape.dimensions.y = value_(1);  // width
   shape.dimensions.z = value_(2);  // height
@@ -137,3 +136,4 @@ autoware_perception_msgs::msg::Shape UnstableShapeFilter::getShape() const
 }
 
 }  // namespace autoware::multi_object_tracker
+
