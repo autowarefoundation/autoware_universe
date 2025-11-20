@@ -54,9 +54,10 @@ void InputStream::onMessage(
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
   const rclcpp::Time timestamp = objects.header.stamp;
 
+  // convert to dynamic object list, frame is the given frame
   types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, channel_.index);
 
-  // Model the object uncertainty only if it is not available
+  // Model the object uncertainty only if it is not available, frame is the given frame
   types::DynamicObjectList objects_with_uncertainty =
     uncertainty::modelUncertainty(dynamic_objects);
 

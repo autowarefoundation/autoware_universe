@@ -456,7 +456,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double & vel_long = X_t(IDX::U);
   const double & vel_lat = X_t(IDX::V);
 
-  const double yaw = std::atan2(y2 - y1, x2 - x1);
   const double wheel_base = std::hypot(x2 - x1, y2 - y1);
   const double sin_yaw = (y2 - y1) / wheel_base;
   const double cos_yaw = (x2 - x1) / wheel_base;
@@ -533,14 +532,13 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   StateMat Q;
   Q.setZero();
-  const double sin_2yaw = std::sin(2.0 * yaw);
   Q(IDX::X1, IDX::X1) = (q_cov_long * cos_yaw * cos_yaw + q_cov_lat * sin_yaw * sin_yaw);
-  Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_long - q_cov_lat) * sin_2yaw);
+  Q(IDX::X1, IDX::Y1) = (q_cov_long - q_cov_lat) * sin_yaw * cos_yaw;
   Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
   Q(IDX::Y1, IDX::Y1) = (q_cov_long * sin_yaw * sin_yaw + q_cov_lat * cos_yaw * cos_yaw);
 
   Q(IDX::X2, IDX::X2) = (q_cov_long2 * cos_yaw * cos_yaw + q_cov_lat2 * sin_yaw * sin_yaw);
-  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_long2 - q_cov_lat2) * sin_2yaw);
+  Q(IDX::X2, IDX::Y2) = (q_cov_long2 - q_cov_lat2) * sin_yaw * cos_yaw;
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
   Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
 
