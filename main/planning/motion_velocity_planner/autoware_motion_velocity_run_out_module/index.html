@@ -23072,7 +23072,10 @@ and first check if it satisfies the following conditions to stop:</p>
 <h3 id="6-calculate-the-stop-or-slowdowns">6. Calculate the stop or slowdowns<a class="headerlink" href="#6-calculate-the-stop-or-slowdowns" title="Permanent link">#</a></h3>
 <p>Finally, for each object, we calculate how the velocity profile will be modified based on the decision made:</p>
 <ul>
-<li><code>stop</code>: insert a <code>0</code> velocity ahead of the predicted collision point by the distance set in the <code>stop.distance_buffer</code> parameter.</li>
+<li><code>stop</code>: insert a <code>0</code> velocity ahead of the predicted collision point by the distance set in the <code>stop.distance_buffer</code> parameter.<ul>
+<li>to prevent the stop pose from jumping, the previous stop pose is reused if its arc length position is before the newly calculated stop pose and the arc length difference between them is smaller than the <code>stop.reuse_margin</code> parameter.</li>
+</ul>
+</li>
 <li><code>slowdown</code>: insert a <span class="arithmatex">\(V_{slow}\)</span> velocity between the collision point and the point ahead of collision point by the distance set in the <code>slowdown.distance_buffer</code> parameter.<ul>
 <li><span class="arithmatex">\(V_{slow}\)</span> is calculated as the maximum between the safe velocity and the comfortable velocity.<ul>
 <li>safe velocity: velocity required to be able to stop over the <code>distance_buffer</code> assuming a deceleration as set by the
