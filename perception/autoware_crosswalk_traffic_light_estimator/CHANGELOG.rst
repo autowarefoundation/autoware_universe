@@ -2,6 +2,24 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_crosswalk_traffic_light_estimator): remove old traffic light groups (`#11536 <https://github.com/autowarefoundation/autoware_universe/issues/11536>`_)
+  * remove old traffic light groups
+  * refactor set CrosswalkTrafficSignals
+  * style(pre-commit): autofix
+  * add const &
+  * chore
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(crosswalk_traffic_light_estimator): estimation rules from lanelet map (`#11397 <https://github.com/autowarefoundation/autoware_universe/issues/11397>`_)
+* Contributors: Masato Saeki, Maxime CLEMENT, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2024 Tier IV, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -10,7 +12,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.sr/bin/env python
+# limitations under the License.
 
 import random
 import signal
@@ -172,23 +174,73 @@ class InitializeInterface(object):
         self.bridge_loop._stop_loop()
 
     def _cleanup(self):
-        self.sensor_wrapper.cleanup()
-        CarlaDataProvider.cleanup()
-        if self.ego_actor:
-            self.ego_actor.destroy()
-            self.ego_actor = None
+        """Clean up all CARLA resources in reverse initialization order.
 
-        if self.interface:
+        Ensures cleanup happens even if individual steps fail.
+        """
+        self._cleanup_sensors()
+        self._cleanup_ros_interface()
+        self._cleanup_ego_actor()
+        self._cleanup_carla_provider()
+
+    def _cleanup_sensors(self):
+        """Clean up sensor wrapper, continuing on error."""
+        if not self.sensor_wrapper:
+            return
+        try:
+            self.sensor_wrapper.cleanup()
+        except Exception as e:
+            print(f"Warning: Sensor cleanup failed: {e}")
+
+    def _cleanup_ros_interface(self):
+        """Clean up ROS interface, continuing on error."""
+        if not self.interface:
+            return
+        try:
             self.interface.shutdown()
             self.interface = None
+        except Exception as e:
+            print(f"Warning: ROS interface shutdown failed: {e}")
+
+    def _cleanup_ego_actor(self):
+        """Destroy ego vehicle, continuing on error."""
+        if not self.ego_actor:
+            return
+        try:
+            self.ego_actor.destroy()
+            self.ego_actor = None
+        except Exception as e:
+            print(f"Warning: Ego actor destruction failed: {e}")
+
+    def _cleanup_carla_provider(self):
+        """Clean up CARLA data provider, continuing on error."""
+        try:
+            CarlaDataProvider.cleanup()
+        except Exception as e:
+            print(f"Warning: CARLA data provider cleanup failed: {e}")
 
 
 def main():
+    """Run the CARLA-Autoware bridge with proper cleanup on all exit paths."""
     carla_bridge = InitializeInterface()
     carla_bridge.load_world()
+
+    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, carla_bridge._stop_loop)
-    carla_bridge.run_bridge()
-    carla_bridge._cleanup()
+    signal.signal(signal.SIGTERM, carla_bridge._stop_loop)
+
+    try:
+        carla_bridge.run_bridge()
+    except KeyboardInterrupt:
+        print("\nReceived keyboard interrupt, shutting down...")
+    except Exception as e:
+        print(f"\nError during bridge operation: {e}")
+        raise
+    finally:
+        # Ensure cleanup always happens, even on exception or signal
+        print("Cleaning up CARLA resources...")
+        carla_bridge._cleanup()
+        print("Cleanup complete.")
 
 
 if __name__ == "__main__":

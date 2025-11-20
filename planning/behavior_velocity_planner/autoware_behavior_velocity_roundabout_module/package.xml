@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_roundabout_module</name>
-  <version>0.46.0</version>
+  <version>0.48.0</version>
   <description>The autoware_behavior_velocity_roundabout_module package</description>
 
   <maintainer email="yukinari.hisaki.2@tier4.jp">Hisaki Yukinari</maintainer>
@@ -25,7 +25,7 @@
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_interpolation</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>

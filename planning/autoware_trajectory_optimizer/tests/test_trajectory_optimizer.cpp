@@ -108,9 +108,11 @@ TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
 TEST_F(TrajectoryOptimizerUtilsTest, ApplySpline)
 {
   TrajectoryPoints points = create_sample_trajectory();
-  TrajectoryOptimizerParams params;
-  params.spline_interpolation_resolution_m = 0.1;
-  autoware::trajectory_optimizer::utils::apply_spline(points, params);
+  const double interpolation_resolution_m = 0.1;
+  const double max_distance_discrepancy_m = 5.0;
+  const bool preserve_original_orientation = true;
+  autoware::trajectory_optimizer::utils::apply_spline(
+    points, interpolation_resolution_m, max_distance_discrepancy_m, preserve_original_orientation);
   ASSERT_GE(points.size(), 2);
 }
 
@@ -120,9 +122,12 @@ TEST_F(TrajectoryOptimizerUtilsTest, AddEgoStateToTrajectory)
   Odometry current_odometry;
   current_odometry.pose.pose.position.x = 1.0;
   current_odometry.pose.pose.position.y = 1.0;
-  TrajectoryOptimizerParams params;
+  const double nearest_dist_threshold_m = 1.5;
+  const double nearest_yaw_threshold_rad = 1.0;
+  const double backward_trajectory_extension_m = 5.0;
   autoware::trajectory_optimizer::utils::add_ego_state_to_trajectory(
-    points, current_odometry, params);
+    points, current_odometry, nearest_dist_threshold_m, nearest_yaw_threshold_rad,
+    backward_trajectory_extension_m);
   ASSERT_FALSE(points.empty());
 }
 
@@ -131,12 +136,10 @@ TEST_F(TrajectoryOptimizerUtilsTest, ExpandTrajectoryWithEgoHistory)
   TrajectoryPoints points = create_sample_trajectory();
   TrajectoryPoints ego_history_points = create_sample_trajectory(1.0, -10.0);
   Odometry current_odometry;
-  TrajectoryOptimizerParams params;
-  params.backward_trajectory_extension_m = 15.0;
   current_odometry.pose.pose.position.x = points.front().pose.position.x;
   current_odometry.pose.pose.position.y = points.front().pose.position.y;
   autoware::trajectory_optimizer::utils::expand_trajectory_with_ego_history(
-    points, ego_history_points, current_odometry, params);
+    points, ego_history_points, current_odometry);
   ASSERT_GE(points.size(), 20);
 }
 

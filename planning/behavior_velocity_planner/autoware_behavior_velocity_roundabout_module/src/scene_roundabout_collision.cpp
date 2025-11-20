@@ -17,6 +17,8 @@
 #include <autoware/behavior_velocity_intersection_module/util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -30,6 +32,7 @@
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <fmt/format.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
@@ -251,7 +254,7 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
       const double ego_end_arc_length = std::min(
         closest_arc_coords.length + ego_end_itr->second +
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
-        lanelet::utils::getLaneletLength2d(concat_lanelets));
+        lanelet::geometry::length2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
         {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {
@@ -606,7 +609,8 @@ std::optional<size_t> RoundaboutModule::checkAngleForTargetLanelets(
     if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
       continue;
     }
-    const double ll_angle = lanelet::utils::getLaneletAngle(ll, pose.position);
+    const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      ll, autoware::experimental::lanelet2_utils::from_ros(pose.position).basicPoint());
     const double pose_angle = tf2::getYaw(pose.orientation);
     const double angle_diff = autoware_utils::normalize_radian(ll_angle - pose_angle, -M_PI);
     if (std::fabs(angle_diff) < detection_area_angle_thr) {

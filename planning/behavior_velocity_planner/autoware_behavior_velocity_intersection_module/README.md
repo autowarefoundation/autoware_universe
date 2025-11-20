@@ -226,7 +226,7 @@ As illustrated in below figure if upstream module inserted a stopline, ego posit
 
 ## Occlusion detection
 
-If the flag `occlusion.enable` is true this module checks if there is sufficient field of view (FOV) on the attention area up to `occlusion.occlusion_attention_area_length`. If FOV is not clear enough ego first makes a brief stop at default_stopline for `occlusion.temporal_stop_time_before_peeking`, and then slowly creeps toward occlusion_peeking_stopline. If `occlusion.creep_during_peeking.enable` is true `occlusion.creep_during_peeking.creep_velocity` is inserted up to occlusion_peeking_stopline. Otherwise only stop line is inserted.
+If the flag `occlusion.enable` is true this module checks if there is sufficient field of view (FOV) on the attention area up to `occlusion.occlusion_attention_area_length`. If FOV is not clear enough ego first makes a brief stop at default_stopline for `occlusion.temporal_stop_time_before_peeking`, and inserts stopline at occlusion_peeking_stopline, thus slowly creeping toward there.
 
 During the creeping if collision is detected this module inserts a stop line in front of ego immediately, and if the FOV gets sufficiently clear the intersection_occlusion wall will disappear. If occlusion is cleared and no collision is detected ego will pass the intersection.
 

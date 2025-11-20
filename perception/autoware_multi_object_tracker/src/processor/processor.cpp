@@ -41,7 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -544,7 +544,75 @@ void TrackerProcessor::getTentativeObjects(
   }
 }
 
-void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+void TrackerProcessor::getMergedObjects(
+  const rclcpp::Time & time, const geometry_msgs::msg::Transform & tf_base_to_world,
+  autoware_perception_msgs::msg::DetectedObjects & merged_objects) const
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  merged_objects.header.stamp = time;
+  merged_objects.objects.clear();
+  merged_objects.objects.reserve(list_tracker_.size());
+  types::DynamicObject tracked_object;
+  for (const auto & tracker : list_tracker_) {
+    constexpr bool to_publish = false;
+    if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
+      merged_objects.objects.push_back(types::toDetectedObjectMsg(tracked_object));
+    }
+  }
+
+  // transform from world frame to ego frame
+  // Extract transform components
+  const double tf_x = tf_base_to_world.translation.x;
+  const double tf_y = tf_base_to_world.translation.y;
+  const double tf_z = tf_base_to_world.translation.z;
+
+  // Extract quaternion components for rotation
+  const auto & tf_q = tf_base_to_world.rotation;
+
+  // Precompute quaternion conjugate (inverse rotation) for efficiency
+  // q_inv = [w, -x, -y, -z] (normalized quaternion)
+  const double tf_qw = tf_q.w;
+  const double tf_qx = -tf_q.x;
+  const double tf_qy = -tf_q.y;
+  const double tf_qz = -tf_q.z;
+
+  for (auto & obj : merged_objects.objects) {
+    auto & pose = obj.kinematics.pose_with_covariance.pose;
+
+    // Transform position: P_base = R_inv * (P_world - T_world)
+    const double dx = pose.position.x - tf_x;
+    const double dy = pose.position.y - tf_y;
+    const double dz = pose.position.z - tf_z;
+
+    // Apply quaternion rotation directly using rotation matrix formula
+    // For quaternion q = [w, x, y, z], the rotation matrix is:
+    // R = I + 2*sin(theta)*K + 2*sin^2(theta/2)*K^2
+    // where K is the skew-symmetric matrix of the unit vector
+
+    // More efficient: direct quaternion rotation formula
+    // v' = v + 2 * q_xyz × (q_xyz × v + q_w * v)
+    const double cross_x = tf_qy * dz - tf_qz * dy + tf_qw * dx;
+    const double cross_y = tf_qz * dx - tf_qx * dz + tf_qw * dy;
+    const double cross_z = tf_qx * dy - tf_qy * dx + tf_qw * dz;
+
+    pose.position.x = dx + 2.0 * (tf_qy * cross_z - tf_qz * cross_y);
+    pose.position.y = dy + 2.0 * (tf_qz * cross_x - tf_qx * cross_z);
+    pose.position.z = dz + 2.0 * (tf_qx * cross_y - tf_qy * cross_x);
+
+    // Transform orientation: q_base = q_inv * q_world (this part was correct)
+    const auto & obj_q = pose.orientation;
+
+    pose.orientation.w = tf_qw * obj_q.w - tf_qx * obj_q.x - tf_qy * obj_q.y - tf_qz * obj_q.z;
+    pose.orientation.x = tf_qw * obj_q.x + tf_qx * obj_q.w + tf_qy * obj_q.z - tf_qz * obj_q.y;
+    pose.orientation.y = tf_qw * obj_q.y - tf_qx * obj_q.z + tf_qy * obj_q.w + tf_qz * obj_q.x;
+    pose.orientation.z = tf_qw * obj_q.z + tf_qx * obj_q.y - tf_qy * obj_q.x + tf_qz * obj_q.w;
+  }
+}
+
+void TrackerProcessor::setTimeKeeper(
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
   association_->setTimeKeeper(time_keeper_);

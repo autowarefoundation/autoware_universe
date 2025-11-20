@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<library path="autoware_trajectory_optimizer_plugins">
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Removes invalid trajectory points (NaN, Inf, close proximity)
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Kinematic Feasibility Enforcer plugin. Enforces Ackermann steering geometry and yaw rate constraints on trajectory points using forward-propagating adjustment from ego pose. Ensures trajectories are kinematically feasible before QP smoothing.
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      QP-based trajectory smoother with fidelity and smoothness constraints
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Elastic Band trajectory smoother for path optimization
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Akima spline-based trajectory interpolation and smoothing
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Velocity profile optimization with lateral acceleration limits and jerk filtering
+    </description>
+  </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryExtender"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Extends trajectory backward with ego vehicle history
+    </description>
+  </class>
+</library>

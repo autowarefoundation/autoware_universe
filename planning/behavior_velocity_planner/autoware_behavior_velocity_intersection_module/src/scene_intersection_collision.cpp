@@ -17,6 +17,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -30,6 +32,7 @@
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <fmt/format.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
@@ -334,7 +337,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       const double ego_end_arc_length = std::min(
         closest_arc_coords.length + ego_end_itr->second +
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
-        lanelet::utils::getLaneletLength2d(concat_lanelets));
+        lanelet::geometry::length2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
         {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {
@@ -687,7 +690,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 {
   const double detection_area_angle_thr = planner_param_.common.attention_area_angle_threshold;
   const bool consider_wrong_direction_vehicle =
-    planner_param_.common.attention_area_angle_threshold;
+    planner_param_.collision_detection.consider_wrong_direction_vehicle;
   const double dist_margin = planner_param_.common.attention_area_margin;
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
@@ -695,7 +698,8 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
     if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
       continue;
     }
-    const double ll_angle = lanelet::utils::getLaneletAngle(ll, pose.position);
+    const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      ll, autoware::experimental::lanelet2_utils::from_ros(pose.position).basicPoint());
     const double pose_angle = tf2::getYaw(pose.orientation);
     const double angle_diff = autoware_utils::normalize_radian(ll_angle - pose_angle, -M_PI);
     if (consider_wrong_direction_vehicle) {
@@ -760,7 +764,7 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
   // occlusion_stopline_idx varies depending on the peeking offset parameter
   // ==========================================================================================
   const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline.value();
+  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
   const auto closest_idx = intersection_stoplines.closest_idx;
   const auto last_intersection_stopline_candidate_idx =
     std::max(occlusion_stopline_idx, first_attention_stopline_idx);

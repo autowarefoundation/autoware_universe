@@ -21,6 +21,13 @@
 
   <group>
     <push-ros-namespace namespace="planning"/>
+    <!-- manual lane change handler module -->
+    <group>
+      <push-ros-namespace namespace="mission_planning"/>
+      <include file="$(find-pkg-share autoware_manual_lane_change_handler)/launch/manual_lane_change_handler.launch.xml">
+        <arg name="mission_planner_param_path" value="$(var mission_planner_param_path)"/>
+      </include>
+    </group>
     <!-- mission planning module -->
     <group>
       <push-ros-namespace namespace="mission_planning"/>
@@ -58,9 +65,7 @@
 
     <!-- planning evaluator -->
     <group>
-      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml">
-        <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
-      </include>
+      <include file="$(find-pkg-share autoware_planning_evaluator)/launch/planning_evaluator.launch.xml"/>
     </group>
 
     <!-- mission remaining distance and time calculator -->

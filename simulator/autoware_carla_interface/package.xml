@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_carla_interface</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The carla autoware bridge package</description>
   <maintainer email="mradityagio@gmail.com">Muhammad Raditya GIOVANNI</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
@@ -10,6 +10,7 @@
   <exec_depend>std_msgs</exec_depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_vehicle_msgs</depend>
+  <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>

@@ -47,21 +47,11 @@
           "default": true,
           "description": "Predict trajectories for neighbor agents"
         },
-        "update_traffic_light_group_info": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable updating of traffic light group info"
-        },
         "traffic_light_group_msg_timeout_seconds": {
           "type": "number",
           "default": 0.2,
           "exclusiveMinimum": 0,
           "description": "Timeout for traffic light group messages (seconds)"
-        },
-        "use_route_handler": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use route handler for selecting route segment indices"
         },
         "build_only": {
           "type": "boolean",
@@ -85,9 +75,14 @@
         },
         "velocity_smoothing_window": {
           "type": "integer",
-          "default": 1,
+          "default": 8,
           "minimum": 1,
           "description": "Window size for velocity smoothing. Set to 1 to disable smoothing."
+        },
+        "stopping_threshold": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Threshold for keeping the stopping state [m/s]"
         },
         "debug_params": {
           "type": "object",
@@ -99,7 +94,7 @@
             },
             "publish_debug_route": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "description": "Publish debug route markers"
             }
           },
@@ -111,9 +106,11 @@
         "args_path",
         "planning_frequency_hz",
         "predict_neighbor_trajectory",
-        "update_traffic_light_group_info",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
+        "temperature",
+        "velocity_smoothing_window",
+        "stopping_threshold",
         "debug_params"
       ]
     }

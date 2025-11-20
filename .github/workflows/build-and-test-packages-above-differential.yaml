@@ -117,7 +117,7 @@ jobs:
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
           packages-above-repos: packages_above.repos
-          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
+          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}-above
           build-pre-command: ${{ inputs.build-pre-command }}
 
       - name: Show ccache stats after build
