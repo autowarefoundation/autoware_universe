@@ -58,8 +58,8 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/unknown_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
-  lib/tracker/util/adaptive_threshold_cache.cpp
-  lib/tracker/util/unstable_shape_filter.cpp
+  lib/association/util/adaptive_threshold_cache.cpp
+  lib/tracker/shape_model/unstable_shape_filter.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}

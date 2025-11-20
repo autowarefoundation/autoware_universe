@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/association/util/adaptive_threshold_cache.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -67,3 +67,4 @@ double AdaptiveThresholdCache::getBEVAreaInfluence(double bev_area) const
 }
 
 }  // namespace autoware::multi_object_tracker
+

@@ -22,8 +22,8 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
+#include "autoware/multi_object_tracker/association/util/index_pair_checker.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
-#include "autoware/multi_object_tracker/tracker/util/index_pair_checker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -112,6 +112,8 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
+  const double CHECK_GIOU_THRESHOLD = 0.7;
+  const double AREA_RATIO_THRESHOLD = 1.3;
   bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
   {
     return significant_shape_change_checker_.hasPair(tracker_idx, measurement_idx);

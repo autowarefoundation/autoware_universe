@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -58,4 +58,5 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__UNSTABLE_SHAPE_FILTER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
+
