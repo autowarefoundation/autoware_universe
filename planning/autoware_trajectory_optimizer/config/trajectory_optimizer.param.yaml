@@ -12,7 +12,7 @@
       - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
 
     # Plugin activation flags - control runtime enable/disable
-    use_akima_spline_interpolation: false
+    use_akima_spline_interpolation: true
     use_eb_smoother: false
     use_qp_smoother: true
     fix_invalid_points: true
