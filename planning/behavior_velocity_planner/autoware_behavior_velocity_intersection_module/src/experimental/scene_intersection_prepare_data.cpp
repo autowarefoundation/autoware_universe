@@ -268,7 +268,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     planner_data.current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
     planner_param_.common.max_jerk, 0.0);
   int first_pass_judge_ip_int =
-    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds));
+    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds)) -
+    static_cast<int>(std::ceil(planner_param_.common.pass_judge_line_margin / ds));
   const auto first_pass_judge_line_ip = static_cast<size_t>(
     std::clamp<int>(first_pass_judge_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
 

@@ -49,6 +49,7 @@ public:
       double attention_area_angle_threshold;
       bool use_intersection_area;
       double default_stopline_margin;
+      double pass_judge_line_margin;
       double stopline_overshoot_margin;
       double path_interpolation_ds;
       double max_accel;
