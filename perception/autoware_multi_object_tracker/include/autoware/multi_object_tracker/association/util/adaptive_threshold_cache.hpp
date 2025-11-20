@@ -49,4 +49,3 @@ private:
 }  // namespace autoware::multi_object_tracker
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__UTIL__ADAPTIVE_THRESHOLD_CACHE_HPP_
-
