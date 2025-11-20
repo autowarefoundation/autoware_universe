@@ -25,7 +25,6 @@ namespace autoware::control_validator
 {
 
 using autoware::motion_utils::convertToTrajectory;
-using autoware::motion_utils::convertToTrajectoryPointArray;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Pose;
@@ -53,14 +52,9 @@ void insert_point_in_predicted_trajectory(
   modified_trajectory.insert(modified_trajectory.begin(), point_to_interpolate);
 }
 
-TrajectoryPoints reverse_trajectory_points(const TrajectoryPoints & trajectory_points)
+inline TrajectoryPoints reverse_trajectory_points(const TrajectoryPoints & trajectory_points)
 {
-  TrajectoryPoints reversed_trajectory_points;
-  reversed_trajectory_points.reserve(trajectory_points.size());
-  std::reverse_copy(
-    trajectory_points.begin(), trajectory_points.end(),
-    std::back_inserter(reversed_trajectory_points));
-  return reversed_trajectory_points;
+  return TrajectoryPoints(trajectory_points.crbegin(), trajectory_points.crend());
 }
 
 bool remove_front_trajectory_point(
@@ -83,31 +77,35 @@ bool remove_front_trajectory_point(
   return predicted_trajectory_point_removed;
 }
 
-Trajectory align_trajectory_with_reference_trajectory(
-  const Trajectory & trajectory, const Trajectory & predicted_trajectory)
+TrajectoryPoints align_trajectory_with_reference_trajectory(
+  const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_trajectory_points)
 {
   if (
-    trajectory.points.empty() || predicted_trajectory.points.empty() ||
-    trajectory.points.size() < 2) {
-    return Trajectory();
+    trajectory_points.empty() || trajectory_points.size() < 2 ||
+    predicted_trajectory_points.empty()) {
+    return TrajectoryPoints();
   }
 
-  constexpr size_t MAX_SAFE_SIZE = 5000;
+  constexpr size_t MAX_TRAJECTORY_SIZE = 5000;
 
-  if (predicted_trajectory.points.size() > MAX_SAFE_SIZE) {
-    Trajectory safe_predicted_trajectory;
-    safe_predicted_trajectory.header = predicted_trajectory.header;
-    safe_predicted_trajectory.points.reserve(MAX_SAFE_SIZE);
-
-    for (size_t i = 0; i < MAX_SAFE_SIZE && i < predicted_trajectory.points.size(); ++i) {
-      safe_predicted_trajectory.points.push_back(predicted_trajectory.points[i]);
-    }
-
-    return align_trajectory_with_reference_trajectory(trajectory, safe_predicted_trajectory);
+  // To reduce memory consumption, limit the maximum size of both trajectories to calculate.
+  // In C++20, copying can be prevented by using e.g. `std::span`.
+  if (trajectory_points.size() > MAX_TRAJECTORY_SIZE) {
+    TrajectoryPoints safe_trajectory_points(
+      trajectory_points.cbegin(), trajectory_points.cbegin() + MAX_TRAJECTORY_SIZE);
+    return align_trajectory_with_reference_trajectory(
+      safe_trajectory_points, predicted_trajectory_points);
+  }
+  if (predicted_trajectory_points.size() > MAX_TRAJECTORY_SIZE) {
+    TrajectoryPoints safe_predicted_trajectory_points(
+      predicted_trajectory_points.cbegin(),
+      predicted_trajectory_points.cbegin() + MAX_TRAJECTORY_SIZE);
+    return align_trajectory_with_reference_trajectory(
+      trajectory_points, safe_predicted_trajectory_points);
   }
 
   const auto last_seg_length = autoware::motion_utils::calcSignedArcLength(
-    trajectory.points, trajectory.points.size() - 2, trajectory.points.size() - 1);
+    trajectory_points, trajectory_points.size() - 2, trajectory_points.size() - 1);
 
   // If no overlapping between trajectory and predicted_trajectory, return empty trajectory
   // predicted_trajectory:   p1------------------pN
@@ -117,21 +115,19 @@ Trajectory align_trajectory_with_reference_trajectory(
   // trajectory:             t1------------------tN
   const bool & is_p_n_before_t1 =
     autoware::motion_utils::calcLongitudinalOffsetToSegment(
-      trajectory.points, 0, predicted_trajectory.points.back().pose.position) < 0.0;
+      trajectory_points, 0, predicted_trajectory_points.back().pose.position) < 0.0;
   const bool & is_p1_behind_t_n = autoware::motion_utils::calcLongitudinalOffsetToSegment(
-                                    trajectory.points, trajectory.points.size() - 2,
-                                    predicted_trajectory.points.front().pose.position) -
+                                    trajectory_points, trajectory_points.size() - 2,
+                                    predicted_trajectory_points.front().pose.position) -
                                     last_seg_length >
                                   0.0;
   const bool is_no_overlapping = (is_p_n_before_t1 || is_p1_behind_t_n);
 
   if (is_no_overlapping) {
-    return Trajectory();
+    return TrajectoryPoints();
   }
 
-  auto modified_trajectory_points = convertToTrajectoryPointArray(predicted_trajectory);
-  auto predicted_trajectory_points = convertToTrajectoryPointArray(predicted_trajectory);
-  auto trajectory_points = convertToTrajectoryPointArray(trajectory);
+  TrajectoryPoints modified_trajectory_points = predicted_trajectory_points;  // copy construction
 
   // If first point of predicted_trajectory is in front of start of trajectory, erase points which
   // are in front of trajectory start point and insert pNew along the predicted_trajectory
@@ -166,7 +162,7 @@ Trajectory align_trajectory_with_reference_trajectory(
   if (
     reversed_trajectory_points.empty() || reversed_modified_trajectory_points.empty() ||
     reversed_predicted_trajectory_points.empty()) {
-    return Trajectory();
+    return TrajectoryPoints();
   }
 
   auto reversed_predicted_trajectory_point_removed = remove_front_trajectory_point(
@@ -179,16 +175,16 @@ Trajectory align_trajectory_with_reference_trajectory(
       reversed_predicted_trajectory_points);
   }
 
-  return convertToTrajectory(reverse_trajectory_points(reversed_modified_trajectory_points));
+  return reverse_trajectory_points(reversed_modified_trajectory_points);
 }
 
 double calc_max_lateral_distance(
   const Trajectory & reference_trajectory, const Trajectory & predicted_trajectory)
 {
-  const auto alined_predicted_trajectory =
-    align_trajectory_with_reference_trajectory(reference_trajectory, predicted_trajectory);
+  const auto aligned_predicted_trajectory_points = align_trajectory_with_reference_trajectory(
+    reference_trajectory.points, predicted_trajectory.points);
   double max_dist = 0;
-  for (const auto & point : alined_predicted_trajectory.points) {
+  for (const auto & point : aligned_predicted_trajectory_points) {
     const auto p0 = autoware_utils::get_point(point);
     // find nearest segment
     const size_t nearest_segment_idx =
