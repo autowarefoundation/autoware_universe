@@ -56,6 +56,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       get_or_declare_parameter<bool>(node, ns + ".common.use_intersection_area");
     ip.common.default_stopline_margin =
       get_or_declare_parameter<double>(node, ns + ".common.default_stopline_margin");
+    ip.common.pass_judge_line_margin =
+      get_or_declare_parameter<double>(node, ns + ".common.pass_judge_line_margin");
     ip.common.stopline_overshoot_margin =
       get_or_declare_parameter<double>(node, ns + ".common.stopline_overshoot_margin");
     ip.common.path_interpolation_ds =
