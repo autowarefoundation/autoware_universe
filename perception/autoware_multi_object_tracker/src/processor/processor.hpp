@@ -16,7 +16,7 @@
 #define PROCESSOR__PROCESSOR_HPP_
 
 #include "autoware/multi_object_tracker/association/association.hpp"
-#include "autoware/multi_object_tracker/association/util/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
