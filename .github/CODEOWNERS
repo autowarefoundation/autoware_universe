@@ -127,6 +127,7 @@ planning/autoware_external_velocity_limit_selector/** satoshi.ota@tier4.jp shump
 planning/autoware_freespace_planner/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_freespace_planning_algorithms/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_hazard_lights_selector/** makoto.kurihara@tier4.jp mamoru.sobue@tier4.jp
+planning/autoware_manual_lane_change_handler/** arjun.ram@tier4.jp
 planning/autoware_mission_planner_universe/** isamu.takagi@tier4.jp kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp ryohsuke.mitsudome@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_path_optimizer/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_path_smoother/** arjun.ram@tier4.jp maxime.clement@tier4.jp takayuki.murooka@tier4.jp
@@ -216,7 +217,7 @@ system/autoware_component_monitor/** baris@leodrive.ai memin@leodrive.ai yavuz@l
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_automatic_pose_initializer/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
-system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
+system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_diagnostic_graph_aggregator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_diagnostic_graph_utils/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_dummy_diag_publisher/** fumihito.ito@tier4.jp tetsuhiro.kawaguchi@tier4.jp
@@ -243,6 +244,7 @@ visualization/tier4_adapi_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.
 visualization/tier4_camera_view_rviz_plugin/** makoto.ybauta@tier4.jp uken.ryu@tier4.jp
 visualization/tier4_control_mode_rviz_plugin/** kyoichi.sugahara@tier4.jp naoto.hiramatsu@tier4.jp shohei.sakai@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/tier4_datetime_rviz_plugin/** isamu.takagi@tier4.jp
+visualization/tier4_manual_lane_change_rviz_plugin/** arjun.ram@tier4.jp
 visualization/tier4_perception_rviz_plugin/** lei.gu@tier4.jp yoshi.ri@tier4.jp
 visualization/tier4_planning_factor_rviz_plugin/** mamoru.sobue@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp
 visualization/tier4_state_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp junya.sasaki@tier4.jp khalil@leodrive.ai ryohsuke.mitsudome@tier4.jp
