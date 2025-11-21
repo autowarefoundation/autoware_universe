@@ -32,7 +32,7 @@ diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid
      enable_slope_compensation: true
 -    enable_keep_stopped_until_steer_convergence: true
 +    enable_keep_stopped_until_steer_convergence: false
- 
+
      # state transition
      drive_state_stop_dist: 0.5
 diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_launch/config/system/diagnostics/planning.yaml
@@ -40,7 +40,7 @@ diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_
 +++ b/autoware_launch/config/system/diagnostics/planning.yaml
 @@ -11,19 +11,7 @@ units:
            - { type: link, link: /autoware/planning/trajectory_validation }
- 
+
    - path: /autoware/planning/trajectory_validation
 -    type: and
 -    list:
@@ -56,7 +56,7 @@ diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_
 -      - { type: link, link: /autoware/planning/trajectory_validation/velocity_deviation }
 -      - { type: link, link: /autoware/planning/trajectory_validation/trajectory_shift }
 +    type: ok
- 
+
    - path: /autoware/planning/routing/state
      type: diag
 ```
@@ -70,7 +70,7 @@ diff --git a/launch/tier4_planning_launch/launch/planning.launch.xml b/launch/ti
 @@ -40,12 +40,34 @@
        </include>
      </group>
- 
+
 +    <!-- trajectory generator -->
 +    <group>
 +      <push-ros-namespace namespace="trajectory_generator"/>
