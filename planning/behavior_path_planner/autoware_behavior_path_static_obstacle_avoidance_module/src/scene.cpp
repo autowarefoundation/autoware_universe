@@ -1038,7 +1038,15 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   };
 
   auto shift_lines = path_shifter_.getShiftLines();
-  if (shift_lines.empty()) {
+
+  std::vector<ShiftLine> shift_lines_after_ego;
+  for (const auto & s : shift_lines) {
+    if (s.end_idx >= planner_data_->findEgoIndex(spline_shift_path.path.points)) {
+      shift_lines_after_ego.push_back(s);
+    }
+  }
+
+  if (shift_lines_after_ego.empty()) {
     return getPreviousModuleOutput().turn_signal_info;
   }
 
@@ -1047,10 +1055,10 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   }
 
   const auto target_shift_line = [&]() {
-    const auto & s1 = shift_lines.front();
+    const auto & s1 = shift_lines_after_ego.front();
 
-    for (size_t i = 1; i < shift_lines.size(); i++) {
-      const auto & s2 = shift_lines.at(i);
+    for (size_t i = 1; i < shift_lines_after_ego.size(); i++) {
+      const auto & s2 = shift_lines_after_ego.at(i);
 
       const auto s1_relative_length = s1.start_shift_length - s1.end_shift_length;
       const auto s2_relative_length = s2.start_shift_length - s2.end_shift_length;

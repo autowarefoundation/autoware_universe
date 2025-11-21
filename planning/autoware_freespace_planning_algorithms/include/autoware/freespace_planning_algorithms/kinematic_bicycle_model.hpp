@@ -17,8 +17,7 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <vector>
 

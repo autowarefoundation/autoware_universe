@@ -102,8 +102,10 @@ rclcpp::Logger get_logger();
  * @brief Removes invalid points from the input trajectory.
  *
  * @param input_trajectory The trajectory points to be cleaned.
+ * @param min_dist_to_remove_m Minimum distance to remove close proximity points [m].
  */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
+void remove_invalid_points(
+  std::vector<TrajectoryPoint> & input_trajectory, const double min_dist_to_remove_m = 1E-2);
 
 /**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
@@ -139,6 +141,15 @@ void clamp_velocities(
  */
 void set_max_velocity(
   std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
+
+/**
+ * @brief Compute time difference between consecutive trajectory points
+ *
+ * @param current Current trajectory point
+ * @param next Next trajectory point
+ * @return Time difference [s]
+ */
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next);
 
 /**
  * @brief Recalculates longitudinal acceleration from velocity differences.

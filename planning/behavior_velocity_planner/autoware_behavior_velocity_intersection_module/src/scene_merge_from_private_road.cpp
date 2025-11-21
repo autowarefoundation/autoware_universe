@@ -18,9 +18,9 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
@@ -187,7 +187,8 @@ lanelet::ConstLanelets MergeFromPrivateRoadModule::getAttentionLanelets() const
 
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto conflicting_lanelets =
-    lanelet::utils::getConflictingLanelets(routing_graph_ptr, assigned_lanelet);
+    autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
+      assigned_lanelet, routing_graph_ptr);
   lanelet::ConstLanelets sibling_lanelets;
   for (const auto & previous_lanelet : routing_graph_ptr->previous(assigned_lanelet)) {
     sibling_lanelets.push_back(previous_lanelet);

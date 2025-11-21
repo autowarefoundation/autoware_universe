@@ -2,6 +2,32 @@
 Changelog for package autoware_pose_instability_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* chore: relieve pose_estimator_lateral_tolerance to 0.5 (`#11461 <https://github.com/autowarefoundation/autoware_universe/issues/11461>`_)
+  * relieve pose_estimator_lateral_tolerance to 0.5
+  * fix style
+  ---------
+* chore: update maintainer (`#11373 <https://github.com/autowarefoundation/autoware_universe/issues/11373>`_)
+  * chore: update maintainer
+  remove Ryu Yamamoto
+  * chore: update maintainer
+  remove Kento Yabuuchi
+  * chore: update maintainer
+  remove Shintaro Sakoda
+  ---------
+* feat(pose_instability_detector): make pose_instability_detector filtered by dimensions (`#11298 <https://github.com/autowarefoundation/autoware_universe/issues/11298>`_)
+  * make pose_instability_detector filtered by dimensions
+  * fix for cppcheck
+  ---------
+* fix(autoware_pose_instability_detector): reduce the svg file size (`#11156 <https://github.com/autowarefoundation/autoware_universe/issues/11156>`_)
+* Contributors: Mete Fatih Cırıt, Motz, Ryohsuke Mitsudome, Taiki Yamada, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(pose instability detector): change diag level (`#11095 <https://github.com/autowarefoundation/autoware_universe/issues/11095>`_)

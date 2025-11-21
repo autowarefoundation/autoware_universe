@@ -56,8 +56,8 @@ struct COMMON_PUBLIC index
 
 /// Specialization for a tuple that starts with the HeadT type. End of recursion.
 template <class HeadT, class... Tail>
-struct COMMON_PUBLIC index<HeadT, std::tuple<HeadT, Tail...>>
-: std::integral_constant<std::int32_t, 0>
+struct COMMON_PUBLIC
+  index<HeadT, std::tuple<HeadT, Tail...>> : std::integral_constant<std::int32_t, 0>
 {
 };
 

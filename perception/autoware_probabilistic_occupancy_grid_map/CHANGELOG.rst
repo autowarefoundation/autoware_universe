@@ -2,6 +2,15 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_probabilistic_occupancy_grid_map): skip frame when TF is unavailable to avoid crash (`#11281 <https://github.com/autowarefoundation/autoware_universe/issues/11281>`_)
+* Contributors: Ryohsuke Mitsudome, multimeters
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

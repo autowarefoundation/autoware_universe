@@ -181,6 +181,11 @@
                 }
               },
               "required": ["time", "distance"]
+            },
+            "reuse_margin": {
+              "type": "number",
+              "description": "[m] the previous stop distance is reused if before the newly calculated one but not further than this margin",
+              "default": 5.0
             }
           },
           "required": [
@@ -188,7 +193,8 @@
             "off_time_buffer",
             "distance_buffer",
             "deceleration_limit",
-            "keep_condition"
+            "keep_condition",
+            "reuse_margin"
           ]
         },
         "ego": {

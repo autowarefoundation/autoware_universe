@@ -2,6 +2,27 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(obstacle_slow_down): fix left/right judgment, update of deceleration constraint calculation (`#11590 <https://github.com/autowarefoundation/autoware_universe/issues/11590>`_)
+* feat(obstacle_slow_down): update velocity calclation (`#11502 <https://github.com/autowarefoundation/autoware_universe/issues/11502>`_)
+* feat(obstacle_slow_down): add obstacle filtter (`#11498 <https://github.com/autowarefoundation/autoware_universe/issues/11498>`_)
+* chore(obstacle\_*_module): add maintainer (`#11506 <https://github.com/autowarefoundation/autoware_universe/issues/11506>`_)
+* feat(obstacle_slow_down): add curve margin feature (`#11343 <https://github.com/autowarefoundation/autoware_universe/issues/11343>`_)
+  * add curve margin
+  ---------
+* fix(obstacle_slow_down): suppress unnecessary virtual walls and planning factors (`#11355 <https://github.com/autowarefoundation/autoware_universe/issues/11355>`_)
+* feat(obstacle_slow_down_module, obstacle_cruise_module): add safety_factor (`#10990 <https://github.com/autowarefoundation/autoware_universe/issues/10990>`_)
+  add safety factor, add planning factor test
+* chore(obstacle_slow_down): add debug print (`#11050 <https://github.com/autowarefoundation/autoware_universe/issues/11050>`_)
+* refactor(obstacle_slow_down): sync motion_velocity_planner chnge (`#11209 <https://github.com/autowarefoundation/autoware_universe/issues/11209>`_)
+  refactor
+* Contributors: Ryohsuke Mitsudome, Takayuki Murooka, Yuki TAKAGI
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

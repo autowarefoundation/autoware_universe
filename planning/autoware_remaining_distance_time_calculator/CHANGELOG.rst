@@ -2,6 +2,21 @@
 Changelog for package autoware_remaining_distance_time_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_remaining_distance_time_calculator): pre-load all the road lanes to speed up processing time (`#11408 <https://github.com/autowarefoundation/autoware_universe/issues/11408>`_)
+  * pre-load all the road lanes to speed up processing time
+  * remove optional and add size checks
+  * remove unnecessary includes
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, danielsanchezaran
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

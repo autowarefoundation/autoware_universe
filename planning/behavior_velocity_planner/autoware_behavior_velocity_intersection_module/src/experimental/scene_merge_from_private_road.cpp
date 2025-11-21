@@ -16,7 +16,7 @@
 
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
@@ -234,7 +234,8 @@ lanelet::ConstLanelets MergeFromPrivateRoadModule::getAttentionLanelets(
 
   const auto & assigned_lanelet = lanelet_map_ptr->laneletLayer.get(lane_id_);
   const auto conflicting_lanelets =
-    lanelet::utils::getConflictingLanelets(routing_graph_ptr, assigned_lanelet);
+    autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
+      assigned_lanelet, routing_graph_ptr);
   lanelet::ConstLanelets sibling_lanelets;
   for (const auto & previous_lanelet : routing_graph_ptr->previous(assigned_lanelet)) {
     sibling_lanelets.push_back(previous_lanelet);

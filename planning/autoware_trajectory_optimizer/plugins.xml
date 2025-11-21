@@ -6,6 +6,12 @@
       Removes invalid trajectory points (NaN, Inf, close proximity)
     </description>
   </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Kinematic Feasibility Enforcer plugin. Enforces Ackermann steering geometry and yaw rate constraints on trajectory points using forward-propagating adjustment from ego pose. Ensures trajectories are kinematically feasible before QP smoothing.
+    </description>
+  </class>
   <class type="autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
          base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
     <description>

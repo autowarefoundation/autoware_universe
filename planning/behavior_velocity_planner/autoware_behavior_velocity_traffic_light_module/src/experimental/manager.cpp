@@ -67,17 +67,16 @@ void TrafficLightModuleManager::modifyPathVelocity(
 
   autoware_perception_msgs::msg::TrafficLightGroup tl_state;
 
-  nearest_ref_stop_path_point_index_ = static_cast<int>(path.get_underlying_bases().size() - 1);
+  auto nearest_stop_point_s = std::numeric_limits<double>::max();
+
   for (const auto & scene_module : scene_modules_) {
     std::shared_ptr<TrafficLightModule> traffic_light_scene_module(
       std::dynamic_pointer_cast<TrafficLightModule>(scene_module));
     traffic_light_scene_module->modifyPathVelocity(path, left_bound, right_bound, planner_data);
 
-    if (
-      traffic_light_scene_module->getFirstRefStopPathPointIndex() <
-      nearest_ref_stop_path_point_index_) {
-      nearest_ref_stop_path_point_index_ =
-        traffic_light_scene_module->getFirstRefStopPathPointIndex();
+    const auto first_stop_point_s = traffic_light_scene_module->getFirstStopPointArcLength();
+    if (first_stop_point_s && *first_stop_point_s < nearest_stop_point_s) {
+      nearest_stop_point_s = *first_stop_point_s;
       if (
         traffic_light_scene_module->getTrafficLightModuleState() !=
         TrafficLightModule::State::GO_OUT) {

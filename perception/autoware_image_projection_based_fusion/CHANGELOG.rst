@@ -2,6 +2,29 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(perception): add maintainer (`#11458 <https://github.com/autowarefoundation/autoware_universe/issues/11458>`_)
+  add maintainer
+* fix(fusion node): subscribe from concatenation info (`#11258 <https://github.com/autowarefoundation/autoware_universe/issues/11258>`_)
+  * chore: rename concatenate info to manager for clearity
+  * feat: add reference min max in the concatenated info
+  * chore: replace reading from diagnositc to concatenate info
+  * fix: qos settting
+  * chore: update for cuda pointcloud preprocessor
+  * chore: move info to matching strategy
+  * chore: clean code
+  * feat: move concat info in launcher
+  * chore: fix readme
+  * feat: sub to concat info in launcher
+  * chore: add concat info in irregular launch
+  ---------
+* Contributors: Masaki Baba, Ryohsuke Mitsudome, Yi-Hsiang Fang (Vivid)
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * chore(image_projection_based_fusion): add initializing status log (`#11112 <https://github.com/autowarefoundation/autoware_universe/issues/11112>`_)

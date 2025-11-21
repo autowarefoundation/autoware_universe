@@ -37,6 +37,58 @@
           "type": "number",
           "description": "The default z-coordinate in meters of the size of radar objects in the case the radar does not provide it.",
           "default": 2.0
+        },
+        "classification_remap": {
+          "type": "object",
+          "description": "Mapping from RADAR labels (autoware_sensing_msgs::msg::RadarClassification) to Perception labels (autoware_perception_msgs::msg::ObjectClassification).",
+          "properties": {
+            "UNKNOWN": {
+              "type": "string",
+              "default": "UNKNOWN"
+            },
+            "CAR": {
+              "type": "string",
+              "default": "CAR"
+            },
+            "TRUCK": {
+              "type": "string",
+              "default": "TRUCK"
+            },
+            "MOTORCYCLE": {
+              "type": "string",
+              "default": "CAR",
+              "description": "Radar tends to misclassify far cars as MOTORCYCLE; default=CAR"
+            },
+            "BICYCLE": {
+              "type": "string",
+              "default": "CAR",
+              "description": "Radar tends to misclassify far cars as BICYCLE; default=CAR"
+            },
+            "PEDESTRIAN": {
+              "type": "string",
+              "default": "PEDESTRIAN"
+            },
+            "ANIMAL": {
+              "type": "string",
+              "default": "ANIMAL"
+            },
+            "HAZARD": {
+              "type": "string",
+              "default": "UNKNOWN",
+              "description": "HAZARD is not a valid Perception label; fallback=UNKNOWN"
+            }
+          },
+          "required": [
+            "UNKNOWN",
+            "CAR",
+            "TRUCK",
+            "MOTORCYCLE",
+            "BICYCLE",
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -45,7 +97,8 @@
         "default_acceleration_z",
         "default_size_x",
         "default_size_y",
-        "default_size_z"
+        "default_size_z",
+        "classification_remap"
       ],
       "additionalProperties": false
     }

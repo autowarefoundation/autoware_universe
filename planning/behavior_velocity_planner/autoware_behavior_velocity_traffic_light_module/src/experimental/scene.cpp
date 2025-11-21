@@ -17,6 +17,7 @@
 #include "../utils.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <autoware/trajectory/utils/find_nearest.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>
@@ -57,36 +58,30 @@ bool TrafficLightModule::modifyPathVelocity(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
-
   debug_data_ = DebugData();
   debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
-  first_ref_stop_path_point_index_ = static_cast<int>(path_msg.points.size()) - 1;
-
-  const auto input_path = path_msg;
+  first_stop_point_s_ = path.length();
 
   const auto & self_pose = planner_data.current_odometry;
 
-  // Calculate stop pose and insert index
-  const auto stop_line = calcStopPointAndInsertIndex(
-    input_path, stop_line_,
+  // Calculate stop point
+  const auto stop_point_s = calcStopPoint(
+    path, left_bound, right_bound, stop_line_,
     planner_param_.stop_margin + planner_data.vehicle_info_.max_longitudinal_offset_m);
 
-  if (!stop_line.has_value()) {
+  if (!stop_point_s) {
     RCLCPP_WARN_STREAM_ONCE(
-      logger_, "Failed to calculate stop point and insert index for regulatory element id "
-                 << traffic_light_reg_elem_.id());
+      logger_,
+      "Failed to calculate stop point for regulatory element id " << traffic_light_reg_elem_.id());
     setSafe(true);
     setDistance(std::numeric_limits<double>::lowest());
     return false;
   }
 
-  // Calculate dist to stop pose
-  geometry_msgs::msg::Point stop_line_point_msg;
-  stop_line_point_msg.x = stop_line.value().second.x();
-  stop_line_point_msg.y = stop_line.value().second.y();
-  const double signed_arc_length_to_stop_point = autoware::motion_utils::calcSignedArcLength(
-    input_path.points, self_pose->pose.position, stop_line_point_msg);
+  // Calculate dist to stop point
+  const auto ego_s =
+    autoware::experimental::trajectory::find_nearest_index(path, self_pose->pose.position);
+  const auto signed_arc_length_to_stop_point = *stop_point_s - ego_s;
   setDistance(signed_arc_length_to_stop_point);
 
   // Check state
@@ -100,18 +95,16 @@ bool TrafficLightModule::modifyPathVelocity(
       return true;
     }
 
-    first_ref_stop_path_point_index_ = stop_line.value().first;
+    first_stop_point_s_ = stop_point_s;
 
     // Check if stop is coming.
     const bool is_stop_signal = isStopSignal(planner_data);
 
     // Update stop signal received time
-    if (is_stop_signal) {
-      if (!stop_signal_received_time_ptr_) {
-        stop_signal_received_time_ptr_ = std::make_unique<Time>(clock_->now());
-      }
-    } else {
+    if (!is_stop_signal) {
       stop_signal_received_time_ptr_.reset();
+    } else if (!stop_signal_received_time_ptr_) {
+      stop_signal_received_time_ptr_ = std::make_unique<Time>(clock_->now());
     }
 
     // Check hysteresis
@@ -135,28 +128,17 @@ bool TrafficLightModule::modifyPathVelocity(
     }
 
     // Check if the vehicle is stopped and within a certain distance to the stop line
-    if (planner_data.isVehicleStopped()) {
-      const double dist_to_stop = signed_arc_length_to_stop_point;
-      if (
-        planner_param_.min_behind_dist_to_stop_for_restart_suppression < dist_to_stop &&
-        dist_to_stop < planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
-        is_stop_signal) {
-        // Suppress restart
-        RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
-        const auto & ego_pos = planner_data.current_odometry->pose.position;
-        const double dist =
-          autoware::motion_utils::calcSignedArcLength(input_path.points, 0L, ego_pos);
-        const auto pose_opt =
-          autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
-        if (pose_opt.has_value()) {
-          const auto restart_suppression_point =
-            Eigen::Vector2d(pose_opt.value().position.x, pose_opt.value().position.y);
-          path_msg = insertStopPose(
-            input_path, stop_line.value().first, restart_suppression_point, planner_data);
-          planning_utils::toTrajectory(path_msg, path);
-          return true;
-        }
-      }
+    if (
+      planner_data.isVehicleStopped() &&
+      planner_param_.min_behind_dist_to_stop_for_restart_suppression <
+        signed_arc_length_to_stop_point &&
+      signed_arc_length_to_stop_point <
+        planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
+      is_stop_signal) {
+      // Suppress restart
+      RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
+      path = insertStopVelocity(path, ego_s, planner_data);
+      return true;
     }
 
     setSafe(!to_be_stopped);
@@ -167,22 +149,17 @@ bool TrafficLightModule::modifyPathVelocity(
 
     // Decide whether to stop or pass even if a stop signal is received.
     if (!isPassthrough(signed_arc_length_to_stop_point, planner_data)) {
-      path_msg =
-        insertStopPose(input_path, stop_line.value().first, stop_line.value().second, planner_data);
+      path = insertStopVelocity(path, *stop_point_s, planner_data);
       is_prev_state_stop_ = true;
     }
-    planning_utils::toTrajectory(path_msg, path);
     return true;
-  }
-  if (state_ == State::GO_OUT) {
+  } else if (state_ == State::GO_OUT) {
     // Initialize if vehicle is far from stop_line
     constexpr bool use_initialization_after_start = true;
     constexpr double restart_length = 1.0;
-    if (use_initialization_after_start) {
-      if (signed_arc_length_to_stop_point > restart_length) {
-        RCLCPP_DEBUG(logger_, "GO_OUT(RESTART) -> APPROACH");
-        state_ = State::APPROACH;
-      }
+    if (use_initialization_after_start && signed_arc_length_to_stop_point > restart_length) {
+      RCLCPP_DEBUG(logger_, "GO_OUT(RESTART) -> APPROACH");
+      state_ = State::APPROACH;
     }
     stop_signal_received_time_ptr_.reset();
     return true;
@@ -257,6 +234,10 @@ void TrafficLightModule::updateTrafficSignal(const PlannerData & planner_data)
 bool TrafficLightModule::isPassthrough(
   const double & signed_arc_length, const PlannerData & planner_data) const
 {
+  if (is_prev_state_stop_) {
+    return false;
+  }
+
   const double max_acc = planner_data.max_stop_acceleration_threshold;
   const double max_jerk = planner_data.max_stop_jerk_threshold;
   const double delay_response_time = planner_data.delay_response_time;
@@ -279,7 +260,7 @@ bool TrafficLightModule::isPassthrough(
 
   const auto & enable_pass_judge = planner_param_.enable_pass_judge;
 
-  if (enable_pass_judge && !stoppable && !is_prev_state_stop_) {
+  if (enable_pass_judge && !stoppable) {
     // Cannot stop under acceleration and jerk limits.
     // However, ego vehicle can't enter the intersection while the light is yellow.
     // It is called dilemma zone. Make a stop decision to be safe.
@@ -295,9 +276,9 @@ bool TrafficLightModule::isPassthrough(
         logger_, *clock_, 1000, "[traffic_light] can pass through intersection during yellow lamp");
       return true;
     }
-  } else {
-    return false;
   }
+
+  return false;
 }
 
 bool TrafficLightModule::findValidTrafficSignal(
@@ -335,28 +316,18 @@ bool TrafficLightModule::isTrafficSignalTimedOut() const
   return false;
 }
 
-autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
-  const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point,
-  const PlannerData & planner_data)
+Trajectory TrafficLightModule::insertStopVelocity(
+  const Trajectory & input, const double & stop_point_s, const PlannerData & planner_data)
 {
-  autoware_internal_planning_msgs::msg::PathWithLaneId modified_path;
-  modified_path = input;
+  auto modified_path = input;
 
-  // Create stop pose
-  const int target_velocity_point_idx = std::max(static_cast<int>(insert_target_point_idx - 1), 0);
-  auto target_point_with_lane_id = modified_path.points.at(target_velocity_point_idx);
-  target_point_with_lane_id.point.pose.position.x = target_point.x();
-  target_point_with_lane_id.point.pose.position.y = target_point.y();
-  target_point_with_lane_id.point.longitudinal_velocity_mps = 0.0;
-  debug_data_.stop_poses.push_back(target_point_with_lane_id.point.pose);
+  const auto stop_pose = modified_path.compute(stop_point_s).point.pose;
+  debug_data_.stop_poses.push_back(stop_pose);
 
-  // Insert stop pose into path or replace with zero velocity
-  size_t insert_index = insert_target_point_idx;
-  planning_utils::insertVelocity(modified_path, target_point_with_lane_id, 0.0, insert_index);
+  modified_path.longitudinal_velocity_mps().range(stop_point_s, modified_path.length()).set(0.0);
 
   planning_factor_interface_->add(
-    modified_path.points, planner_data.current_odometry->pose, target_point_with_lane_id.point.pose,
+    modified_path.restore(), planner_data.current_odometry->pose, stop_pose,
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
     0.0 /*shift distance*/, "traffic_light");

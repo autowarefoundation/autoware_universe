@@ -24,8 +24,10 @@
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/length.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/primitives/LaneletSequence.h>
 
 #include <algorithm>
 #include <string>
@@ -231,8 +233,8 @@ bool IntersectionModule::isTargetYieldStuckVehicleType(
 
 bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & path_lanelets) const
 {
+  using lanelet::geometry::length3d;
   using lanelet::utils::getArcCoordinates;
-  using lanelet::utils::getLaneletLength3d;
   using lanelet::utils::getPolygonFromArcLength;
   using lanelet::utils::to2D;
 
@@ -254,13 +256,12 @@ bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & pa
     return false;
   }
 
-  double target_polygon_length =
-    getLaneletLength3d(path_lanelets.conflicting_interval_and_remaining);
   lanelet::ConstLanelets targets = path_lanelets.conflicting_interval_and_remaining;
+  double target_polygon_length = length3d(lanelet::LaneletSequence(targets));
   if (path_lanelets.next) {
     targets.push_back(path_lanelets.next.value());
     const double next_arc_length =
-      std::min(stuck_vehicle_detect_dist, getLaneletLength3d(path_lanelets.next.value()));
+      std::min(stuck_vehicle_detect_dist, length3d(path_lanelets.next.value()));
     target_polygon_length += next_arc_length;
   }
   const auto target_polygon =

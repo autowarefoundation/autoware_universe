@@ -7,6 +7,7 @@
         attention_area_angle_threshold: 0.785
         use_intersection_area: false
         default_stopline_margin: 3.0
+        pass_judge_line_margin: 0.0
         stopline_overshoot_margin: 0.5
         path_interpolation_ds: 0.1
         max_accel: -2.8

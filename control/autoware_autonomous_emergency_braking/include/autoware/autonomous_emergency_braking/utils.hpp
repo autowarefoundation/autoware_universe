@@ -18,6 +18,7 @@
 #include "autoware/autonomous_emergency_braking/node.hpp"
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
@@ -25,8 +26,6 @@
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
-
-#include <tf2/utils.h>
 
 #include <string>
 #include <vector>

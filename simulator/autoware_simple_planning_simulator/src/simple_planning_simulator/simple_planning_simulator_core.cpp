@@ -23,13 +23,14 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/utils.hpp>
 
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <chrono>
@@ -42,6 +43,14 @@
 #include <vector>
 
 using namespace std::literals::chrono_literals;
+
+namespace
+{
+lanelet::Lanelet remove_const(const lanelet::ConstLanelet & const_lanelet)
+{
+  return lanelet::Lanelet{std::const_pointer_cast<lanelet::LaneletData>(const_lanelet.constData())};
+}
+}  // namespace
 
 namespace autoware::simulator::simple_planning_simulator
 {
@@ -425,11 +434,12 @@ double SimplePlanningSimulator::calculate_ego_pitch() const
   ego_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(ego_yaw);
 
   // calculate prev/next point of lanelet centerline nearest to ego pose.
-  lanelet::Lanelet ego_lanelet;
-  if (!lanelet::utils::query::getClosestLaneletWithConstrains(
-        road_lanelets_, ego_pose, &ego_lanelet, 2.0, std::numeric_limits<double>::max())) {
+  auto opt = autoware::experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
+    road_lanelets_, ego_pose, 2.0, std::numeric_limits<double>::max());
+  if (!opt.has_value()) {
     return 0.0;
   }
+  lanelet::Lanelet ego_lanelet = remove_const(*opt);
   const auto centerline_points = convert_centerline_to_points(ego_lanelet);
   const size_t ego_seg_idx =
     autoware::motion_utils::findNearestSegmentIndex(centerline_points, ego_pose.position);

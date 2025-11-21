@@ -44,6 +44,9 @@
 #include <unordered_map>
 #include <vector>
 
+namespace autoware::tensorrt_bevformer
+{
+
 struct PredictionDict
 {
   std::vector<std::vector<double>> bboxes;  // For 2D array of bounding boxes
@@ -109,3 +112,4 @@ PredsDict decode(
 // Function to get bounding boxes
 ResultList GetBboxes(
   const std::map<std::string, std::vector<double>> & processDict, const PostProcessor & processor);
+}  // namespace autoware::tensorrt_bevformer

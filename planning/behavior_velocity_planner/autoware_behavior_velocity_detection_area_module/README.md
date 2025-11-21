@@ -15,12 +15,12 @@ This module is activated when there is a detection area on the target lane.
 | Parameter                           | Type   | Description                                                                                                                                              |
 | ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                                                                      |
-| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                                                                                |
 | `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                       |
 | `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                             |
 | `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                              |
-| `use_max_acceleration`              | bool   | [-] whether to consider feasible stop distance based on maximum acceleration when inserting stop point                                                   |
-| `max_acceleration`                  | double | [m/s^2] maximum acceleration used to calculate feasible stop distance when `use_max_acceleration` is true                                                |
+| `unstoppable_policy`                | string | [-] policy for handling unstoppable situations: "go" (pass through), "force_stop" (emergency stop), or "stop_after_stopline" (stop after the stop line)  |
+| `max_deceleration`                  | double | [m/s^2] maximum deceleration used to calculate required braking distance for unstoppable situation handling                                              |
+| `delay_response_time`               | double | [s] delay response time used to calculate required braking distance for unstoppable situation handling                                                   |
 | `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                             |
 | `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
 | `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
@@ -43,9 +43,9 @@ This module is activated when there is a detection area on the target lane.
 
 1. Gets a detection area and stop line from map information and confirms if there are obstacles in the detection area
 2. Inserts stop point l[m] in front of the stop line
-3. Inserts a pass judge point to a point where the vehicle can stop with a max deceleration
-4. Sets velocity as zero behind the stop line when the ego-vehicle is in front of the pass judge point
-5. If the ego vehicle has passed the pass judge point already, it doesn't stop and pass through.
+3. Calculates required braking distance based on current velocity, `max_deceleration`, and `delay_response_time`
+4. If the vehicle cannot stop before the stop line, applies the configured `unstoppable_policy`
+5. Sets velocity as zero at the determined stop point
 
 #### Detection Logic
 
@@ -102,15 +102,25 @@ if (state is not stop and ego vehicle over line?) then (yes)
   stop
 endif
 
-if (use pass judge line?) then (yes)
-  if (state is not STOP and not enough braking distance?) then (yes)
+:calculate required braking distance;
+
+if (state is not STOP and not enough braking distance?) then (yes)
+  if (unstoppable_policy is "go") then (yes)
+    :log warning;
+    :allow pass through;
     stop
+  elseif (unstoppable_policy is "force_stop") then (yes)
+    :log warning;
+    :stop at stop line;
+  elseif (unstoppable_policy is "stop_after_stopline") then (yes)
+    :log warning;
+    :shift stop point forward;
   endif
 endif
 
 :set state STOP;
 
-:inset stop point;
+:insert stop point;
 
 :append stop reason and stop factor;
 
@@ -139,8 +149,14 @@ This module has parameter `hold_stop_margin_distance` in order to prevent from t
   <figcaption>inside the hold_stop_margin_distance</figcaption>
 </figure>
 
-#### Feasible stop distance
+#### Unstoppable situation handling
 
-If `use_max_acceleration` is _true_, the module ensures the vehicle can stop within the physical limit set by `max_acceleration`.
+When the ego vehicle cannot stop before the stop line with the given `max_deceleration` and `delay_response_time`, the module applies the `unstoppable_policy`:
 
-Required braking distance: \(d*{req}=v^2/(2a*{max})\). If this exceeds the remaining distance to the stop line \(d*{stop}\), the stop point is shifted forward by \(d*{req}-d\_{stop}\). This adjustment is applied only once, when the module transitions to the STOP state.
+- **"go" policy**: The vehicle is allowed to pass through without stopping. A warning is logged.
+- **"force_stop" policy**: The vehicle performs a stop at the original stop line, even if it cannot stop comfortably. A warning is logged.
+- **"stop_after_stopline" policy**: The stop point is shifted forward beyond the stop line to ensure the vehicle can stop safely within the physical limits.
+
+The required braking distance is calculated as: \(d*{req} = v \cdot t*{delay} + v^2/(2a*{max})\), where \(v\) is current velocity, \(t*{delay}\) is `delay_response_time`, and \(a\_{max}\) is `max_deceleration`.
+
+For the "stop*after_stopline" policy, if \(d*{req}\) exceeds the remaining distance to the stop line \(d*{stop}\), the stop point is shifted forward by \(d*{req} - d\_{stop}\). This adjustment is applied only once, when the module transitions from GO to STOP state.

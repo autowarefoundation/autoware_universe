@@ -17,7 +17,8 @@
 #include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware_path_sampler/utils/geometry_utils.hpp"
-#include "tf2/utils.h"
+
+#include <tf2/utils.hpp>
 
 #include "autoware_planning_msgs/msg/path_point.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"

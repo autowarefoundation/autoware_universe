@@ -14,7 +14,7 @@
 
 #include "autoware/dummy_perception_publisher/signed_distance_function.hpp"
 
-#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Vector3.hpp>
 
 #include <algorithm>
 #include <iostream>

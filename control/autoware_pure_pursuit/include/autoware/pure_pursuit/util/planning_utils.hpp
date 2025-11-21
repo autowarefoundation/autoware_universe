@@ -22,13 +22,12 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/transform_datatypes.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-
-#include <tf2/transform_datatypes.h>
-#include <tf2/utils.h>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>

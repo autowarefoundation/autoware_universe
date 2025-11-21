@@ -14,17 +14,16 @@
 
 #include "mission_planner.hpp"
 
-#include "service_utils.hpp"
-
+#include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/route_checker.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <fmt/format.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <algorithm>
@@ -73,7 +72,7 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   reroute_time_threshold_ = declare_parameter<double>("reroute_time_threshold");
   minimum_reroute_length_ = declare_parameter<double>("minimum_reroute_length");
   allow_reroute_in_autonomous_mode_ = declare_parameter<bool>("allow_reroute_in_autonomous_mode");
-
+  goal_lanelet_transparency_ = declare_parameter<float>("goal_lanelet_transparency");
   planner_ = plugin_loader_.createSharedInstance(
     "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
   planner_->initialize(this);
@@ -96,6 +95,9 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   srv_set_lanelet_route = create_service<SetLaneletRoute>(
     "~/set_lanelet_route",
     service_utils::handle_exception(&MissionPlanner::on_set_lanelet_route, this));
+  srv_set_preferred_primitive = create_service<autoware_planning_msgs::srv::SetPreferredPrimitive>(
+    "~/set_preferred_primitive",
+    service_utils::handle_exception(&MissionPlanner::on_set_preferred_primitive, this));
   srv_set_waypoint_route = create_service<SetWaypointRoute>(
     "~/set_waypoint_route",
     service_utils::handle_exception(&MissionPlanner::on_set_waypoint_route, this));
@@ -245,6 +247,8 @@ void MissionPlanner::on_modified_goal(const PoseWithUuidStamped::ConstSharedPtr 
     return;
   }
 
+  original_route_ = std::nullopt;
+
   change_route(route);
   change_state(RouteState::SET);
   RCLCPP_INFO(get_logger(), "Changed the route with the modified goal");
@@ -258,6 +262,8 @@ void MissionPlanner::on_clear_route(
     throw service_utils::ServiceException(
       ResponseCode::NO_EFFECT, "The mission planner is not ready.", true);
   }
+
+  original_route_ = std::nullopt;
 
   change_route();
   change_state(RouteState::UNSET);
@@ -322,11 +328,89 @@ void MissionPlanner::on_set_lanelet_route(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
 
+  original_route_ = std::nullopt;
+
   change_route(route);
   change_state(RouteState::SET);
   res->status.success = true;
 
   print_pose_log("set_lanelet_route", odometry_->pose.pose, req->goal_pose);
+}
+
+void MissionPlanner::on_set_preferred_primitive(
+  const autoware_planning_msgs::srv::SetPreferredPrimitive::Request::SharedPtr req,
+  const autoware_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
+{
+  using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;
+
+  if (!current_route_) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      ResponseCode::NO_EFFECT, "The route has not been set yet.", true);
+  }
+  if (req->preferred_primitives.size() != current_route_->segments.size() && req->reset == false) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      fmt::format(
+        "The size of preferred_primitives ({}) is different from that of the current route ({}).",
+        req->preferred_primitives.size(), current_route_->segments.size()));
+  }
+  if (req->uuid != current_route_->uuid) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      "Route UUID does not match the current route.");
+  }
+
+  if (!req->reset && !original_route_) {
+    RCLCPP_INFO(get_logger(), "Saved the original route for future resets.");
+    original_route_ = std::make_shared<LaneletRoute>(*current_route_);
+  }
+
+  if (req->reset && !original_route_) {
+    res->status.success = false;
+    throw service_utils::ServiceException(
+      autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+      "There is no saved original route to reset to.");
+  }
+
+  if (req->reset) {
+    RCLCPP_INFO(get_logger(), "Cleared the saved original route after reset.");
+
+    change_route(**original_route_);
+    res->status.message = "Successfully set preferred primitive.";
+    res->status.success = true;
+
+    original_route_ = std::nullopt;
+
+    return;
+  }
+
+  LaneletRoute current_route = *current_route_;
+
+  for (size_t i = 0; i < current_route.segments.size(); ++i) {
+    auto & segment = current_route.segments.at(i);
+    const auto & preferred_primitive = req->preferred_primitives.at(i);
+
+    if (std::none_of(
+          segment.primitives.begin(), segment.primitives.end(),
+          [&preferred_primitive](const autoware_planning_msgs::msg::LaneletPrimitive & p) {
+            return p.id == preferred_primitive.id;
+          })) {
+      res->status.success = false;
+      throw service_utils::ServiceException(
+        autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+        fmt::format(
+          "The preferred_primitive at index {} does not belong to the lanelet segment.", i));
+    }
+
+    segment.preferred_primitive = preferred_primitive;
+  }
+
+  change_route(current_route);
+  res->status.message = "Successfully set preferred primitive.";
+  res->status.success = true;
 }
 
 void MissionPlanner::on_set_waypoint_route(
@@ -382,6 +466,8 @@ void MissionPlanner::on_set_waypoint_route(
       ResponseCode::ERROR_REROUTE_FAILED, "New route is not safe. Reroute failed.");
   }
 
+  original_route_ = std::nullopt;
+
   change_route(route);
   change_state(RouteState::SET);
   res->status.success = true;
@@ -412,7 +498,7 @@ void MissionPlanner::change_route(const LaneletRoute & route)
   arrival_checker_.set_goal(goal);
 
   pub_route_->publish(route);
-  pub_marker_->publish(planner_->visualize(route));
+  pub_marker_->publish(planner_->visualize(route, goal_lanelet_transparency_));
 }
 
 void MissionPlanner::cancel_route()
@@ -628,7 +714,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
-    const double lanelet_length = lanelet::utils::getLaneletLength2d(closest_lanelet);
+    const double lanelet_length = lanelet::geometry::length2d(closest_lanelet);
     accumulated_length = lanelet_length - dist_to_current_pose;
   } else {
     // compute distance from the current pose to the end of the current lanelet
@@ -651,7 +737,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
-    const double lanelet_length = lanelet::utils::getLaneletLength2d(closest_lanelet);
+    const double lanelet_length = lanelet::geometry::length2d(closest_lanelet);
     accumulated_length = lanelet_length - dist_to_current_pose;
   }
 
@@ -666,7 +752,7 @@ bool MissionPlanner::check_reroute_safety(
     for (size_t primitive_idx = 0; primitive_idx < primitives.size(); ++primitive_idx) {
       const auto & primitive = primitives.at(primitive_idx);
       const auto & lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
-      lanelets_length.at(primitive_idx) = (lanelet::utils::getLaneletLength2d(lanelet));
+      lanelets_length.at(primitive_idx) = (lanelet::geometry::length2d(lanelet));
     }
     accumulated_length += *std::min_element(lanelets_length.begin(), lanelets_length.end());
   }
@@ -683,7 +769,7 @@ bool MissionPlanner::check_reroute_safety(
                                     lanelet::utils::to2D(lanelet.centerline()),
                                     lanelet::utils::to2D(target_goal_position).basicPoint())
                                     .length;
-      const double target_lanelet_length = lanelet::utils::getLaneletLength2d(lanelet);
+      const double target_lanelet_length = lanelet::geometry::length2d(lanelet);
       // NOTE: `accumulated_length` here contains the length of the entire target_end_primitive, so
       // the remaining distance from the goal to the end of the target_end_primitive needs to be
       // subtracted.

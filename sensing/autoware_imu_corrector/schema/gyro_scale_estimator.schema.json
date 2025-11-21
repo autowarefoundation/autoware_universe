@@ -179,9 +179,14 @@
         "on_off_correction": {
           "type": "object",
           "properties": {
-            "correct_for_bias": {
+            "correct_for_static_bias": {
               "type": "boolean",
-              "description": "Enable/disable bias correction.",
+              "description": "Enable/disable static bias correction.",
+              "default": true
+            },
+            "correct_for_dynamic_bias": {
+              "type": "boolean",
+              "description": "Enable/disable dynamic bias correction.",
               "default": false
             },
             "correct_for_scale": {
@@ -190,7 +195,7 @@
               "default": false
             }
           },
-          "required": ["correct_for_bias", "correct_for_scale"]
+          "required": ["correct_for_static_bias", "correct_for_dynamic_bias", "correct_for_scale"]
         }
       },
       "required": [

@@ -20,6 +20,8 @@
 
 #include <Eigen/Geometry>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/exceptions.hpp>
+#include <tf2/time.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -27,8 +29,6 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <rmw/qos_profiles.h>
-#include <tf2/exceptions.h>
-#include <tf2/time.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 

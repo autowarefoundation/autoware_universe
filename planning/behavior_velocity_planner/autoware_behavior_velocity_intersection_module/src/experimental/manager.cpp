@@ -14,7 +14,7 @@
 
 #include "manager.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/topology.hpp>
 
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
@@ -51,6 +51,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       get_or_declare_parameter<bool>(node, ns + ".common.use_intersection_area");
     ip.common.default_stopline_margin =
       get_or_declare_parameter<double>(node, ns + ".common.default_stopline_margin");
+    ip.common.pass_judge_line_margin =
+      get_or_declare_parameter<double>(node, ns + ".common.pass_judge_line_margin");
     ip.common.stopline_overshoot_margin =
       get_or_declare_parameter<double>(node, ns + ".common.stopline_overshoot_margin");
     ip.common.path_interpolation_ds =
@@ -580,7 +582,7 @@ void MergeFromPrivateModuleManager::launchNewModules(
     } else {
       const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
       const auto conflicting_lanelets =
-        lanelet::utils::getConflictingLanelets(routing_graph_ptr, ll);
+        autoware::experimental::lanelet2_utils::get_conflicting_lanelets(ll, routing_graph_ptr);
       for (auto && conflicting_lanelet : conflicting_lanelets) {
         const std::string conflicting_attr = conflicting_lanelet.attributeOr("location", "else");
         if (conflicting_attr == "urban") {

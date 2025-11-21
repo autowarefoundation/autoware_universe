@@ -2,6 +2,226 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker (`#11519 <https://github.com/autowarefoundation/autoware_universe/issues/11519>`_)
+  * feat(turn_signal_decider): add threshold based on distance to lane bound for turning off blinker
+  * fix default value in readme
+  * Update readme
+  * update parameter description
+  ---------
+* fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11544 <https://github.com/autowarefoundation/autoware_universe/issues/11544>`_)
+  * fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)
+  * feat(goal_planner): enhance goal refinement with route handler integration
+  - Updated `set_goal` and `refinePathForGoal` functions to include a `route_handler` parameter for improved path refinement.
+  - Introduced utility functions to fill lane IDs and longitudinal velocities based on the input path.
+  - Removed redundant lane ID filling logic to streamline goal setting process.
+  This change aims to enhance the accuracy of goal positioning and path planning by leveraging route information.
+  * fix(utils): enhance longitudinal velocity handling in fillLongitudinalVelocityFromInputPath
+  - Added a check to ensure the input path has at least two points before processing.
+  - Removed the last point from the input path to avoid zero velocity issues.
+  - Updated lane ID and longitudinal velocity assignment logic in set_goal to streamline the process.
+  These changes improve the robustness of the path planning by ensuring valid input and clearer handling of velocity data.
+  * refactor(utils): enhance lanelet handling in path processing
+  - Introduced a template function to retrieve unique lanelets from a given path, improving modularity and reusability.
+  - Updated `fillLaneIdsFromMap` to utilize the new lanelet retrieval function, streamlining lane ID assignment.
+  - Enhanced `set_goal` to incorporate the unique lanelets for more accurate lane ID filling.
+  These changes aim to improve the efficiency and clarity of lanelet management within the path planning process.
+  * refactor(utils): reorder parameters in set_goal function for clarity
+  ---------
+  * fix(utils): update lane ID assignment in fillLaneIdsFromMap function
+  * fix(utils): add TODO comment regarding potential segmentation fault in lane ID assignment
+  ---------
+* Revert "fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)" (`#11527 <https://github.com/autowarefoundation/autoware_universe/issues/11527>`_)
+  This reverts commit 98e1bec71bd6c7e783a5e099887a2cc87a92ce83.
+* fix(goal_planner): correct the lane_id and velocity interpolation logic in smooth_goal_connection (`#11508 <https://github.com/autowarefoundation/autoware_universe/issues/11508>`_)
+  * feat(goal_planner): enhance goal refinement with route handler integration
+  - Updated `set_goal` and `refinePathForGoal` functions to include a `route_handler` parameter for improved path refinement.
+  - Introduced utility functions to fill lane IDs and longitudinal velocities based on the input path.
+  - Removed redundant lane ID filling logic to streamline goal setting process.
+  This change aims to enhance the accuracy of goal positioning and path planning by leveraging route information.
+  * fix(utils): enhance longitudinal velocity handling in fillLongitudinalVelocityFromInputPath
+  - Added a check to ensure the input path has at least two points before processing.
+  - Removed the last point from the input path to avoid zero velocity issues.
+  - Updated lane ID and longitudinal velocity assignment logic in set_goal to streamline the process.
+  These changes improve the robustness of the path planning by ensuring valid input and clearer handling of velocity data.
+  * refactor(utils): enhance lanelet handling in path processing
+  - Introduced a template function to retrieve unique lanelets from a given path, improving modularity and reusability.
+  - Updated `fillLaneIdsFromMap` to utilize the new lanelet retrieval function, streamlining lane ID assignment.
+  - Enhanced `set_goal` to incorporate the unique lanelets for more accurate lane ID filling.
+  These changes aim to improve the efficiency and clarity of lanelet management within the path planning process.
+  * refactor(utils): reorder parameters in set_goal function for clarity
+  ---------
+* fix(turn_signal_decider): prevent turn signal from stop trigger when near intersection (`#11503 <https://github.com/autowarefoundation/autoware_universe/issues/11503>`_)
+  * fix(turn_signal_decider): prevent turn signal from stop trigger when near intersection
+  * parameterized distance to intersection
+  ---------
+* chore(bpp): add maintainer (`#11511 <https://github.com/autowarefoundation/autoware_universe/issues/11511>`_)
+  Adds Takumi Odashima and Yukinari Hisaki as maintainer
+* feat(start_planner): supprt rtc force approval to bypass safety check  (`#11482 <https://github.com/autowarefoundation/autoware_universe/issues/11482>`_)
+  feat(start_planner): rtc force approval
+* feat(start planner): support transit from running state to waiting approval state when unsafe (`#11477 <https://github.com/autowarefoundation/autoware_universe/issues/11477>`_)
+  * transit to waiting approval when unsafe
+  * only works if ego is moving forward
+  ---------
+* feat(start planner): replace zero velocity with stop line on candidate path (`#11476 <https://github.com/autowarefoundation/autoware_universe/issues/11476>`_)
+  * fix(start_planner): insert stop point on planWaitingApproval path
+  * slight refactoring
+  * remove empty space
+  * fix value issue
+  * fix test fail
+  ---------
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in planning component (`#11374 <https://github.com/autowarefoundation/autoware_universe/issues/11374>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(goal_planner): smooth goal connection for goal_planner (`#11381 <https://github.com/autowarefoundation/autoware_universe/issues/11381>`_)
+  * fix smooth goal connection of behavior path planner
+  * fix
+  * fix to keep path length
+  * fix unit test
+  ---------
+* fix(drivable_area): add bounds validation and proper coordinate transformation in drivable area processing (`#11384 <https://github.com/autowarefoundation/autoware_universe/issues/11384>`_)
+  fix drivable_area
+* feat(turn_signal_decider): add turn signal support for roundabouts (`#11235 <https://github.com/autowarefoundation/autoware_universe/issues/11235>`_)
+  * feat(turn_signal): add roundabout turn signal parameters and logic
+  * fix(turn_signal): improve roundabout turn signal logic and handling of lane attributes
+  * feat(turn_signal): enhance turn signal resolution logic with roundabout support
+  * fix(turn_signal): update test cases
+  * refactor(turn_signal): remove unused functions and params
+  * refactor(turn_signal): simplify lane processing and improve readability
+  * refactor(turn_signal_decider): clean up code and fix bug
+  * feat(turn_signal_decider): add roundabout document
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider):  fix document
+  * fix(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): optimize roundabout lane processing
+  * refactor(turn_signal_decider): simplify lane pose calculations and signal resolution
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): rename variables
+  * style(pre-commit): autofix
+  * feat(turn_signal): enhance roundabout signal handling with new parameters
+  * fix(turn_signal): change marker type from CUBE to SPHERE for roundabout turn signal visualization
+  * style(pre-commit): autofix
+  * refactor(turn_signal): streamline roundabout lane processing and improve clarity
+  * fix(turn_signal): update validity check for desired end distance
+  * test(turn_signal): add tests for turn signal behavior before and after desired points
+  * feat(turn_signal): enhance roundabout handling by integrating regulatory elements
+  * style(pre-commit): autofix
+  * refactor(turn_signal_decider): remove redundant logging
+  * refactor(turn_signal_decider): optimize roundabout lanelet checks by using lanelet IDs
+  * test(turn_signal_decider): add tests for lane change scenarios in roundabouts
+  * refactor(turn_signal_decider): update test conditions for roundabout lane change scenarios
+  * style(pre-commit): autofix
+  * refactor(turn_signal_decider): skip lanelets that are part of roundabout regulatory elements
+  * style(pre-commit): autofix
+  * build(build_depends_humble.repos): bump autoware_lanelet2_extension to 0.9.0
+  * refactor(turn_signal): rename parameter for clarity and consistency
+  * style(pre-commit): autofix
+  * refactor(turn_signal): rename desired start point maps for clarity
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): fix test error
+  * rename variable
+  * add comment
+  * upadte readme
+  * refactor
+  * fix(turn_signal_decider): enhance turn signal validation and simplify candidate creation logic
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): fix optional exit turn signal attributes
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): simplify exit turn signal condition in roundabout logic
+  * feat(turn_signal_decider): add roundabout backward length calculations and max distance to entry methods
+  * feat(turn_signal): add backward depth parameter for roundabout turn signal logic
+  * style(pre-commit): autofix
+  * fix(turn_signal): update backward depth parameter for roundabout logic to improve signal accuracy
+  * style(pre-commit): autofix
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner_common/src/turn_signal_decider.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner_common/src/turn_signal_decider.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * refactor(turn_signal_decider): rename calculateMaxDistanceToEntry to calculateMaxDistanceToDesiredStartPoint for clarity
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: M. Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: Yukinari Hisaki <42021302+yhisaki@users.noreply.github.com>
+  Co-authored-by: Y.Hisaki <yhisaki31@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* feat(bpp, lane_change): enable prepare phase check even when ego is preparing (`#11307 <https://github.com/autowarefoundation/autoware_universe/issues/11307>`_)
+  * feat(bpp, lane_change): enable prepare phase check even when ego is preparing
+  * fix cpp check error
+  ---------
+* fix(bpp_common, lane_change): generate extended objects directly with highest confidence path. (`#11304 <https://github.com/autowarefoundation/autoware_universe/issues/11304>`_)
+  * fix(bpp_common, lane_change): generate extended objects directly with highest confidence path.
+  * handles multiple paths has equal highest confidence
+  ---------
+* fix: turn signal decider indexing from the end of the path (`#11288 <https://github.com/autowarefoundation/autoware_universe/issues/11288>`_)
+* fix(autoware_motion_velocity_boundary_departure_prevention_module): remove unused function (`#11215 <https://github.com/autowarefoundation/autoware_universe/issues/11215>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(turn_signal_decider): revert roundabout turnsignal (`#11220 <https://github.com/autowarefoundation/autoware_universe/issues/11220>`_)
+  Revert "feat(turn_signal_decider): add turn signal support for roundabouts (`#10944 <https://github.com/autowarefoundation/autoware_universe/issues/10944>`_)"
+  This reverts commit d7ddce7e822ffb92502b2b5d97900b8ba2216cd7.
+* fix(bpp): namespace of the processing time topic (`#11203 <https://github.com/autowarefoundation/autoware_universe/issues/11203>`_)
+* feat(turn_signal_decider): add turn signal support for roundabouts (`#10944 <https://github.com/autowarefoundation/autoware_universe/issues/10944>`_)
+  * feat(turn_signal): add roundabout turn signal parameters and logic
+  * fix(turn_signal): improve roundabout turn signal logic and handling of lane attributes
+  * feat(turn_signal): enhance turn signal resolution logic with roundabout support
+  * fix(turn_signal): update test cases
+  * refactor(turn_signal): remove unused functions and params
+  * refactor(turn_signal): simplify lane processing and improve readability
+  * refactor(turn_signal_decider): clean up code and fix bug
+  * feat(turn_signal_decider): add roundabout document
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider):  fix document
+  * fix(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): optimize roundabout lane processing
+  * refactor(turn_signal_decider): simplify lane pose calculations and signal resolution
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): fix ci error
+  * refactor(turn_signal_decider): rename variables
+  * style(pre-commit): autofix
+  * feat(turn_signal): enhance roundabout signal handling with new parameters
+  * fix(turn_signal): change marker type from CUBE to SPHERE for roundabout turn signal visualization
+  * style(pre-commit): autofix
+  * refactor(turn_signal): streamline roundabout lane processing and improve clarity
+  * fix(turn_signal): update validity check for desired end distance
+  * test(turn_signal): add tests for turn signal behavior before and after desired points
+  * feat(turn_signal): enhance roundabout handling by integrating regulatory elements
+  * style(pre-commit): autofix
+  * refactor(turn_signal_decider): remove redundant logging
+  * refactor(turn_signal_decider): optimize roundabout lanelet checks by using lanelet IDs
+  * test(turn_signal_decider): add tests for lane change scenarios in roundabouts
+  * refactor(turn_signal_decider): update test conditions for roundabout lane change scenarios
+  * style(pre-commit): autofix
+  * refactor(turn_signal_decider): skip lanelets that are part of roundabout regulatory elements
+  * style(pre-commit): autofix
+  * build(build_depends_humble.repos): bump autoware_lanelet2_extension to 0.9.0
+  * refactor(turn_signal): rename parameter for clarity and consistency
+  * style(pre-commit): autofix
+  * refactor(turn_signal): rename desired start point maps for clarity
+  * style(pre-commit): autofix
+  * fix(turn_signal_decider): fix test error
+  * rename variable
+  * add comment
+  * upadte readme
+  * refactor
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: M. Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: Yukinari Hisaki <42021302+yhisaki@users.noreply.github.com>
+  Co-authored-by: Y.Hisaki <yhisaki31@gmail.com>
+* Contributors: Kotakku, Ryohsuke Mitsudome, Ryuta Kambe, Sarun MUKDAPITAK, Satoshi OTA, Sho Iwasawa, Tim Clephas, Yukinari Hisaki, Yuxuan Liu, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

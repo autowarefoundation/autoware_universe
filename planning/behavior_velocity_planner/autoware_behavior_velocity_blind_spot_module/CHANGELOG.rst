@@ -2,6 +2,44 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* fix(blind_spot): fix generating stop point behind (`#11533 <https://github.com/autowarefoundation/autoware_universe/issues/11533>`_)
+  fix generating stop point behind
+* feat(autoware_lanelet2_extension): remove redundant autoware_lanelet2_extension depend from packages (`#11492 <https://github.com/autowarefoundation/autoware_universe/issues/11492>`_)
+* fix(blind_spot): cut virtual blind lines up to intersection lanelet's bound (`#11282 <https://github.com/autowarefoundation/autoware_universe/issues/11282>`_)
+  * fix(blind_spot): cut virtual blind lines up to intersection lanelet's bound
+  * use opposite of turn signal to get furthest bound
+  ---------
+* fix(blind_spot): when intersection is private, attention area lanelets are also private (`#11283 <https://github.com/autowarefoundation/autoware_universe/issues/11283>`_)
+  * fix(blind_spot): when intersection is private, attention area members are also private
+  * remove diff
+  ---------
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* fix(blind_spot): filter non-vru based on lateral clearance (`#11265 <https://github.com/autowarefoundation/autoware_universe/issues/11265>`_)
+  * fix(blind_spot): filter non-vru based on lateral clearance
+  * use rtree to query nearest segment
+  * replace linestring with vector of points, and add additional unexpected condition
+  * amend function name to snake_case
+  isVRUObjectType → is_vru_object_type
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+  * use VehicleInfo's constant for ego's corner point
+  * return type to std optional and ranges
+  ---------
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* feat(blind_spot): add the flag to ignore non vru (`#11234 <https://github.com/autowarefoundation/autoware_universe/issues/11234>`_)
+* fix(autoware_behavior_velocity_blind_spot_module): remove unused function (`#11206 <https://github.com/autowarefoundation/autoware_universe/issues/11206>`_)
+* fix(behavior_velocity_planner): remove unused function (`#11186 <https://github.com/autowarefoundation/autoware_universe/issues/11186>`_)
+* Contributors: Kotakku, Mamoru Sobue, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Ryuta Kambe, Sarun MUKDAPITAK, Tim Clephas, Zulfaqar Azmi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(blind_spot): new re-designed blind_spot module (`#11079 <https://github.com/autowarefoundation/autoware_universe/issues/11079>`_)

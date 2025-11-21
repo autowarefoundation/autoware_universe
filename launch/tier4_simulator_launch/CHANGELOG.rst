@@ -2,6 +2,12 @@
 Changelog for package tier4_simulator_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(perception_online_evaluator): add functionality to publish perception analytics info (`#11089 <https://github.com/autowarefoundation/autoware_universe/issues/11089>`_)

@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_ranker/metrics/lateral_acceleration_metric.hpp"
 
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <cmath>

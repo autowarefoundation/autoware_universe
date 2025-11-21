@@ -16,9 +16,9 @@
 
 #include "autoware/universe_utils/geometry/geometry.hpp"
 
-#include <boost/geometry/geometry.hpp>
+#include <tf2/utils.hpp>
 
-#include <tf2/utils.h>
+#include <boost/geometry/geometry.hpp>
 
 namespace
 {

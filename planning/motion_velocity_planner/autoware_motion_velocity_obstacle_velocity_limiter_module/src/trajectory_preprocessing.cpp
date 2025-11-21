@@ -18,11 +18,10 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/detail/point__struct.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/utils.h>
 
 #include <optional>
 

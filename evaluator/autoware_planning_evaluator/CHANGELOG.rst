@@ -2,6 +2,28 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(planning_evaluator): refactor the obstacle_distance and obstacle_ttc metric (`#11478 <https://github.com/autowarefoundation/autoware_universe/issues/11478>`_)
+  * tmp save
+  * refactor and pre-commit
+  * tmp save
+  * fix start point bug and apply deceleration lower bound
+  * remove unused launch parm
+  * polish code
+  * fix unit tests
+  * update readme
+  ---------
+* fix(control_evaluator, planning_evaluator): fix goal-related metrics calculation (`#11337 <https://github.com/autowarefoundation/autoware_universe/issues/11337>`_)
+  * fix stop condition
+  * fix include
+  ---------
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

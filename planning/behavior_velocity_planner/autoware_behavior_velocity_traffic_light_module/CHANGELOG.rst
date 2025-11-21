@@ -2,6 +2,33 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_traffic_light_module): use Trajectory instead of PathWithLaneId (`#11577 <https://github.com/autowarefoundation/autoware_universe/issues/11577>`_)
+  use Trajectory instead of PathWithLaneId
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* fix(crosswalk, traffic_light): correct distance calculation by swapping src and dst (`#11393 <https://github.com/autowarefoundation/autoware_universe/issues/11393>`_)
+  * fix: correct distance calculation by swapping src and dst
+  * fix: correct distance calculation by swapping src and dst
+  ---------
+* fix(traffic_light_module): update stop line when route changes (`#11293 <https://github.com/autowarefoundation/autoware_universe/issues/11293>`_)
+  * fix traffic light
+  * add comment
+  ---------
+* fix(behavior_velocity_traffic_light_module): modify the way the parameter is used (`#11263 <https://github.com/autowarefoundation/autoware_universe/issues/11263>`_)
+  * fix
+  * update document
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(traffic_light): fix: incorrect inserted stop point calculation for restart suppression (`#11165 <https://github.com/autowarefoundation/autoware_universe/issues/11165>`_)
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Satoshi OTA, Tim Clephas, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

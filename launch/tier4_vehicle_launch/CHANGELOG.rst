@@ -2,6 +2,15 @@
 Changelog for package tier4_vehicle_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(tier4_vehicle_launch): add use_sim_time argument (`#11607 <https://github.com/autowarefoundation/autoware_universe/issues/11607>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 
