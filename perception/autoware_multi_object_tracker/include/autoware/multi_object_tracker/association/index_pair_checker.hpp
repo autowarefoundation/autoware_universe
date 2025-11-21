@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__UTIL__INDEX_PAIR_CHECKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__UTIL__INDEX_PAIR_CHECKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__INDEX_PAIR_CHECKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__INDEX_PAIR_CHECKER_HPP_
 
 #include <cstddef>
 #include <cstdint>
@@ -70,4 +70,5 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__UTIL__INDEX_PAIR_CHECKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__INDEX_PAIR_CHECKER_HPP_
+
