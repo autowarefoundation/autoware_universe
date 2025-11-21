@@ -21,8 +21,8 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/association/index_pair_checker.hpp"
+#include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
 #include <Eigen/Core>
