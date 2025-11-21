@@ -125,6 +125,15 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
   sensor_model:=sample_sensor_kit
 ```
 
+Note: Make sure the appropriate version weight is set for the path specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml`.
+
+```bash
+$ ls ~/autoware_data/diffusion_planner/v1.0/
+diffusion_planner.onnx diffusion_planner.param.json
+```
+
+This can be downloaded from [setup-dev-env.sh](https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh).
+
 ## Features
 
 - **Diffusion-based trajectory generation** for flexible and robust planning
