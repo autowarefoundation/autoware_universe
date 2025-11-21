@@ -127,7 +127,15 @@ void clamp_velocities(
 
 void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max_velocity)
 {
-  if (input_trajectory_array.size() < 2) {
+  if (input_trajectory_array.empty()) {
+    return;
+  }
+
+  // Handle single-point trajectory
+  if (input_trajectory_array.size() == 1) {
+    input_trajectory_array[0].longitudinal_velocity_mps =
+      std::min(input_trajectory_array[0].longitudinal_velocity_mps, max_velocity);
+    input_trajectory_array[0].acceleration_mps2 = 0.0f;
     return;
   }
 
@@ -219,9 +227,7 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
   }
 
   // Ensure last point always has zero acceleration
-  if (!input_trajectory_array.empty()) {
-    input_trajectory_array.back().acceleration_mps2 = 0.0f;
-  }
+  input_trajectory_array.back().acceleration_mps2 = 0.0f;
 }
 
 double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
