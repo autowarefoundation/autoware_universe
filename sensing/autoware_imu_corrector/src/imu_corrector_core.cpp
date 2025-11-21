@@ -75,7 +75,10 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
 
   accel_stddev_imu_link_ = declare_parameter<double>("acceleration_stddev", 10000.0);
 
-  correct_for_bias_ = declare_parameter<bool>("on_off_correction.correct_for_bias", false);
+  correct_for_static_bias_ =
+    declare_parameter<bool>("on_off_correction.correct_for_static_bias", true);
+  correct_for_dynamic_bias_ =
+    declare_parameter<bool>("on_off_correction.correct_for_dynamic_bias", false);
   correct_for_scale_ = declare_parameter<bool>("on_off_correction.correct_for_scale", false);
 
   imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
@@ -90,6 +93,21 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   gyro_scale_.vector.x = 1.0;
   gyro_scale_.vector.y = 1.0;
   gyro_scale_.vector.z = 1.0;
+
+  RCLCPP_INFO(
+    this->get_logger(), "correct_for_static_bias: %s", correct_for_static_bias_ ? "true" : "false");
+  RCLCPP_INFO(
+    this->get_logger(), "correct_for_dynamic_bias: %s",
+    correct_for_dynamic_bias_ ? "true" : "false");
+  RCLCPP_INFO(this->get_logger(), "correct_for_scale: %s", correct_for_scale_ ? "true" : "false");
+
+  if (correct_for_static_bias_ && correct_for_dynamic_bias_) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Both static and dynamic gyro bias correction are enabled."
+      "Disabling static bias correction.");
+    correct_for_static_bias_ = false;
+  }
 }
 
 void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr)
@@ -108,15 +126,18 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
     gyro_scale_.vector.z = 1.0;
   }
 
-  imu_msg.angular_velocity.x = imu_msg.angular_velocity.x - angular_velocity_offset_x_imu_link_;
-  imu_msg.angular_velocity.y = imu_msg.angular_velocity.y - angular_velocity_offset_y_imu_link_;
-  imu_msg.angular_velocity.z = imu_msg.angular_velocity.z - angular_velocity_offset_z_imu_link_;
+  if (correct_for_static_bias_) {
+    imu_msg.angular_velocity.x -= angular_velocity_offset_x_imu_link_;
+    imu_msg.angular_velocity.y -= angular_velocity_offset_y_imu_link_;
+    imu_msg.angular_velocity.z -= angular_velocity_offset_z_imu_link_;
+  }
 
-  if (correct_for_bias_) {
+  if (correct_for_dynamic_bias_) {
     imu_msg.angular_velocity.x -= gyro_bias_.vector.x;
     imu_msg.angular_velocity.y -= gyro_bias_.vector.y;
     imu_msg.angular_velocity.z -= gyro_bias_.vector.z;
   }
+
   if (correct_for_scale_) {
     imu_msg.angular_velocity.x /= gyro_scale_.vector.x;
     imu_msg.angular_velocity.y /= gyro_scale_.vector.y;
