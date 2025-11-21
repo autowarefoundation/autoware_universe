@@ -424,9 +424,12 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
    * x1_{k+1}   = x1_k + vel_long_k*(x2_k - x1_k)/wheel_base * dt
    * y1_{k+1}   = y1_k + vel_long_k*(y2_k - y1_k)/wheel_base * dt
    * x2_{k+1}   = x2_k + vel_long_k*(x2_k - x1_k)/wheel_base * dt - vel_lat_k*(y2_k -
-   * y1_k)/wheel_base * dt y2_{k+1}   = y2_k + vel_long_k*(y2_k - y1_k)/wheel_base * dt +
-   * vel_lat_k*(x2_k - x1_k)/wheel_base * dt vel_long_{k+1} = vel_long_k vel_lat_{k+1} = vel_lat_k *
-   * exp(-dt / 2.0)  // lateral velocity decays exponentially with a half-life of 2 seconds
+   *              y1_k)/wheel_base * dt
+   * y2_{k+1}   = y2_k + vel_long_k*(y2_k - y1_k)/wheel_base * dt +
+   *              vel_lat_k*(x2_k - x1_k)/wheel_base * dt
+   * vel_long_{k+1} = vel_long_k
+   * vel_lat_{k+1} = vel_lat_k * exp(-dt / 2.0)  // lateral velocity decays exponentially
+   *                                                with a half-life of 2 seconds
    */
 
   /*  Jacobian Matrix
@@ -438,7 +441,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
    * A_x2 = [-vel_long_k / wheel_base * dt, vel_lat_k / wheel_base * dt,
              1 + vel_long_k / wheel_base * dt, - vel_lat_k / wheel_base * dt,
              (x2_k - x1_k)/wheel_base * dt, - (y2_k - y1_k)/wheel_base * dt]
-   * A_y2 = [-vel_lat_k / wheel_base * dt, vel_long_k / wheel_base * dt,
+   * A_y2 = [-vel_lat_k / wheel_base * dt, -vel_long_k / wheel_base * dt,
              vel_lat_k / wheel_base * dt, 1 + vel_long_k / wheel_base * dt,
              (y2_k - y1_k)/wheel_base * dt, (x2_k - x1_k)/wheel_base * dt]
    * A_vx = [0, 0, 0, 0, 1, 0]
@@ -497,7 +500,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::X2, IDX::V) = -sin_yaw_dt;
 
   A(IDX::Y2, IDX::X1) = -vel_lat * wheel_base_inv_dt;
-  A(IDX::Y2, IDX::Y1) = vel_long * wheel_base_inv_dt;
+  A(IDX::Y2, IDX::Y1) = -vel_long * wheel_base_inv_dt;
   A(IDX::Y2, IDX::X2) = vel_lat * wheel_base_inv_dt;
   A(IDX::Y2, IDX::Y2) = 1.0 + vel_long * wheel_base_inv_dt;
   A(IDX::Y2, IDX::U) = sin_yaw_dt;
