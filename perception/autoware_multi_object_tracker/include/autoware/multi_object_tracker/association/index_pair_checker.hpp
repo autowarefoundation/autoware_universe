@@ -71,4 +71,3 @@ public:
 }  // namespace autoware::multi_object_tracker
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__INDEX_PAIR_CHECKER_HPP_
-

@@ -67,4 +67,3 @@ double AdaptiveThresholdCache::getBEVAreaInfluence(double bev_area) const
 }
 
 }  // namespace autoware::multi_object_tracker
-
