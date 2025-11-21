@@ -22719,6 +22719,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -22867,6 +22878,109 @@
 </ul>
 <p>It is implemented as a ROS 2 component node, making it easy to integrate into Autoware-based stacks. The node is aimed at working within the proposed <a href="https://github.com/tier4/new_planning_framework">Autoware new planning framework</a>.</p>
 <hr>
+<h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
+<p>Currently, some launch files must be changed to run the planning simulator with <code>autoware_diffusion_planner</code>.</p>
+<p>(1) <code>/path/to/src/launcher/autoware_launch</code></p>
+<div class="highlight"><pre><span></span><code><span class="gh">diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml b/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml</span>
+<span class="gd">--- a/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml</span>
+<span class="gi">+++ b/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml</span>
+<span class="gu">@@ -6,7 +6,7 @@</span>
+<span class="w"> </span>    enable_overshoot_emergency: false
+<span class="w"> </span>    enable_large_tracking_error_emergency: true
+<span class="w"> </span>    enable_slope_compensation: true
+<span class="gd">-    enable_keep_stopped_until_steer_convergence: true</span>
+<span class="gi">+    enable_keep_stopped_until_steer_convergence: false</span>
+
+<span class="w"> </span>    # state transition
+<span class="w"> </span>    drive_state_stop_dist: 0.5
+<span class="gh">diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_launch/config/system/diagnostics/planning.yaml</span>
+<span class="gd">--- a/autoware_launch/config/system/diagnostics/planning.yaml</span>
+<span class="gi">+++ b/autoware_launch/config/system/diagnostics/planning.yaml</span>
+<span class="gu">@@ -11,19 +11,7 @@ units:</span>
+<span class="w"> </span>          - { type: link, link: /autoware/planning/trajectory_validation }
+
+<span class="w"> </span>  - path: /autoware/planning/trajectory_validation
+<span class="gd">-    type: and</span>
+<span class="gd">-    list:</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/finite }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/interval }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/curvature }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/angle }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/lateral_acceleration }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/acceleration }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/deceleration }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/steering }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/steering_rate }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/velocity_deviation }</span>
+<span class="gd">-      - { type: link, link: /autoware/planning/trajectory_validation/trajectory_shift }</span>
+<span class="gi">+    type: ok</span>
+
+<span class="w"> </span>  - path: /autoware/planning/routing/state
+<span class="w"> </span>    type: diag
+</code></pre></div>
+<p>(2) <code>/path/to/autoware/src/universe/autoware_universe</code></p>
+<div class="highlight"><pre><span></span><code><span class="gh">diff --git a/launch/tier4_planning_launch/launch/planning.launch.xml b/launch/tier4_planning_launch/launch/planning.launch.xml</span>
+<span class="gd">--- a/launch/tier4_planning_launch/launch/planning.launch.xml</span>
+<span class="gi">+++ b/launch/tier4_planning_launch/launch/planning.launch.xml</span>
+<span class="gu">@@ -40,12 +40,34 @@</span>
+<span class="w"> </span>      &lt;/include&gt;
+<span class="w"> </span>    &lt;/group&gt;
+
+<span class="gi">+    &lt;!-- trajectory generator --&gt;</span>
+<span class="gi">+    &lt;group&gt;</span>
+<span class="gi">+      &lt;push-ros-namespace namespace="trajectory_generator"/&gt;</span>
+<span class="gi">+      &lt;include file="$(find-pkg-share autoware_diffusion_planner)/launch/diffusion_planner.launch.xml"&gt;</span>
+<span class="gi">+        &lt;arg name="input_odometry" value="/localization/kinematic_state"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_acceleration" value="/localization/acceleration"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_route" value="/planning/mission_planning/route"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_traffic_signals" value="/perception/traffic_light_recognition/traffic_signals"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_tracked_objects" value="/perception/object_recognition/tracking/objects"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_vector_map" value="/map/vector_map"/&gt;</span>
+<span class="gi">+        &lt;arg name="input_turn_indicators" value="/vehicle/status/turn_indicators_status"/&gt;</span>
+<span class="gi">+        &lt;arg name="output_trajectories" value="/planning/generator/diffusion_planner/candidate_trajectories"/&gt;</span>
+<span class="gi">+        &lt;arg name="output_turn_indicators" value="/planning/turn_indicators_cmd"/&gt;</span>
+<span class="gi">+      &lt;/include&gt;</span>
+<span class="gi">+      &lt;include file="$(find-pkg-share autoware_trajectory_optimizer)/launch/trajectory_optimizer.launch.xml"&gt;</span>
+<span class="gi">+        &lt;arg name="input_trajectories" value="/planning/generator/diffusion_planner/candidate_trajectories"/&gt;</span>
+<span class="gi">+        &lt;arg name="output_traj" value="/planning/trajectory"/&gt;</span>
+<span class="gi">+        &lt;arg name="output_trajectories" value="/planning/generator/trajectory_optimizer/candidate_trajectories"/&gt;</span>
+<span class="gi">+      &lt;/include&gt;</span>
+<span class="gi">+    &lt;/group&gt;</span>
+<span class="gi">+</span>
+<span class="w"> </span>    &lt;!-- planning validator --&gt;
+<span class="w"> </span>    &lt;group&gt;
+<span class="w"> </span>      &lt;include file="$(find-pkg-share autoware_planning_validator)/launch/planning_validator.launch.xml"&gt;
+<span class="w"> </span>        &lt;arg name="container_type" value="component_container_mt"/&gt;
+<span class="w"> </span>        &lt;arg name="input_trajectory" value="/planning/scenario_planning/velocity_smoother/trajectory"/&gt;
+<span class="gd">-        &lt;arg name="output_trajectory" value="/planning/trajectory"/&gt;</span>
+<span class="gi">+        &lt;arg name="output_trajectory" value="/planning/trajectory/unused"/&gt;</span>
+<span class="w"> </span>        &lt;arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/&gt;
+<span class="w"> </span>        &lt;arg name="input_pointcloud_topic_name" value="$(var input_pointcloud_topic_name)"/&gt;
+<span class="w"> </span>        &lt;arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/&gt;
+<span class="gh">diff --git a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml</span>
+<span class="gd">--- a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml</span>
+<span class="gi">+++ b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml</span>
+<span class="gu">@@ -240,7 +240,7 @@</span>
+<span class="w"> </span>        &lt;remap from="~/input/accel" to="/localization/acceleration"/&gt;
+<span class="w"> </span>        &lt;remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/&gt;
+<span class="w"> </span>        &lt;remap from="~/output/path" to="path_with_lane_id"/&gt;
+<span class="gd">-        &lt;remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/&gt;</span>
+<span class="gi">+        &lt;remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd/unused"/&gt;</span>
+<span class="w"> </span>        &lt;remap from="~/output/hazard_lights_cmd" to="/planning/behavior_path_planner/hazard_lights_cmd"/&gt;
+<span class="w"> </span>        &lt;remap from="~/output/modified_goal" to="/planning/scenario_planning/modified_goal"/&gt;
+<span class="w"> </span>        &lt;remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/&gt;
+</code></pre></div>
+<p>(3) launch the planning simulator</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>planning_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span>/path/to/your/map<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>sample_sensor_kit
+</code></pre></div>
+<p>Note: Make sure the appropriate version weight is set for the path specified in <code>planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml</code>.</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/diffusion_planner/v1.0/
+diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
+</code></pre></div>
+<p>This can be downloaded from <a href="https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh">setup-dev-env.sh</a>.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
 <ul>
 <li>
