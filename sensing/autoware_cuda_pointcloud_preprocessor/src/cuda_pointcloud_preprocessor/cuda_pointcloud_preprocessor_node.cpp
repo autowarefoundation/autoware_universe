@@ -126,7 +126,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   // cppcheck-suppress unknownMacro
   pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
-    sensor_msgs::msg::PointCloud2, "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
+    sensor_msgs::msg::PointCloud2, this, "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
     std::bind(&CudaPointcloudPreprocessorNode::pointcloudCallback, this, std::placeholders::_1),
     sub_options);
 
