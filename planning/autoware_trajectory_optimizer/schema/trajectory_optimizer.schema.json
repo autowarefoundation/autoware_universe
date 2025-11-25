@@ -172,6 +172,13 @@
               "minimum": 10.0,
               "maximum": 90.0,
               "description": "Yaw threshold for finding nearest trajectory point to ego [degrees]."
+            },
+            "acceleration_moving_average_window": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Moving average window size for acceleration smoothing. Larger values produce smoother acceleration but increase lag. Window of 1 = no smoothing."
             }
           },
           "required": [
@@ -185,7 +192,8 @@
             "output_delta_arc_length_m",
             "output_backward_traj_length_m",
             "ego_nearest_dist_threshold_m",
-            "ego_nearest_yaw_threshold_deg"
+            "ego_nearest_yaw_threshold_deg",
+            "acceleration_moving_average_window"
           ]
         },
         "trajectory_extender": {

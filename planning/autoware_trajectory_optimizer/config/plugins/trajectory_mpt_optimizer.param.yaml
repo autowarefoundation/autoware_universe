@@ -17,6 +17,9 @@
       ego_nearest_dist_threshold_m: 3.0
       ego_nearest_yaw_threshold_deg: 45.0
 
+      # Acceleration Smoothing
+      acceleration_moving_average_window: 5  # Moving average window size (larger = smoother)
+
     # MPT Algorithm Parameters (required by autoware_path_optimizer MPTOptimizer)
     mpt:
       option:

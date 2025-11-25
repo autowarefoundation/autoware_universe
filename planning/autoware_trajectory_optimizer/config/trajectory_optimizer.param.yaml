@@ -6,9 +6,9 @@
       - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
       - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
 

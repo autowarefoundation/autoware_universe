@@ -58,6 +58,10 @@ struct MPTParams
   // Ego nearest parameters (passed to MPT)
   double ego_nearest_dist_threshold_m{3.0};
   double ego_nearest_yaw_threshold_deg{45.0};
+
+  // Acceleration smoothing
+  int acceleration_moving_average_window{
+    5};  // Moving average window size for acceleration smoothing
 };
 
 struct BoundsPair

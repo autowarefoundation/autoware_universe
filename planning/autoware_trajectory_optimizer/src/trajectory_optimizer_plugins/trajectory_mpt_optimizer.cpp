@@ -17,15 +17,19 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
@@ -104,9 +108,13 @@ void TrajectoryMPTOptimizer::set_up_params()
   // Ego nearest parameters
   ego_nearest_param_.dist_threshold = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_mpt_optimizer.ego_nearest_dist_threshold_m");
-  const double ego_nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
+  const auto ego_nearest_yaw_threshold_deg = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_mpt_optimizer.ego_nearest_yaw_threshold_deg");
   ego_nearest_param_.yaw_threshold = autoware_utils_math::deg2rad(ego_nearest_yaw_threshold_deg);
+
+  // Acceleration smoothing parameters
+  mpt_params_.acceleration_moving_average_window = get_or_declare_parameter<int>(
+    *node_ptr, "trajectory_mpt_optimizer.acceleration_moving_average_window");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryMPTOptimizer::on_parameter(
@@ -151,6 +159,10 @@ rcl_interfaces::msg::SetParametersResult TrajectoryMPTOptimizer::on_parameter(
     ego_nearest_param_.yaw_threshold = autoware_utils_math::deg2rad(ego_nearest_yaw_threshold_deg);
   }
 
+  update_param(
+    parameters, "trajectory_mpt_optimizer.acceleration_moving_average_window",
+    mpt_params_.acceleration_moving_average_window);
+
   if (mpt_optimizer_ptr_) {
     mpt_optimizer_ptr_->onParam(parameters);
   }
@@ -166,16 +178,8 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
-  RCLCPP_INFO_THROTTLE(
-    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
-    "MPT optimize_trajectory CALLED! use_mpt_optimizer=%d, traj_points=%zu",
-    params.use_mpt_optimizer, traj_points.size());
-
   // Skip if MPT optimizer is disabled
   if (!params.use_mpt_optimizer) {
-    RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "MPT optimizer is DISABLED via use_mpt_optimizer flag");
     return;
   }
 
@@ -229,23 +233,113 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     return;
   }
 
-  if (optimized_traj->size() < min_points_for_optimization) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "MPT: Returned trajectory too short (%zu < %zu), keeping original", optimized_traj->size(),
-      min_points_for_optimization);
-    return;
-  }
-
   // Apply optimized trajectory
   traj_points = *optimized_traj;
 
-  // Recalculate time from start
-  motion_utils::calculate_time_from_start(traj_points, data.current_odometry.pose.pose.position);
+  auto get_distance = [](const TrajectoryPoint & p1, const TrajectoryPoint & p2) {
+    return autoware_utils::calc_distance2d(p1.pose.position, p2.pose.position);
+  };
 
-  RCLCPP_DEBUG(
-    get_node_ptr()->get_logger(), "MPT: Optimized %zu->%zu points, recalculated time",
-    original_size, traj_points.size());
+  auto get_acceleration_based_on_velocity_and_distance =
+    [&](const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next) {
+      const double delta_s = get_distance(p_curr, p_next);
+      if (delta_s < 1e-6) {
+        return 0.0;
+      }
+      // Use correct kinematic formula: a = (v² - v₀²) / (2s)
+      const double v_next_sq = p_next.longitudinal_velocity_mps * p_next.longitudinal_velocity_mps;
+      const double v_curr_sq = p_curr.longitudinal_velocity_mps * p_curr.longitudinal_velocity_mps;
+      return (v_next_sq - v_curr_sq) / (2.0 * delta_s);
+    };
+
+  auto get_dt_based_on_distance_velocity_and_acceleration = [&](
+                                                              const double v, const double a,
+                                                              const TrajectoryPoint & p_curr,
+                                                              const TrajectoryPoint & p_next) {
+    const double delta_s = get_distance(p_curr, p_next);
+    constexpr double min_velocity = 1e-3;  // 1mm/s threshold
+
+    if (std::abs(a) < 1e-6) {
+      // Constant velocity model
+      if (std::abs(v) < min_velocity) {
+        // Vehicle nearly stopped, return small dt
+        return 0.1;
+      }
+      return delta_s / v;
+    }
+
+    const double discriminant = v * v + 2.0 * a * delta_s;
+    if (discriminant < 0.0) {
+      // Physically invalid scenario - fallback to constant velocity
+      if (std::abs(v) < min_velocity) {
+        return 0.1;
+      }
+      return delta_s / v;
+    }
+
+    const double v_next = std::sqrt(discriminant);
+    return (v_next - v) / a;
+  };
+
+  auto get_time_from_start_and_acceleration =
+    [&](const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next) {
+      const auto velocity = static_cast<double>(p_curr.longitudinal_velocity_mps);
+      const auto acceleration = get_acceleration_based_on_velocity_and_distance(p_curr, p_next);
+      const auto dt =
+        get_dt_based_on_distance_velocity_and_acceleration(velocity, acceleration, p_curr, p_next);
+      return std::make_pair(dt, acceleration);
+    };
+
+  // set first point time_from_start to zero
+  traj_points.front().time_from_start.sec = 0;
+  traj_points.front().time_from_start.nanosec = 0;
+
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    auto & next_point = traj_points[i];
+    auto & curr_point = traj_points[i - 1];
+    const auto [dt, acc] = get_time_from_start_and_acceleration(curr_point, next_point);
+
+    // Update time_from_start
+    const double curr_time = static_cast<double>(curr_point.time_from_start.sec) +
+                             static_cast<double>(curr_point.time_from_start.nanosec) * 1e-9;
+    const double new_time = curr_time + dt;
+
+    // Split time into seconds and nanoseconds properly
+    const auto sec_part = static_cast<int32_t>(new_time);
+    const double fractional_part = new_time - static_cast<double>(sec_part);
+    next_point.time_from_start.sec = sec_part;
+    next_point.time_from_start.nanosec = static_cast<uint32_t>(fractional_part * 1e9);
+
+    // Update acceleration
+    curr_point.acceleration_mps2 = static_cast<float>(acc);
+  }
+
+  // Apply moving average filter to acceleration
+  const int window_size = std::max(1, mpt_params_.acceleration_moving_average_window);
+  std::vector<float> original_accelerations;
+  original_accelerations.reserve(traj_points.size());
+  for (const auto & point : traj_points) {
+    original_accelerations.push_back(point.acceleration_mps2);
+  }
+
+  for (size_t i = 0; i < traj_points.size() - 1; ++i) {
+    // Calculate moving average using backward-looking window
+    double sum = 0.0;
+    int count = 0;
+    const int start_idx = std::max(0, static_cast<int>(i) - window_size + 1);
+    for (int j = start_idx; j <= static_cast<int>(i); ++j) {
+      sum += original_accelerations[j];
+      count++;
+    }
+    traj_points[i].acceleration_mps2 = static_cast<float>(sum / count);
+  }
+
+  // set last point acceleration to zero
+  traj_points.back().acceleration_mps2 = 0.0f;
+
+  RCLCPP_DEBUG_THROTTLE(
+    get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
+    "MPT: Optimized %zu->%zu points, recalculated time", original_size, traj_points.size());
 }
 
 BoundsPair TrajectoryMPTOptimizer::generate_adaptive_bounds(
