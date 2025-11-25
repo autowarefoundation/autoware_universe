@@ -52,64 +52,20 @@ Marker create_base_marker(
   return marker;
 }
 
-// Helper to extract point data from lane vector
-struct LanePointData
-{
-  double x, y;
-  double lb_x, lb_y;
-  double rb_x, rb_y;
-  double norm;
-};
-
-LanePointData extract_lane_point(
-  const std::vector<float> & lane_vector, int64_t l, int64_t p, int64_t P, int64_t D)
-{
-  LanePointData data;
-  data.x = lane_vector[P * D * l + p * D + X];
-  data.y = lane_vector[P * D * l + p * D + Y];
-  data.lb_x = lane_vector[P * D * l + p * D + LB_X] + data.x;
-  data.lb_y = lane_vector[P * D * l + p * D + LB_Y] + data.y;
-  data.rb_x = lane_vector[P * D * l + p * D + RB_X] + data.x;
-  data.rb_y = lane_vector[P * D * l + p * D + RB_Y] + data.y;
-  data.norm = std::sqrt(data.x * data.x + data.y * data.y);
-  return data;
-}
-
-// Helper to transform points
-struct TransformedPoints
-{
-  double x, y, z;
-  double lb_x, lb_y;
-  double rb_x, rb_y;
-};
-
-TransformedPoints transform_lane_points(
-  const LanePointData & data, const Eigen::Matrix4d & transform)
-{
-  Eigen::Matrix<double, 4, 3> points;
-  points << data.x, data.lb_x, data.rb_x, data.y, data.lb_y, data.rb_y, 0.0, 0.0, 0.0, 1.0, 1.0,
-    1.0;
-
-  Eigen::Matrix<double, 4, 3> transformed = transform * points;
-
-  TransformedPoints result;
-  result.x = transformed(0, 0);
-  result.y = transformed(1, 0);
-  result.lb_x = transformed(0, 1);
-  result.lb_y = transformed(1, 1);
-  result.rb_x = transformed(0, 2);
-  result.rb_y = transformed(1, 2);
-  result.z = transformed(2, 0) + 0.1f;
-  return result;
-}
-
 // Helper to add point to marker
-void add_point_to_marker(Marker & marker, double x, double y, double z)
+void add_point_to_marker(Marker & marker, const Eigen::Vector4d & point)
 {
   Point pt;
-  pt.x = x;
-  pt.y = y;
-  pt.z = z;
+  const double w = point.w();
+  if (w != 0.0) {
+    pt.x = point.x() / w;
+    pt.y = point.y() / w;
+    pt.z = point.z() / w;
+  } else {
+    pt.x = point.x();
+    pt.y = point.y();
+    pt.z = point.z();
+  }
   marker.points.push_back(pt);
 }
 
@@ -141,13 +97,14 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
 
 MarkerArray create_lane_marker(
   const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
-  const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
-  const std::array<float, 4> colors, const std::string & frame_id,
-  const bool set_traffic_light_color)
+  const Time & stamp, const std::array<float, 4> colors)
 {
+  const rclcpp::Duration lifetime = rclcpp::Duration::from_seconds(0.2);
+  const std::string frame_id = "map";
+  const int64_t P = POINTS_PER_SEGMENT;
+  const int64_t D = SEGMENT_POINT_DIM;
+
   MarkerArray marker_array;
-  const int64_t P = shape[2];
-  const int64_t D = shape[3];
   const size_t num_segments = lane_vector.size() / (P * D);
   int64_t segment_count = 0;
   constexpr double near_zero_threshold = 1e-2;
@@ -190,34 +147,48 @@ MarkerArray create_lane_marker(
     marker_sphere.scale.y = 0.5;
     marker_sphere.scale.z = 0.5;
 
-    // Apply traffic light color if requested
-    if (set_traffic_light_color) {
-      const auto g = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_GREEN];
-      const auto y = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_YELLOW];
-      const auto r = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_RED];
-      marker_centerline.color = get_traffic_light_color(g, y, r, lane_color);
-    }
+    // Apply traffic light color
+    const auto g = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_GREEN];
+    const auto y = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_YELLOW];
+    const auto r = lane_vector[P * D * l + 0 * D + TRAFFIC_LIGHT_RED];
+    marker_centerline.color = get_traffic_light_color(g, y, r, lane_color);
 
     // Process points for this segment
     float total_norm = 0.0f;
     for (int64_t p = 0; p < P; ++p) {
-      // Extract point data
-      LanePointData point_data = extract_lane_point(lane_vector, l, p, P, D);
-      total_norm += point_data.norm;
+      const Eigen::Vector3d center_in_base_link(
+        lane_vector[P * D * l + p * D + X], lane_vector[P * D * l + p * D + Y],
+        lane_vector[P * D * l + p * D + Z]);
+      const Eigen::Vector3d left_bound_in_base_link(
+        lane_vector[P * D * l + p * D + LB_X] + center_in_base_link(0),
+        lane_vector[P * D * l + p * D + LB_Y] + center_in_base_link(1),
+        lane_vector[P * D * l + p * D + LB_Z] + center_in_base_link(2));
+      const Eigen::Vector3d right_bound_in_base_link(
+        lane_vector[P * D * l + p * D + RB_X] + center_in_base_link(0),
+        lane_vector[P * D * l + p * D + RB_Y] + center_in_base_link(1),
+        lane_vector[P * D * l + p * D + RB_Z] + center_in_base_link(2));
+
+      const double norm = center_in_base_link.head<2>().norm();
+      total_norm += norm;
 
       // Skip near-zero points (likely padding)
-      if (point_data.norm < near_zero_threshold) {
+      if (norm < near_zero_threshold) {
         continue;
       }
 
-      // Transform points from ego to map frame
-      TransformedPoints transformed = transform_lane_points(point_data, transform_ego_to_map);
+      // Transform points from base_link to map frame
+      const Eigen::Vector4d center_in_map =
+        transform_ego_to_map * center_in_base_link.homogeneous();
+      const Eigen::Vector4d left_bound_in_map =
+        transform_ego_to_map * left_bound_in_base_link.homogeneous();
+      const Eigen::Vector4d right_bound_in_map =
+        transform_ego_to_map * right_bound_in_base_link.homogeneous();
 
       // Add points to respective markers
-      add_point_to_marker(marker_centerline, transformed.x, transformed.y, transformed.z);
-      add_point_to_marker(marker_left_bound, transformed.lb_x, transformed.lb_y, transformed.z);
-      add_point_to_marker(marker_right_bound, transformed.rb_x, transformed.rb_y, transformed.z);
-      add_point_to_marker(marker_sphere, transformed.x, transformed.y, transformed.z + 0.1f);
+      add_point_to_marker(marker_centerline, center_in_map);
+      add_point_to_marker(marker_left_bound, left_bound_in_map);
+      add_point_to_marker(marker_right_bound, right_bound_in_map);
+      add_point_to_marker(marker_sphere, center_in_map);
     }
 
     // Skip empty segments

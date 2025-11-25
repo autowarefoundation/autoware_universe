@@ -116,6 +116,19 @@ public:
     return lanelet_id_to_array_index_;
   }
 
+  /**
+   * @brief Remove Z coordinates from lane data for network input.
+   *
+   * Converts lane data from 37 dimensions (with Z, dZ, LB_Z, RB_Z) to 33 dimensions
+   * (without Z-related coordinates) for neural network input.
+   *
+   * @param data_with_z Lane data including Z coordinates (37 dimensions per point).
+   * @param num_segments Number of lane segments in the data.
+   * @return Lane data without Z coordinates (33 dimensions per point).
+   */
+  static std::vector<float> remove_z_coords(
+    const std::vector<float> & data_with_z, int64_t num_segments);
+
 private:
   const std::vector<autoware::diffusion_planner::LaneSegment> lane_segments_;
   const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_;

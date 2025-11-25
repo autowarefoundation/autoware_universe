@@ -460,9 +460,14 @@ InputDataMap DiffusionPlanner::create_input_data()
   {
     const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
       map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
-    const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
-      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
+    const auto [lanes_with_z, lanes_speed_limit] =
+      lane_segment_context_->create_tensor_data_from_indices(
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
+    // Remove Z coordinates for network input (33D)
+    const auto lanes =
+      preprocess::LaneSegmentContext::remove_z_coords(lanes_with_z, NUM_SEGMENTS_IN_LANE);
     input_data_map["lanes"] = replicate_for_batch(lanes);
+    input_data_map["lanes_with_z"] = replicate_for_batch(lanes_with_z);  // For debug markers (37D)
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
 
@@ -471,10 +476,15 @@ InputDataMap DiffusionPlanner::create_input_data()
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
         *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
-    const auto [route_lanes, route_lanes_speed_limit] =
+    const auto [route_lanes_with_z, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
+    // Remove Z coordinates for network input (33D)
+    const auto route_lanes =
+      preprocess::LaneSegmentContext::remove_z_coords(route_lanes_with_z, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
+    input_data_map["route_lanes_with_z"] =
+      replicate_for_batch(route_lanes_with_z);  // For debug markers (37D)
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
 
@@ -533,25 +543,21 @@ std::vector<float> DiffusionPlanner::replicate_for_batch(const std::vector<float
 void DiffusionPlanner::publish_debug_markers(InputDataMap & input_data_map) const
 {
   if (debug_params_.publish_debug_route) {
-    auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto route_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["route_lanes"],
-      std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(),
-      lifetime, {0.8, 0.8, 0.8, 0.8}, "map", true);
+      ego_to_map_transform_, input_data_map["route_lanes_with_z"], this->now(),
+      {0.8, 0.8, 0.8, 0.8});
     pub_route_marker_->publish(route_markers);
   }
 
   if (debug_params_.publish_debug_map) {
-    auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto lane_markers = utils::create_lane_marker(
-      ego_to_map_transform_, input_data_map["lanes"],
-      std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(), lifetime,
-      {0.1, 0.1, 0.7, 0.8}, "map", true);
+      ego_to_map_transform_, input_data_map["lanes_with_z"], this->now(), {0.1, 0.1, 0.7, 0.8});
     pub_lane_marker_->publish(lane_markers);
   }
 }
 
-void DiffusionPlanner::publish_predictions(const std::vector<float> & predictions) const
+void DiffusionPlanner::publish_predictions(
+  const std::vector<float> & predictions, const std::vector<float> & route_lanes_with_z) const
 {
   CandidateTrajectories candidate_trajectories;
 
@@ -565,7 +571,7 @@ void DiffusionPlanner::publish_predictions(const std::vector<float> & prediction
   for (int i = 0; i < params_.batch_size; i++) {
     const Trajectory trajectory = postprocess::create_ego_trajectory(
       agent_poses, this->now(), ego_to_map_transform_, i, params_.velocity_smoothing_window,
-      enable_force_stop, params_.stopping_threshold);
+      enable_force_stop, params_.stopping_threshold, route_lanes_with_z);
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
@@ -850,7 +856,7 @@ void DiffusionPlanner::on_timer()
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
-  publish_predictions(predictions);
+  publish_predictions(predictions, input_data_map["route_lanes_with_z"]);
 
   // Publish turn indicators
   const auto turn_indicator_logit = get_turn_indicator_logit();

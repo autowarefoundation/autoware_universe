@@ -245,36 +245,40 @@ LaneSegmentContext::create_tensor_data_from_indices(
     for (int64_t i = 0; i < POINTS_PER_SEGMENT; ++i) {
       const int64_t col_idx = added_segments * POINTS_PER_SEGMENT + i;
 
-      // Center (0, 1)
+      // Center (0, 1, 2)
       const Eigen::Vector4d center = transform_matrix * convert_to_vector4d(centerline[i]);
       output_matrix(X, col_idx) = center.x();
       output_matrix(Y, col_idx) = center.y();
+      output_matrix(Z, col_idx) = center.z();
 
-      // Direction (2, 3)
+      // Direction (3, 4, 5)
       if (i > 0) {
         const int64_t col_idx_p = added_segments * POINTS_PER_SEGMENT + (i - 1);
         output_matrix(dX, col_idx_p) = output_matrix(X, col_idx) - output_matrix(X, col_idx_p);
         output_matrix(dY, col_idx_p) = output_matrix(Y, col_idx) - output_matrix(Y, col_idx_p);
+        output_matrix(dZ, col_idx_p) = output_matrix(Z, col_idx) - output_matrix(Z, col_idx_p);
       }
 
-      // Left (4, 5)
+      // Left (6, 7, 8)
       const Eigen::Vector4d left = transform_matrix * convert_to_vector4d(left_boundary[i]);
       output_matrix(LB_X, col_idx) = left.x() - center.x();
       output_matrix(LB_Y, col_idx) = left.y() - center.y();
+      output_matrix(LB_Z, col_idx) = left.z() - center.z();
 
-      // Right (6, 7)
+      // Right (9, 10, 11)
       const Eigen::Vector4d right = transform_matrix * convert_to_vector4d(right_boundary[i]);
       output_matrix(RB_X, col_idx) = right.x() - center.x();
       output_matrix(RB_Y, col_idx) = right.y() - center.y();
+      output_matrix(RB_Z, col_idx) = right.z() - center.z();
 
-      // Traffic Light (8-13)
+      // Traffic Light (12-16)
       output_matrix.block<TRAFFIC_LIGHT_ONE_HOT_DIM, 1>(TRAFFIC_LIGHT, col_idx) =
         traffic_light_one_hot_encoding;
 
-      // Left LineType (14-23)
+      // Left LineType (17-26)
       output_matrix.block<LINE_TYPE_NUM, 1>(LINE_TYPE_LEFT_START, col_idx) = lt_left;
 
-      // Right LineType (24-33)
+      // Right LineType (27-36)
       output_matrix.block<LINE_TYPE_NUM, 1>(LINE_TYPE_RIGHT_START, col_idx) = lt_right;
     }
 
@@ -288,6 +292,31 @@ LaneSegmentContext::create_tensor_data_from_indices(
     output_matrix_f.data(), output_matrix_f.data() + output_matrix_f.size());
 
   return {tensor_data, speed_limit_vector};
+}
+
+std::vector<float> LaneSegmentContext::remove_z_coords(
+  const std::vector<float> & data_with_z, int64_t num_segments)
+{
+  // Remove Z coordinates from lane data for network input
+  // Original dimension: SEGMENT_POINT_DIM (with Z, dZ, LB_Z, RB_Z)
+  // Network dimension: SEGMENT_POINT_DIM_NETWORK (without them)
+  // Indices to skip: Z(2), dZ(5), LB_Z(8), RB_Z(11)
+
+  std::vector<float> data_without_z;
+  data_without_z.reserve(num_segments * POINTS_PER_SEGMENT * SEGMENT_POINT_DIM_NETWORK);
+
+  for (int64_t seg = 0; seg < num_segments; ++seg) {
+    for (int64_t pt = 0; pt < POINTS_PER_SEGMENT; ++pt) {
+      const int64_t base_idx = (seg * POINTS_PER_SEGMENT + pt) * SEGMENT_POINT_DIM;
+      // Copy all fields except Z(2), dZ(5), LB_Z(8), RB_Z(11)
+      for (int64_t i = 0; i < SEGMENT_POINT_DIM; ++i) {
+        if (i != Z && i != dZ && i != LB_Z && i != RB_Z) {
+          data_without_z.push_back(data_with_z[base_idx + i]);
+        }
+      }
+    }
+  }
+  return data_without_z;
 }
 
 // Internal functions implementation

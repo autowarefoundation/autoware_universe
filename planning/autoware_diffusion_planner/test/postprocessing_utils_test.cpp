@@ -48,9 +48,10 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   const bool enable_force_stop = false;
   const double stopping_threshold = 0.0;
   const auto agent_poses = postprocess::parse_predictions(data);
+  const std::vector<float> route_lanes_with_z;  // Empty for test
   auto traj = postprocess::create_ego_trajectory(
     agent_poses, stamp, transform, 0, velocity_smoothing_window, enable_force_stop,
-    stopping_threshold);
+    stopping_threshold, route_lanes_with_z);
   ASSERT_EQ(traj.points.size(), expected_points);
 }
 
