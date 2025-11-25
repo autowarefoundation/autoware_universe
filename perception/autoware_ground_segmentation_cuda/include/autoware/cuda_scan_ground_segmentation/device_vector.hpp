@@ -284,8 +284,10 @@ void device_vector<T>::allocate(size_t ele_num)
     if (mempool_) {
       CHECK_CUDA_ERROR(
         cudaMallocFromPoolAsync(&data_, sizeof(T) * ele_num, mempool_->get(), stream_->get()));
+      CHECK_CUDA_ERROR(cudaMemsetAsync(data_, 0, sizeof(T) * ele_num, stream_->get()));
     } else {
       CHECK_CUDA_ERROR(cudaMallocAsync(&data_, sizeof(T) * ele_num, stream_->get()));
+      CHECK_CUDA_ERROR(cudaMemsetAsync(data_, 0, sizeof(T) * ele_num, stream_->get()));
     }
   }
 
