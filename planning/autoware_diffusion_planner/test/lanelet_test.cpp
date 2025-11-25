@@ -21,10 +21,10 @@ namespace autoware::diffusion_planner::test
 
 TEST_F(LaneletTest, ConvertToLaneSegments)
 {
-  auto lane_segments = convert_to_lane_segments(lanelet_map_, 10);
+  auto lane_segments = convert_to_internal_lanelet_map(lanelet_map_);
 
-  EXPECT_EQ(lane_segments.size(), 1);                 // Expect one lanelet to be converted
-  EXPECT_EQ(lane_segments[0].centerline.size(), 10);  // Expect 10 points in the polyline
+  EXPECT_EQ(lane_segments.lane_segments.size(), 1);                 // Expect one lanelet to be converted
+  EXPECT_EQ(lane_segments.lane_segments[0].centerline.size(), 10);  // Expect 10 points in the polyline
 }
 
 }  // namespace autoware::diffusion_planner::test
