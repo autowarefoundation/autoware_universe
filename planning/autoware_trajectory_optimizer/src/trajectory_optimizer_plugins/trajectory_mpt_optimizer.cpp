@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer_utils.hpp"
+
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -29,7 +31,6 @@
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
@@ -198,8 +199,11 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     mpt_optimizer_ptr_->resetPreviousData();
   }
 
-  // Generate adaptive corridor bounds
-  const auto bounds = generate_adaptive_bounds(traj_points);
+  // Generate simple perpendicular offset bounds
+  const auto bounds = trajectory_mpt_optimizer_utils::generate_bounds(
+    traj_points, mpt_params_.corridor_width_m, mpt_params_.enable_adaptive_width,
+    mpt_params_.curvature_width_factor, mpt_params_.velocity_width_factor,
+    mpt_params_.min_clearance_m, vehicle_info_.vehicle_width_m);
 
   // Publish debug markers
   if (mpt_params_.enable_debug_info) {
@@ -233,207 +237,17 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
   // Apply optimized trajectory
   traj_points = *optimized_traj;
 
-  auto get_distance = [](const TrajectoryPoint & p1, const TrajectoryPoint & p2) {
-    return autoware_utils::calc_distance2d(p1.pose.position, p2.pose.position);
-  };
-
-  auto get_acceleration_based_on_velocity_and_distance =
-    [&](const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next) {
-      const double delta_s = get_distance(p_curr, p_next);
-      if (delta_s < 1e-6) {
-        return 0.0;
-      }
-      // Use correct kinematic formula: a = (v² - v₀²) / (2s)
-      const double v_next_sq = p_next.longitudinal_velocity_mps * p_next.longitudinal_velocity_mps;
-      const double v_curr_sq = p_curr.longitudinal_velocity_mps * p_curr.longitudinal_velocity_mps;
-      return (v_next_sq - v_curr_sq) / (2.0 * delta_s);
-    };
-
-  auto get_dt_based_on_distance_velocity_and_acceleration = [&](
-                                                              const double v, const double a,
-                                                              const TrajectoryPoint & p_curr,
-                                                              const TrajectoryPoint & p_next) {
-    const double delta_s = get_distance(p_curr, p_next);
-    constexpr double min_velocity = 1e-3;  // 1mm/s threshold
-
-    if (std::abs(a) < 1e-6) {
-      // Constant velocity model
-      if (std::abs(v) < min_velocity) {
-        // Vehicle nearly stopped, return small dt
-        return 0.1;
-      }
-      return delta_s / v;
-    }
-
-    const double discriminant = v * v + 2.0 * a * delta_s;
-    if (discriminant < 0.0) {
-      // Physically invalid scenario - fallback to constant velocity
-      if (std::abs(v) < min_velocity) {
-        return 0.1;
-      }
-      return delta_s / v;
-    }
-
-    const double v_next = std::sqrt(discriminant);
-    return (v_next - v) / a;
-  };
-
-  auto get_time_from_start_and_acceleration =
-    [&](const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next) {
-      const auto velocity = static_cast<double>(p_curr.longitudinal_velocity_mps);
-      const auto acceleration = get_acceleration_based_on_velocity_and_distance(p_curr, p_next);
-      const auto dt =
-        get_dt_based_on_distance_velocity_and_acceleration(velocity, acceleration, p_curr, p_next);
-      return std::make_pair(dt, acceleration);
-    };
-
-  // set first point time_from_start to zero
-  traj_points.front().time_from_start.sec = 0;
-  traj_points.front().time_from_start.nanosec = 0;
-
-  for (size_t i = 1; i < traj_points.size(); ++i) {
-    auto & next_point = traj_points[i];
-    auto & curr_point = traj_points[i - 1];
-    const auto [dt, acc] = get_time_from_start_and_acceleration(curr_point, next_point);
-
-    // Update time_from_start
-    const double curr_time = static_cast<double>(curr_point.time_from_start.sec) +
-                             static_cast<double>(curr_point.time_from_start.nanosec) * 1e-9;
-    const double new_time = curr_time + dt;
-
-    // Split time into seconds and nanoseconds properly
-    const auto sec_part = static_cast<int32_t>(new_time);
-    const double fractional_part = new_time - static_cast<double>(sec_part);
-    next_point.time_from_start.sec = sec_part;
-    next_point.time_from_start.nanosec = static_cast<uint32_t>(fractional_part * 1e9);
-
-    // Update acceleration
-    curr_point.acceleration_mps2 = static_cast<float>(acc);
-  }
-
-  // Apply moving average filter to acceleration
-  const int window_size = std::max(1, mpt_params_.acceleration_moving_average_window);
-  std::vector<float> original_accelerations;
-  original_accelerations.reserve(traj_points.size());
-  for (const auto & point : traj_points) {
-    original_accelerations.push_back(point.acceleration_mps2);
-  }
-
-  for (size_t i = 0; i < traj_points.size() - 1; ++i) {
-    // Calculate moving average using backward-looking window
-    double sum = 0.0;
-    int count = 0;
-    const int start_idx = std::max(0, static_cast<int>(i) - window_size + 1);
-    for (int j = start_idx; j <= static_cast<int>(i); ++j) {
-      sum += original_accelerations[j];
-      count++;
-    }
-    traj_points[i].acceleration_mps2 = static_cast<float>(sum / count);
-  }
-
-  // set last point acceleration to zero
-  traj_points.back().acceleration_mps2 = 0.0f;
+  // Recalculate acceleration and time_from_start for kinematic consistency
+  trajectory_mpt_optimizer_utils::recalculate_trajectory_dynamics(
+    traj_points, mpt_params_.acceleration_moving_average_window);
 
   RCLCPP_DEBUG_THROTTLE(
     get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-    "MPT: Optimized %zu->%zu points, recalculated time", original_size, traj_points.size());
-}
-
-BoundsPair TrajectoryMPTOptimizer::generate_adaptive_bounds(
-  const TrajectoryPoints & traj_points) const
-{
-  BoundsPair bounds;
-  bounds.left_bound.reserve(traj_points.size());
-  bounds.right_bound.reserve(traj_points.size());
-
-  for (size_t i = 0; i < traj_points.size(); ++i) {
-    const auto & point = traj_points[i];
-    const auto & pose = point.pose;
-
-    // Calculate adaptive corridor width
-    double corridor_width = mpt_params_.corridor_width_m;
-
-    if (mpt_params_.enable_adaptive_width) {
-      const double curvature = calculate_curvature_at_point(traj_points, i);
-      const double velocity = point.longitudinal_velocity_mps;
-      corridor_width =
-        calculate_adaptive_corridor_width(curvature, velocity, mpt_params_.corridor_width_m);
-    }
-
-    // Ensure minimum clearance
-    const double min_width = vehicle_info_.vehicle_width_m + mpt_params_.min_clearance_m;
-    corridor_width = std::max(corridor_width, min_width);
-
-    // Get yaw from quaternion
-    const double yaw = tf2::getYaw(pose.orientation);
-
-    // Calculate perpendicular offset (90 degrees to the left and right)
-    const double left_yaw = yaw + M_PI_2;
-    const double right_yaw = yaw - M_PI_2;
-
-    // Left bound point
-    geometry_msgs::msg::Point left_point;
-    left_point.x = pose.position.x + corridor_width * std::cos(left_yaw);
-    left_point.y = pose.position.y + corridor_width * std::sin(left_yaw);
-    left_point.z = pose.position.z;
-    bounds.left_bound.push_back(left_point);
-
-    // Right bound point
-    geometry_msgs::msg::Point right_point;
-    right_point.x = pose.position.x + corridor_width * std::cos(right_yaw);
-    right_point.y = pose.position.y + corridor_width * std::sin(right_yaw);
-    right_point.z = pose.position.z;
-    bounds.right_bound.push_back(right_point);
-  }
-
-  return bounds;
-}
-
-double TrajectoryMPTOptimizer::calculate_adaptive_corridor_width(
-  const double curvature, const double velocity, const double base_width) const
-{
-  // Widen corridor in curves (higher curvature needs more space)
-  const double curvature_addition = mpt_params_.curvature_width_factor * std::abs(curvature);
-
-  // Widen corridor at low speeds (more maneuvering room)
-  constexpr double max_velocity = 15.0;  // m/s (~54 km/h)
-  const double velocity_factor = std::max(0.0, (max_velocity - velocity) / max_velocity);
-  const double velocity_addition = mpt_params_.velocity_width_factor * velocity_factor;
-
-  return base_width + curvature_addition + velocity_addition;
-}
-
-double TrajectoryMPTOptimizer::calculate_curvature_at_point(
-  const TrajectoryPoints & traj_points, const size_t idx)
-{
-  if (traj_points.size() < 3 || idx == 0 || idx >= traj_points.size() - 1) {
-    return 0.0;
-  }
-
-  const auto & p_prev = traj_points[idx - 1].pose.position;
-  const auto & p_curr = traj_points[idx].pose.position;
-  const auto & p_next = traj_points[idx + 1].pose.position;
-
-  const double dx1 = p_curr.x - p_prev.x;
-  const double dy1 = p_curr.y - p_prev.y;
-  const double dx2 = p_next.x - p_curr.x;
-  const double dy2 = p_next.y - p_curr.y;
-
-  const double angle1 = std::atan2(dy1, dx1);
-  const double angle2 = std::atan2(dy2, dx2);
-  double angle_diff = angle2 - angle1;
-
-  while (angle_diff > M_PI) angle_diff -= 2.0 * M_PI;
-  while (angle_diff < -M_PI) angle_diff += 2.0 * M_PI;
-
-  const double arc_length = std::hypot(dx1, dy1) + std::hypot(dx2, dy2);
-
-  // κ = Δθ / arc_length
-  return (arc_length > 1e-6) ? (angle_diff / arc_length) : 0.0;
+    "MPT: Optimized %zu->%zu points, recalculated dynamics", original_size, traj_points.size());
 }
 
 PlannerData TrajectoryMPTOptimizer::create_planner_data(
-  const TrajectoryPoints & traj_points, const BoundsPair & bounds,
+  const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
   const TrajectoryOptimizerData & data) const
 {
   PlannerData planner_data;
@@ -457,7 +271,8 @@ PlannerData TrajectoryMPTOptimizer::create_planner_data(
 }
 
 void TrajectoryMPTOptimizer::publish_debug_markers(
-  const BoundsPair & bounds, const TrajectoryPoints & traj_points) const
+  const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
+  const TrajectoryPoints & traj_points) const
 {
   if (debug_markers_pub_->get_subscription_count() == 0) {
     return;

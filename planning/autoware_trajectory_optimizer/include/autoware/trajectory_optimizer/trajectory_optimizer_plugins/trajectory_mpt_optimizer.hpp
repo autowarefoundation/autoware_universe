@@ -17,6 +17,7 @@
 
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer_utils.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
@@ -64,12 +65,6 @@ struct MPTParams
     5};  // Moving average window size for acceleration smoothing
 };
 
-struct BoundsPair
-{
-  std::vector<geometry_msgs::msg::Point> left_bound;
-  std::vector<geometry_msgs::msg::Point> right_bound;
-};
-
 class TrajectoryMPTOptimizer : public TrajectoryOptimizerPluginBase
 {
 public:
@@ -105,22 +100,13 @@ private:
   std::shared_ptr<DebugData> debug_data_ptr_;
   std::shared_ptr<autoware_utils::TimeKeeper> mpt_time_keeper_;
 
-  BoundsPair generate_adaptive_bounds(const TrajectoryPoints & traj_points) const;
-
-  double calculate_adaptive_corridor_width(
-    const double curvature, const double velocity, const double base_width) const;
-
-  static double calculate_curvature_at_point(
-    const TrajectoryPoints & traj_points, const size_t idx);
-
   PlannerData create_planner_data(
-    const TrajectoryPoints & traj_points, const BoundsPair & bounds,
+    const TrajectoryPoints & traj_points, const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
     const TrajectoryOptimizerData & data) const;
 
-  bool validate_trajectory(
-    const TrajectoryPoints & optimized_traj, const TrajectoryPoints & input_traj) const;
-
-  void publish_debug_markers(const BoundsPair & bounds, const TrajectoryPoints & traj_points) const;
+  void publish_debug_markers(
+    const trajectory_mpt_optimizer_utils::BoundsPair & bounds,
+    const TrajectoryPoints & traj_points) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin
