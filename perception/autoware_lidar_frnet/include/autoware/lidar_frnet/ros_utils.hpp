@@ -33,21 +33,21 @@ struct PointCloudLayout
   size_t point_step;
 };
 
-sensor_msgs::msg::PointCloud2 getMsgFromLayout(
-  const sensor_msgs::msg::PointCloud2 & msg_in, const PointCloudLayout & pointcloud_layout)
-{
-  auto new_msg = sensor_msgs::msg::PointCloud2();
-  new_msg.fields = pointcloud_layout.fields;
-  const auto msg_size = pointcloud_layout.point_step * msg_in.width * msg_in.height;
-  new_msg.point_step = pointcloud_layout.point_step;
-  new_msg.header = msg_in.header;
-  new_msg.height = msg_in.height;
-  new_msg.width = msg_in.width;
-  new_msg.row_step = msg_size;
-  new_msg.data.resize(msg_size);
-  return new_msg;
-}
-
+/**
+ * @brief Create a new PointCloud2 message with the specified layout and metadata.
+ *
+ * This function creates a new sensor_msgs::msg::PointCloud2 message with the given header,
+ * dimensions, and point cloud layout. The data buffer is allocated but not filled with actual
+ * point data. This is useful for creating output messages when processing point clouds with
+ * CUDA, where the data will be filled later from GPU memory.
+ *
+ * @param header The header information for the new message.
+ * @param height The height of the point cloud (number of rows).
+ * @param width The width of the point cloud (number of points per row).
+ * @param pointcloud_layout The layout definition containing fields and point_step information.
+ * @return A new PointCloud2 message with the specified layout and metadata. The data buffer
+ *         is allocated to the appropriate size but contains uninitialized data.
+ */
 sensor_msgs::msg::PointCloud2 getMsgFromLayout(
   const std_msgs::msg::Header & header, const uint32_t height, const uint32_t width,
   const PointCloudLayout & pointcloud_layout)
