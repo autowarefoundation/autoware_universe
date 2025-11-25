@@ -128,7 +128,7 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 Note: Make sure the appropriate version weight is set for the path specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml`.
 
 ```bash
-$ ls ~/autoware_data/diffusion_planner/v1.0/
+$ ls ~/autoware_data/diffusion_planner/v2.0/
 diffusion_planner.onnx diffusion_planner.param.json
 ```
 
