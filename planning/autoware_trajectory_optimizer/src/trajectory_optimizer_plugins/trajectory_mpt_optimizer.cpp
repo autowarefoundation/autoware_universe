@@ -198,11 +198,8 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
     mpt_optimizer_ptr_->resetPreviousData();
   }
 
-  // Calculate base velocity for adaptive width
-  const double base_velocity = data.current_odometry.twist.twist.linear.x;
-
   // Generate adaptive corridor bounds
-  const auto bounds = generate_adaptive_bounds(traj_points, base_velocity);
+  const auto bounds = generate_adaptive_bounds(traj_points);
 
   // Publish debug markers
   if (mpt_params_.enable_debug_info) {
@@ -343,7 +340,7 @@ void TrajectoryMPTOptimizer::optimize_trajectory(
 }
 
 BoundsPair TrajectoryMPTOptimizer::generate_adaptive_bounds(
-  const TrajectoryPoints & traj_points, [[maybe_unused]] const double base_velocity) const
+  const TrajectoryPoints & traj_points) const
 {
   BoundsPair bounds;
   bounds.left_bound.reserve(traj_points.size());

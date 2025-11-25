@@ -20,4 +20,4 @@
     optimize_velocity: true
     extend_trajectory_backward: false
     use_kinematic_feasibility_enforcer: true
-    use_mpt_optimizer: false  # Disabled by default - enable for advanced trajectory refinement
+    use_mpt_optimizer: false

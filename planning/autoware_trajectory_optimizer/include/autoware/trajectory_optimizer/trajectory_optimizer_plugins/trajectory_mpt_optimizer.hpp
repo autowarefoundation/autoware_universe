@@ -105,8 +105,7 @@ private:
   std::shared_ptr<DebugData> debug_data_ptr_;
   std::shared_ptr<autoware_utils::TimeKeeper> mpt_time_keeper_;
 
-  BoundsPair generate_adaptive_bounds(
-    const TrajectoryPoints & traj_points, const double base_velocity) const;
+  BoundsPair generate_adaptive_bounds(const TrajectoryPoints & traj_points) const;
 
   double calculate_adaptive_corridor_width(
     const double curvature, const double velocity, const double base_width) const;
