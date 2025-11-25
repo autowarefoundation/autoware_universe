@@ -43,7 +43,7 @@ __global__ void cellInit(Cell * __restrict__ cell_list, int max_num_cells)
   Cell new_cell;
 
   for (int i = index; i < max_num_cells; i += stride) {
-    new_cell.gnd_height_min = 1e6f;
+    new_cell.gnd_height_min = FLT_MAX;
 
     cell_list[i] = new_cell;
   }
