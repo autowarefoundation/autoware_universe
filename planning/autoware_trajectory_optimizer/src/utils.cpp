@@ -149,11 +149,10 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
     const auto dv = static_cast<double>(to.longitudinal_velocity_mps) -
                     static_cast<double>(from.longitudinal_velocity_mps);
     const auto acc = static_cast<double>(from.acceleration_mps2);
-    if (std::abs(acc) < 1e-6) {
-      // Avoid division by zero; assume a small acceleration
-      return std::abs(dv) / 1e-6;
-    }
-    return std::abs(dv) / std::abs(acc);
+    constexpr double epsilon_acceleration = 1e-6;
+    const auto denominator_acc =
+      std::abs(acc) < epsilon_acceleration ? epsilon_acceleration : std::abs(acc);
+    return std::abs(dv) / denominator_acc;
   };
 
   // Store original dt values computed from velocity and acceleration
