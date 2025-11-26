@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
+#include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -178,8 +179,7 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletManyInterpolationPoints)
   auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
   ASSERT_EQ(segments.lane_segments.size(), 1);
-  // Should create many interpolated points
-  EXPECT_GT(segments.lane_segments[0].centerline.size(), 1000);
+  EXPECT_EQ(segments.lane_segments[0].centerline.size(), POINTS_PER_SEGMENT);
 }
 
 // Test edge case: Lanelet with intersection attribute edge cases
