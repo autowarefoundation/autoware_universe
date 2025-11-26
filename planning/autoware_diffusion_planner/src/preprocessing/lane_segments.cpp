@@ -140,7 +140,10 @@ std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
 
     const std::vector<LanePoint> & centerline = segment.centerline;
 
-    // -1 is the same as next first point, so use -2
+    // Approximate distance using the closest of the first and last points
+    // Note: Because the last point (centerline.size() - 1) of the centerline is the same as the
+    // first point of the next segment, we use (centerline.size() - 2) to avoid obtaining the same
+    // distance for adjacent segments.
     const float distance_squared =
       std::min(calc_distance(centerline.front()), calc_distance(centerline[centerline.size() - 2]));
     distances.push_back({static_cast<int64_t>(i), distance_squared});
