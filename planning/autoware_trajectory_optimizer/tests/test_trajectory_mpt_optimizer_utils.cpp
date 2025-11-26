@@ -212,7 +212,7 @@ TEST_F(MPTOptimizerUtilsTest, GenerateBounds_MinimumClearance)
   std::vector<TrajectoryPoint> points;
   points.push_back(create_point(0.0, 0.0, 1.0f));
 
-  const double vehicle_width = 2.0;
+  const double vehicle_width = 3.0;
   const double min_clearance = 0.5;
   const double small_corridor = 1.0;  // Less than required minimum
 
@@ -220,11 +220,11 @@ TEST_F(MPTOptimizerUtilsTest, GenerateBounds_MinimumClearance)
     generate_bounds(points, small_corridor, false, 0.0, 0.0, min_clearance, vehicle_width);
 
   // Corridor width is per-side offset from centerline
-  // Required: vehicle_width/2 + min_clearance = 1.0 + 0.5 = 1.5
+  // Required: vehicle_width/2 + min_clearance = 1.5 + 0.5 = 2.0
   const double actual_width = std::abs(bounds.left_bound[0].y);
   const double expected_min = (vehicle_width / 2.0) + min_clearance;
   EXPECT_GE(actual_width, expected_min);
-  EXPECT_NEAR(actual_width, 1.5, 1e-6);  // Should be clamped to minimum
+  EXPECT_NEAR(actual_width, 2.0, 1e-6);  // Should be clamped to minimum
 }
 
 TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_TimeProgression)
