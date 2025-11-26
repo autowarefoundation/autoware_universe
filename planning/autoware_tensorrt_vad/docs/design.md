@@ -24,7 +24,7 @@ In recent years, approaches have been proposed to address these challenges by tr
 - [Separation between ROS and CUDA domains](#separation-between-ros-and-cuda-domains)
   - Changes to ROS topic types do not affect CUDA implementations
   - Changes to CUDA versions or interfaces do not affect ROS Nodes
-- [Separation between ONNX-dependent and ONNX-independent ROS parameters](#separation-between-onnx-dependent-and-onnx-independent-ros-parameters)
+- [Separation between model architecture and deployment parameters](#separation-between-model-architecture-and-deployment-parameters)
 - [Extensible design for Autoware `camera_id` changes](#extensible-design-for-autoware-camera_id-changes)
   - Even if the front camera ID changes from `0` to `1`, it can be handled through parameter changes without major design modifications
 
@@ -195,20 +195,19 @@ flowchart TD
 - Modify input conversion processing in `VadInterface`
 - Add member to `VadInputData`
 
-### Separation between ONNX-dependent and ONNX-independent ROS parameters
+### Separation between model architecture and deployment parameters
 
-- ONNX-dependent parameters are added to [`ml_package_vad_carla_tiny.param.yaml`](../config/ml_package_vad_carla_tiny.param.yaml)
-- ONNX-independent ROS parameters are added to [`vad_carla_tiny.param.yaml`](../config/vad_carla_tiny.param.yaml)
+- Model architecture parameters (network structure, normalization, training dataset classes) are defined in `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/vad/v0.1/`)
+- Deployment parameters (hardware settings, file paths, detection thresholds) are configured in [`vad_carla_tiny.param.yaml`](../config/vad_carla_tiny.param.yaml)
   - Object class remapping parameters are added to [`object_class_remapper_carla_tiny.param.yaml`](../config/object_class_remapper_carla_tiny.param.yaml)
     - Following the precedent of [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)
-- Some parameters like `autoware_to_vad_camera_mapping` depend on both ONNX and ROS Node. If a parameter **could affect ONNX**, it is added to [`ml_package_vad_carla_tiny.param.yaml`](../config/ml_package_vad_carla_tiny.param.yaml)
 
 #### Expected Use Cases
 
-| Use Case                 | vad_carla_tiny.param.yaml | ml_package_vad_carla_tiny.param.yaml | object_class_remapper_carla_tiny.param.yaml                  |
-| ------------------------ | ------------------------- | ------------------------------------ | ------------------------------------------------------------ |
-| ONNX-dependent changes   | Do not modify             | Modify                               | Modify only when VAD ONNX output class definitions change    |
-| ONNX-independent changes | Modify                    | Do not modify                        | Modify only when object class definitions in Autoware change |
+| Use Case                         | vad_carla_tiny.param.yaml | vad-carla-tiny.param.json | object_class_remapper_carla_tiny.param.yaml                  |
+| -------------------------------- | ------------------------- | ------------------------- | ------------------------------------------------------------ |
+| Model architecture changes       | Do not modify             | Modify                    | Modify only when VAD ONNX output class definitions change    |
+| Deployment configuration changes | Modify                    | Do not modify             | Modify only when object class definitions in Autoware change |
 
 ### Extensible design for Autoware `camera_id` changes
 
@@ -221,7 +220,7 @@ flowchart TD
 
 ##### When camera image ID used for VAD input is changed
 
-- Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`ml_package_vad_carla_tiny.param.yaml`](../config/ml_package_vad_carla_tiny.param.yaml))
+- Modify `autoware_to_vad_camera_mapping` in the ROS param file ([`vad_carla_tiny.param.yaml`](../config/vad_carla_tiny.param.yaml))
 
 ### Additional Design Considerations
 

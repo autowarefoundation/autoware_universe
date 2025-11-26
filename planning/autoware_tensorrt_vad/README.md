@@ -4,7 +4,7 @@
 
 The `autoware_tensorrt_vad` is a ROS 2 component that implements end-to-end autonomous driving using the TensorRT-optimized Vectorized Autonomous Driving (VAD) model. It leverages the [VAD model](https://github.com/hustvl/VAD) (Jiang et al., 2023), optimized for deployment using NVIDIA's [DL4AGX](https://developer.nvidia.com/drive/drive-agx) TensorRT framework. <!-- cSpell:ignore Jiang Shaoyu Bencheng Liao Jiajie Helong Wenyu Xinggang -->
 
-This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with [Autoware](https://autoware.org/) and is designed to work within the Autoware framework.
+This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with [Autoware](https://autowarefoundation.github.io/autoware-documentation/main/) and is designed to work within the Autoware framework.
 
 ---
 
@@ -39,10 +39,10 @@ The system successfully handles right turn maneuvers, generating smooth trajecto
 
 {{ json_to_markdown("planning/autoware_tensorrt_vad/schema/vad_tiny.schema.json") }}
 
-Parameters can be set via YAML configuration files:
+Parameters can be set via configuration files:
 
-- Node and interface parameters: `config/vad_carla_tiny.param.yaml`
-- Model and network parameters: `config/ml_package_vad_carla_tiny.param.yaml`
+- Deployment configuration (node and interface parameters): `config/vad_carla_tiny.param.yaml`
+- Model architecture parameters: `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/vad/v0.1/`)
 
 ---
 
@@ -138,7 +138,7 @@ Models are hosted at: <https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/
 - `vad-carla-tiny_head_no_prev.onnx` - Planning head (first frame)
 - `vad-carla-tiny_head.onnx` - Temporal planning head
 
-If you need to manually configure the model paths, update them in `ml_package_vad_carla_tiny.param.yaml`:
+If you need to manually configure the model paths, update them in `config/vad_carla_tiny.param.yaml`:
 
 ```yaml
 model_params:
