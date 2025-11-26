@@ -35,7 +35,7 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 class MPTOptimizerUtilsTest : public ::testing::Test
 {
 protected:
-  TrajectoryPoint create_point(double x, double y, float velocity, float acceleration = 0.0f)
+  static TrajectoryPoint create_point(double x, double y, float velocity, float acceleration = 0.0f)
   {
     TrajectoryPoint point;
     point.pose.position.x = x;
@@ -188,6 +188,7 @@ TEST_F(MPTOptimizerUtilsTest, CalculateCorridorWidth_LowSpeed)
 TEST_F(MPTOptimizerUtilsTest, GenerateBounds_Basic)
 {
   std::vector<TrajectoryPoint> points;
+  points.reserve(3);
   for (int i = 0; i < 3; ++i) {
     points.push_back(create_point(static_cast<double>(i), 0.0, 1.0f));
   }
@@ -253,6 +254,7 @@ TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_TimeProgression)
 TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_LastPointZeroAccel)
 {
   std::vector<TrajectoryPoint> points;
+  points.reserve(5);
   for (int i = 0; i < 5; ++i) {
     points.push_back(create_point(static_cast<double>(i), 0.0, 10.0f, 5.0f));
   }
@@ -265,14 +267,15 @@ TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_LastPointZeroAccel)
 TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_ConstantVelocity)
 {
   std::vector<TrajectoryPoint> points;
+  points.reserve(5);
   for (int i = 0; i < 5; ++i) {
     points.push_back(create_point(static_cast<double>(i * 10), 0.0, 10.0f));
   }
 
   recalculate_trajectory_dynamics(points, 1);
 
-  for (size_t i = 0; i < points.size(); ++i) {
-    EXPECT_NEAR(points[i].acceleration_mps2, 0.0f, 1e-4);
+  for (auto & point : points) {
+    EXPECT_NEAR(point.acceleration_mps2, 0.0f, 1e-4);
   }
 }
 
@@ -285,9 +288,10 @@ TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_MovingAverage)
   }
 
   recalculate_trajectory_dynamics(points, 1);
-  std::vector<float> unsmoothed_accel;
+  std::vector<float> original_accel;
+  original_accel.reserve(points.size());
   for (const auto & p : points) {
-    unsmoothed_accel.push_back(p.acceleration_mps2);
+    original_accel.push_back(p.acceleration_mps2);
   }
 
   points.clear();
@@ -299,7 +303,7 @@ TEST_F(MPTOptimizerUtilsTest, RecalculateTrajectoryDynamics_MovingAverage)
 
   bool has_smoothing = false;
   for (size_t i = 2; i < points.size() - 1; ++i) {
-    if (std::abs(points[i].acceleration_mps2 - unsmoothed_accel[i]) > 1e-3) {
+    if (std::abs(points[i].acceleration_mps2 - original_accel[i]) > 1e-3) {
       has_smoothing = true;
       break;
     }
