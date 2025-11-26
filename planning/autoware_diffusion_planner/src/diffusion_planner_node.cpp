@@ -562,6 +562,7 @@ InputDataMap DiffusionPlanner::create_input_data()
 
   // turn indicators
   {
+    // copy from back to front, and use the front value for padding if not enough history
     std::vector<float> single_turn_indicators(INPUT_T + 1, 0.0f);
     for (int64_t t = 0; t < INPUT_T + 1; ++t) {
       const int64_t index = std::max(
