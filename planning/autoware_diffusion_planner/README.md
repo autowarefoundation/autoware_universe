@@ -177,6 +177,7 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 | `~/input/traffic_signals` | autoware_perception_msgs/msg/TrafficLightGroupArray | Traffic light states     |
 | `~/input/vector_map`      | autoware_map_msgs/msg/LaneletMapBin                 | Lanelet2 map             |
 | `~/input/route`           | autoware_planning_msgs/msg/LaneletRoute             | Route information        |
+| `~/input/turn_indicators`           | autoware_vehicle_msgs/msg/TurnIndicatorsReport             | Turn indicator information        |
 
 ## Outputs
 
@@ -185,6 +186,7 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 | `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
 | `~/output/trajectories`      | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
 | `~/output/predicted_objects` | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
+| `~/output/turn_indicators` | autoware_vehicle_msgs/msg/TurnIndicatorsCommand             | Planned turn indicator command |
 | `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
 | `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray                        | Route debug markers                        |
 
