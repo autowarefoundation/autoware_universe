@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_mpt_optimizer_utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -25,15 +25,11 @@
 namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
 {
 
-double calculate_distance(const TrajectoryPoint & p1, const TrajectoryPoint & p2)
-{
-  return autoware_utils::calc_distance2d(p1.pose.position, p2.pose.position);
-}
-
 double calculate_acceleration_from_velocity_and_distance(
   const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next)
 {
-  const double delta_s = calculate_distance(p_curr, p_next);
+  const double delta_s =
+    autoware_utils::calc_distance2d(p_curr.pose.position, p_next.pose.position);
   if (delta_s < 1e-6) {
     return 0.0;
   }
@@ -47,7 +43,8 @@ double calculate_acceleration_from_velocity_and_distance(
 double calculate_time_interval(
   const double v, const double a, const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next)
 {
-  const double delta_s = calculate_distance(p_curr, p_next);
+  const double delta_s =
+    autoware_utils::calc_distance2d(p_curr.pose.position, p_next.pose.position);
   constexpr double min_velocity = 1e-3;  // 1mm/s threshold
 
   if (std::abs(a) < 1e-6) {

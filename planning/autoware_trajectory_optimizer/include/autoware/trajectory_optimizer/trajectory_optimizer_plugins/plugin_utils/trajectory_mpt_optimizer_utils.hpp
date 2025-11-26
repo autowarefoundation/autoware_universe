@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_  // NOLINT
-#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_  // NOLINT
+// NOLINTNEXTLINE
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_
+// NOLINTNEXTLINE
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/point.hpp>
 
-#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
@@ -33,15 +34,6 @@ struct BoundsPair
   std::vector<geometry_msgs::msg::Point> left_bound;
   std::vector<geometry_msgs::msg::Point> right_bound;
 };
-
-/**
- * @brief Calculates 2D distance between two trajectory points.
- *
- * @param p1 First trajectory point
- * @param p2 Second trajectory point
- * @return Distance in meters
- */
-double calculate_distance(const TrajectoryPoint & p1, const TrajectoryPoint & p2);
 
 /**
  * @brief Calculates acceleration based on velocity change and distance using kinematic equation.
@@ -139,4 +131,4 @@ BoundsPair generate_bounds(
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils
 
 // NOLINTNEXTLINE
-#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_MPT_OPTIMIZER_UTILS_HPP_
