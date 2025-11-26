@@ -137,6 +137,8 @@
         bezier_parking:
           pull_over_angle_threshold: 0.5
           after_shift_straight_distance: 1.5
+          lateral_acceleration_threshold: 2.0
+          lateral_acceleration_filtering_duration: 1.0
 
       stop_condition:
         maximum_deceleration_for_stop: 1.0
