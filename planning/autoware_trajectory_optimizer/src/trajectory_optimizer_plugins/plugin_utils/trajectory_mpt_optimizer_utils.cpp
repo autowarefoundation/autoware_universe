@@ -196,8 +196,9 @@ BoundsPair generate_bounds(
         curvature, velocity, corridor_width_m, curvature_width_factor, velocity_width_factor);
     }
 
-    // Ensure minimum clearance
-    const double min_width = vehicle_width_m + min_clearance_m;
+    // Ensure minimum clearance on both sides
+    // corridor_width is per-side offset, vehicle extends vehicle_width/2 from center
+    const double min_width = vehicle_width_m / 2.0 + min_clearance_m;
     corridor_width = std::max(corridor_width, min_width);
 
     // Get yaw from quaternion
