@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
+#include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -27,7 +28,7 @@
 #include <string>
 #include <vector>
 
-using autoware::diffusion_planner::convert_to_lane_segments;
+using autoware::diffusion_planner::convert_to_internal_lanelet_map;
 
 namespace autoware::diffusion_planner::test
 {
@@ -84,7 +85,7 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletInvalidSpeedLimit)
   lanelet_map_ptr_->add(lanelet);
 
   // This should throw due to std::stof failing
-  EXPECT_THROW(convert_to_lane_segments(lanelet_map_ptr_, 10), std::invalid_argument);
+  EXPECT_THROW(convert_to_internal_lanelet_map(lanelet_map_ptr_), std::invalid_argument);
 }
 
 // Test edge case: Lanelet with extreme speed limit values
@@ -101,12 +102,12 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletExtremeSpeedLimit)
   auto lanelet = createLanelet(left, right, attrs);
   lanelet_map_ptr_->add(lanelet);
 
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  ASSERT_EQ(segments.size(), 1);
-  EXPECT_TRUE(segments[0].speed_limit_mps.has_value());
+  ASSERT_EQ(segments.lane_segments.size(), 1);
+  EXPECT_TRUE(segments.lane_segments[0].speed_limit_mps.has_value());
   // Speed should be converted from km/h to m/s
-  EXPECT_GT(segments[0].speed_limit_mps.value(), 100000.0f);  // Very large value
+  EXPECT_GT(segments.lane_segments[0].speed_limit_mps.value(), 100000.0f);  // Very large value
 }
 
 // Test edge case: Lanelet with NaN/Inf coordinates
@@ -126,11 +127,11 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletWithNaNInfCoordinates)
   auto lanelet = createLanelet(left, right, attrs);
   lanelet_map_ptr_->add(lanelet);
 
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
   // Should handle NaN/Inf gracefully
-  ASSERT_EQ(segments.size(), 1);
-  const auto & polyline = segments[0].centerline;
+  ASSERT_EQ(segments.lane_segments.size(), 1);
+  const auto & polyline = segments.lane_segments[0].centerline;
 
   // Check that NaN/Inf propagated through
   bool has_nan = false;
@@ -155,11 +156,11 @@ TEST_F(LaneletEdgeCaseTest, ConvertZeroLengthLanelet)
   auto lanelet = createLanelet(left, right, attrs);
   lanelet_map_ptr_->add(lanelet);
 
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  ASSERT_EQ(segments.size(), 1);
+  ASSERT_EQ(segments.lane_segments.size(), 1);
   // Should still create a segment, even if degenerate
-  EXPECT_GE(segments[0].centerline.size(), 2);
+  EXPECT_GE(segments.lane_segments[0].centerline.size(), 2);
 }
 
 // Test edge case: Very large number of interpolation points
@@ -175,11 +176,10 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletManyInterpolationPoints)
   lanelet_map_ptr_->add(lanelet);
 
   // Request extremely high number of interpolation points
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10000);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  ASSERT_EQ(segments.size(), 1);
-  // Should create many interpolated points
-  EXPECT_GT(segments[0].centerline.size(), 1000);
+  ASSERT_EQ(segments.lane_segments.size(), 1);
+  EXPECT_EQ(segments.lane_segments[0].centerline.size(), POINTS_PER_SEGMENT);
 }
 
 // Test edge case: Lanelet with intersection attribute edge cases
@@ -202,9 +202,9 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletIntersectionAttributes)
     auto lanelet = createLanelet(left, right, attrs);
     lanelet_map_ptr_->add(lanelet);
 
-    auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+    auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-    ASSERT_EQ(segments.size(), 1);
+    ASSERT_EQ(segments.lane_segments.size(), 1);
   }
 }
 
@@ -212,10 +212,10 @@ TEST_F(LaneletEdgeCaseTest, ConvertLaneletIntersectionAttributes)
 TEST_F(LaneletEdgeCaseTest, ConvertEmptyMapToLaneSegments)
 {
   // Convert empty map
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
   // Should return empty vector
-  EXPECT_TRUE(segments.empty());
+  EXPECT_TRUE(segments.lane_segments.empty());
 }
 
 // Test edge case: Negative speed limit conversion
@@ -231,12 +231,12 @@ TEST_F(LaneletEdgeCaseTest, ConvertNegativeSpeedLimit)
   auto lanelet = createLanelet(left, right, attrs);
   lanelet_map_ptr_->add(lanelet);
 
-  auto segments = convert_to_lane_segments(lanelet_map_ptr_, 10);
+  auto segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  ASSERT_EQ(segments.size(), 1);
-  EXPECT_TRUE(segments[0].speed_limit_mps.has_value());
+  ASSERT_EQ(segments.lane_segments.size(), 1);
+  EXPECT_TRUE(segments.lane_segments[0].speed_limit_mps.has_value());
   // Negative speed should be preserved (though semantically invalid)
-  EXPECT_LT(segments[0].speed_limit_mps.value(), 0.0f);
+  EXPECT_LT(segments.lane_segments[0].speed_limit_mps.value(), 0.0f);
 }
 
 // Test edge case: Unicode in lanelet attributes
@@ -254,7 +254,7 @@ TEST_F(LaneletEdgeCaseTest, ConvertUnicodeAttributes)
   lanelet_map_ptr_->add(lanelet);
 
   // Should handle unicode attributes without crashing
-  EXPECT_NO_THROW(convert_to_lane_segments(lanelet_map_ptr_, 10));
+  EXPECT_NO_THROW(convert_to_internal_lanelet_map(lanelet_map_ptr_));
 }
 
 }  // namespace autoware::diffusion_planner::test

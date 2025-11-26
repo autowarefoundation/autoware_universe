@@ -48,6 +48,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -80,6 +81,7 @@ using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
@@ -251,9 +253,6 @@ private:
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
 
-  // ego history for ego_agent_past
-  std::deque<Pose> ego_history_;
-
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
@@ -269,13 +268,18 @@ private:
   CudaUniquePtr<float[]> route_lanes_d_;
   CudaUniquePtr<bool[]> route_lanes_has_speed_limit_d_;
   CudaUniquePtr<float[]> route_lanes_speed_limit_d_;
+  CudaUniquePtr<float[]> polygons_d_;
+  CudaUniquePtr<float[]> line_strings_d_;
   CudaUniquePtr<float[]> goal_pose_d_;
   CudaUniquePtr<float[]> ego_shape_d_;
+  CudaUniquePtr<float[]> turn_indicators_d_;
   CudaUniquePtr<float[]> output_d_;                // shape: [1, 11, 80, 4]
   CudaUniquePtr<float[]> turn_indicator_logit_d_;  // shape: [1, 4]
   cudaStream_t stream_{nullptr};
 
   // Model input data
+  std::deque<Pose> ego_history_;
+  std::deque<TurnIndicatorsReport> turn_indicators_history_;
   nav_msgs::msg::Odometry ego_kinematic_state_;
   std::optional<AgentData> agent_data_{std::nullopt};
   std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
@@ -314,6 +318,8 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     autoware_perception_msgs::msg::TrafficLightGroupArray, autoware_utils::polling_policy::All>
     sub_traffic_signals_{this, "~/input/traffic_signals", rclcpp::QoS{10}};
+  autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsReport> sub_turn_indicators_{
+    this, "~/input/turn_indicators"};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};

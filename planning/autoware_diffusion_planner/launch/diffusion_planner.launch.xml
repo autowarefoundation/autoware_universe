@@ -11,6 +11,7 @@
   <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
   <arg name="input_tracked_objects" default="~/input/tracked_objects"/>
   <arg name="input_vector_map" default="~/input/vector_map"/>
+  <arg name="input_turn_indicators" default="~/input/turn_indicators"/>
 
   <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="both">
     <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
@@ -24,5 +25,6 @@
     <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
     <remap from="~/input/tracked_objects" to="$(var input_tracked_objects)"/>
     <remap from="~/input/vector_map" to="$(var input_vector_map)"/>
+    <remap from="~/input/turn_indicators" to="$(var input_turn_indicators)"/>
   </node>
 </launch>

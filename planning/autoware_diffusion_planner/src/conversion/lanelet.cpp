@@ -14,6 +14,7 @@
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 
+#include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware_utils_math/unit_conversion.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
@@ -96,22 +97,25 @@ std::vector<LanePoint> interpolate_points(const std::vector<LanePoint> & input, 
   return result;
 }
 
-std::vector<LanePoint> convert_to_polyline(const lanelet::ConstLineString3d & line_string) noexcept
+template <typename T>
+std::vector<LanePoint> convert_to_polyline(const T & line_string) noexcept
 {
   std::vector<LanePoint> output;
   output.reserve(line_string.size());
-  for (const lanelet::Point3d::ConstType & point : line_string) {
+  for (const auto & point : line_string) {
     output.emplace_back(point.x(), point.y(), point.z());
   }
   return output;
 }
 }  // namespace
 
-std::vector<LaneSegment> convert_to_lane_segments(
-  const lanelet::LaneletMapConstPtr lanelet_map_ptr, const int64_t num_lane_points)
+LaneletMap convert_to_internal_lanelet_map(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
 {
-  std::vector<LaneSegment> lane_segments;
-  lane_segments.reserve(lanelet_map_ptr->laneletLayer.size());
+  LaneletMap lanelet_map;
+  lanelet_map.lane_segments.reserve(lanelet_map_ptr->laneletLayer.size());
+  lanelet_map.polygons.reserve(lanelet_map_ptr->polygonLayer.size());
+  lanelet_map.line_strings.reserve(lanelet_map_ptr->lineStringLayer.size());
+
   // parse lanelet layers
   for (const auto & lanelet : lanelet_map_ptr->laneletLayer) {
     if (!lanelet.hasAttribute("subtype")) {
@@ -122,11 +126,11 @@ std::vector<LaneSegment> convert_to_lane_segments(
       continue;
     }
     const Polyline centerline(
-      interpolate_points(convert_to_polyline(lanelet.centerline3d()), num_lane_points));
+      interpolate_points(convert_to_polyline(lanelet.centerline3d()), POINTS_PER_SEGMENT));
     const Polyline left_boundary(
-      interpolate_points(convert_to_polyline(lanelet.leftBound3d()), num_lane_points));
+      interpolate_points(convert_to_polyline(lanelet.leftBound3d()), POINTS_PER_SEGMENT));
     const Polyline right_boundary(
-      interpolate_points(convert_to_polyline(lanelet.rightBound3d()), num_lane_points));
+      interpolate_points(convert_to_polyline(lanelet.rightBound3d()), POINTS_PER_SEGMENT));
 
     LanePoint mean_point(0.0, 0.0, 0.0);
     for (const LanePoint & p : centerline) {
@@ -173,10 +177,33 @@ std::vector<LaneSegment> convert_to_lane_segments(
       (traffic_light_list.empty() ? LaneSegment::TRAFFIC_LIGHT_ID_NONE
                                   : traffic_light_list.front()->id());
 
-    lane_segments.emplace_back(
+    lanelet_map.lane_segments.emplace_back(
       lanelet.id(), centerline, left_boundary, right_boundary, mean_point, left_line_type,
       right_line_type, speed_limit_mps, turn_direction, traffic_light_id);
   }
-  return lane_segments;
+
+  // parse polygon layers
+  for (const auto & polygon : lanelet_map_ptr->polygonLayer) {
+    const std::string polygon_type = polygon.attributeOr("type", "");
+    if (polygon_type != "intersection_area") {
+      continue;
+    }
+    const Polyline polyline(
+      interpolate_points(convert_to_polyline(polygon.basicLineString()), POINTS_PER_POLYGON));
+    lanelet_map.polygons.push_back(polyline);
+  }
+
+  // parse line string layers
+  for (const auto & line_string : lanelet_map_ptr->lineStringLayer) {
+    const std::string line_string_type = line_string.attributeOr("type", "");
+    if (line_string_type != "stop_line") {
+      continue;
+    }
+    const Polyline polyline(
+      interpolate_points(convert_to_polyline(line_string), POINTS_PER_LINE_STRING));
+    lanelet_map.line_strings.push_back(polyline);
+  }
+
+  return lanelet_map;
 }
 }  // namespace autoware::diffusion_planner
