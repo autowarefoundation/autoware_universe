@@ -266,6 +266,20 @@ plugin_names:
 - **Recalculates accelerations**: Overwrites acceleration values from previous plugins
 - **Recalculates time stamps**: Overwrites `time_from_start` based on kinematic consistency
 
+## Collision Avoidance Capability
+
+**Note:** The underlying MPT solver from `autoware_path_optimizer` supports collision avoidance optimization when provided with drivable area bounds (where obstacles are removed from the drivable area, creating bounds that inherently avoid collisions).
+
+However, this plugin implementation does **not utilize collision avoidance** because:
+
+- Bounds are generated as simple perpendicular offsets from the trajectory centerline
+- No obstacle or predicted object data is integrated
+- The drivable area is not used
+
+The collision-related parameters in the configuration (`soft_collision_free_weight`, `collision_free_constraints`, `avoidance` weights, vehicle circle approximations) are part of the underlying MPT solver's capabilities but remain unused in this geometric-only implementation.
+
+**Future work:** Collision avoidance could be added by integrating obstacle data and generating bounds from actual drivable area instead of geometric offsets.
+
 ## Limitations
 
 ### 1. Bound Requirement
