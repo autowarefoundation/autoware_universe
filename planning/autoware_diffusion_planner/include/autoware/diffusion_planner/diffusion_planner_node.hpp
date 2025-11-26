@@ -253,12 +253,6 @@ private:
    */
   std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
 
-  // ego history for ego_agent_past
-  std::deque<Pose> ego_history_;
-
-  // Turn indicators history for turn_indicators
-  std::deque<TurnIndicatorsReport> turn_indicators_history_;
-
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
@@ -284,6 +278,8 @@ private:
   cudaStream_t stream_{nullptr};
 
   // Model input data
+  std::deque<Pose> ego_history_;
+  std::deque<TurnIndicatorsReport> turn_indicators_history_;
   nav_msgs::msg::Odometry ego_kinematic_state_;
   std::optional<AgentData> agent_data_{std::nullopt};
   std::optional<AgentData> ego_centric_neighbor_agent_data_{std::nullopt};
