@@ -199,18 +199,63 @@ where `N` is the window size (configurable via `acceleration_moving_average_wind
 | ------------------------------------ | ---- | ------- | ------- | ----------------------------------------------------------------- |
 | `acceleration_moving_average_window` | int  | 5       | [1, 20] | Moving average window size. Larger values = smoother but more lag |
 
+## Comparison with Other Plugins
+
+### MPT vs QP Smoother
+
+**QP Smoother** - Geometric smoothing in Cartesian space:
+
+- Minimizes path curvature via second-order finite differences
+- Balances smoothness vs fidelity to original path
+- No vehicle kinematic model
+- Fast (~1-2ms), no bounds required
+
+**MPT Optimizer** - Model predictive with bicycle kinematics:
+
+- Optimizes in Frenet frame (lateral error, yaw error, steering)
+- Uses bicycle kinematics model with steering dynamics
+- Minimizes steering angle, rate, and acceleration explicitly
+- Slower (~5-20ms), requires corridor bounds
+
+**Use QP when:** Simple geometric smoothing needed, tight computational budget.
+**Use MPT when:** Kinematically-aware refinement needed, working with learning-based planners.
+
+### MPT vs Kinematic Feasibility Enforcer
+
+**Kinematic Feasibility Enforcer** - Hard constraint enforcement:
+
+- Forward propagation with yaw rate clamping
+- Hard constraints (must satisfy, no violations)
+- Greedy point-by-point approach
+- Fast, deterministic
+
+**MPT Optimizer** - Optimization with soft constraints:
+
+- QP optimization over prediction horizon
+- Soft constraints with slack variables (can violate if beneficial)
+- Globally optimizes steering smoothness
+- Finds best trajectory balancing multiple objectives
+
+**Use Enforcer when:** Need minimum feasibility guarantee, computational budget critical.
+**Use MPT when:** Need smooth, optimized trajectories considering full vehicle dynamics.
+
 ## Interaction with Other Plugins
 
 ### Recommended Plugin Order
 
-The MPT optimizer should typically run **after** initial smoothing but **before** velocity optimization:
+The MPT optimizer should run **after all geometric smoothing** but **before velocity optimization**:
 
 ```yaml
 plugin_names:
-  - TrajectoryPointFixer # Clean invalid points
-  - TrajectoryQPSmoother # Initial geometric smoothing
+  - TrajectoryPointFixer
+  - TrajectoryKinematicFeasibilityEnforcer
+  - TrajectoryQPSmoother
+  - TrajectoryKinematicFeasibilityEnforcer # Second pass after QP smoothing
+  - TrajectoryEBSmootherOptimizer
+  - TrajectorySplineSmoother
   - TrajectoryMPTOptimizer # Refine geometry with bounds
   - TrajectoryVelocityOptimizer # Optimize velocity profile
+  - TrajectoryExtender
 ```
 
 ### Compatibility Notes

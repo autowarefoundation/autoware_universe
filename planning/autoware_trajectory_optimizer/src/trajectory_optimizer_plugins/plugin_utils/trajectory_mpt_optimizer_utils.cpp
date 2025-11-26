@@ -15,6 +15,7 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tf2/utils.h>
 
@@ -92,16 +93,10 @@ void recalculate_trajectory_dynamics(TrajectoryPoints & traj_points, const int s
     // Calculate time interval
     const double dt = calculate_time_interval(velocity, acceleration, curr_point, next_point);
 
-    // Update time_from_start
-    const double curr_time = static_cast<double>(curr_point.time_from_start.sec) +
-                             static_cast<double>(curr_point.time_from_start.nanosec) * 1e-9;
+    // Update time_from_start using rclcpp::Duration for safe conversion
+    const double curr_time = rclcpp::Duration(curr_point.time_from_start).seconds();
     const double new_time = curr_time + dt;
-
-    // Split time into seconds and nanoseconds properly
-    const auto sec_part = static_cast<int32_t>(new_time);
-    const double fractional_part = new_time - static_cast<double>(sec_part);
-    next_point.time_from_start.sec = sec_part;
-    next_point.time_from_start.nanosec = static_cast<uint32_t>(fractional_part * 1e9);
+    next_point.time_from_start = rclcpp::Duration::from_seconds(new_time);
 
     // Update acceleration
     curr_point.acceleration_mps2 = static_cast<float>(acceleration);
