@@ -62,13 +62,13 @@ nav:
         - 'About Surround Obstacle Checker': planning/autoware_surround_obstacle_checker
         - 'About Surround Obstacle Checker (Japanese)': planning/autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja
       - 'Motion Velocity Planner':
-        - 'About Motion Velocity Planner': 'https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_planner/'
+        - 'About Motion Velocity Planner (Autoware Core)': 'https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_planner/'
         - 'Available Modules':
           - 'Boundary Departure Prevention': planning/motion_velocity_planner/autoware_motion_velocity_boundary_departure_prevention_module/
           - 'Dynamic Obstacle Stop': planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/
           - 'Obstacle Cruise': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/
           - 'Obstacle Slow Down': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/
-          - 'Obstacle Stop': 'https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/'
+          - 'Obstacle Stop (Autoware Core)': 'https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/'
           - 'Obstacle Velocity Limiter': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/
           - 'Out of Lane': planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/
           - 'Road User Stop':  planning/motion_velocity_planner/autoware_motion_velocity_road_user_stop_module/
@@ -95,10 +95,9 @@ nav:
     - 'External Velocity Limit Selector': planning/autoware_external_velocity_limit_selector
     - 'Objects of Interest Marker Interface': planning/autoware_objects_of_interest_marker_interface
     - 'RTC Interface': planning/autoware_rtc_interface
-    - 'Route Handler': planning/autoware_route_handler
 
   - 'Additional Tools':
-    - 'Planning Debug Tools':
+    - 'Planning Debug Tools (Autoware Tools)':
       - 'About Planning Debug Tools': 'https://github.com/autowarefoundation/autoware_tools/tree/main/planning/planning_debug_tools'
       - 'Stop Reason Visualizer': 'https://github.com/autowarefoundation/autoware_tools/blob/main/planning/planning_debug_tools/doc-stop-reason-visualizer.md'
     - 'Planning Topic Converter': planning/autoware_planning_topic_converter
