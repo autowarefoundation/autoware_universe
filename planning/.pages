@@ -88,8 +88,6 @@ nav:
 
   - 'Scenario Selector': planning/autoware_scenario_selector
 
-  - 'Static Centerline Generator': planning/autoware_static_centerline_generator
-
   - 'API and Library':
     - 'Costmap Generator': planning/autoware_costmap_generator
     - 'External Velocity Limit Selector': planning/autoware_external_velocity_limit_selector
@@ -99,7 +97,10 @@ nav:
   - 'Additional Tools':
     - 'Planning Debug Tools (Autoware Tools)':
       - 'About Planning Debug Tools': 'https://github.com/autowarefoundation/autoware_tools/tree/main/planning/planning_debug_tools'
-      - 'Stop Reason Visualizer': 'https://github.com/autowarefoundation/autoware_tools/blob/main/planning/planning_debug_tools/doc-stop-reason-visualizer.md'
+      - 'Processing Time Visualizer': 'https://autowarefoundation.github.io/autoware_tools/main/common/autoware_debug_tools/#processing-time-visualizer'
+      - 'Static Centerline Generator': https://autowarefoundation.github.io/autoware_tools/main/planning/autoware_static_centerline_generator/
+      - 'Stop Reason Visualizer': 'https://autowarefoundation.github.io/autoware_tools/main/planning/planning_debug_tools/doc-stop-reason-visualizer'
+      - 'Trajectory Visualizer': 'https://autowarefoundation.github.io/autoware_tools/main/planning/planning_debug_tools/scripts/trajectory_visualizer/'
     - 'Planning Topic Converter': planning/autoware_planning_topic_converter
     - 'Planning Test Manager': planning/autoware_planning_test_manager
     - 'Planning Validator':
