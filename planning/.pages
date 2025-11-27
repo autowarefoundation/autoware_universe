@@ -87,8 +87,8 @@ nav:
       - 'Trajectory Safety Filter': planning/autoware_trajectory_safety_filter
 
   - 'Scenario Selector': planning/autoware_scenario_selector
-s
-s  - 'Static Centerline Generator': planning/autoware_static_centerline_generator
+
+  - 'Static Centerline Generator': planning/autoware_static_centerline_generator
 
   - 'API and Library':
     - 'Costmap Generator': planning/autoware_costmap_generator
