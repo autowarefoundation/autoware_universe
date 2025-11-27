@@ -343,6 +343,28 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data,
   const double backward_length, const double forward_length);
 
+/**
+ * @brief Check if lateral acceleration is acceptable near start pose
+ *
+ * Evaluates path geometry at a point determined by velocity x duration from start pose.
+ * Dynamically calculates yaw and lateral distance thresholds based on lateral acceleration limit.
+ *
+ * @note This function does NOT check lateral acceleration at every point along the path
+ *       during the specified duration. Instead, it only evaluates the lateral acceleration
+ *       at the single endpoint (velocity x duration ahead of start_pose) by approximating
+ *       the path from start_pose to that point as a circular arc.
+ *
+ * @param path_points Path points to check
+ * @param start_pose Reference start pose
+ * @param velocity Velocity for evaluation [m/s]
+ * @param duration Duration from start pose [s]
+ * @param lateral_acceleration_threshold Maximum lateral acceleration [m/s^2]
+ * @return true if lateral acceleration is acceptable, false otherwise
+ */
+bool is_lateral_acceleration_acceptable_near_start(
+  const std::vector<PathPointWithLaneId> & path_points, const geometry_msgs::msg::Pose & start_pose,
+  const double velocity, const double duration, const double lateral_acceleration_threshold);
+
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_GOAL_PLANNER_MODULE__UTIL_HPP_
