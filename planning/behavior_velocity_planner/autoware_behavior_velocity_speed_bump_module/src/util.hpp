@@ -19,7 +19,6 @@
 
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/point32.hpp>
 
 #include <lanelet2_core/primitives/Polygon.h>
@@ -44,7 +43,7 @@ struct PolygonIntersection
 };
 
 PolygonIntersection getPathIntersectionWithSpeedBumpPolygon(
-  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const autoware::experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
   const lanelet::BasicPolygon2d & polygon, const size_t max_num);
 
 bool isNoRelation(const PolygonIntersection & status);
@@ -54,32 +53,7 @@ bool isNoRelation(const PolygonIntersection & status);
 namespace autoware::behavior_velocity_planner
 {
 
-using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Point32;
-
-// the status of intersection between path and speed bump
-struct PathPolygonIntersectionStatus
-{
-  bool is_path_inside_of_polygon = false;  // true if path is completely inside the speed bump
-                                           // polygon (no intersection point)
-  boost::optional<geometry_msgs::msg::Point> first_intersection_point;
-  boost::optional<geometry_msgs::msg::Point> second_intersection_point;
-};
-
-PathPolygonIntersectionStatus getPathPolygonIntersectionStatus(
-  const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
-  const geometry_msgs::msg::Point & ego_pos, const size_t max_num);
-
-bool isNoRelation(const PathPolygonIntersectionStatus & status);
-
-bool insertConstSpeedToPathSection(
-  std::vector<PathPointWithLaneId> & output, const size_t start_idx, const size_t end_idx,
-  const float speed);
-
-std::optional<size_t> insertPointWithOffset(
-  const geometry_msgs::msg::Point & src_point, const double longitudinal_offset,
-  std::vector<PathPointWithLaneId> & output, const double overlap_threshold = 1e-3);
 
 // returns y (speed) for y=mx+b
 float calcSlowDownSpeed(const Point32 & p1, const Point32 & p2, const float speed_bump_height);
