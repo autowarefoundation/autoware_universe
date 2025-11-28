@@ -2,6 +2,94 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: on off scale and bias correction (`#11314 <https://github.com/autowarefoundation/autoware_universe/issues/11314>`_)
+  * feat: adding parameter to turn on or off scale and bias correction
+  * style(pre-commit): autofix
+  * chore: add parameter to turn on or off scale and bias correction in launcher
+  * chore: updating schema
+  * chore: add override parameters from file to enable disable scal bias
+  * chore: renamed params to enable disble scale bias correction
+  * chore: modified schema files
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat: scale gyro estimation (`#10724 <https://github.com/autowarefoundation/autoware_universe/issues/10724>`_)
+  * feat: scale estimation for gyro on z axis added
+  * after precommit local
+  * wip: imu correction with scale and bias
+  * feat: added diagnostic messages when scale change
+  * monitoring bias and scale gyro status in diagnostics message
+  * style(pre-commit): autofix
+  * added scale and bias  on purpose for testing
+  * style(pre-commit): autofix
+  * added flipped gyro scaled bas signal
+  * style(pre-commit): autofix
+  * fixed bias sign, removed flipped mod signal
+  * style(pre-commit): autofix
+  * added scale estimation  update function
+  * style(pre-commit): autofix
+  * Added threshold to avoid estimation when vehicle is stopped
+  * style(pre-commit): autofix
+  * scale changes real time test
+  * changed parameters scale file
+  * style(pre-commit): autofix
+  * feat: new ekf scale estimation using angle
+  * changed offset used for testing
+  * bias rotated and not rotated used for angle scale estimation
+  * style(pre-commit): autofix
+  * added bias to publish and bias not rotated for scale estimation
+  * deleting commented lines and renaming bias variable
+  * style(pre-commit): autofix
+  * rewrites gyro correction to avoid confusion, adds filter to scale estimation
+  * style(pre-commit): autofix
+  * Adding limits for covariance ekf angle
+  * style(pre-commit): autofix
+  * removing unused functions
+  * new params to detect large scale changes
+  * style(pre-commit): autofix
+  * renaming node name and changed parameters boundaries
+  * style(pre-commit): autofix
+  * refactor: main function to estimate scale
+  * style(pre-commit): autofix
+  * refactoring variables
+  * style(pre-commit): autofix
+  * new: Added json file for parameters and refactoring
+  * style(pre-commit): autofix
+  * refactor variables
+  * Refactor variables
+  * style(pre-commit): autofix
+  * new: unittest for scale angle estimation
+  * style(pre-commit): autofix
+  * added dependencies to package xml
+  * style(pre-commit): autofix
+  * header files inside include directory refactored , tested functions now public
+  * style(pre-commit): autofix
+  * moved include files and  code refactored
+  * style(pre-commit): autofix
+  * refactor add has value checking for variable
+  * refactor: removed debug vectors
+  * style(pre-commit): autofix
+  * refactor: published scale for angle must be divided
+  * refactor: added  missing header file
+  * style(pre-commit): autofix
+  * refactor: added zero checking
+  * style(pre-commit): autofix
+  * refactor: use abs to perform comparison
+  * chore: added scale estimation description to readme
+  * style(pre-commit): autofix
+  * chore: readme grammar correction
+  * refactor: fix to pass CI
+  * fix: documentation changed
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, SergioReyesSan
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

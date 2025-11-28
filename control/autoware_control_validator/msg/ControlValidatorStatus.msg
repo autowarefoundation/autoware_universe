@@ -20,6 +20,8 @@ float64 desired_acc
 float64 measured_acc
 float64 target_vel
 float64 vehicle_vel
+float64 over_velocity_target_vel
+float64 over_velocity_vehicle_vel
 float64 dist_to_stop
 float64 pred_dist_to_stop
 float64 nearest_trajectory_vel

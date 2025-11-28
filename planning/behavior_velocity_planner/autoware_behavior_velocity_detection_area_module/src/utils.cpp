@@ -17,11 +17,13 @@
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/object_recognition_utils/object_classification.hpp>
-#include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
-#include <lanelet2_core/Forward.h>
+#include <boost/geometry/algorithms/intersects.hpp>
+
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
@@ -102,6 +104,35 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
 
 namespace autoware::behavior_velocity_planner::detection_area
 {
+autoware_utils::LineString2d get_stop_line(
+  const lanelet::autoware::DetectionArea & detection_area,
+  const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound)
+{
+  const auto stop_line = detection_area.stopLine();
+  return planning_utils::extendSegmentToBounds(
+    lanelet::utils::to2D(stop_line).basicLineString(), left_bound, right_bound);
+}
+
+std::optional<double> get_stop_point(
+  const Trajectory & path, const autoware_utils::LineString2d & stop_line, const double margin,
+  const double vehicle_offset, const lanelet::Ids & lane_ids)
+{
+  const auto collision_points = experimental::trajectory::crossed_with_constraint(
+    path, stop_line, [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p) {
+      return lane_ids.empty() ||
+             std::any_of(p.lane_ids.begin(), p.lane_ids.end(), [&](const lanelet::Id id) {
+               return std::find(lane_ids.begin(), lane_ids.end(), id) != lane_ids.end();
+             });
+    });
+
+  if (collision_points.empty()) {
+    return std::nullopt;
+  }
+
+  return collision_points.front() - margin - vehicle_offset;
+}
+
 autoware_utils::LineString2d get_stop_line_geometry2d(
   const lanelet::autoware::DetectionArea & detection_area,
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
@@ -158,6 +189,19 @@ bool can_clear_stop_state(
 }
 
 bool has_enough_braking_distance(
+  const double self_s, const double line_point_s, const double pass_judge_line_distance,
+  const double current_velocity)
+{
+  // prevent from being judged as not having enough distance when the current velocity is zero
+  // and the vehicle crosses the stop line
+  if (current_velocity < 1e-3) {
+    return true;
+  }
+
+  return line_point_s - self_s > pass_judge_line_distance;
+}
+
+bool has_enough_braking_distance(
   const geometry_msgs::msg::Pose & self_pose, const geometry_msgs::msg::Pose & line_pose,
   const double pass_judge_line_distance, const double current_velocity)
 {
@@ -187,14 +231,14 @@ std::optional<autoware_perception_msgs::msg::PredictedObject> get_detected_objec
       continue;
     }
 
-    // Get object position
-    const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+    // Get object polygon
+    const auto & pose = object.kinematics.initial_pose_with_covariance.pose;
+    const auto object_polygon = autoware_utils::to_polygon2d(pose, object.shape);
 
-    // Check if the object is within any detection area
+    // Check if the object polygon overlaps with any detection area
     for (const auto & detection_area : detection_areas) {
-      const lanelet::BasicPoint2d obj_point(position.x, position.y);
       const auto detection_area_2d = lanelet::utils::to2D(detection_area);
-      if (lanelet::geometry::within(obj_point, detection_area_2d.basicPolygon())) {
+      if (boost::geometry::intersects(object_polygon, detection_area_2d.basicPolygon())) {
         return object;  // Return the detected object
       }
     }

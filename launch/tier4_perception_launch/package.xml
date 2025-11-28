@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_perception_launch</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The tier4_perception_launch package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
@@ -25,6 +25,7 @@
   <exec_depend>autoware_elevation_map_loader</exec_depend>
   <exec_depend>autoware_euclidean_cluster</exec_depend>
   <exec_depend>autoware_ground_segmentation</exec_depend>
+  <exec_depend>autoware_image_object_locator</exec_depend>
   <exec_depend>autoware_image_projection_based_fusion</exec_depend>
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
   <exec_depend>autoware_lidar_apollo_instance_segmentation</exec_depend>

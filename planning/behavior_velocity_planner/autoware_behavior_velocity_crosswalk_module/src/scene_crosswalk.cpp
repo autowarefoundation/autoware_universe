@@ -14,6 +14,7 @@
 
 #include "scene_crosswalk.hpp"
 
+#include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 #include "occluded_crosswalk.hpp"
 #include "parked_vehicles_stop.hpp"
 
@@ -285,6 +286,7 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   // Set distance
   // NOTE: If no stop point is inserted, distance to the virtual stop line has to be calculated.
   setDistanceToStop(*path, default_stop_pose, nearest_stop_factor);
+  set_previous_stop_pose(nearest_stop_factor);
 
   // plan Go/Stop
   if (isActivated()) {
@@ -1243,36 +1245,39 @@ CrosswalkModule::getNearestStopFactorAndReason(
   const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
   const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles)
 {
-  // the parked vehicles stop feature is only used if there are no other crosswalk stops
-  const auto use_parked_vehicles = !stop_factor_for_crosswalk_users &&
-                                   !stop_factor_for_obstruction_preventions &&
-                                   stop_factor_for_parked_vehicles;
-  if (use_parked_vehicles) {
-    return {stop_factor_for_parked_vehicles, "parked vehicles"};
-  }
-
-  const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
+  const auto get_distance_to_stop = [&](const auto & stop_factor) -> double {
+    if (!stop_factor.has_value()) {
+      return std::numeric_limits<double>::max();
+    }
     const auto & ego_pos = planner_data_->current_odometry->pose.position;
     return calcSignedArcLength(ego_path.points, ego_pos, stop_factor->stop_pose.position);
   };
 
-  std::optional<StopPoseWithObjectUuids> nearest_stop_factor{std::nullopt};
-  std::string reason = "";
+  const std::vector<std::pair<std::optional<StopPoseWithObjectUuids>, std::string>>
+    stop_and_reason = {
+      {stop_factor_for_crosswalk_users, ""},
+      {stop_factor_for_obstruction_preventions, "obstruction prevention"},
+      {stop_factor_for_parked_vehicles, "parked vehicles"}};
 
-  if (stop_factor_for_crosswalk_users) {
-    nearest_stop_factor = stop_factor_for_crosswalk_users;
-    reason = "";
+  const auto nearest_stop_and_reason = std::min_element(
+    stop_and_reason.begin(), stop_and_reason.end(), [&](const auto & a, const auto & b) {
+      return get_distance_to_stop(a.first) < get_distance_to_stop(b.first);
+    });
+  if (nearest_stop_and_reason == stop_and_reason.end() || !nearest_stop_and_reason->first) {
+    return {std::nullopt, ""};
   }
-  if (stop_factor_for_obstruction_preventions) {
-    if (
-      !nearest_stop_factor || get_distance_to_stop(stop_factor_for_obstruction_preventions) <
-                                get_distance_to_stop(nearest_stop_factor)) {
-      nearest_stop_factor = stop_factor_for_obstruction_preventions;
-      reason = "obstruction prevention";
-    }
+  constexpr auto previous_stop_reuse_margin =
+    3.0;  // [m] reuse the previous stop pose if it is within the margin
+  const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
+  const auto use_previous_stop_pose =
+    previous_stop_pose_ && dist_to_stop > get_distance_to_stop(previous_stop_pose_) &&
+    dist_to_stop - get_distance_to_stop(previous_stop_pose_) < previous_stop_reuse_margin;
+  if (use_previous_stop_pose) {
+    previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
+    return {previous_stop_pose_, nearest_stop_and_reason->second};
   }
 
-  return {nearest_stop_factor, reason};
+  return *nearest_stop_and_reason;
 }
 
 void CrosswalkModule::updateObjectState(

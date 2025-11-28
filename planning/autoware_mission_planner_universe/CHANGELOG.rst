@@ -2,6 +2,53 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(manual_lane_change_handler): publishing shift-number (`#11641 <https://github.com/autowarefoundation/autoware_universe/issues/11641>`_)
+  * publishing shift-number
+  * changed warn to info
+  ---------
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* feat(mission_planner): manual lane selection (`#11169 <https://github.com/autowarefoundation/autoware_universe/issues/11169>`_)
+  * manual lane change
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(autoware_lanelet2_extension): remove redundant autoware_lanelet2_extension depend from packages (`#11492 <https://github.com/autowarefoundation/autoware_universe/issues/11492>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in planning component (`#11374 <https://github.com/autowarefoundation/autoware_universe/issues/11374>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(mission_planner_universe): fix parameter schema (`#11415 <https://github.com/autowarefoundation/autoware_universe/issues/11415>`_)
+* feat(planning, perception): replace wall_timer with generic timer (`#11005 <https://github.com/autowarefoundation/autoware_universe/issues/11005>`_)
+  * feat(planning, perception): replace wall_timer with generic timer
+  * use rclcpp::create_timer
+  * remove period_ns
+  ---------
+* feat(arrived_goal): improve arrival judgment when ego-vehicle overshoots goal (`#11134 <https://github.com/autowarefoundation/autoware_universe/issues/11134>`_)
+  * improve arrived goal judgement
+  * add a missed variable
+  * style(pre-commit): autofix
+  * update arrival_check pass_goal_distance to arrival_check_overshoot_distance
+  * register arrival_check_overshoot_distance variable to README
+  * rename some variables
+  * style(pre-commit): autofix
+  * add arrival_check_overshoot_distance to mission_planner schema
+  * update lateral ditance judgement
+  * style(pre-commit): autofix
+  * fix bugs, and refactor arrival_check logic
+  * style(pre-commit): autofix
+  * rename longitudinal_distance to longitudinal_undershoot_distance
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Arjun Jagdish Ram, Mamoru Sobue, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Takagi, Isamu, Tim Clephas, Zhanhong Yan
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_trajectory_follower, autoware_mission_planner_universe, autoware_scenario_selector): use transient_local for operation_mode_state (`#11101 <https://github.com/autowarefoundation/autoware_universe/issues/11101>`_)
