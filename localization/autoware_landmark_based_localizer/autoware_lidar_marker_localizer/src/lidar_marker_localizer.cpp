@@ -54,6 +54,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int64_t>("queue_size_for_output_pose");
 
   param_.marker_name = this->declare_parameter<std::string>("marker_name");
+  param_.road_surface_mode = this->declare_parameter<bool>("road_surface_mode");
   param_.resolution = this->declare_parameter<double>("resolution");
   param_.intensity_pattern = this->declare_parameter<std::vector<int64_t>>("intensity_pattern");
   param_.match_intensity_difference_threshold =
