@@ -51,10 +51,10 @@ uint8_t identify_current_light_status(
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr)
-: lane_segments_(convert_to_lane_segments(lanelet_map_ptr, POINTS_PER_SEGMENT)),
-  lanelet_id_to_array_index_(create_lane_id_to_array_index_map(lane_segments_))
+: lanelet_map_(convert_to_internal_lanelet_map(lanelet_map_ptr)),
+  lanelet_id_to_array_index_(create_lane_id_to_array_index_map(lanelet_map_.lane_segments))
 {
-  if (lane_segments_.empty()) {
+  if (lanelet_map_.lane_segments.empty()) {
     throw std::runtime_error("No lane segments found in the map");
   }
 }
@@ -76,7 +76,7 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
     array_indices.push_back(array_index);
 
     // calculate closest index
-    const LaneSegment & route_segment = lane_segments_[array_index];
+    const LaneSegment & route_segment = lanelet_map_.lane_segments[array_index];
     double distance = std::numeric_limits<double>::max();
     for (const LanePoint & point : route_segment.centerline) {
       const double diff_x = point.x() - center_x;
@@ -96,7 +96,7 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   for (size_t i = closest_index; i < array_indices.size(); ++i) {
     const int64_t segment_idx = array_indices[i];
 
-    if (!is_segment_inside(lane_segments_[segment_idx], center_x, center_y)) {
+    if (!is_segment_inside(lanelet_map_.lane_segments[segment_idx], center_x, center_y)) {
       continue;
     }
 
@@ -119,12 +119,20 @@ std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
     float distance_squared;  //!< Squared distance from the center.
   };
 
+  auto calc_distance = [&](const LanePoint & point) {
+    const Eigen::Vector4d transformed_point =
+      transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
+    const float diff_x = transformed_point.x();
+    const float diff_y = transformed_point.y();
+    return std::sqrt(diff_x * diff_x + diff_y * diff_y);
+  };
+
   // Step 1: Compute distances
   std::vector<ColWithDistance> distances;
-  distances.reserve(lane_segments_.size());
+  distances.reserve(lanelet_map_.lane_segments.size());
 
-  for (size_t i = 0; i < lane_segments_.size(); ++i) {
-    const LaneSegment & segment = lane_segments_[i];
+  for (size_t i = 0; i < lanelet_map_.lane_segments.size(); ++i) {
+    const LaneSegment & segment = lanelet_map_.lane_segments[i];
 
     if (!is_segment_inside(segment, center_x, center_y)) {
       continue;
@@ -132,16 +140,16 @@ std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
 
     const std::vector<LanePoint> & centerline = segment.centerline;
 
-    float distance_squared = 0.0;
-    for (const LanePoint & point : centerline) {
-      const Eigen::Vector4d transformed_point =
-        transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
-      const float diff_x = transformed_point.x();
-      const float diff_y = transformed_point.y();
-      distance_squared += diff_x * diff_x + diff_y * diff_y;
+    if (centerline.size() < 2) {
+      continue;
     }
-    distance_squared /= centerline.size();
 
+    // Approximate distance using the closest of the first and last points
+    // Note: Because the last point (centerline.size() - 1) of the centerline is the same as the
+    // first point of the next segment, we use (centerline.size() - 2) to avoid obtaining the same
+    // distance for adjacent segments.
+    const float distance_squared =
+      std::min(calc_distance(centerline.front()), calc_distance(centerline[centerline.size() - 2]));
     distances.push_back({static_cast<int64_t>(i), distance_squared});
   }
 
@@ -192,7 +200,7 @@ LaneSegmentContext::create_tensor_data_from_indices(
       break;
     }
 
-    const LaneSegment & lane_segment = lane_segments_[segment_idx];
+    const LaneSegment & lane_segment = lanelet_map_.lane_segments[segment_idx];
 
     // Check if segment has valid data
     if (
@@ -288,6 +296,80 @@ LaneSegmentContext::create_tensor_data_from_indices(
     output_matrix_f.data(), output_matrix_f.data() + output_matrix_f.size());
 
   return {tensor_data, speed_limit_vector};
+}
+
+std::vector<float> LaneSegmentContext::create_line_tensor(
+  const std::vector<std::vector<LanePoint>> & polylines, const Eigen::Matrix4d & transform_matrix,
+  const double center_x, const double center_y, const int64_t num_elements,
+  const int64_t num_points) const
+{
+  using autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
+
+  auto judge_inside = [&](const double x, const double y) -> bool {
+    return (
+      x > center_x - LANE_MASK_RANGE_M && x < center_x + LANE_MASK_RANGE_M &&
+      y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
+  };
+
+  struct PolylineWithDistance
+  {
+    Polyline polyline;
+    double min_distance;
+  };
+
+  std::vector<PolylineWithDistance> result_list;
+
+  for (const auto & polyline : polylines) {
+    bool inside_at_least_one = false;
+    for (const auto & point : polyline) {
+      if (judge_inside(point.x(), point.y())) {
+        inside_at_least_one = true;
+        break;
+      }
+    }
+    if (!inside_at_least_one) {
+      continue;
+    }
+
+    std::vector<LanePoint> transformed_polyline;
+    for (const auto & point : polyline) {
+      const Eigen::Vector4d transformed_point =
+        transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
+      transformed_polyline.push_back(
+        Eigen::Vector3d(transformed_point.x(), transformed_point.y(), transformed_point.z()));
+    }
+
+    double min_distance = std::numeric_limits<double>::max();
+    for (const auto & point : transformed_polyline) {
+      const double distance = std::sqrt(point.x() * point.x() + point.y() * point.y());
+      min_distance = std::min(min_distance, distance);
+    }
+
+    result_list.push_back({transformed_polyline, min_distance});
+  }
+
+  std::sort(
+    result_list.begin(), result_list.end(),
+    [](const PolylineWithDistance & a, const PolylineWithDistance & b) {
+      return a.min_distance < b.min_distance;
+    });
+
+  // Create tensor data
+  std::vector<float> tensor_data(num_elements * num_points * 2, 0.0f);
+  const size_t max_elements_size = std::min(static_cast<size_t>(num_elements), result_list.size());
+  for (size_t i = 0; i < max_elements_size; ++i) {
+    const auto & polyline = result_list[i].polyline;
+    const size_t max_points_size = std::min(static_cast<size_t>(num_points), polyline.size());
+
+    for (size_t j = 0; j < max_points_size; ++j) {
+      const auto & point = polyline[j];
+      const size_t base_index = (i * num_points + j) * 2;
+      tensor_data[base_index + 0] = static_cast<float>(point.x());
+      tensor_data[base_index + 1] = static_cast<float>(point.y());
+    }
+  }
+
+  return tensor_data;
 }
 
 // Internal functions implementation
