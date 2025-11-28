@@ -154,13 +154,19 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
     return std::nullopt;
   }
   const auto t_collision = current_decision.collision->ego_collision_time;
-  const auto p_collision = [&]() {
+  const auto p_collision = [&]() -> std::optional<geometry_msgs::msg::Point> {
     if (current_decision.collision && current_decision.collision->type == collision) {
-      return std::make_optional(interpolated_point_at_time(trajectory, t_collision));
+      return interpolated_point_at_time(trajectory, t_collision);
     }
-    return get_most_recent_slowdown_point(history);
+    const auto most_recent_slowdown_point = get_most_recent_slowdown_point(history);
+    if (most_recent_slowdown_point) {  // project onto the current trajectory
+      const auto arc_length =
+        motion_utils::calcSignedArcLength(trajectory, 0, *most_recent_slowdown_point);
+      return motion_utils::calcInterpolatedPose(trajectory, arc_length).position;
+    }
+    return std::nullopt;
   }();
-  if (!p_collision) {
+  if (!p_collision.has_value()) {
     return std::nullopt;
   }
   const auto min_slow_arc_length = current_velocity * 0.1;
