@@ -60,6 +60,11 @@ class LidarMarkerLocalizer : public rclcpp::Node
   using SetBool = std_srvs::srv::SetBool;
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
+public:
+  explicit LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options);
+
+protected:
+  // For test subclass access
   struct Param
   {
     bool enable_read_all_target_ids;
@@ -100,8 +105,11 @@ class LidarMarkerLocalizer : public rclcpp::Node
     int64_t queue_size_for_debug_pub_msg;
   };
 
-public:
-  explicit LidarMarkerLocalizer(const rclcpp::NodeOptions & node_options);
+  Param & mutable_param() { return param_; }
+  const Param & param() const { return param_; }
+  template <typename PointType>
+  std::vector<landmark_manager::Landmark> detect_landmarks(
+    const PointCloud2::ConstSharedPtr & points_msg_ptr);
 
 private:
   void self_pose_callback(const PoseWithCovarianceStamped::ConstSharedPtr & self_pose_msg_ptr);
@@ -112,9 +120,6 @@ private:
 
   void initialize_diagnostics();
   void main_process(const PointCloud2::ConstSharedPtr & points_msg_ptr);
-  template <typename PointType>
-  std::vector<landmark_manager::Landmark> detect_landmarks(
-    const PointCloud2::ConstSharedPtr & points_msg_ptr);
   sensor_msgs::msg::PointCloud2::SharedPtr extract_marker_pointcloud(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
     const geometry_msgs::msg::Pose marker_pose) const;
