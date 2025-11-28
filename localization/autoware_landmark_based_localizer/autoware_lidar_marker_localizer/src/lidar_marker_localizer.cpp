@@ -467,12 +467,28 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   center_intensity_grid_msg.info.width = bin_num;
   center_intensity_grid_msg.info.height = ring_num;
   center_intensity_grid_msg.info.origin.position.x = min_x;
-  center_intensity_grid_msg.info.origin.position.y = param_.marker_to_vehicle_offset_y;
-  center_intensity_grid_msg.info.origin.position.z =
-    param_.marker_height_from_ground +
-    center_intensity_grid_msg.info.height * center_intensity_grid_msg.info.resolution / 2.0;
-  center_intensity_grid_msg.info.origin.orientation =
-    autoware_utils_geometry::create_quaternion_from_rpy(-M_PI / 2.0, 0.0, 0.0);
+  if (param_.road_surface_mode) {
+    center_intensity_grid_msg.info.origin.position.y =
+      param_.marker_to_vehicle_offset_y -
+      center_intensity_grid_msg.info.height * center_intensity_grid_msg.info.resolution / 2.0;
+    center_intensity_grid_msg.info.origin.position.z = param_.marker_height_from_ground;
+    if (param_.marker_to_vehicle_offset_y >= 0) {
+      center_intensity_grid_msg.info.origin.position.y +=
+        center_intensity_grid_msg.info.height * center_intensity_grid_msg.info.resolution;
+      center_intensity_grid_msg.info.origin.orientation =
+        autoware_utils_geometry::create_quaternion_from_rpy(M_PI, 0.0, 0.0);
+    } else {
+      center_intensity_grid_msg.info.origin.orientation =
+        autoware_utils_geometry::create_quaternion_from_rpy(0.0, 0.0, 0.0);
+    }
+  } else {
+    center_intensity_grid_msg.info.origin.position.y = param_.marker_to_vehicle_offset_y;
+    center_intensity_grid_msg.info.origin.position.z =
+      param_.marker_height_from_ground +
+      center_intensity_grid_msg.info.height * center_intensity_grid_msg.info.resolution / 2.0;
+    center_intensity_grid_msg.info.origin.orientation =
+      autoware_utils_geometry::create_quaternion_from_rpy(-M_PI / 2.0, 0.0, 0.0);
+  }
   center_intensity_grid_msg.data = std::vector<int8_t>(
     center_intensity_grid_msg.info.width * center_intensity_grid_msg.info.height, -1);
 
@@ -589,7 +605,11 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
         static_cast<double>(i) + static_cast<double>(param_.intensity_pattern.size()) / 2.0;
       Pose marker_pose_on_base_link;
       marker_pose_on_base_link.position.x = bin_position * param_.resolution + min_x;
-      marker_pose_on_base_link.position.y = reference_ring_y[i];
+      if (param_.road_surface_mode) {
+        marker_pose_on_base_link.position.y = param_.marker_to_vehicle_offset_y;
+      } else {
+        marker_pose_on_base_link.position.y = reference_ring_y[i];
+      }
       marker_pose_on_base_link.position.z = param_.marker_height_from_ground;
       marker_pose_on_base_link.orientation =
         autoware_utils::create_quaternion_from_rpy(M_PI_2, 0.0, 0.0);  // TODO(YamatoAndo)
@@ -770,9 +790,14 @@ void LidarMarkerLocalizer::save_intensity(
 
   // extract marker pointcloud
   for (const auto & point : points_ptr->points) {
-    const double xy_distance = std::sqrt(
+    double xy_distance = std::sqrt(
       std::pow(point.x - marker_pose.position.x, 2.0) +
       std::pow(point.y - marker_pose.position.y, 2.0));
+    if (param_.road_surface_mode) {
+      xy_distance = std::sqrt(
+        std::pow(point.x - marker_pose.position.x, 2.0) +
+        std::pow(point.z - marker_pose.position.z, 2.0));
+    }
     if (xy_distance < param_.radius_for_extracting_marker_pointcloud) {
       marker_points_ptr->push_back(point);
 
