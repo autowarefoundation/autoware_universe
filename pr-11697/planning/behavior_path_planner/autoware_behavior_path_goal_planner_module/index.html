@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
@@ -24112,6 +24112,48 @@
 <p><img src="./images/bad_shift_path.png" width="600"></p>
 <p><em>bezier</em> based path planner interpolates the shift path start and end pose using tbe bezier curve for a several combination of parameters, to obtain a better result through the later selection process. In the below screenshot the goal is on a BusStopArea and <code>use_bus_stop_area</code> is set to true, so <em>bezier</em> planner is triggered instead. Internally, goal<em>planner first tries to use _shift</em> planner, and if it turns out that the shift start and end is not parallel, it switches to <em>bezier</em> planner from the next process.</p>
 <p><img src="./images/bezier_path.png" width="600"></p>
+<h4 id="parameters-for-bezier-parking">Parameters for bezier parking<a class="headerlink" href="#parameters-for-bezier-parking" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Unit</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">pull_over_angle_threshold</td>
+<td align="left">[rad]</td>
+<td align="left">double</td>
+<td align="left">threshold angle difference between shift start and end pose to trigger bezier planner instead of shift planner</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left">after_shift_straight_distance</td>
+<td align="left">[m]</td>
+<td align="left">double</td>
+<td align="left">straight line distance after pull over end pose to goal pose</td>
+<td align="left">1.5</td>
+</tr>
+<tr>
+<td align="left">lateral_acceleration_threshold</td>
+<td align="left">[m/s^2]</td>
+<td align="left">double</td>
+<td align="left">maximum allowable lateral acceleration near the path start. Used to filter out path candidates with excessive lateral acceleration. Paths where the yaw change or lateral deviation at a point <code>velocity × lateral_acceleration_filtering_duration</code> ahead exceeds this limit are rejected.</td>
+<td align="left">1.0</td>
+</tr>
+<tr>
+<td align="left">lateral_acceleration_filtering_duration</td>
+<td align="left">[s]</td>
+<td align="left">double</td>
+<td align="left">time duration from the start pose used to evaluate lateral acceleration. The check evaluates the path geometry at a point calculated as <code>velocity × duration</code> ahead of the start pose. <strong>Note:</strong> This check does NOT evaluate lateral acceleration at every point along the path during this duration. Instead, it only evaluates the lateral acceleration at the single endpoint by approximating the path as a circular arc from the start pose to that point.</td>
+<td align="left">0.5</td>
+</tr>
+</tbody>
+</table>
 <h2 id="collision-check-for-path-generation"><strong>collision check for path generation</strong><a class="headerlink" href="#collision-check-for-path-generation" title="Permanent link">#</a></h2>
 <p>To select a safe one from the path candidates, collision is checked against parked objects for each path.</p>
 <h3 id="occupancy-grid-based-collision-check"><strong>occupancy grid based collision check</strong><a class="headerlink" href="#occupancy-grid-based-collision-check" title="Permanent link">#</a></h3>
