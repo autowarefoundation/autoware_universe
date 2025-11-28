@@ -31,8 +31,11 @@
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/duration.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
 #include <string>
@@ -69,7 +72,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
     "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
-    "~/" + ns_ + "/processing_time", 1);
+    "~/" + ns_ + "/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
@@ -265,6 +268,7 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");
+
   return result.velocity_planning_result;
 }
 

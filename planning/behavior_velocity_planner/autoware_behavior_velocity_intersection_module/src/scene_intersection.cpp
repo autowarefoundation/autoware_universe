@@ -100,7 +100,7 @@ bool IntersectionModule::can_smoothly_stop_at(
   const double braking_distance = planning_utils::calcJudgeLineDistWithJerkLimit(
     planner_data_->current_velocity->twist.linear.x,
     planner_data_->current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
-    planner_param_.common.max_jerk, 0.0);
+    planner_param_.common.max_jerk, planner_param_.common.delay_response_time);
 
   return autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, target_stop_idx) +
            planner_param_.common.stopline_overshoot_margin >
@@ -186,7 +186,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     if (can_smoothly_stop_at(*path, closest_idx, is_stuck_status->stuck_stopline_idx)) {
       return is_stuck_status.value();
     }
-    RCLCPP_WARN_THROTTLE(
+    RCLCPP_ERROR_THROTTLE(
       logger_, *clock_, 5000, "stuck vehicle detected, but give up stop to avoid will_overrun MRM");
   }
 
@@ -408,12 +408,12 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     return autoware::motion_utils::calcSignedArcLength(path->points, closest_idx, index);
   };
   auto stoppedForDurationOrPassed = [&](const size_t pos, StateMachine & state_machine) {
+    static constexpr double approached_dist_threshold = 1.0;
     const double dist_stopline = fromEgoDist(pos);
-    const bool approached_dist_stopline =
-      (std::fabs(dist_stopline) < planner_param_.common.stopline_overshoot_margin);
-    const bool over_stopline = (dist_stopline < -planner_param_.common.stopline_overshoot_margin);
+    const bool approached_stopline = (dist_stopline < approached_dist_threshold);
+    const bool over_stopline = (dist_stopline < -approached_dist_threshold);
     const bool is_stopped_duration = planner_data_->isVehicleStopped();
-    if (over_stopline || (is_stopped_duration && approached_dist_stopline)) {
+    if (over_stopline || (is_stopped_duration && approached_stopline)) {
       state_machine.setStateWithMarginTime(
         StateMachine::State::GO, logger_.get_child("stoppedForDurationOrPassed"), *clock_);
     }

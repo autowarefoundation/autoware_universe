@@ -165,14 +165,6 @@ VelocityLimitClearCommand create_velocity_limit_clear_command(
   msg.command = true;
   return msg;
 }
-
-Float64Stamped create_float64_stamped(const rclcpp::Time & now, const float & data)
-{
-  Float64Stamped msg;
-  msg.stamp = now;
-  msg.data = data;
-  return msg;
-}
 }  // namespace
 
 void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & module_name)
@@ -191,8 +183,6 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
     &node, "motion_velocity_planner_common");
 
   // common publisher
-  processing_time_publisher_ =
-    node.create_publisher<Float64Stamped>("~/debug/obstacle_slow_down/processing_time_ms", 1);
   virtual_wall_publisher_ =
     node.create_publisher<MarkerArray>("~/obstacle_slow_down/virtual_walls", 1);
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_slow_down/debug_markers", 1);
@@ -308,7 +298,6 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
   trajectory_polygon_for_lateral_dist_map_.clear();
 
@@ -464,8 +453,8 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
     }
     const auto & front_collision_point = *slow_down_point_data.front;
     const auto & back_collision_point = slow_down_point_data.back.value_or(front_collision_point);
-    const auto signed_lateral_distance = autoware_utils_geometry::calc_lateral_deviation(
-      traj_points[ego_idx].pose, front_collision_point);
+    const auto signed_lateral_distance =
+      motion_utils::calcLateralOffset(traj_points, front_collision_point);
     const auto side = signed_lateral_distance > 0.0 ? Side::Left : Side::Right;
 
     const auto slow_down_obstacle = create_slow_down_obstacle_for_point_cloud(
@@ -642,8 +631,8 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
   }
   const auto predicted_object_pose =
     object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp);
-  const auto signed_lateral_deviation = autoware_utils_geometry::calc_lateral_deviation(
-    traj_points[front_seg_idx].pose, predicted_object_pose.position);
+  const auto signed_lateral_deviation =
+    motion_utils::calcLateralOffset(traj_points, predicted_object_pose.position);
   const auto side = signed_lateral_deviation > 0.0 ? Side::Left : Side::Right;
 
   return SlowDownObstacle{
@@ -942,9 +931,6 @@ void ObstacleSlowDownModule::publish_debug_info()
 
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
-
-  // 5. processing time
-  processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 }
 
 bool ObstacleSlowDownModule::is_slow_down_obstacle(const uint8_t label) const
@@ -1036,10 +1022,11 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
     apply_lowpass_filter(dist_to_slow_down_start, prev_output->start_point);
   const double filtered_dist_to_slow_down_end =
     apply_lowpass_filter(dist_to_slow_down_end, prev_output->end_point);
+  const double deceleration_dist_lpf = filtered_dist_to_slow_down_start - dist_to_ego;
 
   // calculate velocity considering constraints
   const double feasible_slow_down_vel = [&]() {
-    if (deceleration_dist < 0) {
+    if (deceleration_dist_lpf < 0) {
       if (prev_output) {
         return prev_output->target_vel;
       }
@@ -1055,7 +1042,7 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
         slow_down_planning_param_.slow_down_min_acc) {
         const double squared_vel =
           std::pow(planner_data->current_odometry.twist.twist.linear.x, 2) +
-          2 * deceleration_dist * slow_down_planning_param_.slow_down_min_acc;
+          2 * deceleration_dist_lpf * slow_down_planning_param_.slow_down_min_acc;
         if (squared_vel < 0) {
           return slow_down_vel;
         }
@@ -1065,7 +1052,7 @@ ObstacleSlowDownModule::calculate_distance_to_slow_down_with_constraints(
       const double min_feasible_slow_down_vel = calc_deceleration_velocity_from_distance_to_target(
         slow_down_planning_param_.slow_down_min_jerk, slow_down_planning_param_.slow_down_min_acc,
         planner_data->current_acceleration.accel.accel.linear.x,
-        planner_data->current_odometry.twist.twist.linear.x, deceleration_dist);
+        planner_data->current_odometry.twist.twist.linear.x, deceleration_dist_lpf);
       return min_feasible_slow_down_vel;
     }();
     if (prev_output) {

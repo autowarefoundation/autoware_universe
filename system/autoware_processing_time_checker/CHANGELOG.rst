@@ -2,6 +2,19 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(run_out, processing_time_checker): support processing_time for run_out and update processing time list (`#11515 <https://github.com/autowarefoundation/autoware_universe/issues/11515>`_)
+  update processing time list and support run_out
+* chore(run_out): rm the autoware_behavior_velocity_run_out module (`#11320 <https://github.com/autowarefoundation/autoware_universe/issues/11320>`_)
+* fix(autoware_processing_time_checker): remove unused function (`#11213 <https://github.com/autowarefoundation/autoware_universe/issues/11213>`_)
+* fix(autoware_processing_time_checker): remove unused function (`#11182 <https://github.com/autowarefoundation/autoware_universe/issues/11182>`_)
+* Contributors: Kem (TiankuiXian), Maxime CLEMENT, Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(path_generator): publish processing time (`#10863 <https://github.com/autowarefoundation/autoware_universe/issues/10863>`_)

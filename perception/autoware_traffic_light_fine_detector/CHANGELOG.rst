@@ -2,6 +2,30 @@
 Changelog for package autoware_traffic_light_fine_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: cppcheck for struct Detection (`#11649 <https://github.com/autowarefoundation/autoware_universe/issues/11649>`_)
+  * fix: remove unused Detection struct
+  * fix: add namespace for bevformer postprocessing
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_traffic_light_fine_detector): split utils and add test (`#10365 <https://github.com/autowarefoundation/autoware_universe/issues/10365>`_)
+  * split and add test
+  * add file
+  * style(pre-commit): autofix
+  * refactor
+  * refactor
+  * fix name
+  * chore
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masato Saeki, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

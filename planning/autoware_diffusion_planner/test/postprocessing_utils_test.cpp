@@ -45,8 +45,12 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
 
   auto expected_points = prediction_shape[2];
   const int64_t velocity_smoothing_window = 8;
-  auto traj =
-    postprocess::create_ego_trajectory(data, stamp, transform, 0, velocity_smoothing_window);
+  const bool enable_force_stop = false;
+  const double stopping_threshold = 0.0;
+  const auto agent_poses = postprocess::parse_predictions(data);
+  auto traj = postprocess::create_ego_trajectory(
+    agent_poses, stamp, transform, 0, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
   ASSERT_EQ(traj.points.size(), expected_points);
 }
 
