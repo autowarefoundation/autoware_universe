@@ -14,6 +14,7 @@
 
 #include "converter.hpp"
 
+#include <algorithm>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -23,6 +24,12 @@ namespace autoware::hazard_status_converter
 
 Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", options)
 {
+  if (declare_parameter("include_latent_fault_in_emergency", true)) {
+    emergency_threshold_ = HazardStatus::LATENT_FAULT;
+  } else {
+    emergency_threshold_ = HazardStatus::SINGLE_POINT_FAULT;
+  }
+
   using std::placeholders::_1;
   pub_hazard_ = create_publisher<HazardStatusStamped>("~/hazard_status", rclcpp::QoS(1));
   sub_graph_.register_create_callback(std::bind(&Converter::on_create, this, _1));
@@ -62,7 +69,6 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
 {
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
   using DiagnosticLevel = DiagnosticStatus::_level_type;
-  using HazardStatus = autoware_system_msgs::msg::HazardStatus;
   using HazardLevel = HazardStatus::_level_type;
 
   const auto get_hazard_level = [](DiagnosticLevel unit_level, DiagnosticLevel root_level) {
@@ -104,20 +110,38 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     return;
   }
 
+  auto max_hazard_level = HazardStatus::NO_FAULT;
+  auto max_hazard_latch = HazardStatus::NO_FAULT;
+
   // Calculate hazard level from unit level and root level.
   HazardStatusStamped hazard;
   for (const auto & unit : graph->units()) {
-    if (unit->path_or_name().empty()) continue;
     const bool is_auto_tree = auto_mode_tree_.count(unit);
     const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
+    const auto root_latch = is_auto_tree ? auto_mode_root_->latch_level() : DiagnosticStatus::OK;
     const auto unit_level = unit->level();
-    if (auto diags = get_hazards_vector(hazard.status, get_hazard_level(unit_level, root_level))) {
-      diags->push_back(unit->create_diagnostic_status());
+    const auto hazard_level = get_hazard_level(unit_level, root_level);
+    max_hazard_level = std::max(max_hazard_level, hazard_level);
+
+    if (auto node = dynamic_cast<DiagNode *>(unit)) {
+      const auto unit_latch = node->latch_level();
+      const auto hazard_latch = get_hazard_level(unit_latch, root_latch);
+      max_hazard_latch = std::max(max_hazard_latch, hazard_latch);
+    }
+
+    if (!unit->path_or_name().empty()) {
+      if (auto diags = get_hazards_vector(hazard.status, hazard_level)) {
+        diags->push_back(unit->create_diagnostic_status());
+      }
     }
   }
+
+  RCLCPP_INFO_STREAM(get_logger(), "max_hazard_level: " << (int)max_hazard_level);
+  RCLCPP_INFO_STREAM(get_logger(), "max_hazard_latch: " << (int)max_hazard_latch);
+
   hazard.stamp = graph->updated_stamp();
   hazard.status.level = get_system_level(hazard.status);
-  hazard.status.emergency = hazard.status.level == HazardStatus::SINGLE_POINT_FAULT;
+  hazard.status.emergency = hazard.status.level >= emergency_threshold_;
 
   const auto is_emergency_holding = sub_emergency_holding_.take_data();
   hazard.status.emergency_holding =

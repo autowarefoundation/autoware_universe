@@ -33,6 +33,7 @@ public:
   explicit Converter(const rclcpp::NodeOptions & options);
 
 private:
+  using HazardStatus = autoware_system_msgs::msg::HazardStatus;
   using HazardStatusStamped = autoware_system_msgs::msg::HazardStatusStamped;
   using DiagGraph = autoware::diagnostic_graph_utils::DiagGraph;
   using DiagUnit = autoware::diagnostic_graph_utils::DiagUnit;
@@ -46,6 +47,7 @@ private:
 
   DiagNode * auto_mode_root_;
   std::unordered_set<DiagUnit *> auto_mode_tree_;
+  uint8_t emergency_threshold_;
 };
 
 }  // namespace autoware::hazard_status_converter
