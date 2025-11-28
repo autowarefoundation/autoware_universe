@@ -68,6 +68,7 @@ class LidarMarkerLocalizer : public rclcpp::Node
 
     std::string marker_name;
 
+    bool road_surface_mode;
     double resolution;
     std::vector<int64_t> intensity_pattern;
     int64_t match_intensity_difference_threshold;
