@@ -17,8 +17,6 @@
 
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <memory>
@@ -42,31 +40,9 @@ struct PolygonIntersection
 };
 
 PolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
-  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const autoware::experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
   const lanelet::BasicPolygon2d & polygon, const size_t max_num);
 
 }  // namespace autoware::behavior_velocity_planner::no_drivable_lane
-
-namespace autoware::behavior_velocity_planner
-{
-
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
-// the status of intersection between path and no drivable lane polygon
-struct PathWithNoDrivableLanePolygonIntersection
-{
-  bool is_path_inside_of_polygon = false;  // true if path is completely inside the no drivable lane
-                                           // polygon (no intersection point)
-  bool is_first_path_point_inside_polygon =
-    false;  // true if first path point is inside the no drivable lane polygon
-  std::optional<geometry_msgs::msg::Point> first_intersection_point;
-  std::optional<geometry_msgs::msg::Point> second_intersection_point;
-};
-
-PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
-  const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
-  const geometry_msgs::msg::Point & ego_pos, const size_t max_num);
-
-}  // namespace autoware::behavior_velocity_planner
 
 #endif  // UTIL_HPP_
