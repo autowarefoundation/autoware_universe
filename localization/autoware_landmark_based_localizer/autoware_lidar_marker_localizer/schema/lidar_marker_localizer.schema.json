@@ -27,6 +27,11 @@
           "description": "The name of the markers listed in the HD map.",
           "default": "reflector"
         },
+        "road_surface_mode": {
+          "type": "boolean",
+          "description": "Enable road surface mode for marker detection.",
+          "default": false
+        },
         "resolution": {
           "type": "number",
           "description": "Grid size for marker detection algorithm. [m]",
