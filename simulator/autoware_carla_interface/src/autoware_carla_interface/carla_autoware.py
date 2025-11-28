@@ -28,6 +28,7 @@ from .modules.carla_wrapper import SensorWrapper
 
 
 class SensorLoop(object):
+
     def __init__(self):
         self.start_game_time = None
         self.start_system_time = None
@@ -55,6 +56,7 @@ class SensorLoop(object):
 
 
 class InitializeInterface(object):
+
     def __init__(self):
         self.interface = carla_ros2_interface()
         self.param_ = self.interface.get_param()
@@ -109,9 +111,9 @@ class InitializeInterface(object):
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
-        ##########################################################################################################################################################
+        ##########################################################################
         # TRAFFIC MANAGER
-        ##########################################################################################################################################################
+        ##########################################################################
         # cspell:ignore trafficmanager
         if self.use_traffic_manager:
             traffic_manager = client.get_trafficmanager()
@@ -174,9 +176,11 @@ class InitializeInterface(object):
         self.bridge_loop._stop_loop()
 
     def _cleanup(self):
-        """Clean up all CARLA resources in reverse initialization order.
+        """
+        Clean up all CARLA resources in reverse initialization order.
 
         Ensures cleanup happens even if individual steps fail.
+
         """
         self._cleanup_sensors()
         self._cleanup_ros_interface()
