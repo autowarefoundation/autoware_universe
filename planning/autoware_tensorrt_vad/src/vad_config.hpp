@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_
-#define AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_
+#ifndef VAD_CONFIG_HPP_
+#define VAD_CONFIG_HPP_
 
 #include "networks/postprocess/map_postprocess_kernel.hpp"
 #include "networks/postprocess/object_postprocess_kernel.hpp"
@@ -84,4 +84,4 @@ struct VadConfig
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__VAD_CONFIG_HPP_
+#endif  // VAD_CONFIG_HPP_

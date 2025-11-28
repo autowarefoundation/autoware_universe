@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
-#define AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
+#ifndef INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
+#define INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
 
 #include "converter.hpp"
 
@@ -60,4 +60,4 @@ public:
 
 }  // namespace autoware::tensorrt_vad::vad_interface
 
-#endif  // AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
+#endif  // INPUT_CONVERTER__IMAGE_CONVERTER_HPP_

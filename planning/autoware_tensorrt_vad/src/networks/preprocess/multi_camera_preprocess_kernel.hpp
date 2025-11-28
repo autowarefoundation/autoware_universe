@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#ifndef NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#define NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
 
 #include <cuda_runtime.h>
 
@@ -65,4 +65,4 @@ cudaError_t launch_multi_camera_normalize_kernel(
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_
+#endif  // NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_KERNEL_HPP_

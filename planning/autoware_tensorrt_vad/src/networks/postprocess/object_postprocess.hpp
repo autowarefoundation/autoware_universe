@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
+#ifndef NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
+#define NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 
 #include "data_types.hpp"
 #include "networks/postprocess/object_postprocess_kernel.hpp"
@@ -239,4 +239,4 @@ ObjectPostprocessor::ObjectPostprocessor(
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
+#endif  // NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_

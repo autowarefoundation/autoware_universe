@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__UTILS__TRANSFORM_UTILS_HPP_
-#define AUTOWARE__TENSORRT_VAD__UTILS__TRANSFORM_UTILS_HPP_
+#ifndef UTILS__TRANSFORM_UTILS_HPP_
+#define UTILS__TRANSFORM_UTILS_HPP_
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -82,4 +82,4 @@ inline std::pair<Eigen::Matrix4d, Eigen::Matrix4d> get_transform_matrix(
 
 }  // namespace autoware::tensorrt_vad::utils
 
-#endif  // AUTOWARE__TENSORRT_VAD__UTILS__TRANSFORM_UTILS_HPP_
+#endif  // UTILS__TRANSFORM_UTILS_HPP_

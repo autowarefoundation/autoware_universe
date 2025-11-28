@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__VAD_MODEL_HPP_
-#define AUTOWARE__TENSORRT_VAD__VAD_MODEL_HPP_
+#ifndef VAD_MODEL_HPP_
+#define VAD_MODEL_HPP_
 
 #include "data_types.hpp"
 #include "networks/backbone.hpp"
@@ -330,4 +330,4 @@ private:
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__VAD_MODEL_HPP_
+#endif  // VAD_MODEL_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_
-#define AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_
+#ifndef ROS_VAD_LOGGER_HPP_
+#define ROS_VAD_LOGGER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -71,4 +71,4 @@ public:
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__ROS_VAD_LOGGER_HPP_
+#endif  // ROS_VAD_LOGGER_HPP_

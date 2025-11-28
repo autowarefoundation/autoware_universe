@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__DATA_TYPES_HPP_
-#define AUTOWARE__TENSORRT_VAD__DATA_TYPES_HPP_
+#ifndef DATA_TYPES_HPP_
+#define DATA_TYPES_HPP_
 
 #include <opencv2/core/mat.hpp>
 
@@ -222,4 +222,4 @@ struct VadOutputTopicData
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__DATA_TYPES_HPP_
+#endif  // DATA_TYPES_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__CONVERTER_HPP_
-#define AUTOWARE__TENSORRT_VAD__CONVERTER_HPP_
+#ifndef CONVERTER_HPP_
+#define CONVERTER_HPP_
 
 #include "coordinate_transformer.hpp"
 #include "vad_interface_config.hpp"
@@ -47,4 +47,4 @@ protected:
 
 }  // namespace autoware::tensorrt_vad::vad_interface
 
-#endif  // AUTOWARE__TENSORRT_VAD__CONVERTER_HPP_
+#endif  // CONVERTER_HPP_

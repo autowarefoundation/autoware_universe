@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
+#ifndef NETWORKS__TENSOR_HPP_
+#define NETWORKS__TENSOR_HPP_
 
 #include "ros_vad_logger.hpp"
 
@@ -63,4 +63,4 @@ using TensorMap = std::unordered_map<std::string, std::shared_ptr<Tensor>>;
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
+#endif  // NETWORKS__TENSOR_HPP_

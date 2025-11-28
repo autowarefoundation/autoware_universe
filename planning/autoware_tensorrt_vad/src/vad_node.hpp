@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
-#define AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
+#ifndef VAD_NODE_HPP_
+#define VAD_NODE_HPP_
 
 #include "synchronization_strategy.hpp"
 #include "utils/model_config.hpp"
@@ -170,4 +170,4 @@ private:
 };
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
+#endif  // VAD_NODE_HPP_

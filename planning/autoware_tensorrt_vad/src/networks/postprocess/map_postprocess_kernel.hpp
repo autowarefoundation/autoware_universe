@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_
+#ifndef NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_
+#define NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_
 
 #include <cuda_runtime.h>
 
@@ -93,4 +93,4 @@ cudaError_t launch_map_postprocess_kernel(
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_
+#endif  // NETWORKS__POSTPROCESS__MAP_POSTPROCESS_KERNEL_HPP_

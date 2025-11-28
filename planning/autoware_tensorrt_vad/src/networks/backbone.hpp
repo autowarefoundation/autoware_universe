@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__BACKBONE_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__BACKBONE_HPP_
+#ifndef NETWORKS__BACKBONE_HPP_
+#define NETWORKS__BACKBONE_HPP_
 
 #include "networks/net.hpp"
 
@@ -38,4 +38,4 @@ public:
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__BACKBONE_HPP_
+#endif  // NETWORKS__BACKBONE_HPP_

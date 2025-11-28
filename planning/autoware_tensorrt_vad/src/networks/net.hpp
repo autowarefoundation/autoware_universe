@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__NET_HPP_
-#define AUTOWARE__TENSORRT_VAD__NETWORKS__NET_HPP_
+#ifndef NETWORKS__NET_HPP_
+#define NETWORKS__NET_HPP_
 
 #include "networks/tensor.hpp"
 #include "ros_vad_logger.hpp"
@@ -81,4 +81,4 @@ public:
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // AUTOWARE__TENSORRT_VAD__NETWORKS__NET_HPP_
+#endif  // NETWORKS__NET_HPP_

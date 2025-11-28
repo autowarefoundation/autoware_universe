@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__UTILS__MODEL_CONFIG_HPP_
-#define AUTOWARE__TENSORRT_VAD__UTILS__MODEL_CONFIG_HPP_
+#ifndef UTILS__MODEL_CONFIG_HPP_
+#define UTILS__MODEL_CONFIG_HPP_
 
 #include <array>
 #include <string>
@@ -78,4 +78,4 @@ struct ModelParams
 
 }  // namespace autoware::tensorrt_vad::utils
 
-#endif  // AUTOWARE__TENSORRT_VAD__UTILS__MODEL_CONFIG_HPP_
+#endif  // UTILS__MODEL_CONFIG_HPP_

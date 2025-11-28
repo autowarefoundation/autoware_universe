@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__UTILS__VERSION_CHECKER_HPP_
-#define AUTOWARE__TENSORRT_VAD__UTILS__VERSION_CHECKER_HPP_
+#ifndef UTILS__VERSION_CHECKER_HPP_
+#define UTILS__VERSION_CHECKER_HPP_
 
 #include "utils/constants.hpp"
 
@@ -65,4 +65,4 @@ inline void check_model_version(const std::string & json_path)
 
 }  // namespace autoware::tensorrt_vad::utils
 
-#endif  // AUTOWARE__TENSORRT_VAD__UTILS__VERSION_CHECKER_HPP_
+#endif  // UTILS__VERSION_CHECKER_HPP_

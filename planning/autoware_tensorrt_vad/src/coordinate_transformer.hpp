@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__COORDINATE_TRANSFORMER_HPP_
-#define AUTOWARE__TENSORRT_VAD__COORDINATE_TRANSFORMER_HPP_
+#ifndef COORDINATE_TRANSFORMER_HPP_
+#define COORDINATE_TRANSFORMER_HPP_
 
 #include <Eigen/Dense>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -59,4 +59,4 @@ private:
 
 }  // namespace autoware::tensorrt_vad::vad_interface
 
-#endif  // AUTOWARE__TENSORRT_VAD__COORDINATE_TRANSFORMER_HPP_
+#endif  // COORDINATE_TRANSFORMER_HPP_

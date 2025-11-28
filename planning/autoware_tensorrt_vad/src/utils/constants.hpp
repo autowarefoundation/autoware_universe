@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__UTILS__CONSTANTS_HPP_
-#define AUTOWARE__TENSORRT_VAD__UTILS__CONSTANTS_HPP_
+#ifndef UTILS__CONSTANTS_HPP_
+#define UTILS__CONSTANTS_HPP_
 
 namespace autoware::tensorrt_vad::utils::constants
 {
@@ -24,4 +24,4 @@ constexpr int SUPPORTED_MAJOR_VERSION = 0;
 
 }  // namespace autoware::tensorrt_vad::utils::constants
 
-#endif  // AUTOWARE__TENSORRT_VAD__UTILS__CONSTANTS_HPP_
+#endif  // UTILS__CONSTANTS_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_VAD__UTILS__PARAM_LOADER_HPP_
-#define AUTOWARE__TENSORRT_VAD__UTILS__PARAM_LOADER_HPP_
+#ifndef UTILS__PARAM_LOADER_HPP_
+#define UTILS__PARAM_LOADER_HPP_
 
 #include "utils/model_config.hpp"
 
@@ -112,4 +112,4 @@ inline ModelParams load_model_params(const std::string & json_path)
 
 }  // namespace autoware::tensorrt_vad::utils
 
-#endif  // AUTOWARE__TENSORRT_VAD__UTILS__PARAM_LOADER_HPP_
+#endif  // UTILS__PARAM_LOADER_HPP_
