@@ -41,14 +41,10 @@
 namespace autoware::behavior_velocity_planner
 {
 TrafficLightModule::TrafficLightModule(
-  const int64_t lane_id,
-  const lanelet::TrafficLight & traffic_light_reg_elem,
-  lanelet::ConstLanelet lane,
-  const lanelet::ConstLineString3d & initial_stop_line,
-  const bool is_turn_lane,
-  const bool has_static_arrow,
-  const PlannerParam & planner_param, const rclcpp::Logger logger,
-  const rclcpp::Clock::SharedPtr clock,
+  const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
+  lanelet::ConstLanelet lane, const lanelet::ConstLineString3d & initial_stop_line,
+  const bool is_turn_lane, const bool has_static_arrow, const PlannerParam & planner_param,
+  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -223,8 +219,7 @@ bool TrafficLightModule::isStopSignal()
     if (
       element.color == TrafficSignalElement::AMBER &&
       (element.status == TrafficSignalElement::SOLID_ON ||
-       element.status == TrafficSignalElement::UNKNOWN))
-    {
+       element.status == TrafficSignalElement::UNKNOWN)) {
       is_yellow_now = true;
       break;
     }
@@ -254,15 +249,15 @@ bool TrafficLightModule::isStopSignal()
           yellow_transition_state_ = YellowState::kFromGreen;
         } else {
           RCLCPP_INFO_THROTTLE(
-            logger_, *clock_, 1000, "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
+            logger_, *clock_, 1000,
+            "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
           yellow_transition_state_ = YellowState::kFromRedArrow;
         }
       }
 
       // Check if conditions are met (Green->Yellow, turn lane, static arrow)
       if (
-        is_turn_lane_ && has_static_arrow_ &&
-        yellow_transition_state_ == YellowState::kFromGreen) {
+        is_turn_lane_ && has_static_arrow_ && yellow_transition_state_ == YellowState::kFromGreen) {
         // This is a "Green -> Yellow" sequence. This is the state we *do* want to override (pass).
         return false;
       } else {

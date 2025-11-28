@@ -15,6 +15,7 @@
 #include "manager.hpp"
 
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
+
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -151,11 +152,11 @@ void TrafficLightModuleManager::launchNewModules(
     const auto lane_id = traffic_light_reg_elem.second.id();
     auto existing_module = this->getRegisteredAssociatedModule(lane_id);
     if (!existing_module) {
-      registerModule(std::make_shared<TrafficLightModule>(
-        lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, *stop_line,
-        is_turn_lane, has_static_arrow,
-        planner_param_, logger_.get_child("traffic_light_module"), clock_, time_keeper_,
-        planning_factor_interface_));
+      registerModule(
+        std::make_shared<TrafficLightModule>(
+          lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, *stop_line,
+          is_turn_lane, has_static_arrow, planner_param_, logger_.get_child("traffic_light_module"),
+          clock_, time_keeper_, planning_factor_interface_));
       generate_uuid(lane_id);
       updateRTCStatus(
         getUUID(lane_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
