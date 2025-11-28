@@ -712,8 +712,20 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
 
   std::vector<SlowdownInterval> slowdown_intervals;
   std::vector<SlowDownOutput> new_prev_slow_down_output;
+
+  // Sort obstacles by distance to ego to process the closest one first
+  std::vector<std::pair<size_t, double>> obstacle_distances;
   for (size_t i = 0; i < obstacles.size(); ++i) {
-    const auto & obstacle = obstacles.at(i);
+    const double dist_to_front_collision =
+      autoware::motion_utils::calcSignedArcLength(traj_points, 0, obstacles.at(i).front_collision_point);
+    obstacle_distances.emplace_back(i, dist_to_front_collision);
+  }
+  std::sort(obstacle_distances.begin(), obstacle_distances.end(),
+    [](const auto & a, const auto & b) { return a.second < b.second; });
+  
+  // Process all obstacles sorted by distance, but only apply slow down for the first valid one
+  for (const auto & [obstacle_idx, dist] : obstacle_distances) {
+    const auto & obstacle = obstacles.at(obstacle_idx);
     const auto prev_output = utils::get_obstacle_from_uuid(prev_slow_down_output_, obstacle.uuid);
 
     const auto obstacle_motion = [&]() -> Motion {
@@ -805,7 +817,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       }();
 
       const auto markers = autoware::motion_utils::createSlowDownVirtualWallMarker(
-        slow_down_traj_points.at(slow_down_wall_idx).pose, "obstacle slow down", clock_->now(), i,
+        slow_down_traj_points.at(slow_down_wall_idx).pose, "obstacle slow down", clock_->now(), obstacle_idx,
         abs_ego_offset, "", planner_data->is_driving_forward);
       autoware_utils::append_marker_array(markers, &debug_data_ptr_->slow_down_wall_marker);
 
@@ -832,13 +844,13 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     if (slow_down_start_idx) {
       const auto markers = autoware::motion_utils::createSlowDownVirtualWallMarker(
         slow_down_traj_points.at(*slow_down_start_idx).pose, "obstacle slow down start",
-        clock_->now(), i * 2, abs_ego_offset, "", planner_data->is_driving_forward);
+        clock_->now(), obstacle_idx * 2, abs_ego_offset, "", planner_data->is_driving_forward);
       autoware_utils::append_marker_array(markers, &debug_data_ptr_->slow_down_debug_wall_marker);
     }
     if (slow_down_end_idx) {
       const auto markers = autoware::motion_utils::createSlowDownVirtualWallMarker(
         slow_down_traj_points.at(*slow_down_end_idx).pose, "obstacle slow down end", clock_->now(),
-        i * 2 + 1, abs_ego_offset, "", planner_data->is_driving_forward);
+        obstacle_idx * 2 + 1, abs_ego_offset, "", planner_data->is_driving_forward);
       autoware_utils::append_marker_array(markers, &debug_data_ptr_->slow_down_debug_wall_marker);
     }
 
@@ -851,6 +863,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
         stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
         obstacle_motion});
+    break;
   }
 
   // update prev_slow_down_output_
