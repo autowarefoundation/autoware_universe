@@ -361,16 +361,19 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
   }
 
   // (5) Apply diff pose to self pose
-  // only x and y is changed
+  // if z is needed to be corrected, set new_self_pose.position.z
   PoseWithCovarianceStamped result;
   result.header.stamp = sensor_ros_time;
   result.header.frame_id = "map";
   result.pose.pose.position.x = new_self_pose.position.x;
   result.pose.pose.position.y = new_self_pose.position.y;
-  result.pose.pose.position.z = new_self_pose.position.z;
+  result.pose.pose.position.z = self_pose.position.z;
   result.pose.pose.orientation = self_pose.orientation;
 
   // set covariance
+  // NOTE: Since z is not corrected, the z variance in base_covariance should be increased,
+  // and it should be tuned for each environment. It is left unchanged here because the
+  // impact is small even as it is.
   const Eigen::Quaterniond map_to_base_link_quat = Eigen::Quaterniond(
     result.pose.pose.orientation.w, result.pose.pose.orientation.x, result.pose.pose.orientation.y,
     result.pose.pose.orientation.z);
