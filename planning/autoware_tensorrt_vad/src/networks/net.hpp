@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__NET_HPP_
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__NET_HPP_
 
-#include "autoware/tensorrt_vad/networks/tensor.hpp"
-#include "autoware/tensorrt_vad/ros_vad_logger.hpp"
-#include "autoware/tensorrt_vad/vad_config.hpp"
+#include "networks/tensor.hpp"
+#include "ros_vad_logger.hpp"
+#include "vad_config.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 

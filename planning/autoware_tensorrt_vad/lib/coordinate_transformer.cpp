@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/coordinate_transformer.hpp"
+#include "../src/coordinate_transformer.hpp"
 
 #include <tf2/exceptions.h>
 

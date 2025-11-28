@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__CAN_BUS_CONVERTER_HPP_
 #define AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__CAN_BUS_CONVERTER_HPP_
 
-#include "autoware/tensorrt_vad/converter.hpp"
+#include "converter.hpp"
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>

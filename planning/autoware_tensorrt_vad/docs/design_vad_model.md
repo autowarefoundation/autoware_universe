@@ -1,6 +1,6 @@
 # VadModel Design
 
-- code: [vad_model.hpp](../include/autoware/tensorrt_vad/vad_model.hpp)
+- code: [vad_model.hpp](../src/vad_model.hpp)
 
 ## Responsibilities
 
@@ -47,22 +47,22 @@ flowchart TD
     style LoadHead fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
 
     %% Links to source code files
-    click Start "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_node.hpp" "VadNode header file"
-    click VadInputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadInputData definition"
-    click LoadInputs "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click Enqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click SavePrevBev "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click Postprocess "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click ReleaseNetwork "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click LoadHead "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click VadOutputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadOutputData definition"
+    click Start "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_node.hpp" "VadNode header file"
+    click VadInputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadInputData definition"
+    click LoadInputs "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click Enqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click SavePrevBev "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click Postprocess "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click ReleaseNetwork "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click LoadHead "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click VadOutputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadOutputData definition"
 ```
 
 ### Function Roles
 
 ### API functions (public)
 
-- [`infer(const VadInputData&)`](../include/autoware/tensorrt_vad/vad_model.hpp): Main inference pipeline
+- [`infer(const VadInputData&)`](../src/vad_model.hpp): Main inference pipeline
   1. Selects head network (`head_no_prev` for first frame, `head` for subsequent frames)
   2. Calls `load_inputs()` to preprocess and transfer data to GPU
   3. Calls `enqueue()` to execute backbone and head networks
@@ -73,27 +73,27 @@ flowchart TD
 
 ### Internal functions (private)
 
-- [`init_engines()`](../include/autoware/tensorrt_vad/vad_model.hpp): Initializes TensorRT networks at construction
+- [`init_engines()`](../src/vad_model.hpp): Initializes TensorRT networks at construction
   - Creates `Backbone`, `Head`, and `Head_no_prev` network instances
   - Sets up external input bindings for memory sharing between networks
   - Logs binding connections between networks
 
-- [`load_inputs()`](../include/autoware/tensorrt_vad/vad_model.hpp): Prepares inputs for inference
+- [`load_inputs()`](../src/vad_model.hpp): Prepares inputs for inference
   - Preprocesses multi-camera images using `MultiCameraPreprocessor::preprocess_images()`
   - Loads metadata: `shift`, `vad_base2img` (lidar2img), `can_bus`
   - Sets `prev_bev` binding for `head` network (not needed for `head_no_prev`)
 
-- [`enqueue()`](../include/autoware/tensorrt_vad/vad_model.hpp): Executes inference
+- [`enqueue()`](../src/vad_model.hpp): Executes inference
   - Enqueues backbone network
   - Enqueues selected head network
   - Synchronizes CUDA stream to wait for completion
 
-- [`save_prev_bev()`](../include/autoware/tensorrt_vad/vad_model.hpp): Preserves BEV features for next frame
+- [`save_prev_bev()`](../src/vad_model.hpp): Preserves BEV features for next frame
   - Copies `out.bev_embed` from head output to `prev_bev` tensor
   - Uses `cudaMemcpyAsync` Device-to-Device transfer
   - Returns shared pointer to `Tensor` stored in `saved_prev_bev_` member
 
-- [`postprocess()`](../include/autoware/tensorrt_vad/vad_model.hpp): Extracts and processes outputs
+- [`postprocess()`](../src/vad_model.hpp): Extracts and processes outputs
   - Retrieves `out.ego_fut_preds` (trajectory predictions) from GPU
   - Processes detected objects via `ObjectPostprocessor::postprocess_objects()`
   - Processes map polylines via `MapPostprocessor::postprocess_map_preds()`
@@ -101,12 +101,12 @@ flowchart TD
   - Extracts trajectories for all commands and the selected command
   - Returns `VadOutputData` with all processed outputs
 
-- [`release_network()`](../include/autoware/tensorrt_vad/vad_model.hpp): Frees network resources
+- [`release_network()`](../src/vad_model.hpp): Frees network resources
   - Clears bindings map
   - Resets and erases network from `nets_` map
   - Called to release `head_no_prev` after first frame
 
-- [`load_head()`](../include/autoware/tensorrt_vad/vad_model.hpp): Initializes head network with prev_bev support
+- [`load_head()`](../src/vad_model.hpp): Initializes head network with prev_bev support
   - VAD requires previous frame's BEV features as input
   - First frame uses `head_no_prev` (no previous BEV available)
   - After first frame, switches to `head` which uses `prev_bev` from previous inference
@@ -118,8 +118,8 @@ flowchart TD
 
 - **Goal**: `VadModel` should not depend on ROS, but needs logging capabilities
 - **Solution**: Template-based dependency injection with abstract logger interface
-- [`VadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp): Abstract base class defining logging interface
-- [`RosVadLogger`](../include/autoware/tensorrt_vad/ros_vad_logger.hpp): Concrete implementation using ROS 2 logging macros (`RCLCPP_INFO_THROTTLE`, etc.)
+- [`VadLogger`](../src/ros_vad_logger.hpp): Abstract base class defining logging interface
+- [`RosVadLogger`](../src/ros_vad_logger.hpp): Concrete implementation using ROS 2 logging macros (`RCLCPP_INFO_THROTTLE`, etc.)
 - `VadModel<LoggerType>`: Template class parameterized by logger type
   - Enforces `LoggerType` must inherit from `VadLogger` via `static_assert`
   - Enables unit testing with mock loggers
@@ -134,7 +134,7 @@ flowchart TD
   1. **Backbone**: Processes multi-camera images and extracts features
   2. **Head_no_prev**: First-frame head without previous BEV features
   3. **Head**: Subsequent-frame head using `prev_bev` from previous inference
-- Memory management via [`Tensor`](../include/autoware/tensorrt_vad/networks/tensor.hpp) class
+- Memory management via [`Tensor`](../src/networks/tensor.hpp) class
   - Handles `cudaMalloc` for GPU memory allocation
   - Handles `cudaMemcpyAsync` for Host↔Device transfers
 - Bindings sharing: Outputs from one network can be directly used as inputs to another (e.g., backbone outputs → head inputs)
@@ -179,23 +179,23 @@ flowchart TD
 
     %% Links to source code files
     click CudaMalloc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
-    click BuildEngine "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
-    click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
-    click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
-    click NetConstructor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
+    click BuildEngine "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click NetConstructor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
     click EnqueueV3 "https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_tensorrt_common/src/tensorrt_common.cpp" "enqueueV3 implementation"
-    click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
-    click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/net.hpp" "Net class implementation"
+    click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
     click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
 ```
 
 ##### Network classes: API functions
 
-- **Constructor** → [`init_tensorrt`](../include/autoware/tensorrt_vad/networks/net.hpp)
+- **Constructor** → [`init_tensorrt`](../src/networks/net.hpp)
   - Called from `VadModel::init_engines` during model initialization
-  - **setup_network_io**: Implemented differently in [`Backbone`](../include/autoware/tensorrt_vad/networks/backbone.hpp) and [`Head`](../include/autoware/tensorrt_vad/networks/head.hpp)
+  - **setup_network_io**: Implemented differently in [`Backbone`](../src/networks/backbone.hpp) and [`Head`](../src/networks/head.hpp)
     - Defines input/output tensor names, shapes, and data types
   - **build_engine**: Creates TensorRT engine
     - Instantiates [`TrtCommon`](../../../perception/autoware_tensorrt_common/include/autoware/tensorrt_common/tensorrt_common.hpp) for engine management
@@ -218,9 +218,9 @@ Preprocessor and Postprocessor classes wrap CUDA kernels and provide clean C++ i
 
 **Preprocessor/Postprocessor Classes** (CPU-side wrappers):
 
-- [`MultiCameraPreprocessor`](../include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp): Multi-camera image preprocessing
-- [`ObjectPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp): 3D object detection postprocessing
-- [`MapPostprocessor`](../include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp): Map polyline postprocessing
+- [`MultiCameraPreprocessor`](../src/networks/preprocess/multi_camera_preprocess.hpp): Multi-camera image preprocessing
+- [`ObjectPostprocessor`](../src/networks/postprocess/object_postprocess.hpp): 3D object detection postprocessing
+- [`MapPostprocessor`](../src/networks/postprocess/map_postprocess.hpp): Map polyline postprocessing
 
 **Processing Flow**:
 
@@ -283,10 +283,10 @@ flowchart TD
     style VadModel fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
 
     %% Links to source code files
-    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_model.hpp" "VadModel implementation"
-    click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
-    click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
-    click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
+    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
+    click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
+    click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
+    click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
     click LaunchResize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Resize kernel implementation"
     click LaunchNormalize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Normalize kernel implementation"
     click LaunchObject "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/object_postprocess_kernel.cu" "Object postprocess kernel implementation"

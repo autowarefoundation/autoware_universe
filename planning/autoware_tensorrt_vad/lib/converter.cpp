@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/converter.hpp"
+#include "../src/converter.hpp"
 
 namespace autoware::tensorrt_vad::vad_interface
 {

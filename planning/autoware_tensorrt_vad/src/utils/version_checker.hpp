@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__UTILS__VERSION_CHECKER_HPP_
 #define AUTOWARE__TENSORRT_VAD__UTILS__VERSION_CHECKER_HPP_
 
-#include "autoware/tensorrt_vad/utils/constants.hpp"
+#include "utils/constants.hpp"
 
 #include <nlohmann/json.hpp>
 

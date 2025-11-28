@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp"
+#include "../src/input_converter/bev_shift_converter.hpp"
 
 namespace autoware::tensorrt_vad::vad_interface
 {

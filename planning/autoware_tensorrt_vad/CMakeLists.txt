@@ -55,7 +55,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(OpenCV REQUIRED)
 
   include_directories(
-    include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CUDA_INCLUDE_DIRS}
   )
 

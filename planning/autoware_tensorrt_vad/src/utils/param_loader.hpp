@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__UTILS__PARAM_LOADER_HPP_
 #define AUTOWARE__TENSORRT_VAD__UTILS__PARAM_LOADER_HPP_
 
-#include "autoware/tensorrt_vad/utils/model_config.hpp"
+#include "utils/model_config.hpp"
 
 #include <nlohmann/json.hpp>
 

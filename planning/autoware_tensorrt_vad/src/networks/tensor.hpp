@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__TENSOR_HPP_
 
-#include "autoware/tensorrt_vad/ros_vad_logger.hpp"
+#include "ros_vad_logger.hpp"
 
 #include <NvInfer.h>
 #include <NvInferRuntime.h>

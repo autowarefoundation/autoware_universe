@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__OUTPUT_CONVERTER__TRAJECTORY_CONVERTER_HPP_
 #define AUTOWARE__TENSORRT_VAD__OUTPUT_CONVERTER__TRAJECTORY_CONVERTER_HPP_
 
-#include "autoware/tensorrt_vad/converter.hpp"
+#include "converter.hpp"
 
 #include <Eigen/Dense>
 #include <autoware_utils_uuid/uuid_helper.hpp>

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp"
+#include "../src/networks/postprocess/object_postprocess.hpp"
 
 #include <algorithm>
 #include <array>

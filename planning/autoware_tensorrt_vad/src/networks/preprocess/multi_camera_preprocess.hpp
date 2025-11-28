@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_HPP_
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_HPP_
 
-#include "autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess_kernel.hpp"
-#include "autoware/tensorrt_vad/ros_vad_logger.hpp"
+#include "networks/preprocess/multi_camera_preprocess_kernel.hpp"
+#include "ros_vad_logger.hpp"
 
 #include <opencv2/core/mat.hpp>
 

@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 
-#include "autoware/tensorrt_vad/data_types.hpp"
-#include "autoware/tensorrt_vad/networks/postprocess/object_postprocess_kernel.hpp"
-#include "autoware/tensorrt_vad/ros_vad_logger.hpp"
+#include "data_types.hpp"
+#include "networks/postprocess/object_postprocess_kernel.hpp"
+#include "ros_vad_logger.hpp"
 
 #include <cuda_runtime.h>
 

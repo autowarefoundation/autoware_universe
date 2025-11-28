@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/synchronization_strategy.hpp"
+#include "../src/synchronization_strategy.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

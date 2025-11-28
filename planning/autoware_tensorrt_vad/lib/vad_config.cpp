@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/vad_config.hpp"
+#include "../src/vad_config.hpp"
 
-#include "autoware/tensorrt_vad/networks/postprocess/map_postprocess.hpp"
-#include "autoware/tensorrt_vad/networks/postprocess/object_postprocess.hpp"
+#include "../src/networks/postprocess/map_postprocess.hpp"
+#include "../src/networks/postprocess/object_postprocess.hpp"
 
 namespace autoware::tensorrt_vad
 {

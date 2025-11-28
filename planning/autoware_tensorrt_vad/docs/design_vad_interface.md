@@ -1,23 +1,23 @@
 # VadInterface Design
 
-- code: [vad_interface.cpp](../lib/vad_interface.cpp) [vad_interface.hpp](../include/autoware/tensorrt_vad/vad_interface.hpp)
+- code: [vad_interface.cpp](../lib/vad_interface.cpp) [vad_interface.hpp](../src/vad_interface.hpp)
 
 ## Responsibilities
 
 - Convert from `VadInputTopicData` to `VadInputData`, and from `VadOutputData` to `VadOutputTopicData`
-  - Manage TF lookups via [`CoordinateTransformer`](../include/autoware/tensorrt_vad/coordinate_transformer.hpp)
+  - Manage TF lookups via [`CoordinateTransformer`](../src/coordinate_transformer.hpp)
     - Provides camera frame transformations (base_link → camera frames) via TF buffer
     - Note: For CARLA, VAD coordinates = Autoware base_link coordinates (no conversion needed)
   - Convert input data (all converters in `vad_interface::` namespace)
-    - Convert input images by [`InputImageConverter`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
-    - Convert input transform matrix by [`InputTransformMatrixConverter`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
+    - Convert input images by [`InputImageConverter`](../src/input_converter/image_converter.hpp)
+    - Convert input transform matrix by [`InputTransformMatrixConverter`](../src/input_converter/transform_matrix_converter.hpp)
       - Uses `CoordinateTransformer::lookup_base2cam()` to build transformation matrices
-    - Convert input odometry data by [`InputCanBusConverter`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp)
-    - Compute BEV shift by [`InputBEVShiftConverter`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
+    - Convert input odometry data by [`InputCanBusConverter`](../src/input_converter/can_bus_converter.hpp)
+    - Compute BEV shift by [`InputBEVShiftConverter`](../src/input_converter/bev_shift_converter.hpp)
   - Convert output data (all converters in `vad_interface::` namespace)
-    - Convert output planning trajectory by [`OutputTrajectoryConverter`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
-    - Convert output predicted objects by [`OutputObjectsConverter`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
-    - Convert output map markers by [`OutputMapConverter`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
+    - Convert output planning trajectory by [`OutputTrajectoryConverter`](../src/output_converter/trajectory_converter.hpp)
+    - Convert output predicted objects by [`OutputObjectsConverter`](../src/output_converter/objects_converter.hpp)
+    - Convert output map markers by [`OutputMapConverter`](../src/output_converter/map_converter.hpp)
 
 - Responsible for preprocessing and postprocessing that use only CPU (does not use CUDA)
 - Caches `vad_base2img` transformation matrix after first successful computation to avoid repeated TF lookups
@@ -93,20 +93,20 @@ flowchart TD
     %% Clickable links for code navigation (must be after all style statements)
     click VadNode "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode implementation"
     click VadNode2 "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode implementation"
-    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadInputTopicData definition"
-    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadOutputData definition"
-    click ConvertInput "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface::convert_input()"
-    click ConvertOutput "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/vad_interface.hpp" "VadInterface::convert_output()"
-    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadInputData definition"
-    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/data_types.hpp" "VadOutputTopicData definition"
-    click ImageProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/input_converter/image_converter.hpp" "InputImageConverter::process_image()"
-    click MatrixProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp" "InputTransformMatrixConverter::process_vad_base2img()"
-    click CanBusProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp" "InputCanBusConverter::process_can_bus()"
-    click BEVShiftProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp" "InputBEVShiftConverter::process_shift()"
-    click TrajProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp" "OutputTrajectoryConverter::process_trajectory()"
-    click TrajCandProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp" "OutputTrajectoryConverter::process_candidate_trajectories()"
-    click ObjProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/output_converter/objects_converter.hpp" "OutputObjectsConverter::process_predicted_objects()"
-    click MapProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/include/autoware/tensorrt_vad/output_converter/map_converter.hpp" "OutputMapConverter::process_map_points()"
+    click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadInputTopicData definition"
+    click VadOutputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadOutputData definition"
+    click ConvertInput "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface::convert_input()"
+    click ConvertOutput "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface::convert_output()"
+    click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadInputData definition"
+    click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadOutputTopicData definition"
+    click ImageProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/input_converter/image_converter.hpp" "InputImageConverter::process_image()"
+    click MatrixProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/input_converter/transform_matrix_converter.hpp" "InputTransformMatrixConverter::process_vad_base2img()"
+    click CanBusProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/input_converter/can_bus_converter.hpp" "InputCanBusConverter::process_can_bus()"
+    click BEVShiftProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/input_converter/bev_shift_converter.hpp" "InputBEVShiftConverter::process_shift()"
+    click TrajProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/output_converter/trajectory_converter.hpp" "OutputTrajectoryConverter::process_trajectory()"
+    click TrajCandProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/output_converter/trajectory_converter.hpp" "OutputTrajectoryConverter::process_candidate_trajectories()"
+    click ObjProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/output_converter/objects_converter.hpp" "OutputObjectsConverter::process_predicted_objects()"
+    click MapProc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/output_converter/map_converter.hpp" "OutputMapConverter::process_map_points()"
 ```
 
 ### Function Roles
@@ -116,17 +116,17 @@ flowchart TD
 `VadNode` calls `convert_input()` before inference and `convert_output()` after inference.
 
 - [`convert_input(const VadInputTopicData&)`](../lib/vad_interface.cpp): Convert from `VadInputTopicData` to `VadInputData`
-  - Validates and caches `vad_base2img` transformation via [`InputTransformMatrixConverter::process_vad_base2img()`](../include/autoware/tensorrt_vad/input_converter/transform_matrix_converter.hpp)
-  - Processes CAN-bus data via [`InputCanBusConverter::process_can_bus()`](../include/autoware/tensorrt_vad/input_converter/can_bus_converter.hpp)
-  - Computes BEV shift via [`InputBEVShiftConverter::process_shift()`](../include/autoware/tensorrt_vad/input_converter/bev_shift_converter.hpp)
-  - Processes images via [`InputImageConverter::process_image()`](../include/autoware/tensorrt_vad/input_converter/image_converter.hpp)
+  - Validates and caches `vad_base2img` transformation via [`InputTransformMatrixConverter::process_vad_base2img()`](../src/input_converter/transform_matrix_converter.hpp)
+  - Processes CAN-bus data via [`InputCanBusConverter::process_can_bus()`](../src/input_converter/can_bus_converter.hpp)
+  - Computes BEV shift via [`InputBEVShiftConverter::process_shift()`](../src/input_converter/bev_shift_converter.hpp)
+  - Processes images via [`InputImageConverter::process_image()`](../src/input_converter/image_converter.hpp)
   - Updates `prev_can_bus_` for next frame
 
 - [`convert_output(const VadOutputData&, ...)`](../lib/vad_interface.cpp): Convert from `VadOutputData` to `VadOutputTopicData`
-  - Converts candidate trajectories via [`OutputTrajectoryConverter::process_candidate_trajectories()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
-  - Converts main trajectory via [`OutputTrajectoryConverter::process_trajectory()`](../include/autoware/tensorrt_vad/output_converter/trajectory_converter.hpp)
-  - Converts map polylines via [`OutputMapConverter::process_map_points()`](../include/autoware/tensorrt_vad/output_converter/map_converter.hpp)
-  - Converts predicted objects via [`OutputObjectsConverter::process_predicted_objects()`](../include/autoware/tensorrt_vad/output_converter/objects_converter.hpp)
+  - Converts candidate trajectories via [`OutputTrajectoryConverter::process_candidate_trajectories()`](../src/output_converter/trajectory_converter.hpp)
+  - Converts main trajectory via [`OutputTrajectoryConverter::process_trajectory()`](../src/output_converter/trajectory_converter.hpp)
+  - Converts map polylines via [`OutputMapConverter::process_map_points()`](../src/output_converter/map_converter.hpp)
+  - Converts predicted objects via [`OutputObjectsConverter::process_predicted_objects()`](../src/output_converter/objects_converter.hpp)
 
 ### Converter Architecture
 

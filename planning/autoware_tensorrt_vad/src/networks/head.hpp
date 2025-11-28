@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__NETWORKS__HEAD_HPP_
 #define AUTOWARE__TENSORRT_VAD__NETWORKS__HEAD_HPP_
 
-#include "autoware/tensorrt_vad/networks/net.hpp"
+#include "networks/net.hpp"
 
 #include <memory>
 #include <string>

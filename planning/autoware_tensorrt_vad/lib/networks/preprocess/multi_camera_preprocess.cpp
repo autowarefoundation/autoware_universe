@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess.hpp"
+#include "../src/networks/preprocess/multi_camera_preprocess.hpp"
 
 #include <stdexcept>
 #include <string>

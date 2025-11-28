@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/preprocess/multi_camera_preprocess_kernel.hpp"  // Configuration structures and declarations for CUDA kernel
+#include "networks/preprocess/multi_camera_preprocess_kernel.hpp"  // Configuration structures and declarations for CUDA kernel
 
 namespace autoware::tensorrt_vad
 {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/tensor.hpp"
+#include "../src/networks/tensor.hpp"
 
 #include <iostream>
 #include <memory>

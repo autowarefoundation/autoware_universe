@@ -1,6 +1,6 @@
 # VadNode Design
 
-- code: [vad_node.cpp](../src/vad_node.cpp), [vad_node.hpp](../include/autoware/tensorrt_vad/vad_node.hpp)
+- code: [vad_node.cpp](../src/vad_node.cpp), [vad_node.hpp](../src/vad_node.hpp)
 
 ## Responsibilities
 
@@ -60,9 +60,9 @@ flowchart TD
     style ExecuteInferenceScope fill:#f5f5dc,stroke:#8b4513,stroke-width:2px,color:#000000
 ```
 
-- Synchronization checking and dropped data handling are managed by [`SynchronizationStrategy`](../include/autoware/tensorrt_vad/synchronization_strategy.hpp).
+- Synchronization checking and dropped data handling are managed by [`SynchronizationStrategy`](../src/synchronization_strategy.hpp).
   - Currently implements `FrontCriticalSynchronizationStrategy` which requires the front camera image
-- Conversions between `VadInputTopicData` ↔ `VadInputData` and `VadOutputData` ↔ `VadOutputTopicData` are handled by [`VadInterface`](../include/autoware/tensorrt_vad/vad_interface.hpp).
+- Conversions between `VadInputTopicData` ↔ `VadInputData` and `VadOutputData` ↔ `VadOutputTopicData` are handled by [`VadInterface`](../src/vad_interface.hpp).
 
 ### Function Roles
 
@@ -88,5 +88,5 @@ flowchart TD
 
 - Excessive use of callbacks when subscribing can increase CPU usage. Use callbacks only when it's necessary to react to topic reception, otherwise use `Subscription->take()`.
 - This class has many responsibilities: creating config from ROS parameters, creating publishers and subscribers, callback functions, triggering and executing inference, and publishing. If readability becomes poor, it should be split into separate classes by responsibility.
-- Add [`SynchronizationStrategy`](../include/autoware/tensorrt_vad/synchronization_strategy.hpp) other than FrontCritical
+- Add [`SynchronizationStrategy`](../src/synchronization_strategy.hpp) other than FrontCritical
   - e.g. Consider synchronized when the front 3 images are available

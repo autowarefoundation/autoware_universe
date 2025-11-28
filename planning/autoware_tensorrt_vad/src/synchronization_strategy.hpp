@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__SYNCHRONIZATION_STRATEGY_HPP_
 #define AUTOWARE__TENSORRT_VAD__SYNCHRONIZATION_STRATEGY_HPP_
 
-#include "autoware/tensorrt_vad/vad_interface.hpp"
+#include "vad_interface.hpp"
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>

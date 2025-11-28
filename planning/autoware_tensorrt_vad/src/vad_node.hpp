@@ -15,13 +15,13 @@
 #ifndef AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
 #define AUTOWARE__TENSORRT_VAD__VAD_NODE_HPP_
 
-#include "autoware/tensorrt_vad/synchronization_strategy.hpp"
-#include "autoware/tensorrt_vad/utils/model_config.hpp"
-#include "autoware/tensorrt_vad/utils/param_loader.hpp"
-#include "autoware/tensorrt_vad/utils/version_checker.hpp"
-#include "autoware/tensorrt_vad/vad_interface.hpp"
-#include "autoware/tensorrt_vad/vad_interface_config.hpp"
-#include "autoware/tensorrt_vad/vad_model.hpp"
+#include "synchronization_strategy.hpp"
+#include "utils/model_config.hpp"
+#include "utils/param_loader.hpp"
+#include "utils/version_checker.hpp"
+#include "vad_interface.hpp"
+#include "vad_interface_config.hpp"
+#include "vad_model.hpp"
 #include "ros_vad_logger.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

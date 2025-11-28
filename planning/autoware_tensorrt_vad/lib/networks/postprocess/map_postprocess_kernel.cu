@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/postprocess/cuda_utils.hpp"
-#include "autoware/tensorrt_vad/networks/postprocess/map_postprocess_kernel.hpp"
+#include "networks/postprocess/cuda_utils.hpp"
+#include "networks/postprocess/map_postprocess_kernel.hpp"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>

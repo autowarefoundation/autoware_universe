@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/networks/backbone.hpp"
+#include "../src/networks/backbone.hpp"
 
 #include <memory>
 #include <string>

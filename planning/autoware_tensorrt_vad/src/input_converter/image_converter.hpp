@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
 #define AUTOWARE__TENSORRT_VAD__INPUT_CONVERTER__IMAGE_CONVERTER_HPP_
 
-#include "autoware/tensorrt_vad/converter.hpp"
+#include "converter.hpp"
 
 #include <opencv2/core/mat.hpp>
 

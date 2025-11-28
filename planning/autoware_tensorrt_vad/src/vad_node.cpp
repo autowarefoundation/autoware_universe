@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/vad_node.hpp"
+#include "vad_node.hpp"
 
-#include "autoware/tensorrt_vad/utils/transform_utils.hpp"
+#include "utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
 

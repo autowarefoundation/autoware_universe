@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_vad/output_converter/trajectory_converter.hpp"
+#include "../src/output_converter/trajectory_converter.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 
