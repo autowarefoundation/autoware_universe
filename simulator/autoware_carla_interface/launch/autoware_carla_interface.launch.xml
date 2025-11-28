@@ -139,6 +139,80 @@
         <remap from="input/twist" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
         <remap from="output/accel" to="/localization/acceleration"/>
       </node>
+
+      <!-- Minimal control: trajectory follower only -->
+      <node_container pkg="rclcpp_components" exec="component_container_mt" name="e2e_control_container" namespace="" output="screen">
+        <composable_node pkg="autoware_trajectory_follower_node" plugin="autoware::motion::control::trajectory_follower_node::Controller" name="trajectory_follower">
+          <param name="use_sim_time" value="$(var use_sim_time)"/>
+          <param name="lateral_controller_mode" value="mpc"/>
+          <param name="longitudinal_controller_mode" value="pid"/>
+          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/trajectory_follower_node.param.yaml"/>
+          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/lateral/mpc.param.yaml"/>
+          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/longitudinal/pid.param.yaml"/>
+          <param from="$(find-pkg-share autoware_launch)/config/control/common/nearest_search.param.yaml"/>
+          <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
+          <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
+          <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
+          <remap from="~/input/current_accel" to="/localization/acceleration"/>
+          <remap from="~/input/current_steering" to="/vehicle/status/steering_status"/>
+          <remap from="~/input/current_operation_mode" to="/system/operation_mode/state"/>
+          <remap from="~/output/control_cmd" to="/trajectory_follower/control_cmd"/>
+          <remap from="~/output/predicted_trajectory" to="/control/trajectory_follower/predicted_trajectory"/>
+          <remap from="~/output/lateral_diagnostic" to="/control/trajectory_follower/lateral/diagnostic"/>
+          <remap from="~/output/longitudinal_diagnostic" to="/control/trajectory_follower/longitudinal/diagnostic"/>
+        </composable_node>
+      </node_container>
+
+      <!-- Load shift decider as composable node -->
+      <load_composable_node target="/e2e_control_container">
+        <composable_node pkg="autoware_shift_decider" plugin="autoware::shift_decider::ShiftDecider" name="autoware_shift_decider">
+          <param from="$(find-pkg-share autoware_launch)/config/control/shift_decider/shift_decider.param.yaml"/>
+          <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
+          <remap from="input/state" to="/autoware/state"/>
+          <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
+          <remap from="output/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+        </composable_node>
+      </load_composable_node>
+
+      <node pkg="topic_tools" exec="relay" name="trajectory_follower_control_cmd_relay" output="log" args="/trajectory_follower/control_cmd /trajectory_follower_control_cmd"/>
+
+      <!-- External command selector (required for engagement) -->
+      <include file="$(find-pkg-share autoware_external_cmd_selector)/launch/external_cmd_selector.launch.py">
+        <arg name="use_intra_process" value="false"/>
+        <arg name="target_container" value="/e2e_control_container"/>
+        <arg name="external_cmd_selector_param_path" value="$(find-pkg-share autoware_launch)/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
+        <arg name="output/current_selector_mode" value="/control/external_cmd_selector/current_selector_mode"/>
+      </include>
+
+      <!-- Vehicle command gate for operation mode management -->
+      <let name="check_external_emergency_heartbeat" value="false"/>
+      <node pkg="autoware_vehicle_cmd_gate" exec="vehicle_cmd_gate_exe" name="vehicle_cmd_gate" output="screen">
+        <param from="$(find-pkg-share autoware_launch)/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml"/>
+        <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
+        <param name="use_emergency_handling" value="false"/>
+        <param name="check_external_emergency_heartbeat" value="false"/>
+
+        <remap from="input/steering" to="/vehicle/status/steering_status"/>
+        <remap from="input/auto/control_cmd" to="/trajectory_follower/control_cmd"/>
+        <remap from="input/auto/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
+        <remap from="input/auto/hazard_lights_cmd" to="/planning/hazard_lights_cmd"/>
+        <remap from="input/auto/gear_cmd" to="/control/shift_decider/gear_cmd"/>
+
+        <remap from="input/external/control_cmd" to="/external/selected/control_cmd"/>
+        <remap from="input/external/turn_indicators_cmd" to="/external/selected/turn_indicators_cmd"/>
+        <remap from="input/external/hazard_lights_cmd" to="/external/selected/hazard_lights_cmd"/>
+        <remap from="input/external/gear_cmd" to="/external/selected/gear_cmd"/>
+        <remap from="input/external_emergency_stop_heartbeat" to="/external/selected/heartbeat"/>
+
+        <remap from="input/engage" to="/autoware/engage"/>
+        <remap from="input/gate_mode" to="/control/gate_mode_cmd"/>
+        <remap from="output/gate_mode" to="/control/current_gate_mode"/>
+        <remap from="output/engage" to="/api/autoware/get/engage"/>
+        <remap from="output/control_cmd" to="/control/command/control_cmd"/>
+        <remap from="output/gear_cmd" to="/control/command/gear_cmd"/>
+        <remap from="output/turn_indicators_cmd" to="/control/command/turn_indicators_cmd"/>
+        <remap from="output/hazard_lights_cmd" to="/control/command/hazard_lights_cmd"/>
+      </node>
     </group>
   </group>
 </launch>
