@@ -128,7 +128,7 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 Note: Make sure the appropriate version weight is set for the path specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml`.
 
 ```bash
-$ ls ~/autoware_data/diffusion_planner/v1.0/
+$ ls ~/autoware_data/diffusion_planner/v2.0/
 diffusion_planner.onnx diffusion_planner.param.json
 ```
 
@@ -169,14 +169,15 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
 ## Inputs
 
-| Topic                     | Message Type                                        | Description              |
-| ------------------------- | --------------------------------------------------- | ------------------------ |
-| `~/input/odometry`        | nav_msgs/msg/Odometry                               | Ego vehicle odometry     |
-| `~/input/acceleration`    | geometry_msgs/msg/AccelWithCovarianceStamped        | Ego acceleration         |
-| `~/input/tracked_objects` | autoware_perception_msgs/msg/TrackedObjects         | Detected dynamic objects |
-| `~/input/traffic_signals` | autoware_perception_msgs/msg/TrafficLightGroupArray | Traffic light states     |
-| `~/input/vector_map`      | autoware_map_msgs/msg/LaneletMapBin                 | Lanelet2 map             |
-| `~/input/route`           | autoware_planning_msgs/msg/LaneletRoute             | Route information        |
+| Topic                     | Message Type                                        | Description                |
+| ------------------------- | --------------------------------------------------- | -------------------------- |
+| `~/input/odometry`        | nav_msgs/msg/Odometry                               | Ego vehicle odometry       |
+| `~/input/acceleration`    | geometry_msgs/msg/AccelWithCovarianceStamped        | Ego acceleration           |
+| `~/input/tracked_objects` | autoware_perception_msgs/msg/TrackedObjects         | Detected dynamic objects   |
+| `~/input/traffic_signals` | autoware_perception_msgs/msg/TrafficLightGroupArray | Traffic light states       |
+| `~/input/vector_map`      | autoware_map_msgs/msg/LaneletMapBin                 | Lanelet2 map               |
+| `~/input/route`           | autoware_planning_msgs/msg/LaneletRoute             | Route information          |
+| `~/input/turn_indicators` | autoware_vehicle_msgs/msg/TurnIndicatorsReport      | Turn indicator information |
 
 ## Outputs
 
@@ -185,6 +186,7 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 | `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
 | `~/output/trajectories`      | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
 | `~/output/predicted_objects` | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
+| `~/output/turn_indicators`   | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command             |
 | `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
 | `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray                        | Route debug markers                        |
 
@@ -203,28 +205,29 @@ colcon test-result --all
 
 ## ONNX Model and Versioning
 
-The Diffusion Planner relies on an ONNX model for inference.  
+The Diffusion Planner relies on an ONNX model for inference.
 To ensure compatibility between models and the ROS 2 node implementation, the model versioning scheme follows **major** and **minor** numbers:
 The model version is defined either by the directory name provided to the node or within the `diffusion_planner.param.json` configuration file.
 
-- **Major version**  
+- **Major version**
   Incremented when there are changes in the model **inputs/outputs or architecture**.
 
   > :warning: Models with different major versions are **not compatible** with the current ROS node.
 
-- **Minor version**  
-  Incremented when **only the weight files are updated**.  
+- **Minor version**
+  Incremented when **only the weight files are updated**.
   As long as the major version matches, the node remains compatible, and the new model can be used directly.
 
-To download the latest model, simply run the provided setup script:  
+To download the latest model, simply run the provided setup script:
 [How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
 
 ### Model Version History
 
-| Version | Release Date | Notes                                                                                                                                                                                                                                          | ROS Node Compatibility |
-| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| **0.1** | 2025/07/05   | - First public release<br>- Route planning based on TIER IV real data                                                                                                                                                                          | NG                     |
-| **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points** | OK                     |
+| Version | Release Date | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                    | ROS Node Compatibility |
+| ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **0.1** | 2025/07/05   | - First public release<br>- Route planning based on TIER IV real data                                                                                                                                                                                                                                                                                                                                                                    | NG                     |
+| **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points**                                                                                                                                                                                           | NG                     |
+| **2.0** | 2025/11/26   | - Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added `Polygon` and `LineString` as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased `NUM_SEGMENTS_IN_LANE` from 70 to 140. | OK                     |
 
 ---
 
