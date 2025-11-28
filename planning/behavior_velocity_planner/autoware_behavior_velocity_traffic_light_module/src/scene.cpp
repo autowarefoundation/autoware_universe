@@ -223,7 +223,7 @@ bool TrafficLightModule::isStopSignal()
     if (
       element.color == TrafficSignalElement::AMBER &&
       (element.status == TrafficSignalElement::SOLID_ON ||
-       element.status == TrafficSignalElement::UNKNOWN))  // Status 0 (UNKNOWN) も許容
+       element.status == TrafficSignalElement::UNKNOWN))
     {
       is_yellow_now = true;
       break;
@@ -237,21 +237,6 @@ bool TrafficLightModule::isStopSignal()
       if (yellow_transition_state_ == YellowState::kNotYellow) {
         // This is the first frame of yellow. Determine how it started.
         bool prev_had_green_circle = false;
-
-        // --- Debug: Log previous state ---
-        RCLCPP_INFO_THROTTLE(
-          logger_, *clock_, 1000,
-          "[TrafficLight Debug] Lane %ld: Yellow started. Checking PREVIOUS state...", lane_id_);
-        if (prev_looking_tl_state_.elements.empty()) {
-          RCLCPP_INFO_THROTTLE(
-            logger_, *clock_, 1000, "[TrafficLight Debug]   Prev state was EMPTY.");
-        }
-        for (size_t i = 0; i < prev_looking_tl_state_.elements.size(); ++i) {
-          RCLCPP_INFO_THROTTLE(
-            logger_, *clock_, 1000, "[TrafficLight Debug]   Prev Element %zu: Shape=%d, Color=%d",
-            i, prev_looking_tl_state_.elements[i].shape, prev_looking_tl_state_.elements[i].color);
-        }
-        // ---------------------------------
 
         for (const auto & element : prev_looking_tl_state_.elements) {
           // Check for Green Circle
@@ -279,7 +264,7 @@ bool TrafficLightModule::isStopSignal()
         is_turn_lane_ && has_static_arrow_ &&
         yellow_transition_state_ == YellowState::kFromGreen) {
         // This is a "Green -> Yellow" sequence. This is the state we *do* want to override (pass).
-        return false;  // Override (Pass)
+        return false;
       } else {
         // This is a "Red+Arrow -> Yellow" sequence (or param/map mismatch).
         // Do not return false. Fall through to normal stop logic.
@@ -453,8 +438,4 @@ void TrafficLightModule::updateStopLine(const lanelet::ConstLineString3d & stop_
   stop_line_ = stop_line;
 }
 
-<<<<<<< HEAD
 }  // namespace autoware::behavior_velocity_planner
-=======
-}  // namespace autoware::behavior_velocity_planner
->>>>>>> main
