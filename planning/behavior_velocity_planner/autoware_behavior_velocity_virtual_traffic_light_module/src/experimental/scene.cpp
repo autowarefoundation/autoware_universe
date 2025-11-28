@@ -22,8 +22,10 @@
 
 #include <tier4_v2x_msgs/msg/key_value.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner::experimental
@@ -55,7 +57,7 @@ std::optional<double> findLastCollisionBeforeLine(
   const Trajectory & path, const double end_line_s, const lanelet::ConstLineStrings3d & lines)
 {
   for (const auto & line : lines) {
-    if (const auto collision = findLastCollisionBeforeLine(path, end_line_s, line)) {
+    if (const auto collision = findLastCollisionBeforeLine(path, end_line_s, line); collision) {
       return collision;
     }
   }
