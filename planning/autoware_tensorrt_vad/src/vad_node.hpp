@@ -15,6 +15,7 @@
 #ifndef VAD_NODE_HPP_
 #define VAD_NODE_HPP_
 
+#include "ros_vad_logger.hpp"
 #include "synchronization_strategy.hpp"
 #include "utils/model_config.hpp"
 #include "utils/param_loader.hpp"
@@ -22,7 +23,6 @@
 #include "vad_interface.hpp"
 #include "vad_interface_config.hpp"
 #include "vad_model.hpp"
-#include "ros_vad_logger.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
