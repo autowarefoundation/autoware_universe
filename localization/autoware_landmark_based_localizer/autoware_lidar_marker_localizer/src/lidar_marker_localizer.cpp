@@ -357,13 +357,13 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
   }
 
   // (5) Apply diff pose to self pose
-  // only x and y is changed
+  // if z is needed to be corrected, set new_self_pose.position.z
   PoseWithCovarianceStamped result;
   result.header.stamp = sensor_ros_time;
   result.header.frame_id = "map";
   result.pose.pose.position.x = new_self_pose.position.x;
   result.pose.pose.position.y = new_self_pose.position.y;
-  result.pose.pose.position.z = new_self_pose.position.z;
+  result.pose.pose.position.z = self_pose.position.z;
   result.pose.pose.orientation = self_pose.orientation;
 
   // set covariance
