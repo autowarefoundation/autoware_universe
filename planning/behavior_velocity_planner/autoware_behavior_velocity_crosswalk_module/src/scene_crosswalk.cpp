@@ -1268,7 +1268,7 @@ CrosswalkModule::getNearestStopFactorAndReason(
     return {std::nullopt, ""};
   }
   constexpr auto previous_stop_reuse_margin =
-    3.0;  // [m] reuse the previous stop pose if it is within the margin
+    1.0;  // [m] reuse the previous stop pose if it is within the margin
   const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
   if (previous_stop_pose_) {
     const auto previous_stop_arc_length = motion_utils::calcSignedArcLength(
