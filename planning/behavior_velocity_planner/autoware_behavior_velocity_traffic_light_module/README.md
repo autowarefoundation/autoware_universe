@@ -65,7 +65,6 @@ This module is activated when there is traffic light in ego lane.
 
   This feature enables smooth passing on a yellow signal in turn lanes to avoid sudden braking.
   Even in situations where the system would normally select STOP (Optional Zone) or EMERGENCY STOP (Dilemma Zone), it overrides the decision and selects PASS if all the following conditions are met:
-
   - The parameter `enable_arrow_aware_passing` is set to `true`.
   - The ego vehicle is in a turn lane (left or right).
   - The corresponding traffic light has a static arrow bulb defined in the map.
