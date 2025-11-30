@@ -723,7 +723,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
   std::sort(
     obstacle_distances.begin(), obstacle_distances.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
-
+  
+  // Keep track of which obstacle was processed for slow-down planning
+  std::optional<UUID> processed_obstacle_uuid = std::nullopt;
+  
   // Process all obstacles sorted by distance, but only apply slow down for the first valid one
   for (const auto & [obstacle_idx, dist] : obstacle_distances) {
     const auto & obstacle = obstacles.at(obstacle_idx);
@@ -858,13 +861,35 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     // Add debug data
     debug_data_ptr_->obstacles_to_slow_down.push_back(obstacle);
 
-    // update prev_slow_down_output_
+    // update prev_slow_down_output_ for the processed obstacle
     new_prev_slow_down_output.push_back(
       SlowDownOutput{
         obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
         stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
         obstacle_motion});
+    processed_obstacle_uuid = obstacle.uuid;
+    
+    // Only process the first valid obstacle to avoid multiple slow down reactions
     break;
+  }
+
+  // Preserve tracking history for all obstacles that are still being tracked
+  // This is necessary for hysteresis in motion state determination and low-pass filtering
+  for (const auto & prev_output : prev_slow_down_output_) {
+    // Check if this obstacle is still in the current obstacles list
+    const bool is_still_tracked = std::any_of(
+      obstacles.begin(), obstacles.end(),
+      [&](const auto & obs) { return obs.uuid == prev_output.uuid; });
+    
+    // If still tracked and not already added (i.e., not the processed obstacle), preserve history
+    if (is_still_tracked) {
+      if (!processed_obstacle_uuid.has_value() || 
+          prev_output.uuid != processed_obstacle_uuid.value()) {
+        // Preserve the previous output to maintain tracking history
+        // Note: We use the previous trajectory and indices since this obstacle wasn't processed
+        new_prev_slow_down_output.push_back(prev_output);
+      }
+    }
   }
 
   // update prev_slow_down_output_
