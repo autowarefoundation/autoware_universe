@@ -723,10 +723,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
   std::sort(
     obstacle_distances.begin(), obstacle_distances.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
-  
+
   // Keep track of which obstacle was processed for slow-down planning
   std::optional<UUID> processed_obstacle_uuid = std::nullopt;
-  
+
   // Process all obstacles sorted by distance, but only apply slow down for the first valid one
   for (const auto & [obstacle_idx, dist] : obstacle_distances) {
     const auto & obstacle = obstacles.at(obstacle_idx);
@@ -868,7 +868,7 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
         obstacle_motion});
     processed_obstacle_uuid = obstacle.uuid;
-    
+
     // Only process the first valid obstacle to avoid multiple slow down reactions
     break;
   }
@@ -880,11 +880,12 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     const bool is_still_tracked = std::any_of(
       obstacles.begin(), obstacles.end(),
       [&](const auto & obs) { return obs.uuid == prev_output.uuid; });
-    
+
     // If still tracked and not already added (i.e., not the processed obstacle), preserve history
     if (is_still_tracked) {
-      if (!processed_obstacle_uuid.has_value() || 
-          prev_output.uuid != processed_obstacle_uuid.value()) {
+      if (
+        !processed_obstacle_uuid.has_value() ||
+        prev_output.uuid != processed_obstacle_uuid.value()) {
         // Preserve the previous output to maintain tracking history
         // Note: We use the previous trajectory and indices since this obstacle wasn't processed
         new_prev_slow_down_output.push_back(prev_output);
