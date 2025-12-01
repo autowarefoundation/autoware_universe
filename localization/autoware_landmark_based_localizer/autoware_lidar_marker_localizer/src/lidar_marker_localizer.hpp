@@ -95,7 +95,6 @@ class LidarMarkerLocalizer : public rclcpp::Node
     double limit_distance_from_self_pose_to_marker;
     std::array<double, 36> base_covariance;
 
-    double marker_width;
     // Parameters for initial lower/upper ring id
     int64_t lower_ring_id_init;
     int64_t upper_ring_id_init;
@@ -123,9 +122,6 @@ private:
   template <typename PointType>
   std::vector<landmark_manager::Landmark> detect_landmarks(
     const PointCloud2::ConstSharedPtr & points_msg_ptr);
-  sensor_msgs::msg::PointCloud2::SharedPtr extract_marker_pointcloud(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
-    const geometry_msgs::msg::Pose marker_pose) const;
   void save_detected_marker_log(const sensor_msgs::msg::PointCloud2::SharedPtr & points_msg_ptr);
   landmark_manager::Landmark get_nearest_landmark(
     const geometry_msgs::msg::Pose & self_pose,
