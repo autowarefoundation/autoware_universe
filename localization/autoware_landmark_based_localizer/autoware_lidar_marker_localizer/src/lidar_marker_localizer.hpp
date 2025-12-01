@@ -92,7 +92,6 @@ protected:
     double limit_distance_from_self_pose_to_marker;
     std::array<double, 36> base_covariance;
 
-    double marker_width;
     // Parameters for initial lower/upper ring id
     int64_t lower_ring_id_init;
     int64_t upper_ring_id_init;
