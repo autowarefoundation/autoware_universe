@@ -7,18 +7,20 @@
     num_proposals: 500
     out_size_factor: 8
     max_points_per_voxel: 10
+    use_intensity: false
 
-    d_bound: [1.0, 166.2, 1.4]
+    d_bound: [1.0, 134.0, 1.4]
     x_bound: [-122.4, 122.4, 0.68]
     y_bound: [-122.4, 122.4, 0.68]
     z_bound: [-10.0, 10.0, 20.0]
     num_cameras: 6
     raw_image_height: 1080
     raw_image_width: 1440
-    img_aug_scale_x: 0.489
-    img_aug_scale_y: 0.489
+    img_aug_scale_x: 0.4
+    img_aug_scale_y: 0.4
     roi_height: 384
-    roi_width: 704
+    roi_width: 576
     features_height: 48
-    features_width: 88
-    num_depth_features: 118
+    features_width: 72
+    num_depth_features: 95
+    image_feature_channel: 256

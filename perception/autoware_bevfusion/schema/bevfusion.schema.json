@@ -7,11 +7,6 @@
     "bevfusion": {
       "type": "object",
       "properties": {
-        "sensor_fusion": {
-          "type": "boolean",
-          "description": "Whether to use camera-lidar fusion or not.",
-          "default": true
-        },
         "max_camera_lidar_delay": {
           "type": "number",
           "description": "Maximum delay between the lidar and the latest camera in seconds.",
@@ -39,14 +34,30 @@
         "onnx_path": {
           "type": "string",
           "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/bevfusion.onnx",
+          "default": "$(var model_path)/bevfusion_camera_lidar.onnx",
           "pattern": "\\.onnx$"
         },
         "engine_path": {
           "type": "string",
           "description": "A path to TensorRT engine file.",
-          "default": "$(var model_path)/bevfusion.engine",
+          "default": "$(var model_path)/bevfusion_camera_lidar.engine",
           "pattern": "\\.engine$"
+        },
+        "image_backbone_onnx_path": {
+          "type": "string",
+          "description": "A path to ONNX model file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "$(var model_path)/bevfusion_image_backbone.onnx"
+        },
+        "image_backbone_engine_path": {
+          "type": "string",
+          "description": "A path to TensorRT engine file for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "$(var model_path)/bevfusion_image_backbone.engine"
+        },
+        "image_backbone_trt_precision": {
+          "type": "string",
+          "description": "A precision of TensorRT engine for image backbone. For fusion mode, all three image_backbone_* parameters must be non-empty. For lidar-only mode, all three must be empty strings.",
+          "default": "fp16",
+          "enum": ["fp16", "fp32", ""]
         },
         "densification_num_past_frames": {
           "type": "integer",
@@ -97,13 +108,15 @@
         }
       },
       "required": [
-        "sensor_fusion",
         "max_camera_lidar_delay",
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
         "onnx_path",
         "engine_path",
+        "image_backbone_onnx_path",
+        "image_backbone_engine_path",
+        "image_backbone_trt_precision",
         "densification_num_past_frames",
         "densification_world_frame_id",
         "circle_nms_dist_threshold",
