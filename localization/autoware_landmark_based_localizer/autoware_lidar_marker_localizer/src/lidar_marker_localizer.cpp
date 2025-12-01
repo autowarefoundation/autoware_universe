@@ -84,7 +84,6 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   for (std::size_t i = 0; i < base_covariance.size(); ++i) {
     param_.base_covariance[i] = base_covariance[i];
   }
-  param_.marker_width = this->declare_parameter<double>("marker_width");
   param_.enable_save_log = this->declare_parameter<bool>("enable_save_log");
   param_.save_file_directory_path =
     this->declare_parameter<std::string>("save_file_directory_path");
@@ -376,16 +375,6 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
 
   pub_base_link_pose_with_covariance_on_map_->publish(result);
   pub_debug_pose_with_covariance_->publish(result);
-
-  // for debug
-  const auto marker_pointcloud_msg_ptr =
-    extract_marker_pointcloud(points_msg_ptr, nearest_detected_landmark.pose);
-  pub_marker_pointcloud_->publish(*marker_pointcloud_msg_ptr);
-
-  // save log
-  if (param_.enable_save_log) {
-    save_detected_marker_log(marker_pointcloud_msg_ptr);
-  }
 }
 
 void LidarMarkerLocalizer::service_trigger_node(
@@ -695,39 +684,6 @@ std::array<double, 36> LidarMarkerLocalizer::rotate_covariance(
   return ret_covariance;
 }
 
-sensor_msgs::msg::PointCloud2::SharedPtr LidarMarkerLocalizer::extract_marker_pointcloud(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
-  const geometry_msgs::msg::Pose marker_pose) const
-{
-  // convert from ROSMsg to PCL
-  pcl::shared_ptr<pcl::PointCloud<autoware::point_types::PointXYZIRC>> points_ptr(
-    new pcl::PointCloud<autoware::point_types::PointXYZIRC>);
-  pcl::fromROSMsg(*points_msg_ptr, *points_ptr);
-
-  pcl::shared_ptr<pcl::PointCloud<autoware::point_types::PointXYZIRC>> marker_points_ptr(
-    new pcl::PointCloud<autoware::point_types::PointXYZIRC>);
-
-  // extract marker pointcloud
-  for (const autoware::point_types::PointXYZIRC & point : points_ptr->points) {
-    const double xy_distance = std::sqrt(
-      std::pow(point.x - marker_pose.position.x, 2.0) +
-      std::pow(point.y - marker_pose.position.y, 2.0));
-    if (xy_distance < param_.marker_width / 2.0) {
-      marker_points_ptr->push_back(point);
-    }
-  }
-
-  marker_points_ptr->width = marker_points_ptr->size();
-  marker_points_ptr->height = 1;
-  marker_points_ptr->is_dense = false;
-
-  sensor_msgs::msg::PointCloud2::SharedPtr marker_points_msg_ptr(new sensor_msgs::msg::PointCloud2);
-  pcl::toROSMsg(*marker_points_ptr, *marker_points_msg_ptr);
-  marker_points_msg_ptr->header = points_msg_ptr->header;
-
-  return marker_points_msg_ptr;
-}
-
 void LidarMarkerLocalizer::save_detected_marker_log(
   const sensor_msgs::msg::PointCloud2::SharedPtr & points_msg_ptr)
 {
@@ -842,42 +798,14 @@ void LidarMarkerLocalizer::save_intensity(
 
   pub_marker_pointcloud_->publish(viz_pointcloud_msg);
 
-  if (!param_.enable_save_log) {
-    return;
+  // save log
+  if (param_.enable_save_log) {
+    // Convert viz_pointcloud_msg to SharedPtr before passing
+    auto viz_pointcloud_msg_ptr = std::make_shared<PointCloud2>(viz_pointcloud_msg);
+    save_detected_marker_log(viz_pointcloud_msg_ptr);
   }
 
-  // to csv format
-  std::stringstream log_message;
-  size_t i = 0;
-  log_message << "point.position.x,point.position.y,point.position.z,point.intensity,point.ring"
-              << std::endl;
-  for (const auto & point : marker_points_sensor_frame_ptr->points) {
-    log_message << point.x;
-    log_message << "," << point.y;
-    log_message << "," << point.z;
-    log_message << "," << point.intensity;
-    log_message << "," << ring_array.at(i++);
-    log_message << std::endl;
-  }
-
-  // create file name
-  const double times_seconds = rclcpp::Time(points_msg_ptr->header.stamp).seconds();
-  double time_integer_tmp = 0.0;
-  double time_decimal = std::modf(times_seconds, &time_integer_tmp);
-  auto time_integer = static_cast<int64_t>(time_integer_tmp);
-  struct tm * time_info{};
-  time_info = std::localtime(&time_integer);
-  std::stringstream file_name;
-  file_name << param_.save_file_name << std::put_time(time_info, "%Y%m%d-%H%M%S") << "-"
-            << std::setw(3) << std::setfill('0') << static_cast<int>((time_decimal) * 1000)
-            << ".csv";
-
-  // write log_message to file
-  std::filesystem::path save_file_directory_path = param_.save_file_directory_path;
-  std::filesystem::create_directories(save_file_directory_path);
-  std::ofstream csv_file(save_file_directory_path.append(file_name.str()));
-  csv_file << log_message.str();
-  csv_file.close();
+  return;
 }
 
 // Transform pointcloud from source_frame to target_frame
