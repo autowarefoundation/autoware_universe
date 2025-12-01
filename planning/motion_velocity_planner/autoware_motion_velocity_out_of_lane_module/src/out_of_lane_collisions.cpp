@@ -20,10 +20,12 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
 #include <boost/geometry/algorithms/detail/intersects/interface.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/index/predicates.hpp>
@@ -225,9 +227,8 @@ void calculate_objects_time_collisions(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
   const route_handler::RouteHandler & route_handler, const PlannerParam & params)
 {
-  for (const auto & object : objects) {
-    auto shape = object.shape;
-    shape.dimensions.y += params.objects_extra_width * 0.5;
+  for (auto object : objects) {
+    object.shape.dimensions.y += params.objects_extra_width * 0.5;
     for (auto path_id = 0UL; path_id < object.kinematics.predicted_paths.size(); ++path_id) {
       calculate_object_path_time_collisions(
         out_of_lane_data, path_id, object, route_handler,
@@ -299,6 +300,7 @@ OutOfLanePoint calculate_out_of_lane_point(
   }
   return p;
 }
+
 std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_data)
 {
   std::vector<OutOfLanePoint> out_of_lane_points;
@@ -307,7 +309,7 @@ std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_dat
     OutOfLanePoint p =
       calculate_out_of_lane_point(footprint, ego_data.out_lanelets, ego_data.out_lanelets_rtree);
     p.trajectory_index = i;
-    if (!p.overlapped_lanelets.empty()) {
+    if (!p.overlapped_lanelets.empty() && !p.out_overlaps.empty()) {
       out_of_lane_points.push_back(p);
     }
   }

@@ -8,12 +8,13 @@ package_name = "autoware_carla_interface"
 
 setup(
     name=package_name,
-    version="0.47.0",
+    version="0.48.0",
     packages=find_packages(where="src"),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (os.path.join("share", package_name), ["package.xml"]),
-        (os.path.join("share", package_name), glob("config/*")),
+        (os.path.join("share", package_name), ["config/raw_vehicle_cmd_converter.param.yaml"]),
+        (os.path.join("share", package_name, "config"), ["config/sensor_mapping.yaml"]),
         (os.path.join("share", package_name), glob("calibration_maps/*.csv")),
         (os.path.join("share", package_name), glob("launch/*.launch.xml")),
     ],
@@ -26,7 +27,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main"
+            "autoware_carla_interface = autoware_carla_interface.carla_autoware:main",
+            "multi_camera_combiner = autoware_carla_interface.multi_camera_combiner_node:main",
         ],
     },
     package_dir={"": "src"},

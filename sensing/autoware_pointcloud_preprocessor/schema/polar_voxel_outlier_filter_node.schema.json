@@ -1,0 +1,226 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Polar Voxel Outlier Filter Node",
+  "type": "object",
+  "definitions": {
+    "polar_voxel_outlier_filter": {
+      "type": "object",
+      "properties": {
+        "radial_resolution_m": {
+          "type": "number",
+          "description": "The resolution in radial direction [m].",
+          "default": "0.5",
+          "minimum": 0
+        },
+        "azimuth_resolution_rad": {
+          "type": "number",
+          "description": "The resolution in azimuth direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole azimuth range.",
+          "default": "0.0175",
+          "minimum": 0,
+          "maximum": 6.283185307179586
+        },
+        "elevation_resolution_rad": {
+          "type": "number",
+          "description": "The resolution in elevation direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole elevation range.",
+          "default": "0.0175",
+          "minimum": 0,
+          "maximum": 6.283185307179586
+        },
+        "voxel_points_threshold": {
+          "type": "integer",
+          "description": "The minimum number of points required per voxel.",
+          "default": "2",
+          "minimum": 1
+        },
+        "min_radius_m": {
+          "type": "number",
+          "description": "The minimum radius to consider [m].",
+          "default": "0.5",
+          "minimum": 0
+        },
+        "max_radius_m": {
+          "type": "number",
+          "description": "The maximum radius to consider [m].",
+          "default": "300.0",
+          "minimum": 0
+        },
+        "intensity_threshold": {
+          "type": "integer",
+          "description": "The maximum intensity threshold for secondary returns (primary returns are not affected).",
+          "default": "2",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "visibility_estimation_max_range_m": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [m] (limits visibility calculations to reliable sensor range).",
+          "default": "20.0",
+          "minimum": 0
+        },
+        "visibility_estimation_min_azimuth_rad": {
+          "type": "number",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "0.0",
+          "minimum": 0.0,
+          "maximum": 6.28
+        },
+        "visibility_estimation_max_azimuth_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "6.28",
+          "minimum": 0.0,
+          "maximum": 6.28
+        },
+        "visibility_estimation_min_elevation_rad": {
+          "type": "number",
+          "description": "The minimum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "-1.57",
+          "minimum": -1.57,
+          "maximum": 1.57
+        },
+        "visibility_estimation_max_elevation_rad": {
+          "type": "number",
+          "description": "The maximum range to consider for visibility estimation [rad] (limits visibility calculations to reliable sensor range).",
+          "default": "1.57",
+          "minimum": -1.57,
+          "maximum": 1.57
+        },
+        "use_return_type_classification": {
+          "type": "boolean",
+          "description": "Whether to use return type classification (if false, all returns are processed).",
+          "default": "true"
+        },
+        "filter_secondary_returns": {
+          "type": "boolean",
+          "description": "Whether to filter secondary returns (if true, only primary returns are kept).",
+          "default": "false"
+        },
+        "secondary_noise_threshold": {
+          "type": "number",
+          "description": "Threshold for classifying primary vs secondary returns.",
+          "default": "4",
+          "minimum": 0
+        },
+        "visibility_estimation_max_secondary_voxel_count": {
+          "type": "integer",
+          "description": "Maximum secondary voxel count for visibility estimation calculations.",
+          "default": "500",
+          "minimum": 0
+        },
+        "primary_return_types": {
+          "type": "array",
+          "description": "List of return type values considered as primary returns (all others are secondary).",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "default": "[1, 6, 8, 10]"
+        },
+        "visibility_estimation_only": {
+          "type": "boolean",
+          "description": "Whether to run filter for visibility estimation only without publishing point cloud outputs (for monitoring/diagnostic purposes only).",
+          "default": "false"
+        },
+        "publish_noise_cloud": {
+          "type": "boolean",
+          "description": "Whether to generate and publish noise point cloud for debugging (ignored when visibility_estimation_only=true).",
+          "default": "false"
+        },
+        "filter_ratio_error_threshold": {
+          "type": "number",
+          "description": "The filter ratio threshold for error diagnostics (ratio of output/input points).",
+          "default": "0.5",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "filter_ratio_warn_threshold": {
+          "type": "number",
+          "description": "The filter ratio threshold for warning diagnostics (ratio of output/input points).",
+          "default": "0.7",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "visibility_error_threshold": {
+          "type": "number",
+          "description": "The visibility threshold for error diagnostics.",
+          "default": "0.8",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "visibility_warn_threshold": {
+          "type": "number",
+          "description": "The visibility threshold for warning diagnostics.",
+          "default": "0.9",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "publish_area_marker": {
+          "type": "boolean",
+          "description": "Publish a marker to visualize region used for visibility estimation",
+          "default": "false"
+        },
+        "num_frames_hysteresis_transition": {
+          "type": "number",
+          "description": "The number of frames to be required to transition judgement",
+          "default": "1",
+          "minimum": 1
+        },
+        "immediate_report_error": {
+          "type": "boolean",
+          "description": "Whether to report error state immediately if a single frame categorized as error",
+          "default": "false"
+        },
+        "immediate_relax_state": {
+          "type": "boolean",
+          "description": "Whether to relax state if observed state is better than the current one",
+          "default": "false"
+        }
+      },
+      "required": [
+        "radial_resolution_m",
+        "azimuth_resolution_rad",
+        "elevation_resolution_rad",
+        "voxel_points_threshold",
+        "min_radius_m",
+        "max_radius_m",
+        "intensity_threshold",
+        "visibility_estimation_max_range_m",
+        "visibility_estimation_min_azimuth_rad",
+        "visibility_estimation_max_azimuth_rad",
+        "visibility_estimation_min_elevation_rad",
+        "visibility_estimation_max_elevation_rad",
+        "use_return_type_classification",
+        "filter_secondary_returns",
+        "secondary_noise_threshold",
+        "visibility_estimation_max_secondary_voxel_count",
+        "primary_return_types",
+        "visibility_estimation_only",
+        "publish_noise_cloud",
+        "filter_ratio_error_threshold",
+        "filter_ratio_warn_threshold",
+        "visibility_error_threshold",
+        "visibility_warn_threshold",
+        "publish_area_marker",
+        "num_frames_hysteresis_transition",
+        "immediate_report_error",
+        "immediate_relax_state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/polar_voxel_outlier_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

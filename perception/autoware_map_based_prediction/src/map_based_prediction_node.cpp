@@ -17,18 +17,18 @@
 #include "map_based_prediction/utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -43,7 +43,6 @@
 #include <lanelet2_core/geometry/LaneletMap.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_routing/RoutingGraph.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <chrono>
@@ -344,8 +343,9 @@ void replaceObjectYawWithLaneletsYaw(
   double sum_x = 0.0;
   double sum_y = 0.0;
   for (const auto & current_lanelet : current_lanelets) {
-    const auto lanelet_angle =
-      lanelet::utils::getLaneletAngle(current_lanelet.lanelet, pose_with_cov.pose.position);
+    const auto lanelet_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      current_lanelet.lanelet,
+      autoware::experimental::lanelet2_utils::from_ros(pose_with_cov.pose).basicPoint());
     sum_x += std::cos(lanelet_angle);
     sum_y += std::sin(lanelet_angle);
   }
@@ -443,6 +443,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     double min_crosswalk_user_velocity = declare_parameter<double>("min_crosswalk_user_velocity");
     double max_crosswalk_user_delta_yaw_threshold_for_lanelet =
       declare_parameter<double>("max_crosswalk_user_delta_yaw_threshold_for_lanelet");
+    double max_crosswalk_user_on_road_distance =
+      declare_parameter<double>("max_crosswalk_user_on_road_distance");
     bool use_crosswalk_signal =
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
     double threshold_velocity_assumed_as_stopping =
@@ -458,11 +460,11 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
         "crosswalk_with_signal.timeout_set_for_no_intention_to_walk");
     predictor_vru_->setParameters(
       match_lost_and_appeared_crosswalk_users, min_crosswalk_user_velocity,
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet, use_crosswalk_signal,
-      threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
-      timeout_set_for_no_intention_to_walk, prediction_sampling_time_interval_,
-      prediction_time_horizon_.pedestrian, crossing_intention_duration,
-      no_crossing_intention_duration);
+      max_crosswalk_user_delta_yaw_threshold_for_lanelet, max_crosswalk_user_on_road_distance,
+      use_crosswalk_signal, threshold_velocity_assumed_as_stopping,
+      distance_set_for_no_intention_to_walk, timeout_set_for_no_intention_to_walk,
+      prediction_sampling_time_interval_, prediction_time_horizon_.pedestrian,
+      crossing_intention_duration, no_crossing_intention_duration);
   }
 
   // debug parameter
@@ -940,7 +942,7 @@ std::vector<LaneletPathWithPathInfo> MapBasedPredictionNode::getPredictedReferen
       double search_dist = (final_speed_surpasses_limit && !object_has_surpassed_limit_already)
                              ? get_search_distance_with_partial_acc(target_speed_limit)
                              : get_search_distance_with_decaying_acc();
-      search_dist += lanelet::utils::getLaneletLength3d(current_lanelet_data.lanelet);
+      search_dist += lanelet::geometry::length3d(current_lanelet_data.lanelet);
       possible_params.routingCostLimit = search_dist;
     }
 
@@ -1251,7 +1253,8 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   lanelet::ConstLanelet prev_lanelet = prev_lanelets.front();
   double closest_prev_yaw = std::numeric_limits<double>::max();
   for (const auto & lanelet : prev_lanelets) {
-    const double lane_yaw = lanelet::utils::getLaneletAngle(lanelet, prev_pose.position);
+    const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+      lanelet, autoware::experimental::lanelet2_utils::from_ros(prev_pose).basicPoint());
     const double delta_yaw = tf2::getYaw(prev_pose.orientation) - lane_yaw;
     const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     if (normalized_delta_yaw < closest_prev_yaw) {

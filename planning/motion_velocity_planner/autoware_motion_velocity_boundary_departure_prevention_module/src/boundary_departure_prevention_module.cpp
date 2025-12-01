@@ -27,13 +27,14 @@
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <magic_enum.hpp>
-#include <range/v3/algorithm/sort.hpp>
+#include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
@@ -68,33 +69,10 @@ void BoundaryDeparturePreventionModule::init(
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
   updater_ptr_->add(
     "boundary_departure", [this](diagnostic_updater::DiagnosticStatusWrapper & stat) {
-      const auto matches_type = [this](const DepartureType & type) -> bool {
-        return output_.diagnostic_output.find(type) != output_.diagnostic_output.end() &&
-               output_.diagnostic_output[type];
-      };
-
-      const auto type = std::invoke([&]() {
-        if (matches_type(DepartureType::CRITICAL_DEPARTURE)) {
-          return DepartureType::CRITICAL_DEPARTURE;
-        }
-        if (matches_type(DepartureType::APPROACHING_DEPARTURE)) {
-          return DepartureType::APPROACHING_DEPARTURE;
-        }
-        if (matches_type(DepartureType::NEAR_BOUNDARY)) {
-          return DepartureType::NEAR_BOUNDARY;
-        }
-        return DepartureType::NONE;
-      });
-
-      auto lvl = node_param_.diagnostic_level[type];
-      auto msg = to_string(type);
-
-      if (lvl != DiagStatus::OK && type != DepartureType::NONE) {
-        RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, 1000, "%s", msg.c_str());
-      }
-
+      const auto [lvl, msg] = output_.diag_status;
       stat.summary(lvl, msg);
     });
+
   last_abnormality_fp_no_overlap_bound_time_ = clock_ptr_->now().seconds();
   last_abnormality_fp_overlap_bound_time_ = clock_ptr_->now().seconds();
   last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
@@ -343,9 +321,6 @@ void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
 
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/" + ns, 1);
-
-  processing_time_publisher_ =
-    node.create_publisher<Float64Stamped>("~/debug/" + ns + "/processing_time_ms", 1);
 }
 
 void BoundaryDeparturePreventionModule::take_data()
@@ -384,15 +359,33 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   take_data();
 
-  if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
-    RCLCPP_WARN_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "%s", invalid_data_opt->c_str());
+  const auto result_opt = plan_velocities(raw_trajectory_points, planner_data);
+
+  if (updater_ptr_) {
+    updater_ptr_->force_update();
+  }
+
+  if (!result_opt) {
+    RCLCPP_DEBUG(logger_, "%s", result_opt.error().c_str());
     return {};
   }
 
+  return *result_opt;
+}
+
+tl::expected<VelocityPlanningResult, std::string>
+BoundaryDeparturePreventionModule::plan_velocities(
+  const TrajectoryPoints & raw_trajectory_points,
+  const std::shared_ptr<const PlannerData> & planner_data)
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
+    return tl::make_unexpected(*invalid_data_opt);
+  }
+
   if (const auto is_timeout_opt = is_data_timeout(planner_data->current_odometry)) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", is_timeout_opt->c_str());
-    return {};
+    return tl::make_unexpected(*is_timeout_opt);
   }
 
   if (const auto is_new_route = is_route_changed()) {
@@ -401,9 +394,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   }
 
   if (!is_autonomous_mode()) {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "Not in autonomous mode.");
-    updater_ptr_->force_update();
-    return {};
+    return tl::make_unexpected("Not in autonomous mode.");
   }
 
   const auto & vehicle_info = planner_data->vehicle_info_;
@@ -422,27 +413,18 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   try {
     auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
 
-    processing_time_publisher_->publish(std::invoke([&]() {
-      autoware_internal_debug_msgs::msg::Float64Stamped msg;
-      msg.stamp = clock_ptr_->now();
-      msg.data = stopwatch_ms.toc();
-      return msg;
-    }));
+    publish_visualization_markers();
 
-    updater_ptr_->force_update();
     if (!result_opt) {
-      RCLCPP_DEBUG(logger_, "Planning skipped: %s", result_opt.error().c_str());
-      return {};
+      return tl::make_unexpected(result_opt.error());
     }
 
     return *result_opt;
   } catch (const std::exception & e) {
-    RCLCPP_WARN(logger_, "Exception is caught: %s", e.what());
+    return tl::make_unexpected(fmt::format("Exception: {}", e.what()));
   } catch (...) {
-    RCLCPP_ERROR(logger_, "Unknown exception is caught.");
+    return tl::make_unexpected("Unknown exception.");
   }
-
-  return {};
 }
 
 std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(
@@ -691,56 +673,21 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 
   toc_curr_watch("update_departure_intervals");
 
-  slow_down_wall_marker_.markers.clear();
-
   output_.slowdown_intervals = utils::get_slow_down_intervals(
     *ref_traj_pts_opt, output_.departure_intervals, *slow_down_interpolator_ptr_,
     curr_odom.twist.twist.linear.x, planner_data->current_acceleration.accel.accel.linear.x,
     ego_dist_on_traj_with_offset_m(planner_data->is_driving_forward));
-  toc_curr_watch("get_slow_down_interval");
 
   std::vector<SlowdownInterval> slowdown_intervals;
   for (auto && [idx, slowdown_interval] : output_.slowdown_intervals | ranges::views::enumerate) {
     const auto & [start_pose, end_pose, vel] = slowdown_interval;
     slowdown_intervals.emplace_back(start_pose.position, end_pose.position, vel);
-    const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
-      start_pose, "boundary_departure_prevention_start", clock_ptr_->now(),
-      static_cast<int32_t>(idx), 0.0, "", planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
-    const auto markers_end = autoware::motion_utils::createSlowDownVirtualWallMarker(
-      end_pose, "boundary_departure_prevention_end", clock_ptr_->now(),
-      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
-      planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
   }
+  toc_curr_watch("get_slow_down_interval");
 
-  for (auto && [idx, critical_pt] : output_.critical_departure_points | ranges::views::enumerate) {
-    const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
-      critical_pt.pose_on_current_ref_traj, "boundary_departure_prevention_end", clock_ptr_->now(),
-      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0, "",
-      planner_data->is_driving_forward);
-    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
-  }
-  toc_curr_watch("create_slow_down_interval_marker");
+  output_.diag_status = get_diagnostic_status(ego_dist_on_traj_m, curr_vel);
 
-  if (virtual_wall_publisher_) {
-    virtual_wall_publisher_->publish(slow_down_wall_marker_);
-  }
-
-  if (debug_publisher_) {
-    debug_marker_.markers.clear();
-    autoware_utils::append_marker_array(
-      debug::create_debug_marker_array(
-        output_, *ego_pred_traj_ptr_, clock_ptr_, curr_pose.pose.position.z, node_param_),
-      &debug_marker_);
-    debug_publisher_->publish(debug_marker_);
-  }
-
-  toc_curr_watch("check_stopping_dist");
-
-  output_.diagnostic_output = get_diagnostics(ego_dist_on_traj_m, curr_vel);
-
-  toc_curr_watch("get_diagnostics");
+  toc_curr_watch("get_diagnostic_status");
 
   VelocityPlanningResult result;
   result.slowdown_intervals = slowdown_intervals;
@@ -795,38 +742,14 @@ void BoundaryDeparturePreventionModule::update_critical_departure_points(
   std::sort(output_.critical_departure_points.begin(), output_.critical_departure_points.end());
 }
 
-std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
+std::pair<int8_t, std::string> BoundaryDeparturePreventionModule::get_diagnostic_status(
   const double ego_dist_on_traj, const double curr_vel)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  std::unordered_map<DepartureType, bool> diag{
-    {DepartureType::NEAR_BOUNDARY, false},
-    {DepartureType::APPROACHING_DEPARTURE, false},
-    {DepartureType::CRITICAL_DEPARTURE, false}};
-
-  const auto & th_trigger = node_param_.bdc_param.th_trigger;
-
-  const auto has_type = [&](const DepartureType type, const SideKey side_key) {
-    const auto is_type = [type](const DeparturePoint & pt) { return pt.departure_type == type; };
-
-    return std::any_of(
-      output_.departure_points[side_key].cbegin(), output_.departure_points[side_key].cend(),
-      is_type);
-  };
-
-  diag[DepartureType::NEAR_BOUNDARY] = std::any_of(
-    g_side_keys.begin(), g_side_keys.end(),
-    [&](const SideKey side_key) { return has_type(DepartureType::NEAR_BOUNDARY, side_key); });
-
-  diag[DepartureType::APPROACHING_DEPARTURE] =
-    std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const SideKey side_key) {
-      return has_type(DepartureType::APPROACHING_DEPARTURE, side_key);
-    });
-
-  diag[DepartureType::CRITICAL_DEPARTURE] = std::any_of(
-    output_.critical_departure_points.cbegin(), output_.critical_departure_points.cend(),
-    [&th_trigger, &curr_vel, &ego_dist_on_traj](const DeparturePoint & pt) {
+  const auto diag_type = std::invoke([&]() {
+    const auto is_within_braking_dist = [&](const DeparturePoint & pt) {
+      const auto & th_trigger = node_param_.bdc_param.th_trigger;
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
       const auto braking_dist =
@@ -834,9 +757,39 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
           braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
           th_trigger.brake_delay_s);
       return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <= braking_dist;
-    });
+    };
 
-  return diag;
+    if (ranges::any_of(output_.critical_departure_points, is_within_braking_dist)) {
+      return DepartureType::CRITICAL_DEPARTURE;
+    }
+
+    const auto has_type = [&](const DepartureType type) {
+      const auto is_type = [type](const DeparturePoint & pt) { return pt.departure_type == type; };
+
+      return ranges::any_of(g_side_keys, [&](const SideKey side_key) {
+        return ranges::any_of(output_.departure_points[side_key], is_type);
+      });
+    };
+
+    if (has_type(DepartureType::APPROACHING_DEPARTURE)) {
+      return DepartureType::APPROACHING_DEPARTURE;
+    }
+
+    if (has_type(DepartureType::NEAR_BOUNDARY)) {
+      return DepartureType::NEAR_BOUNDARY;
+    }
+
+    return DepartureType::NONE;
+  });
+
+  auto lvl = node_param_.diagnostic_level[diag_type];
+  auto msg = to_string(diag_type);
+
+  if (lvl != DiagStatus::OK && diag_type != DepartureType::NONE) {
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", msg.c_str());
+  }
+
+  return {lvl, msg};
 }
 
 bool BoundaryDeparturePreventionModule::is_continuous_critical_departure()
@@ -878,6 +831,62 @@ bool BoundaryDeparturePreventionModule::is_critical_departure_persist()
 
   const auto t_diff = clock_ptr_->now().seconds() - last_found_critical_dpt_time_;
   return t_diff >= node_param_.off_time_buffer_s.critical_departure;
+}
+
+void BoundaryDeparturePreventionModule::publish_visualization_markers()
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  slow_down_wall_marker_.markers.clear();
+
+  if (!clock_ptr_) {
+    return;
+  }
+  const auto current_time = clock_ptr_->now();
+
+  publish_virtual_walls(current_time);
+  publish_debug_markers(current_time);
+}
+
+void BoundaryDeparturePreventionModule::publish_virtual_walls(const rclcpp::Time & current_time)
+{
+  if (!virtual_wall_publisher_) {
+    return;
+  }
+
+  for (const auto & [idx, slowdown_interval] :
+       output_.slowdown_intervals | ranges::views::enumerate) {
+    const auto & [start_pose, end_pose, vel] = slowdown_interval;
+    const auto markers_start = autoware::motion_utils::createSlowDownVirtualWallMarker(
+      start_pose, "boundary_departure_slow", current_time, static_cast<int32_t>(idx), 0.0, "");
+    autoware_utils::append_marker_array(markers_start, &slow_down_wall_marker_);
+  }
+
+  for (const auto & [idx, critical_pt] :
+       output_.critical_departure_points | ranges::views::enumerate) {
+    const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
+      critical_pt.pose_on_current_ref_traj, "boundary_departure_critical", current_time,
+      static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0);
+    autoware_utils::append_marker_array(markers_end, &slow_down_wall_marker_);
+  }
+
+  virtual_wall_publisher_->publish(slow_down_wall_marker_);
+}
+
+void BoundaryDeparturePreventionModule::publish_debug_markers(const rclcpp::Time & current_time)
+{
+  debug_marker_.markers.clear();
+
+  if (!debug_publisher_ || !ego_pred_traj_ptr_ || ego_pred_traj_ptr_->points.empty()) {
+    return;
+  }
+  const auto ego_z_position = ego_pred_traj_ptr_->points.front().pose.position.z;
+  autoware_utils::append_marker_array(
+    debug::create_debug_marker_array(
+      output_, *ego_pred_traj_ptr_, current_time, ego_z_position, node_param_),
+    &debug_marker_);
+
+  debug_publisher_->publish(debug_marker_);
 }
 }  // namespace autoware::motion_velocity_planner::experimental
 

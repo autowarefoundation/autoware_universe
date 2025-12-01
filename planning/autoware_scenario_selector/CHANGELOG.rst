@@ -2,6 +2,12 @@
 Changelog for package autoware_scenario_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * fix(autoware_trajectory_follower, autoware_mission_planner_universe, autoware_scenario_selector): use transient_local for operation_mode_state (`#11101 <https://github.com/autowarefoundation/autoware_universe/issues/11101>`_)

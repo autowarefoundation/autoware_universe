@@ -41,7 +41,7 @@ AgentLabel get_model_label(const autoware_perception_msgs::msg::TrackedObject & 
   }
 }
 
-AgentState::AgentState(TrackedObject & object)
+AgentState::AgentState(const TrackedObject & object)
 {
   position_ = object.kinematics.pose_with_covariance.pose.position;
   shape_ = object.shape;
@@ -72,21 +72,21 @@ AgentState::AgentState(TrackedObject & object)
 // {
 // }
 
-void AgentState::apply_transform(const Eigen::Matrix4f & transform)
+void AgentState::apply_transform(const Eigen::Matrix4d & transform)
 {
-  Eigen::Vector4f pos_vec(position_.x, position_.y, position_.z, 1.0);
-  Eigen::Vector4f transformed_pos = transform * pos_vec;
+  Eigen::Vector4d pos_vec(position_.x, position_.y, position_.z, 1.0);
+  Eigen::Vector4d transformed_pos = transform * pos_vec;
   position_.x = transformed_pos.x();
   position_.y = transformed_pos.y();
   position_.z = transformed_pos.z();
 
-  Eigen::Vector4f dir_vec(cos_yaw_, sin_yaw_, 0.0, 0.0);
-  Eigen::Vector4f transformed_dir = transform * dir_vec;
+  Eigen::Vector4d dir_vec(cos_yaw_, sin_yaw_, 0.0, 0.0);
+  Eigen::Vector4d transformed_dir = transform * dir_vec;
   cos_yaw_ = transformed_dir.x();
   sin_yaw_ = transformed_dir.y();
   yaw_ = std::atan2(sin_yaw_, cos_yaw_);
 
-  auto velocity_norm = std::hypot(velocity_.x, velocity_.y);
+  const double velocity_norm = std::hypot(velocity_.x, velocity_.y);
   velocity_.x = velocity_norm * cos_yaw_;
   velocity_.y = velocity_norm * sin_yaw_;
 }
@@ -118,8 +118,8 @@ void AgentState::apply_transform(const Eigen::Matrix4f & transform)
     sin_yaw(),
     vx(),
     vy(),
-    length(),
     width(),
+    length(),
     static_cast<float>(label_ == AgentLabel::VEHICLE),
     static_cast<float>(label_ == AgentLabel::PEDESTRIAN),
     static_cast<float>(label_ == AgentLabel::BICYCLE),
@@ -142,7 +142,7 @@ AgentHistory::AgentHistory(
   }
 }
 
-void AgentHistory::update(double current_time, TrackedObject & object)
+void AgentHistory::update(double current_time, const TrackedObject & object)
 {
   AgentState state(object);
   if (state.object_id_ != object_id_) {

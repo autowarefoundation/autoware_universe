@@ -1,15 +1,13 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>yabloc_pose_initializer</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The pose initializer</description>
   <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
   <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <maintainer email="anh.nguyen.2@tier4.jp">NGUYEN Viet Anh</maintainer>
   <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
-  <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
-  <maintainer email="ryu.yamamoto@tier4.jp">Ryu Yamamoto</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
@@ -17,7 +15,7 @@
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
   <depend>autoware_internal_localization_msgs</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_traffic_light_classifier</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The autoware_traffic_light_classifier package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
@@ -14,12 +14,14 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>wget</buildtool_depend>
 
+  <build_depend>ament_cmake_gtest</build_depend>
   <build_depend>autoware_cmake</build_depend>
 
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_tensorrt_classifier</depend>
   <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>

@@ -55,13 +55,6 @@ std::string to_enum_str(const E & value, const bool to_lower_case = true)
 lanelet::BasicPolygon2d to_basic_polygon_2d(const LinearRing2d & footprint_hull);
 
 /**
- * @brief Convert a 2D line segment to a LineString2d.
- * @param segment A pair of 2D points representing a line segment.
- * @return A LineString2d containing the two endpoints.
- */
-LineString2d to_linestring_2d(const Segment2d & segment);
-
-/**
  * @brief Convert a 3D Eigen vector to a 2D point by dropping the z-coordinate.
  * @param ll_pt A 3D point in Eigen format.
  * @return A 2D point using the x and y values.
@@ -76,6 +69,14 @@ Point2d to_point_2d(const Eigen::Matrix<double, 3, 1> & ll_pt);
  */
 Segment2d to_segment_2d(
   const Eigen::Matrix<double, 3, 1> & ll_pt1, const Eigen::Matrix<double, 3, 1> & ll_pt2);
+
+/**
+ * @brief Converts a 3D segment into its 2D representation by discarding the Z-coordinates.
+ *
+ * @param segment The input 3D segment to convert.
+ * @return A new 2D segment with the Z-coordinates of the original segment's endpoints removed.
+ */
+Segment2d to_segment_2d(const Segment3d & segment);
 
 /**
  * @brief Convert a 2D point and a z value into a 3D ROS geometry_msgs Point.

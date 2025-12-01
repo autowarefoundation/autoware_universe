@@ -226,7 +226,7 @@ As illustrated in below figure if upstream module inserted a stopline, ego posit
 
 ## Occlusion detection
 
-If the flag `occlusion.enable` is true this module checks if there is sufficient field of view (FOV) on the attention area up to `occlusion.occlusion_attention_area_length`. If FOV is not clear enough ego first makes a brief stop at default_stopline for `occlusion.temporal_stop_time_before_peeking`, and then slowly creeps toward occlusion_peeking_stopline. If `occlusion.creep_during_peeking.enable` is true `occlusion.creep_during_peeking.creep_velocity` is inserted up to occlusion_peeking_stopline. Otherwise only stop line is inserted.
+If the flag `occlusion.enable` is true this module checks if there is sufficient field of view (FOV) on the attention area up to `occlusion.occlusion_attention_area_length`. If FOV is not clear enough ego first makes a brief stop at default_stopline for `occlusion.temporal_stop_time_before_peeking`, and inserts stopline at occlusion_peeking_stopline, thus slowly creeping toward there.
 
 During the creeping if collision is detected this module inserts a stop line in front of ego immediately, and if the FOV gets sufficiently clear the intersection_occlusion wall will disappear. If occlusion is cleared and no collision is detected ego will pass the intersection.
 
@@ -257,6 +257,17 @@ If the flag `occlusion.request_approval_wo_traffic_light` is `true`, `intersecti
 While ego is creeping, yellow intersection_wall appears in front ego.
 
 ![occlusion-wo-tl-creeping](./docs/occlusion-wo-tl-creeping.png)
+
+### Map-based forced RTC
+
+RTC can be enabled for specific intersection lanelets such that even if approval is not required by default, it will be required before crossing the corresponding intersection lanelets.
+The following attribute should be added to the lanelet in intersection in the map file:
+
+```xml
+<tag k='rtc_approval_required_v1' v='intersection' />
+```
+
+The value can be set to `intersection`, `intersection_occlusion`, or `intersection,intersection_occlusion`, to adjust which modules will require approvals.
 
 ## Traffic signal specific behavior
 
@@ -305,34 +316,27 @@ $$
 \dfrac{v_{\mathrm{ego}}^{2}}{2a_{\mathrm{max}}} + v_{\mathrm{ego}} * t_{\mathrm{delay}}
 $$
 
-is called pass_judge_line, and safety decision must be made before ego passes this position because ego does not stop anymore.
-
-1st_pass_judge_line is before the first upcoming lane, and at intersections with multiple upcoming lanes, 2nd_pass_judge_line is defined as the position which is before the centerline of the first attention lane by the braking distance. 1st/2nd_pass_judge_line are illustrated in the following figure.
+plus an additional margin `common.pass_judge_line_margin` is called pass_judge_line, and safety decision must be made before ego passes this position because ego does not stop anymore. pass_judge_line are illustrated in the following figure(2nd_pass_judge_line is deprecated).
 
 ![pass-judge-line](./docs/pass-judge-line.drawio.svg)
 
 Intersection module will command to GO if
 
-- ego is over default_stopline(or `common.enable_pass_judge_before_default_stopline` is true) AND
-- ego is over 1st_pass judge line AND
+- ego is over pass judge line AND
 - ego judged SAFE previously AND
-- (ego is over 2nd_pass_judge_line OR ego is between 1st and 2nd pass_judge_line but most probable collision is expected to happen in the 1st attention lane)
 
 because it is expected to stop or continue stop decision if
 
-1. ego is before default_stopline && `common.enable_pass_judge_before_default_stopline` is false OR
-   1. reason: default_stopline is defined on the map and should be respected
-2. ego is before 1st_pass_judge_line OR
+1. ego is before pass_judge_line OR
    1. reason: it has enough braking distance margin
-3. ego judged UNSAFE previously
+2. ego judged UNSAFE previously
    1. reason: ego is now trying to stop and should continue stop decision if collision is detected in later calculation
-4. (ego is between 1st and 2nd pass_judge_line and the most probable collision is expected to happen in the 2nd attention lane)
 
-For the 3rd condition, it is possible that ego stops with some overshoot to the unprotected area while it is trying to stop for collision detection, because ego should keep stop decision while UNSAFE decision is made even if it passed 1st_pass_judge_line during deceleration.
+For the 3rd condition, it is possible that ego stops with some overshoot to the unprotected area while it is trying to stop for collision detection, because ego should keep stop decision while UNSAFE decision is made even if it passed pass_judge_line during deceleration.
 
-For the 4th condition, at intersections with 2nd attention lane, even if ego is over the 1st pass_judge_line, still intersection module commands to stop if the most probable collision is expected to happen in the 2nd attention lane.
+For the 4th condition, at intersections with 2nd attention lane, even if ego is over the pass_judge_line, still intersection module commands to stop if the most probable collision is expected to happen in the 2nd attention lane.
 
-Also if `occlusion.enable` is true, the position of 1st_pass_judge line changes to occlusion_peeking_stopline if ego passed the original 1st_pass_judge_line position while ego is peeking. Otherwise ego could inadvertently judge that it passed 1st_pass_judge during peeking and then abort peeking.
+Also if `occlusion.enable` is true, the position of pass_judge line changes to occlusion_peeking_stopline if ego passed the original pass_judge_line position while ego is peeking. Otherwise ego could inadvertently judge that it passed pass_judge during peeking and then abort peeking.
 
 ## Data Structure
 
@@ -422,6 +426,7 @@ entity TargetObject {
 | `.attention_area_angle_threshold`            | double | [rad] threshold of angle difference between the detected object and lane         |
 | `.use_intersection_area`                     | bool   | [-] flag to use intersection_area for collision detection                        |
 | `.default_stopline_margin`                   | double | [m] margin before_stop_line                                                      |
+| `.pass_judge_line_margin`                    | double | [m] additional margin for pass_judge_line position from first_attention_stopline |
 | `.stopline_overshoot_margin`                 | double | [m] margin for the overshoot from stopline                                       |
 | `.max_accel`                                 | double | [m/ss] max acceleration for stop                                                 |
 | `.max_jerk`                                  | double | [m/sss] max jerk for stop                                                        |

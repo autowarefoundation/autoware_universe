@@ -2,6 +2,33 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_rtc_interface, behavior_velocity\_*_module): replace PathWithLaneId with Trajectory<> class (`#11555 <https://github.com/autowarefoundation/autoware_universe/issues/11555>`_)
+* fix(crosswalk): set object classification label before making decision (`#11504 <https://github.com/autowarefoundation/autoware_universe/issues/11504>`_)
+* fix(crosswalk): limit start_distance of cooperate status to positive (`#11406 <https://github.com/autowarefoundation/autoware_universe/issues/11406>`_)
+  * crop start_distance of cooperate status to positive
+  * fix style
+  ---------
+* fix(crosswalk, traffic_light): correct distance calculation by swapping src and dst (`#11393 <https://github.com/autowarefoundation/autoware_universe/issues/11393>`_)
+  * fix: correct distance calculation by swapping src and dst
+  * fix: correct distance calculation by swapping src and dst
+  ---------
+* feat(RTC, behavior_velocity_planner): set manual RTC via the lanelet map (`#11340 <https://github.com/autowarefoundation/autoware_universe/issues/11340>`_)
+  * first attempt at a solution to set the auto/manual mode for a module
+  * implementation for crosswalk and intersections modules
+  * update READMEs
+  * fix crosswalk -> intersection
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  ---------
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* fix(crosswalk): fix: incorrect inserted stop point calculation for restart suppression (`#11166 <https://github.com/autowarefoundation/autoware_universe/issues/11166>`_)
+* Contributors: Kotakku, Maxime CLEMENT, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

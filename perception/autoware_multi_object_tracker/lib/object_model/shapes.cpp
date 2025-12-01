@@ -15,15 +15,14 @@
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
 #include <Eigen/Geometry>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -35,39 +34,40 @@ namespace autoware::multi_object_tracker
 {
 namespace shapes
 {
-inline double getSumArea(const std::vector<autoware_utils::Polygon2d> & polygons)
+inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
-    polygons.begin(), polygons.end(), 0.0,
-    [](double acc, const autoware_utils::Polygon2d & p) { return acc + boost::geometry::area(p); });
+    polygons.begin(), polygons.end(), 0.0, [](double acc, autoware_utils_geometry::Polygon2d p) {
+      return acc + boost::geometry::area(p);
+    });
 }
 
 inline double getIntersectionArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
+  const autoware_utils_geometry::Polygon2d & source_polygon,
+  const autoware_utils_geometry::Polygon2d & target_polygon)
 {
-  std::vector<autoware_utils::Polygon2d> intersection_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d> intersection_polygons;
   boost::geometry::intersection(source_polygon, target_polygon, intersection_polygons);
   return getSumArea(intersection_polygons);
 }
 
 inline double getUnionArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
+  const autoware_utils_geometry::Polygon2d & source_polygon,
+  const autoware_utils_geometry::Polygon2d & target_polygon)
 {
-  std::vector<autoware_utils::Polygon2d> union_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d> union_polygons;
   boost::geometry::union_(source_polygon, target_polygon, union_polygons);
   return getSumArea(union_polygons);
 }
 
 inline double getConvexShapeArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
+  const autoware_utils_geometry::Polygon2d & source_polygon,
+  const autoware_utils_geometry::Polygon2d & target_polygon)
 {
-  boost::geometry::model::multi_polygon<autoware_utils::Polygon2d> union_polygons;
+  boost::geometry::model::multi_polygon<autoware_utils_geometry::Polygon2d> union_polygons;
   boost::geometry::union_(source_polygon, target_polygon, union_polygons);
 
-  autoware_utils::Polygon2d hull;
+  autoware_utils_geometry::Polygon2d hull;
   boost::geometry::convex_hull(union_polygons, hull);
   return boost::geometry::area(hull);
 }
@@ -111,9 +111,11 @@ double get2dIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
-  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   if (boost::geometry::area(target_polygon) < MIN_AREA) return 0.0;
 
   const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
@@ -130,9 +132,11 @@ double get2dGeneralizedIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
-  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   const double target_area = boost::geometry::area(target_polygon);
   if (source_area < MIN_AREA && target_area < MIN_AREA) return -1.0;
 
@@ -150,10 +154,12 @@ bool get2dPrecisionRecallGIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
   if (source_area < MIN_AREA) return false;
-  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   const double target_area = boost::geometry::area(target_polygon);
   if (target_area < MIN_AREA) return false;
 
@@ -231,116 +237,6 @@ bool convertConvexHullToBoundingBox(
   }
 
   return true;
-}
-
-enum BBOX_IDX {
-  FRONT_SURFACE = 0,
-  RIGHT_SURFACE = 1,
-  REAR_SURFACE = 2,
-  LEFT_SURFACE = 3,
-  FRONT_R_CORNER = 4,
-  REAR_R_CORNER = 5,
-  REAR_L_CORNER = 6,
-  FRONT_L_CORNER = 7,
-  INSIDE = 8,
-  INVALID = -1
-};
-
-/**
- * @brief Determine the Nearest Corner or Surface of detected object observed from ego vehicle
- *
- * @param x: object x coordinate in map frame
- * @param y: object y coordinate in map frame
- * @param yaw: object yaw orientation in map frame
- * @param width: object bounding box width
- * @param length: object bounding box length
- * @param self_transform: Ego vehicle position in map frame
- * @return int index
- */
-void getNearestCornerOrSurface(
-  const geometry_msgs::msg::Transform & self_transform, types::DynamicObject & object)
-{
-  const double x = object.pose.position.x;
-  const double y = object.pose.position.y;
-  const double yaw = tf2::getYaw(object.pose.orientation);
-  const double width = object.shape.dimensions.y;
-  const double length = object.shape.dimensions.x;
-
-  // get local vehicle pose
-  const double x0 = self_transform.translation.x;
-  const double y0 = self_transform.translation.y;
-
-  // localize self vehicle pose to object coordinate
-  // R.T (X0-X)
-  const double xl = std::cos(yaw) * (x0 - x) + std::sin(yaw) * (y0 - y);
-  const double yl = -std::sin(yaw) * (x0 - x) + std::cos(yaw) * (y0 - y);
-
-  // Determine anchor point
-  //     x+ (front)
-  //         __
-  // y+     |  | y-
-  // (left) |  | (right)
-  //         --
-  //     x- (rear)
-  double anchor_x = 0;
-  double anchor_y = 0;
-  if (xl > length / 2.0) {
-    anchor_x = length / 2.0;
-  } else if (xl < -length / 2.0) {
-    anchor_x = -length / 2.0;
-  } else {
-    anchor_x = 0;
-  }
-  if (yl > width / 2.0) {
-    anchor_y = width / 2.0;
-  } else if (yl < -width / 2.0) {
-    anchor_y = -width / 2.0;
-  } else {
-    anchor_y = 0;
-  }
-
-  object.anchor_point.x = anchor_x;
-  object.anchor_point.y = anchor_y;
-}
-
-void calcAnchorPointOffset(
-  const types::DynamicObject & this_object, Eigen::Vector2d & tracking_offset,
-  types::DynamicObject & updating_object)
-{
-  // copy value
-  const geometry_msgs::msg::Point anchor_vector = updating_object.anchor_point;
-  // invalid anchor
-  if (std::abs(anchor_vector.x) <= 1e-6 && std::abs(anchor_vector.y) <= 1e-6) {
-    return;
-  }
-  double input_yaw = tf2::getYaw(updating_object.pose.orientation);
-
-  // current object width and height
-  const double length = this_object.shape.dimensions.x;
-  const double width = this_object.shape.dimensions.y;
-
-  // update offset
-  tracking_offset = Eigen::Vector2d(anchor_vector.x, anchor_vector.y);
-  if (tracking_offset.x() > 1e-6) {
-    tracking_offset.x() -= length / 2.0;
-  } else if (tracking_offset.x() < -1e-6) {
-    tracking_offset.x() += length / 2.0;
-  } else {
-    tracking_offset.x() = 0.0;
-  }
-  if (tracking_offset.y() > 1e-6) {
-    tracking_offset.y() -= width / 2.0;
-  } else if (tracking_offset.y() < -1e-6) {
-    tracking_offset.y() += width / 2.0;
-  } else {
-    tracking_offset.y() = 0.0;
-  }
-
-  // offset input object
-  const Eigen::Matrix2d R = Eigen::Rotation2Dd(input_yaw).toRotationMatrix();
-  const Eigen::Vector2d rotated_offset = R * tracking_offset;
-  updating_object.pose.position.x += rotated_offset.x();
-  updating_object.pose.position.y += rotated_offset.y();
 }
 
 }  // namespace shapes

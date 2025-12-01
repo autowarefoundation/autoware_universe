@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_simple_object_merger</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>autoware_simple_object_merger</description>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
 
   <license>Apache License 2.0</license>
   <author email="satoshi.tanaka@tier4.jp">Satoshi Tanaka</author>

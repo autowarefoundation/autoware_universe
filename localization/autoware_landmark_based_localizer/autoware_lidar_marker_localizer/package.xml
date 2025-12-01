@@ -2,10 +2,9 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_lidar_marker_localizer</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The autoware_lidar_marker_localizer package</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
-  <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
   <license>Apache License 2.0</license>
   <author email="eijiro.takeuchi@tier4.jp">Eijiro Takeuchi</author>
   <author email="yamato.ando@tier4.jp">Yamato Ando</author>
@@ -18,7 +17,8 @@
   <depend>autoware_localization_util</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_point_types</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_diagnostics</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>pcl_conversions</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>

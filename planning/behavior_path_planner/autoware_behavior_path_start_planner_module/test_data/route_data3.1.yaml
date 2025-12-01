@@ -1,0 +1,57 @@
+header:
+  stamp:
+    sec: 1755488463
+    nanosec: 400362199
+  frame_id: map
+start_pose:
+  position:
+    x: 408.4767150878906
+    y: 311.88958740234375
+    z: 100.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.047027798440435226
+    w: 0.9988935810054271
+goal_pose:
+  position:
+    x: 401.86822509765625
+    y: 280.5913391113281
+    z: 100.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.9993344409263988
+    w: -0.0364784207213237
+segments:
+  - preferred_primitive:
+      id: 5991
+      primitive_type: ""
+    primitives:
+      - id: 5991
+        primitive_type: lane
+  - preferred_primitive:
+      id: 5993
+      primitive_type: ""
+    primitives:
+      - id: 5993
+        primitive_type: lane
+uuid:
+  uuid:
+    - 173
+    - 124
+    - 107
+    - 113
+    - 30
+    - 128
+    - 218
+    - 39
+    - 115
+    - 231
+    - 13
+    - 255
+    - 137
+    - 7
+    - 214
+    - 77
+allow_modification: false

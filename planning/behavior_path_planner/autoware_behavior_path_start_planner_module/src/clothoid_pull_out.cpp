@@ -33,13 +33,12 @@
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -1422,19 +1421,16 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     // STEP 5-7: Collision check
     // ===================================================================
     // Create PullOutPath for collision check
-    PullOutPath temp_pull_out_path;
-    temp_pull_out_path.partial_paths.push_back(clothoid_path);
-    temp_pull_out_path.start_pose =
-      clothoid_path.points.empty() ? start_pose : clothoid_path.points.front().point.pose;
-    temp_pull_out_path.end_pose = target_pose;
+    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose};
 
     if (isPullOutPathCollided(
-          temp_pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
+          temp_pull_out_path, planner_data,
+          parameters_.clothoid_collision_check_distance_from_end)) {
       RCLCPP_INFO(
         rclcpp::get_logger("ClothoidPullOut"),
         "Collision detected for steer angle %.2f deg with margin %.2f m. Continuing to next "
         "candidate.",
-        rad2deg(steer_angle), parameters_.shift_collision_check_distance_from_end);
+        rad2deg(steer_angle), parameters_.clothoid_collision_check_distance_from_end);
       planner_debug_data.conditions_evaluation.emplace_back("collision");
       continue;
     }
@@ -1448,8 +1444,9 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       std::make_pair(initial_velocity, acceleration));
     pull_out_path.partial_paths.push_back(clothoid_path);  // Use validated and cropped path
 
-    pull_out_path.start_pose =
-      clothoid_path.points.empty() ? start_pose : clothoid_path.points.front().point.pose;
+    pull_out_path.start_pose = resampled_combined_path.points.empty()
+                                 ? start_pose
+                                 : resampled_combined_path.points.front().point.pose;
     pull_out_path.end_pose = target_pose;
 
     RCLCPP_INFO(

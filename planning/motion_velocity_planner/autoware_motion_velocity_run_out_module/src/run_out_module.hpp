@@ -24,10 +24,12 @@
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
@@ -57,6 +59,7 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  std::string get_short_module_name() const override { return "run_out"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     RequiredSubscriptionInfo required_subscription_info;

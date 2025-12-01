@@ -99,7 +99,6 @@ void StartPlannerModuleManager::updateModuleParams(
     }
     update_param<double>(
       parameters, ns + "center_line_path_interval", p->center_line_path_interval);
-    update_param<bool>(parameters, ns + "enable_shift_pull_out", p->enable_shift_pull_out);
     update_param<double>(
       parameters, ns + "shift_collision_check_distance_from_end",
       p->shift_collision_check_distance_from_end);
@@ -115,9 +114,7 @@ void StartPlannerModuleManager::updateModuleParams(
       parameters, ns + "end_pose_curvature_threshold", p->end_pose_curvature_threshold);
     update_param<double>(
       parameters, ns + "maximum_longitudinal_deviation", p->maximum_longitudinal_deviation);
-    update_param<bool>(parameters, ns + "enable_geometric_pull_out", p->enable_geometric_pull_out);
     update_param<bool>(parameters, ns + "divide_pull_out_path", p->divide_pull_out_path);
-    update_param<bool>(parameters, ns + "enable_clothoid_fallback", p->enable_clothoid_fallback);
     update_param<double>(
       parameters, ns + "arc_path_interval",
       p->parallel_parking_parameters.pull_out_arc_path_interval);
@@ -140,6 +137,9 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "clothoid_max_steer_angle_rate_deg_per_sec",
       p->clothoid_max_steer_angle_rate_deg_per_sec);
+    update_param<double>(
+      parameters, ns + "clothoid_collision_check_distance_from_end",
+      p->clothoid_collision_check_distance_from_end);
     update_param<bool>(
       parameters, ns + "check_clothoid_path_lane_departure", p->check_clothoid_path_lane_departure);
 
@@ -157,7 +157,8 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<bool>(
       parameters, ns + "allow_check_shift_path_lane_departure_override",
       p->allow_check_shift_path_lane_departure_override);
-    update_param<std::string>(parameters, ns + "search_priority", p->search_priority);
+    update_param<std::vector<std::string>>(parameters, ns + "search_priority", p->search_priority);
+    update_param<std::string>(parameters, ns + "search_policy", p->search_policy);
     update_param<double>(parameters, ns + "max_back_distance", p->max_back_distance);
     update_param<double>(
       parameters, ns + "backward_search_resolution", p->backward_search_resolution);

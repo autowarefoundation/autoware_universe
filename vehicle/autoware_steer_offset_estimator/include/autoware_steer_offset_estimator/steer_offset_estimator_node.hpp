@@ -20,13 +20,21 @@
 
 #include "autoware_internal_debug_msgs/msg/float32_stamped.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
+
+#ifdef ROS_DISTRO_GALACTIC
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
 
 #include <memory>
 
 namespace autoware::steer_offset_estimator
 {
 using autoware_internal_debug_msgs::msg::Float32Stamped;
+using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::TwistStamped;
 using Steering = autoware_vehicle_msgs::msg::SteeringReport;
 using diagnostic_updater::DiagnosticStatusWrapper;
@@ -37,16 +45,19 @@ class SteerOffsetEstimatorNode : public rclcpp::Node
 private:
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_;
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_cov_;
-  rclcpp::Subscription<TwistStamped>::SharedPtr sub_twist_;
+  rclcpp::Publisher<Float32Stamped>::SharedPtr pub_steer_offset_error_;
+  rclcpp::Subscription<PoseStamped>::SharedPtr sub_pose_;
   rclcpp::Subscription<Steering>::SharedPtr sub_steer_;
   rclcpp::TimerBase::SharedPtr timer_;
 
-  TwistStamped::ConstSharedPtr twist_ptr_;
+  PoseStamped::ConstSharedPtr current_pose_ptr_;
+  PoseStamped::ConstSharedPtr prev_pose_ptr_;
   Steering::ConstSharedPtr steer_ptr_;
   double wheel_base_;
   double update_hz_;
   double estimated_steer_offset_{0.0};
   double covariance_;
+  double initial_steer_offset_;
   double forgetting_factor_;
   double valid_min_velocity_;
   double valid_max_steer_;
@@ -55,11 +66,17 @@ private:
   // Diagnostic Updater
   std::shared_ptr<Updater> updater_ptr_;
 
-  void onTwist(const TwistStamped::ConstSharedPtr msg);
+  void onPose(const PoseStamped::ConstSharedPtr msg);
   void onSteer(const Steering::ConstSharedPtr msg);
   void onTimer();
   bool updateSteeringOffset();
   void monitorSteerOffset(DiagnosticStatusWrapper & stat);
+
+  static geometry_msgs::msg::Vector3 computeRelativeRotationVector(
+    const tf2::Quaternion & q1, const tf2::Quaternion & q2);
+  TwistStamped calcTwistFromPose(
+    const PoseStamped::ConstSharedPtr pose_a, const PoseStamped::ConstSharedPtr pose_b);
+  static tf2::Quaternion getQuaternion(const PoseStamped::ConstSharedPtr & pose_stamped_ptr);
 
 public:
   explicit SteerOffsetEstimatorNode(const rclcpp::NodeOptions & node_options);

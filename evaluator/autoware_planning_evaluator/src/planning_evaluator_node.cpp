@@ -19,6 +19,7 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
 #include <diagnostic_msgs/msg/detail/diagnostic_status__struct.hpp>
@@ -53,6 +54,7 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     this, get_clock(), 100ms, std::bind(&PlanningEvaluatorNode::onTimer, this));
 
   // Parameters for metrics_calculator
+  metrics_calculator_.setVehicleInfo(vehicle_info_);
   metrics_calculator_.parameters.trajectory.min_point_dist_m =
     declare_parameter<double>("trajectory.min_point_dist_m");
   metrics_calculator_.parameters.trajectory.lookahead.max_dist_m =
@@ -63,6 +65,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     declare_parameter<double>("trajectory.evaluation_time_s");
   metrics_calculator_.parameters.obstacle.dist_thr_m =
     declare_parameter<double>("obstacle.dist_thr_m");
+  metrics_calculator_.parameters.obstacle.limit_min_accel =
+    declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
 
   // Parameters for metrics_accumulator
   metrics_accumulator_.planning_factor_accumulator.parameters.time_count_threshold_s =
@@ -355,8 +359,7 @@ void PlanningEvaluatorNode::onTrajectory(
   auto start = now();
 
   for (Metric metric : metrics_for_publish_) {
-    const auto metric_stat =
-      metrics_calculator_.calculate(Metric(metric), *traj_msg, vehicle_info_.vehicle_length_m);
+    const auto metric_stat = metrics_calculator_.calculate(Metric(metric), *traj_msg);
     if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }
@@ -380,6 +383,10 @@ void PlanningEvaluatorNode::onModifiedGoal(
     return;
   }
   auto start = now();
+  const auto is_ego_stopped_near_goal =
+    std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
+    autoware_utils::calc_distance2d(
+      ego_state_ptr->pose.pose.position, modified_goal_msg->pose.position) < 3.0;
 
   for (Metric metric : metrics_for_publish_) {
     const auto metric_stat = metrics_calculator_.calculate(
@@ -388,9 +395,8 @@ void PlanningEvaluatorNode::onModifiedGoal(
       continue;
     }
     AddMetricMsg(metric, *metric_stat);
-    if (
-      output_metrics_ && std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
-      metric_stat->mean() < 3.0) {  // only record when ego stop close to the target in 3m
+    if (output_metrics_ && is_ego_stopped_near_goal) {  // only record when ego stop close to the
+                                                        // target in 3m
       const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
       metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }

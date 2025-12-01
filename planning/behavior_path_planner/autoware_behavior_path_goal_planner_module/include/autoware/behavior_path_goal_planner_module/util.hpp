@@ -226,8 +226,23 @@ std::optional<Pose> calcRefinedGoal(
   const bool left_side_parking, const double vehicle_width, const double base_link2front,
   const double base_link2rear, const GoalPlannerParameters & parameters);
 
-std::optional<Pose> calcClosestPose(
-  const lanelet::ConstLineString3d line, const Point & query_point);
+/**
+ * @brief Calculate signed lateral distance from vehicle pose to boundary line
+ *
+ * This function calculates the signed lateral distance from a vehicle's reference pose to the
+ * nearest intersection point with a boundary line. The calculation is performed by extending
+ * the vehicle's Y-axis (lateral direction) and finding the closest intersection with any segment
+ * of the boundary line.
+ *
+ * @param line The boundary line string containing multiple points defining the boundary
+ * @param reference_pose The vehicle's reference pose (position and orientation)
+ * @return std::optional<double> The signed lateral distance if intersection exists:
+ *         - Positive value: boundary is on the left side of the vehicle
+ *         - Negative value: boundary is on the right side of the vehicle
+ *         - std::nullopt: no intersection found (parallel or out of range)
+ */
+std::optional<double> calcSignedLateralDistanceToBoundary(
+  const lanelet::ConstLineString3d line, const Pose & reference_pose);
 
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
@@ -238,6 +253,40 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
 bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
+
+/**
+ * @brief Check if ego vehicle is on modified goal position
+ * @param current_pose Current ego pose
+ * @param modified_goal Modified goal candidate
+ * @param parameters Goal planner parameters for threshold
+ * @return true if ego is within arrival distance of modified goal
+ */
+bool is_on_modified_goal(
+  const Pose & current_pose, const GoalCandidate & modified_goal,
+  const GoalPlannerParameters & parameters);
+
+bool is_on_modified_goal(
+  const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
+  const GoalPlannerParameters & parameters);
+
+struct RegenerationCheckResult
+{
+  bool should_regenerate{false};  ///< True if path candidates should be regenerated
+  std::string reason;  ///< Reason for regeneration decision (empty if no regeneration needed)
+
+  explicit operator bool() const { return should_regenerate; }
+};
+/**
+ * @brief Check if path candidates should be regenerated
+ * @param ego_pose Current ego vehicle pose
+ * @param current_upstream Current upstream module output
+ * @param original_upstream Original upstream module output when candidates were generated
+ * @param lane_change_detected Whether lane change state has changed
+ * @return RegenerationCheckResult with decision and reason
+ */
+RegenerationCheckResult should_regenerate_path_candidates(
+  const Pose & ego_pose, const BehaviorModuleOutput & current_upstream,
+  const BehaviorModuleOutput & original_upstream, const bool lane_change_detected);
 
 bool hasPreviousModulePathShapeChanged(
   const BehaviorModuleOutput & upstream_module_output,
@@ -253,21 +302,68 @@ bool hasDeviatedFromPath(
 bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 /**
- * @brief find the lanelet that has changed "laterally" from previous lanelet on the routing graph
+ * @brief find the last lanelet that has changed "laterally" from previous lanelet on the routing
+ * graph
  * @return the lanelet that changed "laterally" if the path is lane changing, otherwise nullopt
+ * @detail if ego changes lane from A to H, lane id set is like
+ * (1) {A, {C, D}, {E, F}, H} --> return F
+ * (2) {A, {C, D}, F, H} --> return D
+ * (3) {A, C, {E, F}, H} --> return F
+ *        |   A   |   C   |   E   |   G   |
+ *        |   B   |   D   |   F   |   H   |
+ *
  */
-std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+std::optional<lanelet::ConstLanelet> find_last_lane_change_completed_lanelet(
   const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
   const lanelet::routing::RoutingGraphConstPtr routing_graph);
 
 /**
- * @brief generate lanelets with which pull over path is aligned
- * @note if lane changing path is detected, this returns lanelets aligned with later part of the
- * lane changing path
+ * @brief Get reference road lane sequence that covers both the path length and goal search range
+ *
+ * @param path The path with lane IDs from upstream module
+ * @param planner_data Shared pointer to planner data containing route handler and parameters
+ * @param backward_length Distance to extend backward from lane_change_complete_lane
+ *                        Expected: backward_path_length + backward_goal_search_length
+ *                        - Covers both path length and goal search range backward
+ *                        - Sum is used because which is longer is unknown
+ *                        - Backward lanes are necessary for path generation
+ * @param forward_length Distance to extend forward from goal_lane
+ *                       Expected: forward_goal_search_length
+ *                       - Covers goal search range beyond the path length forward
+ *
+ * @return Continuous lanelet sequence from (lane_change_complete_lane - backward_length) to
+ *         (goal_lane + forward_length) if goal_lane is reachable from lane_change_complete_lane.
+ *         Otherwise, returns sequence from (lane_change_complete_lane - backward_length) to
+ *         the end of lane_change_complete_lane's sequence (until loop or no next lane).
+ *
+ * @note If lane changing path is detected, this returns lanelets aligned with the later part
+ *       of the lane changing path (lane_change_complete_lane)
  */
 lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data,
   const double backward_length, const double forward_length);
+
+/**
+ * @brief Check if lateral acceleration is acceptable near start pose
+ *
+ * Evaluates path geometry at a point determined by velocity x duration from start pose.
+ * Dynamically calculates yaw and lateral distance thresholds based on lateral acceleration limit.
+ *
+ * @note This function does NOT check lateral acceleration at every point along the path
+ *       during the specified duration. Instead, it only evaluates the lateral acceleration
+ *       at the single endpoint (velocity x duration ahead of start_pose) by approximating
+ *       the path from start_pose to that point as a circular arc.
+ *
+ * @param path_points Path points to check
+ * @param start_pose Reference start pose
+ * @param velocity Velocity for evaluation [m/s]
+ * @param duration Duration from start pose [s]
+ * @param lateral_acceleration_threshold Maximum lateral acceleration [m/s^2]
+ * @return true if lateral acceleration is acceptable, false otherwise
+ */
+bool is_lateral_acceleration_acceptable_near_start(
+  const std::vector<PathPointWithLaneId> & path_points, const geometry_msgs::msg::Pose & start_pose,
+  const double velocity, const double duration, const double lateral_acceleration_threshold);
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 

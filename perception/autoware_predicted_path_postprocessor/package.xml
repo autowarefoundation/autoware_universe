@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_predicted_path_postprocessor</name>
+  <version>0.48.0</version>
+  <description>The ROS 2 package for post-processing predicted paths.</description>
+  <maintainer email="kotaro.uetake@tier4.jp">Kotaro Uetake</maintainer>
+  <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_interpolation</depend>
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_map_msgs</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_system</depend>
+  <depend>lanelet2_core</depend>
+  <depend>lanelet2_routing</depend>
+  <depend>lanelet2_traffic_rules</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
