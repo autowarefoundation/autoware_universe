@@ -131,13 +131,18 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
 
-  TrtBEVFusionConfig trt_bevfusion_config =
-    sensor_fusion_
-      ? TrtBEVFusionConfig{tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U), tensorrt_common::TrtCommonConfig(image_backbone_onnx_path, image_backbone_trt_precision, image_backbone_engine_path, 1ULL << 32U)}
-      : TrtBEVFusionConfig{
-          tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U),
-          std::nullopt};
-
+  auto trt_main_config =
+    tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
+  // clang-format off
+  TrtBEVFusionConfig trt_bevfusion_config = sensor_fusion_
+      ? TrtBEVFusionConfig{
+        trt_main_config,
+        tensorrt_common::TrtCommonConfig(
+          image_backbone_onnx_path, image_backbone_trt_precision,
+          image_backbone_engine_path, 1ULL << 32U)
+      }
+      : TrtBEVFusionConfig{trt_main_config, std::nullopt};
+  // clang-format on
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
