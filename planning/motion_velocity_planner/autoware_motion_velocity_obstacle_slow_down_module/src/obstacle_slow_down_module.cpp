@@ -723,14 +723,23 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
   std::sort(
     obstacle_distances.begin(), obstacle_distances.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
-
-  // Keep track of which obstacle was processed for slow-down planning
-  std::optional<UUID> processed_obstacle_uuid = std::nullopt;
-
+  
+  // Track whether slow-down planning has been applied to avoid multiple reactions
+  bool slow_down_applied = false;
+  
   // Process all obstacles sorted by distance, but only apply slow down for the first valid one
   for (const auto & [obstacle_idx, dist] : obstacle_distances) {
     const auto & obstacle = obstacles.at(obstacle_idx);
     const auto prev_output = utils::get_obstacle_from_uuid(prev_slow_down_output_, obstacle.uuid);
+
+    // Skip heavy computation for obstacles after the first valid one is found
+    if (slow_down_applied) {
+      // If slow-down planning has been applied, just preserve previous output for remaining obstacles
+      if (prev_output) {
+        new_prev_slow_down_output.push_back(*prev_output);
+      }
+      continue;
+    }
 
     const auto obstacle_motion = [&]() -> Motion {
       const auto & p = slow_down_planning_param_;
@@ -756,6 +765,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
       RCLCPP_DEBUG(
         logger_, "[SlowDown] Ignore obstacle (%s) since distance to slow down is not valid",
         autoware_utils_uuid::to_hex_string(obstacle.uuid).c_str());
+      // If no new output, preserve previous output for this obstacle if it exists
+      if (prev_output) {
+        new_prev_slow_down_output.push_back(*prev_output);
+      }
       continue;
     }
     const auto dist_to_slow_down_start = std::get<0>(*dist_vec_to_slow_down);
@@ -770,6 +783,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
                                      ? insert_point_in_trajectory(dist_to_slow_down_end)
                                      : std::nullopt;
     if (!slow_down_end_idx) {
+      // If no new output, preserve previous output for this obstacle if it exists
+      if (prev_output) {
+        new_prev_slow_down_output.push_back(*prev_output);
+      }
       continue;
     }
 
@@ -792,9 +809,14 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         "[SlowDown] Ignore obstacle (%s) since slow down velocity (%f) is higher than trajectory "
         "velocity.",
         autoware_utils_uuid::to_hex_string(obstacle.uuid).c_str(), stable_slow_down_vel);
+      // If no new output, preserve previous output for this obstacle if it exists
+      if (prev_output) {
+        new_prev_slow_down_output.push_back(*prev_output);
+      }
       continue;
     }
 
+    // Apply slow-down planning for the first valid obstacle
     // insert slow down velocity between slow start and end
     slowdown_intervals.push_back(
       SlowdownInterval{
@@ -861,36 +883,13 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
     // Add debug data
     debug_data_ptr_->obstacles_to_slow_down.push_back(obstacle);
 
+    slow_down_applied = true;
+
     // update prev_slow_down_output_ for the processed obstacle
     new_prev_slow_down_output.push_back(
       SlowDownOutput{
         obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
-        stable_slow_down_vel, feasible_slow_down_vel, obstacle.stable_dist_to_traj_poly.value(),
-        obstacle_motion});
-    processed_obstacle_uuid = obstacle.uuid;
-
-    // Only process the first valid obstacle to avoid multiple slow down reactions
-    break;
-  }
-
-  // Preserve tracking history for all obstacles that are still being tracked
-  // This is necessary for hysteresis in motion state determination and low-pass filtering
-  for (const auto & prev_output : prev_slow_down_output_) {
-    // Check if this obstacle is still in the current obstacles list
-    const bool is_still_tracked = std::any_of(
-      obstacles.begin(), obstacles.end(),
-      [&](const auto & obs) { return obs.uuid == prev_output.uuid; });
-
-    // If still tracked and not already added (i.e., not the processed obstacle), preserve history
-    if (is_still_tracked) {
-      if (
-        !processed_obstacle_uuid.has_value() ||
-        prev_output.uuid != processed_obstacle_uuid.value()) {
-        // Preserve the previous output to maintain tracking history
-        // Note: We use the previous trajectory and indices since this obstacle wasn't processed
-        new_prev_slow_down_output.push_back(prev_output);
-      }
-    }
+        stable_slow_down_vel, feasible_slow_down_vel, obstacle.dist_to_traj_poly, obstacle_motion});
   }
 
   // update prev_slow_down_output_
