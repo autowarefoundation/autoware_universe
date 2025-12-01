@@ -160,8 +160,7 @@ bool correctWithDefaultValue(
       } else {
         return false;
       }
-    } else if (
-      first_in_width_range && param.max_width < second_point_distance) {
+    } else if (first_in_width_range && param.max_width < second_point_distance) {
       // Case 4: First point is within width range, but second exceeds max_width
       // Bug Fix 3: Explicit handling when first is valid but second exceeds max_width
       correction_vector = v_point.at(second_distant_index);
