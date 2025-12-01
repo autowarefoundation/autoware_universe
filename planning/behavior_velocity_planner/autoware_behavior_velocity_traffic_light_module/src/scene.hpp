@@ -129,7 +129,7 @@ private:
   lanelet::ConstLineString3d
     stop_line_;  // Note: this stop_line_ may not be the one bound to the traffic light regulatory
                  // element. this is the one bound to the traffic light (line string)
-                 
+
   // Map based information
   const bool is_turn_lane_;
   const bool has_static_arrow_;
