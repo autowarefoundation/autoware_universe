@@ -48,7 +48,7 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
   planner_param_.yellow_light_stop_velocity =
     get_or_declare_parameter<double>(node, ns + ".yellow_light_stop_velocity");
   planner_param_.enable_arrow_aware_passing =
-    get_or_declare_parameter<bool>(node, ns + ".enable_arrow_aware_passing");
+    get_or_declare_parameter<bool>(node, ns + ".enable_arrow_aware_yellow_passing");
   planner_param_.min_behind_dist_to_stop_for_restart_suppression =
     get_or_declare_parameter<double>(node, ns + ".restart_suppression.min_behind_distance_to_stop");
   planner_param_.max_behind_dist_to_stop_for_restart_suppression =
@@ -73,7 +73,7 @@ void TrafficLightModuleManager::modifyPathVelocity(
 
   autoware_perception_msgs::msg::TrafficLightGroup tl_state;
 
-  nearest_ref_stop_path_point_index_ = static_cast<int>(path->points.size()) - 1;
+  nearest_ref_stop_path_point_index_ = static_cast<int>(path->points.size() - 1);
   for (const auto & scene_module : scene_modules_) {
     std::shared_ptr<TrafficLightModule> traffic_light_scene_module(
       std::dynamic_pointer_cast<TrafficLightModule>(scene_module));

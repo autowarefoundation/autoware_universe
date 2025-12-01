@@ -244,11 +244,11 @@ bool TrafficLightModule::isStopSignal()
         }
 
         if (prev_had_green_circle) {
-          RCLCPP_INFO_THROTTLE(
+          RCLCPP_DEBUG_THROTTLE(
             logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
           yellow_transition_state_ = YellowState::kFromGreen;
         } else {
-          RCLCPP_INFO_THROTTLE(
+          RCLCPP_DEBUG_THROTTLE(
             logger_, *clock_, 1000,
             "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
           yellow_transition_state_ = YellowState::kFromRedArrow;
@@ -267,7 +267,7 @@ bool TrafficLightModule::isStopSignal()
     } else {
       // Not yellow. Reset the state.
       if (yellow_transition_state_ != YellowState::kNotYellow) {
-        RCLCPP_INFO_THROTTLE(
+        RCLCPP_DEBUG_THROTTLE(
           logger_, *clock_, 1000, "[TrafficLight Debug] Lane %ld: Yellow ended. Resetting state.",
           lane_id_);
       }
