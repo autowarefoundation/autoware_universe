@@ -41,13 +41,11 @@
                       0.0,  0.0,  0.0,  0.0,        0.00007569, 0.0,
                       0.0,  0.0,  0.0,  0.0,        0.0,        0.00030625]
 
-    # for visualize the detected marker pointcloud
-    marker_width: 0.8
-
     # for save log
     enable_save_log: false
     save_file_directory_path: detected_reflector_intensity
     save_file_name: detected_reflector_intensity
     save_frame_id: velodyne_top
+    ## for visualize the detected marker pointcloud
     radius_for_extracting_marker_pointcloud: 0.4 # [m] within
     queue_size_for_debug_pub_msg: 10 # Queue size for debug publishers
