@@ -723,10 +723,10 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
   std::sort(
     obstacle_distances.begin(), obstacle_distances.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
-  
+
   // Track whether slow-down planning has been applied to avoid multiple reactions
   bool slow_down_applied = false;
-  
+
   // Process all obstacles sorted by distance, but only apply slow down for the first valid one
   for (const auto & [obstacle_idx, dist] : obstacle_distances) {
     const auto & obstacle = obstacles.at(obstacle_idx);
@@ -734,7 +734,8 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
 
     // Skip heavy computation for obstacles after the first valid one is found
     if (slow_down_applied) {
-      // If slow-down planning has been applied, just preserve previous output for remaining obstacles
+      // If slow-down planning has been applied, just preserve previous output for remaining
+      // obstacles
       if (prev_output) {
         new_prev_slow_down_output.push_back(*prev_output);
       }
