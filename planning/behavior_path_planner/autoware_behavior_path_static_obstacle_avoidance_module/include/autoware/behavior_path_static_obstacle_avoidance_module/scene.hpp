@@ -497,16 +497,6 @@ private:
     path_shifter_.setShiftLines(ShiftLineArray{});
   }
 
-  /**
-   * @brief remove behind shift lines.
-   * @param path shifter.
-   */
-  void postProcess() override
-  {
-    const size_t idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
-    path_shifter_.removeBehindShiftLineAndSetBaseOffset(idx);
-  }
-
   struct RegisteredShiftLine
   {
     UUID uuid;

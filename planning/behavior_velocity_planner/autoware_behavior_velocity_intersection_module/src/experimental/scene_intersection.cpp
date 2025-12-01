@@ -312,7 +312,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
           *path, closest_idx, is_stuck_status->stuck_stopline_idx, planner_data)) {
       return is_stuck_status.value();
     }
-    RCLCPP_WARN_THROTTLE(
+    RCLCPP_ERROR_THROTTLE(
       logger_, *clock_, 5000, "stuck vehicle detected, but give up stop to avoid will_overrun MRM");
   }
 
