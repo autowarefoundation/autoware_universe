@@ -1,14 +1,12 @@
 /**:
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
-    onnx_model_path: $(env HOME)/autoware_data/diffusion_planner/v1.0/diffusion_planner.onnx
-    args_path: $(env HOME)/autoware_data/diffusion_planner/v1.0/diffusion_planner.param.json
+    onnx_model_path: $(env HOME)/autoware_data/diffusion_planner/v2.0/diffusion_planner.onnx
+    args_path: $(env HOME)/autoware_data/diffusion_planner/v2.0/diffusion_planner.param.json
     planning_frequency_hz: 10.0
     ignore_neighbors: false
     ignore_unknown_neighbors: true
     predict_neighbor_trajectory: true
-    update_traffic_light_group_info: true
-    keep_last_traffic_light_group_info: true
     traffic_light_group_msg_timeout_seconds: 0.2
     build_only: false
     batch_size: 1

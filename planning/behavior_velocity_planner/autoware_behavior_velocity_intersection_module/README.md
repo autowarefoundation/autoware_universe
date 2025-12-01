@@ -316,7 +316,7 @@ $$
 \dfrac{v_{\mathrm{ego}}^{2}}{2a_{\mathrm{max}}} + v_{\mathrm{ego}} * t_{\mathrm{delay}}
 $$
 
-is called pass_judge_line, and safety decision must be made before ego passes this position because ego does not stop anymore. pass_judge_line are illustrated in the following figure(2nd_pass_judge_line is deprecated).
+plus an additional margin `common.pass_judge_line_margin` is called pass_judge_line, and safety decision must be made before ego passes this position because ego does not stop anymore. pass_judge_line are illustrated in the following figure(2nd_pass_judge_line is deprecated).
 
 ![pass-judge-line](./docs/pass-judge-line.drawio.svg)
 
@@ -426,6 +426,7 @@ entity TargetObject {
 | `.attention_area_angle_threshold`            | double | [rad] threshold of angle difference between the detected object and lane         |
 | `.use_intersection_area`                     | bool   | [-] flag to use intersection_area for collision detection                        |
 | `.default_stopline_margin`                   | double | [m] margin before_stop_line                                                      |
+| `.pass_judge_line_margin`                    | double | [m] additional margin for pass_judge_line position from first_attention_stopline |
 | `.stopline_overshoot_margin`                 | double | [m] margin for the overshoot from stopline                                       |
 | `.max_accel`                                 | double | [m/ss] max acceleration for stop                                                 |
 | `.max_jerk`                                  | double | [m/sss] max jerk for stop                                                        |
