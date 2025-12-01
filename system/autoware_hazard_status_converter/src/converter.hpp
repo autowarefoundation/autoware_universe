@@ -47,6 +47,8 @@ private:
 
   DiagNode * auto_mode_root_;
   std::unordered_set<DiagUnit *> auto_mode_tree_;
+
+  bool use_external_emergency_holding_;
   uint8_t emergency_threshold_;
 };
 

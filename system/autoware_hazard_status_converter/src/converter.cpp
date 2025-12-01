@@ -24,11 +24,12 @@ namespace autoware::hazard_status_converter
 
 Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", options)
 {
-  if (declare_parameter("include_latent_fault_in_emergency", true)) {
+  if (declare_parameter("include_latent_fault_in_emergency")) {
     emergency_threshold_ = HazardStatus::LATENT_FAULT;
   } else {
     emergency_threshold_ = HazardStatus::SINGLE_POINT_FAULT;
   }
+  use_external_emergency_holding_ = declare_parameter("use_external_emergency_holding");
 
   using std::placeholders::_1;
   pub_hazard_ = create_publisher<HazardStatusStamped>("~/hazard_status", rclcpp::QoS(1));
@@ -90,13 +91,6 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     return HazardStatus::SINGLE_POINT_FAULT;
   };
 
-  const auto get_system_level = [](const HazardStatus & status) {
-    if (!status.diag_single_point_fault.empty()) return HazardStatus::SINGLE_POINT_FAULT;
-    if (!status.diag_latent_fault.empty()) return HazardStatus::LATENT_FAULT;
-    if (!status.diag_safe_fault.empty()) return HazardStatus::SAFE_FAULT;
-    return HazardStatus::NO_FAULT;
-  };
-
   const auto get_hazards_vector = [](HazardStatus & status, HazardLevel level) {
     if (level == HazardStatus::SINGLE_POINT_FAULT) return &status.diag_single_point_fault;
     if (level == HazardStatus::LATENT_FAULT) return &status.diag_latent_fault;
@@ -110,10 +104,9 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     return;
   }
 
+  // Calculate hazard level from unit level and root level.
   auto max_hazard_level = HazardStatus::NO_FAULT;
   auto max_hazard_latch = HazardStatus::NO_FAULT;
-
-  // Calculate hazard level from unit level and root level.
   HazardStatusStamped hazard;
   for (const auto & unit : graph->units()) {
     const bool is_auto_tree = auto_mode_tree_.count(unit);
@@ -135,17 +128,18 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
       }
     }
   }
-
   RCLCPP_INFO_STREAM(get_logger(), "max_hazard_level: " << (int)max_hazard_level);
   RCLCPP_INFO_STREAM(get_logger(), "max_hazard_latch: " << (int)max_hazard_latch);
-
   hazard.stamp = graph->updated_stamp();
-  hazard.status.level = get_system_level(hazard.status);
-  hazard.status.emergency = hazard.status.level >= emergency_threshold_;
+  hazard.status.level = max_hazard_level;
+  hazard.status.emergency = max_hazard_level >= emergency_threshold_;
+  hazard.status.emergency_holding = max_hazard_latch >= emergency_threshold_;
 
-  const auto is_emergency_holding = sub_emergency_holding_.take_data();
-  hazard.status.emergency_holding =
-    is_emergency_holding == nullptr ? false : is_emergency_holding->is_holding;
+  if (use_external_emergency_holding_) {
+    const auto ptr = sub_emergency_holding_.take_data();
+    hazard.status.emergency_holding = ptr ? ptr->is_holding : false;
+  }
+
   pub_hazard_->publish(hazard);
 }
 
