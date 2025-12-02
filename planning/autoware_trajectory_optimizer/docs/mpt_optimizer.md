@@ -316,6 +316,10 @@ The MPT solver optimizes geometric criteria (smoothness, bounds compliance) but 
 
 These should be handled by dedicated plugins (e.g., `TrajectoryVelocityOptimizer`).
 
+### 6. Reverse driving
+
+Assumes forward motion. May need special handling for reverse trajectories.
+
 ## When to Use MPT Optimizer
 
 ### Recommended Use Cases
