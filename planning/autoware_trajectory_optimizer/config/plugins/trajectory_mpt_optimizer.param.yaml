@@ -1,8 +1,5 @@
 /**:
   ros__parameters:
-    # MPT (Model Predictive Trajectory) Optimizer Parameters
-    # Optimizes trajectory geometry using QP-based optimization with adaptive corridor bounds
-
     trajectory_mpt_optimizer:
       # Bounds Generation (custom parameters for trajectory_optimizer)
       corridor_width_m: 3.5
@@ -16,8 +13,6 @@
       output_backward_traj_length_m: 5.0
       ego_nearest_dist_threshold_m: 3.0
       ego_nearest_yaw_threshold_deg: 45.0
-
-      # Acceleration Smoothing
       acceleration_moving_average_window: 5  # Moving average window size (larger = smoother)
 
     # MPT Algorithm Parameters (required by autoware_path_optimizer MPTOptimizer)
