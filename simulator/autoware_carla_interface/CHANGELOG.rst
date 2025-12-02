@@ -4,7 +4,6 @@ Changelog for package autoware_carla_interface
 
 0.48.0 (2025-11-18)
 -------------------
-* feat(autoware_carla_interface): add E2E planning support for VAD and other neural planners
 * Merge remote-tracking branch 'origin/main' into humble
 * fix: carla interface config and docs (`#11571 <https://github.com/autowarefoundation/autoware_universe/issues/11571>`_)
   * fix(autoware_carla_interface): correct config file installation paths
