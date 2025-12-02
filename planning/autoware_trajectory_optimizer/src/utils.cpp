@@ -78,40 +78,6 @@ void smooth_trajectory_with_elastic_band(
   eb_path_smoother_ptr->resetPreviousData();
 }
 
-void remove_invalid_points(TrajectoryPoints & input_trajectory)
-{
-  // remove points with nan or inf values
-  input_trajectory.erase(
-    std::remove_if(
-      input_trajectory.begin(), input_trajectory.end(),
-      [](const TrajectoryPoint & point) { return !validate_point(point); }),
-    input_trajectory.end());
-
-  if (input_trajectory.size() < 2) {
-    log_warn_throttle(
-      "Not enough points in trajectory after removing close proximity points and invalid points");
-    return;
-  }
-}
-
-void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
-{
-  if (std::size(input_trajectory_array) < 2) {
-    return;
-  }
-
-  input_trajectory_array.erase(
-    std::remove_if(
-      std::next(input_trajectory_array.begin()),  // Start from second element
-      input_trajectory_array.end(),
-      [&](const TrajectoryPoint & point) {
-        const auto prev_it = std::prev(&point);
-        const auto dist = autoware_utils::calc_distance2d(point, *prev_it);
-        return dist < min_dist;
-      }),
-    input_trajectory_array.end());
-}
-
 void clamp_velocities(
   TrajectoryPoints & input_trajectory_array, float min_velocity, float min_acceleration)
 {

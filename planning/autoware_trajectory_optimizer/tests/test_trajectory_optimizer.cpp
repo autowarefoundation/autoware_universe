@@ -47,27 +47,6 @@ protected:
   }
 };
 
-TEST_F(TrajectoryOptimizerUtilsTest, RemoveInvalidPoints)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  const auto points_size = points.size();
-  autoware::trajectory_optimizer::utils::remove_invalid_points(points);
-  ASSERT_EQ(points.size(), points_size);
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, RemoveCloseProximityPoints)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  const auto points_size = points.size();
-
-  autoware::trajectory_optimizer::utils::remove_close_proximity_points(points, 1E-2);
-  ASSERT_EQ(points.size(), points_size);
-
-  autoware::trajectory_optimizer::utils::remove_close_proximity_points(
-    points, std::numeric_limits<double>::max());
-  ASSERT_EQ(points.size(), 1);
-}
-
 TEST_F(TrajectoryOptimizerUtilsTest, ClampVelocities)
 {
   TrajectoryPoints points = create_sample_trajectory();

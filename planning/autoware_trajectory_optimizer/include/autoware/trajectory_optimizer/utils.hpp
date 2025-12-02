@@ -99,13 +99,6 @@ void apply_spline(
 rclcpp::Logger get_logger();
 
 /**
- * @brief Removes invalid points from the input trajectory.
- *
- * @param input_trajectory The trajectory points to be cleaned.
- */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
-
-/**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
  *
  * @param input_trajectory The trajectory points to be filtered.
@@ -163,15 +156,6 @@ void recalculate_longitudinal_acceleration(
 void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
   const Odometry & current_odometry);
-
-/**
- * @brief Removes points from the input trajectory that are too close to each other.
- *
- * @param input_trajectory_array The trajectory points to be cleaned.
- * @param min_dist The minimum distance between points.
- */
-void remove_close_proximity_points(
-  std::vector<TrajectoryPoint> & input_trajectory_array, const double min_dist = 1E-2);
 
 /**
  * @brief Adds the ego state to the trajectory points.

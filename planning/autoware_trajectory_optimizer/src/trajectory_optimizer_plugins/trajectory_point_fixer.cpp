@@ -15,7 +15,6 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
-#include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
@@ -32,16 +31,11 @@ void TrajectoryPointFixer::optimize_trajectory(
   if (!params.use_trajectory_point_fixer) {
     return;
   }
-  utils::remove_invalid_points(traj_points);
+  trajectory_point_fixer_utils::remove_invalid_points(traj_points);
 
   if (fixer_params_.remove_close_points) {
-    utils::remove_close_proximity_points(traj_points, fixer_params_.min_dist_to_remove_m);
-    if (traj_points.size() < 2) {
-      RCLCPP_ERROR_THROTTLE(
-        get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-        "Not enough points in trajectory after removing close proximity points and invalid points");
-      return;
-    }
+    trajectory_point_fixer_utils::remove_close_proximity_points(
+      traj_points, fixer_params_.min_dist_to_remove_m);
   }
 
   if (fixer_params_.resample_close_points) {

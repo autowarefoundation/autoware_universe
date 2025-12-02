@@ -14,8 +14,11 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
+#include "autoware/trajectory_optimizer/utils.hpp"
+
 #include <Eigen/Core>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -200,6 +203,52 @@ void resample_close_proximity_points(
 
   for (const auto & cluster_of_indices : clusters_of_indices) {
     resample_single_cluster(cluster_of_indices, traj_points, ego_point);
+  }
+}
+
+void remove_invalid_points(TrajectoryPoints & input_trajectory)
+{
+  // remove points with nan or inf values
+  input_trajectory.erase(
+    std::remove_if(
+      input_trajectory.begin(), input_trajectory.end(),
+      [](const TrajectoryPoint & point) {
+        return !autoware::trajectory_optimizer::utils::validate_point(point);
+      }),
+    input_trajectory.end());
+
+  if (input_trajectory.size() < 2) {
+    auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+    RCLCPP_ERROR_THROTTLE(
+      rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
+      "Not enough points in trajectory after removing invalid points");
+    return;
+  }
+}
+
+void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
+{
+  if (std::size(input_trajectory_array) < 2) {
+    return;
+  }
+
+  input_trajectory_array.erase(
+    std::remove_if(
+      std::next(input_trajectory_array.begin()),  // Start from second element
+      input_trajectory_array.end(),
+      [&](const TrajectoryPoint & point) {
+        const auto prev_it = std::prev(&point);
+        const auto dist = autoware_utils_geometry::calc_distance2d(point, *prev_it);
+        return dist < min_dist;
+      }),
+    input_trajectory_array.end());
+
+  if (input_trajectory_array.size() < 2) {
+    auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+    RCLCPP_ERROR_THROTTLE(
+      rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
+      "Not enough points in trajectory after removing close proximity points");
+    return;
   }
 }
 
