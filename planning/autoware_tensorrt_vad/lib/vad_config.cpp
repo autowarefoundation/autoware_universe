@@ -71,6 +71,7 @@ ObjectPostprocessConfig VadConfig::create_object_postprocess_config() const
   config.num_decoder_layers = num_decoder_layers;
   config.bbox_class_names = bbox_class_names;
   config.object_confidence_thresholds = object_confidence_thresholds;
+  config.bbox_class_count = static_cast<int32_t>(bbox_class_names.size());
 
   return config;
 }
