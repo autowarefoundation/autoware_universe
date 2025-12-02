@@ -23,13 +23,13 @@ This module replaces traditional localization, perception, and planning modules 
 
 ### Lane Following Demo
 
-![Lane Following](media/lane_follow_demo.gif)
+![Lane Following](media/lane_follow_demo.jpg)
 
 The module demonstrates robust lane following capabilities, maintaining the vehicle within lane boundaries while tracking the desired trajectory.
 
 ### Turn Right Demo
 
-![Turn Right](media/turn_right_demo.gif)
+![Turn Right](media/turn_right_demo.jpg)
 
 The system successfully handles right turn maneuvers, generating smooth trajectories that follow road geometry and traffic rules.
 
