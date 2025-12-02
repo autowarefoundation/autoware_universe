@@ -26,9 +26,6 @@ namespace autoware::tensorrt_vad
 
 class Head : public Net
 {
-private:
-  NetworkType network_type_;
-
 public:
   Head(
     const VadConfig & vad_config,

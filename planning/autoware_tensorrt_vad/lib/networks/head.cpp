@@ -27,8 +27,7 @@ Head::Head(
   const VadConfig & vad_config,
   const autoware::tensorrt_common::TrtCommonConfig & trt_common_config, NetworkType network_type,
   const std::string & plugins_path, std::shared_ptr<VadLogger> logger)
-: Net(vad_config, trt_common_config, network_type, plugins_path, logger),
-  network_type_(network_type)
+: Net(vad_config, trt_common_config, network_type, plugins_path, logger)
 {
   // Initialize TensorRT engine after derived class is constructed
   trt_common = init_tensorrt(vad_config, trt_common_config, plugins_path);

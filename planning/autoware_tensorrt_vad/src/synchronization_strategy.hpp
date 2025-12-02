@@ -43,17 +43,17 @@ public:
 
   /**
    * @brief Check if the VadInputTopicData is ready to trigger inference
-   * @param data VadInputTopicData in Current frame
+   * @param vad_input_topic_data VadInputTopicData in Current frame
    * @return true if ready to trigger inference, false otherwise
    */
-  virtual bool is_ready(const VadInputTopicData & data) const = 0;
+  virtual bool is_ready(const VadInputTopicData & vad_input_topic_data) const = 0;
 
   /**
    * @brief Check if any image topic data is dropped
-   * @param data VadInputTopicData in Current frame
+   * @param vad_input_topic_data VadInputTopicData in Current frame
    * @return true if any image topic data is dropped, false otherwise
    */
-  virtual bool is_dropped(const VadInputTopicData & data) const = 0;
+  virtual bool is_dropped(const VadInputTopicData & vad_input_topic_data) const = 0;
 
   /**
    * @brief Fill dropped data with appropriate default values
@@ -65,10 +65,10 @@ public:
 
   /**
    * @brief Check if the current frame data is synchronized within tolerance
-   * @param data VadInputTopicData in Current frame
+   * @param vad_input_topic_data VadInputTopicData in Current frame
    * @return true if data is synchronized, false otherwise
    */
-  virtual bool is_synchronized(const VadInputTopicData & data) const = 0;
+  virtual bool is_synchronized(const VadInputTopicData & vad_input_topic_data) const = 0;
 };
 
 /**
@@ -89,8 +89,8 @@ public:
   explicit FrontCriticalSynchronizationStrategy(int32_t front_camera_id, double sync_tolerance_ms);
 
   // Override virtual functions
-  bool is_ready(const VadInputTopicData & data) const override;
-  bool is_dropped(const VadInputTopicData & data) const override;
+  bool is_ready(const VadInputTopicData & vad_input_topic_data) const override;
+  bool is_dropped(const VadInputTopicData & vad_input_topic_data) const override;
 
   /**
    * @brief Fill dropped data with black images using front camera dimensions
@@ -105,10 +105,10 @@ public:
    * @brief Check if the current frame data is synchronized
    *        when the acceleration and kinematic_state topic timestamps
    *        are within sync_tolerance_ms of the front_camera timestamp for synchronization.
-   * @param data VadInputTopicData in Current frame
+   * @param vad_input_topic_data VadInputTopicData in Current frame
    * @return true if data is synchronized, false otherwise
    */
-  bool is_synchronized(const VadInputTopicData & data) const override;
+  bool is_synchronized(const VadInputTopicData & vad_input_topic_data) const override;
 
 private:
   int32_t front_camera_id_;   ///< Front camera ID (anchor camera)

@@ -54,6 +54,7 @@ MapPostprocessConfig VadConfig::create_map_postprocess_config() const
   config.detection_range = detection_range;
   config.map_class_names = map_class_names;
   config.map_confidence_thresholds = map_confidence_thresholds;
+  config.map_class_count = static_cast<int32_t>(map_class_names.size());
 
   return config;
 }
