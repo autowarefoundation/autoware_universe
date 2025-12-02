@@ -54,7 +54,7 @@ double calculate_time_interval(
       // Vehicle nearly stopped, return small dt
       return 0.1;
     }
-    return delta_s / v;
+    return std::abs(delta_s / v);
   }
 
   const double discriminant = v * v + 2.0 * a * delta_s;
@@ -63,7 +63,7 @@ double calculate_time_interval(
     if (std::abs(v) < min_velocity) {
       return 0.1;
     }
-    return delta_s / v;
+    return std::abs(delta_s / v);
   }
 
   const double v_next = std::sqrt(discriminant);
@@ -103,31 +103,27 @@ void recalculate_trajectory_dynamics(TrajectoryPoints & traj_points, const int s
   }
 
   // Apply moving average filter to acceleration
-  if (smoothing_window > 1) {
-    const int window_size = std::max(1, smoothing_window);
-    std::vector<float> original_accelerations;
-    original_accelerations.reserve(traj_points.size());
-    for (const auto & point : traj_points) {
-      original_accelerations.push_back(point.acceleration_mps2);
-    }
+  const int window_size = std::max(1, smoothing_window);
+  std::vector<float> original_accelerations;
+  original_accelerations.reserve(traj_points.size());
+  for (const auto & point : traj_points) {
+    original_accelerations.push_back(point.acceleration_mps2);
+  }
 
-    for (size_t i = 0; i < traj_points.size() - 1; ++i) {
-      // Calculate moving average using backward-looking window
-      double sum = 0.0;
-      int count = 0;
-      const int start_idx = std::max(0, static_cast<int>(i) - window_size + 1);
-      for (int j = start_idx; j <= static_cast<int>(i); ++j) {
-        sum += original_accelerations[j];
-        count++;
-      }
-      traj_points[i].acceleration_mps2 = static_cast<float>(sum / count);
+  for (size_t i = 0; i < traj_points.size() - 1; ++i) {
+    // Calculate moving average using backward-looking window
+    double sum = 0.0;
+    int count = 0;
+    const int start_idx = std::max(0, static_cast<int>(i) - window_size + 1);
+    for (int j = start_idx; j <= static_cast<int>(i); ++j) {
+      sum += original_accelerations[j];
+      count++;
     }
+    traj_points[i].acceleration_mps2 = static_cast<float>(sum / count);
   }
 
   // Set last point acceleration to zero
-  if (!traj_points.empty()) {
-    traj_points.back().acceleration_mps2 = 0.0f;
-  }
+  traj_points.back().acceleration_mps2 = 0.0f;
 }
 
 double calculate_curvature_at_point(const TrajectoryPoints & traj_points, const size_t idx)
