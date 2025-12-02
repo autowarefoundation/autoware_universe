@@ -39,8 +39,10 @@ plugin_names:
 2. **TrajectoryQPSmoother** - QP-based path smoothing with jerk constraints
 3. **TrajectoryEBSmootherOptimizer** - Elastic Band path smoothing
 4. **TrajectorySplineSmoother** - Akima spline interpolation
-5. **TrajectoryVelocityOptimizer** - Velocity profile optimization with lateral acceleration limits
-6. **TrajectoryExtender** - Extends trajectory backward using past ego states
+5. **TrajectoryMPTOptimizer** - Model predictive trajectory optimization with adaptive corridor bounds. Uses bicycle kinematics model for trajectory refinement. Disabled by default (experimental). See [docs/mpt_optimizer.md](docs/mpt_optimizer.md) for details.
+6. **TrajectoryVelocityOptimizer** - Velocity profile optimization with lateral acceleration limits
+7. **TrajectoryExtender** - Extends trajectory backward using past ego states
+8. **TrajectoryKinematicFeasibilityEnforcer** - Enforces Ackermann steering and yaw rate constraints
 
 Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_qp_smoother`) and manages its own configuration independently.
 

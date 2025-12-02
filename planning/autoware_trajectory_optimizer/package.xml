@@ -18,6 +18,7 @@
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_osqp_interface</depend>
+  <depend>autoware_path_optimizer</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_trajectory</depend>
@@ -32,6 +33,7 @@
   <depend>rclcpp_components</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
