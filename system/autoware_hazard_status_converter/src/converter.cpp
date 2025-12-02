@@ -24,12 +24,18 @@ namespace autoware::hazard_status_converter
 
 Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", options)
 {
-  if (declare_parameter("include_latent_fault_in_emergency")) {
+  if (declare_parameter<bool>("include_latent_fault_in_emergency")) {
     emergency_threshold_ = HazardStatus::LATENT_FAULT;
   } else {
     emergency_threshold_ = HazardStatus::SINGLE_POINT_FAULT;
   }
-  use_external_emergency_holding_ = declare_parameter("use_external_emergency_holding");
+
+  use_external_emergency_holding_ = declare_parameter<bool>("use_external_emergency_holding");
+  if (use_external_emergency_holding_) {
+    sub_emergency_holding_ =
+      autoware_utils_rclcpp::InterProcessPollingSubscriber<EmergencyHolding>::create_subscription(
+        this, "~/input/emergency_holding");
+  }
 
   using std::placeholders::_1;
   pub_hazard_ = create_publisher<HazardStatusStamped>("~/hazard_status", rclcpp::QoS(1));
@@ -136,7 +142,7 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   hazard.status.emergency_holding = max_hazard_latch >= emergency_threshold_;
 
   if (use_external_emergency_holding_) {
-    const auto ptr = sub_emergency_holding_.take_data();
+    const auto ptr = sub_emergency_holding_->take_data();
     hazard.status.emergency_holding = ptr ? ptr->is_holding : false;
   }
 
