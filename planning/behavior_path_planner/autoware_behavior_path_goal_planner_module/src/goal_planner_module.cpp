@@ -1303,6 +1303,23 @@ std::optional<PullOverPath> GoalPlannerModule::selectPullOverPath(
       }),
     sorted_path_indices.end());
 
+  // STEP1-3: Filter by lateral acceleration near start pose
+  const double velocity_for_filtering =
+    std::max(planner_data_->self_odometry->twist.twist.linear.x, parameters_.pull_over_velocity);
+  sorted_path_indices.erase(
+    std::remove_if(
+      sorted_path_indices.begin(), sorted_path_indices.end(),
+      [&](const size_t i) {
+        const auto & path = pull_over_path_candidates[i];
+        const PathWithLaneId & parking_path = path.parking_path();
+        return !goal_planner_utils::is_lateral_acceleration_acceptable_near_start(
+          parking_path.points, path.start_pose(), velocity_for_filtering,
+          parameters_.bezier_parking.lateral_acceleration_filtering_duration,
+          parameters_.bezier_parking.lateral_acceleration_threshold);
+      }),
+    sorted_path_indices.end());
+
+  // STEP2: Sort pull over path candidates with multiple criteria
   sortPullOverPaths(
     planner_data_, parameters_, pull_over_path_candidates, goal_candidates_,
     context_data.static_target_objects, getLogger(), sorted_path_indices);

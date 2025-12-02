@@ -7,6 +7,7 @@
     num_proposals: 500
     out_size_factor: 8
     max_points_per_voxel: 10
+    use_intensity: false
 
     d_bound: [1.0, 166.2, 1.4]
     x_bound: [-122.4, 122.4, 0.68]
@@ -22,3 +23,4 @@
     features_height: 0
     features_width: 0
     num_depth_features: 0
+    image_feature_channel: 0

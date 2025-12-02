@@ -278,6 +278,10 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "pull_over_angle_threshold");
     p.bezier_parking.after_shift_straight_distance =
       node->declare_parameter<double>(ns + "after_shift_straight_distance");
+    p.bezier_parking.lateral_acceleration_threshold =
+      node->declare_parameter<double>(ns + "lateral_acceleration_threshold");
+    p.bezier_parking.lateral_acceleration_filtering_duration =
+      node->declare_parameter<double>(ns + "lateral_acceleration_filtering_duration");
   }
 
   // stop condition
