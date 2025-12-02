@@ -78,7 +78,7 @@ void smooth_trajectory_with_elastic_band(
   eb_path_smoother_ptr->resetPreviousData();
 }
 
-void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min_dist_to_remove_m)
+void remove_invalid_points(TrajectoryPoints & input_trajectory)
 {
   // remove points with nan or inf values
   input_trajectory.erase(
@@ -86,8 +86,6 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min
       input_trajectory.begin(), input_trajectory.end(),
       [](const TrajectoryPoint & point) { return !validate_point(point); }),
     input_trajectory.end());
-
-  utils::remove_close_proximity_points(input_trajectory, min_dist_to_remove_m);
 
   if (input_trajectory.size() < 2) {
     log_warn_throttle(
@@ -472,9 +470,8 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(
-    autoware_utils_math::normalize_degree(
-      ego_state.pose.orientation.z - last_point.pose.orientation.z));
+  const auto yaw_diff = std::abs(autoware_utils_math::normalize_degree(
+    ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;

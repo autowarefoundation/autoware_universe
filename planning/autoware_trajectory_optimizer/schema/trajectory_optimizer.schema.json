@@ -38,7 +38,7 @@
           "default": true,
           "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
         },
-        "fix_invalid_points": {
+        "use_trajectory_point_fixer": {
           "type": "boolean",
           "default": true,
           "description": "Remove repeated or invalid points, or points that go against the general trajectory direction"
@@ -77,14 +77,14 @@
               "minimum": 0,
               "description": "Minimum distance threshold for removing close proximity points [m]"
             },
-            "min_dist_to_merge_m": {
+            "min_dist_to_resample_m": {
               "type": "number",
               "default": 0.05,
               "minimum": 0,
               "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_resample_m"]
         },
         "trajectory_kinematic_feasibility": {
           "type": "object",
@@ -586,7 +586,7 @@
         "use_akima_spline_interpolation",
         "use_eb_smoother",
         "use_qp_smoother",
-        "fix_invalid_points",
+        "use_trajectory_point_fixer",
         "extend_trajectory_backward",
         "optimize_velocity",
         "use_kinematic_feasibility_enforcer",

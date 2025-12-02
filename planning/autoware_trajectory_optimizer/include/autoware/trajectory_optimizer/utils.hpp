@@ -102,10 +102,8 @@ rclcpp::Logger get_logger();
  * @brief Removes invalid points from the input trajectory.
  *
  * @param input_trajectory The trajectory points to be cleaned.
- * @param min_dist_to_remove_m Minimum distance to remove close proximity points [m].
  */
-void remove_invalid_points(
-  std::vector<TrajectoryPoint> & input_trajectory, const double min_dist_to_remove_m = 1E-2);
+void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
 
 /**
  * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.

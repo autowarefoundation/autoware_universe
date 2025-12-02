@@ -112,7 +112,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
   update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
-  update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
+  update_param<bool>(parameters, "use_trajectory_point_fixer", params.use_trajectory_point_fixer);
   update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
   update_param<bool>(
@@ -153,7 +153,8 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "use_akima_spline_interpolation");
   params_.use_eb_smoother = get_or_declare_parameter<bool>(*this, "use_eb_smoother");
   params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
-  params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
+  params_.use_trajectory_point_fixer =
+    get_or_declare_parameter<bool>(*this, "use_trajectory_point_fixer");
   params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
