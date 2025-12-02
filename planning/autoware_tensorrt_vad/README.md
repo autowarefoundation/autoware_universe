@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `autoware_tensorrt_vad` is a ROS 2 component that implements end-to-end autonomous driving using the TensorRT-optimized Vectorized Autonomous Driving (VAD) model. It leverages the [VAD model](https://github.com/hustvl/VAD) (Jiang et al., 2023), optimized for deployment using NVIDIA's [DL4AGX](https://developer.nvidia.com/drive/drive-agx) TensorRT framework. <!-- cSpell:ignore Jiang Shaoyu Bencheng Liao Jiajie Helong Wenyu Xinggang -->
+The `autoware_tensorrt_vad` is a ROS 2 component that implements end-to-end autonomous driving using the TensorRT-optimized Vectorized Autonomous Driving (VAD) model. It leverages the [VAD model](https://github.com/hustvl/VAD) (Jiang et al., 2023), optimized for deployment using NVIDIA's [DL4AGX](https://github.com/NVIDIA/DL4AGX) TensorRT framework. <!-- cSpell:ignore Jiang Shaoyu Bencheng Liao Jiajie Helong Wenyu Xinggang -->
 
 This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the [Bench2Drive](https://github.com/Thinklab-SJTU/Bench2Drive) benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with [Autoware](https://autowarefoundation.github.io/autoware-documentation/main/) and is designed to work within the Autoware framework.
 
@@ -25,19 +25,13 @@ This module replaces traditional localization, perception, and planning modules 
 
 ![Lane Following](media/lane_follow_demo.jpg)
 
-The module demonstrates robust lane following capabilities, maintaining the vehicle within lane boundaries while tracking the desired trajectory.
-
 ### Turn Right Demo
 
 ![Turn Right](media/turn_right_demo.jpg)
 
-The system successfully handles right turn maneuvers, generating smooth trajectories that follow road geometry and traffic rules.
-
 ---
 
 ## Parameters
-
-{{ json_to_markdown("planning/autoware_tensorrt_vad/schema/vad_tiny.schema.json") }}
 
 Parameters can be set via configuration files:
 
@@ -180,14 +174,6 @@ While VAD demonstrates promising end-to-end driving capabilities, users should b
 
 - **No Dynamic Mission Control**: The current implementation lacks a high-level command interface, meaning the model cannot dynamically switch between driving behaviors (e.g., "follow lane" → "turn right at next intersection") during runtime
 
-### Future Improvements
-
-We aim to address these limitations through:
-
-- Expanding training data diversity with real-world datasets
-- Implementing conditional planning with high-level command inputs
-- Developing domain adaptation techniques for sim-to-real transfer
-
 ---
 
 ## Development & Contribution
@@ -214,8 +200,8 @@ We aim to address these limitations through:
 
 ### Deployment and Optimization
 
-1. Deep Learning for Autonomous Ground Vehicles (DL4AGX) (2024)
-   - Resource: [developer.nvidia.com/drive/drive-agx](https://developer.nvidia.com/drive/drive-agx)
+1. DL4AGX (2024)
+   - Resource: [github.com/NVIDIA/DL4AGX](https://github.com/NVIDIA/DL4AGX)
    - Description: TensorRT optimization for autonomous driving workloads and embedded GPU deployment strategies
 
 ### Related Work
