@@ -24,6 +24,7 @@
 #include <opencv2/core/types.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/subscription_base.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -50,16 +51,19 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
-class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
+class BlockageDiagComponent : public rclcpp::Node
 {
 protected:
-  void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
+
+  void on_pointcloud(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
+  /** \brief Process no-return mask input directly */
+  void on_no_return_mask(const sensor_msgs::msg::Image::ConstSharedPtr & input);
+
   image_transport::Publisher lidar_depth_map_pub_;
   image_transport::Publisher blockage_mask_pub_;
   image_transport::Publisher single_frame_dust_mask_pub;
@@ -73,12 +77,16 @@ protected:
     ground_dust_ratio_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
+  rclcpp::SubscriptionBase::SharedPtr input_sub_;
+
+  std::mutex mutex_;
+
 private:
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
-    cv::Mat depth_image_16u;
-    cv::Mat blockage_mask_multi_frame;
+    std::optional<cv::Mat> depth_image_16u;
+    std::optional<cv::Mat> blockage_mask_multi_frame;
   };
 
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
@@ -204,16 +212,64 @@ private:
   void compute_dust_diagnostics(const cv::Mat & no_return_mask, const DebugInfo & debug_info);
 
   /**
+   * @brief Process single frame dust detection from no-return mask.
+   *
+   * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
+   * @return cv::Mat The processed single frame dust image. The data type is `CV_8UC1`.
+   */
+  cv::Mat process_single_frame_dust(const cv::Mat & no_return_mask) const;
+
+  /**
+   * @brief Publish the current dust ratio.
+   *
+   * @param single_dust_ground_img The ground portion of the dust image. The data type is `CV_8UC1`.
+   */
+  void publish_dust_ratio(const cv::Mat & single_dust_ground_img);
+
+  /**
+   * @brief Update the dust frame count based on current dust ratio.
+   */
+  void update_dust_frame_count();
+
+  /**
+   * @brief Process multi-frame dust detection.
+   *
+   * @param single_dust_img The single frame dust image. The data type is `CV_8UC1`.
+   * @return cv::Mat The processed multi-frame dust image. The data type is `CV_8UC1`.
+   */
+  cv::Mat process_multi_frame_dust(const cv::Mat & single_dust_img);
+
+  /**
+   * @brief Publish debug images for dust detection.
+   *
+   * @param single_dust_img The single frame dust image. The data type is `CV_8UC1`.
+   * @param multi_frame_ground_dust_result The multi-frame dust image. The data type is `CV_8UC1`.
+   * @param debug_info The debug info containing additional data needed for publishing.
+   */
+  void publish_debug_images(
+    const cv::Mat & single_dust_img, const cv::Mat & multi_frame_ground_dust_result,
+    const DebugInfo & debug_info);
+
+  /**
    * @brief Publish the debug info if enabled.
    *
    * @param debug_info The debug info to publish.
    */
   void publish_debug_info(const DebugInfo & debug_info) const;
 
+  /**
+   * @brief Process the no-return mask through the blockage detection pipeline.
+   *
+   * @param no_return_mask The no-return mask to process. The data type is `CV_8UC1`.
+   * @param debug_info The debug info to use for publishing.
+   */
+  void process_no_return_mask(const cv::Mat & no_return_mask, DebugInfo & debug_info);
+
   Updater updater_{this};
 
   // Debug parameters
   bool publish_debug_image_;
+  bool enable_direct_mask_input_;
 
   // LiDAR parameters
   double max_distance_range_{200.0};
