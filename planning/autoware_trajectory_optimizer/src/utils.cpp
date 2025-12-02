@@ -36,6 +36,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
@@ -126,14 +127,106 @@ void clamp_velocities(
 
 void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max_velocity)
 {
-  std::for_each(
-    input_trajectory_array.begin(), input_trajectory_array.end(),
-    [max_velocity](TrajectoryPoint & point) {
-      point.longitudinal_velocity_mps = std::min(point.longitudinal_velocity_mps, max_velocity);
-    });
+  if (input_trajectory_array.empty()) {
+    return;
+  }
 
-  // recalculate acceleration after velocity change
-  recalculate_longitudinal_acceleration(input_trajectory_array);
+  // Handle single-point trajectory
+  if (input_trajectory_array.size() == 1) {
+    input_trajectory_array[0].longitudinal_velocity_mps =
+      std::min(input_trajectory_array[0].longitudinal_velocity_mps, max_velocity);
+    input_trajectory_array[0].acceleration_mps2 = 0.0f;
+    return;
+  }
+
+  std::vector<std::pair<size_t, size_t>> modified_segment_indices;
+  std::vector<double> original_dts;
+  original_dts.reserve(input_trajectory_array.size() - 1);
+
+  // Lambda to compute dt from velocity change and acceleration
+  auto compute_dt_using_velocity_and_acc =
+    [](const TrajectoryPoint & from, const TrajectoryPoint & to) -> double {
+    const auto dv = static_cast<double>(to.longitudinal_velocity_mps) -
+                    static_cast<double>(from.longitudinal_velocity_mps);
+    const auto acc = static_cast<double>(from.acceleration_mps2);
+    constexpr double epsilon_acceleration = 1e-6;
+    const auto denominator_acc =
+      std::abs(acc) < epsilon_acceleration ? epsilon_acceleration : std::abs(acc);
+    return std::abs(dv) / denominator_acc;
+  };
+
+  // Store original dt values computed from velocity and acceleration
+  for (size_t i = 0; i < input_trajectory_array.size() - 1; ++i) {
+    original_dts.push_back(
+      compute_dt_using_velocity_and_acc(input_trajectory_array[i], input_trajectory_array[i + 1]));
+  }
+
+  // Identify segments where velocity exceeds max_velocity
+  size_t segment_start = 0;
+  bool in_segment = false;
+
+  for (size_t i = 0; i < input_trajectory_array.size(); ++i) {
+    const bool exceeds_max = input_trajectory_array[i].longitudinal_velocity_mps > max_velocity;
+
+    if (exceeds_max && !in_segment) {
+      // Start of new segment
+      segment_start = i;
+      in_segment = true;
+    } else if (!exceeds_max && in_segment) {
+      // End of segment
+      modified_segment_indices.emplace_back(segment_start, i - 1);
+      in_segment = false;
+    }
+  }
+
+  // Handle case where segment extends to end of trajectory
+  if (in_segment) {
+    modified_segment_indices.emplace_back(segment_start, input_trajectory_array.size() - 1);
+  }
+
+  // Cap velocities and set accelerations in offending segments
+  for (const auto & [start, end] : modified_segment_indices) {
+    // Cap velocities for all points in segment
+    for (size_t i = start; i <= end; ++i) {
+      input_trajectory_array[i].longitudinal_velocity_mps = max_velocity;
+    }
+
+    // Set acceleration to 0 for all intermediate points (constant velocity)
+    // Points from start to end-1 have no velocity change to next point
+    for (size_t i = start; i < end; ++i) {
+      input_trajectory_array[i].acceleration_mps2 = 0.0f;
+    }
+  }
+
+  // Recalculate accelerations at segment boundaries (transitions)
+  for (const auto & [start, end] : modified_segment_indices) {
+    // Update acceleration for point right before segment start (transition INTO segment)
+    // Skip if segment starts at index 0 (no point before it)
+    if (start > 0) {
+      const size_t idx_before = start - 1;
+      const double dt = original_dts[idx_before];
+      const auto v_before =
+        static_cast<double>(input_trajectory_array[idx_before].longitudinal_velocity_mps);
+      const auto v_start =
+        static_cast<double>(input_trajectory_array[start].longitudinal_velocity_mps);
+      const double new_acc = (v_start - v_before) / dt;
+      input_trajectory_array[idx_before].acceleration_mps2 = static_cast<float>(new_acc);
+    }
+
+    // Update acceleration for last point of segment (transition OUT OF segment)
+    // Skip if segment ends at last trajectory point (should remain 0.0)
+    if (end < input_trajectory_array.size() - 1) {
+      const double dt = original_dts[end];
+      const auto v_end = static_cast<double>(input_trajectory_array[end].longitudinal_velocity_mps);
+      const auto v_after =
+        static_cast<double>(input_trajectory_array[end + 1].longitudinal_velocity_mps);
+      const double new_acc = (v_after - v_end) / dt;
+      input_trajectory_array[end].acceleration_mps2 = static_cast<float>(new_acc);
+    }
+  }
+
+  // Ensure last point always has zero acceleration
+  input_trajectory_array.back().acceleration_mps2 = 0.0f;
 }
 
 double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
@@ -218,7 +311,7 @@ void limit_lateral_acceleration(
     const double lateral_acceleration = std::abs(current_speed * yaw_rate);
     if (lateral_acceleration < max_lateral_accel_mps2) continue;
 
-    itr->longitudinal_velocity_mps = max_lateral_accel_mps2 / yaw_rate;
+    itr->longitudinal_velocity_mps = static_cast<float>(max_lateral_accel_mps2 / yaw_rate);
   }
 
   motion_utils::calculate_time_from_start(

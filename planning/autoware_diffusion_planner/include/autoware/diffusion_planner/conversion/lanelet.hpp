@@ -52,10 +52,12 @@ const std::map<std::string, LineType> LINE_TYPE_MAP = {
   {"virtual", LINE_TYPE_VIRTUAL},         {"zebra_marking", LINE_TYPE_ZEBRA_MARKING}};
 
 const std::set<std::string> ACCEPTABLE_LANE_SUBTYPES = {
-  "road", "highway", "road_shoulder", "bicycle_lane"};
+  "bicycle_lane", "crosswalk", "highway", "pedestrian_lane", "road", "road_shoulder", "walkway"};
 
 using LanePoint = Eigen::Vector3d;
 using Polyline = std::vector<LanePoint>;
+using Polygon = std::vector<LanePoint>;
+using LineString = std::vector<LanePoint>;
 
 struct LaneSegment
 {
@@ -96,14 +98,20 @@ struct LaneSegment
   }
 };
 
+struct LaneletMap
+{
+  std::vector<LaneSegment> lane_segments;
+  std::vector<Polygon> polygons;
+  std::vector<LineString> line_strings;
+};
+
 /**
  * @brief Convert a lanelet map to line segment data
  * @param lanelet_map_ptr Pointer of loaded lanelet map.
- * @param num_lane_points Number of points per lane segment.
- * @return std::vector<LaneSegment>
+ * @return LaneletMap
  */
-[[nodiscard]] std::vector<LaneSegment> convert_to_lane_segments(
-  const lanelet::LaneletMapConstPtr lanelet_map_ptr, const int64_t num_lane_points);
+[[nodiscard]] LaneletMap convert_to_internal_lanelet_map(
+  const lanelet::LaneletMapConstPtr lanelet_map_ptr);
 
 }  // namespace autoware::diffusion_planner
 

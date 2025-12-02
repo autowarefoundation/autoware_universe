@@ -18,6 +18,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,9 @@ class BEVFusionConfig
 {
 public:
   BEVFusionConfig(
-    const bool sensor_fusion, const std::string & plugins_path, const std::int64_t out_size_factor,
+    const std::string & plugins_path, const std::string & image_backbone_onnx_path,
+    const std::string & image_backbone_engine_path,
+    const std::string & image_backbone_trt_precision, const std::int64_t out_size_factor,
     const std::int64_t cloud_capacity, const std::int64_t max_points_per_voxel,
     const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
     const std::vector<float> & voxel_size, const std::vector<float> & d_bound,
@@ -38,10 +41,36 @@ public:
     const float img_aug_scale_x, const float img_aug_scale_y, const std::int64_t roi_height,
     const std::int64_t roi_width, const std::int64_t features_height,
     const std::int64_t features_width, const std::int64_t num_depth_features,
-    const std::int64_t num_proposals, const float circle_nms_dist_threshold,
-    const std::vector<double> & yaw_norm_thresholds, const float score_threshold)
+    const std::int64_t image_feature_channel, const std::int64_t num_proposals,
+    const float circle_nms_dist_threshold, const std::vector<double> & yaw_norm_thresholds,
+    const float score_threshold, const bool use_intensity)
   {
-    sensor_fusion_ = sensor_fusion;
+    // Derive sensor_fusion from image backbone parameters
+    // All three must be empty OR all three must be non-empty
+    const bool all_empty = image_backbone_onnx_path.empty() && image_backbone_engine_path.empty() &&
+                           image_backbone_trt_precision.empty();
+    const bool all_non_empty = !image_backbone_onnx_path.empty() &&
+                               !image_backbone_engine_path.empty() &&
+                               !image_backbone_trt_precision.empty();
+
+    if (!all_empty && !all_non_empty) {
+      throw std::invalid_argument(
+        "Image backbone parameters must be either all empty (lidar-only mode) or all non-empty "
+        "(fusion mode). Got: image_backbone_onnx_path='" +
+        image_backbone_onnx_path + "', image_backbone_engine_path='" + image_backbone_engine_path +
+        "', image_backbone_trt_precision='" + image_backbone_trt_precision + "'");
+    }
+
+    sensor_fusion_ = all_non_empty;
+
+    if (use_intensity) {
+      // x, y, z, intensity, timestamp_lag
+      num_point_feature_size_ = 5;
+    } else {
+      // x, y, z, timestamp_lag
+      num_point_feature_size_ = 4;
+    }
+    use_intensity_ = use_intensity;
     plugins_path_ = plugins_path;
 
     out_size_factor_ = out_size_factor;
@@ -87,6 +116,7 @@ public:
     features_height_ = features_height;
     features_width_ = features_width;
     num_depth_features_ = num_depth_features;
+    image_feature_channel_ = image_feature_channel;
     resized_height_ = raw_image_height_ * img_aug_scale_y_;
     resized_width_ = raw_image_width_ * img_aug_scale_x_;
 
@@ -112,12 +142,18 @@ public:
 
   ///// MODALITY /////
   bool sensor_fusion_{};
+  bool use_intensity_{false};
 
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
 
   // TensorRT parameters
   std::string plugins_path_{};
+
+  // Constants
+  static constexpr std::int64_t kTransformMatrixDim = 4;  // 4x4 transformation matrix dimension
+  static constexpr std::int64_t kNumRGBChannels = 3;      // RGB color channels
+  static constexpr std::int64_t kNum3DCoords = 3;         // 3D coordinates (x, y, z)
 
   ///// NETWORK PARAMETERS /////
 
@@ -128,7 +164,8 @@ public:
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
   std::int64_t max_points_per_voxel_;
-  const std::int64_t num_point_feature_size_{5};  // x, y, z, intensity, lag
+
+  std::int64_t num_point_feature_size_{4};  // x, y, z, timestamp_lag
 
   // Pointcloud range in meters
   float min_x_range_{};
@@ -170,6 +207,7 @@ public:
   std::int64_t features_height_{};
   std::int64_t features_width_{};
   std::int64_t num_depth_features_{};
+  std::int64_t image_feature_channel_{256};  // Image feature dimension
 
   // Head parameters
   std::int64_t num_proposals_{};

@@ -42,4 +42,10 @@
       Extends trajectory backward with ego vehicle history
     </description>
   </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      MPT (Model Predictive Trajectory) optimizer. Optimizes trajectory geometry using QP-based optimization with adaptive corridor bounds. Refines paths within vehicle-centric constraints after kinematic feasibility and QP smoothing.
+    </description>
+  </class>
 </library>
