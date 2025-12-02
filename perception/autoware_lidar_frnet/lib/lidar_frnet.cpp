@@ -80,6 +80,14 @@ LidarFRNet::LidarFRNet(
   stop_watch_ptr_->tic("processing/inner");
 }
 
+LidarFRNet::~LidarFRNet()
+{
+  if (stream_) {
+    cudaStreamSynchronize(stream_);
+    cudaStreamDestroy(stream_);
+  }
+}
+
 bool LidarFRNet::process(
   const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
   sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered,

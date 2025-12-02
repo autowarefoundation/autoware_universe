@@ -52,7 +52,7 @@ public:
     const utils::NetworkParams & network_params,
     const utils::PreprocessingParams & preprocessing_params,
     const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger);
-  ~LidarFRNet() = default;
+  ~LidarFRNet();
 
   bool process(
     const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
