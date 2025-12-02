@@ -23,6 +23,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -1267,14 +1268,21 @@ CrosswalkModule::getNearestStopFactorAndReason(
     return {std::nullopt, ""};
   }
   constexpr auto previous_stop_reuse_margin =
-    3.0;  // [m] reuse the previous stop pose if it is within the margin
+    1.0;  // [m] reuse the previous stop pose if it is within the margin
   const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
-  const auto use_previous_stop_pose =
-    previous_stop_pose_ && dist_to_stop > get_distance_to_stop(previous_stop_pose_) &&
-    dist_to_stop - get_distance_to_stop(previous_stop_pose_) < previous_stop_reuse_margin;
-  if (use_previous_stop_pose) {
-    previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
-    return {previous_stop_pose_, nearest_stop_and_reason->second};
+  if (previous_stop_pose_) {
+    const auto previous_stop_arc_length = motion_utils::calcSignedArcLength(
+      ego_path.points, 0UL, previous_stop_pose_->stop_pose.position);
+    previous_stop_pose_->stop_pose =
+      motion_utils::calcInterpolatedPose(ego_path.points, previous_stop_arc_length);
+    const auto dist_to_previous_stop = get_distance_to_stop(previous_stop_pose_);
+    const auto use_previous_stop_pose =
+      dist_to_stop > dist_to_previous_stop &&
+      dist_to_stop - dist_to_previous_stop < previous_stop_reuse_margin;
+    if (use_previous_stop_pose) {
+      previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
+      return {previous_stop_pose_, nearest_stop_and_reason->second};
+    }
   }
 
   return *nearest_stop_and_reason;
