@@ -159,6 +159,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME}_component SHARED
     src/bevfusion_node.cpp
+    src/bevfusion_node_utils.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}_component

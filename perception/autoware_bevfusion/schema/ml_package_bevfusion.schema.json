@@ -162,6 +162,17 @@
           "description": "Number of depth features used in the view transform.",
           "default": 118,
           "minimum": 0
+        },
+        "image_feature_channel": {
+          "type": "integer",
+          "description": "Image feature dimension (output channels of the image backbone).",
+          "default": 256,
+          "minimum": 0
+        },
+        "use_intensity": {
+          "type": "boolean",
+          "description": "Whether to use intensity feature in point cloud processing.",
+          "default": true
         }
       },
       "required": [
@@ -185,7 +196,9 @@
         "roi_width",
         "features_height",
         "features_width",
-        "num_depth_features"
+        "num_depth_features",
+        "image_feature_channel",
+        "use_intensity"
       ],
       "additionalProperties": false
     }

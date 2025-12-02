@@ -53,6 +53,7 @@ PreprocessCuda::PreprocessCuda(
   }
 }
 
+template <bool USE_INTENSITY>
 __global__ void generateSweepPoints_kernel(
   const InputPointType * __restrict__ input_points, std::size_t points_size, float time_lag,
   const float * transform_array, int num_features, float * __restrict__ output_points)
@@ -64,8 +65,8 @@ __global__ void generateSweepPoints_kernel(
   float input_x = input_point->x;
   float input_y = input_point->y;
   float input_z = input_point->z;
-  auto input_intensity = static_cast<float>(input_point->intensity);
 
+  // Transform x, y, z coordinates
   output_points[point_idx * num_features] = transform_array[0] * input_x +
                                             transform_array[4] * input_y +
                                             transform_array[8] * input_z + transform_array[12];
@@ -75,8 +76,15 @@ __global__ void generateSweepPoints_kernel(
   output_points[point_idx * num_features + 2] = transform_array[2] * input_x +
                                                 transform_array[6] * input_y +
                                                 transform_array[10] * input_z + transform_array[14];
-  output_points[point_idx * num_features + 3] = input_intensity;
-  output_points[point_idx * num_features + 4] = time_lag;
+
+  // Conditionally include intensity feature
+  if (USE_INTENSITY) {
+    auto input_intensity = static_cast<float>(input_point->intensity);
+    output_points[point_idx * num_features + 3] = input_intensity;
+    output_points[point_idx * num_features + 4] = time_lag;
+  } else {
+    output_points[point_idx * num_features + 3] = time_lag;
+  }
 }
 
 cudaError_t PreprocessCuda::generateSweepPoints_launch(
@@ -86,9 +94,14 @@ cudaError_t PreprocessCuda::generateSweepPoints_launch(
   dim3 blocks(divup(points_size, config_.threads_per_block_));
   dim3 threads(config_.threads_per_block_);
 
-  generateSweepPoints_kernel<<<blocks, threads, 0, stream_>>>(
-    input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
-    output_points);
+  if (config_.use_intensity_)
+    generateSweepPoints_kernel<true><<<blocks, threads, 0, stream_>>>(
+      input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
+      output_points);
+  else
+    generateSweepPoints_kernel<false><<<blocks, threads, 0, stream_>>>(
+      input_data, points_size, time_lag, transform_array, config_.num_point_feature_size_,
+      output_points);
 
   cudaError_t err = cudaGetLastError();
   return err;
