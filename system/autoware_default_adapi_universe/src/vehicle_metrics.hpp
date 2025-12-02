@@ -39,6 +39,8 @@ private:
   Pub<VehicleMetrics> pub_metrics_;
   Sub<EnergyStatus> sub_energy_;
   EnergyStatus::Message::ConstSharedPtr energy_;
+
+  float max_energy_level_;
 };
 
 }  // namespace autoware::default_adapi
