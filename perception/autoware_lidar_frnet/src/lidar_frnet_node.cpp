@@ -14,7 +14,6 @@
 
 #include "autoware/lidar_frnet/lidar_frnet_node.hpp"
 
-#include "autoware/lidar_frnet/ros_utils.hpp"
 #include "autoware/lidar_frnet/utils.hpp"
 
 #include <autoware/tensorrt_common/utils.hpp>
