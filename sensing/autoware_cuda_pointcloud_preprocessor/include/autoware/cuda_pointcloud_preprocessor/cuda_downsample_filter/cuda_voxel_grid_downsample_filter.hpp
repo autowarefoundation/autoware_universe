@@ -85,7 +85,7 @@ public:
 
   explicit CudaVoxelGridDownsampleFilter(
     const float voxel_size_x, const float voxel_size_y, const float voxel_size_z,
-    const int64_t max_mem_pool_size_in_byte);
+    const int64_t max_mem_pool_size_in_byte, bool output_point_xyzircaedt = false);
   ~CudaVoxelGridDownsampleFilter() = default;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filter(
@@ -114,6 +114,7 @@ private:
     decltype(OutputPointType::channel) * channel_field_dev);
 
   VoxelInfo voxel_info_{};
+  bool output_point_xyzircaedt_;
 
   cudaStream_t stream_{};
   cudaMemPool_t mem_pool_{};

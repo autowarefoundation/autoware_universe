@@ -164,11 +164,42 @@ __global__ void packCentroidKernel(
   dst->channel =
     voxel_info_dev.input_channel_offset.is_valid ? *channel_field : 0;  // dummy laser channel ID
 }
+
+__global__ void packCentroidInputKernel(
+  const CudaVoxelGridDownsampleFilter::Centroid * __restrict__ centroids,
+  const size_t num_valid_voxel, const size_t output_point_step, uint8_t * __restrict__ output,
+  uint8_t * __restrict__ return_type_field, uint16_t * __restrict__ channel_field)
+{
+  size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= num_valid_voxel) {
+    return;
+  }
+
+  auto dst = getElementPointer<InputPointType>(output, index, output_point_step, 0);
+
+  dst->x = static_cast<decltype(InputPointType::x)>(centroids[index].x / centroids[index].count);
+  dst->y = static_cast<decltype(InputPointType::y)>(centroids[index].y / centroids[index].count);
+  dst->z = static_cast<decltype(InputPointType::z)>(centroids[index].z / centroids[index].count);
+  dst->intensity =
+    static_cast<decltype(InputPointType::intensity)>(centroids[index].i / centroids[index].count);
+  // Since `return_type` and `channel` fields cannot be accumulated, fill the representative values
+  // for `return_type` and `channel` fields if they are available in the input pointcloud.
+  dst->return_type =
+    voxel_info_dev.input_return_type_offset.is_valid ? *return_type_field : 0;  // 0: UNKNOWN
+  dst->channel =
+    voxel_info_dev.input_channel_offset.is_valid ? *channel_field : 0;  // dummy laser channel ID
+  // Initialize extended fields with default values
+  dst->azimuth = 0.0f;
+  dst->elevation = 0.0f;
+  dst->distance = 1.0f;  // Non-zero default
+  dst->time_stamp = 0U;
+}
 }  // namespace
 
 CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
   const float voxel_size_x, const float voxel_size_y, const float voxel_size_z,
-  const int64_t max_mem_pool_size_in_byte)
+  const int64_t max_mem_pool_size_in_byte, bool output_point_xyzircaedt)
+: output_point_xyzircaedt_(output_point_xyzircaedt)
 {
   voxel_info_.voxel_size.x = voxel_size_x;
   voxel_info_.voxel_size.y = voxel_size_y;
@@ -264,8 +295,10 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
 
   // Allocate region actually result filtered pointcloud requires and fill them
   auto filtered_output = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  const size_t output_point_size =
+    output_point_xyzircaedt_ ? sizeof(InputPointType) : sizeof(OutputPointType);
   filtered_output->data =
-    cuda_blackboard::make_unique<std::uint8_t[]>(num_valid_voxel * sizeof(OutputPointType));
+    cuda_blackboard::make_unique<std::uint8_t[]>(num_valid_voxel * output_point_size);
 
   // Calculate actual voxel-filtered points
   auto centroid_buffer_dev = allocateBufferFromPool<Centroid>(num_valid_voxel * sizeof(Centroid));
@@ -301,9 +334,20 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
       "return_type", voxel_info_.output_offsets[4], sensor_msgs::msg::PointField::UINT8, 1));
     filtered_output->fields.push_back(generate_point_field(
       "channel", voxel_info_.output_offsets[5], sensor_msgs::msg::PointField::UINT16, 1));
+    if (output_point_xyzircaedt_) {
+      // Add extended fields for PointXYZIRCAEDT
+      filtered_output->fields.push_back(
+        generate_point_field("azimuth", 16, sensor_msgs::msg::PointField::FLOAT32, 1));
+      filtered_output->fields.push_back(
+        generate_point_field("elevation", 20, sensor_msgs::msg::PointField::FLOAT32, 1));
+      filtered_output->fields.push_back(
+        generate_point_field("distance", 24, sensor_msgs::msg::PointField::FLOAT32, 1));
+      filtered_output->fields.push_back(
+        generate_point_field("time_stamp", 28, sensor_msgs::msg::PointField::UINT32, 1));
+    }
     filtered_output->is_bigendian = input_points->is_bigendian;
-    filtered_output->point_step = sizeof(OutputPointType);
-    filtered_output->row_step = sizeof(OutputPointType) * num_valid_voxel;
+    filtered_output->point_step = output_point_size;
+    filtered_output->row_step = output_point_size * num_valid_voxel;
     filtered_output->is_dense = input_points->is_dense;
   }
 
@@ -559,8 +603,14 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
   }
 
   dim3 grid_dim_voxel((num_valid_voxel + block_dim.x - 1) / block_dim.x);
-  packCentroidKernel<<<grid_dim_voxel, block_dim, 0, stream_>>>(
-    buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get(),
-    return_type_field_dev, channel_field_dev);
+  if (output_point_xyzircaedt_) {
+    packCentroidInputKernel<<<grid_dim_voxel, block_dim, 0, stream_>>>(
+      buffer_dev, num_valid_voxel, sizeof(InputPointType), output_points->data.get(),
+      return_type_field_dev, channel_field_dev);
+  } else {
+    packCentroidKernel<<<grid_dim_voxel, block_dim, 0, stream_>>>(
+      buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get(),
+      return_type_field_dev, channel_field_dev);
+  }
 }
 }  // namespace autoware::cuda_pointcloud_preprocessor

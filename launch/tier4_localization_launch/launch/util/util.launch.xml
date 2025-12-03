@@ -1,33 +1,66 @@
 <launch>
   <!-- topic -->
   <arg name="output/pointcloud" default="downsample/pointcloud" description="final output topic name"/>
-
+  <arg name="cuda_pointclouds" default="false"/>
   <!-- container -->
   <arg name="localization_pointcloud_container_name" default="/pointcloud_container" description="container name of main lidar used for localization"/>
 
   <!-- whether use intra-process -->
   <arg name="use_intra_process" default="true" description="use ROS 2 component container communication"/>
 
-  <load_composable_node target="$(var localization_pointcloud_container_name)">
-    <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_measurement_range">
-      <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
-      <remap from="input" to="$(var input_pointcloud)"/>
-      <remap from="output" to="measurement_range/pointcloud"/>
-      <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
-    </composable_node>
+  <group unless="$(var cuda_pointclouds)">
+    <load_composable_node target="$(var localization_pointcloud_container_name)">
+      <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_measurement_range">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <remap from="input" to="$(var input_pointcloud)"/>
+        <remap from="output" to="measurement_range/pointcloud"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
 
-    <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::VoxelGridDownsampleFilterComponent" name="voxel_grid_downsample_filter">
-      <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/voxel_grid_downsample_filter_param_path)"/>
-      <remap from="input" to="measurement_range/pointcloud"/>
-      <remap from="output" to="voxel_grid_downsample/pointcloud"/>
-      <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
-    </composable_node>
+      <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::VoxelGridDownsampleFilterComponent" name="voxel_grid_downsample_filter">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/voxel_grid_downsample_filter_param_path)"/>
+        <remap from="input" to="measurement_range/pointcloud"/>
+        <remap from="output" to="voxel_grid_downsample/pointcloud"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
 
-    <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent" name="random_downsample_filter">
-      <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/random_downsample_filter_param_path)"/>
-      <remap from="input" to="voxel_grid_downsample/pointcloud"/>
-      <remap from="output" to="$(var output/pointcloud)"/>
-      <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
-    </composable_node>
-  </load_composable_node>
+      <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::RandomDownsampleFilterComponent" name="random_downsample_filter">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/random_downsample_filter_param_path)"/>
+        <remap from="input" to="voxel_grid_downsample/pointcloud"/>
+        <remap from="output" to="$(var output/pointcloud)"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
+    </load_composable_node>
+  </group>
+
+  <group if="$(var cuda_pointclouds)">
+    <load_composable_node target="$(var localization_pointcloud_container_name)">
+      <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::CudaCropBoxFilterNode" name="crop_box_filter_measurement_range">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <param name="output_point_xyzircaedt" value="true"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input_pointcloud)/cuda"/>
+        <remap from="~/output/pointcloud" to="measurement_range/pointcloud"/>
+        <remap from="~/output/pointcloud/cuda" to="measurement_range/pointcloud/cuda"/>
+      </composable_node>
+
+      <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode" name="voxel_grid_downsample_filter">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/voxel_grid_downsample_filter_param_path)"/>
+        <param name="output_point_xyzircaedt" value="true"/>
+        <remap from="~/input/pointcloud" to="measurement_range/pointcloud"/>
+        <remap from="~/input/pointcloud/cuda" to="measurement_range/pointcloud/cuda"/>
+        <remap from="~/output/pointcloud" to="measurement_range/pointcloud"/>
+        <remap from="~/output/pointcloud/cuda" to="voxel_grid_downsample/pointcloud/cuda"/>
+      </composable_node>
+
+      <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::CudaRandomDownsampleFilterNode" name="random_downsample_filter">
+        <param from="$(var ndt_scan_matcher/pointcloud_preprocessor/random_downsample_filter_param_path)"/>
+        <param name="output_point_xyzircaedt" value="false"/>
+        <remap from="~/input/pointcloud" to="voxel_grid_downsample/pointcloud"/>
+        <remap from="~/input/pointcloud/cuda" to="voxel_grid_downsample/pointcloud/cuda"/>
+        <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+        <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda"/>
+      </composable_node>
+    </load_composable_node>
+  </group>
 </launch>

@@ -1,0 +1,6 @@
+/**:
+  ros__parameters:
+    # Number of points to sample
+    sample_num: 10000
+    # Memory pool size in bytes (default: 1GB)
+    max_mem_pool_size_in_byte: 1000000000

@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <type_traits>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -67,7 +68,23 @@ struct CropBoxParameters
   float max_y;
   float min_z;
   float max_z;
+  std::uint8_t negative;  // if 1, remove points within the box from the pointcloud; otherwise (0),
+                          // remove points outside the box.
+
+  // Explicitly default constructor and destructor to ensure triviality for Thrust compatibility
+  CropBoxParameters() = default;
+  ~CropBoxParameters() = default;
+  CropBoxParameters(const CropBoxParameters &) = default;
+  CropBoxParameters & operator=(const CropBoxParameters &) = default;
 };
+
+// Verify at compile time that CropBoxParameters is compatible with Thrust device_vector
+static_assert(
+  std::is_trivially_destructible<CropBoxParameters>::value,
+  "CropBoxParameters must be trivially destructible for device_vector");
+static_assert(
+  std::is_trivially_copyable<CropBoxParameters>::value,
+  "CropBoxParameters must be trivially copyable for device_vector");
 
 struct RingOutlierFilterParameters
 {

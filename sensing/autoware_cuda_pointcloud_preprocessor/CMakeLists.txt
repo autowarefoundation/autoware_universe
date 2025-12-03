@@ -79,7 +79,9 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
+  src/cuda_downsample_filter/cuda_random_downsample_filter.cu
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
+  src/cuda_cropbox_filter/cuda_crop_box_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -118,7 +120,9 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
+  src/cuda_downsample_filter/cuda_random_downsample_filter_node.cpp
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
+  src/cuda_cropbox_filter/cuda_crop_box_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -148,6 +152,18 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
   EXECUTABLE cuda_polar_voxel_outlier_filter_node
+)
+
+# ========== CropBox filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaCropBoxFilterNode"
+  EXECUTABLE cuda_crop_box_filter_node
+)
+
+# ========== Random downsample filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaRandomDownsampleFilterNode"
+  EXECUTABLE cuda_random_downsample_filter_node
 )
 
 ################################################################################
