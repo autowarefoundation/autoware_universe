@@ -1,13 +1,11 @@
 /**:
   ros__parameters:
-    # Crop box parameters (arrays for multiple boxes)
-    min_x: [-1.0]
-    min_y: [-1.0]
-    min_z: [-1.0]
-    max_x: [1.0]
-    max_y: [1.0]
-    max_z: [1.0]
-    # Negative flag for each box (optional, defaults to false if not provided)
-    negative: [0]
+    min_x: -1.0
+    min_y: -1.0
+    min_z: -1.0
+    max_x: 1.0
+    max_y: 1.0
+    max_z: 1.0
+    negative: 1
     # Memory pool size in bytes (default: 1GB)
     max_mem_pool_size_in_byte: 1000000000
