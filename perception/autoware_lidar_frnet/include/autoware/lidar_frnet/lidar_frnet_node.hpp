@@ -16,7 +16,6 @@
 #define AUTOWARE__LIDAR_FRNET__LIDAR_FRNET_NODE_HPP_
 
 #include "autoware/lidar_frnet/lidar_frnet.hpp"
-#include "autoware/lidar_frnet/ros_utils.hpp"
 #include "autoware/lidar_frnet/utils.hpp"
 #include "autoware/lidar_frnet/visibility_control.hpp"
 
