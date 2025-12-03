@@ -56,7 +56,26 @@ private:
   // topic name - module name
   std::unordered_map<std::string, std::string> module_name_map_{};
   // module name - processing time
-  std::unordered_map<std::string, double> processing_time_map_{};
+  struct DoubleWithMutex {
+      double value{-1.0};
+      std::mutex mtx;
+
+      double get(bool reset = false) {
+        std::lock_guard<std::mutex> lock(mtx);
+        double tmp = value;
+        if (reset) {
+          value = -1.0;
+        }
+        return tmp;
+      }
+
+      void set(double v) {
+        std::lock_guard<std::mutex> lock(mtx);
+        value = v;
+      }
+  };
+  std::unordered_map<std::string, DoubleWithMutex> processing_time_map_{};
+
   // module name - accumulator
   std::unordered_map<std::string, Accumulator<double>> processing_time_accumulator_map_{};
   std::unordered_map<std::string, tdigest<double>> processing_time_tdigest_map_{};

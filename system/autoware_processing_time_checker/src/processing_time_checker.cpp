@@ -72,6 +72,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
       module_name_map_.insert_or_assign(processing_time_topic_name, *module_name);
       processing_time_accumulator_map_.insert_or_assign(*module_name, Accumulator<double>());
       processing_time_tdigest_map_.insert_or_assign(*module_name, tdigest<double>(100));
+      processing_time_map_.insert_or_assign(*module_name, DoubleWithMutex{});
     } else {
       throw std::invalid_argument("The format of the processing time topic name is not correct.");
     }
@@ -86,7 +87,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
       create_subscription<Float64Stamped>(
         processing_time_topic_name, 1,
         [this, &module_name]([[maybe_unused]] const Float64Stamped & msg) {
-          processing_time_map_.insert_or_assign(module_name, msg.data);
+          processing_time_map_.at(module_name).set(msg.data);
           processing_time_accumulator_map_.at(module_name).add(msg.data);
           processing_time_tdigest_map_.at(module_name).insert(msg.data);
         }));
@@ -162,9 +163,12 @@ void ProcessingTimeChecker::on_timer()
 {
   // create MetricArrayMsg
   MetricArrayMsg metrics_msg;
-  for (const auto & processing_time_iterator : processing_time_map_) {
+  for (auto & processing_time_iterator : processing_time_map_) {
     const auto processing_time_topic_name = processing_time_iterator.first;
-    const double processing_time = processing_time_iterator.second;
+    const double processing_time = processing_time_iterator.second.get(true);
+    if (processing_time < 0.0) {
+      continue;
+    }
 
     // generate MetricMsg
     MetricMsg metric;
