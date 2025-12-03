@@ -8,6 +8,7 @@
       - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
 
@@ -19,3 +20,4 @@
     optimize_velocity: true
     extend_trajectory_backward: false
     use_kinematic_feasibility_enforcer: true
+    use_mpt_optimizer: false

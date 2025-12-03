@@ -340,9 +340,9 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
   const double now_sec = this->get_clock()->now().seconds();
 
   for (const auto & [topic, stamp] : concatenated_cloud_result.topic_to_original_stamp_map) {
-    const double latency = (now_sec - stamp) * 1000.0;  // ms
-    topic_to_pipeline_latency_map[topic] = latency;
-    max_pipeline_latency = std::max(max_pipeline_latency, latency);
+    const double latency_ms = (now_sec - stamp) * 1000.0;  // ms
+    topic_to_pipeline_latency_map[topic] = latency_ms;
+    max_pipeline_latency = std::max(max_pipeline_latency, latency_ms);
   }
 
   diagnostic_info.publish_pointcloud = publish_pointcloud;
@@ -484,7 +484,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_c
     }
     const auto latency_it = diagnostic_info.topic_to_pipeline_latency_map.find(topic);
     if (latency_it != diagnostic_info.topic_to_pipeline_latency_map.end()) {
-      diagnostics_interface_->add_key_value("Latency (s): " + topic, latency_it->second);
+      double latency_ms = latency_it->second;
+      diagnostics_interface_->add_key_value("Latency (ms): " + topic, latency_ms);
     }
   }
 

@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer_utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>

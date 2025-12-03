@@ -117,6 +117,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
+  update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
 
   params_ = params;
 
@@ -140,6 +141,7 @@ void TrajectoryOptimizer::set_up_params()
     "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
     "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
     "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
     "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
     "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
     "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
@@ -157,6 +159,7 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
+  params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
