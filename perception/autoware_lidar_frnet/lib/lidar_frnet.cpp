@@ -22,14 +22,21 @@
 #include <autoware/point_types/types.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <cuda_blackboard/cuda_unique_ptr.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <sensor_msgs/msg/point_field.hpp>
+#include <std_msgs/msg/header.hpp>
+
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace autoware::lidar_frnet
 {
@@ -75,16 +82,33 @@ LidarFRNet::LidarFRNet(
   postprocess_ptr_ = std::make_unique<PostprocessCuda>(postprocessing_params, stream_);
 
   initTensors();
+  allocateMessages();
 
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing/inner");
 }
 
+void LidarFRNet::setPublishSegmentedPointcloud(
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func)
+{
+  publish_segmented_pointcloud_ = std::move(func);
+}
+
+void LidarFRNet::setPublishVisualizationPointcloud(
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func)
+{
+  publish_visualization_pointcloud_ = std::move(func);
+}
+
+void LidarFRNet::setPublishFilteredPointcloud(
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func)
+{
+  publish_filtered_pointcloud_ = std::move(func);
+}
+
 bool LidarFRNet::process(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
-  sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
-  sensor_msgs::msg::PointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
-  std::unordered_map<std::string, double> & proc_timing)
+  const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing)
 {
   stop_watch_ptr_->toc("processing/inner", true);
   std::call_once(init_cloud_, [&cloud_in]() {
@@ -128,7 +152,7 @@ bool LidarFRNet::process(
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postprocess(input_num_points, active_comm, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
+  if (!postprocess(input_num_points, active_comm, cloud_in->header)) {
     RCLCPP_ERROR(logger_, "Postprocess failed.");
     return false;
   }
@@ -214,8 +238,7 @@ bool LidarFRNet::inference()
 
 bool LidarFRNet::postprocess(
   const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-  sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
-  sensor_msgs::msg::PointCloud2 & cloud_filtered)
+  const std_msgs::msg::Header & header)
 {
   cuda_utils::clear_async(seg_data_d_.get(), network_params_.num_points_profile.max, stream_);
   cuda_utils::clear_async(viz_data_d_.get(), network_params_.num_points_profile.max, stream_);
@@ -231,14 +254,26 @@ bool LidarFRNet::postprocess(
 
   if (active_comm.seg) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_seg_out.data.data(), seg_data_d_.get(),
-      sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
+      cloud_seg_msg_ptr_->data.get(), seg_data_d_.get(),
+      sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_seg_msg_ptr_->header = header;
+    cloud_seg_msg_ptr_->width = input_num_points;
+    cloud_seg_msg_ptr_->row_step = cloud_seg_msg_ptr_->point_step * input_num_points;
+    publish_segmented_pointcloud_(std::move(cloud_seg_msg_ptr_));
+    cloud_seg_msg_ptr_ = nullptr;
   }
 
   if (active_comm.viz) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_viz_out.data.data(), viz_data_d_.get(),
-      sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
+      cloud_viz_msg_ptr_->data.get(), viz_data_d_.get(),
+      sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_viz_msg_ptr_->header = header;
+    cloud_viz_msg_ptr_->width = input_num_points;
+    cloud_viz_msg_ptr_->row_step = cloud_viz_msg_ptr_->point_step * input_num_points;
+    publish_visualization_pointcloud_(std::move(cloud_viz_msg_ptr_));
+    cloud_viz_msg_ptr_ = nullptr;
   }
 
   if (active_comm.filtered) {
@@ -247,13 +282,17 @@ bool LidarFRNet::postprocess(
       stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_filtered.data.data(), cloud_filtered_d_.get(),
-      sizeof(InputPointType) * num_points_filtered, cudaMemcpyDeviceToHost, stream_));
+      cloud_filtered_msg_ptr_->data.get(), cloud_filtered_d_.get(),
+      sizeof(InputPointType) * num_points_filtered, cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-    cloud_filtered.data.resize(num_points_filtered * cloud_filtered.point_step);
-    cloud_filtered.width = num_points_filtered;
-    cloud_filtered.row_step = num_points_filtered * cloud_filtered.point_step;
+    cloud_filtered_msg_ptr_->header = header;
+    cloud_filtered_msg_ptr_->width = num_points_filtered;
+    cloud_filtered_msg_ptr_->row_step = cloud_filtered_msg_ptr_->point_step * num_points_filtered;
+    publish_filtered_pointcloud_(std::move(cloud_filtered_msg_ptr_));
+    cloud_filtered_msg_ptr_ = nullptr;
   }
+
+  allocateMessages();
   return true;
 }
 
@@ -287,6 +326,86 @@ void LidarFRNet::initTensors()
   network_ptr_->setTensorAddress("voxel_coors", voxel_coors_d_.get());
   network_ptr_->setTensorAddress("inverse_map", inverse_map_d_.get());
   network_ptr_->setTensorAddress("seg_logit", seg_logit_d_.get());
+}
+
+void LidarFRNet::allocateMessages()
+{
+  auto make_point_field = [](const std::string & name, int offset, int datatype, int count) {
+    sensor_msgs::msg::PointField field;
+    field.name = name;
+    field.offset = offset;
+    field.datatype = datatype;
+    field.count = count;
+    return field;
+  };
+
+  // Segmentation pointcloud
+  if (cloud_seg_msg_ptr_ == nullptr) {
+    cloud_seg_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+    cloud_seg_msg_ptr_->height = 1;
+    cloud_seg_msg_ptr_->width = network_params_.num_points_profile.max;
+    cloud_seg_msg_ptr_->is_bigendian = false;
+    cloud_seg_msg_ptr_->is_dense = true;
+
+    std::vector<sensor_msgs::msg::PointField> seg_fields;
+    seg_fields.push_back(make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
+    seg_fields.push_back(make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
+    seg_fields.push_back(make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
+    seg_fields.push_back(make_point_field("class_id", 12, sensor_msgs::msg::PointField::UINT8, 1));
+    cloud_seg_msg_ptr_->fields = seg_fields;
+    cloud_seg_msg_ptr_->point_step = sizeof(OutputSegmentationPointType);
+    cloud_seg_msg_ptr_->row_step =
+      cloud_seg_msg_ptr_->point_step * network_params_.num_points_profile.max;
+    cloud_seg_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
+      network_params_.num_points_profile.max * sizeof(OutputSegmentationPointType));
+  }
+
+  // Visualization pointcloud
+  if (cloud_viz_msg_ptr_ == nullptr) {
+    cloud_viz_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+    cloud_viz_msg_ptr_->height = 1;
+    cloud_viz_msg_ptr_->width = network_params_.num_points_profile.max;
+    cloud_viz_msg_ptr_->is_bigendian = false;
+    cloud_viz_msg_ptr_->is_dense = true;
+
+    std::vector<sensor_msgs::msg::PointField> viz_fields;
+    viz_fields.push_back(make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
+    viz_fields.push_back(make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
+    viz_fields.push_back(make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
+    viz_fields.push_back(make_point_field("rgb", 12, sensor_msgs::msg::PointField::FLOAT32, 1));
+    cloud_viz_msg_ptr_->fields = viz_fields;
+    cloud_viz_msg_ptr_->point_step = sizeof(OutputVisualizationPointType);
+    cloud_viz_msg_ptr_->row_step =
+      cloud_viz_msg_ptr_->point_step * network_params_.num_points_profile.max;
+    cloud_viz_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
+      network_params_.num_points_profile.max * sizeof(OutputVisualizationPointType));
+  }
+
+  // Filtered pointcloud
+  if (cloud_filtered_msg_ptr_ == nullptr) {
+    cloud_filtered_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+    cloud_filtered_msg_ptr_->height = 1;
+    cloud_filtered_msg_ptr_->width = network_params_.num_points_profile.max;
+    cloud_filtered_msg_ptr_->is_bigendian = false;
+    cloud_filtered_msg_ptr_->is_dense = true;
+
+    std::vector<sensor_msgs::msg::PointField> filtered_fields;
+    filtered_fields.push_back(make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
+    filtered_fields.push_back(make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
+    filtered_fields.push_back(make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
+    filtered_fields.push_back(
+      make_point_field("intensity", 12, sensor_msgs::msg::PointField::UINT8, 1));
+    filtered_fields.push_back(
+      make_point_field("return_type", 13, sensor_msgs::msg::PointField::UINT8, 1));
+    filtered_fields.push_back(
+      make_point_field("channel", 14, sensor_msgs::msg::PointField::UINT16, 1));
+    cloud_filtered_msg_ptr_->fields = filtered_fields;
+    cloud_filtered_msg_ptr_->point_step = sizeof(InputPointType);
+    cloud_filtered_msg_ptr_->row_step =
+      cloud_filtered_msg_ptr_->point_step * network_params_.num_points_profile.max;
+    cloud_filtered_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
+      network_params_.num_points_profile.max * sizeof(InputPointType));
+  }
 }
 
 }  // namespace autoware::lidar_frnet
