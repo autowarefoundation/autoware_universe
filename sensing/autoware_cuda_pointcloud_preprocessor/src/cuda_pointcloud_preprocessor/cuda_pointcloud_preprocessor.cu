@@ -341,8 +341,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
 
   // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
-                                        input_pointcloud_msg.header.stamp.nanosec;
+  std::uint64_t pointcloud_stamp_nsec =
+    static_cast<std::uint64_t>(1'000'000'000) * input_pointcloud_msg.header.stamp.sec +
+    input_pointcloud_msg.header.stamp.nanosec;
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
