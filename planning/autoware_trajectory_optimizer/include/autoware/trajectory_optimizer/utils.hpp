@@ -99,41 +99,6 @@ void apply_spline(
 rclcpp::Logger get_logger();
 
 /**
- * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
- *
- * @param input_trajectory The trajectory points to be filtered.
- * @param initial_motion The initial speed and acceleration for motion.
- * @param nearest_dist_threshold_m Distance threshold for trajectory matching.
- * @param nearest_yaw_threshold_rad Yaw threshold for trajectory matching.
- * @param smoother The smoother to be used for filtering the trajectory.
- * @param current_odometry The current odometry data.
- */
-void filter_velocity(
-  TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
-  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry);
-
-/**
- * @brief Clamps the velocities of the input trajectory points to the specified minimum values.
- *
- * @param input_trajectory_array The trajectory points to be clamped.
- * @param min_velocity The minimum velocity to be clamped.
- * @param min_acceleration The minimum acceleration to be clamped.
- */
-void clamp_velocities(
-  std::vector<TrajectoryPoint> & input_trajectory_array, float min_velocity,
-  float min_acceleration);
-
-/**
- * @brief Sets the maximum velocity for the input trajectory points.
- *
- * @param input_trajectory_array The trajectory points to be updated.
- * @param max_velocity The maximum velocity to be set.
- */
-void set_max_velocity(
-  std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
-
-/**
  * @brief Compute time difference between consecutive trajectory points
  *
  * @param current Current trajectory point
@@ -152,10 +117,6 @@ double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
 void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
-
-void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
-  const Odometry & current_odometry);
 
 };  // namespace autoware::trajectory_optimizer::utils
 

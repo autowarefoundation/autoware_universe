@@ -48,7 +48,7 @@
           "default": false,
           "description": "Enable trajectory extender to extend trajectory backward using ego pose history"
         },
-        "optimize_velocity": {
+        "use_velocity_optimizer": {
           "type": "boolean",
           "default": true,
           "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
@@ -588,7 +588,7 @@
         "use_qp_smoother",
         "use_trajectory_point_fixer",
         "use_trajectory_extender",
-        "optimize_velocity",
+        "use_velocity_optimizer",
         "use_kinematic_feasibility_enforcer",
         "use_mpt_optimizer"
       ]

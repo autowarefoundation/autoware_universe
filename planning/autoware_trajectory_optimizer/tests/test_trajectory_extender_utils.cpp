@@ -13,11 +13,9 @@
 // limitations under the License.
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.hpp"
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
-#include <tf2/LinearMath/Quaternion.h>
 #include <tf2/utils.h>
 
 #include <cmath>
@@ -29,64 +27,12 @@ using autoware::trajectory_optimizer::plugin::trajectory_extender_utils::
   expand_trajectory_with_ego_history;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using nav_msgs::msg::Odometry;
+using trajectory_optimizer_test_utils::create_odometry;
+using trajectory_optimizer_test_utils::create_point;
+using trajectory_optimizer_test_utils::create_point_with_yaw;
 
 class ExtenderUtilsTest : public ::testing::Test
 {
-protected:
-  static TrajectoryPoint create_point(
-    double x, double y, float velocity = 1.0f, float acceleration = 0.0f)
-  {
-    TrajectoryPoint point;
-    point.pose.position.x = x;
-    point.pose.position.y = y;
-    point.pose.position.z = 0.0;
-
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, 0.0);
-    point.pose.orientation = tf2::toMsg(q);
-
-    point.longitudinal_velocity_mps = velocity;
-    point.acceleration_mps2 = acceleration;
-    point.time_from_start.sec = 0;
-    point.time_from_start.nanosec = 0;
-    return point;
-  }
-
-  static TrajectoryPoint create_point_with_yaw(
-    double x, double y, double yaw, float velocity = 1.0f)
-  {
-    TrajectoryPoint point;
-    point.pose.position.x = x;
-    point.pose.position.y = y;
-    point.pose.position.z = 0.0;
-
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, yaw);
-    point.pose.orientation = tf2::toMsg(q);
-
-    point.longitudinal_velocity_mps = velocity;
-    point.acceleration_mps2 = 0.0f;
-    point.time_from_start.sec = 0;
-    point.time_from_start.nanosec = 0;
-    return point;
-  }
-
-  static Odometry create_odometry(double x, double y, double yaw, double velocity)
-  {
-    Odometry odom;
-    odom.pose.pose.position.x = x;
-    odom.pose.pose.position.y = y;
-    odom.pose.pose.position.z = 0.0;
-
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, yaw);
-    odom.pose.pose.orientation = tf2::toMsg(q);
-
-    odom.twist.twist.linear.x = velocity;
-    odom.twist.twist.linear.y = 0.0;
-    odom.twist.twist.linear.z = 0.0;
-    return odom;
-  }
 };
 
 // Tests for add_ego_state_to_trajectory

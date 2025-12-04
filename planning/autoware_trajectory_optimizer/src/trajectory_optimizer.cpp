@@ -113,7 +113,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
   update_param<bool>(parameters, "use_trajectory_point_fixer", params.use_trajectory_point_fixer);
-  update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
+  update_param<bool>(parameters, "use_velocity_optimizer", params.use_velocity_optimizer);
   update_param<bool>(parameters, "use_trajectory_extender", params.use_trajectory_extender);
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
@@ -155,7 +155,7 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
   params_.use_trajectory_point_fixer =
     get_or_declare_parameter<bool>(*this, "use_trajectory_point_fixer");
-  params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
+  params_.use_velocity_optimizer = get_or_declare_parameter<bool>(*this, "use_velocity_optimizer");
   params_.use_trajectory_extender =
     get_or_declare_parameter<bool>(*this, "use_trajectory_extender");
   params_.use_kinematic_feasibility_enforcer =

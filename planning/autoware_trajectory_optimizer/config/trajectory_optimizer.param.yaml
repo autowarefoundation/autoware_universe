@@ -17,7 +17,7 @@
     use_eb_smoother: false
     use_qp_smoother: true
     use_trajectory_point_fixer: true
-    optimize_velocity: true
+    use_velocity_optimizer: true
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
