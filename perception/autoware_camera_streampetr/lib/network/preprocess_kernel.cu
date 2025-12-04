@@ -39,7 +39,10 @@ namespace autoware::camera_streampetr
 {
 
 // Helper to ceil division
-inline int divUp(int a, int b) { return (a + b - 1) / b; }
+inline int divUp(int a, int b)
+{
+  return (a + b - 1) / b;
+}
 
 // -------------------------------------------------------------------------
 // Fused Kernel: Anti-Aliased Resize -> Crop -> Normalize -> CHW Layout
@@ -48,15 +51,14 @@ inline int divUp(int a, int b) { return (a + b - 1) / b; }
 // For downscaling, it expands the kernel window to cover all contributing pixels
 // (Anti-aliasing). For upscaling, it acts as standard bilinear interpolation.
 __global__ void resizeAndExtractRoi_kernel(
-  const std::uint8_t * __restrict__ input_img, 
-  float * __restrict__ output_img,
-  int camera_offset,                // Offset in output buffer (for multi-camera batching)
-  int in_h, int in_w,               // Input dimensions
-  int resize_h, int resize_w,       // Target resize dimensions (before cropping)
-  int roi_h, int roi_w,             // Output ROI dimensions
-  int roi_y_start, int roi_x_start, // Top-left of ROI in the resized coordinate space
-  const float * __restrict__ mean,  // Device pointer to 3 floats
-  const float * __restrict__ std    // Device pointer to 3 floats
+  const std::uint8_t * __restrict__ input_img, float * __restrict__ output_img,
+  int camera_offset,                 // Offset in output buffer (for multi-camera batching)
+  int in_h, int in_w,                // Input dimensions
+  int resize_h, int resize_w,        // Target resize dimensions (before cropping)
+  int roi_h, int roi_w,              // Output ROI dimensions
+  int roi_y_start, int roi_x_start,  // Top-left of ROI in the resized coordinate space
+  const float * __restrict__ mean,   // Device pointer to 3 floats
+  const float * __restrict__ std     // Device pointer to 3 floats
 )
 {
   // 1. Calculate thread target pixel in the ROI (Output Image)
