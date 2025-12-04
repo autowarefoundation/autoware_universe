@@ -11,17 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES.
+ * All rights reserved. SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <autoware/camera_streampetr/network/preprocess.hpp>
 #include <autoware/camera_streampetr/utils.hpp>
 
-#include <npp.h>
-#include <nppi.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
-#include <algorithm> // for std::max
 
 namespace autoware::camera_streampetr
 {
@@ -35,7 +47,7 @@ inline int divUp(int a, int b) { return (a + b - 1) / b; }
 // This kernel mimics PIL's resize (Bilinear/Triangle filter with adaptive support).
 // For downscaling, it expands the kernel window to cover all contributing pixels
 // (Anti-aliasing). For upscaling, it acts as standard bilinear interpolation.
-__global__ void resizeExtractNormalize_kernel(
+__global__ void resizeAndExtractRoi_kernel(
   const std::uint8_t * __restrict__ input_img, 
   float * __restrict__ output_img,
   int camera_offset,                // Offset in output buffer (for multi-camera batching)
@@ -143,65 +155,59 @@ __global__ void resizeExtractNormalize_kernel(
 }
 
 cudaError_t resizeAndExtractRoi_launch(
-  const std::uint8_t * input_img, 
-  float * output_img,
-  int camera_offset,
-  int H, int W,              // Original Input Size
-  int H2, int W2,            // Target Resize Size
-  int H3, int W3,            // Target Crop Size
-  int y_start, int x_start,  // Crop Offset
-  const float * channel_wise_mean, 
-  const float * channel_wise_std, 
-  cudaStream_t stream)
+  const std::uint8_t * input_img, float * output_img,
+  int camera_offset,         // Camera offset in the input image
+  int H, int W,              // Original image dimensions
+  int H2, int W2,            // Resized image dimensions
+  int H3, int W3,            // ROI dimensions
+  int y_start, int x_start,  // ROI top-left coordinates in resized image
+  const float * channel_wise_mean, const float * channel_wise_std, cudaStream_t stream)
 {
-  // Block dimensions
-  dim3 block(32, 32);
-  
-  // Grid dimensions covers the OUTPUT ROI size (H3, W3)
-  dim3 grid(divUp(W3, block.x), divUp(H3, block.y));
+  // Define the block and grid dimensions
+  dim3 threads(16, 16);
+  dim3 blocks(divup(W3, threads.x), divup(H3, threads.y));
 
-  resizeExtractNormalize_kernel<<<grid, block, 0, stream>>>(
-    input_img,
-    output_img,
-    camera_offset,
-    H, W,           // Input
-    H2, W2,         // Resized virtual size
-    H3, W3,         // Output ROI size
-    y_start, x_start,
-    channel_wise_mean,
-    channel_wise_std
-  );
+  // Launch the kernel
+  resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream>>>(
+    input_img, output_img, camera_offset, H, W, H2, W2, H3, W3, y_start, x_start, channel_wise_mean,
+    channel_wise_std);
 
+  // Check for errors
   return cudaGetLastError();
 }
 
-// -------------------------------------------------------------------------
-// Remap Kernel (Kept as is, just ensured compilation)
-// -------------------------------------------------------------------------
 __global__ void remap_kernel(
   const std::uint8_t * __restrict__ input_img, std::uint8_t * __restrict__ output_img,
-  int output_height, int output_width,
-  int input_height, int input_width,
+  int output_height, int output_width,  // Output (destination) image dimensions
+  int input_height, int input_width,    // Input (source) image dimensions
   const float * __restrict__ map_x, const float * __restrict__ map_y)
 {
-  int x = blockIdx.x * blockDim.x + threadIdx.x;
-  int y = blockIdx.y * blockDim.y + threadIdx.y;
+  // Calculate the global thread indices for output image
+  int x = blockIdx.x * blockDim.x + threadIdx.x;  // Width index in output
+  int y = blockIdx.y * blockDim.y + threadIdx.y;  // Height index in output
 
+  // Check if the thread corresponds to a valid pixel in output
   if (x >= output_width || y >= output_height) return;
 
+  // Get the mapping coordinates for this output pixel.
+  // Skip the first y rows with (y * output_width) and then skip the first x columns by adding x
   int map_idx = y * output_width + x;
   float src_x = map_x[map_idx];
   float src_y = map_y[map_idx];
 
+  // Check if the mapped coordinates are valid in the input image
+  // Skip the first y rows with (y * output_width) and then skip the first x columns by adding x.
+  // Then skip the first 3 channels by multiplying by 3
   int out_idx = (y * output_width + x) * 3;
-
   if (src_x < 0 || src_y < 0 || src_x >= input_width || src_y >= input_height) {
+    // Set to black for out-of-bounds pixels
     output_img[out_idx] = 0;
     output_img[out_idx + 1] = 0;
     output_img[out_idx + 2] = 0;
     return;
   }
 
+  // Bilinear interpolation in unit square (0,0), (0,1), (1,0), (1,1)
   int x0 = static_cast<int>(floorf(src_x));
   int y0 = static_cast<int>(floorf(src_y));
   int x1 = x0 + 1;
@@ -210,15 +216,18 @@ __global__ void remap_kernel(
   float dx = src_x - x0;
   float dy = src_y - y0;
 
+  // Calculate interpolation weights
   float w00 = (1.0f - dx) * (1.0f - dy);
   float w01 = (1.0f - dx) * dy;
   float w10 = dx * (1.0f - dy);
   float w11 = dx * dy;
 
+// Process each color channel
 #pragma unroll
   for (int c = 0; c < 3; ++c) {
     float v00 = 0.0f, v01 = 0.0f, v10 = 0.0f, v11 = 0.0f;
 
+    // Get pixel values with boundary checks
     if (x0 >= 0 && x0 < input_width && y0 >= 0 && y0 < input_height)
       v00 = static_cast<float>(input_img[(y0 * input_width + x0) * 3 + c]);
     if (x0 >= 0 && x0 < input_width && y1 >= 0 && y1 < input_height)
@@ -228,25 +237,29 @@ __global__ void remap_kernel(
     if (x1 >= 0 && x1 < input_width && y1 >= 0 && y1 < input_height)
       v11 = static_cast<float>(input_img[(y1 * input_width + x1) * 3 + c]);
 
-    float val = w00 * v00 + w01 * v01 + w10 * v10 + w11 * v11;
-    // fmaxf/fminf to clamp
-    val = fmaxf(0.0f, fminf(255.0f, val));
-    output_img[out_idx + c] = static_cast<std::uint8_t>(val);
+    // Interpolate and store the result
+    float interpolated_value = w00 * v00 + w01 * v01 + w10 * v10 + w11 * v11;
+    // Clamp the interpolated value to [0, 255] range
+    interpolated_value = fmaxf(0.0f, fminf(255.0f, interpolated_value));
+    output_img[out_idx + c] = static_cast<std::uint8_t>(interpolated_value);
   }
 }
 
 cudaError_t remap_launch(
   const std::uint8_t * input_img, std::uint8_t * output_img, int output_height,
-  int output_width,
-  int input_height, int input_width,
+  int output_width,                   // Output (destination) image dimensions
+  int input_height, int input_width,  // Input (source) image dimensions
   const float * map_x, const float * map_y, cudaStream_t stream)
 {
+  // Define the block and grid dimensions based on output size
   dim3 threads(16, 16);
-  dim3 blocks(divUp(output_width, threads.x), divUp(output_height, threads.y));
+  dim3 blocks(divup(output_width, threads.x), divup(output_height, threads.y));
 
+  // Launch the kernel
   remap_kernel<<<blocks, threads, 0, stream>>>(
     input_img, output_img, output_height, output_width, input_height, input_width, map_x, map_y);
 
+  // Check for errors
   return cudaGetLastError();
 }
 
