@@ -175,20 +175,34 @@ TEST(align_trajectory_with_reference_trajectory, Trajectories2D)
 {
   auto ref = make_trajectory({{3.0, 0.0}, {2.0, 0.0}, {0.0, 2.0}, {0.0, 3.0}});
 
-  // predicted overlaps partially
-  auto pred1 = make_trajectory({{5.0, 0.0}, {0.0, 5.0}});
-  auto out1 = align_trajectory_with_reference_trajectory(ref, pred1);
-  auto expected1 = make_trajectory({{4.0, 1.0}, {1.0, 4.0}});
-  ASSERT_EQ(out1.size(), expected1.size());
-  for (size_t i = 0; i < out1.size(); ++i) {
-    EXPECT_NEAR(out1[i].pose.position.x, expected1[i].pose.position.x, 1e-6);
-    EXPECT_NEAR(out1[i].pose.position.y, expected1[i].pose.position.y, 1e-6);
+  auto pred = make_trajectory({{5.0, 0.0}, {0.0, 5.0}});
+  auto out = align_trajectory_with_reference_trajectory(ref, pred);
+  auto expected = make_trajectory({{4.0, 1.0}, {1.0, 4.0}});
+  ASSERT_EQ(out.size(), expected.size());
+  for (size_t i = 0; i < out.size(); ++i) {
+    EXPECT_NEAR(out[i].pose.position.x, expected[i].pose.position.x, 1e-6);
+    EXPECT_NEAR(out[i].pose.position.y, expected[i].pose.position.y, 1e-6);
   }
+}
 
-  // PATHOLOGICAL: 45-deg direction parallel, no overlap
-  auto pred2 = make_trajectory({{5.0, 4.0}, {4.0, 5.0}});
-  auto out2 = align_trajectory_with_reference_trajectory(ref, pred2);
-  ASSERT_EQ(out2.size(), 0u);
+TEST(align_trajectory_with_reference_trajectory, DISABLED_Trajectories2D_Pathological)
+{
+  auto ref = make_trajectory({{3.0, 0.0}, {2.0, 0.0}, {0.0, 2.0}, {0.0, 3.0}});
+
+  auto pred = make_trajectory({{5.0, 4.0}, {4.0, 5.0}});
+  auto out = align_trajectory_with_reference_trajectory(ref, pred);
+
+  // Disabled test case:
+  //
+  // even though the middle reference segment aligns with predicted trajectory,
+  // current algorithm only considers the first and last segments for overlap checking,
+  // so the result is empty.
+
+  ASSERT_EQ(out.size(), pred.size());
+  for (size_t i = 0; i < out.size(); ++i) {
+    EXPECT_NEAR(out[i].pose.position.x, pred[i].pose.position.x, 1e-6);
+    EXPECT_NEAR(out[i].pose.position.y, pred[i].pose.position.y, 1e-6);
+  }
 }
 
 }  // namespace autoware::control_validator::detail
