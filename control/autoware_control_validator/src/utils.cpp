@@ -91,7 +91,7 @@ TrajectoryPoints align_trajectory_with_reference_trajectory(
     return TrajectoryPoints();
   }
 
-  // To reduce memory consumption, limit the maximum size of both trajectories to calculate.
+  // To reduce memory consumption, limit the maximum size of the predicted trajectory to calculate.
   // In C++20, copying can be prevented by using e.g. `std::span`.
   constexpr size_t MAX_TRAJECTORY_SIZE = 5000;
   if (predicted_trajectory_points.size() > MAX_TRAJECTORY_SIZE) {

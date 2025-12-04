@@ -194,7 +194,7 @@ TEST(align_trajectory_with_reference_trajectory, DISABLED_Trajectories2D_Patholo
 
   // Disabled test case:
   //
-  // even though the middle reference segment aligns with predicted trajectory,
+  // even though the middle reference segment overlaps with predicted trajectory,
   // current algorithm only considers the first and last segments for overlap checking,
   // so the result is empty.
 
