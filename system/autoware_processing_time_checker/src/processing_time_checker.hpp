@@ -24,6 +24,7 @@
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -74,7 +75,7 @@ private:
         value = v;
       }
   };
-  std::unordered_map<std::string, DoubleWithMutex> processing_time_map_{};
+  std::unordered_map<std::string, std::unique_ptr<DoubleWithMutex>> processing_time_map_{};
 
   // module name - accumulator
   std::unordered_map<std::string, Accumulator<double>> processing_time_accumulator_map_{};
