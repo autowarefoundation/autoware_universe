@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2023-2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,28 @@
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
+#include <vector>
+
 namespace autoware::control_validator
 {
+
+namespace detail
+{
+
+using TrajectoryPoints = std::vector<autoware_planning_msgs::msg::TrajectoryPoint>;
+
+/**
+ * @brief Align the predicted trajectory with the reference trajectory by trimming the parts which
+ * are out of the reference trajectory range.
+ * @param reference_trajectory_points reference trajectory
+ * @param predicted_trajectory_points predicted trajectory
+ * @return aligned predicted trajectory
+ */
+TrajectoryPoints align_trajectory_with_reference_trajectory(
+  const TrajectoryPoints & reference_trajectory_points,
+  const TrajectoryPoints & predicted_trajectory_points);
+}  // namespace detail
+
 /**
  * @brief Shift pose along the yaw direction
  */
@@ -35,6 +55,7 @@ void shift_pose(geometry_msgs::msg::Pose & pose, double longitudinal);
 double calc_max_lateral_distance(
   const autoware_planning_msgs::msg::Trajectory & reference_trajectory,
   const autoware_planning_msgs::msg::Trajectory & predicted_trajectory);
+
 }  // namespace autoware::control_validator
 
 #endif  // AUTOWARE__CONTROL_VALIDATOR__UTILS_HPP_
