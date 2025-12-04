@@ -1,0 +1,18 @@
+/**:
+  ros__parameters:
+    # Costmap frame
+    costmap_frame: "map"
+    # Grid parameters
+    grid_length_x: 70.0  # [m]
+    grid_length_y: 70.0  # [m]
+    grid_resolution: 0.3  # [m]
+    grid_position_x: 0.0  # [m]
+    grid_position_y: 0.0  # [m]
+    # Height thresholds
+    maximum_height_thres: 2.5  # [m] ignore points with z value above this
+    minimum_height_thres: 0.0  # [m] ignore points with z value below this
+    # Costmap value range
+    grid_min_value: 0.0
+    grid_max_value: 1.0
+    # Memory pool size in bytes (default: 1GB)
+    max_mem_pool_size_in_byte: 1000000000

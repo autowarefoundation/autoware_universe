@@ -1,6 +1,10 @@
 /**:
   ros__parameters:
-
+    # Voxel size along each axis [m]
     voxel_size_x: 0.3
     voxel_size_y: 0.3
     voxel_size_z: 0.1
+    # Force output to PointXYZIRCAEDT format (default: false, outputs PointXYZIRC)
+    output_point_xyzircaedt: false
+    # Memory pool size in bytes (default: 1GB)
+    max_mem_pool_size_in_byte: 1000000000

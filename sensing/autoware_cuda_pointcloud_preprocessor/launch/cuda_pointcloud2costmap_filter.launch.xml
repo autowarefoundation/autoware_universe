@@ -1,0 +1,29 @@
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/top/pointcloud_raw"/>
+  <arg name="output/grid_map" default="/perception/costmap_generator/cuda_costmap"/>
+  <arg name="debug" default="false">
+    <choice value="true"/>
+    <choice value="false"/>
+  </arg>
+
+  <arg name="cuda_pointcloud2costmap_filter_param_file" default="$(find-pkg-share autoware_cuda_pointcloud_preprocessor)/config/cuda_pointcloud2costmap_filter.param.yaml"/>
+
+  <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_pointcloud2costmap_filter_node" name="cuda_pointcloud2costmap_filter" output="screen" unless="$(var debug)">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/output/grid_map" to="$(var output/grid_map)"/>
+    <param from="$(var cuda_pointcloud2costmap_filter_param_file)"/>
+  </node>
+
+  <node
+    pkg="autoware_cuda_pointcloud_preprocessor"
+    exec="cuda_pointcloud2costmap_filter_node"
+    name="cuda_pointcloud2costmap_filter"
+    output="screen"
+    launch-prefix="gnome-terminal -- cuda-gdb --args"
+    if="$(var debug)"
+  >
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/output/grid_map" to="$(var output/grid_map)"/>
+    <param from="$(var cuda_pointcloud2costmap_filter_param_file)"/>
+  </node>
+</launch>

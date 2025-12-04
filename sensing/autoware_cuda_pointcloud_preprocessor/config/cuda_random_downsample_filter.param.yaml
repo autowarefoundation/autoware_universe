@@ -2,5 +2,7 @@
   ros__parameters:
     # Number of points to sample
     sample_num: 10000
+    # Force output to PointXYZIRCAEDT format (default: false, outputs PointXYZIRC)
+    output_point_xyzircaedt: false
     # Memory pool size in bytes (default: 1GB)
     max_mem_pool_size_in_byte: 1000000000

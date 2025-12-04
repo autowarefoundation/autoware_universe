@@ -12,25 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_NODE_HPP_
-#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_NODE_HPP_
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_POINTCLOUD2COSTMAP_FILTER__CUDA_POINTCLOUD2COSTMAP_FILTER_NODE_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_POINTCLOUD2COSTMAP_FILTER__CUDA_POINTCLOUD2COSTMAP_FILTER_NODE_HPP_
 
-#include "cuda_crop_box_filter.hpp"
+#include "cuda_pointcloud2costmap_filter.hpp"
 
 #include <cuda_blackboard/cuda_adaptation.hpp>
 #include <cuda_blackboard/cuda_blackboard_publisher.hpp>
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <grid_map_ros/GridMapRosConverter.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <grid_map_msgs/msg/grid_map.hpp>
+
 #include <memory>
+#include <string>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
-class CudaCropBoxFilterNode : public rclcpp::Node
+class CudaPointcloud2CostmapFilterNode : public rclcpp::Node
 {
 public:
-  explicit CudaCropBoxFilterNode(const rclcpp::NodeOptions & node_options);
+  explicit CudaPointcloud2CostmapFilterNode(const rclcpp::NodeOptions & node_options);
 
 private:
   void cudaPointcloudCallback(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr msg);
@@ -39,12 +43,15 @@ private:
   std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     sub_{};
 
-  // CUDA pub
-  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
-    pub_{};
+  // ROS pub for grid_map
+  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_costmap_{};
 
-  std::unique_ptr<CudaCropBoxFilter> cuda_crop_box_filter_{};
+  std::unique_ptr<CudaPointcloud2CostmapFilter> cuda_pointcloud2costmap_filter_{};
+
+  // Costmap parameters
+  CostmapParameters costmap_params_;
+  std::string costmap_frame_;
 };
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_NODE_HPP_
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_POINTCLOUD2COSTMAP_FILTER__CUDA_POINTCLOUD2COSTMAP_FILTER_NODE_HPP_

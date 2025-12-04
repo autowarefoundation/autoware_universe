@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_FILTER__CUDA_CROP_BOX_FILTER_HPP_
-#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_FILTER__CUDA_CROP_BOX_FILTER_HPP_
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_HPP_
 
 #include "autoware/cuda_pointcloud_preprocessor/common_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
@@ -65,4 +65,4 @@ private:
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_FILTER__CUDA_CROP_BOX_FILTER_HPP_
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CROPBOX_FILTER__CUDA_CROP_BOX_FILTER_HPP_

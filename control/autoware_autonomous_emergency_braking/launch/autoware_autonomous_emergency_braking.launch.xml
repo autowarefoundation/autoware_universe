@@ -5,12 +5,69 @@
   <arg name="input_imu" default="/sensing/imu/imu_data"/>
   <arg name="input_predicted_trajectory" default="/control/trajectory_follower/lateral/predicted_trajectory"/>
   <arg name="input_objects" default="/perception/object_recognition/objects"/>
+  <arg name="use_cuda_filtering" default="false"/>
 
+  <!-- Container for composable nodes -->
+  <arg name="aeb_container_name" default="/pointcloud_container" description="container name for AEB composable nodes"/>
+  <arg name="use_intra_process" default="true" description="use ROS 2 component container communication"/>
+
+  <!-- CUDA filter parameters (used when use_cuda_filtering is enabled) -->
+  <arg name="detection_range_min_height" default="0.0"/>
+  <arg name="detection_range_max_height" default="2.0"/>
+  <arg name="voxel_grid_x" default="0.1"/>
+  <arg name="voxel_grid_y" default="0.1"/>
+  <arg name="voxel_grid_z" default="0.5"/>
+
+  <!-- Intermediate topics for CUDA filtering pipeline -->
+  <arg name="cuda_height_filtered_pointcloud" default="$(var input_pointcloud)/cuda_height_filtered"/>
+  <arg name="cuda_filtered_pointcloud" default="$(var input_pointcloud)/cuda_filtered"/>
+
+  <!-- CUDA Crop Box Filter for height filtering (replaces PassThrough filter) -->
+  <!-- This filters points by height (z-axis) with large X/Y range (±500m) -->
+  <group if="$(var use_cuda_filtering)">
+    <load_composable_node target="$(var aeb_container_name)">
+      <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::CudaCropBoxFilterNode" name="aeb_cuda_height_filter">
+        <param name="min_x" value="-500.0"/>
+        <param name="max_x" value="500.0"/>
+        <param name="min_y" value="-500.0"/>
+        <param name="max_y" value="500.0"/>
+        <param name="min_z" value="$(var detection_range_min_height)"/>
+        <param name="max_z" value="$(var detection_range_max_height)"/>
+        <param name="negative" value="false"/>
+        <param name="output_point_xyzircaedt" value="true"/>
+        <param name="max_mem_pool_size_in_byte" value="1000000000"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input_pointcloud)/cuda"/>
+        <remap from="~/output/pointcloud" to="$(var cuda_height_filtered_pointcloud)"/>
+        <remap from="~/output/pointcloud/cuda" to="$(var cuda_height_filtered_pointcloud)/cuda"/>
+      </composable_node>
+
+      <!-- CUDA Voxel Grid Downsample Filter (replaces PCL VoxelGrid filter) -->
+      <!-- Outputs PointXYZIRC for AEB node (which uses CPU processing) -->
+      <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode" name="aeb_cuda_voxel_grid_filter">
+        <param name="voxel_size_x" value="$(var voxel_grid_x)"/>
+        <param name="voxel_size_y" value="$(var voxel_grid_y)"/>
+        <param name="voxel_size_z" value="$(var voxel_grid_z)"/>
+        <param name="output_point_xyzircaedt" value="false"/>
+        <param name="max_mem_pool_size_in_byte" value="1000000000"/>
+        <remap from="~/input/pointcloud" to="$(var cuda_height_filtered_pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var cuda_height_filtered_pointcloud)/cuda"/>
+        <remap from="~/output/pointcloud" to="$(var cuda_filtered_pointcloud)"/>
+        <remap from="~/output/pointcloud/cuda" to="$(var cuda_filtered_pointcloud)/cuda"/>
+        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
+      </composable_node>
+    </load_composable_node>
+  </group>
+
+  <!-- AEB Node -->
   <node pkg="autoware_autonomous_emergency_braking" exec="autoware_autonomous_emergency_braking" name="autonomous_emergency_braking" output="screen">
     <!-- load config files -->
     <param from="$(var param_path)"/>
     <!-- remap topic name -->
-    <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
+    <!-- When use_cuda_filtering is enabled, pointcloud is already filtered by CUDA filters -->
+    <!-- When use_cuda_filtering is disabled, pointcloud goes through CPU filtering in AEB node -->
+    <remap from="~/input/pointcloud" to="$(var cuda_filtered_pointcloud)" if="$(var use_cuda_filtering)"/>
+    <remap from="~/input/pointcloud" to="$(var input_pointcloud)" unless="$(var use_cuda_filtering)"/>
     <remap from="~/input/velocity" to="$(var input_velocity)"/>
     <remap from="~/input/imu" to="$(var input_imu)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
