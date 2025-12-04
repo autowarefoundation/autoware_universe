@@ -30,8 +30,7 @@ Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", op
     emergency_threshold_ = HazardStatus::SINGLE_POINT_FAULT;
   }
 
-  use_external_emergency_holding_ = declare_parameter<bool>("use_external_emergency_holding");
-  if (use_external_emergency_holding_) {
+  if (declare_parameter<bool>("use_external_emergency_holding")) {
     sub_emergency_holding_ =
       autoware_utils_rclcpp::InterProcessPollingSubscriber<EmergencyHolding>::create_subscription(
         this, "~/input/emergency_holding");
@@ -139,7 +138,7 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   hazard.status.emergency = max_hazard_level >= emergency_threshold_;
   hazard.status.emergency_holding = max_hazard_latch >= emergency_threshold_;
 
-  if (use_external_emergency_holding_) {
+  if (sub_emergency_holding_) {
     const auto ptr = sub_emergency_holding_->take_data();
     hazard.status.emergency_holding = ptr ? ptr->is_holding : false;
   }
