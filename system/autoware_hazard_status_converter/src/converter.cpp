@@ -134,8 +134,6 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
       }
     }
   }
-  RCLCPP_INFO_STREAM(get_logger(), "max_hazard_level: " << (int)max_hazard_level);
-  RCLCPP_INFO_STREAM(get_logger(), "max_hazard_latch: " << (int)max_hazard_latch);
   hazard.stamp = graph->updated_stamp();
   hazard.status.level = max_hazard_level;
   hazard.status.emergency = max_hazard_level >= emergency_threshold_;
