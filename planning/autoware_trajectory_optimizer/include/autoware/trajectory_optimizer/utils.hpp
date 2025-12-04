@@ -157,28 +157,6 @@ void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
   const Odometry & current_odometry);
 
-/**
- * @brief Adds the ego state to the trajectory points.
- *
- * @param traj_points The trajectory points to be updated.
- * @param current_odometry The current odometry data.
- * @param params The parameters for trajectory interpolation.
- */
-void add_ego_state_to_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
-  double backward_trajectory_extension_m);
-
-/**
- * @brief Expands the trajectory points with the ego history points.
- *
- * @param traj_points The trajectory points to be expanded.
- * @param ego_history_points The ego history points to be added.
- */
-void expand_trajectory_with_ego_history(
-  TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
-  const Odometry & current_odometry);
-
 };  // namespace autoware::trajectory_optimizer::utils
 
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__UTILS_HPP_

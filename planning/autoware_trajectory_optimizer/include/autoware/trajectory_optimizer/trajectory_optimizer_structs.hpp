@@ -45,7 +45,7 @@ struct TrajectoryOptimizerParams
   bool use_qp_smoother{false};
   bool use_trajectory_point_fixer{false};
   bool optimize_velocity{false};
-  bool extend_trajectory_backward{false};
+  bool use_trajectory_extender{false};
   bool use_kinematic_feasibility_enforcer{false};
   bool use_mpt_optimizer{false};
 };

@@ -114,7 +114,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
   update_param<bool>(parameters, "use_trajectory_point_fixer", params.use_trajectory_point_fixer);
   update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
-  update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
+  update_param<bool>(parameters, "use_trajectory_extender", params.use_trajectory_extender);
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
   update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
@@ -156,8 +156,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_trajectory_point_fixer =
     get_or_declare_parameter<bool>(*this, "use_trajectory_point_fixer");
   params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
-  params_.extend_trajectory_backward =
-    get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
+  params_.use_trajectory_extender =
+    get_or_declare_parameter<bool>(*this, "use_trajectory_extender");
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");

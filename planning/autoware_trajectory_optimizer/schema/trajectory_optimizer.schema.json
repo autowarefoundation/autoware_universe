@@ -43,10 +43,10 @@
           "default": true,
           "description": "Remove repeated or invalid points, or points that go against the general trajectory direction"
         },
-        "extend_trajectory_backward": {
+        "use_trajectory_extender": {
           "type": "boolean",
-          "default": true,
-          "description": "Extend trajectory backward using ego pose history"
+          "default": false,
+          "description": "Enable trajectory extender to extend trajectory backward using ego pose history"
         },
         "optimize_velocity": {
           "type": "boolean",
@@ -587,7 +587,7 @@
         "use_eb_smoother",
         "use_qp_smoother",
         "use_trajectory_point_fixer",
-        "extend_trajectory_backward",
+        "use_trajectory_extender",
         "optimize_velocity",
         "use_kinematic_feasibility_enforcer",
         "use_mpt_optimizer"
