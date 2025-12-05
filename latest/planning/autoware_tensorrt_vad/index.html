@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_adapter/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_tensorrt_vad/">
       
       
-        <link rel="prev" href="../autoware_tensorrt_vad/docs/design_vad_node/">
+        <link rel="prev" href="../autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/">
       
       
-        <link rel="next" href="../autoware_trajectory_concatenator/">
+        <link rel="next" href="docs/design/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Trajectory Adapter - Autoware Universe Documentation</title>
+        <title>autoware_tensorrt_vad - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trajectory-adapter" class="md-skip">
+        <a href="#autoware_tensorrt_vad" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trajectory Adapter
+              autoware_tensorrt_vad
             
           </span>
         </div>
@@ -14964,7 +14964,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../autoware_trajectory_adapter" class="md-nav__link">
         
   
   
@@ -23260,10 +23260,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purposerole" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose/Role
+        Overview
       
     </span>
   </a>
@@ -23271,10 +23271,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#algorithm-overview" class="md-nav__link">
+  <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Algorithm Overview
+        Features
       
     </span>
   </a>
@@ -23282,22 +23282,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interface" class="md-nav__link">
+  <a href="#visualization" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Interface
+        Visualization
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Interface">
+    <nav class="md-nav" aria-label="Visualization">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#topics" class="md-nav__link">
+  <a href="#lane-following-demo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Topics
+        Lane Following Demo
       
     </span>
   </a>
@@ -23305,10 +23305,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
+  <a href="#turn-right-demo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Parameters
+        Turn Right Demo
       
     </span>
   </a>
@@ -23321,10 +23321,254 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#future-work" class="md-nav__link">
+  <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Future Work
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unit-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#carla-simulator-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CARLA Simulator Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-setup-and-versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Setup and Versioning
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Setup and Versioning">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Preparation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-version-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Version History
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ❗ Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="❗ Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#training-data-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training Data Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lack-of-high-level-command-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lack of High-Level Command Interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-contribution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development &amp; Contribution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#training-and-datasets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Training and Datasets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deployment-and-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment and Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
       
     </span>
   </a>
@@ -23351,46 +23595,250 @@
   
 
 
-<div><h1 id="trajectory-adapter">Trajectory Adapter<a class="headerlink" href="#trajectory-adapter" title="Permanent link">#</a></h1>
-<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>This node converts a set of ranked candidate trajectories into a single, cleaned‑up <a href="https://github.com/autowarefoundation/autoware_msgs/blob/main/autoware_planning_msgs/msg/Trajectory.msg">autoware_planning_msgs/msg/Trajectory</a>.</p>
-<h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>Upon receiving a message, the node finds the candidate with the highest score.
-If no candidate is found an empty list would be published. The selected trajectory’s points are then processed, ensuring that successive points match the conditions to conduct control modules.</p>
-<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
-<h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
+<div><h1 id="autoware_tensorrt_vad">autoware_tensorrt_vad<a class="headerlink" href="#autoware_tensorrt_vad" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>The <code>autoware_tensorrt_vad</code> is a ROS 2 component that implements end-to-end autonomous driving using the TensorRT-optimized Vectorized Autonomous Driving (VAD) model. It leverages the <a href="https://github.com/hustvl/VAD">VAD model</a> (Jiang et al., 2023), optimized for deployment using NVIDIA's <a href="https://github.com/NVIDIA/DL4AGX">DL4AGX</a> TensorRT framework. <!-- cSpell:ignore Jiang Shaoyu Bencheng Liao Jiajie Helong Wenyu Xinggang --></p>
+<p>This module replaces traditional localization, perception, and planning modules with a single neural network, trained on the <a href="https://github.com/Thinklab-SJTU/Bench2Drive">Bench2Drive</a> benchmark (Jia et al., 2024) using CARLA simulation data. It integrates seamlessly with <a href="https://autowarefoundation.github.io/autoware-documentation/main/">Autoware</a> and is designed to work within the Autoware framework.</p>
+<hr>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Monolithic End-to-End Architecture</strong>: Single neural network directly maps camera inputs to trajectories, replacing the entire traditional perception-planning pipeline with one unified model - no separate detection, tracking, prediction, or planning modules</li>
+<li><strong>Multi-Camera Perception</strong>: Processes 6 surround-view cameras simultaneously for 360° awareness</li>
+<li><strong>Vectorized Scene Representation</strong>: Efficient scene encoding using vector maps for reduced computational overhead</li>
+<li><strong>Real-time TensorRT Inference</strong>: Optimized for embedded deployment with ~20ms inference time</li>
+<li><strong>Integrated Perception Outputs</strong>: Generates both object predictions (with future trajectories) and map elements as auxiliary outputs</li>
+<li><strong>Temporal Modeling</strong>: Leverages historical features for improved temporal consistency and prediction accuracy</li>
+</ul>
+<hr>
+<h2 id="visualization">Visualization<a class="headerlink" href="#visualization" title="Permanent link">#</a></h2>
+<h3 id="lane-following-demo">Lane Following Demo<a class="headerlink" href="#lane-following-demo" title="Permanent link">#</a></h3>
+<p><img alt="Lane Following" src="media/lane_follow_demo.jpg"></p>
+<h3 id="turn-right-demo">Turn Right Demo<a class="headerlink" href="#turn-right-demo" title="Permanent link">#</a></h3>
+<p><img alt="Turn Right" src="media/turn_right_demo.jpg"></p>
+<hr>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<p>Parameters can be set via configuration files:</p>
+<ul>
+<li>Deployment configuration (node and interface parameters): <code>config/vad_carla_tiny.param.yaml</code></li>
+<li>Model architecture parameters: <code>vad-carla-tiny.param.json</code> (downloaded with model to <code>~/autoware_data/vad/v0.1/</code>)</li>
+</ul>
+<hr>
+<h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">#</a></h2>
 <table>
 <thead>
 <tr>
-<th>Direction</th>
-<th>Topic Name</th>
+<th>Topic</th>
 <th>Message Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Subscribe</td>
-<td><code>~/input/trajectories</code></td>
-<td><code>autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories</code></td>
-<td>Candidate trajectories with scores</td>
+<td>~/input/image*</td>
+<td>sensor_msgs/msg/Image*</td>
+<td>Camera images 0-5: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT</td>
 </tr>
 <tr>
-<td>Publish</td>
-<td><code>~/output/trajectory</code></td>
-<td><code>autoware_planning_msgs/msg/Trajectory</code></td>
-<td>Re-arranged best‑score trajectory</td>
+<td>~/input/camera_info*</td>
+<td>sensor_msgs/msg/CameraInfo</td>
+<td>Camera calibration for cameras 0-5</td>
+</tr>
+<tr>
+<td>~/input/kinematic_state</td>
+<td>nav_msgs/msg/Odometry</td>
+<td>Vehicle odometry</td>
+</tr>
+<tr>
+<td>~/input/acceleration</td>
+<td>geometry_msgs/msg/AccelWithCovarianceStamped</td>
+<td>Vehicle acceleration</td>
 </tr>
 </tbody>
 </table>
-<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<p>The current implementation does not expose any ROS parameters. All behavior is hard‑coded.</p>
-<h2 id="future-work">Future Work<a class="headerlink" href="#future-work" title="Permanent link">#</a></h2>
-<p>The following features and improvements are planned for future development:</p>
+<p>*Image transport supports both raw and compressed formats. Configure per-camera via <code>use_raw</code> parameter (default: compressed).</p>
+<hr>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Message Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~/output/trajectory</td>
+<td>autoware_planning_msgs/msg/Trajectory</td>
+<td>Selected ego trajectory</td>
+</tr>
+<tr>
+<td>~/output/trajectories</td>
+<td>autoware_internal_planning_msgs/msg/CandidateTrajectories</td>
+<td>All 6 candidate trajectories</td>
+</tr>
+<tr>
+<td>~/output/objects</td>
+<td>autoware_perception_msgs/msg/PredictedObjects</td>
+<td>Predicted objects with trajectories</td>
+</tr>
+<tr>
+<td>~/output/map</td>
+<td>visualization_msgs/msg/MarkerArray</td>
+<td>Predicted map elements</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">#</a></h2>
+<p>Build the package with colcon:</p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install<span class="w"> </span>--cmake-args<span class="w"> </span>-DCMAKE_EXPORT_COMPILE_COMMANDS<span class="o">=</span>ON<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Release<span class="w"> </span>--packages-up-to<span class="w"> </span>autoware_tensorrt_vad
+</code></pre></div>
+<hr>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">#</a></h2>
+<h3 id="unit-tests">Unit Tests<a class="headerlink" href="#unit-tests" title="Permanent link">#</a></h3>
+<p>Unit tests are provided and can be run with:</p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_tensorrt_vad
+colcon<span class="w"> </span>test-result<span class="w"> </span>--all
+</code></pre></div>
+<p>For verbose output:</p>
+<div class="highlight"><pre><span></span><code>colcon<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--packages-select<span class="w"> </span>autoware_tensorrt_vad<span class="w"> </span>--event-handlers<span class="w"> </span>console_cohesion+
+</code></pre></div>
+<h3 id="carla-simulator-testing">CARLA Simulator Testing<a class="headerlink" href="#carla-simulator-testing" title="Permanent link">#</a></h3>
+<p>First, setup CARLA following the <a href="https://github.com/autowarefoundation/autoware.universe/tree/main/simulator/autoware_carla_interface">autoware_carla_interface</a> instructions.</p>
+<p>Then launch the E2E VAD system:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_launch<span class="w"> </span>e2e_simulator.launch.xml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>map_path:<span class="o">=</span><span class="nv">$HOME</span>/autoware_map/Town01<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>vehicle_model:<span class="o">=</span>sample_vehicle<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>sensor_model:<span class="o">=</span>carla_sensor_kit<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>simulator_type:<span class="o">=</span>carla<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>use_e2e_planning:<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>
+<hr>
+<h2 id="model-setup-and-versioning">Model Setup and Versioning<a class="headerlink" href="#model-setup-and-versioning" title="Permanent link">#</a></h2>
+<h3 id="model-download">Model Download<a class="headerlink" href="#model-download" title="Permanent link">#</a></h3>
+<p>The VAD model files are automatically downloaded when setting up the Autoware development environment.</p>
+<p>To download the latest models, simply run the provided setup script:
+<a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment">How to set up a development environment</a></p>
+<p>The models will be downloaded to <code>~/autoware_data/vad/</code> by default.</p>
+<p><strong>Manual Download</strong> (if needed):
+Models are hosted at: <a href="https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/">https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/</a></p>
+<h3 id="model-preparation">Model Preparation<a class="headerlink" href="#model-preparation" title="Permanent link">#</a></h3>
+<blockquote>
+<p><img alt="⚠" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@14.1.2/assets/svg/26a0.svg" title=":warning:"> <strong>Note</strong>: The node automatically builds TensorRT engines from ONNX models on first run. Pre-built engines are cached for subsequent runs and are hardware-specific.</p>
+</blockquote>
+<p><strong>Model Components</strong> (trained on Bench2Drive CARLA dataset):</p>
 <ul>
-<li><strong>Turn Signal Control</strong>: Implement proper turn signal activation based on trajectory curvature and lane change intentions</li>
-<li><strong>Hazard Light Control</strong>: Add logic to activate hazard lights in emergency situations or when the vehicle needs to warn other traffic participants</li>
-</ul></div>
+<li><code>vad-carla-tiny_backbone.onnx</code> - Image feature extraction backbone</li>
+<li><code>vad-carla-tiny_head_no_prev.onnx</code> - Planning head (first frame)</li>
+<li><code>vad-carla-tiny_head.onnx</code> - Temporal planning head</li>
+</ul>
+<p>If you need to manually configure the model paths, update them in <code>config/vad_carla_tiny.param.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">model_params</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">nets</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">backbone</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_backbone.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_backbone.engine"</span>
+<span class="w">    </span><span class="nt">head</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head.engine"</span>
+<span class="w">    </span><span class="nt">head_no_prev</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">onnx_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"</span>
+<span class="w">      </span><span class="nt">engine_path</span><span class="p">:</span><span class="w"> </span><span class="s">"$(var</span><span class="nv"> </span><span class="s">model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"</span>
+</code></pre></div>
+<ol>
+<li><strong>Launch the node</strong>: On first run, the node will automatically:<ul>
+<li>Build TensorRT engines from ONNX models</li>
+<li>Optimize for your specific GPU</li>
+<li>Cache engines at the specified <code>engine_path</code> locations</li>
+<li>Use FP16 precision for backbone and FP32 for heads (configurable)</li>
+</ul>
+</li>
+</ol>
+<h3 id="model-version-history">Model Version History<a class="headerlink" href="#model-version-history" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Training Dataset</th>
+<th>Release Date</th>
+<th>Notes</th>
+<th>Node Compatibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0.1</strong></td>
+<td>Bench2Drive CARLA</td>
+<td>2025-11-04</td>
+<td>- Initial release<br>- 6-camera surround view<br>- Trained on CARLA Towns<br>- FP16/FP32 mixed precision</td>
+<td>&gt;= 0.1.0</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="limitations">❗ Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
+<p>While VAD demonstrates promising end-to-end driving capabilities, users should be aware of the following limitations:</p>
+<h3 id="training-data-constraints">Training Data Constraints<a class="headerlink" href="#training-data-constraints" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Simulation-Only Training</strong>: The model is trained exclusively on CARLA simulator data, which may not capture the full complexity and variability of real-world driving scenarios</li>
+</ul>
+<h3 id="lack-of-high-level-command-interface">Lack of High-Level Command Interface<a class="headerlink" href="#lack-of-high-level-command-interface" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>No Dynamic Mission Control</strong>: The current implementation lacks a high-level command interface, meaning the model cannot dynamically switch between driving behaviors (e.g., "follow lane" → "turn right at next intersection") during runtime</li>
+</ul>
+<hr>
+<h2 id="development-contribution">Development &amp; Contribution<a class="headerlink" href="#development-contribution" title="Permanent link">#</a></h2>
+<ul>
+<li>Follow the <a href="https://autowarefoundation.github.io/autoware-documentation/main/contributing/">Autoware coding guidelines</a>.</li>
+<li>Contributions, bug reports, and feature requests are welcome via GitHub issues and pull requests.</li>
+</ul>
+<hr>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
+<h3 id="core-model">Core Model<a class="headerlink" href="#core-model" title="Permanent link">#</a></h3>
+<ol>
+<li>VAD: Vectorized Scene Representation for Efficient Autonomous Driving (2023)<ul>
+<li>Paper: <a href="https://arxiv.org/abs/2303.12077">arXiv:2303.12077</a></li>
+<li>Code: <a href="https://github.com/hustvl/VAD">github.com/hustvl/VAD</a></li>
+</ul>
+</li>
+</ol>
+<h3 id="training-and-datasets">Training and Datasets<a class="headerlink" href="#training-and-datasets" title="Permanent link">#</a></h3>
+<ol>
+<li>Bench2Drive: Towards Multi-Ability Benchmarking of Closed-Loop End-To-End Autonomous Driving (2024)<ul>
+<li>Paper: <a href="https://arxiv.org/abs/2406.03877">arXiv:2406.03877</a></li>
+<li>Code: <a href="https://github.com/Thinklab-SJTU/Bench2Drive">github.com/Thinklab-SJTU/Bench2Drive</a></li>
+<li>Description: CARLA-based benchmark for end-to-end autonomous driving evaluation</li>
+</ul>
+</li>
+</ol>
+<h3 id="deployment-and-optimization">Deployment and Optimization<a class="headerlink" href="#deployment-and-optimization" title="Permanent link">#</a></h3>
+<ol>
+<li>DL4AGX (2024)<ul>
+<li>Resource: <a href="https://github.com/NVIDIA/DL4AGX">github.com/NVIDIA/DL4AGX</a></li>
+<li>Description: TensorRT optimization for autonomous driving workloads and embedded GPU deployment strategies</li>
+</ul>
+</li>
+</ol>
+<h3 id="related-work">Related Work<a class="headerlink" href="#related-work" title="Permanent link">#</a></h3>
+<ol>
+<li>
+<p>nuScenes: A Multimodal Dataset for Autonomous Driving (2020)</p>
+<ul>
+<li>Paper: <a href="https://arxiv.org/abs/1903.11027">arXiv:1903.11027</a></li>
+<li>Dataset: <a href="https://www.nuscenes.org">nuscenes.org</a></li>
+</ul>
+</li>
+<li>
+<p>BEVFormer: Learning Bird's-Eye-View Representation from Multi-Camera Images via Spatiotemporal Transformers (2022)</p>
+<ul>
+<li>Paper: <a href="https://arxiv.org/abs/2203.17270">arXiv:2203.17270</a></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">#</a></h2>
+<p>This package is released under the Apache 2.0 License.</p></div>
 
 
 
@@ -23426,7 +23874,7 @@ If no candidate is found an empty list would be published. The selected trajecto
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_tensorrt_vad/docs/design_vad_node/" class="md-footer__link md-footer__link--prev" aria-label="Previous: VadNode Design">
+          <a href="../autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Surround Obstacle Checker">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23436,20 +23884,20 @@ If no candidate is found an empty list would be published. The selected trajecto
                 Previous
               </span>
               <div class="md-ellipsis">
-                VadNode Design
+                Surround Obstacle Checker
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_trajectory_concatenator/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Concatenator">
+          <a href="docs/design/" class="md-footer__link md-footer__link--next" aria-label="Next: Design">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Trajectory Concatenator
+                Design
               </div>
             </div>
             <div class="md-footer__button md-icon">
