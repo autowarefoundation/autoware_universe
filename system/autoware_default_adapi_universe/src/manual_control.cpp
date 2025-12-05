@@ -174,9 +174,6 @@ void ManualControlNode::enable_pedals_commands()
   sub_pedals_ = create_subscription<PedalsCommand>(
     ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(), [this](const PedalsCommand & msg) {
       pub_pedals_->publish(msg);
-
-      // Update last heartbeat received time.
-      diag_heartbeat_->update();
     });
 }
 
@@ -207,7 +204,10 @@ void ManualControlNode::enable_common_commands()
 
   sub_heartbeat_ = create_subscription<OperatorHeartbeat>(
     ns_ + "/operator/heartbeat", rclcpp::QoS(1).best_effort(),
-    [this](const OperatorHeartbeat & msg) { pub_heartbeat_->publish(msg); });
+    [this](const OperatorHeartbeat & msg) {
+      pub_heartbeat_->publish(msg);
+      diag_heartbeat_->update();
+    });
   sub_steering_ = create_subscription<SteeringCommand>(
     ns_ + "/command/steering", rclcpp::QoS(1).best_effort(),
     [this](const SteeringCommand & msg) { pub_steering_->publish(msg); });
