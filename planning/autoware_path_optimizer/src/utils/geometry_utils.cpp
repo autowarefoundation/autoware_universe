@@ -170,9 +170,14 @@ bool isOutsideDrivableAreaFromRectangleFootprint(
   if (use_footprint_polygon_for_outside_drivable_area_check) {
     // calculate footprint polygon
     LinearRing2d base_footprint = vehicle_info.createFootprint();
+
     // remove center point
-    base_footprint.erase(base_footprint.begin() + 5);
-    base_footprint.erase(base_footprint.begin() + 2);
+    auto center_left_index = base_footprint.begin() + 5;
+    auto center_right_index = base_footprint.begin() + 2;
+
+    base_footprint.erase(center_left_index);
+    base_footprint.erase(center_right_index);
+
     auto footprint_polygon =
       autoware_utils::transform_vector(base_footprint, autoware_utils::pose2transform(pose));
 

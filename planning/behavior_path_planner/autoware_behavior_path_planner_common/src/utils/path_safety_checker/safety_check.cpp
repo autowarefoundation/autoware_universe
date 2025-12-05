@@ -120,8 +120,11 @@ Polygon2d createExtendedPolygon(
     (is_stopped_obj ? lon_length / 2 : 0));
 
   // remove center point
-  base_footprint.erase(base_footprint.begin() + 5);
-  base_footprint.erase(base_footprint.begin() + 2);
+  auto center_left_index = base_footprint.begin() + 5;
+  auto center_right_index = base_footprint.begin() + 2;
+
+  base_footprint.erase(center_left_index);
+  base_footprint.erase(center_right_index);
 
   auto footprint = autoware_utils::transform_vector(
     base_footprint, autoware_utils::pose2transform(base_link_pose));
