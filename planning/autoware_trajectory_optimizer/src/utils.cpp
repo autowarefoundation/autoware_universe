@@ -472,8 +472,9 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(autoware_utils_math::normalize_degree(
-    ego_state.pose.orientation.z - last_point.pose.orientation.z));
+  const auto yaw_diff = std::abs(
+    autoware_utils_math::normalize_degree(
+      ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;
