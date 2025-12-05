@@ -100,7 +100,7 @@ __global__ void shufflePoints_kernel(
   int src_idx = indices[(point_idx + offset) % max_size];
   int dst_idx = point_idx;
 
-  if (dst_idx >= points_size) {
+  if (src_idx >= points_size) {
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 0] = INFINITY;
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 1] = INFINITY;
     shuffled_points[POINT_NUM_FEATURES * dst_idx + 2] = INFINITY;
