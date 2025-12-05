@@ -319,10 +319,11 @@ private:
   rclcpp::Publisher<Trajectory>::SharedPtr debug_fixed_traj_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr debug_ref_traj_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr debug_mpt_traj_pub_;
+  rclcpp::Publisher<Trajectory>::SharedPtr debug_acados_mpt_traj_pub_;
 
   // Add new publishers for spline coefficients and curvatures
-  rclcpp::Client<autoware_internal_debug_msgs::srv::SplineDebug>::SharedPtr acados_mpt_client_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_steering_pub_;
 
   // argument
   bool enable_debug_info_;

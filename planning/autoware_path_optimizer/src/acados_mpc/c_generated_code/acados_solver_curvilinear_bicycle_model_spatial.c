@@ -548,9 +548,9 @@ void curvilinear_bicycle_model_spatial_acados_setup_nlp_in(curvilinear_bicycle_m
 
    double* W_0 = calloc(NY0*NY0, sizeof(double));
     // change only the non-zero elements:
-    W_0[0+(NY0) * 0] = 0.001;
+    W_0[0+(NY0) * 0] = 0.1;
     W_0[1+(NY0) * 1] = 0.01;
-    W_0[14+(NY0) * 14] = 0.2;
+    W_0[14+(NY0) * 14] = 0.1;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, 0, "W", W_0);
     free(W_0);
     double* Vx_0 = calloc(NY0*NX, sizeof(double));
@@ -586,9 +586,9 @@ void curvilinear_bicycle_model_spatial_acados_setup_nlp_in(curvilinear_bicycle_m
     free(yref);
     double* W = calloc(NY*NY, sizeof(double));
     // change only the non-zero elements:
-    W[0+(NY) * 0] = 0.001;
+    W[0+(NY) * 0] = 0.1;
     W[1+(NY) * 1] = 0.01;
-    W[14+(NY) * 14] = 0.2;
+    W[14+(NY) * 14] = 0.1;
 
     for (int i = 1; i < N; i++)
     {
@@ -634,7 +634,7 @@ void curvilinear_bicycle_model_spatial_acados_setup_nlp_in(curvilinear_bicycle_m
 
     double* W_e = calloc(NYN*NYN, sizeof(double));
     // change only the non-zero elements:
-    W_e[0+(NYN) * 0] = 0.005;
+    W_e[0+(NYN) * 0] = 0.5;
     W_e[1+(NYN) * 1] = 0.05;
     ocp_nlp_cost_model_set(nlp_config, nlp_dims, nlp_in, N, "W", W_e);
     free(W_e);
@@ -757,20 +757,20 @@ void curvilinear_bicycle_model_spatial_acados_setup_nlp_in(curvilinear_bicycle_m
     double* lubx = calloc(2*NBX, sizeof(double));
     double* lbx = lubx;
     double* ubx = lubx + NBX;
-    lbx[0] = -2;
-    ubx[0] = 2;
-    lbx[1] = -2;
-    ubx[1] = 2;
-    lbx[2] = -2;
-    ubx[2] = 2;
-    lbx[3] = -2;
-    ubx[3] = 2;
-    lbx[4] = -2;
-    ubx[4] = 2;
-    lbx[5] = -2;
-    ubx[5] = 2;
-    lbx[6] = -2;
-    ubx[6] = 2;
+    lbx[0] = -15;
+    ubx[0] = 15;
+    lbx[1] = -15;
+    ubx[1] = 15;
+    lbx[2] = -15;
+    ubx[2] = 15;
+    lbx[3] = -15;
+    ubx[3] = 15;
+    lbx[4] = -15;
+    ubx[4] = 15;
+    lbx[5] = -15;
+    ubx[5] = 15;
+    lbx[6] = -15;
+    ubx[6] = 15;
 
     for (int i = 1; i < N; i++)
     {
