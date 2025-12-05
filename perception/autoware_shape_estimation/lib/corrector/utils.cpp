@@ -134,8 +134,9 @@ bool correctWithDefaultValue(
      0);
 
   if (are_opposite_edges) {
-    // Case 1: First point fits width range, third point is below max length
-    if (first_in_width_range && third_below_max_length) {
+    // Case 1: First point below max width (no min constraint), third point is below max length
+    // Bug Fix 1: Removed min_width requirement to allow correction when edges are very small
+    if (first_below_max_width && third_below_max_length) {
       correction_vector = v_point.at(third_distant_index);
       applyCorrectionVector(correction_vector, param.default_length);
     } else if (first_in_length_range && third_below_max_width) {
@@ -148,24 +149,36 @@ bool correctWithDefaultValue(
   }
   // Case: Adjacent edges (different scenarios based on which points fit ranges)
   else {
-    // Case 3: Both first and second points are within width range
-    if (first_in_width_range && second_in_width_range) {
-      correction_vector = v_point.at(most_distant_index);
+    // Case 3: Both first and second points are below max width
+    // Bug Fix 2: Changed from requiring both in width range to requiring both below max_width,
+    // then checking if at least one exceeds min_width
+    if (first_below_max_width && second_below_max_width) {
+      // At least one must exceed min_width, otherwise both are too small
+      if (first_point_distance > param.min_width || second_point_distance > param.min_width) {
+        correction_vector = v_point.at(most_distant_index);
+        applyCorrectionVector(correction_vector, param.default_length);
+      } else {
+        return false;
+      }
+    } else if (first_in_width_range && param.max_width < second_point_distance) {
+      // Case 4: First point is within width range, but second exceeds max_width
+      // Bug Fix 3: Explicit handling when first is valid but second exceeds max_width
+      correction_vector = v_point.at(second_distant_index);
       applyCorrectionVector(correction_vector, param.default_length);
     } else if (first_in_width_range) {
-      // Case 4: Only first point is within width range
+      // Case 5: Only first point is within width range (standard case)
       correction_vector = v_point.at(second_distant_index);
       applyCorrectionVector(correction_vector, param.default_length);
     } else if (second_in_width_range) {
-      // Case 5: Only second point is within width range
+      // Case 6: Only second point is within width range
       correction_vector = v_point.at(most_distant_index);
       applyCorrectionVector(correction_vector, param.default_length);
     } else if (first_in_length_range && second_below_max_width) {
-      // Case 6: First point is within length range, second point is below max width
+      // Case 7: First point is within length range, second point is below max width
       correction_vector = v_point.at(second_distant_index);
       applyCorrectionVector(correction_vector, param.default_width);
     } else if (second_in_length_range && first_below_max_width) {
-      // Case 7: Second point is within length range, first point is below max width
+      // Case 8: Second point is within length range, first point is below max width
       correction_vector = v_point.at(most_distant_index);
       applyCorrectionVector(correction_vector, param.default_width);
     } else {
