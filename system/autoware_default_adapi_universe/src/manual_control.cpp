@@ -172,9 +172,8 @@ void ManualControlNode::disable_all_commands()
 void ManualControlNode::enable_pedals_commands()
 {
   sub_pedals_ = create_subscription<PedalsCommand>(
-    ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(), [this](const PedalsCommand & msg) {
-      pub_pedals_->publish(msg);
-    });
+    ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(),
+    [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
 // TODO(isamu-takagi): This function is reserved for future support.
