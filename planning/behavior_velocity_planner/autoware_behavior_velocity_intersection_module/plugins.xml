@@ -1,4 +1,10 @@
 <library path="autoware_behavior_velocity_intersection_module">
-  <class type="autoware::behavior_velocity_planner::IntersectionModulePlugin" base_class_type="autoware::behavior_velocity_planner::PluginInterface"/>
-  <class type="autoware::behavior_velocity_planner::MergeFromPrivateModulePlugin" base_class_type="autoware::behavior_velocity_planner::PluginInterface"/>
+  <class type="autoware::behavior_velocity_planner::IntersectionModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::PluginInterface" />
+  <class type="autoware::behavior_velocity_planner::MergeFromPrivateModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::PluginInterface" />
+  <class type="autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::experimental::PluginInterface" />
+  <class type="autoware::behavior_velocity_planner::experimental::MergeFromPrivateModulePlugin"
+    base_class_type="autoware::behavior_velocity_planner::experimental::PluginInterface" />
 </library>

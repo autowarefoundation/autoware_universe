@@ -37,7 +37,6 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 struct TrajectorySplineSmootherParams
 {
   double interpolation_resolution_m{0.5};
-  double max_yaw_discrepancy_deg{2.5};
   double max_distance_discrepancy_m{5.0};
   bool preserve_input_trajectory_orientation{true};
 };

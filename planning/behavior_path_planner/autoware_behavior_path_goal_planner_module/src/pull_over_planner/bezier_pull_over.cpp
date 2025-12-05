@@ -188,12 +188,13 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   std::vector<std::tuple<double, double, double>> params;
   const size_t n_sample_v_init = 2;
   const size_t n_sample_v_final = 2;
+  const double min_v_coeff = 0.1;
   const size_t n_sample_acc = 1;
   for (unsigned i = 0; i <= n_sample_v_init; ++i) {
     for (unsigned j = 0; j <= n_sample_v_final; j++) {
       for (unsigned k = 0; k <= n_sample_acc; k++) {
-        const double v_init_coeff = i * (1.0 / n_sample_v_init);
-        const double v_final_coeff = j * 0.25 / (1.0 / n_sample_v_final);
+        const double v_init_coeff = std::max(min_v_coeff, i * (1.0 / n_sample_v_init));
+        const double v_final_coeff = std::max(min_v_coeff, j * 0.25 / (1.0 / n_sample_v_final));
         const double acc_coeff = k * (10.0 / n_sample_acc);
         params.emplace_back(v_init_coeff, v_final_coeff, acc_coeff);
       }
@@ -301,15 +302,18 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
     }
 
     // set lane_id and velocity to shifted_path
-    for (size_t i = path_shifter.getShiftLines().front().start_idx;
-         i < shifted_path.path.points.size() - 1; ++i) {
+    if (path_shifter.getShiftLines().empty()) {
+      continue;
+    }
+    const size_t start_idx = path_shifter.getShiftLines().front().start_idx;
+    for (size_t i = start_idx; i < shifted_path.path.points.size() - 1; ++i) {
       auto & point = shifted_path.path.points.at(i);
       point.point.longitudinal_velocity_mps =
         std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
       lanelet::Lanelet lanelet{};
       if (lanelet::utils::query::getClosestLanelet(lanes, point.point.pose, &lanelet)) {
         point.lane_ids = {lanelet.id()};  // overwrite lane_ids
-      } else {
+      } else if (i > 0) {
         point.lane_ids = shifted_path.path.points.at(i - 1).lane_ids;
       }
     }

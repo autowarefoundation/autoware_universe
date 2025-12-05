@@ -13,6 +13,7 @@
           },
           "default": [
             "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
             "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
             "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
             "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
@@ -52,17 +53,148 @@
           "default": true,
           "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
         },
+        "use_kinematic_feasibility_enforcer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)"
+        },
+        "use_mpt_optimizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
-            "orientation_threshold_deg": {
+            "resample_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable resampling of close proximity points"
+            },
+            "min_dist_to_remove_m": {
               "type": "number",
-              "default": 5.0,
+              "default": 0.01,
               "minimum": 0,
-              "description": "Yaw threshold for removing wrongly oriented points [deg]"
+              "description": "Minimum distance threshold for removing close proximity points [m]"
+            },
+            "min_dist_to_merge_m": {
+              "type": "number",
+              "default": 0.05,
+              "minimum": 0,
+              "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": ["orientation_threshold_deg"]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
+        },
+        "trajectory_kinematic_feasibility": {
+          "type": "object",
+          "properties": {
+            "max_yaw_rate_rad_s": {
+              "type": "number",
+              "default": 0.7,
+              "minimum": 0.1,
+              "maximum": 2.0,
+              "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            }
+          },
+          "required": ["max_yaw_rate_rad_s"]
+        },
+        "trajectory_mpt_optimizer": {
+          "type": "object",
+          "properties": {
+            "corridor_width_m": {
+              "type": "number",
+              "default": 3.5,
+              "minimum": 2.0,
+              "maximum": 10.0,
+              "description": "Base corridor width for adaptive bounds generation [m]. Defines the lateral distance from trajectory centerline to left/right bounds."
+            },
+            "enable_adaptive_width": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable adaptive corridor width based on curvature and velocity. When true, corridor widens in curves and at low speeds."
+            },
+            "curvature_width_factor": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Factor for curvature-based corridor widening [m/rad]. Higher values provide more space in curves."
+            },
+            "velocity_width_factor": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Factor for velocity-based corridor widening [m]. Higher values provide more maneuvering room at low speeds."
+            },
+            "min_clearance_m": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Minimum clearance from vehicle edges to corridor bounds [m]. Ensures minimum safe distance."
+            },
+            "reset_previous_data_each_iteration": {
+              "type": "boolean",
+              "default": true,
+              "description": "Reset MPT's previous optimization data each cycle. Should be true for diffusion planner (new trajectories each cycle), false for incremental planners."
+            },
+            "enable_debug_info": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable debug visualization markers for bounds and reference trajectory."
+            },
+            "output_delta_arc_length_m": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0.1,
+              "maximum": 5.0,
+              "description": "Spacing between trajectory points in MPT optimization [m]. Smaller values provide finer resolution but increase computation."
+            },
+            "output_backward_traj_length_m": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0.0,
+              "maximum": 20.0,
+              "description": "Length of trajectory extension backward from ego pose [m]."
+            },
+            "ego_nearest_dist_threshold_m": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0.5,
+              "maximum": 10.0,
+              "description": "Distance threshold for finding nearest trajectory point to ego [m]."
+            },
+            "ego_nearest_yaw_threshold_deg": {
+              "type": "number",
+              "default": 45.0,
+              "minimum": 10.0,
+              "maximum": 90.0,
+              "description": "Yaw threshold for finding nearest trajectory point to ego [degrees]."
+            },
+            "acceleration_moving_average_window": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Moving average window size for acceleration smoothing. Larger values produce smoother acceleration but increase lag. Window of 1 = no smoothing."
+            }
+          },
+          "required": [
+            "corridor_width_m",
+            "enable_adaptive_width",
+            "curvature_width_factor",
+            "velocity_width_factor",
+            "min_clearance_m",
+            "reset_previous_data_each_iteration",
+            "enable_debug_info",
+            "output_delta_arc_length_m",
+            "output_backward_traj_length_m",
+            "ego_nearest_dist_threshold_m",
+            "ego_nearest_yaw_threshold_deg",
+            "acceleration_moving_average_window"
+          ]
         },
         "trajectory_extender": {
           "type": "object",
@@ -101,17 +233,11 @@
               "exclusiveMinimum": 0,
               "description": "Interpolation resolution for Akima spline [m]"
             },
-            "max_yaw_discrepancy_deg": {
-              "type": "number",
-              "default": 2.5,
-              "minimum": 0,
-              "description": "Maximum yaw deviation allowed for spline outlier detection [deg]"
-            },
             "max_distance_discrepancy_m": {
               "type": "number",
               "default": 5.0,
               "minimum": 0,
-              "description": "Maximum position deviation allowed for spline outlier detection [m]"
+              "description": "Maximum position deviation allowed for orientation copying [m]"
             },
             "preserve_input_trajectory_orientation": {
               "type": "boolean",
@@ -121,7 +247,6 @@
           },
           "required": [
             "interpolation_resolution_m",
-            "max_yaw_discrepancy_deg",
             "max_distance_discrepancy_m",
             "preserve_input_trajectory_orientation"
           ]
@@ -463,7 +588,9 @@
         "use_qp_smoother",
         "fix_invalid_points",
         "extend_trajectory_backward",
-        "optimize_velocity"
+        "optimize_velocity",
+        "use_kinematic_feasibility_enforcer",
+        "use_mpt_optimizer"
       ]
     }
   },

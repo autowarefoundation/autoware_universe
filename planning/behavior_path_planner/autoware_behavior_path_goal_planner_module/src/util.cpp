@@ -29,13 +29,13 @@
 #include <magic_enum.hpp>
 #include <range/v3/view/reverse.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
-#include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
@@ -287,7 +287,7 @@ std::optional<Polygon2d> generateObjectExtractionPolygon(
     it->orientation = autoware_utils::create_quaternion_from_yaw(yaw);
   }
   base_boundary_poses.back().orientation =
-    base_boundary_poses[base_boundary_poses.size() - 2].orientation;
+    base_boundary_poses.at(base_boundary_poses.size() - 2).orientation;
 
   // generate outer and inner boundary poses
   std::vector<Point> outer_boundary_points{};
@@ -307,6 +307,10 @@ std::optional<Polygon2d> generateObjectExtractionPolygon(
   const auto remove_self_intersection = [](const std::vector<Point> & bound) {
     constexpr double INTERSECTION_CHECK_DISTANCE = 10.0;
     std::vector<Point> modified_bound{};
+    // Need at least 2 points to form a segment
+    if (bound.size() < 2) {
+      return bound;
+    }
     size_t i = 0;
     while (i < bound.size() - 1) {
       BoostPoint p1(bound.at(i).x, bound.at(i).y);
@@ -610,6 +614,9 @@ MarkerArray createLaneletPolygonMarkerArray(
 double calcLateralDeviationBetweenPaths(
   const PathWithLaneId & reference_path, const PathWithLaneId & target_path)
 {
+  if (reference_path.points.empty()) {
+    return 0.0;
+  }
   double lateral_deviation = 0.0;
   for (const auto & target_point : target_path.points) {
     const size_t nearest_index = autoware::motion_utils::findNearestIndex(
@@ -618,7 +625,7 @@ double calcLateralDeviationBetweenPaths(
       lateral_deviation,
       std::abs(
         autoware_utils::calc_lateral_deviation(
-          reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
+          reference_path.points.at(nearest_index).point.pose, target_point.point.pose.position)));
   }
   return lateral_deviation;
 }
@@ -658,6 +665,11 @@ PathWithLaneId cropForwardPoints(
   const PathWithLaneId & path, const size_t target_seg_idx, const double forward_length)
 {
   const auto & points = path.points;
+
+  // Safety check: ensure target_seg_idx + 1 is valid and there are points to iterate
+  if (target_seg_idx + 1 >= points.size()) {
+    return path;
+  }
 
   double sum_length = 0;
   for (size_t i = target_seg_idx + 1; i < points.size(); ++i) {
@@ -1011,12 +1023,23 @@ bool hasPreviousModulePathShapeChanged(
   const BehaviorModuleOutput & upstream_module_output,
   const BehaviorModuleOutput & last_upstream_module_output)
 {
+  if (last_upstream_module_output.path.points.size() < 2) {
+    return false;
+  }
+
   // Calculate the lateral distance between each point of the current path and the nearest point of
   // the last path
   constexpr double LATERAL_DEVIATION_THRESH = 0.1;
   for (const auto & p : upstream_module_output.path.points) {
     const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
       last_upstream_module_output.path.points, p.point.pose.position);
+
+    if (nearest_seg_idx + 1 >= last_upstream_module_output.path.points.size()) {
+      // In case the path is curved, nearest_seg_idx may not be monotonically increasing,
+      // so use continue instead of break here.
+      continue;
+    }
+
     const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
     const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
     // Check if the target point is within the segment
@@ -1175,7 +1198,7 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
         break;
       }
       result.push_back(current_lane);
-      acc_dist += lanelet::utils::getLaneletLength3d(current_lane);
+      acc_dist += lanelet::geometry::length3d(current_lane);
     }
   };
 
@@ -1211,5 +1234,43 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
   }
 
   return route_lanes;
+}
+
+bool is_lateral_acceleration_acceptable_near_start(
+  const std::vector<PathPointWithLaneId> & path_points, const geometry_msgs::msg::Pose & start_pose,
+  const double velocity, const double duration, const double lateral_acceleration_threshold)
+{
+  using autoware::motion_utils::calcLongitudinalOffsetPose;
+
+  constexpr double epsilon = 1e-3;
+  if (velocity < epsilon) return true;
+
+  const double arc_length = velocity * duration;
+  const auto check_pose_opt =
+    calcLongitudinalOffsetPose(path_points, start_pose.position, arc_length);
+  if (!check_pose_opt) return false;
+
+  // Calculate geometric deviations in start_pose frame
+  const auto relative_pose =
+    autoware_utils::inverse_transform_pose(check_pose_opt.value(), start_pose);
+  const double lateral_distance = std::abs(relative_pose.position.y);
+  const double yaw_difference = std::abs(autoware_utils::get_rpy(relative_pose).z);
+
+  // Calculate dynamic thresholds based on lateral acceleration limit
+  // From: lateral_accel = v^2 / R
+  //       R = arc_length / yaw_difference,
+  // => yaw_difference_max = lateral_accel x arc_length / v^2
+  const double velocity_squared = velocity * velocity;
+  const double maximum_yaw_difference =
+    lateral_acceleration_threshold * arc_length / velocity_squared;
+
+  // Calculate lateral distance threshold from maximum_yaw_difference
+  const double radius = velocity_squared / lateral_acceleration_threshold;
+  const double maximum_lateral_distance = radius * (1.0 - std::cos(maximum_yaw_difference));
+
+  if (yaw_difference > maximum_yaw_difference) return false;
+  if (lateral_distance > maximum_lateral_distance) return false;
+
+  return true;
 }
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

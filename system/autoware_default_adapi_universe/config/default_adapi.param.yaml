@@ -20,6 +20,7 @@
 /adapi/node/vehicle_metrics:
   ros__parameters:
     update_rate: 0.1
+    max_energy_level: 1.0
 
 /adapi/node/vehicle_door:
   ros__parameters:

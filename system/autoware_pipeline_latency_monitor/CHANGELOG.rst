@@ -2,6 +2,16 @@
 Changelog for package autoware_pipeline_latency_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(pipeline_latency_monitor): change diagnostic status from WARN to ERROR for latency threshold exceedance (`#11562 <https://github.com/autowarefoundation/autoware_universe/issues/11562>`_)
+* refactor(pipeline_latency_monitor): change log level from WARN to DEBUG for negative latency values (`#11345 <https://github.com/autowarefoundation/autoware_universe/issues/11345>`_)
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_pipeline_latency_monitor): add autoware_pipeline_latency_monitor package (`#10798 <https://github.com/autowarefoundation/autoware_universe/issues/10798>`_)

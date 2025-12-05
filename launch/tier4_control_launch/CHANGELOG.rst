@@ -2,6 +2,20 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(launch): update input topic parameters to allow dynamic configuration (`#11389 <https://github.com/autowarefoundation/autoware_universe/issues/11389>`_)
+* refactor(launch):  topic remapping for object recognition and point cloud input to planning/control module (`#11242 <https://github.com/autowarefoundation/autoware_universe/issues/11242>`_)
+  * feat(planning): introduce dynamic topic remapping for input objects and pointcloud
+  ---------
+* chore(tier4_control_launch): add maintainers  (`#11256 <https://github.com/autowarefoundation/autoware_universe/issues/11256>`_)
+  chore(tier4_control_launch): add maintainers to package.xml
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)
