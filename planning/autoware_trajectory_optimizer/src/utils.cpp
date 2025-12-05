@@ -90,7 +90,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min
   utils::remove_close_proximity_points(input_trajectory, min_dist_to_remove_m);
 
   if (input_trajectory.size() < 2) {
-    log_error_throttle(
+    log_warn_throttle(
       "Not enough points in trajectory after removing close proximity points and invalid points");
     return;
   }
@@ -405,7 +405,7 @@ void apply_spline(
 {
   constexpr size_t minimum_points_for_akima_spline = 5;
   if (traj_points.size() < minimum_points_for_akima_spline) {
-    log_error_throttle("Not enough points in trajectory for spline interpolation");
+    log_warn_throttle("Not enough points in trajectory for spline interpolation");
     return;
   }
   const TrajectoryPoints original_traj_points = traj_points;
@@ -472,9 +472,8 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(
-    autoware_utils_math::normalize_degree(
-      ego_state.pose.orientation.z - last_point.pose.orientation.z));
+  const auto yaw_diff = std::abs(autoware_utils_math::normalize_degree(
+    ego_state.pose.orientation.z - last_point.pose.orientation.z));
   const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
   const bool is_change_small = distance < epsilon && yaw_diff < epsilon;
