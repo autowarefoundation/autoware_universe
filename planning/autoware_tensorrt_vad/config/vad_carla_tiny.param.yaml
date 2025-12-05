@@ -1,0 +1,168 @@
+# ==============================================================================
+# VAD (Vectorized Autonomous Driving) - CARLA Tiny Deployment Configuration
+# ==============================================================================
+#
+# ARCHITECTURE:
+#   This file contains DEPLOYMENT-SPECIFIC configuration only.
+#   Model architecture parameters are loaded from: vad-carla-tiny.param.json
+#
+# CONFIGURATION LAYERS:
+#   ┌─────────────────────────────────────────────────────────────────┐
+#   │ vad-carla-tiny.param.json (Model Package - DO NOT MODIFY)      │
+#   │  - Model version and compatibility                              │
+#   │  - Network architecture (BEV, transformer, prediction, etc.)    │
+#   │  - Training-specific parameters (normalization, dimensions)     │
+#   │  - Class definitions from training dataset                      │
+#   └─────────────────────────────────────────────────────────────────┘
+#                              ▲
+#                              │ loaded by
+#                              │
+#   ┌─────────────────────────────────────────────────────────────────┐
+#   │ vad_carla_tiny.param.yaml (THIS FILE - DEPLOYMENT CONFIG)      │
+#   │  - Hardware-specific settings (camera resolution, formats)      │
+#   │  - Application tuning (detection range, confidence thresholds)  │
+#   │  - File paths and precision settings for TensorRT              │
+#   │  - Visualization and interface settings                         │
+#   └─────────────────────────────────────────────────────────────────┘
+#
+# MODIFICATION GUIDE:
+#   [SAFE TO MODIFY] Confidence thresholds, detection range, colors
+#   [MUST MATCH MODEL] Class names, target image dimensions
+#   [DEPLOYMENT-SPECIFIC] File paths, camera settings, synchronization
+#
+# ==============================================================================
+
+/**:
+  ros__parameters:
+    # ==========================================================================
+    # MODEL PACKAGE CONFIGURATION
+    # ==========================================================================
+    # Path to model-specific parameters (architecture, normalization, classes)
+    # This file is downloaded via Ansible with the model weights
+    model_param_path: $(env HOME)/autoware_data/vad/v0.1/vad-carla-tiny.param.json
+
+    # ==========================================================================
+    # CAMERA HARDWARE CONFIGURATION (Deployment-Specific)
+    # ==========================================================================
+    node_params:
+      # Number of surround-view cameras (fixed by model architecture)
+      num_cameras: 6
+
+      # Image format per camera: false = compressed (network efficient)
+      #                          true = raw (lower latency, higher bandwidth)
+      # Order: [FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT]
+      use_raw: [false, false, false, false, false, false]
+
+    # ==========================================================================
+    # IMAGE PROCESSING CONFIGURATION
+    # ==========================================================================
+    interface_params:
+      # --- Camera Sensor Dimensions (Hardware-Specific) ---
+      # Actual resolution of your camera sensors
+      # CARLA default: 1600x900, adjust for your hardware
+      input_image_width: 1600
+      input_image_height: 900
+
+      # Model input dimensions (target_image_width/height) are defined in vad-carla-tiny.param.json
+
+      # --- Detection Spatial Range (Application-Specific) ---
+      # 3D bounding box [x_min, y_min, z_min, x_max, y_max, z_max] in base_link frame
+      # Objects outside this range will be filtered out
+      # Default: 30m forward/back, 16m left/right, 5m vertical range
+      detection_range: [-30.0, -16.0, -0.355, 30.0, 16.0, 4.645]
+
+      # --- Trajectory Output Configuration ---
+      # Time step between trajectory points in seconds
+      # Affects trajectory granularity and planning horizon
+      trajectory_timestep: 0.5  # [s]
+
+      # --- Visualization Colors (RGB, 0-1 scale) ---
+      # Map element rendering colors for RViz visualization
+      # Order matches map_class_names: [Broken, Solid, SolidSolid, Center, TrafficLight, StopSign]
+      map_colors: [
+        1.0,    0.5,    0.0,      # Broken line: orange
+        0.3922, 0.5843, 0.9294,   # Solid line: cornflower blue
+        0.0,    0.0,    1.0,      # Double solid: blue
+        1.0,    1.0,    0.0,      # Center line: yellow
+        1.0,    0.0,    0.0,      # Traffic light: red
+        0.7,    0.0,    0.0       # Stop sign: dark red
+      ]
+
+    # ==========================================================================
+    # MODEL INFERENCE CONFIGURATION
+    # ==========================================================================
+    model_params:
+      # --- TensorRT Runtime ---
+      # Path to custom TensorRT plugin library
+      plugins_path: "$(var plugins_path)/plugins/libautoware_tensorrt_plugins.so"
+
+      # --- Ego Planning Command (Application-Specific) ---
+      # Default navigation command for planning
+      # 0=LEFT, 1=RIGHT, 2=STRAIGHT, 3=LANE_FOLLOW, 4=CHANGE_LANE_LEFT, 5=CHANGE_LANE_RIGHT
+      default_command: 3  # LANE_FOLLOW
+
+      # Class names (map_class_names, object_class_names) are defined in vad-carla-tiny.param.json
+
+      # --- Detection Confidence Thresholds [SAFE TO TUNE] ---
+      # Confidence threshold per class (0-1 scale)
+      # Higher values = fewer false positives, may miss detections
+      # Lower values = more detections, may include false positives
+
+      # Map element detection thresholds
+      # Order: [Broken, Solid, SolidSolid, Center, TrafficLight, StopSign]
+      map_confidence_thresholds: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+
+      # Object detection thresholds
+      # Order: [car, van, truck, bicycle, traffic_sign, traffic_cone, traffic_light, pedestrian, others]
+      # "others" class uses lower threshold (0.3) to detect unknown objects
+      object_confidence_thresholds: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.3]
+
+      # --- Neural Network Model Files [Deployment Paths] ---
+      # ONNX models and TensorRT engine paths
+      # Models are downloaded via Ansible to $(var model_path)
+      nets:
+        # Backbone network: Feature extraction from images
+        backbone:
+          name: "backbone"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_backbone.engine"
+          precision: "fp16"  # Half precision for GPU efficiency
+
+        # Head network: Prediction head with history
+        head:
+          name: "head"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head.engine"
+          precision: "fp32"  # Full precision for accuracy
+          inputs:
+            "input_feature": "mlvl_feats.0"
+            "net": "backbone"
+            "name": "out.0"
+
+        # Head network: Initial prediction without history
+        head_no_prev:
+          name: "head_no_prev"
+          onnx_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.onnx"
+          engine_path: "$(var model_path)/v0.1/vad-carla-tiny_head_no_prev.engine"
+          precision: "fp32"  # Full precision for accuracy
+          inputs:
+            "input_feature": "mlvl_feats.0"
+            "net": "backbone"
+            "name": "out.0"
+
+    # ==========================================================================
+    # MULTI-CAMERA SYNCHRONIZATION (Deployment-Specific)
+    # ==========================================================================
+    sync_params:
+      # Index of front camera for synchronization anchor
+      # Cameras are synchronized to this camera's timestamp
+      front_camera_id: 0
+
+      # Maximum timestamp difference for valid frame set (milliseconds)
+      # CARLA simulation: 500ms (loose tolerance for simulation)
+      # Real hardware: Reduce to 50-100ms for better temporal alignment
+      sync_tolerance_ms: 500.0
+
+# ==============================================================================
+# END OF CONFIGURATION
+# ==============================================================================
