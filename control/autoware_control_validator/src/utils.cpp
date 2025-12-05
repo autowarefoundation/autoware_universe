@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2023-2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,17 +19,142 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
-#include <vector>
+#include <optional>
 
 namespace autoware::control_validator
 {
 
-using autoware::motion_utils::convertToTrajectory;
-using autoware::motion_utils::convertToTrajectoryPointArray;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Pose;
-using TrajectoryPoints = std::vector<TrajectoryPoint>;
+
+namespace detail
+{
+
+inline TrajectoryPoints reverse_trajectory_points(const TrajectoryPoints & trajectory_points)
+{
+  return TrajectoryPoints(trajectory_points.crbegin(), trajectory_points.crend());
+}
+
+/**
+ * @brief Remove trajectory points which are in front of the reference segment
+ * and insert interpolated point at the boundary if needed.
+ *
+ * To avoid front removal and insertion, trajectory is given in reversed order.
+ * @param[in] segment_points reference segment trajectory of length at least 2
+ * @param[inout] reversed_trajectory_points trajectory in reversed order, possibly empty
+ */
+void clamp_trajectory_head(
+  const TrajectoryPoints & segment_points, TrajectoryPoints & reversed_trajectory_points)
+{
+  if (segment_points.size() < 2) {
+    return;
+  }
+  std::optional<TrajectoryPoint> opt_last_removed_point = std::nullopt;
+  while (!reversed_trajectory_points.empty()) {
+    const auto & point = reversed_trajectory_points.back();
+    if (
+      autoware::motion_utils::calcLongitudinalOffsetToSegment(
+        segment_points, 0, point.pose.position) >= 0.0) {
+      // reached the overlapping boundary
+      break;
+    }
+    opt_last_removed_point.emplace(point);
+    reversed_trajectory_points.pop_back();
+  }
+  if (reversed_trajectory_points.empty() || !opt_last_removed_point.has_value()) {
+    // boundary segment does not exist and nothing to insert; either the predicted trajectory is
+    // fully consumed, or the referenced segment is ahead of the predicted trajectory
+    return;
+  }
+  // we don't need the whole segments of the predicted trajectory for interpolation
+  TrajectoryPoints boundary_segment_points = {
+    opt_last_removed_point.value(), reversed_trajectory_points.back()};
+  auto interpolated_point = autoware::motion_utils::calcInterpolatedPoint(
+    autoware::motion_utils::convertToTrajectory(boundary_segment_points),
+    segment_points.front().pose);
+  reversed_trajectory_points.emplace_back(interpolated_point);
+}
+
+/**
+ * @brief Align the predicted trajectory with the reference trajectory by trimming the parts which
+ * are out of the reference trajectory range.
+ * @param reference_trajectory_points reference trajectory
+ * @param predicted_trajectory_points predicted trajectory
+ * @return aligned predicted trajectory
+ */
+TrajectoryPoints align_trajectory_with_reference_trajectory(
+  const TrajectoryPoints & reference_trajectory_points,
+  const TrajectoryPoints & predicted_trajectory_points)
+{
+  if (reference_trajectory_points.size() < 2 || predicted_trajectory_points.empty()) {
+    return TrajectoryPoints();
+  }
+
+  // To reduce memory consumption, limit the maximum size of the predicted trajectory to calculate.
+  // In C++20, copying can be prevented by using e.g. `std::span`.
+  constexpr size_t MAX_TRAJECTORY_SIZE = 5000;
+  if (predicted_trajectory_points.size() > MAX_TRAJECTORY_SIZE) {
+    TrajectoryPoints safe_predicted_trajectory_points(
+      predicted_trajectory_points.cbegin(),
+      predicted_trajectory_points.cbegin() + MAX_TRAJECTORY_SIZE);
+    return align_trajectory_with_reference_trajectory(
+      reference_trajectory_points, safe_predicted_trajectory_points);
+  }
+
+  // We don't need to consider the entire trajectory; only the first and last segments are needed.
+  TrajectoryPoints first_segment_points = {
+    reference_trajectory_points[0], reference_trajectory_points[1]};
+  TrajectoryPoints reversed_last_segment_points = {
+    reference_trajectory_points[reference_trajectory_points.size() - 1],
+    reference_trajectory_points[reference_trajectory_points.size() - 2]};
+
+  // If no overlapping between reference_ and predicted_trajectory, return empty trajectory.
+  //
+  // predicted_trajectory:   p1------------------pN
+  // reference_trajectory:                           r1------------------rN
+  //     OR
+  // predicted_trajectory:                           p1------------------pN
+  // reference_trajectory:   r1------------------rN
+  const bool is_p_n_before_r1 =
+    autoware::motion_utils::calcLongitudinalOffsetToSegment(
+      first_segment_points, 0, predicted_trajectory_points.back().pose.position) < 0.0;
+  const bool is_p1_behind_r_n =
+    autoware::motion_utils::calcLongitudinalOffsetToSegment(
+      reversed_last_segment_points, 0, predicted_trajectory_points.front().pose.position) < 0.0;
+  const bool is_no_overlapping = (is_p_n_before_r1 || is_p1_behind_r_n);
+
+  if (is_no_overlapping) {
+    return TrajectoryPoints();
+  }
+
+  // If first point of predicted_trajectory is in front of reference_trajectory, remove points which
+  // are in front of reference_trajectory and insert pNew along the predicted_trajectory.
+  //
+  // predicted_trajectory:           p1-----p2-----p3----//------pN
+  // reference_trajectory:                     r1--------//------rN
+  // ↓
+  // predicted_trajectory:                   pNew--p3----//------pN
+  // reference_trajectory:                     r1--------//------rN
+  auto reversed_aligned_trajectory_points = reverse_trajectory_points(predicted_trajectory_points);
+  clamp_trajectory_head(first_segment_points, reversed_aligned_trajectory_points);
+
+  // If last point of predicted_trajectory is behind reference_trajectory, remove points which
+  // are behind reference_trajectory and insert pNew along the predicted_trajectory
+  //
+  // predicted_trajectory:           p1-----//------pN-2-----pN-1-----pN
+  // reference_trajectory:           r1-----//-----rN-1--rN
+  // ↓
+  // predicted_trajectory:           p1-----//------pN-2-pNew
+  // reference_trajectory:           r1-----//-----rN-1--rN
+
+  auto aligned_trajectory_points = reverse_trajectory_points(reversed_aligned_trajectory_points);
+  clamp_trajectory_head(reversed_last_segment_points, aligned_trajectory_points);
+
+  return aligned_trajectory_points;
+}
+
+}  // namespace detail
 
 void shift_pose(Pose & pose, double longitudinal)
 {
@@ -38,157 +163,14 @@ void shift_pose(Pose & pose, double longitudinal)
   pose.position.y += std::sin(yaw) * longitudinal;
 }
 
-/**
- * @brief Insert interpolated point along the predicted_trajectory to the modified_trajectory
- * @param[inout] modified_trajectory modified trajectory
- * @param[in] reference_pose reference pose
- * @param[in] predicted_trajectory predicted trajectory
- */
-void insert_point_in_predicted_trajectory(
-  TrajectoryPoints & modified_trajectory, const Pose & reference_pose,
-  const TrajectoryPoints & predicted_trajectory)
-{
-  const auto point_to_interpolate = autoware::motion_utils::calcInterpolatedPoint(
-    convertToTrajectory(predicted_trajectory), reference_pose);
-  modified_trajectory.insert(modified_trajectory.begin(), point_to_interpolate);
-}
-
-TrajectoryPoints reverse_trajectory_points(const TrajectoryPoints & trajectory_points)
-{
-  TrajectoryPoints reversed_trajectory_points;
-  reversed_trajectory_points.reserve(trajectory_points.size());
-  std::reverse_copy(
-    trajectory_points.begin(), trajectory_points.end(),
-    std::back_inserter(reversed_trajectory_points));
-  return reversed_trajectory_points;
-}
-
-bool remove_front_trajectory_point(
-  const TrajectoryPoints & trajectory_points, TrajectoryPoints & modified_trajectory_points,
-  const TrajectoryPoints & predicted_trajectory_points)
-{
-  bool predicted_trajectory_point_removed = false;
-  for (const auto & point : predicted_trajectory_points) {
-    if (
-      autoware::motion_utils::calcLongitudinalOffsetToSegment(
-        trajectory_points, 0, point.pose.position) < 0.0) {
-      modified_trajectory_points.erase(modified_trajectory_points.begin());
-
-      predicted_trajectory_point_removed = true;
-    } else {
-      break;
-    }
-  }
-
-  return predicted_trajectory_point_removed;
-}
-
-Trajectory align_trajectory_with_reference_trajectory(
-  const Trajectory & trajectory, const Trajectory & predicted_trajectory)
-{
-  if (
-    trajectory.points.empty() || predicted_trajectory.points.empty() ||
-    trajectory.points.size() < 2) {
-    return Trajectory();
-  }
-
-  constexpr size_t MAX_SAFE_SIZE = 5000;
-
-  if (predicted_trajectory.points.size() > MAX_SAFE_SIZE) {
-    Trajectory safe_predicted_trajectory;
-    safe_predicted_trajectory.header = predicted_trajectory.header;
-    safe_predicted_trajectory.points.reserve(MAX_SAFE_SIZE);
-
-    for (size_t i = 0; i < MAX_SAFE_SIZE && i < predicted_trajectory.points.size(); ++i) {
-      safe_predicted_trajectory.points.push_back(predicted_trajectory.points[i]);
-    }
-
-    return align_trajectory_with_reference_trajectory(trajectory, safe_predicted_trajectory);
-  }
-
-  const auto last_seg_length = autoware::motion_utils::calcSignedArcLength(
-    trajectory.points, trajectory.points.size() - 2, trajectory.points.size() - 1);
-
-  // If no overlapping between trajectory and predicted_trajectory, return empty trajectory
-  // predicted_trajectory:   p1------------------pN
-  // trajectory:                                     t1------------------tN
-  //     OR
-  // predicted_trajectory:                           p1------------------pN
-  // trajectory:             t1------------------tN
-  const bool & is_p_n_before_t1 =
-    autoware::motion_utils::calcLongitudinalOffsetToSegment(
-      trajectory.points, 0, predicted_trajectory.points.back().pose.position) < 0.0;
-  const bool & is_p1_behind_t_n = autoware::motion_utils::calcLongitudinalOffsetToSegment(
-                                    trajectory.points, trajectory.points.size() - 2,
-                                    predicted_trajectory.points.front().pose.position) -
-                                    last_seg_length >
-                                  0.0;
-  const bool is_no_overlapping = (is_p_n_before_t1 || is_p1_behind_t_n);
-
-  if (is_no_overlapping) {
-    return Trajectory();
-  }
-
-  auto modified_trajectory_points = convertToTrajectoryPointArray(predicted_trajectory);
-  auto predicted_trajectory_points = convertToTrajectoryPointArray(predicted_trajectory);
-  auto trajectory_points = convertToTrajectoryPointArray(trajectory);
-
-  // If first point of predicted_trajectory is in front of start of trajectory, erase points which
-  // are in front of trajectory start point and insert pNew along the predicted_trajectory
-  // predicted_trajectory:           p1-----p2-----p3----//------pN
-  // trajectory:                               t1--------//------tN
-  // ↓
-  // predicted_trajectory:                   pNew--p3----//------pN
-  // trajectory:                               t1--------//------tN
-  auto predicted_trajectory_point_removed = remove_front_trajectory_point(
-    trajectory_points, modified_trajectory_points, predicted_trajectory_points);
-
-  if (predicted_trajectory_point_removed) {
-    if (!trajectory_points.empty() && !predicted_trajectory_points.empty()) {
-      insert_point_in_predicted_trajectory(
-        modified_trajectory_points, trajectory_points.front().pose, predicted_trajectory_points);
-    }
-  }
-
-  // If last point of predicted_trajectory is behind of end of trajectory, erase points which are
-  // behind trajectory last point and insert pNew along the predicted_trajectory
-  // predicted_trajectory:           p1-----//------pN-2-----pN-1-----pN
-  // trajectory:                     t1-----//-----tN-1--tN
-  // ↓
-  // predicted_trajectory:           p1-----//------pN-2-pNew
-  // trajectory:                     t1-----//-----tN-1--tN
-
-  auto reversed_predicted_trajectory_points =
-    reverse_trajectory_points(predicted_trajectory_points);
-  auto reversed_trajectory_points = reverse_trajectory_points(trajectory_points);
-  auto reversed_modified_trajectory_points = reverse_trajectory_points(modified_trajectory_points);
-
-  if (
-    reversed_trajectory_points.empty() || reversed_modified_trajectory_points.empty() ||
-    reversed_predicted_trajectory_points.empty()) {
-    return Trajectory();
-  }
-
-  auto reversed_predicted_trajectory_point_removed = remove_front_trajectory_point(
-    reversed_trajectory_points, reversed_modified_trajectory_points,
-    reversed_predicted_trajectory_points);
-
-  if (reversed_predicted_trajectory_point_removed) {
-    insert_point_in_predicted_trajectory(
-      reversed_modified_trajectory_points, reversed_trajectory_points.front().pose,
-      reversed_predicted_trajectory_points);
-  }
-
-  return convertToTrajectory(reverse_trajectory_points(reversed_modified_trajectory_points));
-}
-
 double calc_max_lateral_distance(
   const Trajectory & reference_trajectory, const Trajectory & predicted_trajectory)
 {
-  const auto alined_predicted_trajectory =
-    align_trajectory_with_reference_trajectory(reference_trajectory, predicted_trajectory);
+  const auto aligned_predicted_trajectory_points =
+    detail::align_trajectory_with_reference_trajectory(
+      reference_trajectory.points, predicted_trajectory.points);
   double max_dist = 0;
-  for (const auto & point : alined_predicted_trajectory.points) {
+  for (const auto & point : aligned_predicted_trajectory_points) {
     const auto p0 = autoware_utils::get_point(point);
     // find nearest segment
     const size_t nearest_segment_idx =
