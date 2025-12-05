@@ -12,17 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
-#include "test_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
-using autoware::trajectory_optimizer::utils::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using trajectory_optimizer_test_utils::create_sample_trajectory;
 
 class TrajectoryOptimizerUtilsTest : public ::testing::Test
 {
@@ -45,17 +41,6 @@ TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
   TrajectoryPoint invalid_point;
   invalid_point.pose.position.x = std::nan("");
   ASSERT_FALSE(autoware::trajectory_optimizer::utils::validate_point(invalid_point));
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, ApplySpline)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  const double interpolation_resolution_m = 0.1;
-  const double max_distance_discrepancy_m = 5.0;
-  const bool preserve_original_orientation = true;
-  autoware::trajectory_optimizer::utils::apply_spline(
-    points, interpolation_resolution_m, max_distance_discrepancy_m, preserve_original_orientation);
-  ASSERT_GE(points.size(), 2);
 }
 
 int main(int argc, char ** argv)

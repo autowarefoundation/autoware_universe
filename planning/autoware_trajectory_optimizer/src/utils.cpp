@@ -14,36 +14,19 @@
 
 #include "autoware/trajectory_optimizer/utils.hpp"
 
-#include "autoware/trajectory/interpolator/akima_spline.hpp"
-#include "autoware/trajectory/interpolator/interpolator.hpp"
-#include "autoware/trajectory/pose.hpp"
-#include "autoware/trajectory/trajectory_point.hpp"
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
-
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils_geometry/geometry.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
-
-#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
-#include <iterator>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
 {
-using autoware::experimental::trajectory::interpolator::AkimaSpline;
-using InterpolationTrajectory =
-  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
 
 rclcpp::Logger get_logger()
 {
@@ -139,65 +122,6 @@ void copy_trajectory_orientation(
     const auto nearest_index = nearest_index_opt.value();
     out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
   }
-}
-
-void apply_spline(
-  TrajectoryPoints & traj_points, const double interpolation_resolution_m,
-  const double max_distance_discrepancy_m, const bool preserve_original_orientation)
-{
-  constexpr size_t minimum_points_for_akima_spline = 5;
-  if (traj_points.size() < minimum_points_for_akima_spline) {
-    log_warn_throttle("Not enough points in trajectory for spline interpolation");
-    return;
-  }
-  const TrajectoryPoints original_traj_points = traj_points;
-  auto trajectory_interpolation_util =
-    InterpolationTrajectory::Builder{}
-      .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
-      .build(traj_points);
-  if (!trajectory_interpolation_util) {
-    log_warn_throttle("Failed to build interpolation trajectory");
-    return;
-  }
-  trajectory_interpolation_util->align_orientation_with_trajectory_direction();
-  TrajectoryPoints output_points{traj_points.front()};
-  constexpr double min_interpolation_step = 1e-2;
-  const auto ds = std::max(interpolation_resolution_m, min_interpolation_step);
-  output_points.reserve(static_cast<size_t>(trajectory_interpolation_util->length() / ds));
-
-  for (auto s = ds; s <= trajectory_interpolation_util->length(); s += ds) {
-    auto p = trajectory_interpolation_util->compute(s);
-    if (!validate_point(p)) {
-      continue;
-    }
-    output_points.push_back(p);
-  }
-
-  if (output_points.size() < 2) {
-    log_warn_throttle("Not enough points in trajectory after akima spline interpolation");
-    return;
-  }
-  auto last_interpolated_point = output_points.back();
-  auto & original_trajectory_last_point = traj_points.back();
-
-  if (!validate_point(original_trajectory_last_point)) {
-    log_warn_throttle("Last point in original trajectory is invalid. Removing last point");
-    traj_points = output_points;
-    return;
-  }
-
-  auto d = autoware_utils::calc_distance2d(
-    last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
-  if (d > min_interpolation_step) {
-    output_points.push_back(original_trajectory_last_point);
-  }
-
-  if (preserve_original_orientation) {
-    copy_trajectory_orientation(
-      original_traj_points, output_points, max_distance_discrepancy_m, M_PI);
-  }
-
-  traj_points = output_points;
 }
 
 }  // namespace autoware::trajectory_optimizer::utils
