@@ -102,7 +102,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     parameters.max_y = static_cast<float>(crop_box_max_y_vector.at(i));
     parameters.max_z = static_cast<float>(crop_box_max_z_vector.at(i));
     parameters.negative = static_cast<uint8_t>(
-      crop_box_max_z_vector.at(i));  // Default to positive mode (preserve inside)
+      crop_box_negative_vector.at(i));  // Default to positive mode (preserve inside)
     crop_box_parameters.push_back(parameters);
   }
 
