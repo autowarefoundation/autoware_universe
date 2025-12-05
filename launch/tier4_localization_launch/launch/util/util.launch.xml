@@ -49,7 +49,7 @@
         <param name="output_point_xyzircaedt" value="true"/>
         <remap from="~/input/pointcloud" to="measurement_range/pointcloud"/>
         <remap from="~/input/pointcloud/cuda" to="measurement_range/pointcloud/cuda"/>
-        <remap from="~/output/pointcloud" to="measurement_range/pointcloud"/>
+        <remap from="~/output/pointcloud" to="voxel_grid_downsample/pointcloud"/>
         <remap from="~/output/pointcloud/cuda" to="voxel_grid_downsample/pointcloud/cuda"/>
       </composable_node>
 
