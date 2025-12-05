@@ -323,7 +323,8 @@ private:
 
   // Add new publishers for spline coefficients and curvatures
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_steering_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr
+    debug_acados_optimised_steering_pub_;
 
   // argument
   bool enable_debug_info_;

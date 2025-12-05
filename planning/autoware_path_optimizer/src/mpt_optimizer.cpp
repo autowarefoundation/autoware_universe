@@ -15,12 +15,13 @@
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
 #include "acados_mpc/include/acados_interface.hpp"
-#include <autoware_utils/math/normalization.hpp>
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/utils/geometry_utils.hpp"
 #include "autoware/path_optimizer/utils/trajectory_utils.hpp"
+
+#include <autoware_utils/math/normalization.hpp>
 #include <rclcpp/logging.hpp>
 #include <tf2/utils.hpp>
 
@@ -433,9 +434,8 @@ MPTOptimizer::MPTOptimizer(
     node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
 
   debug_acados_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/acados_mpt_traj", 1);
-  debug_acados_optimised_steering_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/acados_optimised_steering", 1);
-
+  debug_acados_optimised_steering_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
+    "~/debug/acados_optimised_steering", 1);
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -503,8 +503,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   AcadosSolution acados_result;
 
   if (mpt_param_.use_acados) {
-    acados_result =
-      runAcadosMPT(ref_points, ref_points_spline, p.ego_pose, vehicle_info_);
+    acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose, vehicle_info_);
 
     std::cout << "utraj:" << std::endl;
     for (const auto & control : acados_result.utraj) {
@@ -534,14 +533,15 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
       std::make_shared<std::vector<TrajectoryPoint>>(*acados_traj_points);
 
     std_msgs::msg::Float32MultiArray acados_steering_msg;
-    for (const auto& delta : acados_result.utraj) {
+    for (const auto & delta : acados_result.utraj) {
       acados_steering_msg.data.push_back(static_cast<float>(delta[0]));
     }
 
     debug_acados_optimised_steering_pub_->publish(acados_steering_msg);
 
     // Publish acados trajectory to separate topic for comparison
-    const auto acados_traj = autoware::motion_utils::convertToTrajectory(*acados_traj_points, p.header);
+    const auto acados_traj =
+      autoware::motion_utils::convertToTrajectory(*acados_traj_points, p.header);
 
     debug_acados_mpt_traj_pub_->publish(acados_traj);
   }
@@ -574,9 +574,9 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   const size_t N_u = (N_ref - 1) * D_u;
 
   const size_t expected_size = N_x + N_u;
-  
+
   if (static_cast<size_t>(optimized_variables->size()) != expected_size) {
-    std::cout << "SIZE MISMATCH! Expected: " << expected_size 
+    std::cout << "SIZE MISMATCH! Expected: " << expected_size
               << " Got: " << optimized_variables->size() << std::endl;
   }
 
@@ -595,18 +595,21 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   // 8. publish trajectories for debug
   publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
 
-  std::cout << "Comparing MPT and acados outputs MPT (ey, epsi) - ACADOS (ey, epsi), Error:" << std::endl;
+  std::cout << "Comparing MPT and acados outputs MPT (ey, epsi) - ACADOS (ey, epsi), Error:"
+            << std::endl;
   for (size_t i = 0; i < acados_result.xtraj.size(); ++i) {
-    const auto& acados_state = acados_result.xtraj[i];
-    const auto& mpt_state = optimized_variables->segment(i * D_x, D_x);
+    const auto & acados_state = acados_result.xtraj[i];
+    const auto & mpt_state = optimized_variables->segment(i * D_x, D_x);
 
-    const auto& acados_ey = acados_state[0];
-    const auto& acados_epsi = acados_state[1];
+    const auto & acados_ey = acados_state[0];
+    const auto & acados_epsi = acados_state[1];
 
-    const auto& mpt_ey = mpt_state[0];
-    const auto& mpt_epsi = mpt_state[1];
+    const auto & mpt_ey = mpt_state[0];
+    const auto & mpt_epsi = mpt_state[1];
 
-    std::cout << "(" << (mpt_ey) << ", " << (mpt_epsi) << "), (" << (acados_ey) << ", " << (acados_epsi) << "), (" << (mpt_ey - acados_ey) << ", " << (mpt_epsi - acados_epsi) << ") ";
+    std::cout << "(" << (mpt_ey) << ", " << (mpt_epsi) << "), (" << (acados_ey) << ", "
+              << (acados_epsi) << "), (" << (mpt_ey - acados_ey) << ", " << (mpt_epsi - acados_epsi)
+              << ") ";
   }
   std::cout << std::endl;
 
@@ -615,11 +618,11 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   for (size_t i = 0; i < std::min(mpt_traj_points->size(), acados_traj_points->size()); ++i) {
     const auto & mpt_point = (*mpt_traj_points)[i];
     const auto & acados_point = (*acados_traj_points)[i];
-    
+
     const double dx = mpt_point.pose.position.x - acados_point.pose.position.x;
     const double dy = mpt_point.pose.position.y - acados_point.pose.position.y;
     const double dv = mpt_point.longitudinal_velocity_mps - acados_point.longitudinal_velocity_mps;
-    
+
     std::cout << "(" << dx << ", " << dy << ", " << dv << "), ";
   }
   std::cout << std::endl;
@@ -729,8 +732,8 @@ std::vector<double> MPTOptimizer::computeCubicSplineCoeffs(
   }
 
   // Compute cubic polynomial coefficients for each segment
-  // SymbolicCubicSpline expects: [a_seg0, a_seg1, ..., b_seg0, b_seg1, ..., c_seg0, ..., d_seg0, ...]
-  // where p(t) = a*t^3 + b*t^2 + c*t + d
+  // SymbolicCubicSpline expects: [a_seg0, a_seg1, ..., b_seg0, b_seg1, ..., c_seg0, ..., d_seg0,
+  // ...] where p(t) = a*t^3 + b*t^2 + c*t + d
   std::vector<double> a_coeffs, b_coeffs, c_coeffs, d_coeffs;
   a_coeffs.reserve(n_segments);
   b_coeffs.reserve(n_segments);
@@ -1019,7 +1022,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
     ref_point.optimized_kinematic_state = KinematicState{lat_error, yaw_error};
 
     // Store steering input (last state has no control)
-    if (i == N_ref -1 ) {
+    if (i == N_ref - 1) {
       ref_point.optimized_input = 0.0;
     } else {
       ref_point.optimized_input = acados_solution.utraj[i][0];

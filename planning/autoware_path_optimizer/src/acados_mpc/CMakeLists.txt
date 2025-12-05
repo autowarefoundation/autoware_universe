@@ -25,7 +25,7 @@ add_library(acados_interface
 )
 
 # Make acados_interface headers available to consumers
-target_include_directories(acados_interface PUBLIC 
+target_include_directories(acados_interface PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
@@ -51,7 +51,7 @@ add_library(acados_generated_code
 )
 
 # Ensure headers in c_generated_code are visible to consumers
-target_include_directories(acados_generated_code PUBLIC 
+target_include_directories(acados_generated_code PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code>
     $<INSTALL_INTERFACE:include/c_generated_code>
     /home/arjunram/Workspace/acados/include
