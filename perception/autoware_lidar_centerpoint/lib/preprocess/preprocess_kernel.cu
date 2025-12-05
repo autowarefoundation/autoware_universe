@@ -46,6 +46,60 @@ const std::size_t POINT_DIM_XYZIT = 5;  // X, Y, Z, Intensity, Time_lag
 const std::size_t ENCODER_NUM_FEATURES_9 = 9;
 const std::size_t ENCODER_NUM_FEATURES_10 = 10;
 const std::size_t ENCODER_NUM_FEATURES_11 = 11;
+
+// Kernel to compute height (max_z - min_z) for each voxel
+__global__ void computeVoxelHeights_kernel(
+  const float * voxels, const float * voxel_num_points, unsigned int num_voxels,
+  float * voxel_heights, std::size_t point_dim)
+{
+  int voxel_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (voxel_idx >= num_voxels) return;
+
+  int num_points = static_cast<int>(voxel_num_points[voxel_idx]);
+  if (num_points == 0) {
+    voxel_heights[voxel_idx] = 0.0f;
+    return;
+  }
+
+  float min_z = INFINITY;
+  float max_z = -INFINITY;
+
+  // Iterate through all points in this voxel
+  for (int i = 0; i < num_points; ++i) {
+    int point_index = voxel_idx * MAX_POINT_IN_VOXEL_SIZE + i;
+    float z = voxels[point_index * point_dim + 2];  // Z is at index 2
+    min_z = fminf(min_z, z);
+    max_z = fmaxf(max_z, z);
+  }
+
+  voxel_heights[voxel_idx] = max_z - min_z;
+}
+
+// Kernel to extract mean Z from encoded features
+// Mean Z is at index 6 for ENCODER_NUM_FEATURES_9/10, index 7 for ENCODER_NUM_FEATURES_11
+__global__ void extractFeatureMeanZ_kernel(
+  const float * encoder_features, const float * voxel_num_points, unsigned int num_voxels,
+  float * voxel_mean_z, std::size_t encoder_in_feature_size)
+{
+  int voxel_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (voxel_idx >= num_voxels) return;
+
+  int num_points = static_cast<int>(voxel_num_points[voxel_idx]);
+  if (num_points == 0) {
+    voxel_mean_z[voxel_idx] = 0.0f;
+    return;
+  }
+
+  // Determine the index of mean.z based on encoder feature size
+  // For 11 features: mean.z is at index 7
+  // For 9/10 features: mean.z is at index 6
+  int mean_z_idx = (encoder_in_feature_size >= ENCODER_NUM_FEATURES_11) ? 7 : 6;
+
+  // Extract mean.z from the first point (it's the same for all points in the voxel)
+  // Layout: [voxel_idx][point_idx][feature_idx]
+  int feature_index = voxel_idx * MAX_POINT_IN_VOXEL_SIZE * encoder_in_feature_size + mean_z_idx;
+  voxel_mean_z[voxel_idx] = encoder_features[feature_index];
+}
 }  // namespace
 
 namespace autoware::lidar_centerpoint
@@ -469,6 +523,32 @@ cudaError_t PreprocessCuda::generateFeatures_launch(
   } else {
     throw std::runtime_error("Value of encoder_in_feature_size is not supported!");
   }
+
+  return cudaGetLastError();
+}
+
+cudaError_t PreprocessCuda::computeVoxelHeights_launch(
+  const float * voxels, const float * voxel_num_points, unsigned int num_voxels,
+  float * voxel_heights)
+{
+  dim3 threads(256);
+  dim3 blocks((num_voxels + threads.x - 1) / threads.x);
+
+  computeVoxelHeights_kernel<<<blocks, threads, 0, stream_>>>(
+    voxels, voxel_num_points, num_voxels, voxel_heights, config_.point_feature_size_);
+
+  return cudaGetLastError();
+}
+
+cudaError_t PreprocessCuda::extractFeatureMeanZ_launch(
+  const float * encoder_features, const float * voxel_num_points, unsigned int num_voxels,
+  float * voxel_mean_z)
+{
+  dim3 threads(256);
+  dim3 blocks((num_voxels + threads.x - 1) / threads.x);
+
+  extractFeatureMeanZ_kernel<<<blocks, threads, 0, stream_>>>(
+    encoder_features, voxel_num_points, num_voxels, voxel_mean_z, config_.encoder_in_feature_size_);
 
   return cudaGetLastError();
 }

@@ -97,6 +97,8 @@ void CenterPointTRT::initPtr()
 
   points_aux_d_ = cuda::make_unique<float[]>(config_.cloud_capacity_ * config_.point_feature_size_);
   shuffle_indices_d_ = cuda::make_unique<unsigned int[]>(config_.cloud_capacity_);
+  voxel_heights_d_ = cuda::make_unique<float[]>(config_.max_voxel_size_);
+  voxel_mean_z_d_ = cuda::make_unique<float[]>(config_.max_voxel_size_);
 
   std::vector<unsigned int> indexes(config_.cloud_capacity_);
   std::iota(indexes.begin(), indexes.end(), 0);
@@ -252,6 +254,16 @@ bool CenterPointTRT::preprocess(
     voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
     encoder_in_features_d_.get());
 
+  // Extract mean Z from encoded features for visualization
+  unsigned int num_voxels_host;
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    &num_voxels_host, num_voxels_d_.get(), sizeof(unsigned int), cudaMemcpyDeviceToHost));
+  if (num_voxels_host > 0) {
+    pre_proc_ptr_->extractFeatureMeanZ_launch(
+      encoder_in_features_d_.get(), num_points_per_voxel_d_.get(), num_voxels_host,
+      voxel_mean_z_d_.get());
+  }
+
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return true;
 }
@@ -287,6 +299,108 @@ void CenterPointTRT::postProcess(std::vector<Box3D> & det_boxes3d)
   if (det_boxes3d.size() == 0) {
     RCLCPP_DEBUG_STREAM(rclcpp::get_logger(config_.logger_name_.c_str()), "No detected boxes.");
   }
+}
+
+bool CenterPointTRT::getVoxelGridData(
+  std::vector<int> & coordinates, std::vector<float> & point_counts, unsigned int & num_voxels)
+{
+  // Get number of voxels
+  CHECK_CUDA_ERROR(
+    cudaMemcpy(&num_voxels, num_voxels_d_.get(), sizeof(unsigned int), cudaMemcpyDeviceToHost));
+
+  if (num_voxels == 0) {
+    return false;
+  }
+
+  // Allocate host memory
+  coordinates.resize(num_voxels * 3);  // z, y, x for each voxel
+  point_counts.resize(num_voxels);
+
+  // Copy data from device to host
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    coordinates.data(), coordinates_d_.get(), num_voxels * 3 * sizeof(int),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    point_counts.data(), num_points_per_voxel_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+
+  return true;
+}
+
+bool CenterPointTRT::getVoxelGridData(
+  std::vector<int> & coordinates, std::vector<float> & point_counts,
+  std::vector<float> & voxel_heights, unsigned int & num_voxels)
+{
+  // Get number of voxels
+  CHECK_CUDA_ERROR(
+    cudaMemcpy(&num_voxels, num_voxels_d_.get(), sizeof(unsigned int), cudaMemcpyDeviceToHost));
+
+  if (num_voxels == 0) {
+    return false;
+  }
+
+  // Compute voxel heights on GPU
+  pre_proc_ptr_->computeVoxelHeights_launch(
+    voxels_d_.get(), num_points_per_voxel_d_.get(), num_voxels, voxel_heights_d_.get());
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  // Allocate host memory
+  coordinates.resize(num_voxels * 3);  // z, y, x for each voxel
+  point_counts.resize(num_voxels);
+  voxel_heights.resize(num_voxels);
+
+  // Copy data from device to host
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    coordinates.data(), coordinates_d_.get(), num_voxels * 3 * sizeof(int),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    point_counts.data(), num_points_per_voxel_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    voxel_heights.data(), voxel_heights_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+
+  return true;
+}
+
+bool CenterPointTRT::getVoxelGridData(
+  std::vector<int> & coordinates, std::vector<float> & point_counts,
+  std::vector<float> & voxel_heights, std::vector<float> & voxel_mean_z, unsigned int & num_voxels)
+{
+  // Get number of voxels
+  CHECK_CUDA_ERROR(
+    cudaMemcpy(&num_voxels, num_voxels_d_.get(), sizeof(unsigned int), cudaMemcpyDeviceToHost));
+
+  if (num_voxels == 0) {
+    return false;
+  }
+
+  // Compute voxel heights on GPU
+  pre_proc_ptr_->computeVoxelHeights_launch(
+    voxels_d_.get(), num_points_per_voxel_d_.get(), num_voxels, voxel_heights_d_.get());
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  // Allocate host memory
+  coordinates.resize(num_voxels * 3);  // z, y, x for each voxel
+  point_counts.resize(num_voxels);
+  voxel_heights.resize(num_voxels);
+  voxel_mean_z.resize(num_voxels);
+
+  // Copy data from device to host
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    coordinates.data(), coordinates_d_.get(), num_voxels * 3 * sizeof(int),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    point_counts.data(), num_points_per_voxel_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    voxel_heights.data(), voxel_heights_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    voxel_mean_z.data(), voxel_mean_z_d_.get(), num_voxels * sizeof(float),
+    cudaMemcpyDeviceToHost));
+
+  return true;
 }
 
 }  // namespace autoware::lidar_centerpoint

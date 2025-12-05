@@ -30,7 +30,8 @@ public:
     const std::vector<double> & voxel_size, const std::size_t downsample_factor,
     const std::size_t encoder_in_feature_size, const std::vector<float> & score_thresholds,
     const float circle_nms_dist_threshold, const std::vector<double> yaw_norm_thresholds,
-    const bool has_variance, const std::string logger_name = "lidar_centerpoint")
+    const bool has_variance, const std::size_t max_num_detections = 2000,
+    const std::string logger_name = "lidar_centerpoint")
   {
     class_size_ = class_size;
     point_feature_size_ = point_feature_size;
@@ -79,6 +80,8 @@ public:
         (yaw_norm_threshold >= 0.f && yaw_norm_threshold < 1.f) ? yaw_norm_threshold : 0.f;
     }
 
+    max_num_detections_ = max_num_detections;
+
     grid_size_x_ = static_cast<std::size_t>((range_max_x_ - range_min_x_) / voxel_size_x_);
     grid_size_y_ = static_cast<std::size_t>((range_max_y_ - range_min_y_) / voxel_size_y_);
     grid_size_z_ = static_cast<std::size_t>((range_max_z_ - range_min_z_) / voxel_size_z_);
@@ -124,6 +127,8 @@ public:
   std::vector<float> score_thresholds_{};
   float circle_nms_dist_threshold_{1.5f};
   std::vector<float> yaw_norm_thresholds_{};
+  std::size_t max_num_detections_{
+    1000};  // Maximum number of detections before NMS to limit GPU memory usage
 
   // calculated params
   std::size_t grid_size_x_ = (range_max_x_ - range_min_x_) / voxel_size_x_;

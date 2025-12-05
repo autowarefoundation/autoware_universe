@@ -185,8 +185,13 @@ cudaError_t PostProcessCUDA::generateDetectedBoxes3D_launch(
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
 
+  // limit the number of detections to prevent GPU memory overflow in NMS
+  if (det_boxes3d_d.size() > config_.max_num_detections_) {
+    det_boxes3d_d.resize(config_.max_num_detections_);
+  }
+
   // supress by NMS
-  thrust::device_vector<bool> final_keep_mask_d(num_det_boxes3d);
+  thrust::device_vector<bool> final_keep_mask_d(det_boxes3d_d.size());
   const auto num_final_det_boxes3d =
     circleNMS(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
 
