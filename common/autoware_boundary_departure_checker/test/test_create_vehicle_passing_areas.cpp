@@ -15,7 +15,7 @@
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <Eigen/Core>
-#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/covered_by.hpp>
@@ -27,8 +27,8 @@
 #include <vector>
 
 using autoware::boundary_departure_checker::utils::createVehiclePassingAreas;
-using autoware_utils::LinearRing2d;
-using autoware_utils::Point2d;
+using autoware_utils_geometry::LinearRing2d;
+using autoware_utils_geometry::Point2d;
 
 class CreateVehiclePassingAreasTest : public ::testing::Test
 {
