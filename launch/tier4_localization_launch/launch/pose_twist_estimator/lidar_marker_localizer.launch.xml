@@ -1,30 +1,36 @@
 <?xml version="1.0"?>
 <launch>
+  <arg name="group_namespace" default="lidar_marker_localizer"/>
+
   <!-- input pointcloud topic/container -->
   <arg name="input_pointcloud"/>
-  <arg name="lidar_container_name"/>
+  <arg name="lidar_container_name" default="/pointcloud_preprocessor/pointcloud_container" description="container name of lidar used for lidar-marker localization"/>
 
   <!-- whether use intra-process -->
   <arg name="use_intra_process" default="true" description="use ROS 2 component container communication"/>
 
+  <arg name="crop_box_filter_measurement_range_param_path" default="$(var lidar_marker_localizer/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+  <arg name="ring_filter_param_path" default="$(var lidar_marker_localizer/pointcloud_preprocessor/ring_filter_param_path)"/>
+  <arg name="lidar_marker_localizer_param_path" default="$(var lidar_marker_localizer/lidar_marker_localizer_param_path)"/>
+
   <group>
-    <push-ros-namespace namespace="lidar_marker_localizer"/>
+    <push-ros-namespace namespace="$(var group_namespace)"/>
 
     <!-- pointcloud preprocess -->
     <group>
       <push-ros-namespace namespace="pointcloud_preprocessor"/>
       <load_composable_node target="$(var lidar_container_name)">
         <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_measurement_range">
+          <param from="$(var crop_box_filter_measurement_range_param_path)"/>
           <remap from="input" to="$(var input_pointcloud)"/>
           <remap from="output" to="measurement_range/pointcloud"/>
-          <param from="$(var lidar_marker_localizer/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
 
         <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::PassThroughFilterUInt16Component" name="ring_filter">
+          <param from="$(var ring_filter_param_path)"/>
           <remap from="input" to="measurement_range/pointcloud"/>
           <remap from="output" to="ring_filter/pointcloud"/>
-          <param from="$(var lidar_marker_localizer/pointcloud_preprocessor/ring_filter_param_path)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
       </load_composable_node>
@@ -37,7 +43,7 @@
       <arg name="input_pointcloud" value="pointcloud_preprocessor/ring_filter/pointcloud"/>
       <arg name="output_pose_with_covariance" value="/localization/pose_estimator/pose_with_covariance"/>
       <arg name="service_trigger_node_srv" value="trigger_node_srv"/>
-      <arg name="param_file" value="$(var lidar_marker_localizer/lidar_marker_localizer_param_path)"/>
+      <arg name="param_file" value="$(var lidar_marker_localizer_param_path)"/>
     </include>
   </group>
 </launch>
