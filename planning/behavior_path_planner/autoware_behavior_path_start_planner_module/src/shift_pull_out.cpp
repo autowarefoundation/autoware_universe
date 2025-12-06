@@ -113,12 +113,24 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     // The method for lane departure checking verifies if the footprint of each point on the path
     // is contained within a lanelet using `boost::geometry::within`, which incurs a high
     // computational cost.
-
+    std::optional<geometry_msgs::msg::Pose> departure_pose = std::nullopt;
     if (
-      is_lane_departure_check_required && boundary_departure_checker_->checkPathWillLeaveLane(
-                                            lanelet_map_ptr, path_shift_start_to_end,
-                                            fused_id_start_to_end, fused_polygon_start_to_end)) {
+      is_lane_departure_check_required &&
+      boundary_departure_checker_->checkPathWillLeaveLane(
+        lanelet_map_ptr, path_shift_start_to_end, fused_id_start_to_end, fused_polygon_start_to_end,
+        departure_pose)) {
       planner_debug_data.conditions_evaluation.emplace_back("lane departure");
+
+      // Append departure point information if available
+      if (departure_pose) {
+        const auto relative_departure_pose =
+          start_planner_utils::calculate_relative_pose_in_vehicle_coordinate(
+            start_pose, *departure_pose);
+        planner_debug_data.conditions_evaluation.back().append(
+          " (at local_x:" + std::to_string(relative_departure_pose.longitudinal_distance_vehicle) +
+          ", local_y:" + std::to_string(relative_departure_pose.lateral_distance_vehicle) + ")");
+      }
+
       continue;
     }
 
@@ -168,9 +180,22 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     shift_path.points = cropped_path.points;
     shift_path.header = planner_data->route_handler->getRouteHeader();
 
+    std::optional<geometry_msgs::msg::Pose> collision_pose = std::nullopt;
     if (isPullOutPathCollided(
-          pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
+          pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end,
+          collision_pose)) {
       planner_debug_data.conditions_evaluation.emplace_back("collision");
+
+      // Append collision point information if available
+      if (collision_pose) {
+        const auto relative_collision_pose =
+          start_planner_utils::calculate_relative_pose_in_vehicle_coordinate(
+            start_pose, *collision_pose);
+        planner_debug_data.conditions_evaluation.back().append(
+          " (at local_x:" + std::to_string(relative_collision_pose.longitudinal_distance_vehicle) +
+          ", local_y:" + std::to_string(relative_collision_pose.lateral_distance_vehicle) + ")");
+      }
+
       continue;
     }
 
