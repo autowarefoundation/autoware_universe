@@ -115,22 +115,22 @@ Polygon2d createExtendedPolygon(
     debug->lat_offset = lat_offset;
   }
 
-  const auto p1 =
-    autoware_utils::calc_offset_pose(base_link_pose, forward_lon_offset, lat_offset, 0.0);
-  const auto p2 =
-    autoware_utils::calc_offset_pose(base_link_pose, forward_lon_offset, -lat_offset, 0.0);
-  const auto p3 =
-    autoware_utils::calc_offset_pose(base_link_pose, backward_lon_offset, -lat_offset, 0.0);
-  const auto p4 =
-    autoware_utils::calc_offset_pose(base_link_pose, backward_lon_offset, lat_offset, 0.0);
+  auto base_footprint = vehicle_info.createFootprint(
+    lat_margin, lat_margin, lat_margin, (is_stopped_obj ? lon_length / 2 : lon_length),
+    (is_stopped_obj ? lon_length / 2 : 0));
+
+  // remove center point
+  auto center_left_index = base_footprint.begin() + 5;
+  auto center_right_index = base_footprint.begin() + 2;
+
+  base_footprint.erase(center_left_index);
+  base_footprint.erase(center_right_index);
+
+  auto footprint = autoware_utils::transform_vector(
+    base_footprint, autoware_utils::pose2transform(base_link_pose));
 
   Polygon2d polygon;
-  polygon.outer().reserve(5);
-  appendPointToPolygon(polygon, p1.position);
-  appendPointToPolygon(polygon, p2.position);
-  appendPointToPolygon(polygon, p3.position);
-  appendPointToPolygon(polygon, p4.position);
-  appendPointToPolygon(polygon, p1.position);
+  polygon.outer() = footprint;
   return autoware_utils::is_clockwise(polygon) ? polygon
                                                : autoware_utils::inverse_clockwise(polygon);
 }
