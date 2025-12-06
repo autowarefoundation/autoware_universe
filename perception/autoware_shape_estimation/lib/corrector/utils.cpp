@@ -366,7 +366,7 @@ bool correctWithReferenceShapeAndPose(
   Eigen::Affine3d base2obj_transform;
   tf2::fromMsg(pose, base2obj_transform);
 
-  Eigen::Vector3d local_c1;
+  Eigen::Vector3d local_c1 = Eigen::Vector3d::Zero();
   Eigen::Vector3d ref_center = Eigen::Vector3d(ref_pose.position.x, ref_pose.position.y, 0.0);
   // local points
   std::vector<Eigen::Vector3d> v_points;
