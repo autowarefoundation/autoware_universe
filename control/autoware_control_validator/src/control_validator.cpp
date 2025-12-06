@@ -19,6 +19,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
+
 #include <angles/angles/angles.h>
 
 #include <algorithm>
@@ -133,7 +135,7 @@ void AccelerationValidator::validate(
 {
   desired_acc_lpf.filter(
     control_cmd.longitudinal.acceleration +
-    9.8 * autoware_utils::get_rpy(kinematic_state.pose.pose).y);
+    9.8 * autoware_utils_geometry::get_rpy(kinematic_state.pose.pose).y);
   measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
   if (std::abs(kinematic_state.twist.twist.linear.x) < 0.3) {
     desired_acc_lpf.reset(0.0);

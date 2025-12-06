@@ -30,6 +30,7 @@
   <depend>autoware_route_handler</depend>
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>pluginlib</depend>

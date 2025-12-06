@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_tensorrt_vad</name>
+  <version>0.0.0</version>
+  <description>VAD ROS Node for Autoware</description>
+  <maintainer email="aquashin0202@gmail.com">shintarotomie</maintainer>
+  <maintainer email="vborisw@gmail.com">Max-Bin</maintainer>
+  <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <!-- ROS 2 core dependencies -->
+  <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_tensorrt_plugins</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_utils_uuid</depend>
+  <depend>cv_bridge</depend>
+  <depend>eigen3_cmake_module</depend>
+  <depend>geometry_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>nav_msgs</depend>
+  <depend>nlohmann-json-dev</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
+  <depend>visualization_msgs</depend>
+
+  <exec_depend>autoware_launch</exec_depend>
+
+  <test_depend>ament_cmake_gmock</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

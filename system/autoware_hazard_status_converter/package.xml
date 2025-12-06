@@ -14,7 +14,7 @@
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_diagnostic_graph_utils</depend>
   <depend>autoware_system_msgs</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>diagnostic_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

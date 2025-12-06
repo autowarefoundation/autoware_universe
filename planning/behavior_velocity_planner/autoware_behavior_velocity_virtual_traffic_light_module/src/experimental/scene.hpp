@@ -18,6 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 #include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
@@ -47,10 +48,10 @@ public:
     std::string instrument_type{};
     std::string instrument_id{};
     std::vector<tier4_v2x_msgs::msg::KeyValue> custom_tags{};
-    autoware_utils::Point3d instrument_center{};
-    std::optional<autoware_utils::LineString3d> stop_line{};
-    autoware_utils::LineString3d start_line{};
-    std::vector<autoware_utils::LineString3d> end_lines{};
+    autoware_utils_geometry::Point3d instrument_center{};
+    std::optional<autoware_utils_geometry::LineString3d> stop_line{};
+    autoware_utils_geometry::LineString3d start_line{};
+    std::vector<autoware_utils_geometry::LineString3d> end_lines{};
     std::string stop_line_id_for_log{};
   };
 

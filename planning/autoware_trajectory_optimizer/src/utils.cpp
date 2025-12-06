@@ -90,7 +90,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory, const double min
   utils::remove_close_proximity_points(input_trajectory, min_dist_to_remove_m);
 
   if (input_trajectory.size() < 2) {
-    log_error_throttle(
+    log_warn_throttle(
       "Not enough points in trajectory after removing close proximity points and invalid points");
     return;
   }
@@ -405,7 +405,7 @@ void apply_spline(
 {
   constexpr size_t minimum_points_for_akima_spline = 5;
   if (traj_points.size() < minimum_points_for_akima_spline) {
-    log_error_throttle("Not enough points in trajectory for spline interpolation");
+    log_warn_throttle("Not enough points in trajectory for spline interpolation");
     return;
   }
   const TrajectoryPoints original_traj_points = traj_points;

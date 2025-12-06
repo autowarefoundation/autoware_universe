@@ -135,6 +135,7 @@ planning/autoware_remaining_distance_time_calculator/** ahmed.ebrahim@leodrive.a
 planning/autoware_rtc_interface/** fumiya.watanabe@tier4.jp kyoichi.sugahara@tier4.jp satoshi.ota@tier4.jp taiki.tanaka@tier4.jp
 planning/autoware_scenario_selector/** fumiya.watanabe@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 planning/autoware_surround_obstacle_checker/** satoshi.ota@tier4.jp takumi.odashima@tier4.jp
+planning/autoware_tensorrt_vad/** aquashin0202@gmail.com vborisw@gmail.com yukihiro.saito@tier4.jp
 planning/autoware_trajectory_adapter/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_concatenator/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_modifier/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp

@@ -192,11 +192,13 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       pcl::concatenatePointCloud(
         *concatenate_cloud_result.concatenate_cloud_ptr, *transformed_delay_compensated_cloud_ptr,
         *concatenate_cloud_result.concatenate_cloud_ptr);
-      concatenation_info_manager_.update_source_from_point_cloud(
-        *transformed_delay_compensated_cloud_ptr, topic,
-        autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
-        *concatenate_cloud_result.concatenation_info_ptr);
     }
+
+    // update concatenation info
+    concatenation_info_manager_.update_source_from_point_cloud(
+      *transformed_delay_compensated_cloud_ptr, topic,
+      autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+      *concatenate_cloud_result.concatenation_info_ptr);
 
     if (publish_synchronized_pointcloud_) {
       if (!concatenate_cloud_result.topic_to_transformed_cloud_map) {

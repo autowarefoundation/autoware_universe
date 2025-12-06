@@ -32,6 +32,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
 #include <pluginlib/class_list_macros.hpp>
