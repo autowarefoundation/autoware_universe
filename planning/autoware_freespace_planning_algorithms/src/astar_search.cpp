@@ -498,7 +498,8 @@ bool AstarSearch::isGoal(const AstarNode & node) const
 {
   const double lateral_goal_range = planner_common_param_.lateral_goal_range / 2.0;
   const double longitudinal_goal_range = planner_common_param_.longitudinal_goal_range / 2.0;
-  const double goal_angle = autoware_utils_math::deg2rad(planner_common_param_.angle_goal_range / 2.0);
+  const double goal_angle =
+    autoware_utils_math::deg2rad(planner_common_param_.angle_goal_range / 2.0);
 
   const auto node_pose = node2pose(node);
 
