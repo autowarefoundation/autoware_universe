@@ -15,6 +15,7 @@
 #include "scene.hpp"
 
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <memory>
 #include <vector>
@@ -30,7 +31,7 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
   using autoware_utils::create_default_marker;
   using autoware_utils::create_marker_color;
   using autoware_utils::create_marker_scale;
-  using autoware_utils::create_point;
+  using autoware_utils_geometry::create_point;
   using visualization_msgs::msg::Marker;
 
   visualization_msgs::msg::MarkerArray msg;
@@ -68,7 +69,7 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
 }
 }  // namespace
 
-using autoware_utils::create_point;
+using autoware_utils_geometry::create_point;
 
 NoDrivableLaneModule::NoDrivableLaneModule(
   const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
@@ -204,7 +205,7 @@ void NoDrivableLaneModule::handle_approaching_state(
   }
 
   geometry_msgs::msg::Point stop_point =
-    autoware_utils::get_point(path->points.at(target_point_idx).point);
+    autoware_utils_geometry::get_point(path->points.at(target_point_idx).point);
 
   const auto & op_stop_pose =
     planning_utils::insertStopPoint(stop_point, target_segment_idx, *path);
@@ -263,7 +264,7 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(
 
   // Get stop point and stop factor
   {
-    const auto & stop_pose = autoware_utils::get_pose(path->points.at(0));
+    const auto & stop_pose = autoware_utils_geometry::get_pose(path->points.at(0));
     planning_factor_interface_->add(
       path->points, planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
