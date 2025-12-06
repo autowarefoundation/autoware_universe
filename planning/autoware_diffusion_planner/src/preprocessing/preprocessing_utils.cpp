@@ -63,7 +63,7 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
 
   for (auto & [key, value] : input_data_map) {
     // Skip normalization for ego_shape and sampled_trajectories
-    if (key == "ego_shape" || key == "sampled_trajectories") {
+    if (key == "ego_shape" || key == "sampled_trajectories" || key == "turn_indicators") {
       continue;
     }
 

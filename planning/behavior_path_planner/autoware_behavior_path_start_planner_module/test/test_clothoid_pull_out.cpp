@@ -85,7 +85,10 @@ TEST_F(TestClothoidPullOut, GenerateValidClothoidPullOutPath)
   // Test data files to be tested
   // latter data files are commented out because they fail
   const std::vector<std::string> yaml_files = {
-    "route_data2.1.yaml", "route_data2.2.yaml", "route_data4.1.yaml", "route_data4.2.yaml",
+    "route_data2.1.yaml",
+    "route_data2.2.yaml",
+    "route_data4.1.yaml",
+    "route_data4.2.yaml",
     // "route_data2.3.yaml", "route_data3.1.yaml", "route_data3.2.yaml", "route_data3.3.yaml",
     // "route_data4.3.yaml"
   };

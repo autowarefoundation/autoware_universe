@@ -79,14 +79,6 @@ VelocityLimitClearCommand create_velocity_limit_clear_command(
   msg.command = true;
   return msg;
 }
-
-Float64Stamped create_float64_stamped(const rclcpp::Time & now, const float & data)
-{
-  Float64Stamped msg;
-  msg.stamp = now;
-  msg.data = data;
-  return msg;
-}
 }  // namespace
 
 void ObstacleCruiseModule::init(rclcpp::Node & node, const std::string & module_name)
@@ -103,8 +95,6 @@ void ObstacleCruiseModule::init(rclcpp::Node & node, const std::string & module_
   obstacle_filtering_param_ = ObstacleFilteringParam(node);
 
   // common publisher
-  processing_time_publisher_ =
-    node.create_publisher<Float64Stamped>("~/debug/obstacle_cruise/processing_time_ms", 1);
   virtual_wall_publisher_ =
     node.create_publisher<MarkerArray>("~/obstacle_cruise/virtual_walls", 1);
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_cruise/debug_markers", 1);
@@ -144,7 +134,6 @@ VelocityPlanningResult ObstacleCruiseModule::plan(
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // 1. init variables
-  stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
 
   // filter obstacles of predicted objects
@@ -339,9 +328,6 @@ void ObstacleCruiseModule::publish_debug_info()
 
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
-
-  // 5. processing time
-  processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 }
 
 std::optional<CruiseObstacle> ObstacleCruiseModule::create_cruise_obstacle(

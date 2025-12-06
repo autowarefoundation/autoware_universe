@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_motion_velocity_road_user_stop_module</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>road_user_stop module to stop ego vehicle when road users (pedestrians, cyclists) are on the road</description>
 
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
