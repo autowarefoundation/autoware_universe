@@ -302,20 +302,29 @@ void * msr_reader(void * args)
       msr.error_code_ = 0;
       msr.pkg_thermal_status_.push_back(false);
       oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      {
+        const std::string & str = oss.str();
+        ret = write(new_sock, str.c_str(), str.length());
+      }
       break;
 
     case Throttling:
       msr.error_code_ = 0;
       msr.pkg_thermal_status_.push_back(true);
       oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      {
+        const std::string & str = oss.str();
+        ret = write(new_sock, str.c_str(), str.length());
+      }
       break;
 
     case ReturnsError:
       msr.error_code_ = EACCES;
       oa << msr;
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      {
+        const std::string & str = oss.str();
+        ret = write(new_sock, str.c_str(), str.length());
+      }
       break;
 
     case RecvTimeout:
@@ -338,7 +347,10 @@ void * msr_reader(void * args)
     case FormatError:
       // Send wrong data
       oa << "test";
-      ret = write(new_sock, oss.str().c_str(), oss.str().length());
+      {
+        const std::string & str = oss.str();
+        ret = write(new_sock, str.c_str(), str.length());
+      }
       break;
 
     default:

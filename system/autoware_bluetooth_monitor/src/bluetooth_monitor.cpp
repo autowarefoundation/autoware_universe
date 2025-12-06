@@ -92,7 +92,8 @@ bool BluetoothMonitor::sendConfig(diagnostic_updater::DiagnosticStatusWrapper & 
   archive & config_;
 
   // Write list of devices to FD
-  int ret = write(socket_, out_stream.str().c_str(), out_stream.str().length());
+  const std::string & str = out_stream.str();
+  int ret = write(socket_, str.c_str(), str.length());
   if (ret < 0) {
     stat.summary(DiagStatus::ERROR, FUNCTION_ERROR_STR);
     stat.add("write", strerror(errno));

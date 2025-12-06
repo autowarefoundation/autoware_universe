@@ -89,8 +89,9 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   if (c.exit_code() != 0) {
     std::ostringstream os;
     is_err >> os.rdbuf();
+    const std::string & str = os.str();
     stat.summary(DiagStatus::ERROR, "free error");
-    stat.add("free", os.str().c_str());
+    stat.add("free", str.c_str());
     return;
   }
 
@@ -195,8 +196,9 @@ void MemMonitor::checkEcc(diagnostic_updater::DiagnosticStatusWrapper & stat)
   if (c.exit_code() != 0) {
     std::ostringstream os;
     is_err >> os.rdbuf();
+    const std::string & str = os.str();
     stat.summary(DiagStatus::ERROR, "edac-util error");
-    stat.add("edac-util", os.str().c_str());
+    stat.add("edac-util", str.c_str());
     return;
   }
 

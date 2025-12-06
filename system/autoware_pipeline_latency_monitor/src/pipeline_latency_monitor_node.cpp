@@ -205,10 +205,12 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
       debug_ss << " + " << step_it->name << "=skipped";
     }
   }
-  RCLCPP_DEBUG(
-    get_logger(), "Total latency calculation (cumulative time-ordered): %s = %2.2fms",
-    debug_ss.str().c_str(), total_latency_ms_);
-
+  {
+    const std::string & str = debug_ss.str();
+    RCLCPP_DEBUG(
+      get_logger(), "Total latency calculation (cumulative time-ordered): %s = %2.2fms",
+      str.c_str(), total_latency_ms_);
+  }
   std::stringstream ss;
   ss << "offsets added to the total: [ ";
   for (const auto offset : latency_offsets_) {
@@ -216,9 +218,11 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
     total_latency_ms_ += offset;
   }
   ss << "]";
-
-  RCLCPP_DEBUG(
-    get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, ss.str().c_str());
+  {
+    const std::string & str = ss.str();
+    RCLCPP_DEBUG(
+      get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, str.c_str());
+  }
 }
 
 void PipelineLatencyMonitorNode::publish_total_latency()

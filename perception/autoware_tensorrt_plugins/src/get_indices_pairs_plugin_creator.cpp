@@ -197,68 +197,99 @@ IPluginV3 * GetIndicesPairsPluginCreator::createPlugin(
 
       // Log the attributes parsed from ONNX node.
       std::stringstream ss;
-      ss << name << " plugin Attributes:";
-      logDebug(ss.str().c_str());
-
-      ss.str("");
-      ss << "batch_size: " << parameters.batch_size;
-      logDebug(ss.str().c_str());
-
-      ss.str("");
-      ss << "algo: " << parameters.algo;
-      logDebug(ss.str().c_str());
-
-      ss.str("");
-      ss << "dilation: ";
-      for (auto const & val : parameters.dilation) {
-        ss << val << " ";
+      {
+        ss << name << " plugin Attributes:";
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      ss.str("");
-      ss << "ksize: ";
-      for (auto const & val : parameters.ksize) {
-        ss << val << " ";
+      {
+        ss.str("");
+        ss << "batch_size: " << parameters.batch_size;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      ss.str("");
-      ss << "out_padding: ";
-      for (auto const & val : parameters.out_padding) {
-        ss << val << " ";
+      {
+        ss.str("");
+        ss << "algo: " << parameters.algo;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      logDebug(ss.str().c_str());
-
-      ss.str("");
-      ss << "padding: ";
-      for (auto const & val : parameters.padding) {
-        ss << val << " ";
+      {
+        ss.str("");
+        ss << "dilation: ";
+        for (auto const & val : parameters.dilation) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      ss.str("");
-      ss << "spatial_shape: ";
-      for (auto const & val : parameters.spatial_shape) {
-        ss << val << " ";
+      {
+        ss.str("");
+        ss << "ksize: ";
+        for (auto const & val : parameters.ksize) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      ss.str("");
-      ss << "stride: ";
-      for (auto const & val : parameters.stride) {
-        ss << val << " ";
+      {
+        ss.str("");
+        ss << "out_padding: ";
+        for (auto const & val : parameters.out_padding) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
       }
-      logDebug(ss.str().c_str());
 
-      ss.str("");
-      ss << "subm: " << parameters.subm;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "padding: ";
+        for (auto const & val : parameters.padding) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
-      ss.str("");
-      ss << "transpose: " << parameters.transpose;
-      logDebug(ss.str().c_str());
+      {
+        ss.str("");
+        ss << "spatial_shape: ";
+        for (auto const & val : parameters.spatial_shape) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
+
+      {
+        ss.str("");
+        ss << "stride: ";
+        for (auto const & val : parameters.stride) {
+          ss << val << " ";
+        }
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
+
+      {
+        ss.str("");
+        ss << "subm: " << parameters.subm;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
+
+      {
+        ss.str("");
+        ss << "transpose: " << parameters.transpose;
+        const std::string & str = ss.str();
+        logDebug(str.c_str());
+      }
 
       GetIndicesPairsPlugin * const plugin{
         new GetIndicesPairsPlugin{std::string(name), parameters}};

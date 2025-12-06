@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <sstream>
+#include <string>
 
 void caughtError(std::exception const & e)
 {
@@ -37,7 +38,8 @@ void reportAssertion(bool success, char const * msg, char const * file, std::int
     stream << "Assertion failed: " << msg << std::endl
            << file << ':' << line << std::endl
            << "Aborting..." << std::endl;
-    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+    const std::string & str = stream.str();
+    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, str.c_str());
     std::abort();
   }
 }
@@ -47,6 +49,7 @@ void reportValidation(bool success, char const * msg, char const * file, std::in
   if (!success) {
     std::ostringstream stream;
     stream << "Validation failed: " << msg << std::endl << file << ':' << line << std::endl;
-    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+    const std::string & str = stream.str();
+    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, str.c_str());
   }
 }

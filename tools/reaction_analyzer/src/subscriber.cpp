@@ -971,7 +971,8 @@ std::optional<size_t> SubscriberBase::find_first_brake_idx(const std::vector<Con
         }
       }
 
-      RCLCPP_INFO(node_->get_logger(), "%s", ss.str().c_str());
+      const std::string & str = ss.str();
+      RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
     }
     return i + 1;
   }

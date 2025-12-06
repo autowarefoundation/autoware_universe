@@ -46,7 +46,8 @@ bool L2ping::getDeviceInformation()
   c.wait();
   if (c.exit_code() != 0) {
     is_err >> os.rdbuf();
-    syslog(LOG_ERR, "hcitool info: %s\n", os.str().c_str());
+    const std::string & str = os.str();
+    syslog(LOG_ERR, "hcitool info: %s\n", str.c_str());
     return false;
   }
 
