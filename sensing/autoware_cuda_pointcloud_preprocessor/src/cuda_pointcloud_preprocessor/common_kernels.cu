@@ -65,8 +65,16 @@ __global__ void cropBoxKernel(
       const float & max_x = crop_box_parameters.max_x;
       const float & max_y = crop_box_parameters.max_y;
       const float & max_z = crop_box_parameters.max_z;
-      passed_crop_box_mask &=
-        (x <= min_x || x >= max_x) || (y <= min_y || y >= max_y) || (z <= min_z || z >= max_z);
+      const std::uint8_t negative = crop_box_parameters.negative;
+
+      // Check if point is inside the box
+      bool point_is_inside =
+        (x > min_x && x < max_x) && (y > min_y && y < max_y) && (z > min_z && z < max_z);
+
+      // If negative mode (negative == 1): remove points within the box → preserve points outside
+      // If positive mode (negative == 0): remove points outside the box → preserve points inside
+      bool should_preserve = (negative != 0) ? !point_is_inside : point_is_inside;
+      passed_crop_box_mask &= (should_preserve ? 1 : 0);
     }
 
     output_crop_mask[idx] = passed_crop_box_mask;
@@ -98,6 +106,46 @@ __global__ void extractPointsKernel(
     output_point.intensity = input_point.intensity;
     output_point.return_type = input_point.return_type;
     output_point.channel = input_point.channel;
+  }
+}
+
+__global__ void extractInputPointsKernel(
+  InputPointType * __restrict__ input_points, std::uint32_t * __restrict__ masks,
+  std::uint32_t * __restrict__ indices, int num_points, InputPointType * __restrict__ output_points)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points && masks[idx] == 1) {
+    InputPointType & input_point = input_points[idx];
+    InputPointType & output_point = output_points[indices[idx] - 1];
+    // Copy all fields including extended ones
+    output_point = input_point;
+  }
+}
+
+__global__ void convertPointXYZIRCToInputPointTypeKernel(
+  const OutputPointType * __restrict__ input_points, InputPointType * __restrict__ output_points,
+  int num_points)
+{
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points) {
+    const OutputPointType & input_point = input_points[idx];
+    InputPointType & output_point = output_points[idx];
+
+    // Copy common fields
+    output_point.x = input_point.x;
+    output_point.y = input_point.y;
+    output_point.z = input_point.z;
+    output_point.intensity = input_point.intensity;
+    output_point.return_type = input_point.return_type;
+    output_point.channel = input_point.channel;
+
+    // Initialize extended fields with default values
+    // Set distance to 1.0f so points are not skipped by crop box kernel
+    // (which checks if distance == 0.0f)
+    output_point.azimuth = 0.0f;
+    output_point.elevation = 0.0f;
+    output_point.distance = 1.0f;  // Non-zero so point is not skipped
+    output_point.time_stamp = 0U;
   }
 }
 
@@ -134,6 +182,22 @@ void extractPointsLaunch(
 {
   extractPointsKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     input_points, masks, indices, num_points, output_points);
+}
+
+void extractInputPointsLaunch(
+  InputPointType * input_points, std::uint32_t * masks, std::uint32_t * indices, int num_points,
+  InputPointType * output_points, int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+{
+  extractInputPointsKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
+    input_points, masks, indices, num_points, output_points);
+}
+
+void convertPointXYZIRCToInputPointTypeLaunch(
+  const OutputPointType * input_points, InputPointType * output_points, int num_points,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+{
+  convertPointXYZIRCToInputPointTypeKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
+    input_points, output_points, num_points);
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

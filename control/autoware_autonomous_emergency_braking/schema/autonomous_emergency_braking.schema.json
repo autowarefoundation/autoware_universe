@@ -46,6 +46,11 @@
           "description": "Flag to enable or disable Autoware state check.",
           "default": true
         },
+        "use_cuda_filtering": {
+          "type": "boolean",
+          "description": "Flag to use CUDA-based pointcloud filtering instead of CPU-based filtering. When enabled, pointcloud filtering (height filter and voxel grid) is performed by CUDA filters before reaching AEB node.",
+          "default": false
+        },
         "imu_path_lat_dev_threshold": {
           "type": "number",
           "description": "Lateral deviation threshold for the IMU path.",

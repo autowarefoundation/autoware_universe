@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for the cuda_random_downsample_filter",
+  "type": "object",
+  "definitions": {
+    "cuda_random_downsample_filter": {
+      "type": "object",
+      "properties": {
+        "sample_num": {
+          "type": "integer",
+          "description": "Number of points to randomly sample from the input point cloud",
+          "default": 10000,
+          "minimum": 1
+        },
+        "output_point_xyzircaedt": {
+          "type": "boolean",
+          "description": "Force output to PointXYZIRCAEDT format for continuous CUDA processing. If false, outputs PointXYZIRC format for Autoware usage.",
+          "default": false
+        },
+        "max_mem_pool_size_in_byte": {
+          "type": "number",
+          "description": "Maximum size of GPU memory pool [bytes]",
+          "default": 1000000000,
+          "minimum": 0
+        }
+      },
+      "required": ["sample_num"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/cuda_random_downsample_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

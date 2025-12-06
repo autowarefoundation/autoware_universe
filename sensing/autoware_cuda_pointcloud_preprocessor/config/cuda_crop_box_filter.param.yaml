@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    # Crop box parameters (single box)
+    min_x: -1.0
+    min_y: -1.0
+    min_z: -1.0
+    max_x: 1.0
+    max_y: 1.0
+    max_z: 1.0
+    # Negative flag (false = keep points inside box, true = keep points outside box)
+    negative: true
+    # Force output to PointXYZIRCAEDT format (default: false, outputs PointXYZIRC)
+    output_point_xyzircaedt: false
+    # Memory pool size in bytes (default: 1GB)
+    max_mem_pool_size_in_byte: 1000000000

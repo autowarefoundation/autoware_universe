@@ -40,6 +40,15 @@ void extractPointsLaunch(
   OutputPointType * output_points, int threads_per_block, int blocks_per_grid,
   cudaStream_t & stream);
 
+void extractInputPointsLaunch(
+  InputPointType * input_points, std::uint32_t * masks, std::uint32_t * indices, int num_points,
+  InputPointType * output_points, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream);
+
+void convertPointXYZIRCToInputPointTypeLaunch(
+  const OutputPointType * input_points, InputPointType * output_points, int num_points,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__COMMON_KERNELS_HPP_

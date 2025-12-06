@@ -92,6 +92,7 @@ private:
   lanelet::LaneletMapPtr lanelet_map_;
   PredictedObjects::ConstSharedPtr objects_;
   sensor_msgs::msg::PointCloud2::ConstSharedPtr points_;
+  grid_map_msgs::msg::GridMap::ConstSharedPtr cuda_costmap_;
 
   grid_map::GridMap costmap_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
@@ -109,6 +110,8 @@ private:
     this, "~/input/objects"};
   autoware_utils::InterProcessPollingSubscriber<autoware_internal_planning_msgs::msg::Scenario>
     sub_scenario_{this, "~/input/scenario"};
+  autoware_utils::InterProcessPollingSubscriber<grid_map_msgs::msg::GridMap> sub_cuda_costmap_{
+    this, "~/input/cuda_costmap"};
 
   rclcpp::TimerBase::SharedPtr timer_;
 

@@ -26,6 +26,7 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
   float voxel_size_x = declare_parameter<float>("voxel_size_x");
   float voxel_size_y = declare_parameter<float>("voxel_size_y");
   float voxel_size_z = declare_parameter<float>("voxel_size_z");
+  const bool output_point_xyzircaedt = declare_parameter<bool>("output_point_xyzircaedt", false);
   int64_t max_mem_pool_size_in_byte = declare_parameter<int64_t>(
     "max_mem_pool_size_in_byte",
     1e9);  // 1GB in default
@@ -46,7 +47,7 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
       *this, "~/output/pointcloud");
 
   cuda_voxel_grid_downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
-    voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte);
+    voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte, output_point_xyzircaedt);
 }
 
 void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
@@ -58,8 +59,8 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
   if (!pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzi(msg->fields)) {
     // This filter assumes float for intensity data type, though the filter supports
     // other data types for the intensity field, so here just outputs a WARN message.
-    RCLCPP_WARN(
-      this->get_logger(),
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
       "Input pointcloud data layout is not compatible with PointXYZI. "
       "The output result may not be correct");
   }

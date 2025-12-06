@@ -561,6 +561,7 @@ public:
   bool use_predicted_object_data_;
   bool use_object_velocity_calculation_;
   bool check_autoware_state_;
+  bool use_cuda_filtering_;
   double imu_path_lat_dev_threshold_;
   double path_footprint_extra_margin_;
   double speed_calculation_expansion_margin_;
