@@ -21,6 +21,7 @@
 
 #define EIGEN_MPL2_ONLY
 
+#include "autoware/multi_object_tracker/association/index_pair_checker.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
@@ -58,7 +59,6 @@ struct AssociatorConfig
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
-  Eigen::MatrixXd max_rad_matrix;
   Eigen::MatrixXd min_iou_matrix;
   double unknown_association_giou_threshold;
 };
@@ -88,6 +88,9 @@ private:
   // Cache of squared distances for each class pair to avoid sqrt in inner loop
   Eigen::MatrixXd squared_distance_matrix_;
 
+  /// Checker for (tracker_idx, measurement_idx) pairs flagged for significant shape change
+  IndexPairChecker significant_shape_change_checker_;
+
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
 
@@ -103,11 +106,18 @@ public:
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
     const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-    const InverseCovariance2D & inv_cov) const;
+    const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 
   Eigen::MatrixXd calcScoreMatrix(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
+
+  const double CHECK_GIOU_THRESHOLD = 0.7;
+  const double AREA_RATIO_THRESHOLD = 1.3;
+  bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
+  {
+    return significant_shape_change_checker_.hasPair(tracker_idx, measurement_idx);
+  }
 
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 };
