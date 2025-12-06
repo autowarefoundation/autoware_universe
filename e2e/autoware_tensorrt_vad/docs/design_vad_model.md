@@ -178,7 +178,7 @@ flowchart TD
     style VadModelEnqueue fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
 
     %% Links to source code files
-    click CudaMalloc "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
+    click CudaMalloc "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
     click BuildEngine "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
     click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
     click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
@@ -188,7 +188,7 @@ flowchart TD
     click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
     click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
     click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
-    click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
+    click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
 ```
 
 ##### Network classes: API functions
@@ -287,10 +287,10 @@ flowchart TD
     click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
     click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
     click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
-    click LaunchResize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Resize kernel implementation"
-    click LaunchNormalize "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Normalize kernel implementation"
-    click LaunchObject "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/object_postprocess_kernel.cu" "Object postprocess kernel implementation"
-    click LaunchMap "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/lib/networks/postprocess/map_postprocess_kernel.cu" "Map postprocess kernel implementation"
+    click LaunchResize "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Resize kernel implementation"
+    click LaunchNormalize "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Normalize kernel implementation"
+    click LaunchObject "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/postprocess/object_postprocess_kernel.cu" "Object postprocess kernel implementation"
+    click LaunchMap "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/postprocess/map_postprocess_kernel.cu" "Map postprocess kernel implementation"
 ```
 
 ## Key Design Details
