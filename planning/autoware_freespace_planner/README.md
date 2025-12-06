@@ -56,6 +56,8 @@ None
 | `vehicle_shape_margin_m`     | double | vehicle margin                                                                  |
 | `replan_when_obstacle_found` | bool   | whether replanning when obstacle has found on the trajectory                    |
 | `replan_when_course_out`     | bool   | whether replanning when vehicle is out of course                                |
+| `parking_accuracy_tolerance` | double | the acceptable tolerance for the vehicle's final orientation                    |
+| `max_replan_count`           | int    | the maximum number of times the planner is allowed to replan                    |
 
 #### Planner common parameters
 
@@ -75,18 +77,26 @@ None
 
 #### A\* search parameters
 
-| Parameter                   | Type   | Description                                             |
-| --------------------------- | ------ | ------------------------------------------------------- |
-| `search_method`             | string | method of searching, start to goal or vice versa        |
-| `only_behind_solutions`     | bool   | whether restricting the solutions to be behind the goal |
-| `use_back`                  | bool   | whether using backward trajectory                       |
-| `adapt_expansion_distance`  | bool   | if true, adapt expansion distance based on environment  |
-| `expansion_distance`        | double | length of expansion for node transitions                |
-| `near_goal_distance`        | double | near goal distance threshold                            |
-| `distance_heuristic_weight` | double | heuristic weight for estimating node's cost             |
-| `smoothness_weight`         | double | cost factor for change in curvature                     |
-| `obstacle_distance_weight`  | double | cost factor for distance to obstacle                    |
-| `goal_lat_distance_weight`  | double | cost factor for lateral distance from goal              |
+| Parameter                           | Type   | Description                                                              |
+| ----------------------------------- | ------ | ------------------------------------------------------------------------ |
+| `search_method`                     | string | method of searching, start to goal or vice versa                         |
+| `only_behind_solutions`             | bool   | whether restricting the solutions to be behind the goal                  |
+| `use_back`                          | bool   | whether using backward trajectory                                        |
+| `adapt_expansion_distance`          | bool   | if true, adapt expansion distance based on environment                   |
+| `expansion_distance`                | double | length of expansion for node transitions                                 |
+| `near_goal_distance`                | double | near goal distance threshold                                             |
+| `distance_heuristic_weight`         | double | heuristic weight for estimating node's cost                              |
+| `smoothness_weight`                 | double | cost factor for change in curvature                                      |
+| `obstacle_distance_weight`          | double | cost factor for distance to obstacle                                     |
+| `goal_lat_distance_weight`          | double | cost factor for lateral distance from goal                               |
+| `final_segment_threshold`           | double | distance threshold near goal to apply precise alignment costs            |
+| `extra_steering_penalty_factor`     | double | factor for penalizing sharp steering.                                    |
+| `yaw_weight`                        | double | weight for penalizing yaw deviation from the goal                        |
+| `distance_to_goal_extension_weight` | double | weight for lateral offset from the goal.                                 |
+| `reparking_forward_first_weight`    | double | penalty for starting with a reverse motion during reparking              |
+| `reparking_deviation_penalty`       | double | additional cost for non-straight motion during reparking                 |
+| `reparking_alignment_weight`        | double | scaling factor for alignment costs in reparking                          |
+| `reparking_distance`                | double | minimum distance from goal before a direction change is considered valid |
 
 #### RRT\* search parameters
 
@@ -127,9 +137,13 @@ if (replan is required?) then (yes)
 else (no)
 endif
 
-
 if (vehicle is stopped?) then (yes)
-  stop
+  if (is parking accurate enough?) then (yes)
+    stop
+  else (no)
+    :replan for accurate parking;
+    stop
+  endif
 else (no)
 endif
 
