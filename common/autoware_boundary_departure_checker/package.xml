@@ -23,7 +23,10 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_trajectory</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_geometry</depend>
+  <depend>autoware_utils_system</depend>
+  <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>boost</depend>
