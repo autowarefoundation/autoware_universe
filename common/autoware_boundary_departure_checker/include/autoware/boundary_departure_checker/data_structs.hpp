@@ -17,12 +17,11 @@
 
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_geometry/pose_deviation.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
@@ -242,7 +241,7 @@ struct DeparturePoint
 
   [[nodiscard]] Point to_geom_pt(const double z = 0.0) const
   {
-    return autoware_utils::to_msg(point.to_3d(z));
+    return autoware_utils_geometry::to_msg(point.to_3d(z));
   }
 
   bool operator<(const DeparturePoint & other) const

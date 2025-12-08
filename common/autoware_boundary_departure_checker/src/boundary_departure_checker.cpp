@@ -19,9 +19,9 @@
 
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <tf2/utils.hpp>
@@ -43,7 +43,7 @@ namespace
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware_utils::Point2d;
+using autoware_utils_geometry::Point2d;
 using geometry_msgs::msg::Point;
 
 double calcBrakingDistance(
@@ -68,7 +68,7 @@ Output BoundaryDepartureChecker::update(const Input & input)
 {
   Output output{};
 
-  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
 
   {
     constexpr double min_velocity = 0.01;
@@ -123,7 +123,7 @@ Output BoundaryDepartureChecker::update(const Input & input)
 bool BoundaryDepartureChecker::checkPathWillLeaveLane(
   const lanelet::ConstLanelets & lanelets, const PathWithLaneId & path) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   std::vector<LinearRing2d> vehicle_footprints =
     utils::createVehicleFootprints(path, *vehicle_info_ptr_, param_.footprint_extra_margin);
@@ -136,7 +136,7 @@ bool BoundaryDepartureChecker::willLeaveLane(
   const lanelet::ConstLanelets & candidate_lanelets,
   const std::vector<LinearRing2d> & vehicle_footprints) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   for (const auto & vehicle_footprint : vehicle_footprints) {
     if (isOutOfLane(candidate_lanelets, vehicle_footprint)) {
@@ -150,7 +150,7 @@ bool BoundaryDepartureChecker::willLeaveLane(
 std::vector<std::pair<double, lanelet::Lanelet>> BoundaryDepartureChecker::getLaneletsFromPath(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // Get Footprint Hull basic polygon
   std::vector<LinearRing2d> vehicle_footprints =
@@ -164,17 +164,18 @@ std::vector<std::pair<double, lanelet::Lanelet>> BoundaryDepartureChecker::getLa
     lanelet_map_ptr->laneletLayer, footprint_hull_basic_polygon, 0.0);
 }
 
-std::optional<autoware_utils::Polygon2d> BoundaryDepartureChecker::getFusedLaneletPolygonForPath(
+std::optional<autoware_utils_geometry::Polygon2d>
+BoundaryDepartureChecker::getFusedLaneletPolygonForPath(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto lanelets_distance_pair = getLaneletsFromPath(lanelet_map_ptr, path);
   if (lanelets_distance_pair.empty()) return std::nullopt;
 
   // Fuse lanelets into a single BasicPolygon2d
-  autoware_utils::MultiPolygon2d lanelet_unions;
-  autoware_utils::MultiPolygon2d result;
+  autoware_utils_geometry::MultiPolygon2d lanelet_unions;
+  autoware_utils_geometry::MultiPolygon2d result;
 
   for (size_t i = 0; i < lanelets_distance_pair.size(); ++i) {
     const auto & route_lanelet = lanelets_distance_pair.at(i).second;
@@ -192,15 +193,15 @@ std::optional<autoware_utils::Polygon2d> BoundaryDepartureChecker::getFusedLanel
 bool BoundaryDepartureChecker::updateFusedLaneletPolygonForPath(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
   std::vector<lanelet::Id> & fused_lanelets_id,
-  std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const
+  std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto lanelets_distance_pair = getLaneletsFromPath(lanelet_map_ptr, path);
   if (lanelets_distance_pair.empty()) return false;
 
-  autoware_utils::MultiPolygon2d lanelet_unions;
-  autoware_utils::MultiPolygon2d result;
+  autoware_utils_geometry::MultiPolygon2d lanelet_unions;
+  autoware_utils_geometry::MultiPolygon2d result;
 
   if (fused_lanelets_polygon) lanelet_unions.push_back(fused_lanelets_polygon.value());
 
@@ -246,7 +247,7 @@ bool BoundaryDepartureChecker::updateFusedLaneletPolygonForPath(
 bool BoundaryDepartureChecker::checkPathWillLeaveLane(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // check if the footprint is not fully contained within the fused lanelets polygon
   const std::vector<LinearRing2d> vehicle_footprints =
@@ -263,9 +264,9 @@ bool BoundaryDepartureChecker::checkPathWillLeaveLane(
 bool BoundaryDepartureChecker::checkPathWillLeaveLane(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
   std::vector<lanelet::Id> & fused_lanelets_id,
-  std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const
+  std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const std::vector<LinearRing2d> vehicle_footprints =
     utils::createVehicleFootprints(path, *vehicle_info_ptr_, param_.footprint_extra_margin);
@@ -295,9 +296,9 @@ bool BoundaryDepartureChecker::checkPathWillLeaveLane(
 PathWithLaneId BoundaryDepartureChecker::cropPointsOutsideOfLanes(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path, const size_t end_index,
   std::vector<lanelet::Id> & fused_lanelets_id,
-  std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon)
+  std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   PathWithLaneId temp_path;
 
@@ -312,7 +313,7 @@ PathWithLaneId BoundaryDepartureChecker::cropPointsOutsideOfLanes(
     utils::createVehicleFootprints(path, *vehicle_info_ptr_, param_.footprint_extra_margin);
 
   {
-    autoware_utils::ScopedTimeTrack st2(
+    autoware_utils_debug::ScopedTimeTrack st2(
       "check if footprint is within fused_lanelets_polygon", *time_keeper_);
 
     size_t idx = 0;
@@ -345,7 +346,7 @@ bool BoundaryDepartureChecker::willCrossBoundary(
   const std::vector<LinearRing2d> & vehicle_footprints,
   const SegmentRtree & uncrossable_segments) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   for (const auto & footprint : vehicle_footprints) {
     std::vector<Segment2d> intersection_result;
