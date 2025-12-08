@@ -209,6 +209,13 @@ void ElevationMapLoaderNode::onPointcloudMap(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_map)
 {
   RCLCPP_INFO(this->get_logger(), "Pointcloud_map has been subscribed");
+
+  // check for empty point cloud
+  if (pointcloud_map->data.empty() || pointcloud_map->width == 0 || pointcloud_map->height == 0) {
+    RCLCPP_WARN(this->get_logger(), "Empty pointcloud_map received, skipping processing");
+    return;
+  }
+
   {
     pcl::PointCloud<pcl::PointXYZ> map_pcl;
     pcl::fromROSMsg<pcl::PointXYZ>(*pointcloud_map, map_pcl);
@@ -294,6 +301,13 @@ void ElevationMapLoaderNode::receiveMap()
     concatenatePointCloudMaps(pointcloud_map, result.get()->new_pointcloud_with_ids);
   }
   RCLCPP_DEBUG(this->get_logger(), "Pointcloud map receiving process has been finished");
+
+  // check for empty point cloud
+  if (pointcloud_map.data.empty() || pointcloud_map.width == 0 || pointcloud_map.height == 0) {
+    RCLCPP_WARN(this->get_logger(), "Empty pointcloud_map received after concatenation");
+    return;
+  }
+
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(pointcloud_map, map_pcl);
   data_manager_.map_pcl_ptr_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
