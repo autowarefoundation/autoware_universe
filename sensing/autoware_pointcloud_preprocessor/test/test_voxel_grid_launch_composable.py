@@ -95,9 +95,7 @@ class TestLaunchComposable(unittest.TestCase):
             else:
                 rclpy.spin_once(self.test_node, timeout_sec=0.1)
 
-        self.assertTrue(
-            node_found, "voxel_grid_downsample_filter_node not found in container"
-        )
+        self.assertTrue(node_found, "voxel_grid_downsample_filter_node not found in container")
 
 
 @launch_testing.post_shutdown_test()
