@@ -32,7 +32,8 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
 {
   // check for empty point cloud
   if (map->data.empty() || map->width == 0 || map->height == 0) {
-    RCLCPP_WARN(rclcpp::get_logger("voxel_distance_based_compare_map_filter"), "Empty map received");
+    RCLCPP_WARN(
+      rclcpp::get_logger("voxel_distance_based_compare_map_filter"), "Empty map received");
     return;
   }
 
