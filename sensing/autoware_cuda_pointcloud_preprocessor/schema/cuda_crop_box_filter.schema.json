@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for the cuda_crop_box_filter",
+  "type": "object",
+  "definitions": {
+    "cuda_crop_box_filter": {
+      "type": "object",
+      "properties": {
+        "min_x": {
+          "type": "number",
+          "description": "Minimum x value of the crop box [m]",
+          "default": -1.0
+        },
+        "min_y": {
+          "type": "number",
+          "description": "Minimum y value of the crop box [m]",
+          "default": -1.0
+        },
+        "min_z": {
+          "type": "number",
+          "description": "Minimum z value of the crop box [m]",
+          "default": -1.0
+        },
+        "max_x": {
+          "type": "number",
+          "description": "Maximum x value of the crop box [m]",
+          "default": 1.0
+        },
+        "max_y": {
+          "type": "number",
+          "description": "Maximum y value of the crop box [m]",
+          "default": 1.0
+        },
+        "max_z": {
+          "type": "number",
+          "description": "Maximum z value of the crop box [m]",
+          "default": 1.0
+        },
+        "negative": {
+          "type": "boolean",
+          "description": "If false, keep points inside the box. If true, keep points outside the box.",
+          "default": false
+        },
+        "output_point_xyzircaedt": {
+          "type": "boolean",
+          "description": "Force output to PointXYZIRCAEDT format for continuous CUDA processing. If false, outputs PointXYZIRC format for Autoware .",
+          "default": false
+        },
+        "max_mem_pool_size_in_byte": {
+          "type": "number",
+          "description": "Maximum size of GPU memory pool [bytes]",
+          "default": 1000000000,
+          "minimum": 0
+        }
+      },
+      "required": ["min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "negative"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/cuda_crop_box_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

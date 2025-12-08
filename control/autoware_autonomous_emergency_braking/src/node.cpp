@@ -167,6 +167,7 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   use_predicted_object_data_ = declare_parameter<bool>("use_predicted_object_data");
   use_object_velocity_calculation_ = declare_parameter<bool>("use_object_velocity_calculation");
   check_autoware_state_ = declare_parameter<bool>("check_autoware_state");
+  use_cuda_filtering_ = declare_parameter<bool>("use_cuda_filtering");
   path_footprint_extra_margin_ = declare_parameter<double>("path_footprint_extra_margin");
   imu_path_lat_dev_threshold_ = declare_parameter<double>("imu_path_lat_dev_threshold");
   speed_calculation_expansion_margin_ =
@@ -231,6 +232,7 @@ rcl_interfaces::msg::SetParametersResult AEB::onParameter(
   update_param<bool>(
     parameters, "use_object_velocity_calculation", use_object_velocity_calculation_);
   update_param<bool>(parameters, "check_autoware_state", check_autoware_state_);
+  update_param<bool>(parameters, "use_cuda_filtering", use_cuda_filtering_);
   update_param<double>(parameters, "path_footprint_extra_margin", path_footprint_extra_margin_);
   update_param<double>(parameters, "imu_path_lat_dev_threshold", imu_path_lat_dev_threshold_);
   update_param<double>(
@@ -295,6 +297,16 @@ void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
   pcl::fromROSMsg(*input_msg, *pointcloud_ptr);
 
+  // If CUDA filtering is enabled, the pointcloud is already filtered by CUDA filters
+  // Just convert and use it directly
+  if (use_cuda_filtering_) {
+    obstacle_ros_pointcloud_ptr_ = std::make_shared<PointCloud2>();
+    pcl::toROSMsg(*pointcloud_ptr, *obstacle_ros_pointcloud_ptr_);
+    obstacle_ros_pointcloud_ptr_->header = input_msg->header;
+    return;
+  }
+
+  // CPU-based filtering (original implementation)
   if (input_msg->header.frame_id != "base_link") {
     RCLCPP_ERROR_STREAM(
       get_logger(),

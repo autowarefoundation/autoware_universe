@@ -26,9 +26,14 @@
         },
         "max_mem_pool_size_in_byte": {
           "type": "number",
-          "description": "maximum size of GPU memory pool",
-          "default": "1000000000",
+          "description": "Maximum size of GPU memory pool [bytes]",
+          "default": 1000000000,
           "minimum": 0
+        },
+        "output_point_xyzircaedt": {
+          "type": "boolean",
+          "description": "Force output to PointXYZIRCAEDT format for continuous CUDA processing. If false, outputs PointXYZIRC format for Autoware usage.",
+          "default": false
         }
       },
       "required": ["voxel_size_x", "voxel_size_y", "voxel_size_z"],
