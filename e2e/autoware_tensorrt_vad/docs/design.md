@@ -169,10 +169,10 @@ flowchart TD
     style VadNode_pub fill:#943126,stroke:#78281F,stroke-width:2px,color:#FFFFFF;
 
     %% Links to source code files
-    click VadNode_sub "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
+    click VadNode_sub "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
     click VadInterface "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface header file"
     click VadInterface2 "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_interface.hpp" "VadInterface header file"
-    click VadNode_pub "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
+    click VadNode_pub "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.cpp" "VadNode source file"
     click VadInputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
     click VadOutputTopicData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
     click VadInputData "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "Data types header file"
