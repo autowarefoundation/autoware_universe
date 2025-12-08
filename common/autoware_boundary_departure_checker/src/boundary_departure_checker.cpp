@@ -263,7 +263,8 @@ bool BoundaryDepartureChecker::checkPathWillLeaveLane(
 bool BoundaryDepartureChecker::checkPathWillLeaveLane(
   const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
   std::vector<lanelet::Id> & fused_lanelets_id,
-  std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const
+  std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon,
+  std::optional<geometry_msgs::msg::Pose> & departure_pose) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -278,18 +279,28 @@ bool BoundaryDepartureChecker::checkPathWillLeaveLane(
 
   // If lanelets polygon exists and all footprints are within it, the path doesn't leave the lane
   if (fused_lanelets_polygon && is_all_footprints_within(fused_lanelets_polygon.value())) {
+    departure_pose = std::nullopt;
     return false;
   }
 
   // Update the lanelet polygon for the current path
   if (!updateFusedLaneletPolygonForPath(
         lanelet_map_ptr, path, fused_lanelets_id, fused_lanelets_polygon)) {
-    // If update fails, assume the path leaves the lane
+    departure_pose = std::nullopt;
     return true;
   }
 
-  // Check if any footprint is outside the updated lanelets polygon
-  return !is_all_footprints_within(fused_lanelets_polygon.value());
+  // Check each footprint to find the first one that is outside the lanelets polygon
+  for (size_t i = 0; i < vehicle_footprints.size(); ++i) {
+    if (!boost::geometry::within(vehicle_footprints[i], fused_lanelets_polygon.value())) {
+      departure_pose = path.points[i].point.pose;
+      return true;
+    }
+  }
+
+  // All footprints are within the lane
+  departure_pose = std::nullopt;
+  return false;
 }
 
 PathWithLaneId BoundaryDepartureChecker::cropPointsOutsideOfLanes(

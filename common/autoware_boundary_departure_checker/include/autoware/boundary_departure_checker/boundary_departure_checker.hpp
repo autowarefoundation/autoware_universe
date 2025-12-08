@@ -93,10 +93,20 @@ public:
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
 
+  /**
+   * @brief Check if path will leave lane and return the index of first departure point
+   * @param lanelet_map_ptr Lanelet map pointer
+   * @param path Path to check
+   * @param fused_lanelets_id Output: fused lanelet IDs
+   * @param fused_lanelets_polygon Output: fused lanelet polygon
+   * @param departure_pose Output: pose of first departure point (if departure detected)
+   * @return true if path will leave lane, false otherwise
+   */
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const;
+    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon,
+    std::optional<geometry_msgs::msg::Pose> & departure_pose) const;
 
   PathWithLaneId cropPointsOutsideOfLanes(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
