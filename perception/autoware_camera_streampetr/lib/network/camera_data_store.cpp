@@ -205,9 +205,6 @@ void CameraDataStore::update_camera_image(
   // Update metadata and timing
   update_metadata_and_timing(camera_id, input_camera_image_msg, start_time);
 
-  // Sync the stream to ensure processing is complete
-  cudaStreamSynchronize(streams_.at(camera_id));
-
   {
     std::lock_guard<std::mutex> lock(freeze_mutex_);
     --active_updates_;
@@ -455,6 +452,10 @@ std::vector<float> CameraDataStore::get_image_shape() const
 
 std::shared_ptr<cuda::Tensor> CameraDataStore::get_image_input() const
 {
+  // Sync all streams to ensure processing is complete before returning
+  for (const auto & stream : streams_) {
+    cudaStreamSynchronize(stream);
+  }
   return image_input_;
 }
 
