@@ -4,11 +4,25 @@
   <arg name="input_frame" default="base_link"/>
   <arg name="output_frame" default="base_link"/>
   <arg name="crop_box_filter_param_file" default="$(find-pkg-share autoware_pointcloud_preprocessor)/config/crop_box_filter_node.param.yaml"/>
-  <node pkg="autoware_pointcloud_preprocessor" exec="crop_box_filter_node" name="crop_box_filter_node">
+  <arg name="container_name" default="" description="Container name for composable node. If empty, standalone node is launched."/>
+
+  <!-- Standalone mode: launch as a regular node when container_name is empty -->
+  <node pkg="autoware_pointcloud_preprocessor" exec="crop_box_filter_node" name="crop_box_filter_node" if="$(eval &quot;'$(var container_name)'==''&quot;)">
     <param from="$(var crop_box_filter_param_file)"/>
     <remap from="input" to="$(var input_topic_name)"/>
     <remap from="output" to="$(var output_topic_name)"/>
     <param name="input_frame" value="$(var input_frame)"/>
     <param name="output_frame" value="$(var output_frame)"/>
   </node>
+
+  <!-- Composable mode: load into existing container when container_name is specified -->
+  <load_composable_node target="$(var container_name)" if="$(eval &quot;'$(var container_name)'!=''&quot;)">
+    <composable_node pkg="autoware_pointcloud_preprocessor" plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent" name="crop_box_filter_node" namespace="">
+      <param from="$(var crop_box_filter_param_file)"/>
+      <remap from="input" to="$(var input_topic_name)"/>
+      <remap from="output" to="$(var output_topic_name)"/>
+      <param name="input_frame" value="$(var input_frame)"/>
+      <param name="output_frame" value="$(var output_frame)"/>
+    </composable_node>
+  </load_composable_node>
 </launch>

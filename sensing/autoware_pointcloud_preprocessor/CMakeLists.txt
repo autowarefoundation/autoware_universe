@@ -327,4 +327,8 @@ if(BUILD_TESTING)
     TIMEOUT "50"
   )
 
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/test_voxel_grid_launch.py)
+  add_launch_test(test/test_voxel_grid_launch_composable.py)
+
 endif()
