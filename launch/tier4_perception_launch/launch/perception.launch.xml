@@ -186,7 +186,7 @@
   <arg name="output/tracker_merged_objects" default="/perception/object_recognition/detection/objects"/>
   <!-- Downsample pointcloud for perception usage -->
   <arg name="downsample_perception_common_pointcloud" default="false"/>
-  <arg name="cuda_pointclouds_preprocessing" default="false"/>
+  <arg name="cuda_pointcloud_preprocessing" default="false"/>
   <arg name="common_downsample_voxel_size_x" default="0.05"/>
   <arg name="common_downsample_voxel_size_y" default="0.05"/>
   <arg name="common_downsample_voxel_size_z" default="0.05"/>
@@ -200,7 +200,7 @@
     <let name="perception_pointcloud" value="$(var downsampled_pointcloud)" if="$(var downsample_perception_common_pointcloud)"/>
     <group if="$(var downsample_perception_common_pointcloud)">
       <push-ros-namespace namespace="common"/>
-      <group unless="$(var cuda_pointclouds)">
+      <group unless="$(var cuda_pointcloud_preprocessing)">
         <load_composable_node target="$(var pointcloud_container_name)">
           <composable_node
             pkg="autoware_pointcloud_preprocessor"
@@ -218,7 +218,7 @@
         </load_composable_node>
       </group>
 
-      <group if="$(var cuda_pointclouds)">
+      <group if="$(var cuda_pointcloud_preprocessing)">
         <load_composable_node target="$(var pointcloud_container_name)">
           <composable_node
             pkg="autoware_cuda_pointcloud_preprocessor"
