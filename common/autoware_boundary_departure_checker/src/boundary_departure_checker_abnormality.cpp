@@ -18,9 +18,9 @@
 
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
 #include <tf2/utils.hpp>
@@ -116,7 +116,7 @@ namespace autoware::boundary_departure_checker
 {
 BoundaryDepartureChecker::BoundaryDepartureChecker(
   lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info, const Param & param,
-  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
 : param_(param),
   lanelet_map_ptr_(lanelet_map_ptr),
   vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info)),
@@ -138,7 +138,7 @@ tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnor
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
   const SteeringReport & current_steering)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (predicted_traj.empty()) {
     return tl::make_unexpected("Ego predicted trajectory is empty");
@@ -243,7 +243,7 @@ void BoundaryDepartureChecker::update_closest_boundary_segments(
 BoundarySideWithIdx BoundaryDepartureChecker::get_boundary_segments(
   const EgoSides & ego_sides_from_footprints, const TrajectoryPoints & trimmed_pred_trajectory)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   BoundarySideWithIdx boundary_sides_with_idx;
 
@@ -266,7 +266,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & abnormality_to_check = param_.abnormality_types_to_compensate;
 
@@ -381,7 +381,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & th_trigger = param_.th_trigger;
   const auto min_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
     curr_vel, curr_acc, th_trigger.th_acc_mps2.max, th_trigger.th_jerk_mps3.max,
@@ -426,7 +426,7 @@ Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
   const ClosestProjectionsToBound & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto th_point_merge_distance_m = param_.th_point_merge_distance_m;
 
@@ -443,7 +443,7 @@ tl::expected<UncrossableBoundRTree, std::string>
 BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
   const lanelet::LaneletMapPtr & lanelet_map_ptr)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!lanelet_map_ptr) {
     return tl::make_unexpected("lanelet_map_ptr is null");
@@ -457,7 +457,7 @@ SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
   const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
   const double max_search_length, const std::vector<std::string> & boundary_types_to_detect) const
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto has_types =
     [](const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types) {
