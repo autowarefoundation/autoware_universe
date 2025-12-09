@@ -82,7 +82,22 @@ class InitializeInterface(object):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
         client.load_world(self.carla_map)
+
+        # Wait for the world to be fully loaded
+        # This is critical for non-default maps that need time to load
+        time.sleep(2.0)
+
         self.world = client.get_world()
+
+        # Verify world is ready by attempting to tick it
+        # This ensures the world is fully initialized before accessing settings
+        try:
+            self.world.tick()
+        except RuntimeError:
+            # If synchronous mode is not enabled yet, tick() may fail
+            # In this case, just wait a bit more
+            time.sleep(1.0)
+
         settings = self.world.get_settings()
         settings.fixed_delta_seconds = self.fixed_delta_seconds
         settings.synchronous_mode = self.sync_mode
