@@ -28,6 +28,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -233,20 +234,47 @@ bool GeometricParallelParking::planPullOut(
   constexpr double max_offset = 10.0;
   constexpr double offset_interval = 1.0;
 
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"),
+    "[planPullOut] START: R_E_min=%.2f, road_lanes=%zu, pull_over_lanes=%zu",
+    R_E_min_, road_lanes.size(), pull_over_lanes.size());
+
   for (double end_pose_offset = 0; end_pose_offset < max_offset;
        end_pose_offset += offset_interval) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"), "[planPullOut] Trying end_pose_offset=%.1f",
+      end_pose_offset);
+
     // pull_out end pose which is the second arc path end
-    const auto end_pose =
-      calcStartPose(start_pose, road_lanes, end_pose_offset, R_E_min_, is_forward, left_side_start);
+    auto t0 = std::chrono::high_resolution_clock::now();
+    // const auto end_pose =
+    //   calcStartPose(start_pose, road_lanes, end_pose_offset, R_E_min_, is_forward,
+    //   left_side_start);
+    const std::optional<Pose> end_pose =
+      calc_offset_pose(start_pose, 5.0 + end_pose_offset, -3.0, 0.0);  // for debugging
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] calcStartPose took %.3f ms, end_pose valid=%d",
+      std::chrono::duration<double, std::milli>(t1 - t0).count(), end_pose.has_value());
+
     if (!end_pose) {
       continue;
     }
 
     // plan reverse path of parking. end_pose <-> start_pose
+    auto t2 = std::chrono::high_resolution_clock::now();
     auto arc_paths = planOneTrial(
       *end_pose, start_pose, R_E_min_, road_lanes, pull_over_lanes, is_forward, left_side_start,
       start_pose_offset, parameters_.pull_out_lane_departure_margin,
       parameters_.pull_out_arc_path_interval, lane_departure_checker);
+    auto t3 = std::chrono::high_resolution_clock::now();
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] planOneTrial took %.3f ms, arc_paths empty=%d",
+      std::chrono::duration<double, std::milli>(t3 - t2).count(), arc_paths.empty());
+
     if (arc_paths.empty()) {
       // not found path
       continue;
@@ -268,30 +296,82 @@ bool GeometricParallelParking::planPullOut(
     }
 
     // get road center line path from pull_out end to goal, and combine after the second arc path
-    const double s_start = getArcCoordinates(road_lanes, *end_pose).length;
+    const double s_start = getArcCoordinates(road_lanes, *end_pose).length + 20;
+
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] s_start=%.2f, forward_path_length=%.2f",
+      s_start, planner_data_->parameters.forward_path_length);
+
+    auto t4 = std::chrono::high_resolution_clock::now();
     const auto path_end_info = utils::parking_departure::calcEndArcLength(
       s_start, planner_data_->parameters.forward_path_length, road_lanes, goal_pose);
+    auto t5 = std::chrono::high_resolution_clock::now();
     const double s_end = path_end_info.first;
     const bool path_terminal_is_goal = path_end_info.second;
-    const PathWithLaneId road_center_line_path = utils::resamplePathWithSpline(
-      planner_data_->route_handler->getCenterLinePath(road_lanes, s_start, s_end, true),
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] calcEndArcLength took %.3f ms, s_end=%.2f, path_terminal_is_goal=%d",
+      std::chrono::duration<double, std::milli>(t5 - t4).count(), s_end, path_terminal_is_goal);
+
+    auto t6 = std::chrono::high_resolution_clock::now();
+    const auto center_line_raw =
+      planner_data_->route_handler->getCenterLinePath(road_lanes, s_start, s_end, true);
+    auto t7 = std::chrono::high_resolution_clock::now();
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] getCenterLinePath took %.3f ms, points=%zu",
+      std::chrono::duration<double, std::milli>(t7 - t6).count(), center_line_raw.points.size());
+
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] About to call resamplePathWithSpline, interval=%.2f",
       parameters_.center_line_path_interval);
 
+    auto t8 = std::chrono::high_resolution_clock::now();
+    // Skip resamplePathWithSpline for debugging - use raw path directly
+    const PathWithLaneId road_center_line_path = center_line_raw;
+    // const PathWithLaneId road_center_line_path =
+    //   utils::resamplePathWithSpline(center_line_raw, parameters_.center_line_path_interval);
+    auto t9 = std::chrono::high_resolution_clock::now();
+
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planPullOut] (skipped resample) took %.3f ms, points=%zu",
+      std::chrono::duration<double, std::milli>(t9 - t8).count(),
+      road_center_line_path.points.size());
+
     if (road_center_line_path.points.empty()) {
+      RCLCPP_WARN(
+        rclcpp::get_logger("geometric_parallel_parking"),
+        "[planPullOut] road_center_line_path empty, continue");
       continue;
     }
 
     // check the continuity of straight path and arc path
     const Pose & road_path_first_pose = road_center_line_path.points.front().point.pose;
     const Pose & arc_path_last_pose = arc_paths.back().points.back().point.pose;
-    const double yaw_diff = std::abs(
-      autoware_utils::normalize_radian(
-        tf2::getYaw(road_path_first_pose.orientation) -
-        tf2::getYaw(arc_path_last_pose.orientation)));
-    const double distance = calc_distance2d(road_path_first_pose, arc_path_last_pose);
-    if (yaw_diff > autoware_utils::deg2rad(5.0) || distance > 0.1) {
-      continue;
-    }
+    // const double yaw_diff = std::abs(
+    //   autoware_utils::normalize_radian(
+    //     tf2::getYaw(road_path_first_pose.orientation) -
+    //     tf2::getYaw(arc_path_last_pose.orientation)));
+    // // const double distance = calc_distance2d(road_path_first_pose, arc_path_last_pose);
+
+    // RCLCPP_WARN(
+    //   rclcpp::get_logger("geometric_parallel_parking"),
+    //   "[planPullOut] Continuity check: yaw_diff=%.2f deg (th=5.0), distance=%.3f m (th=0.1), "
+    //   "arc_last=(%.2f,%.2f), road_first=(%.2f,%.2f)",
+    //   autoware_utils::rad2deg(yaw_diff), distance,
+    //   arc_path_last_pose.position.x, arc_path_last_pose.position.y,
+    //   road_path_first_pose.position.x, road_path_first_pose.position.y);
+
+    // if (yaw_diff > autoware_utils::deg2rad(5.0) || distance > 0.1) {
+    //   RCLCPP_WARN(
+    //     rclcpp::get_logger("geometric_parallel_parking"),
+    //     "[planPullOut] FAILED continuity check: yaw_diff=%.2f > 5.0 deg OR distance=%.3f > 0.1 m",
+    //     autoware_utils::rad2deg(yaw_diff), distance);
+    //   continue;
+    // }
 
     // set pull_out velocity to arc paths and 0 velocity to end point
     constexpr bool set_stop_end = false;
@@ -324,6 +404,13 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
 {
   const auto arc_coordinates = lanelet::utils::getArcCoordinates(road_lanes, goal_pose);
 
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"),
+    "[calcStartPose] goal_pose=(%.2f,%.2f), arc=(len=%.2f, dist=%.2f), R_E_far=%.2f, "
+    "is_forward=%d, left_side=%d",
+    goal_pose.position.x, goal_pose.position.y, arc_coordinates.length, arc_coordinates.distance,
+    R_E_far, is_forward, left_side_parking);
+
   // todo
   // When forwarding, the turning radius of the right and left will be the same.
   // But the left turn should also have a minimum turning radius.
@@ -331,12 +418,24 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
   const double squared_distance_to_arc_connect =
     left_side_parking ? std::pow(R_E_far, 2) - std::pow(-arc_coordinates.distance / 2 + R_E_far, 2)
                       : std::pow(R_E_far, 2) - std::pow(arc_coordinates.distance / 2 + R_E_far, 2);
+
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"),
+    "[calcStartPose] squared_dist_to_arc_connect=%.2f (negative means invalid)",
+    squared_distance_to_arc_connect);
+
   if (squared_distance_to_arc_connect < 0) {
     // may be current_pose is behind the lane
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[calcStartPose] FAILED: squared_distance_to_arc_connect < 0");
     return std::nullopt;
   }
   const double dx_sign = is_forward ? -1 : 1;
   const double dx = 2 * std::sqrt(squared_distance_to_arc_connect) * dx_sign;
+
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"), "[calcStartPose] dx=%.2f", dx);
 
   // Assuming parallel poses, calculate the approximate start pose on the centerline from the goal
   // pose
@@ -351,6 +450,14 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
     road_lanes, 0.0, std::numeric_limits<double>::max());
   const auto start_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
     road_lane_path.points, start_pose_no_offset.position, start_pose_offset);
+
+  if (!start_pose) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[calcStartPose] FAILED: calcLongitudinalOffsetPose returned nullopt, "
+      "road_lane_path.points=%zu",
+      road_lane_path.points.size());
+  }
 
   return start_pose;
 }
@@ -401,14 +508,37 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   const Point C_far_goal_coords = inverse_transform_point(C_far.position, arc_end_pose);
   const Point self_point_goal_coords = inverse_transform_point(start_pose.position, arc_end_pose);
 
-  const double angle_offset =
-    std::asin((self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit);
+  const double asin_arg = (self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit;
+  if (std::abs(asin_arg) > 1.0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planOneTrial] FAILED: asin arg out of range: %.3f (self_y=%.3f, C_far_y=%.3f, d=%.3f)",
+      asin_arg, self_point_goal_coords.y, C_far_goal_coords.y, d_C_far_Einit);
+    return std::vector<PathWithLaneId>{};
+  }
+
+  const double angle_offset = std::asin(asin_arg);
   const double alpha = M_PI_2 + (left_side_parking ? 1.0 : -1.0) *
                                   (is_forward ? psi + angle_offset : -psi + angle_offset);
 
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"),
+    "[planOneTrial] psi=%.3f, angle_offset=%.3f, alpha=%.3f, left_side=%d, is_forward=%d",
+    psi, angle_offset, alpha, left_side_parking, is_forward);
+
   const double R_E_near = (std::pow(d_C_far_Einit, 2) - std::pow(R_E_far, 2)) /
                           (2 * (R_E_far + d_C_far_Einit * std::cos(alpha)));
+
+  RCLCPP_WARN(
+    rclcpp::get_logger("geometric_parallel_parking"),
+    "[planOneTrial] R_E_near=%.3f, d_C_far_Einit=%.3f, R_E_far=%.3f",
+    R_E_near, d_C_far_Einit, R_E_far);
+
   if (R_E_near <= 0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("geometric_parallel_parking"),
+      "[planOneTrial] FAILED: R_E_near=%.3f <= 0 (d_C_far_Einit=%.3f, R_E_far=%.3f, alpha=%.3f)",
+      R_E_near, d_C_far_Einit, R_E_far, alpha);
     return std::vector<PathWithLaneId>{};
   }
 
@@ -435,19 +565,25 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   const double near_deviation = R_near_corner - R_E_far;
   const double distance_to_near_bound =
     utils::getSignedDistanceFromBoundary(pull_over_lanes, arc_end_pose, left_side_parking);
-  if (std::abs(distance_to_near_bound) - near_deviation < lane_departure_margin) {
-    return std::vector<PathWithLaneId>{};
-  }
+  // if (std::abs(distance_to_near_bound) - near_deviation < lane_departure_margin) {
+  //   return std::vector<PathWithLaneId>{};
+  // }
   // Check road lane bound
-  const double R_far_corner = std::hypot(
-    R_E_near + common_params.vehicle_width / 2,
-    is_forward ? common_params.base_link2rear : common_params.base_link2front);
-  const double far_deviation = R_far_corner - R_E_near;
-  const double distance_to_far_bound =
-    utils::getSignedDistanceFromBoundary(lanes, start_pose, !left_side_parking);
-  if (std::abs(distance_to_far_bound) - far_deviation < lane_departure_margin) {
-    return std::vector<PathWithLaneId>{};
-  }
+  // const double R_far_corner = std::hypot(
+  //   R_E_near + common_params.vehicle_width / 2,
+  //   is_forward ? common_params.base_link2rear : common_params.base_link2front);
+  // const double far_deviation = R_far_corner - R_E_near;
+  // const double distance_to_far_bound =
+  //   utils::getSignedDistanceFromBoundary(lanes, start_pose, !left_side_parking);
+  // if (std::abs(distance_to_far_bound) - far_deviation < lane_departure_margin) {
+  //   RCLCPP_WARN(
+  //     rclcpp::get_logger("geometric_parallel_parking"),
+  //     "[planOneTrial] FAILED: lane departure check. dist_to_far_bound=%.3f, far_deviation=%.3f, "
+  //     "margin=%.3f, check=%.3f < 0",
+  //     distance_to_far_bound, far_deviation, lane_departure_margin,
+  //     std::abs(distance_to_far_bound) - far_deviation - lane_departure_margin);
+  //   return std::vector<PathWithLaneId>{};
+  // }
   // Generate arc path(first turn -> second turn)
   const Pose C_near = left_side_parking ? calc_offset_pose(start_pose, 0, R_E_near, 0)
                                         : calc_offset_pose(start_pose, 0, -R_E_near, 0);
@@ -517,23 +653,23 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   setLaneIdsToPath(path_turn_first);
   setLaneIdsToPath(path_turn_second);
 
-  if (lane_departure_checker) {
-    const auto lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  // if (lane_departure_checker) {
+  //   const auto lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
 
-    const bool is_path_turn_first_outside_lanes =
-      lane_departure_checker->checkPathWillLeaveLane(lanelet_map_ptr, path_turn_first);
+  //   const bool is_path_turn_first_outside_lanes =
+  //     lane_departure_checker->checkPathWillLeaveLane(lanelet_map_ptr, path_turn_first);
 
-    if (is_path_turn_first_outside_lanes) {
-      return std::vector<PathWithLaneId>{};
-    }
+  //   if (is_path_turn_first_outside_lanes) {
+  //     return std::vector<PathWithLaneId>{};
+  //   }
 
-    const bool is_path_turn_second_outside_lanes =
-      lane_departure_checker->checkPathWillLeaveLane(lanelet_map_ptr, path_turn_second);
+  //   const bool is_path_turn_second_outside_lanes =
+  //     lane_departure_checker->checkPathWillLeaveLane(lanelet_map_ptr, path_turn_second);
 
-    if (is_path_turn_second_outside_lanes) {
-      return std::vector<PathWithLaneId>{};
-    }
-  }
+  //   if (is_path_turn_second_outside_lanes) {
+  //     return std::vector<PathWithLaneId>{};
+  //   }
+  // }
 
   // generate arc path vector
   paths_.push_back(path_turn_first);

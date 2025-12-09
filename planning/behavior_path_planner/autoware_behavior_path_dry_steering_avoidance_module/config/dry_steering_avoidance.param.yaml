@@ -1,0 +1,28 @@
+/**:
+  ros__parameters:
+    dry_steering_avoidance:
+      # activation condition
+      th_stopped_velocity: 0.01          # [m/s] ego stopped velocity threshold
+      th_stopped_time: 3.0               # [s] time to wait before activation
+      th_static_object_velocity: 0.5     # [m/s] static object velocity threshold
+
+      # object detection
+      object_search_forward_distance: 10.0  # [m] forward detection range
+
+      # goal pose sampling
+      avoidance_direction: "right"       # "right" or "left"
+      longitudinal_search_min: 1.0       # [m] minimum longitudinal distance
+      longitudinal_search_max: 15.0      # [m] maximum longitudinal distance
+      longitudinal_search_interval: 1.0  # [m] longitudinal sampling interval
+      lateral_search_min: 0.1            # [m] minimum lateral offset from object edge
+      lateral_search_max: 5.0            # [m] maximum lateral offset
+      lateral_search_interval: 0.5       # [m] lateral sampling interval
+
+      # geometric pull out parameters
+      geometric_pull_out_velocity: 1.0
+      lane_departure_margin: 0.2
+      lane_departure_check_expansion_margin: 0.0
+      divide_pull_out_path: true
+      arc_path_interval: 1.0
+      geometric_pull_out_max_steer_angle_margin_scale: 0.72
+      geometric_collision_check_distance_from_end: 0.0
