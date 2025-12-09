@@ -101,6 +101,7 @@ __global__ void resizeAndExtractRoi_kernel(
   float sum_weight = 0.0f;
 
   // 7. Convolution Loop (Triangle/Bilinear Filter)
+  // TODO(SamratThapa120): If necessary, optimize with im2col, separate horizontal and vertical filtering, etc.
   for (int y = y_min; y <= y_max; ++y) {
     // Y-weight: Triangle filter (1 - distance / support)
     float dy = (center_y - y);
