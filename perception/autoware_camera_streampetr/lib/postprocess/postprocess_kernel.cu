@@ -131,7 +131,8 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater_classwise(thrust::raw_pointer_cast(score_thresholds_d.data())));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(),
+    is_score_greater_classwise(thrust::raw_pointer_cast(score_thresholds_d.data())));
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }

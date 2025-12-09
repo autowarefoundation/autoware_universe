@@ -29,9 +29,9 @@ class PostProcessingConfig
 {
 public:
   PostProcessingConfig(
-    const int32_t num_classes, const float circle_nms_dist_threshold, const std::vector<double> & score_thresholds,
-    const std::vector<double> & yaw_norm_thresholds, const int32_t num_proposals,
-    const std::vector<float> & detection_range)
+    const int32_t num_classes, const float circle_nms_dist_threshold,
+    const std::vector<double> & score_thresholds, const std::vector<double> & yaw_norm_thresholds,
+    const int32_t num_proposals, const std::vector<float> & detection_range)
   : num_classes_(num_classes),
     num_proposals_(num_proposals),
     circle_nms_dist_threshold_(circle_nms_dist_threshold),
@@ -54,8 +54,7 @@ public:
       yaw_norm_threshold =
         (yaw_norm_threshold >= 0.0 && yaw_norm_threshold < 1.0) ? yaw_norm_threshold : 0.0;
     }
-    score_thresholds_ =
-      std::vector<float>(score_thresholds.begin(), score_thresholds.end());
+    score_thresholds_ = std::vector<float>(score_thresholds.begin(), score_thresholds.end());
   }
 
   ///// NETWORK PARAMETERS /////
