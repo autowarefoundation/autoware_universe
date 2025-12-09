@@ -110,7 +110,7 @@
           "description": "obstacle object",
           "type": "object",
           "properties": {
-            "dist_thr_m": {
+            "collision_thr_m": {
               "description": "distance between ego and the obstacle below which a collision is considered",
               "type": "number",
               "default": 0.0

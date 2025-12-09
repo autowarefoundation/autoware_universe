@@ -22,6 +22,11 @@
 #include "autoware_perception_msgs/msg/predicted_object.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
+#include "unique_identifier_msgs/msg/uuid.hpp"
+
+#include <sstream>
+#include <iomanip>
+#include <string>
 
 namespace planning_diagnostics
 {
@@ -34,6 +39,21 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Pose;
+
+/**
+ * @brief convert UUID to string representation
+ * @param [in] uuid UUID message
+ * @return hex string representation of UUID
+ */
+inline std::string uuid_to_string(const unique_identifier_msgs::msg::UUID & uuid)
+{
+  std::stringstream ss;
+  ss << std::hex << std::setfill('0');
+  for (const auto & byte : uuid.uuid) {
+    ss << std::setw(2) << static_cast<int>(byte);
+  }
+  return ss.str();
+}
 
 /**
  * @brief find the index in the trajectory at the given distance of the given index
@@ -68,15 +88,26 @@ Trajectory get_lookahead_trajectory(
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
 
 /**
- * @brief calculate the distance between ego vehicle footprint and a predicted object
+ * @brief create ego vehicle footprint polygon at a specific pose
  * @param [in] local_ego_footprint ego vehicle footprint in local coordinates
  * @param [in] ego_pose current ego vehicle pose in world coordinates
- * @param [in] object predicted object with pose and shape information
- * @return minimum distance between ego footprint and object footprint in meters
+ * @return ego footprint polygon transformed to world coordinates
  */
-double calc_ego_object_distance(
-  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
-  const PredictedObject & object);
+autoware_utils::Polygon2d create_pose_footprint(
+  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose);
+
+/**
+ * @brief create an elongated footprint polygon by combining ego footprints along trajectory
+ * @details Uses adaptive resampling based on vehicle info to balance accuracy and
+ *          performance. Resamples trajectory at 0.2x vehicle length intervals and fills gaps
+ *          larger than 0.5x vehicle length with intermediate points to ensure continuity.
+ * @param [in] vehicle_info vehicle information containing dimensions
+ * @param [in] traj trajectory to sweep the footprint along
+ * @param [in] ego_pose current ego vehicle pose in world coordinates
+ * @return combined polygon representing the swept area of ego footprint along trajectory
+ */
+autoware_utils::Polygon2d create_trajectory_footprint(
+  const VehicleInfo & vehicle_info, const Trajectory & traj, const Pose & ego_pose);
 
 }  // namespace utils
 }  // namespace metrics

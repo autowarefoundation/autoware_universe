@@ -172,7 +172,7 @@ The following information are used to calculate metrics:
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
 - **`obstacle_ttc`**: Statistics of the time-to-collision (TTC) of objects and ego. Predicted path of objects and ego trajectory are considered.
-  - Parameters: `obstacle.dist_thr_m` (distance margin to consider a collision occurs between object footprints and ego trajectory footprints).
+  - Parameters: `obstacle.collision_thr_m` (distance margin to consider a collision occurs between object footprints and ego trajectory footprints).
   - Sub-metrics to publish: `/mean`, `/min`, `/max`.
   - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
 
