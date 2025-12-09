@@ -152,8 +152,7 @@ void reportValidationFailure(char const * msg, char const * file, int line)
 {
   std::ostringstream stream;
   stream << "Validation failed: " << msg << std::endl << file << ':' << line << std::endl;
-  const std::string & str = stream.str();
-  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, str.c_str());
+  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
 }
 
 // break-pointable
@@ -163,8 +162,7 @@ void reportAssertion(const char * msg, const char * file, int line)
   stream << "Assertion failed: " << msg << std::endl
          << file << ':' << line << std::endl
          << "Aborting..." << std::endl;
-  const std::string & str = stream.str();
-  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, str.c_str());
+  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
   PLUGIN_CUASSERT(cudaDeviceReset());
   abort();
 }

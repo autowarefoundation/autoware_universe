@@ -211,8 +211,7 @@ void run(const std::string & socket_path, const std::vector<std::string> & list)
 
     oa << msr;
     // Write N bytes of BUF to FD
-    const std::string & str = oss.str();
-    ret = write(new_sock, str.c_str(), str.length());
+    ret = write(new_sock, oss.str().c_str(), oss.str().length());
     if (ret < 0) {
       syslog(LOG_ERR, "Failed to write N bytes of BUF to FD. %s\n", strerror(errno));
     }

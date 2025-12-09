@@ -682,8 +682,8 @@ bool NetMonitor::send_data(traffic_reader_service::Request request)
 
   // Write data to socket
   boost::system::error_code error_code;
-  const std::string & str = out_stream.str();
-  socket_->write_some(boost::asio::buffer(str.c_str(), str.length()), error_code);
+  socket_->write_some(
+    boost::asio::buffer(out_stream.str().c_str(), out_stream.str().length()), error_code);
 
   if (error_code) {
     RCLCPP_ERROR(get_logger(), "Failed to write data to socket. %s", error_code.message().c_str());
@@ -705,8 +705,8 @@ bool NetMonitor::send_data_with_parameters(
 
   // Write data to socket
   boost::system::error_code error_code;
-  const std::string & str = out_stream.str();
-  socket_->write_some(boost::asio::buffer(str.c_str(), str.length()), error_code);
+  socket_->write_some(
+    boost::asio::buffer(out_stream.str().c_str(), out_stream.str().length()), error_code);
 
   if (error_code) {
     RCLCPP_ERROR(get_logger(), "Failed to write data to socket. %s", error_code.message().c_str());

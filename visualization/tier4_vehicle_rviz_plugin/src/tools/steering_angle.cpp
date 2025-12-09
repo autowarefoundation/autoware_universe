@@ -159,11 +159,10 @@ void SteeringAngleDisplay::update(float wall_dt, float ros_dt)
   } else {
     steering_angle_ss << "Not received";
   }
-  const std::string & str = steering_angle_ss.str();
   painter.drawText(
     0, std::min(property_value_height_offset_->getInt(), h - 1), w,
     std::max(h - property_value_height_offset_->getInt(), 1), Qt::AlignCenter | Qt::AlignVCenter,
-    str.c_str());
+    steering_angle_ss.str().c_str());
 
   painter.end();
 }

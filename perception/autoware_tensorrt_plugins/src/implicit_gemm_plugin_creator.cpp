@@ -103,53 +103,32 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
 
       // Log the attributes parsed from ONNX node.
       std::stringstream ss;
-      {
-        ss << name << " plugin Attributes:";
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss << name << " plugin Attributes:";
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "act_alpha: " << parameters.act_alpha;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "act_alpha: " << parameters.act_alpha;
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "act_beta: " << parameters.act_beta;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "act_beta: " << parameters.act_beta;
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "is_subm: " << parameters.is_subm;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "is_subm: " << parameters.is_subm;
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "is_train: " << parameters.is_train;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "is_train: " << parameters.is_train;
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "output_add_scale: " << parameters.output_add_scale;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "output_add_scale: " << parameters.output_add_scale;
+      logDebug(ss.str().c_str());
 
-      {
-        ss.str("");
-        ss << "output_scale: " << parameters.output_scale;
-        const std::string & str = ss.str();
-        logDebug(str.c_str());
-      }
+      ss.str("");
+      ss << "output_scale: " << parameters.output_scale;
+      logDebug(ss.str().c_str());
 
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), parameters}};
       return plugin;

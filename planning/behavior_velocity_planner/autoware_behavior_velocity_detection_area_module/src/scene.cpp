@@ -78,10 +78,9 @@ void DetectionAreaModule::print_detected_obstacle(
                  << ", " << p_from_ego.z << ")";
   }
 
-  const std::string & str = obstacles_ss.str();
   logInfoThrottle(
     1000, "ego: map_coord(%.2f, %.2f, %.2f), %s", self_pose.position.x, self_pose.position.y,
-    self_pose.position.z, str.c_str());
+    self_pose.position.z, obstacles_ss.str().c_str());
 }
 
 void DetectionAreaModule::finalizeStopPoint(

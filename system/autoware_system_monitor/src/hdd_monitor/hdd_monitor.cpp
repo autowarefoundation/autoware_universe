@@ -319,11 +319,10 @@ void HddMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     if (c.exit_code() != 0) {
       std::ostringstream os;
       is_err >> os.rdbuf();
-      const std::string & str = os.str();
       error_str = "df error";
       stat.add(fmt::format("HDD {}: status", hdd_index), "df error");
       stat.add(fmt::format("HDD {}: name", hdd_index), itr->second.part_device_.c_str());
-      stat.add(fmt::format("HDD {}: df", hdd_index), str.c_str());
+      stat.add(fmt::format("HDD {}: df", hdd_index), os.str().c_str());
       continue;
     }
 
@@ -710,8 +709,7 @@ void HddMonitor::updateHddInfoList()
   oa & hdd_devices;
 
   // Write list of devices to FD
-  const std::string & str = oss.str();
-  ret = write(sock, str.c_str(), str.length());
+  ret = write(sock, oss.str().c_str(), oss.str().length());
   if (ret < 0) {
     connect_diag_.summary(DiagStatus::ERROR, "write error");
     connect_diag_.add("write", strerror(errno));
@@ -939,8 +937,7 @@ int HddMonitor::unmountDevice(std::string & device)
   oa & umount_dev_infos;
 
   // Write list of devices to FD
-  const std::string & str = oss.str();
-  ret = write(sock, str.c_str(), str.length());
+  ret = write(sock, oss.str().c_str(), oss.str().length());
   if (ret < 0) {
     RCLCPP_ERROR(get_logger(), "socket write error. %s", strerror(errno));
     close(sock);

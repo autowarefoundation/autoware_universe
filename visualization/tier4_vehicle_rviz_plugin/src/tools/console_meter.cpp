@@ -20,7 +20,6 @@
 #include <X11/Xlib.h>
 
 #include <algorithm>
-#include <string>
 namespace rviz_plugins
 {
 ConsoleMeterDisplay::ConsoleMeterDisplay()
@@ -156,11 +155,10 @@ void ConsoleMeterDisplay::update(float wall_dt, float ros_dt)
   } else {
     velocity_ss << "Not received";
   }
-  const std::string & str = velocity_ss.str();
   painter.drawText(
     0, std::min(property_value_height_offset_->getInt(), h - 1), w,
     std::max(h - property_value_height_offset_->getInt(), 1), Qt::AlignCenter | Qt::AlignVCenter,
-    str.c_str());
+    velocity_ss.str().c_str());
   painter.end();
   updateVisualization();
 }

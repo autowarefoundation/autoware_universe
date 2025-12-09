@@ -188,8 +188,8 @@ void TrafficReaderService::get_result()
 
   // Write data to socket
   boost::system::error_code error_code;
-  const std::string & str = out_stream.str();
-  socket_->write_some(boost::asio::buffer(str.c_str(), str.length()), error_code);
+  socket_->write_some(
+    boost::asio::buffer(out_stream.str().c_str(), out_stream.str().length()), error_code);
 
   if (error_code) {
     syslog(LOG_ERR, "Failed to write data to socket. %s\n", error_code.message().c_str());
@@ -208,8 +208,7 @@ void TrafficReaderService::execute_nethogs()
     command << " " << device;
   }
 
-  const std::string & str = command.str();
-  syslog(LOG_INFO, "%s\n", str.c_str());
+  syslog(LOG_INFO, "%s\n", command.str().c_str());
 
   process::ipstream is_out;
   process::ipstream is_error;

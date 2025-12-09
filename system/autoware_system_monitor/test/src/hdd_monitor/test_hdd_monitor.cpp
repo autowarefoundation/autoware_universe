@@ -255,10 +255,7 @@ void * hdd_reader(void * args)
       info.temp_ = 40;
       list["/dev/sda"] = info;
       oa << list;
-      {
-        const std::string & str = oss.str();
-        ret = write(new_sock, str.c_str(), str.length());
-      }
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
       break;
 
     case Hot:
@@ -266,10 +263,7 @@ void * hdd_reader(void * args)
       info.temp_ = 55;
       list["/dev/sda"] = info;
       oa << list;
-      {
-        const std::string & str = oss.str();
-        ret = write(new_sock, str.c_str(), str.length());
-      }
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
       break;
 
     case CriticalHot:
@@ -277,20 +271,14 @@ void * hdd_reader(void * args)
       info.temp_ = 70;
       list["/dev/sda"] = info;
       oa << list;
-      {
-        const std::string & str = oss.str();
-        ret = write(new_sock, str.c_str(), str.length());
-      }
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
       break;
 
     case ReturnsError:
       info.error_code_ = EACCES;
       list["/dev/sda"] = info;
       oa << list;
-      {
-        const std::string & str = oss.str();
-        ret = write(new_sock, str.c_str(), str.length());
-      }
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
       break;
 
     case RecvTimeout:
@@ -312,10 +300,7 @@ void * hdd_reader(void * args)
     case FormatError:
       // Send wrong data
       oa << "test";
-      {
-        const std::string & str = oss.str();
-        ret = write(new_sock, str.c_str(), str.length());
-      }
+      ret = write(new_sock, oss.str().c_str(), oss.str().length());
       break;
 
     default:
