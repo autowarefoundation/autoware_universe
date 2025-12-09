@@ -119,7 +119,7 @@ void copy_trajectory_orientation(
     if (!nearest_index_opt.has_value()) {
       continue;
     }
-    const auto & nearest_index = nearest_index_opt.value();
+    const auto nearest_index = nearest_index_opt.value();
     out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
   }
 }
