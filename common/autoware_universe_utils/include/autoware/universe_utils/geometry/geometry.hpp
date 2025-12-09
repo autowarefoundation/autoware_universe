@@ -41,7 +41,6 @@
 #include <geometry_msgs/msg/vector3.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-
 namespace autoware::universe_utils
 {
 template <class T>
