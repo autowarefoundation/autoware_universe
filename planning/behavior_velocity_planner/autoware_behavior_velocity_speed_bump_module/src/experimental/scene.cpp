@@ -15,6 +15,7 @@
 #include "scene.hpp"
 
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <iostream>
 #include <memory>
@@ -25,11 +26,11 @@ namespace autoware::behavior_velocity_planner::experimental
 {
 using autoware::motion_utils::calcSignedArcLength;
 using autoware_utils::append_marker_array;
-using autoware_utils::calc_offset_pose;
 using autoware_utils::create_default_marker;
 using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_scale;
-using autoware_utils::create_point;
+using autoware_utils_geometry::calc_offset_pose;
+using autoware_utils_geometry::create_point;
 using geometry_msgs::msg::Point32;
 using visualization_msgs::msg::Marker;
 
@@ -255,7 +256,7 @@ autoware::motion_utils::VirtualWalls SpeedBumpModule::createVirtualWalls()
   wall.ns = std::to_string(module_id_) + "_";
   wall.style = autoware::motion_utils::VirtualWallType::slowdown;
   for (const auto & p : debug_data_.slow_start_poses) {
-    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils_geometry::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
   return virtual_walls;
