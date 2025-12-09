@@ -37,13 +37,6 @@
 
 namespace autoware::camera_streampetr
 {
-
-// Helper to ceil division
-inline int divUp(int a, int b)
-{
-  return (a + b - 1) / b;
-}
-
 // -------------------------------------------------------------------------
 // Fused Kernel: Anti-Aliased Resize -> Crop -> Normalize -> CHW Layout
 // -------------------------------------------------------------------------
