@@ -25,7 +25,6 @@ import launch_testing
 import launch_testing.actions
 import pytest
 import rclpy
-from rclpy.node import Node
 
 
 @pytest.mark.launch_test
