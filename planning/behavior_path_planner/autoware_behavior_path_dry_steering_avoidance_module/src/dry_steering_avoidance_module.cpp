@@ -200,17 +200,17 @@ CandidateOutput DrySteeringAvoidanceModule::planCandidate() const
 
 bool DrySteeringAvoidanceModule::canTransitSuccessState()
 {
-  // Success if goal is reached
-  if (hasReachedGoal()) {
-    RCLCPP_INFO(getLogger(), "Goal reached, transitioning to SUCCESS");
-    return true;
-  }
+  // // Success if goal is reached
+  // if (hasReachedGoal()) {
+  //   RCLCPP_INFO(getLogger(), "Goal reached, transitioning to SUCCESS");
+  //   return true;
+  // }
 
-  // Success if obstacle disappeared while at start pose
-  if (hasObstacleDisappearedAtStart()) {
-    RCLCPP_INFO(getLogger(), "Obstacle disappeared at start, transitioning to SUCCESS");
-    return true;
-  }
+  // // Success if obstacle disappeared while at start pose
+  // if (hasObstacleDisappearedAtStart()) {
+  //   RCLCPP_INFO(getLogger(), "Obstacle disappeared at start, transitioning to SUCCESS");
+  //   return true;
+  // }
 
   return false;
 }

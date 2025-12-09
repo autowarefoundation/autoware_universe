@@ -251,7 +251,7 @@ bool GeometricParallelParking::planPullOut(
     //   calcStartPose(start_pose, road_lanes, end_pose_offset, R_E_min_, is_forward,
     //   left_side_start);
     const std::optional<Pose> end_pose =
-      calc_offset_pose(start_pose, 5.0 + end_pose_offset, -3.0, 0.0);  // for debugging
+      calc_offset_pose(start_pose, 5.0 + end_pose_offset, -2.5, 0.0);  // for debugging
 
     auto t1 = std::chrono::high_resolution_clock::now();
     RCLCPP_WARN(
@@ -296,7 +296,7 @@ bool GeometricParallelParking::planPullOut(
     }
 
     // get road center line path from pull_out end to goal, and combine after the second arc path
-    const double s_start = getArcCoordinates(road_lanes, *end_pose).length + 20;
+    const double s_start = getArcCoordinates(road_lanes, *end_pose).length + 30;
 
     RCLCPP_WARN(
       rclcpp::get_logger("geometric_parallel_parking"),
