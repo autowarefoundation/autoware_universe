@@ -19,6 +19,7 @@
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
 #include "autoware/planning_evaluator/metrics_accumulator.hpp"
 #include "autoware/planning_evaluator/metrics_calculator.hpp"
+#include "autoware/planning_evaluator/obstacle_metrics_calculator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -148,9 +149,21 @@ public:
   void AddKinematicStateMetricMsg(
     const AccelWithCovarianceStamped & accel_stamped, const Odometry::ConstSharedPtr ego_state_ptr);
 
+  /**
+   * @brief add stop count metric for a specific planning factor module
+   */
   void AddStopCountMetricMsg(
     const PlanningFactorArray::ConstSharedPtr & planning_factors,
     const Odometry::ConstSharedPtr ego_state_ptr, const std::string & module_name);
+
+  /**
+   * @brief add obstacle metric for a specific object
+   * @param [in] metric the obstacle metric type
+   * @param [in] metric_stat the metric statistics
+   * @param [in] object_name the object identifier (e.g., "worst" or object UUID)
+   */
+  void AddObstacleMsg(
+    const Metric & metric, const Accumulator<double> & metric_stat, const std::string & object_name);
 
 private:
   static bool isFinite(const TrajectoryPoint & p);
@@ -209,6 +222,7 @@ private:
 
   // Calculator and accumulator
   MetricsCalculator metrics_calculator_;
+  ObstacleMetricsCalculator obstacle_metrics_calculator_;
   MetricsAccumulator metrics_accumulator_;
 
   // Metrics for publishing

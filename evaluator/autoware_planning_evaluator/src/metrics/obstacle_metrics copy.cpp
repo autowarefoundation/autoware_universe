@@ -36,37 +36,28 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::calc_distance2d;
 namespace bg = boost::geometry;
 
-std::vector<std::pair<std::string, Accumulator<double>>> calcDistanceToObstacle(
-  const nav_msgs::msg::Odometry & ego_odom,
-  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info,
-  const bool worst_only)
+Accumulator<double> calcDistanceToObstacle(
+  const PredictedObjects & obstacles, const Trajectory & traj, const VehicleInfo & vehicle_info)
 {
-  if (traj.points.empty() || obstacles.objects.empty()) {
-    return {};
-  }
+  Accumulator<double> stat;
 
-  const auto trajectory_footprint = utils::create_trajectory_footprint(vehicle_info, traj);
+  const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info.createFootprint();
 
-  double min_dist = std::numeric_limits<double>::max();
-  std::vector<std::pair<std::string, Accumulator<double>>> uuid_stats;
-  for (const auto & object : obstacles.objects) {
-    const auto object_polygon = autoware_utils::to_polygon2d(object);
-    const auto dist = boost::geometry::distance(trajectory_footprint, object_polygon);
-    min_dist = std::min(min_dist, dist);
-    if (!worst_only) {
-      uuid_stats.emplace_back(utils::uuid_to_string(object.object_id), Accumulator<double>{}.add(dist));
+  for (const TrajectoryPoint & p : traj.points) {
+    double min_dist = std::numeric_limits<double>::max();
+    for (const auto & object : obstacles.objects) {
+      const auto dist = utils::calc_ego_object_distance(local_ego_footprint, p.pose, object);
+      min_dist = std::min(min_dist, dist);
     }
+    stat.add(min_dist);
   }
-
-  uuid_stats.emplace_back("worst", Accumulator<double>{}.add(min_dist));
-
-  return uuid_stats;
+  return stat;
 }
 
-std::vector<std::pair<std::string, Accumulator<double>>> calcTimeToCollision(
+Accumulator<double> calcTimeToCollision(
   const nav_msgs::msg::Odometry & ego_odom, const PredictedObjects & obstacles,
   const Trajectory & traj, const VehicleInfo & vehicle_info, const double distance_threshold,
-  const double limit_min_accel, const bool worst_only) // TODO refactor codes
+  const double limit_min_accel)
 {
   constexpr double eps = 1e-6;
   Accumulator<double> stat;
@@ -216,9 +207,8 @@ std::vector<std::pair<std::string, Accumulator<double>>> calcTimeToCollision(
     for (auto & obstacle : dynamic_obstacles) {
       obstacle.updatePosition(dt);
 
-      const auto ego_polygon = utils::create_pose_footprint(local_ego_footprint, p_curr.pose);
-      const auto object_polygon = autoware_utils::to_polygon2d(obstacle.object);
-      const auto distance = boost::geometry::distance(ego_polygon, object_polygon);
+      const auto distance =
+        utils::calc_ego_object_distance(local_ego_footprint, p_curr.pose, obstacle.object);
       if (distance <= distance_threshold) {
         stat.add(t);
         return stat;
