@@ -87,27 +87,6 @@ Trajectory get_lookahead_trajectory(
  */
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
 
-/**
- * @brief create ego vehicle footprint polygon at a specific pose
- * @param [in] local_ego_footprint ego vehicle footprint in local coordinates
- * @param [in] ego_pose current ego vehicle pose in world coordinates
- * @return ego footprint polygon transformed to world coordinates
- */
-autoware_utils::Polygon2d create_pose_footprint(
-  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose);
-
-/**
- * @brief create an elongated footprint polygon by combining ego footprints along trajectory
- * @details Uses adaptive resampling based on vehicle info to balance accuracy and
- *          performance. Resamples trajectory at 0.2x vehicle length intervals and fills gaps
- *          larger than 0.5x vehicle length with intermediate points to ensure continuity.
- * @param [in] vehicle_info vehicle information containing dimensions
- * @param [in] traj trajectory to sweep the footprint along
- * @param [in] ego_pose current ego vehicle pose in world coordinates
- * @return combined polygon representing the swept area of ego footprint along trajectory
- */
-autoware_utils::Polygon2d create_trajectory_footprint(
-  const VehicleInfo & vehicle_info, const Trajectory & traj, const Pose & ego_pose);
 
 }  // namespace utils
 }  // namespace metrics

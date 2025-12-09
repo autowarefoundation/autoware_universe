@@ -74,6 +74,10 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     declare_parameter<double>("obstacle.collision_thr_m");
   obstacle_metrics_calculator_.parameters.stop_velocity_mps =
     declare_parameter<double>("obstacle.stop_velocity_mps");
+  obstacle_metrics_calculator_.parameters.min_time_interval_s =
+    declare_parameter<double>("obstacle.min_time_interval_s");
+  obstacle_metrics_calculator_.parameters.min_spatial_interval_m =
+    declare_parameter<double>("obstacle.min_spatial_interval_m");
 
   obstacle_metrics_calculator_.parameters.limit_min_accel =
     declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
