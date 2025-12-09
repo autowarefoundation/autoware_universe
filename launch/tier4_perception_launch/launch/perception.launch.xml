@@ -46,6 +46,7 @@
   <arg name="traffic_light_multi_camera_fusion_param_path"/>
   <arg name="traffic_light_arbiter_param_path"/>
   <arg name="crosswalk_traffic_light_estimator_param_path"/>
+  <arg name="tracker_publish_merged_objects"/>
 
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
@@ -182,7 +183,7 @@
 
   <!-- Object merger method: whether to enable multi-channel tracker merger -->
   <arg name="use_multi_channel_tracker_merger" default="false" description="if it is true, replace the multi step merger to multi-channel tracker merger."/>
-
+  <arg name="output/tracker_merged_objects" default="/perception/object_recognition/detection/objects"/>
   <!-- Downsample pointcloud for perception usage -->
   <arg name="downsample_perception_common_pointcloud" default="false"/>
   <arg name="cuda_pointcloud_preprocessing" default="false"/>
