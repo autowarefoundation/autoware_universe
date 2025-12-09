@@ -129,7 +129,7 @@ void DiffusionPlanner::set_up_params()
   params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.0});
   params_.velocity_smoothing_window =
     this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
-  params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.0);
+  params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.3);
 
   // debug params
   debug_params_.publish_debug_map =

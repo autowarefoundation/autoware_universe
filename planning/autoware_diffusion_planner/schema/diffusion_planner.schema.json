@@ -81,7 +81,7 @@
         },
         "stopping_threshold": {
           "type": "number",
-          "default": 0.0,
+          "default": 0.3,
           "description": "Threshold for keeping the stopping state [m/s]"
         },
         "debug_params": {
