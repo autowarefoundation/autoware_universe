@@ -23,14 +23,14 @@ namespace autoware::camera_streampetr
 {
 const size_t THREADS_PER_BLOCK = 256;
 
-struct is_score_greater
+struct is_score_greater_classwise
 {
-  explicit is_score_greater(float t) : t_(t) {}
+  explicit is_score_greater_classwise(const float * t) : t_(t) {}
 
-  __device__ bool operator()(const Box3D & b) { return b.score > t_; }
+  __device__ bool operator()(const Box3D & b) { return b.score > t_[b.label]; }
 
 private:
-  float t_{0.0};
+  const float * t_;
 };
 
 struct is_kept
@@ -121,6 +121,9 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   auto detection_range_d =
     thrust::device_vector<float>(config_.detection_range_.begin(), config_.detection_range_.end());
 
+  auto score_thresholds_d = thrust::device_vector<float>(
+    config_.score_thresholds_.begin(), config_.score_thresholds_.end());
+
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     cls_output, box_output, config_.num_proposals_, config_.num_classes_,
     thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
@@ -128,14 +131,14 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater(config_.score_threshold_));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater_classwise(thrust::raw_pointer_cast(score_thresholds_d.data())));
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
   thrust::copy_if(
     thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(),
-    is_score_greater(config_.score_threshold_));
+    is_score_greater_classwise(thrust::raw_pointer_cast(score_thresholds_d.data())));
 
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());

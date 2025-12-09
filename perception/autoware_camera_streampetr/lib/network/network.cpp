@@ -194,7 +194,7 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
-      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_threshold,
+      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_thresholds,
       config_.yaw_norm_thresholds, config_.num_proposals, config_.detection_range),
     stream_);
 }
