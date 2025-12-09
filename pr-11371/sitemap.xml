@@ -177,6 +177,26 @@
          <lastmod>2025-12-09</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/e2e/autoware_tensorrt_vad/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/e2e/autoware_tensorrt_vad/docs/design/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/e2e/autoware_tensorrt_vad/docs/design_vad_interface/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/e2e/autoware_tensorrt_vad/docs/design_vad_model/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/e2e/autoware_tensorrt_vad/docs/design_vad_node/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/evaluator/autoware_control_evaluator/</loc>
          <lastmod>2025-12-09</lastmod>
     </url>
@@ -641,6 +661,10 @@
          <lastmod>2025-12-09</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/planning/autoware_manual_lane_change_handler/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/planning/autoware_mission_planner_universe/</loc>
          <lastmod>2025-12-09</lastmod>
     </url>
@@ -698,6 +722,14 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/planning/autoware_trajectory_optimizer/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/planning/autoware_trajectory_optimizer/docs/kinematic_feasibility_enforcer/</loc>
+         <lastmod>2025-12-09</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-11371/planning/autoware_trajectory_optimizer/docs/mpt_optimizer/</loc>
          <lastmod>2025-12-09</lastmod>
     </url>
     <url>
