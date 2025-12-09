@@ -4,8 +4,10 @@
   <name>autoware_spheric_collision_detector</name>
   <version>0.1.0</version>
   <description>The spheric_collision_detector package</description>
-  <license>Apache License 2.0</license>
+
   <maintainer email="simon.ranjith@lx.it.pt">Simon Ranjith</maintainer>
+
+  <license>Apache License 2.0</license>
   <author email="simon.ranjith@lx.it.pt">Simon Ranjith</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
