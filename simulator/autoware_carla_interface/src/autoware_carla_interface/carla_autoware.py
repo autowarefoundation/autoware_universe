@@ -78,6 +78,60 @@ class InitializeInterface(object):
         self.use_traffic_manager = self.param_["use_traffic_manager"]
         self.max_real_delta_seconds = self.param_["max_real_delta_seconds"]
 
+    def _parse_spawn_point(self):
+        """Parse spawn point string and return transform with randomize flag."""
+        spawn_point = carla.Transform()
+        point_items = self.spawn_point.split(",")
+        randomize = False
+        if len(point_items) == 6:
+            spawn_point.location.x = float(point_items[0])
+            spawn_point.location.y = float(point_items[1])
+            spawn_point.location.z = (
+                float(point_items[2]) + 2
+            )  # +2 is used so the car did not stuck on the road when spawned.
+            spawn_point.rotation.roll = float(point_items[3])
+            spawn_point.rotation.pitch = float(point_items[4])
+            spawn_point.rotation.yaw = float(point_items[5])
+        else:
+            randomize = True
+        return spawn_point, randomize
+
+    def _setup_traffic_manager(self, client):
+        """Configure traffic manager with NPC vehicles."""
+        traffic_manager = client.get_trafficmanager()
+        traffic_manager.set_synchronous_mode(True)
+        traffic_manager.set_random_device_seed(0)
+        random.seed(0)
+        spawn_points_tm = self.world.get_map().get_spawn_points()
+        for i, spawn_point in enumerate(spawn_points_tm):
+            self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
+        models = [
+            "dodge",
+            "audi",
+            "model3",
+            "mini",
+            "mustang",
+            "lincoln",
+            "prius",
+            "nissan",
+            "crown",
+            "impala",
+        ]
+        blueprints = []
+        for vehicle in self.world.get_blueprint_library().filter("*vehicle*"):
+            if any(model in vehicle.id for model in models):
+                blueprints.append(vehicle)
+        max_vehicles = 30
+        max_vehicles = min([max_vehicles, len(spawn_points_tm)])
+        vehicles = []
+        for i, spawn_point in enumerate(random.sample(spawn_points_tm, max_vehicles)):
+            temp = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
+            if temp is not None:
+                vehicles.append(temp)
+
+        for vehicle in vehicles:
+            vehicle.set_autopilot(True)
+
     def load_world(self):
         client = carla.Client(self.local_host, self.port)
         client.set_timeout(self.timeout)
@@ -104,20 +158,8 @@ class InitializeInterface(object):
         self.world.apply_settings(settings)
         CarlaDataProvider.set_world(self.world)
         CarlaDataProvider.set_client(client)
-        spawn_point = carla.Transform()
-        point_items = self.spawn_point.split(",")
-        randomize = False
-        if len(point_items) == 6:
-            spawn_point.location.x = float(point_items[0])
-            spawn_point.location.y = float(point_items[1])
-            spawn_point.location.z = (
-                float(point_items[2]) + 2
-            )  # +2 is used so the car did not stuck on the road when spawned.
-            spawn_point.rotation.roll = float(point_items[3])
-            spawn_point.rotation.pitch = float(point_items[4])
-            spawn_point.rotation.yaw = float(point_items[5])
-        else:
-            randomize = True
+
+        spawn_point, randomize = self._parse_spawn_point()
         self.ego_actor = CarlaDataProvider.request_new_actor(
             self.vehicle_type, spawn_point, self.agent_role_name, random_location=randomize
         )
@@ -126,44 +168,9 @@ class InitializeInterface(object):
 
         self.sensor_wrapper = SensorWrapper(self.interface)
         self.sensor_wrapper.setup_sensors(self.ego_actor, False)
-        ##########################################################################
-        # TRAFFIC MANAGER
-        ##########################################################################
-        # cspell:ignore trafficmanager
-        if self.use_traffic_manager:
-            traffic_manager = client.get_trafficmanager()
-            traffic_manager.set_synchronous_mode(True)
-            traffic_manager.set_random_device_seed(0)
-            random.seed(0)
-            spawn_points_tm = self.world.get_map().get_spawn_points()
-            for i, spawn_point in enumerate(spawn_points_tm):
-                self.world.debug.draw_string(spawn_point.location, str(i), life_time=10)
-            models = [
-                "dodge",
-                "audi",
-                "model3",
-                "mini",
-                "mustang",
-                "lincoln",
-                "prius",
-                "nissan",
-                "crown",
-                "impala",
-            ]
-            blueprints = []
-            for vehicle in self.world.get_blueprint_library().filter("*vehicle*"):
-                if any(model in vehicle.id for model in models):
-                    blueprints.append(vehicle)
-            max_vehicles = 30
-            max_vehicles = min([max_vehicles, len(spawn_points_tm)])
-            vehicles = []
-            for i, spawn_point in enumerate(random.sample(spawn_points_tm, max_vehicles)):
-                temp = self.world.try_spawn_actor(random.choice(blueprints), spawn_point)
-                if temp is not None:
-                    vehicles.append(temp)
 
-            for vehicle in vehicles:
-                vehicle.set_autopilot(True)
+        if self.use_traffic_manager:
+            self._setup_traffic_manager(client)
 
     def run_bridge(self):
         self.bridge_loop = SensorLoop()
