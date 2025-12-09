@@ -58,7 +58,7 @@ void LidarInstanceSegmentationNode::pointCloudCallback(
     return;
   }
 
-stop_watch_ptr_->toc("processing_time", true);
+  stop_watch_ptr_->toc("processing_time", true);
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_msg;
   detector_ptr_->detectDynamicObjects(*msg, output_msg);
   dynamic_objects_pub_->publish(output_msg);
