@@ -47,7 +47,7 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".yellow_lamp_period");
   planner_param_.yellow_light_stop_velocity =
     get_or_declare_parameter<double>(node, ns + ".yellow_light_stop_velocity");
-  planner_param_.enable_arrow_aware_passing =
+  planner_param_.enable_arrow_aware_yellow_passing =
     get_or_declare_parameter<bool>(node, ns + ".enable_arrow_aware_yellow_passing");
   planner_param_.min_behind_dist_to_stop_for_restart_suppression =
     get_or_declare_parameter<double>(node, ns + ".restart_suppression.min_behind_distance_to_stop");

@@ -226,7 +226,7 @@ bool TrafficLightModule::isStopSignal()
   }
 
   // Override for yellow light on turn lanes with static arrows
-  if (planner_param_.enable_arrow_aware_passing) {
+  if (planner_param_.enable_arrow_aware_yellow_passing) {
     if (is_yellow_now) {
       // This is a yellow light. Check if this is the *start* of the yellow sequence.
       if (yellow_transition_state_ == YellowState::kNotYellow) {

@@ -65,7 +65,7 @@ public:
     double yellow_light_stop_velocity;
     double stop_time_hysteresis;
     bool enable_pass_judge;
-    bool enable_arrow_aware_passing;
+    bool enable_arrow_aware_yellow_passing;
     // Restart Suppression Parameter
     double max_behind_dist_to_stop_for_restart_suppression;
     double min_behind_dist_to_stop_for_restart_suppression;
