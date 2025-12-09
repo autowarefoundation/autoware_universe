@@ -87,6 +87,17 @@ void DrySteeringAvoidanceModuleManager::updateModuleParams(
     parameters, ns + "lane_departure_check_expansion_margin",
     p->lane_departure_check_expansion_margin);
 
+  // debug end pose offset parameters
+  update_param<double>(
+    parameters, ns + "debug_end_pose_longitudinal_offset",
+    p->parallel_parking_parameters.debug_end_pose_longitudinal_offset);
+  update_param<double>(
+    parameters, ns + "debug_end_pose_lateral_offset",
+    p->parallel_parking_parameters.debug_end_pose_lateral_offset);
+  update_param<double>(
+    parameters, ns + "center_line_path_extension",
+    p->parallel_parking_parameters.center_line_path_extension);
+
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
     if (!observer.expired()) observer.lock()->updateModuleParams(p);
   });

@@ -61,6 +61,11 @@ struct ParallelParkingParameters
   double pull_out_lane_departure_margin{0.0};
   double pull_out_arc_path_interval{0.0};
   double geometric_pull_out_max_steer_angle_margin_scale{0.0};
+
+  // debug offset for end pose (used in planPullOut)
+  double debug_end_pose_longitudinal_offset{5.0};
+  double debug_end_pose_lateral_offset{-2.5};
+  double center_line_path_extension{45.0};
 };
 
 class GeometricParallelParking
