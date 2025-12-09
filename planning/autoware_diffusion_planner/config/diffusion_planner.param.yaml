@@ -10,9 +10,9 @@
     traffic_light_group_msg_timeout_seconds: 0.2
     build_only: false
     batch_size: 1
-    temperature: [0.5]
+    temperature: [0.0]
     velocity_smoothing_window: 8
-    stopping_threshold: 0.0
+    stopping_threshold: 0.3
     debug_params:
       publish_debug_route: true
       publish_debug_map: false

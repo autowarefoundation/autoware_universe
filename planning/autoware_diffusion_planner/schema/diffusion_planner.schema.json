@@ -70,7 +70,7 @@
             "type": "number",
             "minimum": 0
           },
-          "default": [0.5],
+          "default": [0.0],
           "description": "List of temperature for sampling trajectories. Its length must be the same as `batch_size`. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature"
         },
         "velocity_smoothing_window": {
@@ -81,7 +81,7 @@
         },
         "stopping_threshold": {
           "type": "number",
-          "default": 0.0,
+          "default": 0.3,
           "description": "Threshold for keeping the stopping state [m/s]"
         },
         "debug_params": {
