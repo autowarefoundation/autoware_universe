@@ -115,6 +115,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
   update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
   update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
+  update_param<bool>(
+    parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
+  update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
 
   params_ = params;
 
@@ -136,7 +139,9 @@ void TrajectoryOptimizer::set_up_params()
   // Declare plugin_names parameter with default order
   const std::vector<std::string> default_plugins = {
     "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+    "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
     "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+    "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer",
     "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
     "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
     "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
@@ -152,6 +157,9 @@ void TrajectoryOptimizer::set_up_params()
   params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
   params_.extend_trajectory_backward =
     get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
+  params_.use_kinematic_feasibility_enforcer =
+    get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
+  params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)

@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <limits>
+#include <vector>
 
 using autoware::trajectory_optimizer::TrajectoryOptimizerParams;
 using autoware::trajectory_optimizer::utils::TrajectoryPoints;
@@ -77,13 +78,306 @@ TEST_F(TrajectoryOptimizerUtilsTest, ClampVelocities)
   }
 }
 
-TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity)
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_BasicCapping)
 {
-  TrajectoryPoints points = create_sample_trajectory();
-  autoware::trajectory_optimizer::utils::set_max_velocity(points, 2.0f);
-  for (const auto & point : points) {
-    ASSERT_LE(point.longitudinal_velocity_mps, 2.0f);
+  // Create trajectory with varying velocities
+  TrajectoryPoints points;
+  for (int i = 0; i < 5; ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = 5.0f + i;  // [5, 6, 7, 8, 9]
+    point.acceleration_mps2 = 0.5f;
+    points.push_back(point);
   }
+
+  const float max_velocity = 7.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // Check all velocities are capped
+  for (const auto & point : points) {
+    ASSERT_LE(point.longitudinal_velocity_mps, max_velocity);
+  }
+
+  // Check specific values
+  EXPECT_FLOAT_EQ(points[0].longitudinal_velocity_mps, 5.0f);  // Below max, unchanged
+  EXPECT_FLOAT_EQ(points[1].longitudinal_velocity_mps, 6.0f);  // Below max, unchanged
+  EXPECT_FLOAT_EQ(points[2].longitudinal_velocity_mps, 7.0f);  // At max, unchanged
+  EXPECT_FLOAT_EQ(points[3].longitudinal_velocity_mps, 7.0f);  // Capped from 8
+  EXPECT_FLOAT_EQ(points[4].longitudinal_velocity_mps, 7.0f);  // Capped from 9
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_InteriorAccelerationsZero)
+{
+  // Create trajectory with segment of constant velocity after capping
+  TrajectoryPoints points;
+  for (int i = 0; i < 5; ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = 10.0f;  // All exceed max
+    point.acceleration_mps2 = 0.5f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // All interior points should have zero acceleration (constant velocity)
+  // Points 0-3 should have zero acceleration (transition to next point at same velocity)
+  for (size_t i = 0; i < 4; ++i) {
+    EXPECT_FLOAT_EQ(points[i].acceleration_mps2, 0.0f)
+      << "Interior point " << i << " should have zero acceleration";
+  }
+
+  // Last point always has zero acceleration
+  EXPECT_FLOAT_EQ(points[4].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_BoundaryAccelerations)
+{
+  // Create trajectory: [low, HIGH, HIGH, HIGH, low]
+  TrajectoryPoints points;
+  std::vector<float> velocities = {3.0f, 10.0f, 10.0f, 10.0f, 4.0f};
+
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = velocities[i];
+    point.acceleration_mps2 = 1.0f;  // Will be used to compute dt
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // After capping: [3.0, 5.0, 5.0, 5.0, 4.0]
+  // Segment is [1, 3]
+
+  // Point 0 (before segment): acceleration should be recalculated for transition INTO segment
+  // a[0] = (v[1] - v[0]) / dt[0] = (5.0 - 3.0) / dt[0] > 0
+  EXPECT_GT(points[0].acceleration_mps2, 0.0f)
+    << "Point before segment should have positive acceleration";
+
+  // Points 1-2 (interior): should have zero acceleration
+  EXPECT_FLOAT_EQ(points[1].acceleration_mps2, 0.0f);
+  EXPECT_FLOAT_EQ(points[2].acceleration_mps2, 0.0f);
+
+  // Point 3 (end of segment): acceleration for transition OUT of segment
+  // a[3] = (v[4] - v[3]) / dt[3] = (4.0 - 5.0) / dt[3] < 0
+  EXPECT_LT(points[3].acceleration_mps2, 0.0f)
+    << "Last point of segment should have negative acceleration";
+
+  // Last point always zero
+  EXPECT_FLOAT_EQ(points[4].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_SegmentAtStart)
+{
+  // Create trajectory starting with offending segment: [HIGH, HIGH, low, low]
+  TrajectoryPoints points;
+  std::vector<float> velocities = {10.0f, 10.0f, 3.0f, 3.0f};
+
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = velocities[i];
+    point.acceleration_mps2 = 1.0f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // After capping: [5.0, 5.0, 3.0, 3.0]
+  // Segment is [0, 1]
+
+  // Point 0: interior of segment, should have zero acceleration
+  EXPECT_FLOAT_EQ(points[0].acceleration_mps2, 0.0f);
+
+  // Point 1: end of segment, should have negative acceleration (transition to lower velocity)
+  EXPECT_LT(points[1].acceleration_mps2, 0.0f);
+
+  // Last point always zero
+  EXPECT_FLOAT_EQ(points[3].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_SegmentAtEnd)
+{
+  // Create trajectory ending with offending segment: [low, low, HIGH, HIGH]
+  TrajectoryPoints points;
+  std::vector<float> velocities = {3.0f, 3.0f, 10.0f, 10.0f};
+
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = velocities[i];
+    point.acceleration_mps2 = 1.0f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // After capping: [3.0, 3.0, 5.0, 5.0]
+  // Segment is [2, 3]
+
+  // Point 1: before segment, should have positive acceleration
+  EXPECT_GT(points[1].acceleration_mps2, 0.0f);
+
+  // Point 2: interior of segment, should have zero acceleration
+  EXPECT_FLOAT_EQ(points[2].acceleration_mps2, 0.0f);
+
+  // Point 3: last point of trajectory, must have zero acceleration
+  EXPECT_FLOAT_EQ(points[3].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_SinglePointSegment)
+{
+  // Create trajectory with single offending point: [low, HIGH, low]
+  TrajectoryPoints points;
+  std::vector<float> velocities = {3.0f, 10.0f, 3.0f};
+
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = velocities[i];
+    point.acceleration_mps2 = 1.0f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // After capping: [3.0, 5.0, 3.0]
+  // Segment is [1, 1]
+
+  EXPECT_FLOAT_EQ(points[1].longitudinal_velocity_mps, 5.0f);
+
+  // Point 0: transition into segment, positive acceleration
+  EXPECT_GT(points[0].acceleration_mps2, 0.0f);
+
+  // Point 1: transition out of segment, negative acceleration
+  EXPECT_LT(points[1].acceleration_mps2, 0.0f);
+
+  // Last point always zero
+  EXPECT_FLOAT_EQ(points[2].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_EntireTrajectoryOffending)
+{
+  // All points exceed max velocity
+  TrajectoryPoints points;
+  for (int i = 0; i < 5; ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = 10.0f;
+    point.acceleration_mps2 = 0.5f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // All velocities should be capped
+  for (const auto & point : points) {
+    EXPECT_FLOAT_EQ(point.longitudinal_velocity_mps, max_velocity);
+  }
+
+  // All accelerations should be zero (constant velocity throughout)
+  for (const auto & point : points) {
+    EXPECT_FLOAT_EQ(point.acceleration_mps2, 0.0f);
+  }
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_NoOffendingSegments)
+{
+  // All points below max velocity
+  TrajectoryPoints points;
+  for (int i = 0; i < 5; ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = 3.0f;
+    point.acceleration_mps2 = 0.5f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 10.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // Velocities should remain unchanged
+  for (const auto & point : points) {
+    EXPECT_FLOAT_EQ(point.longitudinal_velocity_mps, 3.0f);
+  }
+
+  // Last point should have zero acceleration
+  EXPECT_FLOAT_EQ(points.back().acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_MultipleSegments)
+{
+  // Create trajectory with multiple offending segments: [HIGH, HIGH, low, HIGH, HIGH, low]
+  TrajectoryPoints points;
+  std::vector<float> velocities = {10.0f, 10.0f, 3.0f, 10.0f, 10.0f, 3.0f};
+
+  for (size_t i = 0; i < velocities.size(); ++i) {
+    TrajectoryPoint point;
+    point.pose.position.x = i * 1.0;
+    point.pose.position.y = 0.0;
+    point.longitudinal_velocity_mps = velocities[i];
+    point.acceleration_mps2 = 1.0f;
+    points.push_back(point);
+  }
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  // After capping: [5.0, 5.0, 3.0, 5.0, 5.0, 3.0]
+  // Segments are [0, 1] and [3, 4]
+
+  // First segment [0, 1]
+  EXPECT_FLOAT_EQ(points[0].acceleration_mps2, 0.0f);  // Interior
+  EXPECT_LT(points[1].acceleration_mps2, 0.0f);        // Transition out
+
+  // Between segments
+  EXPECT_GT(points[2].acceleration_mps2, 0.0f);  // Transition into second segment
+
+  // Second segment [3, 4]
+  EXPECT_FLOAT_EQ(points[3].acceleration_mps2, 0.0f);  // Interior
+  EXPECT_LT(points[4].acceleration_mps2, 0.0f);        // Transition out
+
+  // Last point always zero
+  EXPECT_FLOAT_EQ(points[5].acceleration_mps2, 0.0f);
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_EmptyTrajectory)
+{
+  TrajectoryPoints points;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, 5.0f);
+  EXPECT_TRUE(points.empty());
+}
+
+TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity_SinglePointTrajectory)
+{
+  TrajectoryPoints points;
+  TrajectoryPoint point;
+  point.pose.position.x = 0.0;
+  point.pose.position.y = 0.0;
+  point.longitudinal_velocity_mps = 10.0f;
+  point.acceleration_mps2 = 0.5f;
+  points.push_back(point);
+
+  const float max_velocity = 5.0f;
+  autoware::trajectory_optimizer::utils::set_max_velocity(points, max_velocity);
+
+  EXPECT_FLOAT_EQ(points[0].longitudinal_velocity_mps, max_velocity);
+  EXPECT_FLOAT_EQ(points[0].acceleration_mps2, 0.0f);
 }
 
 TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
@@ -110,9 +404,9 @@ TEST_F(TrajectoryOptimizerUtilsTest, ApplySpline)
   TrajectoryPoints points = create_sample_trajectory();
   const double interpolation_resolution_m = 0.1;
   const double max_distance_discrepancy_m = 5.0;
-  const bool copy_original_orientation = true;
+  const bool preserve_original_orientation = true;
   autoware::trajectory_optimizer::utils::apply_spline(
-    points, interpolation_resolution_m, max_distance_discrepancy_m, copy_original_orientation);
+    points, interpolation_resolution_m, max_distance_discrepancy_m, preserve_original_orientation);
   ASSERT_GE(points.size(), 2);
 }
 

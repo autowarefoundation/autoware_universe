@@ -26,6 +26,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
@@ -321,9 +322,6 @@ void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
 
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/" + ns, 1);
-
-  processing_time_publisher_ =
-    node.create_publisher<Float64Stamped>("~/debug/" + ns + "/processing_time_ms", 1);
 }
 
 void BoundaryDeparturePreventionModule::take_data()
@@ -366,15 +364,6 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   if (updater_ptr_) {
     updater_ptr_->force_update();
-  }
-
-  if (clock_ptr_ && processing_time_publisher_) {
-    processing_time_publisher_->publish(std::invoke([&]() {
-      autoware_internal_debug_msgs::msg::Float64Stamped msg;
-      msg.stamp = clock_ptr_->now();
-      msg.data = stopwatch_ms.toc();
-      return msg;
-    }));
   }
 
   if (!result_opt) {
@@ -524,8 +513,8 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_route_changed()
     return fmt::format("Initializing previous route pointer.");
   }
 
-  const auto prev_uuid = autoware_utils::to_boost_uuid(prev_route_ptr_->uuid);
-  const auto curr_uuid = autoware_utils::to_boost_uuid(route_ptr_->uuid);
+  const auto prev_uuid = autoware_utils_uuid::to_boost_uuid(prev_route_ptr_->uuid);
+  const auto curr_uuid = autoware_utils_uuid::to_boost_uuid(route_ptr_->uuid);
 
   if (prev_uuid != curr_uuid) {
     *prev_route_ptr_ = *route_ptr_;

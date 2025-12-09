@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_simple_planning_simulator</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>simple_planning_simulator as a ROS 2 node</description>
   <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
@@ -19,6 +19,7 @@
 
   <depend>autoware_control_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_learning_based_vehicle_model</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>

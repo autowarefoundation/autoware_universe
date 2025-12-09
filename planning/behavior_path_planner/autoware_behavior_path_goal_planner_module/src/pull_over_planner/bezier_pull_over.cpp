@@ -188,12 +188,13 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   std::vector<std::tuple<double, double, double>> params;
   const size_t n_sample_v_init = 2;
   const size_t n_sample_v_final = 2;
+  const double min_v_coeff = 0.1;
   const size_t n_sample_acc = 1;
   for (unsigned i = 0; i <= n_sample_v_init; ++i) {
     for (unsigned j = 0; j <= n_sample_v_final; j++) {
       for (unsigned k = 0; k <= n_sample_acc; k++) {
-        const double v_init_coeff = i * (1.0 / n_sample_v_init);
-        const double v_final_coeff = j * 0.25 / (1.0 / n_sample_v_final);
+        const double v_init_coeff = std::max(min_v_coeff, i * (1.0 / n_sample_v_init));
+        const double v_final_coeff = std::max(min_v_coeff, j * 0.25 / (1.0 / n_sample_v_final));
         const double acc_coeff = k * (10.0 / n_sample_acc);
         params.emplace_back(v_init_coeff, v_final_coeff, acc_coeff);
       }
