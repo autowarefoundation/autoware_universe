@@ -26,6 +26,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/view.hpp>
@@ -512,8 +513,8 @@ std::optional<std::string> BoundaryDeparturePreventionModule::is_route_changed()
     return fmt::format("Initializing previous route pointer.");
   }
 
-  const auto prev_uuid = autoware_utils::to_boost_uuid(prev_route_ptr_->uuid);
-  const auto curr_uuid = autoware_utils::to_boost_uuid(route_ptr_->uuid);
+  const auto prev_uuid = autoware_utils_uuid::to_boost_uuid(prev_route_ptr_->uuid);
+  const auto curr_uuid = autoware_utils_uuid::to_boost_uuid(route_ptr_->uuid);
 
   if (prev_uuid != curr_uuid) {
     *prev_route_ptr_ = *route_ptr_;
