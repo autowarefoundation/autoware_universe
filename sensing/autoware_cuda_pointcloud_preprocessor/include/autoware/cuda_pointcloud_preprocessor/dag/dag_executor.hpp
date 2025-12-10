@@ -63,7 +63,7 @@ public:
   /**
    * @brief Execute the DAG with given inputs and publishers for immediate publishing
    * @param inputs Map of input names to data pointers
-   * @param publishers Map of output keys to ROS2 publishers
+   * @param publishers Map of output keys to ROS publishers
    * @return Map of output names to data pointers (only intermediate results)
    *
    * Outputs that need to be published are finalized and published immediately after

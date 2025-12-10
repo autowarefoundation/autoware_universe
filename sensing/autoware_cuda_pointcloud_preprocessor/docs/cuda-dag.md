@@ -157,84 +157,6 @@ struct TypedInputs {
 
 ---
 
-## Development Notes
-
-### Adding a New Filter
-
-1. **Create filter class** inheriting `IFilter`:
-
-   ```cpp
-   class MyFilter : public IFilter {
-     void initialize(const map<string, any>& params) override;
-     void process(const TypedInputs& inputs,
-                  map<string, shared_ptr<void>>& outputs,
-                  FilterContext& context,
-                  const vector<string>& output_names) override;
-     bool validateInputs(const TypedInputs& inputs) override;
-   };
-   ```
-
-2. **Register in `filter_registrations.cpp`**:
-
-   ```cpp
-   registerFilterType<MyFilter>("MyFilter");
-   ```
-
-3. **Implement processing**:
-
-   - Get input: `auto state = inputs.processing_states.begin()->second;`
-   - Process: Modify `state->device_data` in-place OR create new state
-   - Set finalized flag if output is compacted
-   - Output: `outputs[output_names[0]] = state;`
-
-4. **Add to YAML**:
-
-   ```yaml
-   - id: "my_filter"
-     type: "MyFilter"
-     inputs: [...]
-     outputs: [...]
-     parameters: { ... }
-   ```
-
-### When to Set `is_finalized = true`
-
-- ✅ Filter **restructures** data (downsample, voxel grid)
-- ✅ Filter **compacts** data (removes points)
-- ❌ Filter only **updates masks** (cropbox, outlier)
-- ❌ Filter **transforms** data in-place (transform, distortion)
-
-### Memory Management Rules
-
-1. **Non-owning state**: `owns_memory = false`, `is_finalized = false`
-
-   - Points to shared preprocessor's internal buffers
-   - Use for in-place filters (transform, cropbox, outlier)
-
-2. **Owning state**: `owns_memory = true`, `is_finalized = true`
-
-   - Allocated its own GPU memory
-   - Use for restructuring filters (downsample)
-   - Must `cudaFree` in destructor (automatic)
-
-3. **Copy-on-write**:
-   - DAG executor handles copies when multiple consumers
-   - Use `makeProcessingStateCopy()` for manual copies
-
-### Common Pitfalls
-
-❌ **DON'T**: Create dummy/placeholder code
-❌ **DON'T**: Use `CudaPointCloud2` between filters (use `PointcloudProcessingState`)
-❌ **DON'T**: Call `cudaStreamSynchronize()` in filter process (breaks pipeline)
-❌ **DON'T**: Forget to set `is_finalized` for restructuring filters
-
-✅ **DO**: Work directly with raw GPU pointers
-✅ **DO**: Modify data in-place when possible
-✅ **DO**: Let DAG executor handle copies and publishing
-✅ **DO**: Use shared preprocessor's methods for mask operations
-
----
-
 ## Testing
 
 ```bash
@@ -267,7 +189,7 @@ sensing/autoware_cuda_pointcloud_preprocessor/
 │   ├── dag_config_parser.cpp         # YAML parsing
 │   ├── filter_registry.cpp           # Filter creation
 │   ├── filter_registrations.cpp     # Register all filters
-│   ├── cuda_pointcloud_preprocessor_dag_node.cpp  # ROS2 node
+│   ├── cuda_pointcloud_preprocessor_dag_node.cpp  # ROS node
 │   └── filters/                      # Individual filter implementations
 │
 ├── config/dag/

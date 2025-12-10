@@ -47,7 +47,7 @@ namespace autoware::cuda_pointcloud_preprocessor::dag
 {
 
 /**
- * @brief ROS2 node that executes a DAG-based pointcloud preprocessing pipeline
+ * @brief ROS node that executes a DAG-based pointcloud preprocessing pipeline
  */
 class CudaPointcloudPreprocessorDagNode : public rclcpp::Node
 {

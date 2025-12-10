@@ -63,7 +63,7 @@ private:
   float voxel_size_z_{0.1f};
 
   // Voxel grid downsample filter instance
-  std::unique_ptr<CudaVoxelGridDownsampleFilter> downsampler_;
+  std::unique_ptr<CudaVoxelGridDownsampleFilter> downsample_filter_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor::dag

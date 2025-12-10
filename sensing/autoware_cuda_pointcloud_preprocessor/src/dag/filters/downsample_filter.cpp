@@ -56,7 +56,7 @@ void DownsampleFilter::initialize(const std::map<std::string, std::any> & params
   }
 
   constexpr int64_t DEFAULT_MAX_MEM_POOL_SIZE = 1LL << 30;
-  downsampler_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
+  downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
     voxel_size_x_, voxel_size_y_, voxel_size_z_, DEFAULT_MAX_MEM_POOL_SIZE);
 }
 
@@ -76,7 +76,7 @@ void DownsampleFilter::process(
   // Use the DAG-optimized interface that works directly with processing states
   // This still involves one copy internally (input state -> temp CudaPointCloud2)
   // but avoids the unsafe .release() and properly manages memory
-  auto output_state = downsampler_->filterProcessingState(input_state);
+  auto output_state = downsample_filter_->filterProcessingState(input_state);
 
   // Output with dynamic name
   outputs[output_names[0]] = output_state;

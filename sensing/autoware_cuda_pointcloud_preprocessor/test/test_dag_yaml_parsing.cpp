@@ -486,7 +486,7 @@ dag:
         crop_boxes: "invalid_string_not_array"
 )";
 
-  std::string filepath = createTempYamlFile("invalid_cropboxes.yaml", yaml_content);
+  std::string filepath = createTempYamlFile("invalid_cropbox.yaml", yaml_content);
 
   try {
     DagConfig config = DagConfigParser::parseFromFile(filepath);

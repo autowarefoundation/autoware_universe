@@ -37,7 +37,7 @@ class FilterIntegrationTest : public ::testing::Test
 protected:
   void SetUp() override
   {
-    // Initialize ROS2 context
+    // Initialize ROS context
     if (!rclcpp::ok()) {
       rclcpp::init(0, nullptr);
     }

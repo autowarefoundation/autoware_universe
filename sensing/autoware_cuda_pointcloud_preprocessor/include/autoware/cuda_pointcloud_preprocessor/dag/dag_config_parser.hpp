@@ -85,8 +85,8 @@ public:
   static DagConfig parseFromString(const std::string & yaml_content);
 
   /**
-   * @brief Parse DAG configuration from ROS2 parameters
-   * @param node ROS2 node to read parameters from
+   * @brief Parse DAG configuration from ROS parameters
+   * @param node ROS node to read parameters from
    * @return Parsed DAG configuration
    */
   static DagConfig parseFromParameters(rclcpp::Node * node);
