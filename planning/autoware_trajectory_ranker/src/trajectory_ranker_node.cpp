@@ -43,10 +43,8 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
   const auto vehicle_info = std::make_shared<vehicle_info_utils::VehicleInfo>(
     vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo());
 
-  // Initialize evaluator with logger
-  evaluator_ = std::make_shared<Evaluator>(route_handler_, vehicle_info, get_logger());
+  evaluator_ = std::make_shared<Evaluator>(route_handler_, vehicle_info, get_logger(), this);
 
-  // Load metrics dynamically through evaluator
   const auto metrics = listener_->get_params().metrics;
   for (size_t i = 0; i < metrics.name.size(); i++) {
     evaluator_->load_metric(metrics.name.at(i), i, listener_->get_params().resolution);

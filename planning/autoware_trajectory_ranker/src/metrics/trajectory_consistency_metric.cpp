@@ -28,6 +28,17 @@
 namespace autoware::trajectory_ranker::metrics
 {
 
+void TrajectoryConsistency::setup_parameters()
+{
+  if (node()) {
+    try {
+      time_horizon_ = node()->declare_parameter<double>("trajectory_consistency.time_horizon", 2.0);
+    } catch (const rclcpp::exceptions::ParameterAlreadyDeclaredException &) {
+      time_horizon_ = node()->get_parameter("trajectory_consistency.time_horizon").as_double();
+    }
+  }
+}
+
 namespace
 {
 /**
@@ -169,7 +180,8 @@ void TrajectoryConsistency::evaluate(
   // Get current ego pose from the first trajectory point
   const auto & ego_pose = result->points()->front().pose;
 
-  constexpr double time_offset_from_now = 2.0;
+  // Time offset to extract point for consistency comparison
+  const double time_offset_from_now = time_horizon_;
 
   const double current_time = rclcpp::Time(result->header().stamp).seconds();
   const double target_absolute_time = current_time + time_offset_from_now;

@@ -39,6 +39,11 @@ public:
     const float max_value) const override;
 
   bool is_deviation() const override { return true; }  // Higher variance is worse
+
+  void setup_parameters() override;
+
+private:
+  mutable double time_horizon_{2.0};
 };
 
 }  // namespace autoware::trajectory_ranker::metrics
