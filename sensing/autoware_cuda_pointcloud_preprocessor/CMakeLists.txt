@@ -36,6 +36,7 @@ endif()
 if(BUILD_TESTING)
     list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
     find_package(ament_lint_auto REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
     ament_lint_auto_find_test_dependencies()
 endif()
 
@@ -119,12 +120,26 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
+  # DAG framework
+  src/dag/filter_registry.cpp
+  src/dag/dag_executor.cpp
+  src/dag/dag_config_parser.cpp
+  # DAG filters (lightweight wrappers, zero-copy processing state)
+  src/dag/filters/transform_filter.cpp
+  src/dag/filters/cropbox_filter.cpp
+  src/dag/filters/distortion_filter.cpp
+  src/dag/filters/ring_outlier_filter.cpp
+  src/dag/filters/downsample_filter.cpp
+  src/dag/filter_registrations.cpp
+  # DAG node (organize/finalize internalized)
+  src/dag/cuda_pointcloud_preprocessor_dag_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
   ${CUDA_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
   cuda_pointcloud_preprocessor_lib
+  yaml-cpp
 )
 
 # ========== Concatenate and Sync data ==========
@@ -149,6 +164,63 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
   EXECUTABLE cuda_polar_voxel_outlier_filter_node
 )
+
+# ========== DAG-based Pointcloud preprocessor ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::dag::CudaPointcloudPreprocessorDagNode"
+  EXECUTABLE cuda_pointcloud_preprocessor_dag_node
+)
+
+################################################################################
+# Testing
+if(BUILD_TESTING)
+  find_package(yaml-cpp REQUIRED)
+
+  # Unit test for FilterRegistry
+  ament_add_gtest(test_filter_registry test/test_filter_registry.cpp)
+  target_link_libraries(test_filter_registry
+    cuda_pointcloud_preprocessor
+    ${CUDA_LIBRARIES}
+    yaml-cpp
+  )
+  target_include_directories(test_filter_registry PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  # Unit test for DagExecutor
+  ament_add_gtest(test_dag_executor test/test_dag_executor.cpp)
+  target_link_libraries(test_dag_executor
+    cuda_pointcloud_preprocessor
+    ${CUDA_LIBRARIES}
+    yaml-cpp
+  )
+  target_include_directories(test_dag_executor PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  # Integration test for filter pipeline
+  ament_add_gtest(test_filter_integration test/test_filter_integration.cpp)
+  target_link_libraries(test_filter_integration
+    cuda_pointcloud_preprocessor
+    cuda_pointcloud_preprocessor_lib
+    ${CUDA_LIBRARIES}
+    yaml-cpp
+  )
+  target_include_directories(test_filter_integration PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  # Unit test for DAG YAML parsing with file loading
+  ament_add_gtest(test_dag_yaml_parsing test/test_dag_yaml_parsing.cpp)
+  target_link_libraries(test_dag_yaml_parsing
+    cuda_pointcloud_preprocessor
+    ${CUDA_LIBRARIES}
+    yaml-cpp
+  )
+  target_include_directories(test_dag_yaml_parsing PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+endif()
 
 ################################################################################
 # Install

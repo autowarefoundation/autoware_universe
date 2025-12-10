@@ -23,6 +23,12 @@
 #include <autoware/cuda_utils/thrust_utils.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
+// Forward declaration for processing state
+namespace autoware::cuda_pointcloud_preprocessor::dag
+{
+struct PointcloudProcessingState;
+}
+
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
@@ -66,6 +72,104 @@ public:
     const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
     const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
     const std::uint32_t first_point_rel_stamp_nsec);
+
+  // ============================================================================
+  // Public API for DAG execution (lightweight wrappers for individual steps)
+  // ============================================================================
+
+  /**
+   * @brief Get CUDA stream for external synchronization
+   */
+  cudaStream_t getStream() const { return stream_; }
+
+  /**
+   * @brief Get memory pool for external allocations
+   */
+  cudaMemPool_t getMemoryPool() const { return device_memory_pool_; }
+
+  /**
+   * @brief Load raw pointcloud into internal buffers and organize by ring
+   * @param input_msg Raw unorganized pointcloud (CPU memory)
+   * @return Organized pointcloud in CudaPointCloud2 format
+   */
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> organizePointcloudPublic(
+    const sensor_msgs::msg::PointCloud2 & input_msg);
+
+  /**
+   * @brief Organize pointcloud that is already on GPU
+   * @param input Raw unorganized pointcloud (GPU memory)
+   * @return Organized pointcloud in CudaPointCloud2 format
+   */
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> organizePointcloudPublic(
+    const cuda_blackboard::CudaPointCloud2 & input);
+
+  /**
+   * @brief Transform organized pointcloud using TF transform (in-place on internal buffers)
+   * @param state Processing state (device_data is read, then updated to point to transformed
+   * buffer)
+   * @param transform_msg TF transform
+   * NOTE: Updates state.device_data to point to device_transformed_points_ (zero-copy)
+   */
+  void transformPointcloudPublic(
+    autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const geometry_msgs::msg::TransformStamped & transform_msg);
+
+  /**
+   * @brief Apply cropbox filtering (updates masks only, zero-copy)
+   * @param state Processing state (device_data is read, masks are updated)
+   * @param crop_boxes Vector of crop box parameters to apply
+   * NOTE: Works on state.device_data in-place, only updates crop mask
+   */
+  void applyCropBoxPublic(
+    const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const std::vector<CropBoxParameters> & crop_boxes);
+
+  /**
+   * @brief Correct motion distortion (in-place on internal buffers)
+   * @param state Processing state (distortion applied directly on device_transformed_points_)
+   * @param twist_queue Velocity measurements
+   * @param angular_velocity_queue IMU measurements
+   * @param first_point_rel_stamp_nsec Timestamp of first point
+   * @param undistortion_type Type of undistortion (2D or 3D)
+   * @param use_imu Whether to use IMU data
+   * NOTE: Distortion applied in-place, state.device_data already points to
+   * device_transformed_points_
+   */
+  void correctDistortionPublic(
+    autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
+    const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
+    const std::uint32_t first_point_rel_stamp_nsec, UndistortionType undistortion_type,
+    bool use_imu);
+
+  /**
+   * @brief Apply ring outlier filter (updates masks only, zero-copy)
+   * @param state Processing state (device_data is read, masks are updated)
+   * @param params Ring outlier filter parameters
+   * @param enabled Whether the filter is enabled
+   * NOTE: Works on state.device_data in-place, only updates outlier mask
+   */
+  void applyRingOutlierFilterPublic(
+    const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const RingOutlierFilterParameters & params, bool enabled);
+
+  /**
+   * @brief Finalize processing and generate output pointcloud from processing state
+   * @param state Processing state with all filters applied
+   * @return Final output pointcloud with masks applied and points compacted
+   * NOTE: This is the EXIT point - creates CudaPointCloud2 from state
+   */
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> finalizeOutputPublic(
+    const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state);
+
+  /**
+   * @brief Create processing state from organized pointcloud (ENTRY POINT)
+   * @param input Organized pointcloud (from organizePointcloudPublic)
+   * @return Processing state pointing to internal device_organized_points_
+   * NOTE: state.device_data points to internal buffer (non-owning)
+   */
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState
+  createProcessingStateFromOrganized(const cuda_blackboard::CudaPointCloud2 & input);
 
 private:
   static cudaStream_t initialize_stream();

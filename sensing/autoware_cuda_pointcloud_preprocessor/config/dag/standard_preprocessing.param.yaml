@@ -1,0 +1,9 @@
+# ROS2 Parameter file for CUDA Pointcloud Preprocessor DAG Node
+# Contains only the path to the DAG configuration YAML
+# This follows ROS2 best practice: simple parameters in .param.yaml, complex structures in separate files
+
+/cuda_pointcloud_preprocessor_dag:
+  ros__parameters:
+    # Path to DAG configuration YAML file
+    # The DAG YAML contains the full pipeline structure, node definitions, and filter parameters
+    dag_config_file: "$(find-pkg-share autoware_cuda_pointcloud_preprocessor)/config/dag/standard_preprocessing.yaml"

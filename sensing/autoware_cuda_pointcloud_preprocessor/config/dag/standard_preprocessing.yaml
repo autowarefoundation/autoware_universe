@@ -1,0 +1,97 @@
+# DAG Configuration for Standard Pointcloud Preprocessing
+# This configuration replicates the functionality of the existing cuda_pointcloud_preprocessor
+#
+# NOTE: OrganizeFilter and FinalizeFilter are INTERNALIZED and not user-configurable
+#   - Organize happens automatically on external input
+#   - Finalize happens automatically before publishing
+
+dag:
+  name: standard_pointcloud_preprocessing
+  version: 1.0
+
+  # External inputs (ROS topics)
+  inputs:
+    - name: pointcloud
+      type: cuda_blackboard::CudaPointCloud2
+      topic: ~/input/pointcloud
+    - name: twist
+      type: geometry_msgs::msg::TwistWithCovarianceStamped
+      topic: ~/input/twist
+    - name: imu
+      type: sensor_msgs::msg::Imu
+      topic: ~/input/imu
+      optional: true
+
+  # Processing nodes (filters in execution order defined by connections)
+  # NOTE: Organize is automatic, so first node receives organized pointcloud
+  nodes:
+    # Step 1: Transform to base frame (receives auto-organized pointcloud)
+    - id: transform
+      type: TransformFilter
+      inputs:
+        - source: pointcloud # External input (already organized)
+      outputs:
+        - name: transformed
+      parameters:
+        target_frame: base_link
+
+    # Step 2: Crop box filtering
+    - id: cropbox
+      type: CropBoxFilter
+      inputs:
+        - source: transformed
+          from_node: transform
+      outputs:
+        - name: cropbox
+      parameters:
+        crop_boxes:
+          - min_x: 2.84
+            max_x: 3.16
+            min_y: -1.03
+            max_y: 1.03
+            min_z: 0.86
+            max_z: 1.22
+          - min_x: -0.85
+            max_x: 3.55
+            min_y: -0.8475
+            max_y: 0.8475
+            min_z: 0.0
+            max_z: 2.5
+
+    # Step 3: Distortion correction (2D or 3D)
+    - id: distortion
+      type: DistortionFilter
+      inputs:
+        - source: cropbox
+          from_node: cropbox
+        - source: twist # External input
+          optional: true # (optional) for skipping check
+        - source: imu # External input (optional)
+          optional: true # (optional) for skipping check
+      outputs:
+        - name: undistorted
+      parameters:
+        type: 2D # Options: 2D or 3D
+        use_imu: true
+
+    # Step 4: Ring outlier filtering (final filter)
+    - id: ring_outlier
+      type: RingOutlierFilter
+      inputs:
+        - source: undistorted
+          from_node: distortion
+      outputs:
+        - name: filtered
+      parameters:
+        distance_ratio: 1.03
+        object_length_threshold: 0.05
+        enabled: true
+
+  # Output definitions (what to publish to ROS topics)
+  # NOTE: Finalize is automatic - masks are applied and points are extracted before publishing
+  outputs:
+    - name: preprocessed_pointcloud
+      source: filtered
+      from_node: ring_outlier
+      topic: ~/output/pointcloud
+      type: cuda_blackboard::CudaPointCloud2
