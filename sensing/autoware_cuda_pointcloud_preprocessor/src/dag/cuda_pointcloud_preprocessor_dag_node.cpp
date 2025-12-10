@@ -206,7 +206,6 @@ void CudaPointcloudPreprocessorDagNode::pointcloudCallback(
   // Get first point timestamp (simplified - use header stamp)
   std::uint64_t first_point_stamp = 1'000'000'000ULL * input_pointcloud_msg.header.stamp.sec +
                                     input_pointcloud_msg.header.stamp.nanosec;
-  std::uint32_t first_point_rel_stamp = 0;  // Relative to pointcloud timestamp
 
   updateTwistQueue(first_point_stamp);
   updateImuQueue(first_point_stamp);
