@@ -15,8 +15,10 @@
 #include "autoware/trajectory_ranker/metrics/trajectory_consistency_metric.hpp"
 
 #include <rclcpp/time.hpp>
-#include <tf2/utils.h>
+
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
@@ -237,8 +239,7 @@ void TrajectoryConsistency::evaluate(
 
   // Normalize variance to [0, 1] range using max_value as reference
   // Convert variance (m^2) to metric score
-  const float normalized_variance =
-    std::min(1.0f, static_cast<float>(total_variance) / max_value);
+  const float normalized_variance = std::min(1.0f, static_cast<float>(total_variance) / max_value);
 
   // Apply this metric value to all points in the trajectory
   // (consistency is a trajectory-level metric, not point-wise)

@@ -318,8 +318,8 @@ TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
   header.stamp = rclcpp::Time(0);
   unique_identifier_msgs::msg::UUID uuid;
 
-  auto core_data =
-    std::make_shared<CoreData>(points, points, nullptr, objects, lanes, header, uuid, empty_history);
+  auto core_data = std::make_shared<CoreData>(
+    points, points, nullptr, objects, lanes, header, uuid, empty_history);
 
   auto result = std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 7);
 
