@@ -16,8 +16,7 @@
     <arg name="use_traffic_manager" default="False"/>
     <arg name="max_real_delta_seconds" default="0.05"/>
 
-    <let name="carla_map"
-         value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
+    <let name="carla_map" value="$(eval &quot;__import__('os').path.basename('$(var map_path)'.strip().rstrip('/')) or 'Town01'&quot;)"/>
 
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
 
