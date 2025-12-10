@@ -129,7 +129,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory);
  * @param min_dist The minimum distance between points (default: 1E-2)
  */
 void remove_close_proximity_points(
-  TrajectoryPoints & input_trajectory_array, const double min_dist = 1E-2);
+  TrajectoryPoints & input_trajectory_array, const double min_dist = 1e-2);
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
 

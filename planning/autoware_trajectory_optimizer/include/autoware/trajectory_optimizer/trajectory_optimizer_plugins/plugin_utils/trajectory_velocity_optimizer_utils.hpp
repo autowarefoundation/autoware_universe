@@ -44,7 +44,8 @@ using nav_msgs::msg::Odometry;
  * @param min_acceleration The minimum acceleration to enforce
  */
 void clamp_velocities(
-  TrajectoryPoints & input_trajectory_array, float min_velocity, float min_acceleration);
+  TrajectoryPoints & input_trajectory_array, const float min_velocity,
+  const float min_acceleration);
 
 /**
  * @brief Sets the maximum velocity for trajectory points while preserving dynamics.
@@ -57,7 +58,7 @@ void clamp_velocities(
  * @param input_trajectory_array The trajectory points to be updated (modified in place)
  * @param max_velocity The maximum velocity to enforce
  */
-void set_max_velocity(TrajectoryPoints & input_trajectory_array, float max_velocity);
+void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max_velocity);
 
 /**
  * @brief Limits lateral acceleration by reducing velocity at high curvature points.
@@ -71,7 +72,7 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, float max_veloc
  * @param current_odometry Current vehicle odometry for time calculation
  */
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, double max_lateral_accel_mps2,
+  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
   const Odometry & current_odometry);
 
 /**
@@ -89,7 +90,7 @@ void limit_lateral_acceleration(
  */
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
   const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry);
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils

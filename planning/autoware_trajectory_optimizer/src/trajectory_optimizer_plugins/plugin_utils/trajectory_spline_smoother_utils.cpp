@@ -20,7 +20,7 @@
 #include "autoware/trajectory/trajectory_point.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <algorithm>
@@ -79,7 +79,7 @@ void apply_spline(
       "Not enough points in trajectory after akima spline interpolation");
     return;
   }
-  auto last_interpolated_point = output_points.back();
+  const auto & last_interpolated_point = output_points.back();
   auto & original_trajectory_last_point = traj_points.back();
 
   if (!autoware::trajectory_optimizer::utils::validate_point(original_trajectory_last_point)) {
@@ -91,7 +91,7 @@ void apply_spline(
     return;
   }
 
-  auto d = autoware_utils::calc_distance2d(
+  auto d = autoware_utils_geometry::calc_distance2d(
     last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
   if (d > min_interpolation_step) {
     output_points.push_back(original_trajectory_last_point);

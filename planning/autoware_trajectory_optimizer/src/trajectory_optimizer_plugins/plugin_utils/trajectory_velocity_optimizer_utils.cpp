@@ -32,7 +32,7 @@ namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_
 {
 
 void clamp_velocities(
-  TrajectoryPoints & input_trajectory_array, float min_velocity, float min_acceleration)
+  TrajectoryPoints & input_trajectory_array, const float min_velocity, const float min_acceleration)
 {
   std::for_each(
     input_trajectory_array.begin(), input_trajectory_array.end(),
@@ -67,8 +67,7 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
                     static_cast<double>(from.longitudinal_velocity_mps);
     const auto acc = static_cast<double>(from.acceleration_mps2);
     constexpr double epsilon_acceleration = 1e-6;
-    const auto denominator_acc =
-      std::abs(acc) < epsilon_acceleration ? epsilon_acceleration : std::abs(acc);
+    const auto denominator_acc = std::max(std::abs(acc), epsilon_acceleration);
     return std::abs(dv) / denominator_acc;
   };
 
@@ -185,10 +184,11 @@ void limit_lateral_acceleration(
       delta_theta += 2.0 * M_PI;
     }
 
-    const double yaw_rate = std::max(std::abs(delta_theta / delta_time), 1.0E-5);
+    constexpr double epsilon_yaw_rate = 1.0e-5;
+    const double yaw_rate = std::max(std::abs(delta_theta / delta_time), epsilon_yaw_rate);
     const double current_speed = std::abs(itr->longitudinal_velocity_mps);
     // Compute lateral acceleration
-    const double lateral_acceleration = std::abs(current_speed * yaw_rate);
+    const double lateral_acceleration = current_speed * yaw_rate;
     if (lateral_acceleration < max_lateral_accel_mps2) continue;
 
     itr->longitudinal_velocity_mps = static_cast<float>(max_lateral_accel_mps2 / yaw_rate);

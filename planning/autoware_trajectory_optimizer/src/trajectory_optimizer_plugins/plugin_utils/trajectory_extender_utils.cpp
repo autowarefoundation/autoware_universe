@@ -15,7 +15,7 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 
 #include <algorithm>
@@ -39,12 +39,15 @@ void add_ego_state_to_trajectory(
     return;
   }
   const auto & last_point = traj_points.back();
-  const auto yaw_diff = std::abs(
-    autoware_utils_math::normalize_degree(
-      ego_state.pose.orientation.z - last_point.pose.orientation.z));
-  const auto distance = autoware_utils::calc_distance2d(last_point, ego_state);
+  const auto ego_yaw_rad = tf2::getYaw(ego_state.pose.orientation);
+  const auto last_point_yaw_rad = tf2::getYaw(last_point.pose.orientation);
+
+  const auto yaw_diff =
+    std::abs(autoware_utils_math::normalize_radian(ego_yaw_rad - last_point_yaw_rad));
+  const auto distance = autoware_utils_geometry::calc_distance2d(last_point, ego_state);
   constexpr double epsilon{1e-2};
-  const bool is_change_small = distance < epsilon && yaw_diff < epsilon;
+  constexpr double epsilon_rad{1e-2};
+  const bool is_change_small = distance < epsilon && yaw_diff < epsilon_rad;
   if (is_change_small) {
     return;
   }
@@ -61,7 +64,8 @@ void add_ego_state_to_trajectory(
   size_t clip_idx = 0;
   double accumulated_length = 0.0;
   for (size_t i = traj_points.size() - 1; i > 0; i--) {
-    accumulated_length += autoware_utils::calc_distance2d(traj_points.at(i - 1), traj_points.at(i));
+    accumulated_length +=
+      autoware_utils_geometry::calc_distance2d(traj_points.at(i - 1), traj_points.at(i));
     if (accumulated_length > backward_trajectory_extension_m) {
       clip_idx = i;
       break;
@@ -91,7 +95,7 @@ void expand_trajectory_with_ego_history(
 
   const auto ego_position = current_odometry.pose.pose.position;
   const auto distance_ego_to_first_trajectory_point =
-    autoware_utils::calc_distance2d(first_ego_trajectory_point, ego_position);
+    autoware_utils_geometry::calc_distance2d(first_ego_trajectory_point, ego_position);
 
   std::for_each(ego_history_points.rbegin(), ego_history_points.rend(), [&](const auto & point) {
     const auto point_arc_length = autoware::motion_utils::calcSignedArcLength(
@@ -99,10 +103,11 @@ void expand_trajectory_with_ego_history(
 
     const bool is_ahead_of_first_point = point_arc_length > first_ego_trajectory_point_arc_length;
     const bool is_closer_than_first_trajectory_point =
-      autoware_utils::calc_distance2d(point, ego_position) < distance_ego_to_first_trajectory_point;
+      autoware_utils_geometry::calc_distance2d(point, ego_position) <
+      distance_ego_to_first_trajectory_point;
     const bool is_point_already_in_trajectory =
       std::any_of(traj_points.begin(), traj_points.end(), [&](const TrajectoryPoint & traj_point) {
-        return autoware_utils::calc_distance2d(traj_point, point) < 1e-1;
+        return autoware_utils_geometry::calc_distance2d(traj_point, point) < 1e-1;
       });
     if (
       is_ahead_of_first_point || is_point_already_in_trajectory ||
