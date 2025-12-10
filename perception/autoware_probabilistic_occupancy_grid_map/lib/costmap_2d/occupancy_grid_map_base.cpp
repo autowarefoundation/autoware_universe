@@ -149,7 +149,7 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
     return;
 #endif
   } else {
-    local_map.resize(static_cast<size_t>(cell_size_x) * cell_size_y);
+    local_map.resize(static_cast<size_t>(cell_size_x) * static_cast<size_t>(cell_size_y));
 
     // copy the local window in the costmap to the local map
     copyMapRegion(
