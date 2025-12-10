@@ -154,8 +154,7 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
     // copy the local window in the costmap to the local map
     copyMapRegion(
       costmap_, lower_left_x, lower_left_y, size_x_, local_map.data(), 0, 0, cell_size_x,
-      cell_size_x,
-      cell_size_y);
+      cell_size_x, cell_size_y);
 
     // now we'll set the costmap to be completely unknown if we track unknown space
     nav2_costmap_2d::Costmap2D::resetMaps();
