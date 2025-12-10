@@ -17,7 +17,7 @@
 
 #include "autoware/boundary_departure_checker/parameters.hpp"
 
-#include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rosidl_runtime_cpp/message_initialization.hpp>
 #include <tl_expected/expected.hpp>
@@ -52,16 +52,16 @@ class BoundaryDepartureChecker
 {
 public:
   explicit BoundaryDepartureChecker(
-    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
-      std::make_shared<autoware_utils::TimeKeeper>())
+    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils_debug::TimeKeeper>())
   : time_keeper_(std::move(time_keeper))
   {
   }
 
   BoundaryDepartureChecker(
     Param param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
-      std::make_shared<autoware_utils::TimeKeeper>())
+    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils_debug::TimeKeeper>())
   : param_(std::move(param)),
     vehicle_info_ptr_(std::make_shared<autoware::vehicle_info_utils::VehicleInfo>(vehicle_info)),
     time_keeper_(std::move(time_keeper))
@@ -73,8 +73,8 @@ public:
   BoundaryDepartureChecker(
     lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info,
     const Param & param = Param{},
-    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
-      std::make_shared<autoware_utils::TimeKeeper>());
+    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils_debug::TimeKeeper>());
 
   bool checkPathWillLeaveLane(
     const lanelet::ConstLanelets & lanelets, const PathWithLaneId & path) const;
@@ -82,13 +82,13 @@ public:
   std::vector<std::pair<double, lanelet::Lanelet>> getLaneletsFromPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
 
-  std::optional<autoware_utils::Polygon2d> getFusedLaneletPolygonForPath(
+  std::optional<autoware_utils_geometry::Polygon2d> getFusedLaneletPolygonForPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
 
   bool updateFusedLaneletPolygonForPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const;
+    std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon) const;
 
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
@@ -96,12 +96,12 @@ public:
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const;
+    std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon) const;
 
   PathWithLaneId cropPointsOutsideOfLanes(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     const size_t end_index, std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon);
+    std::optional<autoware_utils_geometry::Polygon2d> & fused_lanelets_polygon);
 
   static bool isOutOfLane(
     const lanelet::ConstLanelets & candidate_lanelets, const LinearRing2d & vehicle_footprint);
@@ -258,9 +258,9 @@ private:
     const std::vector<LinearRing2d> & vehicle_footprints,
     const SegmentRtree & uncrossable_segments) const;
 
-  autoware_utils::Polygon2d toPolygon2D(const lanelet::BasicPolygon2d & poly) const;
+  autoware_utils_geometry::Polygon2d toPolygon2D(const lanelet::BasicPolygon2d & poly) const;
 
-  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
 
   Footprint get_ego_footprints(
     const AbnormalityType abnormality_type, const FootprintMargin uncertainty_fp_margin);

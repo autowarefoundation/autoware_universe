@@ -11,7 +11,7 @@
       set_engage_speed: false         # Set minimum speed during engage
 
       # Speed limiting
-      max_speed_mps: 8.33             # [m/s] Maximum allowed speed (30 km/h default)
+      max_speed_mps: 13.88             # [m/s] Maximum allowed speed (30 km/h default)
       limit_speed: true               # Enable speed limiting
 
       # Lateral acceleration limiting
