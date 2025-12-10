@@ -344,12 +344,10 @@ void MissionPlanner::on_set_preferred_primitive(
   using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;
 
   if (!current_route_) {
-    res->status.success = false;
     throw service_utils::ServiceException(
       ResponseCode::NO_EFFECT, "The route has not been set yet.", true);
   }
   if (req->preferred_primitives.size() != current_route_->segments.size() && req->reset == false) {
-    res->status.success = false;
     throw service_utils::ServiceException(
       autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
       fmt::format(
@@ -357,7 +355,6 @@ void MissionPlanner::on_set_preferred_primitive(
         req->preferred_primitives.size(), current_route_->segments.size()));
   }
   if (req->uuid != current_route_->uuid) {
-    res->status.success = false;
     throw service_utils::ServiceException(
       autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
       "Route UUID does not match the current route.");
@@ -369,7 +366,6 @@ void MissionPlanner::on_set_preferred_primitive(
   }
 
   if (req->reset && !original_route_) {
-    res->status.success = false;
     throw service_utils::ServiceException(
       autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
       "There is no saved original route to reset to.");
