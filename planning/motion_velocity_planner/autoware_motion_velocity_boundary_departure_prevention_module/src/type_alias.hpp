@@ -26,6 +26,7 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/processing_time_publisher.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <diagnostic_updater/diagnostic_status_wrapper.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -86,9 +87,9 @@ using autoware_utils::create_marker_color;       // NOLINT
 using autoware_utils::create_marker_scale;       // NOLINT
 using autoware_utils::get_or_declare_parameter;  // NOLINT
 using autoware_utils::ProcessingTimePublisher;   // NOLINT
-using autoware_utils::StopWatch;                 // NOLINT
 using autoware_utils::to_msg;                    // NOLINT
 using autoware_utils_geometry::Point2d;          // NOLINT
+using autoware_utils_system::StopWatch;          // NOLINT
 using vehicle_info_utils::VehicleInfo;           // NOLINT
 
 using boundary_departure_checker::Abnormalities;             // NOLINT

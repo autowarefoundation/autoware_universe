@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__FREESPACE_PLANNING_ALGORITHMS__ABSTRACT_ALGORITHM_HPP_
 #define AUTOWARE__FREESPACE_PLANNING_ALGORITHMS__ABSTRACT_ALGORITHM_HPP_
 
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tf2/utils.hpp>
 
@@ -29,7 +29,7 @@
 
 namespace autoware::freespace_planning_algorithms
 {
-using autoware_utils::normalize_radian;
+using autoware_utils_math::normalize_radian;
 
 geometry_msgs::msg::Pose transformPose(
   const geometry_msgs::msg::Pose & pose, const geometry_msgs::msg::TransformStamped & transform);
