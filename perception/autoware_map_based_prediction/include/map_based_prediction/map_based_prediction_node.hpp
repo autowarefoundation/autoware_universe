@@ -95,7 +95,7 @@ private:
   std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
 
   // Object History
-  std::unordered_map<std::string, std::deque<ObjectData>> road_users_history_;
+  std::unordered_map<std::string, std::deque<RoadUser>> road_users_history_;
 
   // Lanelet Map Pointers
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
