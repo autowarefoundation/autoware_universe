@@ -24017,7 +24017,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>temperature</td>
 <td>array</td>
 <td>List of temperature for sampling trajectories. Its length must be the same as <code>batch_size</code>. Each value means the coefficient of the standard normal distribution which is used for each initial noise of corresponding batch index. val = N(0,1) * temperature</td>
-<td>[0.5]</td>
+<td>[0.0]</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -24031,7 +24031,7 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>stopping_threshold</td>
 <td>float</td>
 <td>Threshold for keeping the stopping state [m/s]</td>
-<td>0.0</td>
+<td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
