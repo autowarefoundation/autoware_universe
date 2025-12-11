@@ -184,7 +184,10 @@ void TrajectoryConsistency::evaluate(
 
   // Time offset to extract point for consistency comparison
   const double time_offset_from_now = time_horizon_;
-
+  // We want to compare where each trajectory predicted the vehicle would be
+  // at a common future time. For each historical trajectory, we find the point that was predicted
+  // for time T when that trajectory was generated. This allows us to measure consistency between
+  // past and current predictions at the same future moment.
   const double current_time = rclcpp::Time(result->header().stamp).seconds();
   const double target_absolute_time = current_time + time_offset_from_now;
 
@@ -211,7 +214,7 @@ void TrajectoryConsistency::evaluate(
     }
   }
 
-  // Add current trajectory's point at 2 seconds ahead
+  // Add current trajectory's point at time_horizon_seconds ahead
   // Create a Trajectory message from current trajectory points
   autoware_planning_msgs::msg::Trajectory current_trajectory;
   current_trajectory.header = result->header();
