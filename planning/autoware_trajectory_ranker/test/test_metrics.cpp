@@ -28,6 +28,7 @@
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -292,6 +293,15 @@ TEST_F(TestMetrics, TrajectoryConsistencyMetric)
 
   // Test evaluation with trajectory history
   EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+
+  // Verify that points exist and metric was computed
+  ASSERT_TRUE(result->points());
+  EXPECT_GT(result->points()->size(), 0u);
+
+  // Verify the computed score is in valid range [0.0, 1.0]
+  const float score = result->score(0);
+  EXPECT_GE(score, 0.0f);
+  EXPECT_LE(score, 1.0f);
 }
 
 TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
@@ -325,6 +335,14 @@ TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
 
   // Should handle empty history gracefully (returns zero metric)
   EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+
+  // Verify that points exist
+  ASSERT_TRUE(result->points());
+  EXPECT_GT(result->points()->size(), 0u);
+
+  // Metric value should be zero when history is empty (less than 2 points)
+  const float score = result->score(0);
+  EXPECT_FLOAT_EQ(score, 0.0f);
 }
 
 }  // namespace autoware::trajectory_ranker::metrics
