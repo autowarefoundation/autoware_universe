@@ -1,0 +1,11 @@
+<launch>
+  <arg name="input/lanelet2_map" default="/map/vector_map"/>
+  <arg name="input/pose" default="/localization/pose_with_covariance"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_feature_environment_recognizer)/config/feature_environment_recognizer.param.yaml"/>
+
+  <node pkg="autoware_feature_environment_recognizer" exec="autoware_feature_environment_recognizer_node" output="both">
+    <remap from="~/input/lanelet2_map" to="$(var input/lanelet2_map)"/>
+    <remap from="~/input/pose" to="$(var input/pose)"/>
+    <param from="$(var param_file)"/>
+  </node>
+</launch>

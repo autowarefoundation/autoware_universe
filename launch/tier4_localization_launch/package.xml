@@ -21,6 +21,7 @@
   <exec_depend>autoware_gyro_odometer</exec_depend>
   <exec_depend>autoware_lidar_marker_localizer</exec_depend>
   <exec_depend>autoware_localization_error_monitor</exec_depend>
+  <exec_depend>autoware_feature_environment_recognizer</exec_depend>
   <exec_depend>autoware_ndt_scan_matcher</exec_depend>
   <exec_depend>autoware_pointcloud_preprocessor</exec_depend>
   <exec_depend>autoware_pose_covariance_modifier</exec_depend>

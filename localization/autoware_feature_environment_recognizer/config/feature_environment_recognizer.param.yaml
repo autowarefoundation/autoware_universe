@@ -1,0 +1,26 @@
+/**:
+  ros__parameters:
+    # Default environment ID when lanelet is not found in any list
+    # 0: Normal environment (default)
+    default_environment_id: 0
+
+    # Distance threshold for lanelet search [m]
+    search_distance_threshold: 10.0
+
+    # Yaw threshold for lanelet search [rad]
+    search_yaw_threshold: 0.785  # π/4
+
+    # Environment-lanelet ID mappings
+    # Environment ID 1: Uniform road (e.g., tunnel straight sections, uniform shape roads)
+    # 環境ID 1: 均一形状路（トンネル直線部など）
+    environment_id_1:
+      lanelet_ids: []  # Add lanelet IDs for uniform roads here, e.g., [100, 101, 102, 103]
+
+    # Environment ID 2: Feature-poor road (roads with few features for map matching)
+    # 環境ID 2: 特徴が少ない道路（地図マッチングに特徴が少ない道路）
+    environment_id_2:
+      lanelet_ids: []  # Add lanelet IDs for feature-poor roads here, e.g., [200, 201, 202, 203]
+
+    # You can add more environment mappings as needed:
+    # environment_id_3:
+    #   lanelet_ids: [300, 301, 302]

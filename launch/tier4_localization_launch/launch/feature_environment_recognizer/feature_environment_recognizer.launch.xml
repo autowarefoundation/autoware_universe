@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="param_file" description="Path to the parameter file"/>
+  <group>
+    <include file="$(find-pkg-share autoware_feature_environment_recognizer)/launch/feature_environment_recognizer.launch.xml">
+      <arg name="input/lanelet2_map" value="/map/vector_map"/>
+      <arg name="input/pose" value="/localization/pose_with_covariance"/>
+      <arg name="param_file" value="$(var param_file)"/>
+    </include>
+  </group>
+</launch>
