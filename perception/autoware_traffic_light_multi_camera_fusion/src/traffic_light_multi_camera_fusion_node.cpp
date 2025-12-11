@@ -67,6 +67,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
+  message_lifespan_unique_ = this->declare_parameter<double>("message_lifespan_unique");
   prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
@@ -170,14 +171,37 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> 
     return;
   }
   const rclcpp::Time & newest_stamp(record_arr_set_.rbegin()->header.stamp);
+
+  // First pass: identify which frame_ids have newer records
+  std::map<std::string, rclcpp::Time> latest_stamp_per_frame;
+  for (const auto & record_arr : record_arr_set_) {
+    const std::string & frame_id = record_arr.header.frame_id;
+    const rclcpp::Time current_stamp(record_arr.header.stamp);
+
+    if (
+      latest_stamp_per_frame.find(frame_id) == latest_stamp_per_frame.end() ||
+      current_stamp > latest_stamp_per_frame[frame_id]) {
+      latest_stamp_per_frame[frame_id] = current_stamp;
+    }
+  }
+
+  // Second pass: remove old records with adaptive threshold
   for (auto it = record_arr_set_.begin(); it != record_arr_set_.end();) {
+    const std::string & frame_id = it->header.frame_id;
+    const rclcpp::Time current_stamp(it->header.stamp);
+    const rclcpp::Duration age = newest_stamp - current_stamp;
+
+    // Check if this is the latest record from this frame_id
+    const bool is_unique_record = (current_stamp == latest_stamp_per_frame[frame_id]);
+
+    // Use different thresholds based on uniqueness
+    const double threshold = is_unique_record ? message_lifespan_unique_ : message_lifespan_;
+
     /*
     remove all old record arrays whose timestamp difference with newest record is larger than
-    threshold
+    the adaptive threshold
     */
-    if (
-      (newest_stamp - rclcpp::Time(it->header.stamp)) >
-      rclcpp::Duration::from_seconds(message_lifespan_)) {
+    if (age > rclcpp::Duration::from_seconds(threshold)) {
       it = record_arr_set_.erase(it);
     } else {
       /*
