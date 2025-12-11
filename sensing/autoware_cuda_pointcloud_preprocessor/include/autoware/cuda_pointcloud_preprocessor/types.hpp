@@ -67,6 +67,7 @@ struct CropBoxParameters
   float max_y;
   float min_z;
   float max_z;
+  std::uint8_t negative;
 };
 
 struct RingOutlierFilterParameters

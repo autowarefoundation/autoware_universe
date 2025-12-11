@@ -80,13 +80,15 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   const auto crop_box_max_x_vector = declare_parameter<std::vector<double>>("crop_box.max_x");
   const auto crop_box_max_y_vector = declare_parameter<std::vector<double>>("crop_box.max_y");
   const auto crop_box_max_z_vector = declare_parameter<std::vector<double>>("crop_box.max_z");
+  const auto crop_box_negative_vector = declare_parameter<std::vector<bool>>("crop_box.negative");
 
   if (
     crop_box_min_x_vector.size() != crop_box_min_y_vector.size() ||
     crop_box_min_x_vector.size() != crop_box_min_z_vector.size() ||
     crop_box_min_x_vector.size() != crop_box_max_x_vector.size() ||
     crop_box_min_x_vector.size() != crop_box_max_y_vector.size() ||
-    crop_box_min_x_vector.size() != crop_box_max_z_vector.size()) {
+    crop_box_min_x_vector.size() != crop_box_max_z_vector.size() ||
+    crop_box_min_x_vector.size() != crop_box_negative_vector.size()) {
     throw std::runtime_error("Crop box parameters must have the same size");
   }
 
@@ -100,6 +102,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     parameters.max_x = static_cast<float>(crop_box_max_x_vector.at(i));
     parameters.max_y = static_cast<float>(crop_box_max_y_vector.at(i));
     parameters.max_z = static_cast<float>(crop_box_max_z_vector.at(i));
+    parameters.negative = static_cast<uint8_t>(crop_box_negative_vector.at(i));
     crop_box_parameters.push_back(parameters);
   }
 
