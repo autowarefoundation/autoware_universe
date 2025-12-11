@@ -15,6 +15,8 @@
 #include "autoware/camera_streampetr/postprocess/circle_nms_kernel.hpp"
 #include "autoware/camera_streampetr/postprocess/postprocess_kernel.hpp"
 
+#include <autoware/cuda_utils/thrust_utils.hpp>
+
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -155,7 +157,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   auto boxes3d_ptr = thrust::device_pointer_cast(boxes3d_d_.get());
 
   // Create stream-aware execution policy
-  auto policy = thrust::cuda::par.on(stream);
+  auto policy = autoware::cuda_utils::thrust_on_stream(stream);
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
