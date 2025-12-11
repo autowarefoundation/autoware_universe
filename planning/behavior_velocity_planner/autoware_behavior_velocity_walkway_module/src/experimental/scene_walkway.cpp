@@ -16,6 +16,7 @@
 
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <cmath>
 #include <memory>
@@ -28,16 +29,16 @@ namespace bg = boost::geometry;
 using autoware::motion_utils::calcLongitudinalOffsetPose;
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findNearestSegmentIndex;
-using autoware_utils::create_point;
-using autoware_utils::get_pose;
+using autoware_utils_geometry::create_point;
+using autoware_utils_geometry::get_pose;
 
 namespace
 {
 using autoware_utils::append_marker_array;
-using autoware_utils::calc_offset_pose;
 using autoware_utils::create_default_marker;
 using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_scale;
+using autoware_utils_geometry::calc_offset_pose;
 using visualization_msgs::msg::Marker;
 
 visualization_msgs::msg::MarkerArray createWalkwayMarkers(
