@@ -17,8 +17,11 @@
 
 #include "autoware/camera_streampetr/utils.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <thrust/device_vector.h>
 
 #include <vector>
 
@@ -82,6 +85,12 @@ private:
   cudaStream_t stream_;
   cudaStream_t stream_event_;
   cudaEvent_t start_, stop_;
+  
+  // Pre-allocated device arrays to avoid repeated allocations
+  autoware::cuda_utils::CudaUniquePtr<float[]> yaw_norm_thresholds_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> score_thresholds_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> detection_range_d_;
+  autoware::cuda_utils::CudaUniquePtr<Box3D[]> boxes3d_d_;
 };
 
 }  // namespace autoware::camera_streampetr
