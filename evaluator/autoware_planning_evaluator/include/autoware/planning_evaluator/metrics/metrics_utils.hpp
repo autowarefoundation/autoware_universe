@@ -87,7 +87,6 @@ Trajectory get_lookahead_trajectory(
  */
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
 
-
 }  // namespace utils
 }  // namespace metrics
 }  // namespace planning_diagnostics

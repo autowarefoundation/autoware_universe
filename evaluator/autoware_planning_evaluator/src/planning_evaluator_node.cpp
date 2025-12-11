@@ -109,9 +109,7 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     metrics_for_publish_.insert(metric);
 
     // Set obstacle metrics need flag
-    if (obstacle_metrics_calculator_.metrics_need_.count(metric) > 0) {
-      obstacle_metrics_calculator_.metrics_need_[metric] = true;
-    }
+    obstacle_metrics_calculator_.setMetricNeed(metric, true);
   }
 
   for (const std::string & metric_name :
@@ -406,14 +404,13 @@ void PlanningEvaluatorNode::onTrajectory(
   auto runtime_trajectory = (now() - trajectory_start).seconds();
   RCLCPP_DEBUG(get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
 
-
   // Calculate obstacle metrics
   auto obstacle_start = now();
-  obstacle_metrics_calculator_.clearData();
+
   obstacle_metrics_calculator_.setTrajectory(*traj_msg);
   obstacle_metrics_calculator_.calculateMetrics();
 
-  for (const auto & [metric, is_needed] : obstacle_metrics_calculator_.metrics_need_) {
+  for (const auto & metric : obstacle_metrics_calculator_.obstacle_metric_types) {
     std::vector<std::pair<std::string, Accumulator<double>>> metrics_pre_object =
       obstacle_metrics_calculator_.getMetric(metric);
     if (metrics_pre_object.empty()) {
@@ -428,6 +425,8 @@ void PlanningEvaluatorNode::onTrajectory(
       }
     }
   }
+
+  obstacle_metrics_calculator_.clearData();
 
   auto runtime_obstacle = (now() - obstacle_start).seconds();
   RCLCPP_DEBUG(get_logger(), "Planning evaluation obstacle metrics calculation time: %2.2f ms", runtime_obstacle * 1e3);

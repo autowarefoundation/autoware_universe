@@ -24,14 +24,13 @@
 #include <boost/geometry.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <vector>
 
 namespace planning_diagnostics
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::calc_distance2d;
-namespace bg = boost::geometry;
 
 void ObstacleMetricsCalculator::setVehicleInfo(const VehicleInfo & vehicle_info)
 {
@@ -57,37 +56,68 @@ void ObstacleMetricsCalculator::clearData()
 {
   predicted_objects_.reset();
   ego_odometry_.reset();
-  vehicle_info_.reset();
   trajectory_.reset();
   
-  obstacle_distance_metrics_.clear();
-  obstacle_ttc_metrics_.clear();
-  obstacle_pet_metrics_.clear();
-  obstacle_drac_metrics_.clear();
+  for (auto & [metric, metrics_vector] : obstacle_metrics_) {
+    metrics_vector.clear();
+  }
 }
 
 std::vector<std::pair<std::string, Accumulator<double>>> ObstacleMetricsCalculator::getMetric(
   const Metric metric) const
 {
-  switch (metric) {
-    case Metric::obstacle_distance:
-      return obstacle_distance_metrics_;
-    case Metric::obstacle_ttc:
-      return obstacle_ttc_metrics_;
-    case Metric::obstacle_pet:
-      return obstacle_pet_metrics_;
-    case Metric::obstacle_drac:
-      return obstacle_drac_metrics_;
-    default:
-      return {};
+  const auto it = obstacle_metrics_.find(metric);
+  if (it != obstacle_metrics_.end()) {
+    return it->second;
+  }
+  return {};
+}
+
+void ObstacleMetricsCalculator::setMetricNeed(const Metric metric, bool need)
+{
+  // Only allow setting for obstacle metrics
+  for (const auto obstacle_metric : obstacle_metric_types) {
+    if (obstacle_metric == metric) {
+      metrics_need_[metric] = need;
+      return;
+    }
   }
 }
+
 
 bool ObstacleMetricsCalculator::isDataReady() const
 {
   return trajectory_.has_value() && !trajectory_->points.empty() &&
          predicted_objects_.has_value() && !predicted_objects_->objects.empty() &&
          ego_odometry_.has_value() && vehicle_info_.has_value();
+}
+
+
+void ObstacleMetricsCalculator::calculatePointToPolygonBoundaryDistances(
+  const Pose & pose, const Polygon2d & polygon, double & min_dist, double & max_dist) const
+{
+  const Point2d point(pose.position.x, pose.position.y);
+  const auto & outer = polygon.outer();
+
+  // Calculate max distance: distance to farthest vertex
+  max_dist = 0.0;
+  for (const auto & vertex : outer) {
+    const double dist = bg::distance(point, vertex);
+    max_dist = std::max(max_dist, dist);
+  }
+
+  // Calculate min distance: distance to nearest edge segment
+  min_dist = std::numeric_limits<double>::max();
+  const size_t num_vertices = outer.size();
+  for (size_t i = 0; i < num_vertices; ++i) {
+    const auto & p1 = outer[i];
+    const auto & p2 = outer[(i + 1) % num_vertices];
+
+    // Use boost::geometry segment to calculate distance from point to line segment
+    Segment2d segment(p1, p2);
+    const double dist = bg::distance(point, segment);
+    min_dist = std::min(min_dist, dist);
+  }
 }
 
 void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
@@ -110,17 +140,12 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
   }
 
   // Insert first point at ego pose
-  const bool initial_is_stop = (std::abs(vel_curr) <= parameters.stop_velocity_mps);
   ego_trajectory_points_.emplace_back(
-    ego_odometry_->pose.pose, vel_curr, 0.0, 0.0, initial_is_stop);
-  if (initial_is_stop || p0_index + 1 >= trajectory_->points.size()) {
-    return;
-  }
+    ego_odometry_->pose.pose, vel_curr, 0.0, 0.0);
 
   // Process trajectory points
   double time_from_start_s = 0.0;
   double distance_from_start_m = 0.0;
-  bool is_stop = false;
 
   for (size_t i = p0_index + 1; i < trajectory_->points.size(); ++i) {
     const auto & p_curr = trajectory_->points.at(i);
@@ -140,10 +165,12 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
                  2.0 * parameters.limit_min_accel * segment_dist));
       vel_curr = vel_curr < 0 ? vel_curr : std::max(vel_curr, vel_lower_bound);
 
-      double effective_velocity = (vel_curr + trajectory_point_prev.velocity_mps) * 0.5;
-      effective_velocity = vel_curr >= 0 ? std::max(effective_velocity, 1e-2) : -std::min(-effective_velocity, -1e-2);
-        
-      const double segment_time = segment_dist / std::abs(effective_velocity);
+      const double effective_velocity = std::abs(vel_curr + trajectory_point_prev.velocity_mps) * 0.5;
+      
+      // Use infinity for trajectory points after the ego stops
+      const double segment_time = effective_velocity > parameters.stop_velocity_mps 
+                                  ? segment_dist / effective_velocity 
+                                  : std::numeric_limits<double>::infinity();
 
       // Skip if segment time is too small
       if (segment_time < parameters.min_time_interval_s) {
@@ -151,12 +178,10 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
       }
     
       // Insert new ego trajectory point
-      time_from_start_s += segment_time;
+      time_from_start_s += segment_time; // NOTE: it can be infinity, which means the ego trajectory point is after a stop point.
       distance_from_start_m += segment_dist;
-      is_stop = (std::abs(vel_curr) <= parameters.stop_velocity_mps);
-
       ego_trajectory_points_.emplace_back(
-        p_curr.pose, vel_curr, time_from_start_s, distance_from_start_m, is_stop);
+        p_curr.pose, vel_curr, time_from_start_s, distance_from_start_m);
 
     }
     else {
@@ -167,133 +192,322 @@ void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
       time_from_start_s += segment_time;
       distance_from_start_m += segment_dist;
       ego_trajectory_points_.emplace_back(
-        p_curr.pose, vel_curr, time_from_start_s, distance_from_start_m, false);
+        p_curr.pose, vel_curr, time_from_start_s, distance_from_start_m);
     }
 
-    // update max reachable distance
-    const double dist_from_ego = calc_distance2d(ego_odometry_->pose.pose, p_curr.pose);
-    ego_max_reachable_distance_ = std::max(ego_max_reachable_distance_, dist_from_ego);
-
-    // if stopped, break
-    if (is_stop) {
-      break;
+    // update max reachable distance if the ego trajectory point is before the first stop point.
+    if (!std::isfinite(time_from_start_s)) {
+      const double dist_from_ego = calc_distance2d(ego_odometry_->pose.pose, p_curr.pose);
+      ego_max_reachable_distance_ = std::max(ego_max_reachable_distance_, dist_from_ego);
     }
   }
-  
+
   // set polygon for all ego trajectory points
   for (auto & ego_trajectory_point : ego_trajectory_points_) {
     ego_trajectory_point.setPolygon(*vehicle_info_);
   }
+
+  std::cerr << "[DEBUG] Ego trajectory points size: " << ego_trajectory_points_.size() << std::endl;
 }
 
 void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
 {
-  obstacle_trajectory_points_.clear();
-  obstacle_first_overlapping_index_.clear();
-  obstacle_first_collision_index_.clear();
-  obstacle_index_to_uuid_.clear();
-
-  const auto & ego_initial_pose = ego_trajectory_points_.front().pose;
-  const auto & ego_final_time = ego_trajectory_points_.back().time_from_start_s;
-
-  // calculate ego margin
-  const autoware_utils::LinearRing2d footprint = vehicle_info_->createFootprint();
-  double ego_margin_max = 0.0;
-  double ego_margin_min = std::numeric_limits<double>::max();
-  for (const auto & point : footprint) {
-    const double dist = std::sqrt(point.x() * point.x() + point.y() * point.y());
-    ego_margin_max = std::max(ego_margin_max, dist);
-    ego_margin_min = std::min(ego_margin_min, dist);
+  // calculate ego margin using the first ego trajectory point's pose and polygon
+  if (ego_trajectory_points_.empty()) {
+    return;
   }
 
+  const auto & first_ego_point = ego_trajectory_points_.front();
+
+  double ego_margin_min = 0.0;
+  double ego_margin_max = std::numeric_limits<double>::max();
+  calculatePointToPolygonBoundaryDistances(first_ego_point.pose, first_ego_point.polygon.value(), ego_margin_min, ego_margin_max);
+  std::cerr << "[DEBUG] Ego margin min / max: " << ego_margin_min << " / " << ego_margin_max << " [m]" << std::endl; // TODO: remove this
+
   for (const auto & object : predicted_objects_->objects) {
+
+    // ------------------------------------------------------------------------------------------------
     // 1. initialize
+    obstacle_trajectory_points_.clear();
+
     const auto & obstacle_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto & obstacle_twist = object.kinematics.initial_twist_with_covariance.twist.linear;
     const double obstacle_velocity = std::sqrt(obstacle_twist.x * obstacle_twist.x + obstacle_twist.y * obstacle_twist.y);
-    const bool is_obstacle_stop = obstacle_velocity <= parameters.stop_velocity_mps;
     bool is_obstacle_traj_no_overlapping_ego_traj = false;
 
+    std::string object_uuid = metrics::utils::uuid_to_string(object.object_id);;
+
+    // ------------------------------------------------------------------------------------------------
     // 2. roughly check if obstacle trajectory is no overlapping with ego trajectory.
-    double obstacle_margin_max = 0.0;
-    double obstacle_margin_min = std::numeric_limits<double>::max();
-    const auto obstacle_polygon = autoware_utils::to_polygon2d(Pose(), object.shape);
-    for (const auto & point : obstacle_polygon.outer()) {
-      const double dist = std::sqrt(point.x() * point.x() + point.y() * point.y());
-      obstacle_margin_max = std::max(obstacle_margin_max, dist);
-      obstacle_margin_min = std::min(obstacle_margin_min, dist);
-    }
+    auto obstacle_margin_start = std::chrono::steady_clock::now(); // TODO: remove this
+
+    const auto obstacle_polygon = autoware_utils::to_polygon2d(obstacle_pose, object.shape);
+    double obstacle_margin_min = 0.0;
+    double obstacle_margin_max = std::numeric_limits<double>::max();
+    calculatePointToPolygonBoundaryDistances(obstacle_pose, obstacle_polygon, obstacle_margin_min, obstacle_margin_max);
+
+    std::cerr << "[DEBUG] Obstacle margin min / max: " << obstacle_margin_min << " / " << obstacle_margin_max << " [m]" << std::endl; // TODO: remove this
+
+    const auto & ego_initial_pose = ego_trajectory_points_.front().pose;
+    const auto & ego_final_time = ego_trajectory_points_.back().time_from_start_s;
+
     const double obstacle_max_reachable_distance = obstacle_velocity * ego_final_time;
     const double obstacle_ego_distance = calc_distance2d(ego_initial_pose, obstacle_pose);
     is_obstacle_traj_no_overlapping_ego_traj = (obstacle_ego_distance >= obstacle_max_reachable_distance + ego_max_reachable_distance_ + ego_margin_max + obstacle_margin_max + parameters.collision_thr_m);
 
-    // 3. create obstacle trajectory points
-    obstacle_trajectory_points_.emplace_back(obstacle_pose, obstacle_velocity, 0, 0, is_obstacle_stop);
-    if (!is_obstacle_traj_no_overlapping_ego_traj && !is_obstacle_stop && !object.kinematics.predicted_paths.empty()) {
-      const auto & obstacle_path = object.kinematics.predicted_paths.front().path;
-  
-      // initialize reference point and the point right after next reference point. Here `reference_point` is the point right before the current ego trajectory point.
-      ObstacleTrajectoryPoint reference_point = obstacle_trajectory_points_.front();
-      size_t next_reference_point_idx = 1;
-      double next_reference_point_time_from_start_s = std::numeric_limits<double>::max();
-      double next_reference_point_distance_from_start_m = std::numeric_limits<double>::max();
-      double next_reference_point_time_from_start_s = std::numeric_limits<double>::max();
+    auto obstacle_margin_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto obstacle_margin_duration = std::chrono::duration_cast<std::chrono::milliseconds>(obstacle_margin_end - obstacle_margin_start);
+    std::cerr << "[DEBUG TIME][1] Calculate obstacle margin for object " << object_uuid << " [ms]: " << obstacle_margin_duration.count() << std::endl;
 
-      if (next_reference_point_idx < obstacle_path.size()) {
-        next_reference_point_distance_from_start_m = 
-          calc_distance2d(reference_point.pose, obstacle_path[next_reference_point_idx]) + reference_point.distance_from_start_m;
-        next_reference_point_time_from_start_s = next_reference_point_distance_from_start_m / obstacle_velocity;
-      }
-      
-      for (size_t i = 1; i < ego_trajectory_points_.size(); ++i) {
-        const auto & ego_trajectory_point = ego_trajectory_points_[i];
-        const double ego_time = ego_trajectory_point.time_from_start_s;
+    // ------------------------------------------------------------------------------------------------
+    // 3. create obstacle trajectory points:
+    //  - It creates the same number of points as the ego trajectory points with the same `time_from_start_s`.
+    //  - But if there is stop point in the ego trajectory, obstacle trajectory points after that timing are not created.
+    auto obstacle_trajectory_points_start = std::chrono::steady_clock::now(); // TODO: remove this
 
-        // Update the reference point and next reference point.
-        while (next_reference_point_idx < obstacle_path.size() && 
-               next_reference_point_time_from_start_s < ego_time) {
-
-          reference_point = ObstacleTrajectoryPoint(
-            obstacle_path[next_reference_point_idx],
-            obstacle_velocity,
-            next_reference_point_time_from_start_s,
-            next_reference_point_distance_from_start_m,
-            false);
-          ++next_reference_point_idx;
-          
-          if (next_reference_point_idx < obstacle_path.size()) {
-            const double next_reference_point_distance_from_start_m = 
-              calc_distance2d(reference_point.pose, obstacle_path[next_reference_point_idx]) + reference_point.distance_from_start_m;
-            next_reference_point_time_from_start_s = next_reference_point_distance_from_start_m / obstacle_velocity;
+    obstacle_trajectory_points_.emplace_back(obstacle_pose, obstacle_velocity, 0, 0);
+    if (!is_obstacle_traj_no_overlapping_ego_traj) {
+      if (object.kinematics.predicted_paths.empty()) {
+        // Create duplicate obstacle trajectory points with same `time_from_start_s` as ego trajectory points.
+        for (size_t i = 1; i < ego_trajectory_points_.size(); ++i) {
+          const double ego_time = ego_trajectory_points_[i].time_from_start_s;
+          if (!std::isfinite(ego_time)) {
+            break;
           }
+          obstacle_trajectory_points_.emplace_back(obstacle_pose, obstacle_velocity, ego_time, 0.0);
+        }
+      }
+      else {
+        // Create obstacle trajectory points based on the predicted path.
+        const auto & obstacle_path = object.kinematics.predicted_paths.front().path;
+    
+        // initialize reference point and the point right after next reference point. Here `reference_point` is the point right before the current ego trajectory point.
+        ObstacleTrajectoryPoint reference_point = obstacle_trajectory_points_.front();
+        size_t next_reference_point_idx = 1;
+        double next_reference_point_time_from_start_s = std::numeric_limits<double>::max();
+        double next_reference_point_distance_from_start_m = std::numeric_limits<double>::max();
+
+        if (next_reference_point_idx < obstacle_path.size()) {
+          next_reference_point_distance_from_start_m = 
+            calc_distance2d(reference_point.pose, obstacle_path[next_reference_point_idx]) + reference_point.distance_from_start_m;
+          next_reference_point_time_from_start_s = next_reference_point_distance_from_start_m / obstacle_velocity;
         }
 
-        // insert new obstacle trajectory point based on the reference point
-        obstacle_trajectory_points_.emplace_back(reference_point, ego_time - reference_point.time_from_start_s);
+        // create obstacle trajectory points based on the corresponding ego trajectory points.
+        for (size_t i = 1; i < ego_trajectory_points_.size(); ++i) {
+          const auto & ego_trajectory_point = ego_trajectory_points_[i];
+          const double ego_time = ego_trajectory_point.time_from_start_s;
+
+          if (ego_trajectory_point.time_from_start_s == std::numeric_limits<double>::infinity()) {
+            break;
+          }
+
+          // Update the reference point and next reference point.
+          while (next_reference_point_idx < obstacle_path.size() && 
+                next_reference_point_time_from_start_s < ego_time) {
+
+            reference_point = ObstacleTrajectoryPoint(
+              obstacle_path[next_reference_point_idx],
+              obstacle_velocity,
+              next_reference_point_time_from_start_s,
+              next_reference_point_distance_from_start_m);
+            ++next_reference_point_idx;
+            
+            if (next_reference_point_idx < obstacle_path.size()) {
+              const double next_reference_point_distance_from_start_m = 
+                calc_distance2d(reference_point.pose, obstacle_path[next_reference_point_idx]) + reference_point.distance_from_start_m;
+              next_reference_point_time_from_start_s = next_reference_point_distance_from_start_m / obstacle_velocity;
+            }
+          }
+
+          // insert new obstacle trajectory point based on the reference point and `time_from_start_s` of the corresponding ego trajectory point.
+          obstacle_trajectory_points_.emplace_back(reference_point, ego_time - reference_point.time_from_start_s);
+        }
       }
     }
 
+    auto obstacle_trajectory_points_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto obstacle_trajectory_points_duration = std::chrono::duration_cast<std::chrono::milliseconds>(obstacle_trajectory_points_end - obstacle_trajectory_points_start);
+    std::cerr << "[DEBUG TIME][2] Create " << obstacle_trajectory_points_.size() << " points for object " << object_uuid << " [ms]: " << obstacle_trajectory_points_duration.count() << std::endl;
+
+    // ------------------------------------------------------------------------------------------------
     // 4. calculate `obstacle_distance` metrics
+    auto obstacle_distance_start = std::chrono::steady_clock::now(); // TODO: remove this
+
     if (metrics_need_[Metric::obstacle_distance]) {
       double obstacle_distance = std::numeric_limits<double>::max();
-
       const auto & first_obstacle_point = obstacle_trajectory_points_.front();
-      first_obstacle_point.setPolygon(object.shape);
-      const auto & first_obstacle_polygon = first_obstacle_point.polygon.value();
 
       for (auto & ego_trajectory_point : ego_trajectory_points_) {
-        const auto dist = bg::distance(ego_trajectory_point.polygon.value(), first_obstacle_polygon);
+        const double dist = calc_distance2d(ego_trajectory_point.pose, first_obstacle_point.pose);
         obstacle_distance = std::min(obstacle_distance, dist);
+        // ---TODO 在readme写关于这个的说明：因为polygon距离计算太耗时，这里计算NPC中心点到轨迹点的距离。
       }
-      
-      // add metric
+
+      // add to metric statistics
       Accumulator<double> obstacle_distance_metric;
       obstacle_distance_metric.add(obstacle_distance);
-      obstacle_distance_metrics_.emplace_back(utils::uuid_to_string(object.object_id), obstacle_distance_metric);
+      obstacle_metrics_[Metric::obstacle_distance].emplace_back(object_uuid, obstacle_distance_metric);
+    }
+    auto obstacle_distance_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto obstacle_distance_duration = std::chrono::duration_cast<std::chrono::milliseconds>(obstacle_distance_end - obstacle_distance_start);
+    std::cerr << "[DEBUG TIME][3] Calculate obstacle_distance for object " << object_uuid << " [ms]: " << obstacle_distance_duration.count() << std::endl;
+
+    // ------------------------------------------------------------------------------------------------
+    // 5. check overlap and collision between ego trajectory and obstacle trajectory
+    auto check_overlap_and_collision_start = std::chrono::steady_clock::now(); // TODO: remove this
+
+    for (size_t i = 0; i < obstacle_trajectory_points_.size(); ++i) {
+      auto & obstacle_trajectory_point = obstacle_trajectory_points_[i];
+
+      for (size_t j = i; j < ego_trajectory_points_.size(); ++j) {
+        const auto & ego_trajectory_point = ego_trajectory_points_[j];
+        if (ego_trajectory_point.time_from_start_s == std::numeric_limits<double>::infinity()) {
+          break;
+        }
+
+        const double dist = calc_distance2d(ego_trajectory_point.pose, obstacle_trajectory_point.pose);
+        bool is_overlapping = false;
+        if (dist <= ego_margin_min + obstacle_margin_min + parameters.collision_thr_m) {
+          is_overlapping = true;
+        }
+        else if (dist > ego_margin_max + obstacle_margin_max + parameters.collision_thr_m) {
+          is_overlapping = false;
+        }
+        else {
+          obstacle_trajectory_point.setPolygon(object.shape);
+          is_overlapping = bg::intersects(ego_trajectory_point.polygon.value(), obstacle_trajectory_point.polygon.value());
+        }
+
+        obstacle_trajectory_point.is_overlapping_with_ego_trajectory = is_overlapping;
+        obstacle_trajectory_point.is_collision_with_ego_trajectory = is_overlapping && obstacle_trajectory_point.time_from_start_s == ego_trajectory_point.time_from_start_s;
+        if (is_overlapping) {
+          obstacle_trajectory_point.first_overlapping_ego_trajectory_index = std::min(obstacle_trajectory_point.first_overlapping_ego_trajectory_index, j);
+          obstacle_trajectory_point.last_overlapping_ego_trajectory_index = std::max(obstacle_trajectory_point.last_overlapping_ego_trajectory_index, j);
+        }
+      }
     }
 
-    // 5. calculate `obstacle_ttc` metrics (TODO)
+    auto check_overlap_and_collision_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto check_overlap_and_collision_duration = std::chrono::duration_cast<std::chrono::milliseconds>(check_overlap_and_collision_end - check_overlap_and_collision_start);
+    std::cerr << "[DEBUG TIME][4] Check overlap and collision between ego trajectory and obstacle trajectory for object " << object_uuid << " [ms]: " << check_overlap_and_collision_duration.count() << std::endl;
+  
+    // ------------------------------------------------------------------------------------------------
+    // 6. get `obstacle_ttc` metrics
+    auto calculate_ttc_start = std::chrono::steady_clock::now(); // TODO: remove this
+    if (metrics_need_[Metric::obstacle_ttc]) {
+      for (auto & obstacle_trajectory_point : obstacle_trajectory_points_) {
+        if (obstacle_trajectory_point.is_collision_with_ego_trajectory) {
+          Accumulator<double> obstacle_ttc_metric;
+          obstacle_ttc_metric.add(obstacle_trajectory_point.time_from_start_s);
+          obstacle_metrics_[Metric::obstacle_ttc].emplace_back(object_uuid, obstacle_ttc_metric);
+          break;
+        }
+      }
+    }
+    auto calculate_ttc_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto calculate_ttc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(calculate_ttc_end - calculate_ttc_start);
+    std::cerr << "[DEBUG TIME][5] Calculate obstacle_ttc for object " << object_uuid << " [ms]: " << calculate_ttc_duration.count() << std::endl;
 
+    // ------------------------------------------------------------------------------------------------
+    // 7. get `obstacle_pet` metrics
+    auto calculate_pet_start = std::chrono::steady_clock::now(); // TODO: remove this
+    if (metrics_need_[Metric::obstacle_pet]) {
+      double obstacle_pet = std::numeric_limits<double>::max();
+      for (size_t i = 0; i < obstacle_trajectory_points_.size(); ++i) {
+        const auto & obstacle_trajectory_point = obstacle_trajectory_points_[i];
+        if (obstacle_trajectory_point.is_overlapping_with_ego_trajectory) {
+          const size_t ego_first_overlap_idx = obstacle_trajectory_point.first_overlapping_ego_trajectory_index;          
+          const double point_pet = obstacle_trajectory_point.time_from_start_s - ego_trajectory_points_[ego_first_overlap_idx].time_from_start_s;
+          if (point_pet > 0) { // Only consider the case where obstacle leaves before ego arrives.
+            obstacle_pet = std::min(obstacle_pet, point_pet);
+          }
+        }
+      }
+
+      if (obstacle_pet != std::numeric_limits<double>::max()) {
+        Accumulator<double> obstacle_pet_metric;
+        obstacle_pet_metric.add(obstacle_pet);
+        obstacle_metrics_[Metric::obstacle_pet].emplace_back(object_uuid, obstacle_pet_metric);
+      }
+    }
+    auto calculate_pet_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto calculate_pet_duration = std::chrono::duration_cast<std::chrono::milliseconds>(calculate_pet_end - calculate_pet_start);
+    std::cerr << "[DEBUG TIME][6] Calculate obstacle_pet for object " << object_uuid << " [ms]: " << calculate_pet_duration.count() << std::endl;
+
+    // ------------------------------------------------------------------------------------------------
+    // 8. get `obstacle_drac` metrics
+    auto calculate_drac_start = std::chrono::steady_clock::now(); // TODO: remove this
+    if (metrics_need_[Metric::obstacle_drac]) {
+      double obstacle_drac = 0.0;
+      const double ego_start_vel = first_ego_point.velocity_mps;
+
+      for (size_t i = 1; i < obstacle_trajectory_points_.size(); ++i) {
+        const auto & obstacle_trajectory_point = obstacle_trajectory_points_[i];
+        const auto & ego_trajectory_point = ego_trajectory_points_[i];
+        if (!obstacle_trajectory_point.is_collision_with_ego_trajectory) 
+          continue;
+
+        // calculate ego end velocity 
+        //  - ego decelerate max to stop,
+        //  - consider two cases of forward and backward.
+        const double yaw_diff = tf2::getYaw(ego_trajectory_point.pose.orientation) - tf2::getYaw(obstacle_trajectory_point.pose.orientation);
+        double ego_end_vel = obstacle_trajectory_point.velocity_mps * std::cos(yaw_diff);
+        ego_end_vel = ego_start_vel >= 0.0 ? std::max(ego_end_vel, 0.0) : std::min(ego_end_vel, 0.0);
+
+        const double point_drac = (ego_start_vel - ego_end_vel) / ego_trajectory_point.time_from_start_s;
+        obstacle_drac = std::max(obstacle_drac, point_drac);
+      }
+
+      // Add to metric statistics if we found any valid DRAC value
+      if (obstacle_drac > 0.0) {
+        Accumulator<double> obstacle_drac_metric;
+        obstacle_drac_metric.add(obstacle_drac);
+        obstacle_metrics_[Metric::obstacle_drac].emplace_back(object_uuid, obstacle_drac_metric);
+      }
+    }
+    auto calculate_drac_end = std::chrono::steady_clock::now(); // TODO: remove this
+    auto calculate_drac_duration = std::chrono::duration_cast<std::chrono::milliseconds>(calculate_drac_end - calculate_drac_start);
+    std::cerr << "[DEBUG TIME][7] Calculate obstacle_drac for object " << object_uuid << " [ms]: " << calculate_drac_duration.count() << std::endl;
+  }
+}
+void ObstacleMetricsCalculator::CollectWorstMetrics()
+{
+  for (const auto & [metric, is_needed] : metrics_need_) {
+    if (!is_needed) {
+      continue;
+    }
+
+    const auto & metric_values = obstacle_metrics_[metric];
+    if (metric_values.empty()) {
+      continue;
+    }
+
+    const bool find_min = (metric == Metric::obstacle_distance || 
+                           metric == Metric::obstacle_ttc || 
+                           metric == Metric::obstacle_pet);
+    
+    double worst_value = find_min ? std::numeric_limits<double>::max() 
+                                  : std::numeric_limits<double>::lowest();
+    
+    for (const auto & [obj_id, accumulator] : metric_values) {
+      if (accumulator.count() == 0) {
+        continue;
+      }
+      
+      if (find_min) {
+        worst_value = std::min(worst_value, accumulator.min());
+      } else {  // Metric::obstacle_drac
+        worst_value = std::max(worst_value, accumulator.max());
+      }
+    }
+
+    Accumulator<double> worst_accumulator;
+    worst_accumulator.add(worst_value);
+    if (parameters.worst_only) {
+      obstacle_metrics_[metric].clear();
+    }
+    obstacle_metrics_[metric].emplace_back("worst", worst_accumulator);
   }
 }
 
@@ -305,6 +519,7 @@ void ObstacleMetricsCalculator::calculateMetrics()
   }
   PreprocessEgoTrajectory();
   ProcessObstaclesTrajectory();
+  
+  CollectWorstMetrics();
 }
-
 }  // namespace planning_diagnostics
