@@ -238,7 +238,7 @@ void TrajectoryConsistency::evaluate(
     calculate_longitudinal_variance(points_at_target_time, ego_pose);
 
   // Combine lateral and longitudinal variance (total position variance)
-  const double total_variance = lateral_variance + longitudinal_variance;
+  const double total_variance = std::sqrt(lateral_variance + longitudinal_variance);
 
   // Normalize variance to [0, 1] range using max_value as reference
   // Convert variance (m^2) to metric score
