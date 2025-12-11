@@ -228,20 +228,30 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
 
 void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
 {
-  if (std::size(input_trajectory_array) < 2) {
+  if (input_trajectory_array.size() < 2) {
     return;
   }
 
-  input_trajectory_array.erase(
-    std::remove_if(
-      std::next(input_trajectory_array.begin()),  // Start from second element
-      input_trajectory_array.end(),
-      [&](const TrajectoryPoint & point) {
-        const auto prev_it = std::prev(&point);
-        const auto dist = autoware_utils_geometry::calc_distance2d(point, *prev_it);
-        return dist < min_dist;
-      }),
-    input_trajectory_array.end());
+  // Keep the first point
+  size_t last_valid_idx = 0;
+
+  for (size_t i = 1; i < input_trajectory_array.size(); ++i) {
+    const double dist = autoware_utils_geometry::calc_distance2d(
+      input_trajectory_array[i],
+      input_trajectory_array[last_valid_idx]  // Compare against last kept index
+    );
+
+    if (dist >= min_dist) {
+      ++last_valid_idx;
+      // Overwrite the next slot in the same vector
+      input_trajectory_array[last_valid_idx] = input_trajectory_array[i];
+    }
+  }
+
+  // Shrink vector to the new size
+  const auto erase_start_itr =
+    std::next(input_trajectory_array.begin(), static_cast<std::ptrdiff_t>(last_valid_idx + 1));
+  input_trajectory_array.erase(erase_start_itr, input_trajectory_array.end());
 
   if (input_trajectory_array.size() < 2) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);

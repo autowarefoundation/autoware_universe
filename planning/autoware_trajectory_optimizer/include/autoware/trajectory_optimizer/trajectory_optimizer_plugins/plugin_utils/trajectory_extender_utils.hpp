@@ -43,8 +43,8 @@ using nav_msgs::msg::Odometry;
  */
 void add_ego_state_to_trajectory(
   TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  double nearest_dist_threshold_m, double nearest_yaw_threshold_rad,
-  double backward_trajectory_extension_m);
+  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
+  const double backward_trajectory_extension_m);
 
 /**
  * @brief Extends the forward trajectory with the ego history points.
