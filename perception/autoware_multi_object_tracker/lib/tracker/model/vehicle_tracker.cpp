@@ -361,8 +361,7 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   const EdgePositions meas_edges = calculateEdgeCenters(measurement);
 
   // 2. Calculate alignment distances between measurement and prediction edges
-  const EdgeAlignment alignment =
-    findAlignedEdges(meas_edges, prediction);
+  const EdgeAlignment alignment = findAlignedEdges(meas_edges, prediction);
 
   // 3. Check if any edge is well-aligned (within threshold ratio of vehicle length)
   const double predicted_length = prediction.shape.dimensions.x;
@@ -377,8 +376,8 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
 
   // 5. Determine aligned edge and calculate anchor point
   strategy.type = (alignment.aligned_pred_edge == Edge::FRONT)
-  ? UpdateStrategyType::FRONT_WHEEL_UPDATE
-  : UpdateStrategyType::REAR_WHEEL_UPDATE;
+                    ? UpdateStrategyType::FRONT_WHEEL_UPDATE
+                    : UpdateStrategyType::REAR_WHEEL_UPDATE;
   strategy.anchor_point = calculateAnchorPoint(alignment, measurement);
 
   return strategy;
@@ -424,13 +423,17 @@ VehicleTracker::EdgeAlignment VehicleTracker::findAlignedEdges(
   const double pred_rear_axis = pred_center_axis - predicted_half_length;
 
   // Define all four edge alignment candidates
-  struct Candidate { double distance; Edge pred_edge; Edge meas_edge; };
-  const std::array<Candidate, 4> candidates = {{
-    {std::abs(meas_front_axis - pred_front_axis), Edge::FRONT, Edge::FRONT},
-    {std::abs(meas_rear_axis - pred_front_axis), Edge::FRONT, Edge::REAR},
-    {std::abs(meas_front_axis - pred_rear_axis), Edge::REAR, Edge::FRONT},
-    {std::abs(meas_rear_axis - pred_rear_axis), Edge::REAR, Edge::REAR}
-  }};
+  struct Candidate
+  {
+    double distance;
+    Edge pred_edge;
+    Edge meas_edge;
+  };
+  const std::array<Candidate, 4> candidates = {
+    {{std::abs(meas_front_axis - pred_front_axis), Edge::FRONT, Edge::FRONT},
+     {std::abs(meas_rear_axis - pred_front_axis), Edge::FRONT, Edge::REAR},
+     {std::abs(meas_front_axis - pred_rear_axis), Edge::REAR, Edge::FRONT},
+     {std::abs(meas_rear_axis - pred_rear_axis), Edge::REAR, Edge::REAR}}};
 
   // Find the best aligned edge pair
   const auto best = std::min_element(
