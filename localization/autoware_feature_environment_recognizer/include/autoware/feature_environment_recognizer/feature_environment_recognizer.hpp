@@ -16,14 +16,16 @@
 #define AUTOWARE__FEATURE_ENVIRONMENT_RECOGNIZER__FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_feature_environment_recognizer/msg/feature_environment.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <std_msgs/msg/header.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-#include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/header.hpp>
 
 #include <memory>
 #include <mutex>
@@ -49,8 +51,7 @@ private:
   std::optional<lanelet::ConstLanelet> get_current_lanelet(
     const geometry_msgs::msg::Pose & pose) const;
   int32_t classify_environment(const lanelet::Id lanelet_id) const;
-  void publish_environment(
-    const int32_t environment_id, const std_msgs::msg::Header & header);
+  void publish_environment(const int32_t environment_id, const std_msgs::msg::Header & header);
 
   // Parameters
   struct Param

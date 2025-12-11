@@ -75,7 +75,8 @@ FeatureEnvironmentRecognizer::FeatureEnvironmentRecognizer(const rclcpp::NodeOpt
           }
         } catch (const std::exception & e) {
           RCLCPP_WARN(
-            this->get_logger(), "Failed to parse environment ID from parameter: %s", param_name.c_str());
+            this->get_logger(), "Failed to parse environment ID from parameter: %s",
+            param_name.c_str());
         }
       }
     }
@@ -91,8 +92,9 @@ FeatureEnvironmentRecognizer::FeatureEnvironmentRecognizer(const rclcpp::NodeOpt
     std::bind(&FeatureEnvironmentRecognizer::on_pose, this, std::placeholders::_1));
 
   // Create publishers
-  pub_environment_ = this->create_publisher<autoware_feature_environment_recognizer::msg::FeatureEnvironment>(
-    "~/output/environment", 10);
+  pub_environment_ =
+    this->create_publisher<autoware_feature_environment_recognizer::msg::FeatureEnvironment>(
+      "~/output/environment", 10);
 
   // Set parameter callback
   param_callback_handle_ = this->add_on_set_parameters_callback(
@@ -115,11 +117,11 @@ void FeatureEnvironmentRecognizer::on_map(
     lanelet_map_ptr_->laneletLayer.size());
 }
 
-void FeatureEnvironmentRecognizer::on_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg)
+void FeatureEnvironmentRecognizer::on_pose(
+  const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg)
 {
   if (!is_map_ready_) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
     // Publish invalid environment ID (-1) when map is not ready
     publish_environment(-1, msg->header);
     return;
@@ -130,8 +132,7 @@ void FeatureEnvironmentRecognizer::on_pose(const geometry_msgs::msg::PoseWithCov
   const auto current_lanelet = get_current_lanelet(msg->pose.pose);
   if (!current_lanelet.has_value()) {
     RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000,
-      "Could not find lanelet for current pose");
+      this->get_logger(), *this->get_clock(), 5000, "Could not find lanelet for current pose");
     // Publish invalid environment ID (-1) when lanelet is not found
     publish_environment(-1, msg->header);
     return;
@@ -229,4 +230,5 @@ rcl_interfaces::msg::SetParametersResult FeatureEnvironmentRecognizer::on_set_pa
 }  // namespace autoware::feature_environment_recognizer
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::feature_environment_recognizer::FeatureEnvironmentRecognizer)
+RCLCPP_COMPONENTS_REGISTER_NODE(
+  autoware::feature_environment_recognizer::FeatureEnvironmentRecognizer)
