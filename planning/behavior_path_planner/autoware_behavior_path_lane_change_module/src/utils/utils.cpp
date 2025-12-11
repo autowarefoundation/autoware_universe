@@ -1222,4 +1222,15 @@ bool is_lanelet_in_lanelet_collections(
     lanelet_collections.begin(), lanelet_collections.end(),
     [&](const auto & lane) { return lane.id() == lanelet.id(); });
 }
+
+void exclude_lanelets(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & excluded_lanes)
+{
+  auto remove_itr = ranges::remove_if(base_lanes, [&](const lanelet::ConstLanelet & ll) {
+    return is_lanelet_in_lanelet_collections(excluded_lanes, ll);
+  });
+
+  base_lanes.erase(remove_itr, base_lanes.end());
+}
+
 }  // namespace autoware::behavior_path_planner::utils::lane_change
