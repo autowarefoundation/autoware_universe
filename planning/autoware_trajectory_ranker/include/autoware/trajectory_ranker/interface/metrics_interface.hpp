@@ -65,12 +65,22 @@ public:
    * @brief Initializes the metric with vehicle info and time resolution
    * @param vehicle_info Vehicle parameters (dimensions, wheelbase, etc.)
    * @param resolution Time resolution for evaluation [s]
+   * @param node Optional node pointer for parameter access
    */
-  void init(const std::shared_ptr<VehicleInfo> & vehicle_info, const float resolution)
+  void init(
+    const std::shared_ptr<VehicleInfo> & vehicle_info, const float resolution,
+    rclcpp::Node * node = nullptr)
   {
     vehicle_info_ = vehicle_info;
     resolution_ = resolution;
+    node_ptr_ = node;
+    setup_parameters();
   }
+
+  /**
+   * @brief Setup metric-specific parameters (optional override)
+   */
+  virtual void setup_parameters() {}
 
   /**
    * @brief Sets the metric index for storage in result arrays
@@ -103,6 +113,12 @@ protected:
    */
   float resolution() const { return resolution_; }
 
+  /**
+   * @brief Gets node pointer (for parameter access)
+   * @return Node pointer
+   */
+  rclcpp::Node * node() const { return node_ptr_; }
+
 private:
   std::shared_ptr<VehicleInfo> vehicle_info_;
 
@@ -111,6 +127,8 @@ private:
   size_t index_;
 
   float resolution_;
+
+  rclcpp::Node * node_ptr_{nullptr};
 };
 
 }  // namespace autoware::trajectory_ranker::metrics
