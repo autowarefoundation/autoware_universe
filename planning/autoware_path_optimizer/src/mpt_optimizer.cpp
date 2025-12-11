@@ -1330,7 +1330,6 @@ MPTOptimizer::ConstraintMatrix MPTOptimizer::calcConstraintMatrix(
     A_rows += N_u;
   }
 
-
   // NOTE: The following takes 1 [ms]
   time_keeper_->start_track("constraintMatrix_initialization");
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(A_rows, N_v);
@@ -1338,7 +1337,7 @@ MPTOptimizer::ConstraintMatrix MPTOptimizer::calcConstraintMatrix(
   Eigen::VectorXd ub = Eigen::VectorXd::Constant(A_rows, autoware::osqp_interface::INF);
   time_keeper_->comment("Initialized A, lb, ub");
   time_keeper_->end_track("constraintMatrix_initialization");
-  
+
   size_t A_rows_end = 0;
 
   // 1. State equation
