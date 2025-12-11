@@ -172,7 +172,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
-    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
     return;
   }
 

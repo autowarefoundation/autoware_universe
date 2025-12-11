@@ -219,7 +219,7 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
 
   if (input_trajectory.size() < 2) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
-    RCLCPP_ERROR_THROTTLE(
+    RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
       "Not enough points in trajectory after removing invalid points");
     return;
@@ -245,7 +245,7 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
 
   if (input_trajectory_array.size() < 2) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
-    RCLCPP_ERROR_THROTTLE(
+    RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
       "Not enough points in trajectory after removing close proximity points");
     return;

@@ -41,7 +41,7 @@ void apply_spline(
   constexpr size_t minimum_points_for_akima_spline = 5;
   if (traj_points.size() < minimum_points_for_akima_spline) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
-    RCLCPP_ERROR_THROTTLE(
+    RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("trajectory_spline_smoother"), *clock, 5000,
       "Not enough points in trajectory for spline interpolation");
     return;
