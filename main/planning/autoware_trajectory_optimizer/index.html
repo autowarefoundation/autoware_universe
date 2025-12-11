@@ -23808,7 +23808,7 @@
 <li><strong>QP Smoother must run before EB/Akima smoothers</strong>: The QP solver relies on constant time intervals (Δt) between trajectory points (default: 0.1s). Both Elastic Band and Akima spline smoothers resample trajectories without preserving the time domain structure, which breaks the QP solver's assumptions. Therefore, when using multiple smoothers together, the QP smoother must execute first.</li>
 </ul>
 <ul>
-<li><strong>Trajectory Extender positioning</strong>: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is <strong>disabled by default</strong> (<code>extend_trajectory_backward: false</code>). Fixing the extender's discontinuity issues is future work.</li>
+<li><strong>Trajectory Extender positioning</strong>: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is <strong>disabled by default</strong> (<code>use_trajectory_extender: false</code>). Fixing the extender's discontinuity issues is future work.</li>
 </ul>
 <h2 id="qp-smoother">QP Smoother<a class="headerlink" href="#qp-smoother" title="Permanent link">#</a></h2>
 <p>The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths with advanced features:</p>
@@ -23877,21 +23877,21 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>fix_invalid_points</td>
+<td>use_trajectory_point_fixer</td>
 <td>boolean</td>
 <td>Remove repeated or invalid points, or points that go against the general trajectory direction</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>extend_trajectory_backward</td>
+<td>use_trajectory_extender</td>
 <td>boolean</td>
-<td>Extend trajectory backward using ego pose history</td>
-<td>True</td>
+<td>Enable trajectory extender to extend trajectory backward using ego pose history</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>optimize_velocity</td>
+<td>use_velocity_optimizer</td>
 <td>boolean</td>
 <td>Enable velocity profile optimization with jerk filtering and constraint enforcement</td>
 <td>True</td>
@@ -23926,7 +23926,7 @@
 <td>≥0</td>
 </tr>
 <tr>
-<td>trajectory_point_fixer.min_dist_to_merge_m</td>
+<td>trajectory_point_fixer.min_dist_to_resample_m</td>
 <td>float</td>
 <td>Minimum distance threshold for merging close proximity points [m]</td>
 <td>0.05</td>
