@@ -376,11 +376,10 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   }
 
   // 5. Determine aligned edge and calculate anchor point
-  const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
-  strategy.type = (alignment.aligned_pred_edge == Edge::FRONT) 
+  strategy.type = (alignment.aligned_pred_edge == Edge::FRONT)
   ? UpdateStrategyType::FRONT_WHEEL_UPDATE
   : UpdateStrategyType::REAR_WHEEL_UPDATE;
-  strategy.anchor_point = calculateAnchorPoint(meas_edges, alignment.aligned_meas_edge, predicted_length, pred_yaw);
+  strategy.anchor_point = calculateAnchorPoint(alignment, measurement);
 
   return strategy;
 }
@@ -442,39 +441,29 @@ VehicleTracker::EdgeAlignment VehicleTracker::findAlignedEdges(
 }
 
 geometry_msgs::msg::Point VehicleTracker::calculateAnchorPoint(
-  const EdgePositions & meas_edges, Edge aligned_meas_edge, double predicted_length,
-  double pred_yaw) const
+  const EdgeAlignment & alignment, const types::DynamicObject & measurement) const
 {
+  // Calculate the anchor point (edge center) for wheel-based updates
+  // updateStatePoseRear/Front will convert edge center to wheel position internally
+
   geometry_msgs::msg::Point anchor_point;
 
-  // Get wheel position parameters based on aligned measurement edge
-  const auto & bicycle_state = object_model_.bicycle_state;
-  const bool is_meas_front = (aligned_meas_edge == Edge::FRONT);
-  const double wheel_offset_ratio =
-    is_meas_front ? bicycle_state.wheel_pos_ratio_front : bicycle_state.wheel_pos_ratio_rear;
-  const double wheel_min_dist =
-    is_meas_front ? bicycle_state.wheel_pos_front_min : bicycle_state.wheel_pos_rear_min;
+  const double meas_yaw = tf2::getYaw(measurement.pose.orientation);
+  const double meas_cos_yaw = std::cos(meas_yaw);
+  const double meas_sin_yaw = std::sin(meas_yaw);
+  const double meas_half_length = measurement.shape.dimensions.x * 0.5;
 
-  // Calculate offset from edge center to wheel position
-  const double edge_to_wheel_offset = std::max(
-    predicted_length * (0.5 - wheel_offset_ratio), wheel_min_dist - predicted_length * 0.5);
-
-  // Calculate anchor point: offset inward from the aligned measurement edge
-  // The offset direction uses prediction yaw to maintain geometric consistency
-  // with edge alignment (which projects onto prediction axis) and state update (which uses prediction yaw)
-  const double pred_cos_yaw = std::cos(pred_yaw);
-  const double pred_sin_yaw = std::sin(pred_yaw);
-
-  if (is_meas_front) {
-    // Measurement front edge is aligned: offset inward (opposite to front direction)
-    anchor_point.x = meas_edges.front_x - edge_to_wheel_offset * pred_cos_yaw;
-    anchor_point.y = meas_edges.front_y - edge_to_wheel_offset * pred_sin_yaw;
+  // Calculate the matched measurement edge center directly
+  if (alignment.aligned_meas_edge == Edge::FRONT) {
+    // Use measurement front edge center
+    anchor_point.x = measurement.pose.position.x + meas_half_length * meas_cos_yaw;
+    anchor_point.y = measurement.pose.position.y + meas_half_length * meas_sin_yaw;
   } else {
-    // Measurement rear edge is aligned: offset inward (opposite to rear direction)
-    anchor_point.x = meas_edges.rear_x + edge_to_wheel_offset * pred_cos_yaw;
-    anchor_point.y = meas_edges.rear_y + edge_to_wheel_offset * pred_sin_yaw;
+    // Use measurement rear edge center
+    anchor_point.x = measurement.pose.position.x - meas_half_length * meas_cos_yaw;
+    anchor_point.y = measurement.pose.position.y - meas_half_length * meas_sin_yaw;
   }
-  
+
   return anchor_point;
 }
 
