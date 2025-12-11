@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
+#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
 
@@ -31,21 +32,10 @@ using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::ge
 using autoware::trajectory_optimizer::plugin::trajectory_mpt_optimizer_utils::
   recalculate_trajectory_dynamics;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using trajectory_optimizer_test_utils::create_point;
 
 class MPTOptimizerUtilsTest : public ::testing::Test
 {
-protected:
-  static TrajectoryPoint create_point(double x, double y, float velocity, float acceleration = 0.0f)
-  {
-    TrajectoryPoint point;
-    point.pose.position.x = x;
-    point.pose.position.y = y;
-    point.pose.position.z = 0.0;
-    point.pose.orientation.w = 1.0;
-    point.longitudinal_velocity_mps = velocity;
-    point.acceleration_mps2 = acceleration;
-    return point;
-  }
 };
 
 TEST_F(MPTOptimizerUtilsTest, CalculateAcceleration_Accelerating)

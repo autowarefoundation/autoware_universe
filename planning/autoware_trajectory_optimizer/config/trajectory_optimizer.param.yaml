@@ -16,8 +16,8 @@
     use_akima_spline_interpolation: true
     use_eb_smoother: false
     use_qp_smoother: true
-    fix_invalid_points: true
-    optimize_velocity: true
-    extend_trajectory_backward: false
+    use_trajectory_point_fixer: true
+    use_velocity_optimizer: true
+    use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false

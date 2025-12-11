@@ -16,9 +16,9 @@
 
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -112,9 +112,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
     parameters, "use_akima_spline_interpolation", params.use_akima_spline_interpolation);
   update_param<bool>(parameters, "use_eb_smoother", params.use_eb_smoother);
   update_param<bool>(parameters, "use_qp_smoother", params.use_qp_smoother);
-  update_param<bool>(parameters, "fix_invalid_points", params.fix_invalid_points);
-  update_param<bool>(parameters, "optimize_velocity", params.optimize_velocity);
-  update_param<bool>(parameters, "extend_trajectory_backward", params.extend_trajectory_backward);
+  update_param<bool>(parameters, "use_trajectory_point_fixer", params.use_trajectory_point_fixer);
+  update_param<bool>(parameters, "use_velocity_optimizer", params.use_velocity_optimizer);
+  update_param<bool>(parameters, "use_trajectory_extender", params.use_trajectory_extender);
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
   update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
@@ -153,10 +153,11 @@ void TrajectoryOptimizer::set_up_params()
     get_or_declare_parameter<bool>(*this, "use_akima_spline_interpolation");
   params_.use_eb_smoother = get_or_declare_parameter<bool>(*this, "use_eb_smoother");
   params_.use_qp_smoother = get_or_declare_parameter<bool>(*this, "use_qp_smoother");
-  params_.fix_invalid_points = get_or_declare_parameter<bool>(*this, "fix_invalid_points");
-  params_.optimize_velocity = get_or_declare_parameter<bool>(*this, "optimize_velocity");
-  params_.extend_trajectory_backward =
-    get_or_declare_parameter<bool>(*this, "extend_trajectory_backward");
+  params_.use_trajectory_point_fixer =
+    get_or_declare_parameter<bool>(*this, "use_trajectory_point_fixer");
+  params_.use_velocity_optimizer = get_or_declare_parameter<bool>(*this, "use_velocity_optimizer");
+  params_.use_trajectory_extender =
+    get_or_declare_parameter<bool>(*this, "use_trajectory_extender");
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
@@ -171,7 +172,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   current_acceleration_ptr_ = sub_current_acceleration_.take_data();
 
   if (!current_odometry_ptr_ || !current_acceleration_ptr_) {
-    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "No odometry or acceleration data");
     return;
   }
 
