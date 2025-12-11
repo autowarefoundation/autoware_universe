@@ -1039,9 +1039,16 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
 
   auto shift_lines = path_shifter_.getShiftLines();
 
+  const auto & ref_points = path_shifter_.getReferencePath().points;
+  if (ref_points.empty()) {
+    return getPreviousModuleOutput().turn_signal_info;
+  }
+  
+  const size_t ego_idx = planner_data_->findEgoIndex(ref_points);
+
   std::vector<ShiftLine> shift_lines_after_ego;
   for (const auto & s : shift_lines) {
-    if (s.end_idx >= planner_data_->findEgoIndex(spline_shift_path.path.points)) {
+    if (s.end_idx >= ego_idx) {
       shift_lines_after_ego.push_back(s);
     }
   }
@@ -1074,17 +1081,14 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
       }
 
       // different side shift
-      const auto & points = path_shifter_.getReferencePath().points;
-      const size_t idx = planner_data_->findEgoIndex(points);
-
       // output turn signal for near shift line.
-      if (calcSignedArcLength(points, idx, s1.start_idx) > 0.0) {
+      if (calcSignedArcLength(ref_points, ego_idx, s1.start_idx) > 0.0) {
         return s1;
       }
 
       // output turn signal for far shift line.
       if (
-        calcSignedArcLength(points, idx, s2.start_idx) <
+        calcSignedArcLength(ref_points, ego_idx, s2.start_idx) <
         getEgoSpeed() * parameters_->max_prepare_time) {
         return s2;
       }
