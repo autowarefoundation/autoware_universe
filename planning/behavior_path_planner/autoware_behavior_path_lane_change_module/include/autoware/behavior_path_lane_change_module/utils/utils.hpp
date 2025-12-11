@@ -491,5 +491,21 @@ bool is_moving_object(
  */
 bool is_lanelet_in_lanelet_collections(
   const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet);
+
+/**
+ * @brief Remove lanelets from the base set that appear in the excluded set.
+ *
+ * This function performs an in-place filtering of `base_lanes`. Any lanelet whose ID
+ * matches a lanelet in `excluded_lanes` is removed from `base_lanes`. Ordering of the
+ * remaining lanelets is preserved.
+ *
+ * @param base_lanes        Lanelets to be filtered. This container is modified in-place.
+ * @param excluded_lanes    Lanelets that define the exclusion set.
+ *
+ * @note Membership is determined by checking whether each lanelet in `base_lanes`
+ *       exists in `excluded_lanes` using its lanelet ID.
+ */
+void exclude_lanelets(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & excluded_lanes);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
