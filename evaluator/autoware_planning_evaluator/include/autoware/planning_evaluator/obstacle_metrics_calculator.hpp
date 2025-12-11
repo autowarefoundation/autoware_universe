@@ -16,7 +16,7 @@
 #define AUTOWARE__PLANNING_EVALUATOR__OBSTACLE_METRICS_CALCULATOR_HPP_
 
 #include "autoware/planning_evaluator/metrics/metric.hpp"
-#include "autoware_utils/math/accumulator.hpp"
+#include <autoware_utils/math/accumulator.hpp>
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -24,6 +24,7 @@
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <array>
 #include <string>
 #include <utility>
 #include <unordered_map>
@@ -31,7 +32,10 @@
 #include <optional>
 #include <geometry_msgs/msg/pose.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <boost/geometry.hpp>
 #include <cmath>
 
 namespace planning_diagnostics
@@ -45,7 +49,9 @@ using autoware_utils::Accumulator;
 using autoware_utils::calc_distance2d;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Point;
+using autoware_utils::Point2d;
 using autoware_utils::Polygon2d;
+using autoware_utils::Segment2d;
 namespace bg = boost::geometry;
 
 
@@ -60,8 +66,6 @@ struct EgoTrajectoryPoint
   double time_from_start_s = 0.0;
   double distance_from_start_m = 0.0;
 
-  bool is_stop = false;
-
   Pose pose;
   std::optional<Polygon2d> polygon;
 
@@ -75,7 +79,7 @@ struct EgoTrajectoryPoint
    * @param [in] distance_from_start_m distance from start
    */
   EgoTrajectoryPoint(
-    const Pose & pose, double velocity_mps, double time_from_start_s, double distance_from_start_m, bool is_stop = false)
+    const Pose & pose, double velocity_mps, double time_from_start_s, double distance_from_start_m)
   {
     this->velocity_mps = velocity_mps;
     this->time_from_start_s = time_from_start_s;
@@ -83,7 +87,6 @@ struct EgoTrajectoryPoint
 
     this->pose = pose;
 
-    this->is_stop = is_stop;
   }
 
   void setPolygon(const VehicleInfo & ego_vehicle_info)
@@ -104,15 +107,14 @@ struct EgoTrajectoryPoint
  */
 struct ObstacleTrajectoryPoint
 {
-  bool is_checked = false;
   bool is_overlapping_with_ego_trajectory = false;
   bool is_collision_with_ego_trajectory = false;
+  size_t first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
+  size_t last_overlapping_ego_trajectory_index = -1;
 
   double velocity_mps = 0.0;
   double time_from_start_s = 0.0;
   double distance_from_start_m = 0.0;
-
-  bool is_stop = false;
 
   Pose pose;
   std::optional<Polygon2d> polygon;
@@ -122,20 +124,18 @@ struct ObstacleTrajectoryPoint
   /**
    * @brief Constructor from predicted obstacle
    */
-  ObstacleTrajectoryPoint(const Pose & pose, double velocity_mps, double time_from_start_s, double distance_from_start_m, bool is_stop = false)
+  ObstacleTrajectoryPoint(const Pose & pose, double velocity_mps, double time_from_start_s, double distance_from_start_m)
   {
-    this->is_checked = false;
     this->is_overlapping_with_ego_trajectory = false;
     this->is_collision_with_ego_trajectory = false;
+    this->first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
+    this->last_overlapping_ego_trajectory_index = -1;
     this->velocity_mps = velocity_mps;
     this->time_from_start_s = time_from_start_s;
     this->distance_from_start_m = distance_from_start_m;
 
     this->pose = pose;
-
-    this->is_stop = is_stop;
   }
-}
 
   /**
    * @brief Constructor from reference point and time from reference
@@ -144,9 +144,10 @@ struct ObstacleTrajectoryPoint
    */
   ObstacleTrajectoryPoint(const ObstacleTrajectoryPoint & reference_point, double time_from_reference_s)
   {
-    this->is_checked = false;
     this->is_overlapping_with_ego_trajectory = false;
     this->is_collision_with_ego_trajectory = false;
+    this->first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
+    this->last_overlapping_ego_trajectory_index = -1;
 
     this->velocity_mps = reference_point.velocity_mps;
     this->time_from_start_s = reference_point.time_from_start_s + time_from_reference_s;
@@ -154,16 +155,12 @@ struct ObstacleTrajectoryPoint
 
     this->pose = reference_point.pose;
 
-    this->is_stop = reference_point.is_stop;
-
-    if (!is_stop) {
-      const double distance_from_reference_m = time_from_reference_s * reference_point.velocity_mps;
-      this->distance_from_start_m += distance_from_reference_m;
+    const double distance_from_reference_m = time_from_reference_s * reference_point.velocity_mps;
+    this->distance_from_start_m += distance_from_reference_m;
   
-      const double yaw = tf2::getYaw(reference_point.pose.orientation);
-      this->pose.position.x += distance_from_reference_m * std::cos(yaw);
-      this->pose.position.y += distance_from_reference_m * std::sin(yaw);
-    }
+    const double yaw = tf2::getYaw(reference_point.pose.orientation);
+    this->pose.position.x += distance_from_reference_m * std::cos(yaw);
+    this->pose.position.y += distance_from_reference_m * std::sin(yaw);
   }
 
   void setPolygon(const Shape & obstacle_shape)
@@ -203,25 +200,23 @@ public:
     double min_spatial_interval_m = 0.2;
   } parameters;
 
-  std::unordered_map<Metric, bool> metrics_need_ = {
-    {Metric::obstacle_distance, false},
-    {Metric::obstacle_ttc, false},
-    {Metric::obstacle_pet, false},
-    {Metric::obstacle_drac, false}
-  };
-
   ObstacleMetricsCalculator()
   {
     ego_trajectory_points_.reserve(100);
     obstacle_trajectory_points_.reserve(100);
-    obstacle_first_overlapping_index_.reserve(100);
-    obstacle_first_collision_index_.reserve(100);
-    obstacle_index_to_uuid_.reserve(100);
-    obstacle_distance_metrics_.reserve(100);
-    obstacle_ttc_metrics_.reserve(100);
-    obstacle_pet_metrics_.reserve(100);
-    obstacle_drac_metrics_.reserve(100);
+    
+    for (const auto metric : obstacle_metric_types) {
+      metrics_need_[metric] = false;
+      obstacle_metrics_[metric].reserve(100);
+    }
   }
+
+  static constexpr std::array<Metric, 4> obstacle_metric_types = {
+    Metric::obstacle_distance,
+    Metric::obstacle_ttc,
+    Metric::obstacle_pet,
+    Metric::obstacle_drac
+  };
 
   /**
    * @brief set vehicle info
@@ -270,6 +265,22 @@ public:
   std::vector<std::pair<std::string, Accumulator<double>>> getMetric(
     const Metric metric) const;
 
+  /**
+   * @brief set whether a metric needs to be calculated
+   * @param [in] metric Metric enum value
+   * @param [in] need true if the metric needs to be calculated, false otherwise
+   */
+  void setMetricNeed(const Metric metric, bool need);
+
+  /**
+   * @brief Collect worst case metrics from all obstacles and insert as "worst"
+   * @details For each metric, finds the worst case from all obstacles
+   *          and inserts it with the name "worst" into obstacle_metrics_，
+   *          if `parameters.worst_only` is true, remove the original metrics from obstacle_metrics_
+   *          and only keep the "worst" metric.
+   */
+  void CollectWorstMetrics();
+
 private:
   /**
    * @brief Check if all required data is ready for metric calculation
@@ -279,42 +290,51 @@ private:
 
 
   /**
-   * @brief Preprocess ego trajectory: trim from ego pose and resample
+   * @brief Preprocess ego trajectory: trim the trajectory from ego pose and resample them.
    * @details This function:
    *          1. Finds the closest trajectory point to ego pose and trims past points
    *          2. Resamples trajectory based on parameters.min_time_interval and parameters.min_spatial_interval
-   *          3. Adds ego trajectory points to trajectory_points_
+   *          3. Adds ego trajectory points to ego_trajectory_points_
+   *          4. calculate the max reachable distance of ego base on the trajectory
+   *          Note: The points after the first stop point has `time_from_start_s` = std::numeric_limits<double>::infinity()
    */
   void PreprocessEgoTrajectory();
 
   /**
    * @brief Process obstacles trajectory and calculate metrics
-   * @details This function:
-   *          1. Filters out predicted objects that are guaranteed not to overlap
-   *          2. Adds filtered objects to trajectory_points_ and object_index_to_uuid_
+   * @details For each obstacle, this function:
+   *          1. Checks if the obstacle trajectory is no overlapping with ego trajectory, if so, skip some metrics calculation.
+   *          2. Creates obstacle trajectory points based on the ego trajectory points' time
+   *          3. Calculates metrics for each obstacle trajectory point and stores them in obstacle_metrics_.
    */
   void ProcessObstaclesTrajectory();
 
+  /**
+   * @brief Calculate min and max distance from a pose to polygon edges
+   * @param [in] pose The reference pose (position is used as the point)
+   * @param [in] polygon The polygon to calculate distance to
+   * @param [out] min_dist Minimum distance from pose position to polygon edges (distance to nearest edge segment)
+   * @param [out] max_dist Maximum distance from pose position to polygon vertices (distance to farthest vertex)
+   */
+  void calculatePointToPolygonBoundaryDistances(
+    const Pose & pose, const Polygon2d & polygon, double & min_dist, double & max_dist) const;
+
+
+  // input data
   std::optional<PredictedObjects> predicted_objects_;
   std::optional<nav_msgs::msg::Odometry> ego_odometry_;
   std::optional<VehicleInfo> vehicle_info_;
   std::optional<Trajectory> trajectory_;
 
-
+  // intermediate data
   std::vector<EgoTrajectoryPoint> ego_trajectory_points_;
   std::vector<ObstacleTrajectoryPoint> obstacle_trajectory_points_;
-  std::vector<size_t> obstacle_first_overlapping_index_;
-  std::vector<size_t> obstacle_first_collision_index_;
+  size_t ego_first_stop_index_ = -1;
   double ego_max_reachable_distance_ = 0.0;
 
-  std::vector<std::string> obstacle_index_to_uuid_;  
-
-
-
-  std::vector<std::pair<std::string, Accumulator<double>>> obstacle_distance_metrics_;
-  std::vector<std::pair<std::string, Accumulator<double>>> obstacle_ttc_metrics_;
-  std::vector<std::pair<std::string, Accumulator<double>>> obstacle_pet_metrics_;
-  std::vector<std::pair<std::string, Accumulator<double>>> obstacle_drac_metrics_;
+  // output data
+  std::unordered_map<Metric, bool> metrics_need_;
+  std::unordered_map<Metric, std::vector<std::pair<std::string, Accumulator<double>>>> obstacle_metrics_;
 
 };
 
