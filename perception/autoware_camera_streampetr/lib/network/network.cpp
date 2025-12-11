@@ -309,6 +309,7 @@ void StreamPetrNetwork::executePostprocessing(
   postprocess_cuda_->generateDetectedBoxes3D_launch(
     static_cast<const float *>(pts_head_->bindings["all_cls_scores"]->ptr),
     static_cast<const float *>(pts_head_->bindings["all_bbox_preds"]->ptr), det_boxes3d, stream_);
+  cudaStreamSynchronize(stream_);
 
   std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
   for (size_t i = 0; i < det_boxes3d.size(); ++i) {

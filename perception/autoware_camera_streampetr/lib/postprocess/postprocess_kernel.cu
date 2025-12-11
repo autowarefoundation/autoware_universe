@@ -17,6 +17,7 @@
 
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 #include <thrust/sort.h>
 
 namespace autoware::camera_streampetr
@@ -153,20 +154,23 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   // Wrap raw pointer with thrust device pointer for thrust algorithms
   auto boxes3d_ptr = thrust::device_pointer_cast(boxes3d_d_.get());
 
+  // Create stream-aware execution policy
+  auto policy = thrust::cuda::par.on(stream);
+
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_ptr, boxes3d_ptr + config_.num_proposals_,
+    policy, boxes3d_ptr, boxes3d_ptr + config_.num_proposals_,
     is_score_greater_classwise(score_thresholds_d_.get()));
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
   thrust::copy_if(
-    thrust::device, boxes3d_ptr, boxes3d_ptr + config_.num_proposals_, det_boxes3d_d.begin(),
+    policy, boxes3d_ptr, boxes3d_ptr + config_.num_proposals_, det_boxes3d_d.begin(),
     is_score_greater_classwise(score_thresholds_d_.get()));
 
   // sort by score
-  thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
+  thrust::sort(policy, det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
 
   // supress by NMS
   if (config_.circle_nms_dist_threshold_ > 0.0) {
@@ -175,16 +179,16 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
       circleNMS(det_boxes3d_d, config_.circle_nms_dist_threshold_, final_keep_mask_d, stream);
     thrust::device_vector<Box3D> final_det_boxes3d_d(num_final_det_boxes3d);
     thrust::copy_if(
-      thrust::device, det_boxes3d_d.begin(), det_boxes3d_d.end(), final_keep_mask_d.begin(),
+      policy, det_boxes3d_d.begin(), det_boxes3d_d.end(), final_keep_mask_d.begin(),
       final_det_boxes3d_d.begin(), is_kept());
 
     // memcpy device to host
     det_boxes3d.resize(num_final_det_boxes3d);
-    thrust::copy(final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
+    thrust::copy(policy, final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
   } else {
     // memcpy device to host
     det_boxes3d.resize(num_det_boxes3d);
-    thrust::copy(det_boxes3d_d.begin(), det_boxes3d_d.end(), det_boxes3d.begin());
+    thrust::copy(policy, det_boxes3d_d.begin(), det_boxes3d_d.end(), det_boxes3d.begin());
   }
 
   return cudaGetLastError();
