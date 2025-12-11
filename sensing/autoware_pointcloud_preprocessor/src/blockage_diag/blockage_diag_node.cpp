@@ -16,7 +16,13 @@
 
 #include "autoware/point_types/types.hpp"
 
+#include <opencv2/imgproc.hpp>
+#include <rclcpp/node.hpp>
+
+#include <cv_bridge/cv_bridge.h>
+
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -28,7 +34,7 @@ using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options)
-: Filter("BlockageDiag", options)
+: rclcpp::Node("BlockageDiag", options)
 {
   {
     // LiDAR configuration
@@ -60,6 +66,9 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
 
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
+
+    // Input configuration
+    enable_direct_mask_input_ = declare_parameter<bool>("enable_direct_mask_input");
 
     // Depth map configuration
     // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this
@@ -112,9 +121,24 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     "blockage_diag/debug/ground_blockage_ratio", rclcpp::SensorDataQoS());
   sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
+
+  if (enable_direct_mask_input_) {
+    input_sub_ = create_subscription<sensor_msgs::msg::Image>(
+      "input", rclcpp::SensorDataQoS(),
+      std::bind(&BlockageDiagComponent::on_no_return_mask, this, std::placeholders::_1));
+  } else {
+    input_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+      "input", rclcpp::SensorDataQoS(),
+      std::bind(&BlockageDiagComponent::on_pointcloud, this, std::placeholders::_1));
+  }
+
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&BlockageDiagComponent::param_callback, this, _1));
+
+  RCLCPP_INFO(
+    get_logger(), "Mask dimensions: %dx%d", get_mask_dimensions().width,
+    get_mask_dimensions().height);
 }
 
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
@@ -259,8 +283,9 @@ cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
   assert(image_16u.type() == CV_16UC1);
 
   cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
-  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
+  // FIXME(badai-nguyen): Is the normalization factor correct? `256` would be enough to prevent
+  // overflow.
+  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 300);
   return image_8u;
 }
 
@@ -272,7 +297,6 @@ cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) 
 
   cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
   cv::inRange(depth_image, 0, 1, no_return_mask);
-
   return no_return_mask;
 }
 
@@ -311,6 +335,7 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
   cv::Mat no_return_mask_binarized(dimensions, CV_8UC1, cv::Scalar(0));
 
   no_return_mask_binarized = blockage_mask / 255;
+
   if (blockage_frame_count_ >= blockage_buffering_interval_) {
     no_return_mask_buffer.push_back(no_return_mask_binarized);
     blockage_frame_count_ = 0;
@@ -396,8 +421,7 @@ void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockag
   }
 }
 
-void BlockageDiagComponent::compute_dust_diagnostics(
-  const cv::Mat & no_return_mask, const DebugInfo & debug_info)
+cv::Mat BlockageDiagComponent::process_single_frame_dust(const cv::Mat & no_return_mask) const
 {
   auto dimensions = get_mask_dimensions();
   assert(dimensions == no_return_mask.size());
@@ -421,13 +445,21 @@ void BlockageDiagComponent::compute_dust_diagnostics(
   cv::Mat single_dust_img(dimensions, CV_8UC1, cv::Scalar(0));
   cv::vconcat(sky_blank, single_dust_ground_img, single_dust_img);
 
+  return single_dust_img;
+}
+
+void BlockageDiagComponent::publish_dust_ratio(const cv::Mat & single_dust_ground_img)
+{
   autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
   ground_dust_ratio_ = static_cast<float>(cv::countNonZero(single_dust_ground_img)) /
                        (single_dust_ground_img.cols * single_dust_ground_img.rows);
   ground_dust_ratio_msg.data = ground_dust_ratio_;
   ground_dust_ratio_msg.stamp = now();
   ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
+}
 
+void BlockageDiagComponent::update_dust_frame_count()
+{
   if (ground_dust_ratio_ > dust_ratio_threshold_) {
     if (dust_frame_count_ < 2 * dust_count_threshold_) {
       dust_frame_count_++;
@@ -435,47 +467,68 @@ void BlockageDiagComponent::compute_dust_diagnostics(
   } else {
     dust_frame_count_ = 0;
   }
+}
 
-  if (publish_debug_image_) {
-    cv::Mat binarized_dust_mask_(dimensions, CV_8UC1, cv::Scalar(0));
-    cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
-    cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
+cv::Mat BlockageDiagComponent::process_multi_frame_dust(const cv::Mat & single_dust_img)
+{
+  auto dimensions = get_mask_dimensions();
+  cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
 
-    if (dust_buffering_interval_ == 0) {
-      single_dust_img.copyTo(multi_frame_ground_dust_result);
-      dust_buffering_frame_counter_ = 0;
-    } else {
-      binarized_dust_mask_ = single_dust_img / 255;
-      if (dust_buffering_frame_counter_ >= dust_buffering_interval_) {
-        dust_mask_buffer.push_back(binarized_dust_mask_);
-        dust_buffering_frame_counter_ = 0;
-      } else {
-        dust_buffering_frame_counter_++;
-      }
-      for (const auto & binarized_dust_mask : dust_mask_buffer) {
-        multi_frame_dust_mask += binarized_dust_mask;
-      }
-      cv::inRange(
-        multi_frame_dust_mask, dust_mask_buffer.size() - 1, dust_mask_buffer.size(),
-        multi_frame_ground_dust_result);
-    }
-    cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::applyColorMap(single_dust_img, single_frame_ground_dust_colorized, cv::COLORMAP_JET);
-    cv::Mat multi_frame_ground_dust_colorized;
+  if (dust_buffering_interval_ == 0) {
+    single_dust_img.copyTo(multi_frame_ground_dust_result);
+    dust_buffering_frame_counter_ = 0;
+    return multi_frame_ground_dust_result;
+  }
+
+  cv::Mat binarized_dust_mask = single_dust_img / 255;
+  if (dust_buffering_frame_counter_ >= dust_buffering_interval_) {
+    dust_mask_buffer.push_back(binarized_dust_mask);
+    dust_buffering_frame_counter_ = 0;
+  } else {
+    dust_buffering_frame_counter_++;
+  }
+
+  cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
+  for (const auto & mask : dust_mask_buffer) {
+    multi_frame_dust_mask += mask;
+  }
+
+  cv::inRange(
+    multi_frame_dust_mask, dust_mask_buffer.size() - 1, dust_mask_buffer.size(),
+    multi_frame_ground_dust_result);
+
+  return multi_frame_ground_dust_result;
+}
+
+void BlockageDiagComponent::publish_debug_images(
+  const cv::Mat & single_dust_img, const cv::Mat & multi_frame_ground_dust_result,
+  const DebugInfo & debug_info)
+{
+  auto dimensions = get_mask_dimensions();
+
+  // Create and publish single frame dust mask
+  cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
+  cv::applyColorMap(single_dust_img, single_frame_ground_dust_colorized, cv::COLORMAP_JET);
+  sensor_msgs::msg::Image::SharedPtr single_frame_dust_mask_msg =
+    cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", single_frame_ground_dust_colorized)
+      .toImageMsg();
+  single_frame_dust_mask_pub.publish(single_frame_dust_mask_msg);
+
+  // Create and publish multi frame dust mask
+  cv::Mat multi_frame_ground_dust_colorized;
+  sensor_msgs::msg::Image::SharedPtr multi_frame_dust_mask_msg =
+    cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", multi_frame_ground_dust_colorized)
+      .toImageMsg();
+  multi_frame_dust_mask_pub.publish(multi_frame_dust_mask_msg);
+
+  if (debug_info.blockage_mask_multi_frame) {
+    // Create and publish merged blockage and dust image
     cv::Mat blockage_dust_merged_img(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::Mat blockage_dust_merged_mask(dimensions, CV_8UC1, cv::Scalar(0));
     blockage_dust_merged_img.setTo(
-      cv::Vec3b(0, 0, 255), debug_info.blockage_mask_multi_frame);  // red:blockage
+      cv::Vec3b(0, 0, 255), *debug_info.blockage_mask_multi_frame);  // red:blockage
     blockage_dust_merged_img.setTo(
       cv::Vec3b(0, 255, 255), multi_frame_ground_dust_result);  // yellow:dust
-    sensor_msgs::msg::Image::SharedPtr single_frame_dust_mask_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", single_frame_ground_dust_colorized)
-        .toImageMsg();
-    single_frame_dust_mask_pub.publish(single_frame_dust_mask_msg);
-    sensor_msgs::msg::Image::SharedPtr multi_frame_dust_mask_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", multi_frame_ground_dust_colorized)
-        .toImageMsg();
-    multi_frame_dust_mask_pub.publish(multi_frame_dust_mask_msg);
+
     cv::Mat blockage_dust_merged_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
     blockage_dust_merged_img.copyTo(blockage_dust_merged_colorized);
     sensor_msgs::msg::Image::SharedPtr blockage_dust_merged_msg =
@@ -483,6 +536,30 @@ void BlockageDiagComponent::compute_dust_diagnostics(
         .toImageMsg();
     blockage_dust_merged_msg->header = debug_info.input_header;
     blockage_dust_merged_pub.publish(blockage_dust_merged_msg);
+  }
+}
+
+void BlockageDiagComponent::compute_dust_diagnostics(
+  const cv::Mat & no_return_mask, const DebugInfo & debug_info)
+{
+  // Process single frame dust detection
+  cv::Mat single_dust_img = process_single_frame_dust(no_return_mask);
+
+  // Extract ground portion for ratio calculation
+  auto [single_dust_ground_img, _] = segment_into_ground_and_sky(single_dust_img);
+
+  // Compute and publish dust ratio
+  publish_dust_ratio(single_dust_ground_img);
+
+  // Update dust frame count
+  update_dust_frame_count();
+
+  if (publish_debug_image_) {
+    // Process multi-frame dust detection
+    cv::Mat multi_frame_ground_dust_result = process_multi_frame_dust(single_dust_img);
+
+    // Publish debug images
+    publish_debug_images(single_dust_img, multi_frame_ground_dust_result, debug_info);
   }
 }
 
@@ -498,15 +575,22 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   sky_blockage_ratio_msg.stamp = now();
   sky_blockage_ratio_pub_->publish(sky_blockage_ratio_msg);
 
-  if (publish_debug_image_) {
+  if (!publish_debug_image_) {
+    return;
+  }
+
+  if (debug_info.depth_image_16u) {
     sensor_msgs::msg::Image::SharedPtr lidar_depth_map_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "mono16", debug_info.depth_image_16u)
+      cv_bridge::CvImage(std_msgs::msg::Header(), "mono16", *debug_info.depth_image_16u)
         .toImageMsg();
     lidar_depth_map_msg->header = debug_info.input_header;
     lidar_depth_map_pub_.publish(lidar_depth_map_msg);
+  }
+
+  if (debug_info.blockage_mask_multi_frame) {
     cv::Mat blockage_mask_colorized;
     cv::applyColorMap(
-      debug_info.blockage_mask_multi_frame, blockage_mask_colorized, cv::COLORMAP_JET);
+      *debug_info.blockage_mask_multi_frame, blockage_mask_colorized, cv::COLORMAP_JET);
     sensor_msgs::msg::Image::SharedPtr blockage_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", blockage_mask_colorized).toImageMsg();
     blockage_mask_msg->header = debug_info.input_header;
@@ -514,20 +598,35 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
-void BlockageDiagComponent::filter(
-  const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
-  PointCloud2 & output)
+void BlockageDiagComponent::on_no_return_mask(const sensor_msgs::msg::Image::ConstSharedPtr & input)
 {
   std::scoped_lock lock(mutex_);
 
-  PCLCloudXYZIRCAEDT pcl_input;
-  pcl::fromROSMsg(*input, pcl_input);
+  // Convert ROS Image to OpenCV Mat
+  cv_bridge::CvImageConstPtr cv_ptr;
+  try {
+    cv_ptr = cv_bridge::toCvShare(input, sensor_msgs::image_encodings::MONO8);
+  } catch (cv_bridge::Exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
+    return;
+  }
 
-  cv::Mat depth_image_16u = make_normalized_depth_image(pcl_input);
-  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
-  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
+  DebugInfo debug_info = {input->header, std::nullopt, std::nullopt};
+
+  if (publish_debug_image_) {
+    debug_info.depth_image_16u = cv::Mat(cv_ptr->image.size(), CV_16UC1, cv::Scalar(0));
+    cv_ptr->image.convertTo(*debug_info.depth_image_16u, CV_16UC1, 256);
+  }
+
+  process_no_return_mask(cv_ptr->image, debug_info);
+}
+
+void BlockageDiagComponent::process_no_return_mask(
+  const cv::Mat & no_return_mask, DebugInfo & debug_info)
+{
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
   cv::Mat time_series_blockage_result = update_time_series_blockage_mask(blockage_mask);
+  debug_info.blockage_mask_multi_frame = std::move(time_series_blockage_result);
 
   auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
 
@@ -537,16 +636,27 @@ void BlockageDiagComponent::filter(
   update_ground_blockage_info(ground_blockage_mask);
   update_sky_blockage_info(sky_blockage_mask);
 
-  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
-
   if (enable_dust_diag_) {
     compute_dust_diagnostics(no_return_mask, debug_info);
   }
 
   publish_debug_info(debug_info);
+}
 
-  pcl::toROSMsg(pcl_input, output);
-  output.header = input->header;
+void BlockageDiagComponent::on_pointcloud(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+{
+  std::scoped_lock lock(mutex_);
+
+  PCLCloudXYZIRCAEDT pcl_input;
+  pcl::fromROSMsg(*input, pcl_input);
+
+  cv::Mat depth_image_16u = make_normalized_depth_image(pcl_input);
+  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
+  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
+
+  DebugInfo debug_info = {input->header, depth_image_16u, std::nullopt};
+  process_no_return_mask(no_return_mask, debug_info);
 }
 
 rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
