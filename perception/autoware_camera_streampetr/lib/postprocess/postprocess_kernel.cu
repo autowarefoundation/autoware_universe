@@ -114,13 +114,15 @@ PostprocessCuda::PostprocessCuda(const PostProcessingConfig & config, cudaStream
 : config_(config), stream_(stream)
 {
   // Allocate and copy yaw_norm_thresholds
-  yaw_norm_thresholds_d_ = autoware::cuda_utils::make_unique<float[]>(config_.yaw_norm_thresholds_.size());
+  yaw_norm_thresholds_d_ =
+    autoware::cuda_utils::make_unique<float[]>(config_.yaw_norm_thresholds_.size());
   cudaMemcpy(
     yaw_norm_thresholds_d_.get(), config_.yaw_norm_thresholds_.data(),
     config_.yaw_norm_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice);
 
   // Allocate and copy score_thresholds
-  score_thresholds_d_ = autoware::cuda_utils::make_unique<float[]>(config_.score_thresholds_.size());
+  score_thresholds_d_ =
+    autoware::cuda_utils::make_unique<float[]>(config_.score_thresholds_.size());
   cudaMemcpy(
     score_thresholds_d_.get(), config_.score_thresholds_.data(),
     config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice);
@@ -145,8 +147,8 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     cls_output, box_output, config_.num_proposals_, config_.num_classes_,
-    yaw_norm_thresholds_d_.get(), score_thresholds_d_.get(),
-    detection_range_d_.get(), boxes3d_d_.get());
+    yaw_norm_thresholds_d_.get(), score_thresholds_d_.get(), detection_range_d_.get(),
+    boxes3d_d_.get());
 
   // Wrap raw pointer with thrust device pointer for thrust algorithms
   auto boxes3d_ptr = thrust::device_pointer_cast(boxes3d_d_.get());

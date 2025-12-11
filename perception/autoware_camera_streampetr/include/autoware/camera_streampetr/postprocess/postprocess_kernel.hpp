@@ -85,7 +85,7 @@ private:
   cudaStream_t stream_;
   cudaStream_t stream_event_;
   cudaEvent_t start_, stop_;
-  
+
   // Pre-allocated device arrays to avoid repeated allocations
   autoware::cuda_utils::CudaUniquePtr<float[]> yaw_norm_thresholds_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> score_thresholds_d_;
