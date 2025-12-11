@@ -25,6 +25,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_ranker::metrics
@@ -43,6 +44,42 @@ void TrajectoryConsistency::setup_parameters()
 
 namespace
 {
+/**
+ * @brief Transform points from world coordinates to ego vehicle frame
+ * @param points Vector of points in world coordinates
+ * @param ego_pose Current ego vehicle pose
+ * @return Pair of vectors: first contains longitudinal coordinates, second contains lateral
+ * coordinates
+ */
+std::pair<std::vector<double>, std::vector<double>> transform_to_ego_frame(
+  const std::vector<geometry_msgs::msg::Point> & points, const geometry_msgs::msg::Pose & ego_pose)
+{
+  std::vector<double> longitudinal_coords;
+  std::vector<double> lateral_coords;
+
+  if (points.empty()) {
+    return {longitudinal_coords, lateral_coords};
+  }
+
+  const double ego_yaw = tf2::getYaw(ego_pose.orientation);
+  const double cos_yaw = std::cos(ego_yaw);
+  const double sin_yaw = std::sin(ego_yaw);
+
+  longitudinal_coords.reserve(points.size());
+  lateral_coords.reserve(points.size());
+
+  for (const auto & point : points) {
+    const double dx = point.x - ego_pose.position.x;
+    const double dy = point.y - ego_pose.position.y;
+    const double longitudinal = dx * cos_yaw + dy * sin_yaw;
+    const double lateral = -dx * sin_yaw + dy * cos_yaw;
+    longitudinal_coords.push_back(longitudinal);
+    lateral_coords.push_back(lateral);
+  }
+
+  return {longitudinal_coords, lateral_coords};
+}
+
 /**
  * @brief Find trajectory point at specified time offset from trajectory start
  * @param trajectory Trajectory message with header timestamp
@@ -74,91 +111,27 @@ std::optional<geometry_msgs::msg::Point> find_point_at_time(
 }
 
 /**
- * @brief Calculate lateral variance of trajectory endpoints
- * @param trajectory_endpoints Vector of trajectory endpoint positions
- * @param ego_pose Current ego vehicle pose
- * @return Lateral variance in ego frame [m^2]
+ * @brief Calculate variance of coordinates
+ * @param coords Vector of coordinate values
+ * @return Variance [m^2]
  */
-double calculate_lateral_variance(
-  const std::vector<geometry_msgs::msg::Point> & trajectory_endpoints,
-  const geometry_msgs::msg::Pose & ego_pose)
+double calculate_variance(const std::vector<double> & coords)
 {
-  if (trajectory_endpoints.size() < 2) {
+  if (coords.size() < 2) {
     return 0.0;
   }
 
-  const double ego_yaw = tf2::getYaw(ego_pose.orientation);
-  const double cos_yaw = std::cos(ego_yaw);
-  const double sin_yaw = std::sin(ego_yaw);
-
-  // Transform trajectory endpoints to ego frame and extract lateral coordinates
-  std::vector<double> lateral_coords;
-  lateral_coords.reserve(trajectory_endpoints.size());
-
-  for (const auto & point : trajectory_endpoints) {
-    const double dx = point.x - ego_pose.position.x;
-    const double dy = point.y - ego_pose.position.y;
-    const double lateral = -dx * sin_yaw + dy * cos_yaw;
-    lateral_coords.push_back(lateral);
-  }
-
-  // Calculate mean lateral position
-  const double mean_lateral =
-    std::accumulate(lateral_coords.begin(), lateral_coords.end(), 0.0) / lateral_coords.size();
+  // Calculate mean
+  const double mean = std::accumulate(coords.begin(), coords.end(), 0.0) / coords.size();
 
   // Calculate variance
-  double lateral_variance = 0.0;
-  for (const auto & lateral : lateral_coords) {
-    const double diff = lateral - mean_lateral;
-    lateral_variance += diff * diff;
+  double variance = 0.0;
+  for (const auto & coord : coords) {
+    const double diff = coord - mean;
+    variance += diff * diff;
   }
 
-  return lateral_variance / lateral_coords.size();
-}
-
-/**
- * @brief Calculate longitudinal variance of trajectory endpoints
- * @param trajectory_endpoints Vector of trajectory endpoint positions
- * @param ego_pose Current ego vehicle pose
- * @return Longitudinal variance in ego frame [m^2]
- */
-double calculate_longitudinal_variance(
-  const std::vector<geometry_msgs::msg::Point> & trajectory_endpoints,
-  const geometry_msgs::msg::Pose & ego_pose)
-{
-  if (trajectory_endpoints.size() < 2) {
-    return 0.0;
-  }
-
-  const double ego_yaw = tf2::getYaw(ego_pose.orientation);
-  const double cos_yaw = std::cos(ego_yaw);
-  const double sin_yaw = std::sin(ego_yaw);
-
-  // Transform trajectory endpoints to ego frame and extract longitudinal coordinates
-  std::vector<double> longitudinal_coords;
-  longitudinal_coords.reserve(trajectory_endpoints.size());
-
-  for (const auto & point : trajectory_endpoints) {
-    const double dx = point.x - ego_pose.position.x;
-    const double dy = point.y - ego_pose.position.y;
-    // Rotate to ego frame: longitudinal = dx * cos(yaw) + dy * sin(yaw)
-    const double longitudinal = dx * cos_yaw + dy * sin_yaw;
-    longitudinal_coords.push_back(longitudinal);
-  }
-
-  // Calculate mean longitudinal position
-  const double mean_longitudinal =
-    std::accumulate(longitudinal_coords.begin(), longitudinal_coords.end(), 0.0) /
-    longitudinal_coords.size();
-
-  // Calculate variance
-  double longitudinal_variance = 0.0;
-  for (const auto & longitudinal : longitudinal_coords) {
-    const double diff = longitudinal - mean_longitudinal;
-    longitudinal_variance += diff * diff;
-  }
-
-  return longitudinal_variance / longitudinal_coords.size();
+  return variance / coords.size();
 }
 }  // namespace
 
@@ -232,10 +205,13 @@ void TrajectoryConsistency::evaluate(
     return;
   }
 
-  // Calculate both lateral and longitudinal variance from all points at 2 seconds ahead
-  const double lateral_variance = calculate_lateral_variance(points_at_target_time, ego_pose);
-  const double longitudinal_variance =
-    calculate_longitudinal_variance(points_at_target_time, ego_pose);
+  // Transform all points to ego frame once
+  const auto [longitudinal_coords, lateral_coords] =
+    transform_to_ego_frame(points_at_target_time, ego_pose);
+
+  // Calculate both lateral and longitudinal variance
+  const double lateral_variance = calculate_variance(lateral_coords);
+  const double longitudinal_variance = calculate_variance(longitudinal_coords);
 
   // Combine lateral and longitudinal variance (total position variance)
   const double total_variance = std::sqrt(lateral_variance + longitudinal_variance);
