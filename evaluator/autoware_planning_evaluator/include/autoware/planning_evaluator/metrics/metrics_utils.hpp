@@ -24,8 +24,8 @@
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "unique_identifier_msgs/msg/uuid.hpp"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 #include <string>
 
 namespace planning_diagnostics
@@ -97,8 +97,7 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
  * @return true if polygons intersect, false otherwise
  */
 bool polygonIntersects(
-  const autoware_utils::Polygon2d & poly1, 
-  const autoware_utils::Polygon2d & poly2);
+  const autoware_utils::Polygon2d & poly1, const autoware_utils::Polygon2d & poly2);
 
 }  // namespace utils
 }  // namespace metrics

@@ -163,7 +163,8 @@ public:
    * @param [in] object_name the object identifier (e.g., "worst" or object UUID)
    */
   void AddObstacleMsg(
-    const Metric & metric, const Accumulator<double> & metric_stat, const std::string & object_name);
+    const Metric & metric, const Accumulator<double> & metric_stat,
+    const std::string & object_name);
 
 private:
   static bool isFinite(const TrajectoryPoint & p);

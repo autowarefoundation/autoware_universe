@@ -99,25 +99,23 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
 }
 
 bool polygonIntersects(
-  const autoware_utils::Polygon2d & poly1, 
-  const autoware_utils::Polygon2d & poly2)
+  const autoware_utils::Polygon2d & poly1, const autoware_utils::Polygon2d & poly2)
 {
   const auto & outer1 = poly1.outer();
   const auto & outer2 = poly2.outer();
-  
+
   // Separating Axis Theorem: test perpendicular axes of both polygon edges
   const auto test_axes = [&](const auto & poly_outer, const auto & other_outer) {
     const size_t n = poly_outer.size();
     for (size_t i = 0; i < n; ++i) {
       const auto & p1 = poly_outer[i];
       const auto & p2 = poly_outer[(i + 1) % n];
-      
 
       const double edge_x = p2.x() - p1.x();
       const double edge_y = p2.y() - p1.y();
       const double edge_len_sq = edge_x * edge_x + edge_y * edge_y;
       if (edge_len_sq < 1e-2) continue;
-      
+
       const double axis_x = -edge_y;
       const double axis_y = edge_x;
 
@@ -128,7 +126,7 @@ bool polygonIntersects(
         min1 = std::min(min1, proj);
         max1 = std::max(max1, proj);
       }
-      
+
       const size_t m = other_outer.size();
       double min2 = other_outer[0].x() * axis_x + other_outer[0].y() * axis_y;
       double max2 = min2;
@@ -137,17 +135,16 @@ bool polygonIntersects(
         min2 = std::min(min2, proj);
         max2 = std::max(max2, proj);
       }
-      
+
       if (max1 < min2 || max2 < min1) {
         return false;  // Found separating axis
       }
     }
     return true;
   };
-  
+
   return test_axes(outer1, outer2) && test_axes(outer2, outer1);
 }
-
 
 }  // namespace utils
 }  // namespace metrics

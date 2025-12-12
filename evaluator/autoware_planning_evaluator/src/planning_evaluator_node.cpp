@@ -327,8 +327,6 @@ void PlanningEvaluatorNode::AddMetricMsg(
   return;
 }
 
-
-
 void PlanningEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -402,7 +400,8 @@ void PlanningEvaluatorNode::onTrajectory(
   }
 
   auto runtime_trajectory = (now() - trajectory_start).seconds();
-  RCLCPP_DEBUG(get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
+  RCLCPP_DEBUG(
+    get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
 
   // Calculate obstacle metrics
   auto obstacle_start = now();
@@ -429,7 +428,9 @@ void PlanningEvaluatorNode::onTrajectory(
   obstacle_metrics_calculator_.clearData();
 
   auto runtime_obstacle = (now() - obstacle_start).seconds();
-  RCLCPP_DEBUG(get_logger(), "Planning evaluation obstacle metrics calculation time: %2.2f ms", runtime_obstacle * 1e3);
+  RCLCPP_DEBUG(
+    get_logger(), "Planning evaluation obstacle metrics calculation time: %2.2f ms",
+    runtime_obstacle * 1e3);
 }
 
 void PlanningEvaluatorNode::onModifiedGoal(
