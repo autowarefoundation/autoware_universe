@@ -87,6 +87,19 @@ Trajectory get_lookahead_trajectory(
  */
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
 
+/**
+ * @brief Fast polygon intersection check using Separating Axis Theorem (SAT)
+ * @details Efficiently checks if two convex polygons intersect, faster than boost::geometry's
+ *          generic intersection check. Uses SAT with early exit for non-intersecting cases.
+ *
+ * @param [in] poly1 First polygon (typically ego vehicle footprint)
+ * @param [in] poly2 Second polygon (typically obstacle footprint)
+ * @return true if polygons intersect, false otherwise
+ */
+bool polygonIntersects(
+  const autoware_utils::Polygon2d & poly1, 
+  const autoware_utils::Polygon2d & poly2);
+
 }  // namespace utils
 }  // namespace metrics
 }  // namespace planning_diagnostics
