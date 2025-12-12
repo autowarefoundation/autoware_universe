@@ -67,7 +67,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::vector<std::string>>("camera_namespaces");
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
-  message_lifespan_unique_ = this->declare_parameter<double>("message_lifespan_unique");
+  message_lifespan_latest_ = this->declare_parameter<double>("message_lifespan_latest");
   prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
@@ -192,10 +192,10 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> 
     const rclcpp::Duration age = newest_stamp - current_stamp;
 
     // Check if this is the latest record from this frame_id
-    const bool is_unique_record = (current_stamp == latest_stamp_per_frame[frame_id]);
+    const bool is_latest_record = (current_stamp == latest_stamp_per_frame[frame_id]);
 
-    // Use different thresholds based on uniqueness
-    const double threshold = is_unique_record ? message_lifespan_unique_ : message_lifespan_;
+    // Use different thresholds based on if  it is the latest
+    const double threshold = is_latest_record ? message_lifespan_latest_ : message_lifespan_;
 
     /*
     remove all old record arrays whose timestamp difference with newest record is larger than

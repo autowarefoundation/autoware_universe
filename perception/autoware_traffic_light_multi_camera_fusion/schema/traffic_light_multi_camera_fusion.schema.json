@@ -11,7 +11,7 @@
           "description": "The maximum timestamp span to be fused.",
           "default": 0.0
         },
-        "message_lifespan_unique": {
+        "message_lifespan_latest": {
           "type": "number",
           "description": "The maximum timestamp span to be fused if the message is the latest one from a certain camera.",
           "default": 0.0

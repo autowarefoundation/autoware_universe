@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
     message_lifespan: 0.09
-    message_lifespan_unique: 0.12
+    message_lifespan_latest: 0.12
     approximate_sync: false
     prior_log_odds: 0.0

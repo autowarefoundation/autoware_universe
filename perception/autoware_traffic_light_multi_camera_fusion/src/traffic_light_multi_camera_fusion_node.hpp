@@ -158,7 +158,7 @@ private:
   it would be discarded.
   */
   double message_lifespan_;
-  double message_lifespan_unique_;
+  double message_lifespan_latest_;
   /**
    * @brief The prior log-odds for a traffic light state.
    */
