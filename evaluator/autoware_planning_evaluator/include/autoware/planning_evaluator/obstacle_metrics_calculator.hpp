@@ -196,8 +196,8 @@ public:
     double limit_min_accel = -2.5;
     
     // for trajectory resampling
-    double min_time_interval_s = 0.1;
-    double min_spatial_interval_m = 0.2;
+    double min_time_interval_s = 0.05;
+    double min_spatial_interval_m = 0.1;
   } parameters;
 
   ObstacleMetricsCalculator()
@@ -304,8 +304,8 @@ private:
    * @brief Process obstacles trajectory and calculate metrics
    * @details For each obstacle, this function:
    *          1. Checks if the obstacle trajectory is no overlapping with ego trajectory, if so, skip some metrics calculation.
-   *          2. Creates obstacle trajectory points based on the ego trajectory points' time
-   *          3. Calculates metrics for each obstacle trajectory point and stores them in obstacle_metrics_.
+   *          2. Creates obstacle trajectory points based on the ego trajectory points' time_from_start_s.
+   *          3. Calculates metrics for each obstacle trajectory point and stores them into obstacle_metrics_.
    */
   void ProcessObstaclesTrajectory();
 
