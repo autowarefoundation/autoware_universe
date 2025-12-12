@@ -27,6 +27,9 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <boost/geometry/geometry.hpp>
+
+#include <map>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -48,34 +51,34 @@ private:
   void on_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg);
 
   // Core functions
-  std::optional<lanelet::ConstLanelet> get_current_lanelet(
-    const geometry_msgs::msg::Pose & pose) const;
-  int32_t classify_environment(const lanelet::Id lanelet_id) const;
-  void publish_environment(const int32_t environment_id, const std_msgs::msg::Header & header);
+  int32_t classify_environment(const geometry_msgs::msg::Point & point) const;
+  void publish_environment(
+    const int32_t environment_id, const std_msgs::msg::Header & header);
 
   // Parameters
   struct Param
   {
-    // Lanelet ID lists for each environment type
+    // Area subtype to environment ID mapping
     // Environment ID definitions:
-    //   -1: Invalid (lanelet not found or map not ready)
+    //   -1: Invalid (area not found or map not ready)
     //   0: Normal environment (default)
     //   1: Uniform road (e.g., tunnel straight sections, uniform shape roads)
     //   2: Feature-poor road (roads with few features for map matching)
-    // Key: environment_id (int32), Value: set of lanelet IDs
-    std::unordered_map<int32_t, std::set<lanelet::Id>> environment_lanelet_ids;
-    // Default environment ID when lanelet is not found in any list (0: Normal environment)
+    // Key: area subtype (string), Value: environment_id (int32)
+    std::unordered_map<std::string, int32_t> area_subtype_to_environment_id;
+    // Default environment ID when area is not found in any list (0: Normal environment)
     int32_t default_environment_id{0};
-    // Distance threshold for lanelet search
-    double search_distance_threshold{10.0};
-    // Yaw threshold for lanelet search (rad)
-    double search_yaw_threshold{M_PI / 4.0};
   } param_;
 
   // State
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::mutex mutex_;
   bool is_map_ready_{false};
+
+  // Area data structure for point-in-polygon check
+  using BoostPoint = boost::geometry::model::d2::point_xy<double>;
+  using BoostPolygon = boost::geometry::model::polygon<BoostPoint>;
+  std::multimap<std::string, BoostPolygon> area_polygons_;
 
   // Subscribers
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;

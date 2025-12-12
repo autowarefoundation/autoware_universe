@@ -1,62 +1,59 @@
 # autoware_feature_environment_recognizer
 
-## 概要
+## Abstract
 
-このパッケージは、現在位置がLanelet2のどのlaneletに属しているかを探索し、そのlanelet IDをリストと照合して環境番号を識別する機能を提供します。地図マッチングに重要な特徴がある/ない環境を識別するために使用できます。
+This package determines which area (polygon) in a Lanelet2 map the current position belongs to and identifies the environment ID based on the area's subtype. It can be used to identify environments with rich/poor features for map matching.
 
-## 環境番号の定義
+By using area-based determination instead of lanelet IDs, information can be directly embedded in the map, avoiding issues where lanelet IDs change when the map is regenerated.
 
-- **環境ID -1**: 無効（laneletが見つからない、またはマップが準備できていない場合）
-- **環境ID 0**: 通常環境（デフォルト、どのリストにも該当しない場合）
-- **環境ID 1**: 均一形状路（トンネル直線部など均一形状の道路）
-- **環境ID 2**: 特徴が少ない道路（地図マッチングに特徴が少ない道路）
+## Environment ID Definitions
 
-## 機能
+- **Environment ID -1**: Invalid (area not found or map not ready)
+- **Environment ID 0**: Normal environment (default, when not matching any area)
+- **Environment ID 1**: Uniform road (e.g., tunnel straight sections, uniform shape roads)
+- **Environment ID 2**: Feature-poor road (roads with few features for map matching)
 
-- Lanelet2マップから現在位置のlaneletを取得
-- 設定されたlanelet IDリストと照合
-- 環境番号（整数）をパブリッシュ
+## Features
 
-## ノード
+- Reads areas from the polygon layer of Lanelet2 maps
+- Determines which area the current position is within (point-in-polygon check)
+- Determines environment ID based on the area's subtype
+- Publishes environment ID (integer)
+
+## Node
 
 ### feature_environment_recognizer_node
 
-現在位置のposeとlanelet mapを受け取り、環境番号をパブリッシュします。
+Receives the current position pose and lanelet map, and publishes the environment ID.
 
-#### サブスクライブ
+#### Subscriptions
 
 - `~/input/lanelet2_map` (`autoware_map_msgs::msg::LaneletMapBin`)
-  - Lanelet2マップデータ
+  - Lanelet2 map data
 
-- `~/input/pose` (`geometry_msgs::msg::PoseStamped`)
-  - 現在位置のpose
+- `~/input/pose` (`geometry_msgs::msg::PoseWithCovarianceStamped`)
+  - Current position pose
 
-#### パブリッシュ
+#### Publications
 
 - `~/output/environment` (`autoware_feature_environment_recognizer::msg::FeatureEnvironment`)
-  - 特徴環境認識結果
-  - `header`: 入力位置のタイムスタンプを含むヘッダー
-  - `environment_id`: 識別された環境番号
-  - `confidence`: 認識結果の信頼度（現在は使用しないが、将来の使用のために予約、デフォルト値: 1.0）
+  - Feature environment recognition result
+  - `header`: Header containing the timestamp of the input position
+  - `environment_id`: Identified environment ID
+  - `confidence`: Confidence of the recognition result (currently unused, reserved for future use, default value: 1.0)
 
-#### パラメータ
+#### Parameters
 
 - `default_environment_id` (int, default: 0)
-  - どのリストにも該当しない場合のデフォルト環境番号（通常環境）
+  - Default environment ID when not matching any area (normal environment)
 
-- `search_distance_threshold` (double, default: 10.0)
-  - Lanelet検索の距離閾値 [m]
+- `area_subtype_<subtype_name>.environment_id` (int, optional)
+  - Mapping between area subtype and environment_id
+  - `area_subtype_uniform_road`: Subtype for uniform roads (e.g., tunnel straight sections)
+  - `area_subtype_feature_poor_road`: Subtype for feature-poor roads
+  - Example: `area_subtype_uniform_road.environment_id: 1`
 
-- `search_yaw_threshold` (double, default: 0.785)
-  - Lanelet検索のヨー角閾値 [rad] (デフォルトはπ/4)
-
-- `environment_id_<number>.lanelet_ids` (int[], optional)
-  - 各環境IDに対応するlanelet IDのリスト
-  - `environment_id_1`: 均一形状路（トンネル直線部など）のlanelet IDリスト
-  - `environment_id_2`: 特徴が少ない道路のlanelet IDリスト
-  - 例: `environment_id_1.lanelet_ids: [100, 101, 102, 103]`
-
-## 使用方法
+## Usage
 
 ### Launch
 
@@ -64,35 +61,67 @@
 ros2 launch autoware_feature_environment_recognizer feature_environment_recognizer.launch.xml
 ```
 
-### パラメータ設定例
+### Parameter Configuration Example
 
-`config/feature_environment_recognizer.param.yaml` に以下のように設定します:
+Configure `config/feature_environment_recognizer.param.yaml` as follows:
 
 ```yaml
 /**:
   ros__parameters:
     default_environment_id: 0
-    search_distance_threshold: 10.0
-    search_yaw_threshold: 0.785
 
-    # 環境ID 1: 均一形状路（トンネル直線部など）
-    environment_id_1:
-      lanelet_ids: [100, 101, 102, 103, 104]
+    # Environment ID 1: Uniform road (e.g., tunnel straight sections)
+    area_subtype_uniform_road:
+      environment_id: 1
 
-    # 環境ID 2: 特徴が少ない道路
-    environment_id_2:
-      lanelet_ids: [200, 201, 202, 203, 204]
+    # Environment ID 2: Feature-poor road
+    area_subtype_feature_poor_road:
+      environment_id: 2
 ```
 
-## 実装詳細
+### Area Definition in Map
 
-このパッケージは以下の機能を使用しています:
+Define areas in the Lanelet2 map in the following format:
 
-- `autoware::experimental::lanelet2_utils::get_road_lanelets_at()`: 位置から道路laneletを取得
-- `autoware::experimental::lanelet2_utils::get_closest_lanelet()`: 最も近いlaneletを取得
-- `autoware::experimental::lanelet2_utils::get_closest_lanelet_within_constraint()`: 制約付きで最も近いlaneletを取得
+```xml
+  <node id="1" lat="35.8xxxxx" lon="139.6xxxxx">
+    <tag k="mgrs_code" v="54SUE000000"/>
+    <tag k="local_x" v="10.0"/>
+    <tag k="local_y" v="10.0"/>
+    <tag k="ele" v="1.0"/>
+  </node>
+  <node id="2" lat="35.8xxxxx" lon="139.6xxxxx">
+    <tag k="mgrs_code" v="54SUE000000"/>
+    <tag k="local_x" v="10.0"/>
+    <tag k="local_y" v="20.0"/>
+    <tag k="ele" v="1.0"/>
+  </node>
+  <!-- Other nodes... -->
 
-## 依存関係
+  <way id="5">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <!-- Other nodes... -->
+    <tag k="type" v="feature_environment_specify"/>
+    <tag k="subtype" v="uniform_road"/>
+    <tag k="area" v="yes"/>
+  </way>
+```
+
+Important points:
+- Set `type` to `"feature_environment_specify"`
+- Set `subtype` to the subtype name defined in parameters (e.g., `"uniform_road"`, `"feature_poor_road"`)
+- Set `area` to `"yes"`
+
+## Implementation Details
+
+This package uses the following features:
+
+- Reads areas from the polygon layer of Lanelet2 maps
+- Point-in-polygon determination using `boost::geometry::within()`
+- Adopts a similar approach to `PoseEstimatorArea` in `pose_estimator_arbiter`
+
+## Dependencies
 
 - `autoware_lanelet2_extension`
 - `autoware_lanelet2_utils`
@@ -100,3 +129,4 @@ ros2 launch autoware_feature_environment_recognizer feature_environment_recogniz
 - `geometry_msgs`
 - `rclcpp`
 - `std_msgs`
+- `Boost::geometry` (for point-in-polygon determination)

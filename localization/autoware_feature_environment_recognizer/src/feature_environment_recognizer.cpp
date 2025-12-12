@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/feature_environment_recognizer/feature_environment_recognizer.hpp"
+#include "feature_environment_recognizer.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/Lanelet.h>
+
+#include <boost/geometry/geometry.hpp>
 
 #include <algorithm>
 #include <string>
@@ -32,51 +34,36 @@ FeatureEnvironmentRecognizer::FeatureEnvironmentRecognizer(const rclcpp::NodeOpt
 {
   // Declare parameters
   this->declare_parameter<int32_t>("default_environment_id", 0);
-  this->declare_parameter<double>("search_distance_threshold", 10.0);
-  this->declare_parameter<double>("search_yaw_threshold", M_PI / 4.0);
 
   // Load parameters
   param_.default_environment_id = this->get_parameter("default_environment_id").as_int();
-  param_.search_distance_threshold = this->get_parameter("search_distance_threshold").as_double();
-  param_.search_yaw_threshold = this->get_parameter("search_yaw_threshold").as_double();
 
-  // Load environment-lanelet ID mappings from parameters
+  // Load area subtype to environment ID mappings from parameters
   // Environment ID definitions:
-  //   -1: Invalid (lanelet not found or map not ready)
+  //   -1: Invalid (area not found or map not ready)
   //   0: Normal environment (default)
   //   1: Uniform road (e.g., tunnel straight sections, uniform shape roads)
   //   2: Feature-poor road (roads with few features for map matching)
-  // Format: environment_id_<number>.lanelet_ids = [id1, id2, id3, ...]
+  // Format: area_subtype_<subtype_name>.environment_id = <environment_id>
   const auto param_names = this->list_parameters({}, 0);
   for (const auto & param_name : param_names.names) {
-    if (param_name.find("environment_id_") == 0) {
-      // Extract environment ID from parameter name (e.g., "environment_id_1" -> 1)
-      const size_t prefix_len = std::string("environment_id_").length();
-      const std::string id_str = param_name.substr(prefix_len);
-      const size_t dot_pos = id_str.find('.');
+    if (param_name.find("area_subtype_") == 0) {
+      // Extract area subtype from parameter name (e.g., "area_subtype_uniform_road" -> "uniform_road")
+      const size_t prefix_len = std::string("area_subtype_").length();
+      const std::string subtype_str = param_name.substr(prefix_len);
+      const size_t dot_pos = subtype_str.find('.');
       if (dot_pos != std::string::npos) {
-        const std::string env_id_str = id_str.substr(0, dot_pos);
-        try {
-          const int32_t env_id = std::stoi(env_id_str);
-          const std::string lanelet_ids_param_name = param_name;
-          if (this->has_parameter(lanelet_ids_param_name)) {
-            const auto lanelet_ids_param = this->get_parameter(lanelet_ids_param_name);
-            if (lanelet_ids_param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER_ARRAY) {
-              const auto lanelet_ids = lanelet_ids_param.as_integer_array();
-              std::set<lanelet::Id> lanelet_id_set;
-              for (const auto & id : lanelet_ids) {
-                lanelet_id_set.insert(static_cast<lanelet::Id>(id));
-              }
-              param_.environment_lanelet_ids[env_id] = lanelet_id_set;
-              RCLCPP_INFO(
-                this->get_logger(), "Loaded environment_id %d with %zu lanelet IDs", env_id,
-                lanelet_id_set.size());
-            }
+        const std::string subtype_name = subtype_str.substr(0, dot_pos);
+        const std::string env_id_param_name = param_name;
+        if (this->has_parameter(env_id_param_name)) {
+          const auto env_id_param = this->get_parameter(env_id_param_name);
+          if (env_id_param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER) {
+            const int32_t env_id = env_id_param.as_int();
+            param_.area_subtype_to_environment_id[subtype_name] = env_id;
+            RCLCPP_INFO(
+              this->get_logger(), "Loaded area subtype '%s' -> environment_id %d", subtype_name.c_str(),
+              env_id);
           }
-        } catch (const std::exception & e) {
-          RCLCPP_WARN(
-            this->get_logger(), "Failed to parse environment ID from parameter: %s",
-            param_name.c_str());
         }
       }
     }
@@ -112,9 +99,41 @@ void FeatureEnvironmentRecognizer::on_map(
   lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map_ptr_);
   is_map_ready_ = true;
 
+  // Load areas from polygon layer
+  area_polygons_.clear();
+  const std::string feature_environment_area_type = "feature_environment_specify";
+  const auto & polygon_layer = lanelet_map_ptr_->polygonLayer;
+  RCLCPP_DEBUG_STREAM(this->get_logger(), "Polygon layer size: " << polygon_layer.size());
+
+  for (const auto & polygon : polygon_layer) {
+    const std::string type{polygon.attributeOr(lanelet::AttributeName::Type, "none")};
+    RCLCPP_DEBUG_STREAM(this->get_logger(), "polygon type: " << type);
+    if (feature_environment_area_type != type) {
+      continue;
+    }
+
+    const std::string subtype{polygon.attributeOr(lanelet::AttributeName::Subtype, "none")};
+    RCLCPP_DEBUG_STREAM(this->get_logger(), "polygon subtype: " << subtype);
+
+    // Create boost polygon from lanelet polygon
+    BoostPolygon boost_poly;
+    for (const lanelet::ConstPoint3d & p : polygon) {
+      boost_poly.outer().push_back(BoostPoint(p.x(), p.y()));
+    }
+    // Close the polygon
+    if (!boost_poly.outer().empty()) {
+      boost_poly.outer().push_back(boost_poly.outer().front());
+    }
+
+    area_polygons_.emplace(subtype, boost_poly);
+    RCLCPP_INFO(
+      this->get_logger(), "Loaded area with subtype '%s' (%zu vertices)", subtype.c_str(),
+      boost_poly.outer().size());
+  }
+
   RCLCPP_INFO(
-    this->get_logger(), "Received lanelet map with %zu lanelets",
-    lanelet_map_ptr_->laneletLayer.size());
+    this->get_logger(), "Received lanelet map with %zu lanelets and %zu feature environment areas",
+    lanelet_map_ptr_->laneletLayer.size(), area_polygons_.size());
 }
 
 void FeatureEnvironmentRecognizer::on_pose(
@@ -129,63 +148,33 @@ void FeatureEnvironmentRecognizer::on_pose(
 
   std::lock_guard<std::mutex> lock(mutex_);
 
-  const auto current_lanelet = get_current_lanelet(msg->pose.pose);
-  if (!current_lanelet.has_value()) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Could not find lanelet for current pose");
-    // Publish invalid environment ID (-1) when lanelet is not found
-    publish_environment(-1, msg->header);
-    return;
-  }
-
-  const int32_t environment_id = classify_environment(current_lanelet.value().id());
+  const int32_t environment_id = classify_environment(msg->pose.pose.position);
   publish_environment(environment_id, msg->header);
 }
 
-std::optional<lanelet::ConstLanelet> FeatureEnvironmentRecognizer::get_current_lanelet(
-  const geometry_msgs::msg::Pose & pose) const
+int32_t FeatureEnvironmentRecognizer::classify_environment(const geometry_msgs::msg::Point & point) const
 {
-  if (!lanelet_map_ptr_) {
-    return std::nullopt;
-  }
+  const BoostPoint boost_point(point.x, point.y);
 
-  // First, try to get road lanelets at the position
-  const auto road_lanelets = autoware::experimental::lanelet2_utils::get_road_lanelets_at(
-    lanelet_map_ptr_, pose.position.x, pose.position.y);
-
-  if (!road_lanelets.empty()) {
-    // Use get_closest_lanelet to select the best match based on yaw
-    const auto closest_lanelet =
-      autoware::experimental::lanelet2_utils::get_closest_lanelet(road_lanelets, pose);
-    if (closest_lanelet.has_value()) {
-      return closest_lanelet;
+  // Check if the point is within any area polygon
+  for (const auto & [subtype, polygon] : area_polygons_) {
+    if (boost::geometry::within(boost_point, polygon)) {
+      // Point is within this area, check if we have a mapping for this subtype
+      const auto it = param_.area_subtype_to_environment_id.find(subtype);
+      if (it != param_.area_subtype_to_environment_id.end()) {
+        RCLCPP_DEBUG(
+          this->get_logger(), "Point is within area subtype '%s' -> environment_id %d",
+          subtype.c_str(), it->second);
+        return it->second;
+      } else {
+        RCLCPP_DEBUG(
+          this->get_logger(), "Point is within area subtype '%s' but no environment_id mapping found",
+          subtype.c_str());
+      }
     }
   }
 
-  // If no road lanelet found, try with constraints
-  // Get all lanelets in the map
-  lanelet::ConstLanelets all_lanelets;
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
-    all_lanelets.push_back(lanelet);
-  }
-
-  const auto closest_lanelet_with_constraint =
-    autoware::experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
-      all_lanelets, pose, param_.search_distance_threshold, param_.search_yaw_threshold);
-
-  return closest_lanelet_with_constraint;
-}
-
-int32_t FeatureEnvironmentRecognizer::classify_environment(const lanelet::Id lanelet_id) const
-{
-  // Check if the lanelet ID is in any of the environment lists
-  for (const auto & [env_id, lanelet_ids] : param_.environment_lanelet_ids) {
-    if (lanelet_ids.find(lanelet_id) != lanelet_ids.end()) {
-      return env_id;
-    }
-  }
-
-  // If not found in any list, return default environment ID
+  // If not found in any area, return default environment ID
   return param_.default_environment_id;
 }
 
@@ -212,15 +201,6 @@ rcl_interfaces::msg::SetParametersResult FeatureEnvironmentRecognizer::on_set_pa
       param_.default_environment_id = param.as_int();
       RCLCPP_INFO(
         this->get_logger(), "Updated default_environment_id to %d", param_.default_environment_id);
-    } else if (param.get_name() == "search_distance_threshold") {
-      param_.search_distance_threshold = param.as_double();
-      RCLCPP_INFO(
-        this->get_logger(), "Updated search_distance_threshold to %f",
-        param_.search_distance_threshold);
-    } else if (param.get_name() == "search_yaw_threshold") {
-      param_.search_yaw_threshold = param.as_double();
-      RCLCPP_INFO(
-        this->get_logger(), "Updated search_yaw_threshold to %f", param_.search_yaw_threshold);
     }
   }
 
