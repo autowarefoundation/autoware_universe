@@ -183,7 +183,6 @@ private:
 
   // grid parameters
   float grid_size_m_;
-  float grid_mode_switch_radius_;  // non linear grid size switching distance
   uint16_t gnd_grid_buffer_size_;
   float virtual_lidar_z_;
 
