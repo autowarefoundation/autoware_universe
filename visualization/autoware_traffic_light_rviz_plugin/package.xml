@@ -15,6 +15,7 @@
 
   <depend>ament_index_cpp</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>libqt5-core</depend>
   <depend>libqt5-gui</depend>

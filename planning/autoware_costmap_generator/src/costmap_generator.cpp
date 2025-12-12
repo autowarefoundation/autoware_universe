@@ -46,7 +46,7 @@
 
 #include "autoware/costmap_generator/utils/object_map_utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -235,8 +235,8 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(
 void CostmapGenerator::onLaneletMapBin(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
-  lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map_);
+  lanelet_map_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 
   if (param_->use_wayarea) {
     loadRoadAreasFromLaneletMap(lanelet_map_, primitives_polygons_);
