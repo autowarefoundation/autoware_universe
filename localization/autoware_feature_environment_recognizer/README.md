@@ -109,6 +109,7 @@ Define areas in the Lanelet2 map in the following format:
 ```
 
 Important points:
+
 - Set `type` to `"feature_environment_specify"`
 - Set `subtype` to the subtype name defined in parameters (e.g., `"uniform_road"`, `"feature_poor_road"`)
 - Set `area` to `"yes"`

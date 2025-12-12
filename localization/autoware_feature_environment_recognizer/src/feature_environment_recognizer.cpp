@@ -17,10 +17,10 @@
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
+#include <boost/geometry/geometry.hpp>
+
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-
-#include <boost/geometry/geometry.hpp>
 
 #include <algorithm>
 #include <string>
@@ -48,7 +48,8 @@ FeatureEnvironmentRecognizer::FeatureEnvironmentRecognizer(const rclcpp::NodeOpt
   const auto param_names = this->list_parameters({}, 0);
   for (const auto & param_name : param_names.names) {
     if (param_name.find("area_subtype_") == 0) {
-      // Extract area subtype from parameter name (e.g., "area_subtype_uniform_road" -> "uniform_road")
+      // Extract area subtype from parameter name (e.g., "area_subtype_uniform_road" ->
+      // "uniform_road")
       const size_t prefix_len = std::string("area_subtype_").length();
       const std::string subtype_str = param_name.substr(prefix_len);
       const size_t dot_pos = subtype_str.find('.');
@@ -61,8 +62,8 @@ FeatureEnvironmentRecognizer::FeatureEnvironmentRecognizer(const rclcpp::NodeOpt
             const int32_t env_id = env_id_param.as_int();
             param_.area_subtype_to_environment_id[subtype_name] = env_id;
             RCLCPP_INFO(
-              this->get_logger(), "Loaded area subtype '%s' -> environment_id %d", subtype_name.c_str(),
-              env_id);
+              this->get_logger(), "Loaded area subtype '%s' -> environment_id %d",
+              subtype_name.c_str(), env_id);
           }
         }
       }
@@ -152,7 +153,8 @@ void FeatureEnvironmentRecognizer::on_pose(
   publish_environment(environment_id, msg->header);
 }
 
-int32_t FeatureEnvironmentRecognizer::classify_environment(const geometry_msgs::msg::Point & point) const
+int32_t FeatureEnvironmentRecognizer::classify_environment(
+  const geometry_msgs::msg::Point & point) const
 {
   const BoostPoint boost_point(point.x, point.y);
 
@@ -168,8 +170,8 @@ int32_t FeatureEnvironmentRecognizer::classify_environment(const geometry_msgs::
         return it->second;
       } else {
         RCLCPP_DEBUG(
-          this->get_logger(), "Point is within area subtype '%s' but no environment_id mapping found",
-          subtype.c_str());
+          this->get_logger(),
+          "Point is within area subtype '%s' but no environment_id mapping found", subtype.c_str());
       }
     }
   }

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__FEATURE_ENVIRONMENT_RECOGNIZER__FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
-#define AUTOWARE__FEATURE_ENVIRONMENT_RECOGNIZER__FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
+#ifndef FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
+#define FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_feature_environment_recognizer/msg/feature_environment.hpp>
@@ -24,10 +24,10 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <std_msgs/msg/header.hpp>
 
+#include <boost/geometry/geometry.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-
-#include <boost/geometry/geometry.hpp>
 
 #include <map>
 #include <memory>
@@ -52,8 +52,7 @@ private:
 
   // Core functions
   int32_t classify_environment(const geometry_msgs::msg::Point & point) const;
-  void publish_environment(
-    const int32_t environment_id, const std_msgs::msg::Header & header);
+  void publish_environment(const int32_t environment_id, const std_msgs::msg::Header & header);
 
   // Parameters
   struct Param
@@ -96,4 +95,4 @@ private:
 
 }  // namespace autoware::feature_environment_recognizer
 
-#endif  // AUTOWARE__FEATURE_ENVIRONMENT_RECOGNIZER__FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
+#endif  // FEATURE_ENVIRONMENT_RECOGNIZER_HPP_
