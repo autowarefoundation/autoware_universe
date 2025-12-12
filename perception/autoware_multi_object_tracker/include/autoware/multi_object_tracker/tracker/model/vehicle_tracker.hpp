@@ -27,6 +27,16 @@
 namespace autoware::multi_object_tracker
 {
 
+// Vehicle update strategy type for conditioned updates
+enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDATE };
+
+struct UpdateStrategy
+{
+  UpdateStrategyType type;
+  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for
+                                           // FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
+};
+
 class VehicleTracker : public Tracker
 {
 private:
@@ -38,6 +48,9 @@ private:
 
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
+
+  // determine anchor point for shape updates by last update strategy
+  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
 
 public:
   VehicleTracker(
@@ -51,9 +64,43 @@ public:
   bool measureWithPose(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
 
+  bool conditionedUpdate(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
+    const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
+
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
+
+  const double ALIGNMENT_RATIO_THRESHOLD = 0.09;  // 9% of length as alignment tolerance
+  UpdateStrategy determineUpdateStrategy(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
+
+private:
+  // Helper structs for determineUpdateStrategy
+  struct EdgePositions
+  {
+    double front_x, front_y;
+    double rear_x, rear_y;
+  };
+
+  enum class Edge { FRONT, REAR };
+  struct EdgeAlignment
+  {
+    double min_alignment_distance;
+    Edge aligned_pred_edge;
+    Edge aligned_meas_edge;
+  };
+
+  // Helper functions for determineUpdateStrategy
+  EdgePositions calculateEdgeCenters(const types::DynamicObject & obj) const;
+  EdgeAlignment findAlignedEdges(
+    const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
+  geometry_msgs::msg::Point calculateAnchorPoint(
+    const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
 };
 
 }  // namespace autoware::multi_object_tracker

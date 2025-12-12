@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__ADAPTIVE_THRESHOLD_CACHE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__ADAPTIVE_THRESHOLD_CACHE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ADAPTIVE_THRESHOLD_CACHE_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ADAPTIVE_THRESHOLD_CACHE_HPP_
 
 #include <algorithm>
 #include <vector>
@@ -36,8 +36,8 @@ private:
   static constexpr double MAX_DISTANCE = 150.0;  // meter
   static constexpr size_t DISTANCE_BIN_NUM =
     static_cast<size_t>(MAX_DISTANCE * MAX_DISTANCE * DISTANCE_SQ_BIN_INV) + 1;
-  static constexpr size_t BEV_AREA_BIN_NUM = 21;  // bin width 1 m^2
-  static constexpr double MAX_BEV_AREA = 20.0;    // m^2
+  static constexpr size_t BEV_AREA_BIN_NUM = 31;  // bin width 1 m^2
+  static constexpr double MAX_BEV_AREA = 30.0;    // m^2
 
   std::vector<double> distance_influence_table_;
   std::vector<double> bev_area_influence_table_;
@@ -48,4 +48,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UTIL__ADAPTIVE_THRESHOLD_CACHE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ADAPTIVE_THRESHOLD_CACHE_HPP_

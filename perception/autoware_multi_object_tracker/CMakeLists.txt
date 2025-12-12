@@ -4,6 +4,9 @@ project(autoware_multi_object_tracker)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 # Ignore -Wnonportable-include-path in Clang for mussp
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wno-nonportable-include-path)
@@ -55,7 +58,8 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/unknown_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
-  lib/tracker/util/adaptive_threshold_cache.cpp
+  lib/association/adaptive_threshold_cache.cpp
+  lib/tracker/shape_model/unstable_shape_filter.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}
@@ -65,6 +69,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
   glog::glog
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -85,6 +91,7 @@ if(BUILD_TESTING)
     test/test_bench.cpp
     test/test_utils.cpp
     test/test_bench_association.cpp
+    test/test_vehicle_tracker.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
