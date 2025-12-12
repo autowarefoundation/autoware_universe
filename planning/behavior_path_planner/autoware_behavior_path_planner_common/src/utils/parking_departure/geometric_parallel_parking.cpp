@@ -300,27 +300,7 @@ bool GeometricParallelParking::planPullOut(
     // check the continuity of straight path and arc path
     const Pose & road_path_first_pose = road_center_line_path.points.front().point.pose;
     const Pose & arc_path_last_pose = arc_paths.back().points.back().point.pose;
-    // const double yaw_diff = std::abs(
-    //   autoware_utils::normalize_radian(
-    //     tf2::getYaw(road_path_first_pose.orientation) -
-    //     tf2::getYaw(arc_path_last_pose.orientation)));
-    // // const double distance = calc_distance2d(road_path_first_pose, arc_path_last_pose);
 
-    // RCLCPP_WARN(
-    //   rclcpp::get_logger("geometric_parallel_parking"),
-    //   "[planPullOut] Continuity check: yaw_diff=%.2f deg (th=5.0), distance=%.3f m (th=0.1), "
-    //   "arc_last=(%.2f,%.2f), road_first=(%.2f,%.2f)",
-    //   autoware_utils::rad2deg(yaw_diff), distance,
-    //   arc_path_last_pose.position.x, arc_path_last_pose.position.y,
-    //   road_path_first_pose.position.x, road_path_first_pose.position.y);
-
-    // if (yaw_diff > autoware_utils::deg2rad(5.0) || distance > 0.1) {
-    //   RCLCPP_WARN(
-    //     rclcpp::get_logger("geometric_parallel_parking"),
-    //     "[planPullOut] FAILED continuity check: yaw_diff=%.2f > 5.0 deg OR distance=%.3f > 0.1
-    //     m", autoware_utils::rad2deg(yaw_diff), distance);
-    //   continue;
-    // }
 
     // set pull_out velocity to arc paths and 0 velocity to end point
     constexpr bool set_stop_end = false;
@@ -328,6 +308,9 @@ bool GeometricParallelParking::planPullOut(
 
     // combine the road center line path with the second arc path
     auto paths = arc_paths;
+    // ここに速度入れると補間で間の速度もちゃんと入る。
+    paths.back().points.back().point.longitudinal_velocity_mps =
+      road_center_line_path.points.front().point.longitudinal_velocity_mps;
     paths.back().points.insert(
       paths.back().points.end(),
       road_center_line_path.points.begin() + 1,  // to avoid overlapped point
