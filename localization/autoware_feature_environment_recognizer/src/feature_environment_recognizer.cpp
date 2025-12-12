@@ -23,6 +23,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 
