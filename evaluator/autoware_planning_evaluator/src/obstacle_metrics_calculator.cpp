@@ -313,7 +313,7 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
             ++next_reference_point_idx;
 
             if (next_reference_point_idx < obstacle_path.size()) {
-              const double next_reference_point_distance_from_start_m =
+              next_reference_point_distance_from_start_m =
                 calc_distance2d(reference_point.pose, obstacle_path[next_reference_point_idx]) +
                 reference_point.distance_from_start_m;
               next_reference_point_time_from_start_s =
