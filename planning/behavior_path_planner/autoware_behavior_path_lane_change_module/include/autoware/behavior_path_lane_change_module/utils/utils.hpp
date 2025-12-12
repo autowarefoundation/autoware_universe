@@ -493,19 +493,13 @@ bool is_lanelet_in_lanelet_collections(
   const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet);
 
 /**
- * @brief Remove lanelets from the base set that appear in the excluded set.
+ * @brief Trim the lanelet sequence by removing preferred lanes that appear after the first
+ *        alternative lane.
  *
- * This function performs an in-place filtering of `base_lanes`. Any lanelet whose ID
- * matches a lanelet in `excluded_lanes` is removed from `base_lanes`. Ordering of the
- * remaining lanelets is preserved.
- *
- * @param base_lanes        Lanelets to be filtered. This container is modified in-place.
- * @param excluded_lanes    Lanelets that define the exclusion set.
- *
- * @note Membership is determined by checking whether each lanelet in `base_lanes`
- *       exists in `excluded_lanes` using its lanelet ID.
+ * @param base_lanes       Lanelet sequence to be modified in-place.
+ * @param preferred_lanes  Set of lanelets used to classify which entries are considered preferred.
  */
-void exclude_lanelets(
-  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & excluded_lanes);
+void trim_preferred_after_alternative(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
