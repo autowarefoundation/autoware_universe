@@ -241,6 +241,39 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
   ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
 }
 
+// Test case: Diagnostics STALE test when no input is published
+TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
+{
+
+  // Create and publish empty pointcloud
+  auto timestamp = test_node_->now();
+  auto input_cloud = create_test_pointcloud(timestamp, 0);
+
+  input_pub_->publish(input_cloud);
+
+  diagnostics_received_ = false;  // reset received diagnostics
+  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
+
+  // Verify diagnostics message
+  ASSERT_NE(diagnostics_msg_, nullptr);
+  ASSERT_GT(diagnostics_msg_->status.size(), 0);
+
+  // Find the blockage_diag status
+  bool found_blockage_diag_status = false;
+  for (const auto & status : diagnostics_msg_->status) {
+    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
+    if (is_blockage_diag_status) {
+      found_blockage_diag_status = true;
+      // Check that the level is WARN (1)
+      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::WARN)
+        << "Expected WARN level but got: " << static_cast<int>(status.level);
+      break;
+    }
+  }
+
+  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
