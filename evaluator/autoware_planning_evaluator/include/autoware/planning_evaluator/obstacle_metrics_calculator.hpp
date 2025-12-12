@@ -246,7 +246,7 @@ public:
    * @brief calculate all needed obstacle metrics for each obstacle and store them
    * @return list of pairs containing obstacle UUID/`worst` and corresponding metric accumulator
    *         The first element of pair can be obstacle UUID string or "worst" for worst case
-   *         The list length can be 0 if no calculatable obstacles exist
+   *         The list length can be 0 if no calculable obstacles exist
    */
   void calculateMetrics();
 
@@ -260,7 +260,7 @@ public:
    * @param [in] metric Metric enum value
    * @return list of pairs containing obstacle UUID/`worst` and corresponding metric accumulator
    *         The first element of pair can be obstacle UUID string or "worst" for worst case
-   *         The list length can be 0 if no calculatable obstacles exist
+   *         The list length can be 0 if no calculable obstacles exist
    */
   std::vector<std::pair<std::string, Accumulator<double>>> getMetric(const Metric metric) const;
 
