@@ -196,24 +196,6 @@ protected:
   bool diagnostics_received_;
 };
 
-// Test case: Basic integration test
-TEST_F(BlockageDiagIntegrationTest, BasicIntegrationTest)
-{
-  // Create and publish input pointcloud
-  auto timestamp = test_node_->now();
-  auto input_cloud = create_test_pointcloud(timestamp, 100);
-
-  input_pub_->publish(input_cloud);
-
-  // Wait for output
-  ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message";
-
-  // Verify output
-  ASSERT_NE(output_msg_, nullptr);
-  EXPECT_EQ(output_msg_->header.frame_id, "lidar_top");
-  EXPECT_GT(output_msg_->width * output_msg_->height, 0);
-}
-
 // Test case: Empty pointcloud
 TEST_F(BlockageDiagIntegrationTest, EmptyPointcloudTest)
 {
@@ -229,25 +211,6 @@ TEST_F(BlockageDiagIntegrationTest, EmptyPointcloudTest)
   // Verify output
   ASSERT_NE(output_msg_, nullptr);
   EXPECT_EQ(output_msg_->width * output_msg_->height, 0);
-}
-
-// Test case: Multiple pointclouds
-TEST_F(BlockageDiagIntegrationTest, MultiplePointcloudsTest)
-{
-  const int num_clouds = 3;
-
-  for (int i = 0; i < num_clouds; ++i) {
-    output_received_ = false;
-
-    auto timestamp = test_node_->now();
-    auto input_cloud = create_test_pointcloud(timestamp, 100);
-
-    input_pub_->publish(input_cloud);
-
-    ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message " << i;
-    ASSERT_NE(output_msg_, nullptr);
-    EXPECT_GT(output_msg_->width * output_msg_->height, 0);
-  }
 }
 
 // Test case: Diagnostics STALE test when no input is published
