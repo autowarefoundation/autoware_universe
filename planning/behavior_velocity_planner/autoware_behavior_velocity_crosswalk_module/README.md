@@ -244,6 +244,8 @@ In the `obstruction_prevention` namespace, the following parameters are defined.
 
 | Parameter                           | Unit    | Type   | Description                                                             |
 | ----------------------------------- | ------- | ------ | ----------------------------------------------------------------------- |
+| `enable_obstruction_prevention`     | [-]     | bool   | whether to enable obstruction prevention feature                        |
+| `ignore_in_intersection`            | [-]     | bool   | whether to ignore obstruction prevention in intersections               |
 | `target_vehicle_velocity`           | [m/s]   | double | maximum velocity threshold whether the target vehicle is stopped or not |
 | `max_target_vehicle_lateral_offset` | [m]     | double | maximum lateral offset of the target vehicle position                   |
 | `required_clearance`                | [m]     | double | clearance to be secured between the ego and the ahead vehicle           |
