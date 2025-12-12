@@ -236,10 +236,10 @@ private:
   float grid_azimuth_size_ = 0.01f;  // radians
 
   // calculated parameters
-  float grid_dist_size_rad_ = 0.0f;           // radians
-  float grid_dist_size_inv_ = 0.0f;           // inverse of the grid size in meters
-  int grid_linearity_switch_num_ = 0;         // number of grids within the switch radius
-  float grid_size_rad_inv_ = 0.0f;            // inverse of the grid size in radians
+  float grid_dist_size_rad_ = 0.0f;    // radians
+  float grid_dist_size_inv_ = 0.0f;    // inverse of the grid size in meters
+  int grid_linearity_switch_num_ = 0;  // number of grids within the switch radius
+  float grid_size_rad_inv_ = 0.0f;     // inverse of the grid size in radians
   bool is_initialized_ = false;
 
   // configured parameters
