@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -44,11 +44,11 @@ void AdaptiveThresholdCache::initializeDistanceInfluenceTable()
 void AdaptiveThresholdCache::initializeBEVAreaInfluenceTable()
 {
   // bev area influence as normalized quadratic curve
-  // range from 0 to 1 (capped at MAX_BEV_AREA)
+  // range from 0 to 3 (capped at MAX_BEV_AREA)
   bev_area_influence_table_.resize(BEV_AREA_BIN_NUM);
   for (size_t i = 0; i < BEV_AREA_BIN_NUM; ++i) {
     double area = static_cast<double>(i);
-    bev_area_influence_table_[i] = 0.03 * area * area / MAX_BEV_AREA;
+    bev_area_influence_table_[i] = 0.1 * area * area / MAX_BEV_AREA;
   }
 }
 
