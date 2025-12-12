@@ -44,9 +44,76 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
     elevation_grid_mode_ = declare_parameter<bool>("elevation_grid_mode");
 
     // common parameters
-    radial_divider_angle_rad_ =
-      static_cast<float>(deg2rad(declare_parameter<double>("radial_divider_angle_deg")));
+    // Read radial divider angle map (list of radius/angle pairs)
+    // Since ROS 2 doesn't natively support array-of-maps, we use two parallel arrays
+    // and combine them, or read from YAML structure directly via parameter value
+    radial_divider_angle_map_.clear();
+
+    // Default values: 4 deg for < 5m, 2 deg for < 10m, 1 deg for < 20m, 0.5 deg for < 40m,
+    //                0.25 deg for < 60m, 0.125 deg for < 80m, 0.0625 deg for >= 80m
+    std::vector<double> default_radii = {0.0, 5.0, 10.0, 20.0, 40.0, 60.0, 80.0};
+    std::vector<double> default_angles = {4.0, 2.0, 1.0, 0.5, 0.25, 0.125, 0.0625};
+
+    std::vector<double> radius_array = default_radii;
+    std::vector<double> angle_array = default_angles;
+
+    // Try to read as two parallel arrays (more ROS 2 compatible)
+    if (
+      has_parameter("radial_divider_angle_map_radii") &&
+      has_parameter("radial_divider_angle_map_angles")) {
+      try {
+        radius_array =
+          declare_parameter<std::vector<double>>("radial_divider_angle_map_radii", default_radii);
+        angle_array =
+          declare_parameter<std::vector<double>>("radial_divider_angle_map_angles", default_angles);
+      } catch (const std::exception & e) {
+        RCLCPP_WARN(
+          get_logger(), "Failed to read radial_divider_angle_map arrays, using defaults: %s",
+          e.what());
+      }
+    }
+
+    // Combine arrays into map entries
+    const size_t map_size = std::min(radius_array.size(), angle_array.size());
+    for (size_t i = 0; i < map_size; ++i) {
+      RadialDividerAngleEntry entry;
+      entry.radius = static_cast<float>(radius_array[i]);
+      entry.angle_rad = static_cast<float>(deg2rad(angle_array[i]));
+      radial_divider_angle_map_.push_back(entry);
+    }
+
+    // If arrays are empty or mismatched, use defaults
+    if (radial_divider_angle_map_.empty()) {
+      for (size_t i = 0; i < default_radii.size(); ++i) {
+        RadialDividerAngleEntry entry;
+        entry.radius = static_cast<float>(default_radii[i]);
+        entry.angle_rad = static_cast<float>(deg2rad(default_angles[i]));
+        radial_divider_angle_map_.push_back(entry);
+      }
+    }
+
+    // Sort by radius to ensure ascending order
+    std::sort(
+      radial_divider_angle_map_.begin(), radial_divider_angle_map_.end(),
+      [](const RadialDividerAngleEntry & a, const RadialDividerAngleEntry & b) {
+        return a.radius < b.radius;
+      });
+
+    // Find the finest (smallest) angle for maximum number of divisions
+    float finest_angle_rad = radial_divider_angle_map_.empty()
+                               ? static_cast<float>(deg2rad(0.0625))
+                               : radial_divider_angle_map_.back().angle_rad;
+    for (const auto & entry : radial_divider_angle_map_) {
+      if (entry.angle_rad < finest_angle_rad) {
+        finest_angle_rad = entry.angle_rad;
+      }
+    }
+    radial_divider_angle_rad_ = finest_angle_rad;
     radial_dividers_num_ = std::ceil(2.0 * M_PI / radial_divider_angle_rad_);
+
+    // Keep radial_divider_angle_deg for backward compatibility (schema requirement)
+    [[maybe_unused]] const double radial_divider_angle_deg =
+      declare_parameter<double>("radial_divider_angle_deg");
 
     // common thresholds
     global_slope_max_angle_rad_ =
@@ -186,6 +253,37 @@ void ScanGroundFilterComponent::convertPointcloud(
   }
 }
 
+float ScanGroundFilterComponent::getRadialDividerAngleRad(const float radius) const
+{
+  // Find the appropriate angle based on radius using the configurable map
+  // The map is sorted by radius in ascending order
+  // We find the last entry where radius >= entry.radius
+  if (radial_divider_angle_map_.empty()) {
+    // Fallback to finest resolution if map is empty
+    return static_cast<float>(deg2rad(0.0625));
+  }
+
+  // Find the appropriate entry: use the last entry where radius >= entry.radius
+  float angle_rad = radial_divider_angle_map_.back().angle_rad;  // Default to last entry
+  for (size_t i = 0; i < radial_divider_angle_map_.size(); ++i) {
+    if (radius < radial_divider_angle_map_[i].radius) {
+      // Use the previous entry (or first entry if at the beginning)
+      if (i > 0) {
+        angle_rad = radial_divider_angle_map_[i - 1].angle_rad;
+      } else {
+        angle_rad = radial_divider_angle_map_[0].angle_rad;
+      }
+      break;
+    }
+    // If we've reached the last entry and radius >= its threshold, use it
+    if (i == radial_divider_angle_map_.size() - 1) {
+      angle_rad = radial_divider_angle_map_[i].angle_rad;
+    }
+  }
+
+  return angle_rad;
+}
+
 void ScanGroundFilterComponent::calcVirtualGroundOrigin(pcl::PointXYZ & point) const
 {
   point.x = vehicle_info_.wheel_base_m;
@@ -253,9 +351,11 @@ void ScanGroundFilterComponent::classifyPointCloud(
         height_from_obj = point_curr.z - non_ground_cluster.getAverageHeight();
       }
       bool calculate_slope = true;
+      // Use dynamic radial divider angle based on current point's radius
+      const float dynamic_radial_divider_angle_rad = getRadialDividerAngleRad(pd.radius);
       bool is_point_close_to_prev =
         (points_distance <
-         (pd.radius * radial_divider_angle_rad_ + split_points_distance_tolerance_));
+         (pd.radius * dynamic_radial_divider_angle_rad + split_points_distance_tolerance_));
 
       if (is_point_close_to_prev) {
         if (ground_cluster.point_num > 0) {
@@ -417,13 +517,21 @@ rcl_interfaces::msg::SetParametersResult ScanGroundFilterComponent::onParameter(
       get_logger(), "Setting local_slope_max_angle_rad to: %f.", local_slope_max_angle_rad_);
     RCLCPP_DEBUG(get_logger(), "Setting local_slope_max_ratio to: %f.", local_slope_max_ratio_);
   }
+  // Note: radial_divider_angle_deg parameter is no longer used for dynamic behavior
+  // The radial divider angle is now determined dynamically based on radius via
+  // getRadialDividerAngleRad() We always use the finest resolution (0.0625 deg) for maximum number
+  // of divisions
   double radial_divider_angle_deg{get_parameter("radial_divider_angle_deg").as_double()};
   if (get_param(param, "radial_divider_angle_deg", radial_divider_angle_deg)) {
-    radial_divider_angle_rad_ = deg2rad(radial_divider_angle_deg);
+    // Use finest resolution for maximum number of divisions
+    const float finest_radial_divider_angle_rad = static_cast<float>(deg2rad(0.0625));
+    radial_divider_angle_rad_ = finest_radial_divider_angle_rad;
     radial_dividers_num_ = std::ceil(2.0 * M_PI / radial_divider_angle_rad_);
     // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_, grid_mode_switch_radius_);
     RCLCPP_DEBUG(
-      get_logger(), "Setting radial_divider_angle_rad to: %f.", radial_divider_angle_rad_);
+      get_logger(),
+      "Setting radial_divider_angle_rad to: %f (finest resolution for max divisions).",
+      radial_divider_angle_rad_);
     RCLCPP_DEBUG(get_logger(), "Setting radial_dividers_num to: %zu.", radial_dividers_num_);
   }
   if (get_param(param, "split_points_distance_tolerance", split_points_distance_tolerance_)) {
