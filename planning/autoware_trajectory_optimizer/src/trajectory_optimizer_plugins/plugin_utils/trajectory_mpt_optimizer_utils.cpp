@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.hpp"
 
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tf2/utils.h>
@@ -30,7 +30,7 @@ double calculate_acceleration_from_velocity_and_distance(
   const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next)
 {
   const double delta_s =
-    autoware_utils::calc_distance2d(p_curr.pose.position, p_next.pose.position);
+    autoware_utils_geometry::calc_distance2d(p_curr.pose.position, p_next.pose.position);
   if (delta_s < 1e-6) {
     return 0.0;
   }
@@ -45,7 +45,7 @@ double calculate_time_interval(
   const double v, const double a, const TrajectoryPoint & p_curr, const TrajectoryPoint & p_next)
 {
   const double delta_s =
-    autoware_utils::calc_distance2d(p_curr.pose.position, p_next.pose.position);
+    autoware_utils_geometry::calc_distance2d(p_curr.pose.position, p_next.pose.position);
   constexpr double min_velocity = 1e-3;  // 1mm/s threshold
 
   if (std::abs(a) < 1e-6) {
