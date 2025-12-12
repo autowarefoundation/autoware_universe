@@ -265,8 +265,8 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
   // Find the blockage_diag status
   bool found_blockage_diag_status = false;
   for (const auto & status : diagnostics_msg_->status) {
-    if (status.name.find("BlockageDiag") != std::string::npos ||
-        status.name.find("blockage") != std::string::npos) {
+    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
+    if (is_blockage_diag_status) {
       found_blockage_diag_status = true;
       // Check that the level is STALE (3)
       EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::STALE)
