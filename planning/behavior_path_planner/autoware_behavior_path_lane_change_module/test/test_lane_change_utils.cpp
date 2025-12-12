@@ -116,11 +116,13 @@ TEST(BehaviorPathPlanningLaneChangeUtilsTest, testExcludeLanelets)
     lanelet::Lanelet ll(id, lanelet::LineString3d{}, lanelet::LineString3d{});
     return lanelet::ConstLanelet{ll};
   };
-  lanelet::ConstLanelets alternative{create_lane(1), create_lane(2), create_lane(3), create_lane(4)};
+  lanelet::ConstLanelets alternative{
+    create_lane(1), create_lane(2), create_lane(3), create_lane(4)};
 
   lanelet::ConstLanelets preferred{create_lane(1), create_lane(2), create_lane(4)};
 
-  autoware::behavior_path_planner::utils::lane_change::trim_preferred_after_alternative(alternative, preferred);
+  autoware::behavior_path_planner::utils::lane_change::trim_preferred_after_alternative(
+    alternative, preferred);
 
   ASSERT_EQ(alternative.size(), 2u);
   EXPECT_EQ(alternative[0].id(), 1);
