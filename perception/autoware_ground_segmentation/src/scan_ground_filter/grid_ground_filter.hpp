@@ -164,7 +164,7 @@ public:
     grid_ptr_ = std::make_unique<Grid>(
       param_.virtual_lidar_x, param_.virtual_lidar_y, param_.virtual_lidar_z);
     // TODO(badai-nguyen): Temporary add radial limit to 200.0m constant value.
-    // need to be updated unify with crob range parameter
+    // need to be updated unify with cropbox range parameter
     grid_ptr_->initialize(param_.grid_size_m, param_.radial_divider_angle_rad, 200.0f);
   }
   ~GridGroundFilter() = default;
