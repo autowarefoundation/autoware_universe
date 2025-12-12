@@ -85,8 +85,8 @@ private:
   std::optional<PredictedObject> findNearestStaticObjectInCurrentLanes() const;
   double getObjectLateralEdgeOffset(const PredictedObject & object, bool right_side) const;
 
-  // Goal pose generation
-  std::vector<Pose> generateGoalPoseCandidates(const PredictedObject & object) const;
+  // End pose generation
+  std::vector<Pose> generateEndPoseCandidates(const PredictedObject & object) const;
 
   // Path planning
   std::optional<PullOutPath> planAvoidancePath();
@@ -134,7 +134,7 @@ private:
   bool condition_check_started_{false};
 
   // Debug data
-  std::vector<Pose> debug_goal_candidates_;
+  std::vector<Pose> debug_end_pose_candidates_;
   std::optional<PredictedObject> debug_target_object_;
 };
 

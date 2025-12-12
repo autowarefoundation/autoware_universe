@@ -77,6 +77,9 @@ void DrySteeringAvoidanceModuleManager::updateModuleParams(
     parameters, ns + "lane_departure_margin",
     p->parallel_parking_parameters.pull_out_lane_departure_margin);
   update_param<double>(
+    parameters, ns + "center_line_path_interval",
+    p->parallel_parking_parameters.center_line_path_interval);
+  update_param<double>(
     parameters, ns + "geometric_pull_out_max_steer_angle_margin_scale",
     p->parallel_parking_parameters.geometric_pull_out_max_steer_angle_margin_scale);
   update_param<double>(

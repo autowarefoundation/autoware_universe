@@ -70,11 +70,6 @@ bool DrySteeringAvoidanceModule::isExecutionRequested() const
   const bool is_stopped = isStopped();
   const bool has_object = hasStaticObjectInFront();
 
-  RCLCPP_WARN_THROTTLE(
-    getLogger(), *clock_, 3000,
-    "[DrySteeringAvoidance] isExecutionRequested: speed=%.2f, is_stopped=%d, has_object=%d",
-    getEgoSpeed(), is_stopped, has_object);
-
   // Check basic conditions - if not met, reset timer and return false
   if (!is_stopped || !has_object) {
     // Reset timer when conditions are not met
@@ -84,17 +79,12 @@ bool DrySteeringAvoidanceModule::isExecutionRequested() const
 
   // Continue if already running and conditions are still met
   if (avoidance_path_.has_value()) {
-    RCLCPP_WARN_THROTTLE(
-      getLogger(), *clock_, 3000,
-      "[DrySteeringAvoidance] isExecutionRequested: already has path, conditions met, returning true");
     return true;
   }
 
   // Check time condition (const cast for mutable state)
   const bool activation_ok =
     const_cast<DrySteeringAvoidanceModule *>(this)->checkActivationCondition();
-  RCLCPP_WARN_THROTTLE(
-    getLogger(), *clock_, 3000, "[DrySteeringAvoidance] activation_ok=%d", activation_ok);
   return activation_ok;
 }
 
@@ -105,29 +95,18 @@ bool DrySteeringAvoidanceModule::isExecutionReady() const
 
 void DrySteeringAvoidanceModule::processOnEntry()
 {
-  RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] processOnEntry - Module activated!");
   resetPathCandidate();
   resetPathReference();
   debug_marker_.markers.clear();
   info_marker_.markers.clear();
 
-  // Plan avoidance path at activation time
   start_pose_ = getEgoPose();
   avoidance_path_ = planAvoidancePath();
-
-  // Cache drivable lanes at activation time (maintain during execution)
   drivable_lanes_ = generateDrivableLanes();
-
-  if (avoidance_path_.has_value()) {
-    RCLCPP_INFO(getLogger(), "Avoidance path planned successfully at activation");
-  } else {
-    RCLCPP_WARN(getLogger(), "Failed to plan avoidance path at activation");
-  }
 }
 
 void DrySteeringAvoidanceModule::processOnExit()
 {
-  RCLCPP_DEBUG(getLogger(), "DrySteeringAvoidanceModule processOnExit");
   avoidance_path_.reset();
   drivable_lanes_.clear();
   condition_check_started_ = false;
@@ -158,7 +137,6 @@ BehaviorModuleOutput DrySteeringAvoidanceModule::plan()
   output.reference_path = getPreviousModuleOutput().reference_path;
   output.turn_signal_info = calcTurnSignalInfo();
 
-  // Use cached drivable lanes (generated at activation time in processOnEntry)
   // Left boundary: current lane's left, Right boundary: rightmost lane's right
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
   const auto expanded_lanes = utils::expandLanelets(
@@ -172,10 +150,10 @@ BehaviorModuleOutput DrySteeringAvoidanceModule::plan()
 
   // Update RTC status (auto-approval)
   const auto & path = output.path;
-  const double start_distance = calcSignedArcLength(
-    path.points, getEgoPosition(), avoidance_path_->start_pose.position);
-  const double finish_distance = calcSignedArcLength(
-    path.points, getEgoPosition(), avoidance_path_->end_pose.position);
+  const double start_distance =
+    calcSignedArcLength(path.points, getEgoPosition(), avoidance_path_->start_pose.position);
+  const double finish_distance =
+    calcSignedArcLength(path.points, getEgoPosition(), avoidance_path_->end_pose.position);
   updateRTCStatus(std::max(0.0, start_distance), finish_distance);
 
   return output;
@@ -200,18 +178,6 @@ CandidateOutput DrySteeringAvoidanceModule::planCandidate() const
 
 bool DrySteeringAvoidanceModule::canTransitSuccessState()
 {
-  // // Success if goal is reached
-  // if (hasReachedGoal()) {
-  //   RCLCPP_INFO(getLogger(), "Goal reached, transitioning to SUCCESS");
-  //   return true;
-  // }
-
-  // // Success if obstacle disappeared while at start pose
-  // if (hasObstacleDisappearedAtStart()) {
-  //   RCLCPP_INFO(getLogger(), "Obstacle disappeared at start, transitioning to SUCCESS");
-  //   return true;
-  // }
-
   return false;
 }
 
@@ -224,10 +190,6 @@ bool DrySteeringAvoidanceModule::isStopped() const
 {
   const double speed = getEgoSpeed();
   const bool stopped = speed < parameters_->th_stopped_velocity;
-  RCLCPP_WARN_THROTTLE(
-    getLogger(), *clock_, 1000,
-    "[DrySteeringAvoidance] isStopped: speed=%.3f, th=%.3f, stopped=%d",
-    speed, parameters_->th_stopped_velocity, stopped);
   return stopped;
 }
 
@@ -242,28 +204,17 @@ bool DrySteeringAvoidanceModule::checkActivationCondition()
 
   if (!condition_met) {
     condition_check_started_ = false;
-    RCLCPP_WARN_THROTTLE(
-      getLogger(), *clock_, 3000,
-      "[DrySteeringAvoidance] checkActivation: condition_met=false");
     return false;
   }
 
   if (!condition_check_started_) {
     condition_start_time_ = clock_->now();
     condition_check_started_ = true;
-    RCLCPP_WARN(
-      getLogger(),
-      "[DrySteeringAvoidance] checkActivation: started timer, th_stopped_time=%.1f",
-      parameters_->th_stopped_time);
     return false;
   }
 
   const double elapsed_time = (clock_->now() - condition_start_time_).seconds();
   const bool activated = elapsed_time >= parameters_->th_stopped_time;
-  RCLCPP_WARN_THROTTLE(
-    getLogger(), *clock_, 1000,
-    "[DrySteeringAvoidance] checkActivation: elapsed=%.1f, th=%.1f, activated=%d",
-    elapsed_time, parameters_->th_stopped_time, activated);
   return activated;
 }
 
@@ -272,22 +223,14 @@ std::optional<PredictedObject> DrySteeringAvoidanceModule::findNearestStaticObje
 {
   const auto & objects = planner_data_->dynamic_object;
   if (!objects) {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] findNearest: objects is null");
     return std::nullopt;
   }
-
-  RCLCPP_WARN(
-    getLogger(), "[DrySteeringAvoidance] findNearest: %zu objects available",
-    objects->objects.size());
 
   const auto current_lanes = getCurrentLanes();
   if (current_lanes.empty()) {
     RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] findNearest: current_lanes empty");
     return std::nullopt;
   }
-
-  RCLCPP_WARN(
-    getLogger(), "[DrySteeringAvoidance] findNearest: %zu current_lanes", current_lanes.size());
 
   std::optional<PredictedObject> nearest_object;
   double min_distance = std::numeric_limits<double>::max();
@@ -303,40 +246,22 @@ std::optional<PredictedObject> DrySteeringAvoidanceModule::findNearestStaticObje
     // Check longitudinal distance from ego
     const double longitudinal_distance = calcLongitudinalDistanceFromEgo(obj_pose, current_lanes);
 
-    RCLCPP_WARN(
-      getLogger(),
-      "[DrySteeringAvoidance] obj: vel=%.2f (th=%.2f), lon_dist=%.2f (range=0~%.1f)",
-      obj_vel, parameters_->th_static_object_velocity, longitudinal_distance,
-      parameters_->object_search_forward_distance);
-
     if (obj_vel > parameters_->th_static_object_velocity) {
-      RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] -> skipped: not static");
       continue;
     }
 
     if (longitudinal_distance <= 0.0) {
-      RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] -> skipped: behind ego");
       continue;
     }
 
     if (longitudinal_distance >= parameters_->object_search_forward_distance) {
-      RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] -> skipped: too far");
       continue;
     }
 
     if (longitudinal_distance < min_distance) {
       min_distance = longitudinal_distance;
       nearest_object = obj;
-      RCLCPP_WARN(
-        getLogger(), "[DrySteeringAvoidance] -> selected as nearest (dist=%.2f)", min_distance);
     }
-  }
-
-  if (nearest_object) {
-    RCLCPP_WARN(
-      getLogger(), "[DrySteeringAvoidance] findNearest: found object at dist=%.2f", min_distance);
-  } else {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] findNearest: no valid object found");
   }
 
   return nearest_object;
@@ -366,14 +291,14 @@ double DrySteeringAvoidanceModule::getObjectLateralEdgeOffset(
   }
 }
 
-std::vector<Pose> DrySteeringAvoidanceModule::generateGoalPoseCandidates(
+std::vector<Pose> DrySteeringAvoidanceModule::generateEndPoseCandidates(
   const PredictedObject & object) const
 {
   std::vector<Pose> candidates;
 
   const auto current_lanes = getCurrentLanes();
   if (current_lanes.empty()) {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] generateGoal: current_lanes empty");
+    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] generateEndPose: current_lanes empty");
     return candidates;
   }
 
@@ -383,18 +308,12 @@ std::vector<Pose> DrySteeringAvoidanceModule::generateGoalPoseCandidates(
   const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
   const auto obj_arc = getArcCoordinates(current_lanes, obj_pose);
 
-  RCLCPP_WARN(
-    getLogger(),
-    "[DrySteeringAvoidance] generateGoal: avoid_right=%d, obj_center=(len=%.2f, dist=%.2f)",
-    avoid_right, obj_arc.length, obj_arc.distance);
-
   // Get the object's center pose projected onto the lane centerline
   // First, get the centerline path
   const auto centerline_path = planner_data_->route_handler->getCenterLinePath(
     current_lanes, 0.0, std::numeric_limits<double>::max());
 
   if (centerline_path.points.empty()) {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] generateGoal: centerline_path empty");
     return candidates;
   }
 
@@ -403,16 +322,8 @@ std::vector<Pose> DrySteeringAvoidanceModule::generateGoalPoseCandidates(
     centerline_path.points, centerline_path.points.front().point.pose.position, obj_arc.length);
 
   if (!obj_centerline_pose) {
-    RCLCPP_WARN(
-      getLogger(), "[DrySteeringAvoidance] generateGoal: cannot find pose at obj_arc.length=%.2f",
-      obj_arc.length);
     return candidates;
   }
-
-  RCLCPP_WARN(
-    getLogger(),
-    "[DrySteeringAvoidance] generateGoal: obj_centerline_pose=(%.2f, %.2f)",
-    obj_centerline_pose->position.x, obj_centerline_pose->position.y);
 
   // Generate 4 lateral offset candidates from object center: 1.0, 1.5, 2.0, 2.5 [m]
   const std::vector<double> lateral_offsets = {1.0, 1.5, 2.0, 2.5};
@@ -431,53 +342,36 @@ std::vector<Pose> DrySteeringAvoidanceModule::generateGoalPoseCandidates(
 
     // Create goal pose by offsetting from centerline pose
     // calc_offset_pose: positive y = left in vehicle frame
-    Pose goal_pose = calc_offset_pose(*obj_centerline_pose, 0.0, goal_lateral_from_center, 0.0);
+    Pose end_pose = calc_offset_pose(*obj_centerline_pose, 0.0, goal_lateral_from_center, 0.0);
 
-    RCLCPP_WARN(
-      getLogger(),
-      "[DrySteeringAvoidance] generateGoal: lat_offset=%.1f, goal_lateral_from_center=%.2f, "
-      "goal_pos=(%.2f, %.2f)",
-      lat_offset, goal_lateral_from_center, goal_pose.position.x, goal_pose.position.y);
-
-    candidates.push_back(goal_pose);
+    candidates.push_back(end_pose);
   }
-
-  RCLCPP_WARN(
-    getLogger(), "[DrySteeringAvoidance] generateGoal: generated %zu candidates", candidates.size());
 
   return candidates;
 }
 
 std::optional<PullOutPath> DrySteeringAvoidanceModule::planAvoidancePath()
 {
-  RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] planAvoidancePath called");
-
   // Clear debug data
-  debug_goal_candidates_.clear();
+  debug_end_pose_candidates_.clear();
   debug_target_object_.reset();
 
   const auto target_object = findNearestStaticObjectInCurrentLanes();
   if (!target_object) {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] No target object found");
     return std::nullopt;
   }
 
   // Store for debug visualization
   debug_target_object_ = target_object;
 
-  RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] Found target object");
-
-  const auto goal_candidates = generateGoalPoseCandidates(*target_object);
-  if (goal_candidates.empty()) {
-    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] No goal candidates generated");
+  const auto end_pose_candidates = generateEndPoseCandidates(*target_object);
+  if (end_pose_candidates.empty()) {
+    RCLCPP_WARN(getLogger(), "[DrySteeringAvoidance] No end pose candidates generated");
     return std::nullopt;
   }
 
   // Store for debug visualization
-  debug_goal_candidates_ = goal_candidates;
-
-  RCLCPP_WARN(
-    getLogger(), "[DrySteeringAvoidance] Generated %zu goal candidates", goal_candidates.size());
+  debug_end_pose_candidates_ = end_pose_candidates;
 
   const auto & start_pose = getEgoPose();
   const auto current_lanes = getCurrentLanes();
@@ -498,7 +392,6 @@ std::optional<PullOutPath> DrySteeringAvoidanceModule::planAvoidancePath()
   const bool avoid_right = (parameters_->avoidance_direction == "right");
   const bool left_side_start = avoid_right;
 
-
   // Set turning radius using vehicle info
   const double max_steer_angle =
     vehicle_info_.max_steer_angle_rad *
@@ -507,42 +400,19 @@ std::optional<PullOutPath> DrySteeringAvoidanceModule::planAvoidancePath()
   geometric_planner_.setTurningRadius(planner_data_->parameters, max_steer_angle);
   geometric_planner_.setPlannerData(planner_data_);
 
-
-  // Print start pose with orientation
-  RCLCPP_WARN(
-    getLogger(),
-    "[DrySteeringAvoidance] start_pose: pos=(%.3f, %.3f, %.3f), quat=(%.4f, %.4f, %.4f, %.4f)",
-    start_pose.position.x, start_pose.position.y, start_pose.position.z,
-    start_pose.orientation.x, start_pose.orientation.y, start_pose.orientation.z,
-    start_pose.orientation.w);
-
-  // Try each goal candidate
+  // Try each end pose candidate
   size_t tried_count = 0;
-  for (const auto & goal_pose : goal_candidates) {
+  for (const auto & end_pose : end_pose_candidates) {
     tried_count++;
 
-    // Print goal pose with orientation
-    RCLCPP_WARN(
-      getLogger(),
-      "[DrySteeringAvoidance] Trying goal %zu/%zu: pos=(%.3f, %.3f, %.3f), quat=(%.4f, %.4f, %.4f, %.4f)",
-      tried_count, goal_candidates.size(),
-      goal_pose.position.x, goal_pose.position.y, goal_pose.position.z,
-      goal_pose.orientation.x, goal_pose.orientation.y, goal_pose.orientation.z,
-      goal_pose.orientation.w);
-
     // const bool found_valid_path = geometric_planner_.planPullOut(
-    //   start_pose, goal_pose, current_lanes, current_lanes, left_side_start,
+    //   start_pose, end_pose, current_lanes, current_lanes, left_side_start,
     //   boundary_departure_checker_);
 
     // 本物のgoal poseを渡してみる
     const bool found_valid_path = geometric_planner_.planPullOut(
-      start_pose, planner_data_->route_handler->getGoalPose(),
-      current_lanes, current_lanes, left_side_start,
-      boundary_departure_checker_);    
-
-    RCLCPP_WARN(
-      getLogger(), "[DrySteeringAvoidance] planPullOut result: %s",
-      found_valid_path ? "SUCCESS" : "FAILED");
+      start_pose, planner_data_->route_handler->getGoalPose(), current_lanes, current_lanes,
+      left_side_start, boundary_departure_checker_);
 
     if (found_valid_path) {
       PullOutPath output;
@@ -551,23 +421,14 @@ std::optional<PullOutPath> DrySteeringAvoidanceModule::planAvoidancePath()
         geometric_planner_.getPairsTerminalVelocityAndAccel();
 
       const auto arc_paths = geometric_planner_.getArcPaths();
-      RCLCPP_WARN(
-        getLogger(), "[DrySteeringAvoidance] arc_paths: empty=%d, size=%zu", arc_paths.empty(),
-        arc_paths.size());
 
       if (!arc_paths.empty() && !arc_paths.front().points.empty() && arc_paths.size() >= 2) {
         output.start_pose = arc_paths.front().points.front().point.pose;
         output.end_pose = arc_paths.back().points.back().point.pose;
       } else {
-        RCLCPP_WARN(
-          getLogger(), "[DrySteeringAvoidance] arc_paths invalid: empty=%d, size=%zu",
-          arc_paths.empty(), arc_paths.size());
         continue;
       }
 
-      RCLCPP_WARN(
-        getLogger(), "[DrySteeringAvoidance] Found valid avoidance path after %zu tries",
-        tried_count);
       return output;
     }
 
@@ -577,8 +438,6 @@ std::optional<PullOutPath> DrySteeringAvoidanceModule::planAvoidancePath()
     }
   }
 
-  RCLCPP_WARN(
-    getLogger(), "[DrySteeringAvoidance] No valid path found after %zu tries", tried_count);
   return std::nullopt;
 }
 
@@ -651,11 +510,9 @@ lanelet::ConstLanelets DrySteeringAvoidanceModule::getRightLanes() const
     // getMostRightLanelet: enable_same_root=true, get_shoulder_lane=true
     const auto rightmost_lane = route_handler->getMostRightLanelet(lane, true, true);
     // Add the rightmost lane if not already in the list
-    if (
-      std::find_if(
-        right_lanes.begin(), right_lanes.end(),
-        [&rightmost_lane](const auto & l) { return l.id() == rightmost_lane.id(); }) ==
-      right_lanes.end()) {
+    if (std::find_if(right_lanes.begin(), right_lanes.end(), [&rightmost_lane](const auto & l) {
+          return l.id() == rightmost_lane.id();
+        }) == right_lanes.end()) {
       right_lanes.push_back(rightmost_lane);
     }
   }
@@ -751,10 +608,10 @@ TurnSignalInfo DrySteeringAvoidanceModule::calcTurnSignalInfo() const
 
 void DrySteeringAvoidanceModule::setDebugData()
 {
+  using autoware_utils::append_marker_array;
   using marker_utils::createFootprintMarkerArray;
   using marker_utils::createPathMarkerArray;
   using marker_utils::createPoseMarkerArray;
-  using autoware_utils::append_marker_array;
   using visualization_msgs::msg::Marker;
 
   const auto life_time = rclcpp::Duration::from_seconds(1.5);
@@ -776,23 +633,23 @@ void DrySteeringAvoidanceModule::setDebugData()
   add(start_pose_marker, info_marker_);
 
   // Visualize ego footprint at start pose
-  auto start_footprint_marker =
-    createFootprintMarkerArray(getEgoPose(), vehicle_info_, "dry_steering_start_footprint", 0, 0.3, 0.9, 0.3);
+  auto start_footprint_marker = createFootprintMarkerArray(
+    getEgoPose(), vehicle_info_, "dry_steering_start_footprint", 0, 0.3, 0.9, 0.3);
   add(start_footprint_marker, debug_marker_);
 
-  // Visualize goal candidates
-  if (!debug_goal_candidates_.empty()) {
-    visualization_msgs::msg::MarkerArray goal_candidates_marker;
-    for (size_t i = 0; i < debug_goal_candidates_.size(); ++i) {
+  // Visualize end pose candidates
+  if (!debug_end_pose_candidates_.empty()) {
+    visualization_msgs::msg::MarkerArray end_pose_candidates_marker;
+    for (size_t i = 0; i < debug_end_pose_candidates_.size(); ++i) {
       auto marker = autoware_utils::create_default_marker(
-        "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "goal_candidates", static_cast<int>(i),
+        "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "end_pose_candidates", static_cast<int>(i),
         Marker::ARROW, autoware_utils::create_marker_scale(0.5, 0.2, 0.2),
         autoware_utils::create_marker_color(0.0, 0.5, 1.0, 0.5));
-      marker.pose = debug_goal_candidates_[i];
+      marker.pose = debug_end_pose_candidates_[i];
       marker.lifetime = life_time;
-      goal_candidates_marker.markers.push_back(marker);
+      end_pose_candidates_marker.markers.push_back(marker);
     }
-    add(goal_candidates_marker, debug_marker_);
+    add(end_pose_candidates_marker, debug_marker_);
   }
 
   // Visualize target object

@@ -56,6 +56,8 @@ DrySteeringAvoidanceParameters DrySteeringAvoidanceParameters::init(rclcpp::Node
     get_or_declare_parameter<double>(node, ns + "arc_path_interval");
   p.parallel_parking_parameters.pull_out_lane_departure_margin =
     get_or_declare_parameter<double>(node, ns + "lane_departure_margin");
+  p.parallel_parking_parameters.center_line_path_interval =
+    get_or_declare_parameter<double>(node, ns + "center_line_path_interval");
   p.parallel_parking_parameters.geometric_pull_out_max_steer_angle_margin_scale =
     get_or_declare_parameter<double>(node, ns + "geometric_pull_out_max_steer_angle_margin_scale");
   p.geometric_collision_check_distance_from_end =
