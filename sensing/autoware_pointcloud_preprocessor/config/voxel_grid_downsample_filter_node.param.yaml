@@ -3,3 +3,8 @@
     voxel_size_x: 0.3
     voxel_size_y: 0.3
     voxel_size_z: 0.1
+    enable_roi_exclusion  : false
+    roi_x_min: 80.0
+    roi_x_max: 220.0
+    roi_y_min: -20.0
+    roi_y_max: 20.0
