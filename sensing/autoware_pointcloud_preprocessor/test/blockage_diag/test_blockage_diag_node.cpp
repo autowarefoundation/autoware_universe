@@ -16,6 +16,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -90,6 +91,15 @@ protected:
         output_received_ = true;
       });
 
+    // Create subscriber for diagnostics topic
+    diagnostics_received_ = false;
+    diagnostics_sub_ = test_node_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
+      "/diagnostics", rclcpp::QoS(10),
+      [this](const diagnostic_msgs::msg::DiagnosticArray::SharedPtr msg) {
+        diagnostics_msg_ = msg;
+        diagnostics_received_ = true;
+      });
+
     // Wait for publisher/subscriber setup
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }
@@ -158,6 +168,21 @@ protected:
     return true;
   }
 
+  bool wait_for_diagnostics(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
+  {
+    auto start = std::chrono::steady_clock::now();
+    diagnostics_received_ = false;
+
+    while (!diagnostics_received_) {
+      if (std::chrono::steady_clock::now() - start > timeout) {
+        return false;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    return true;
+  }
+
   std::shared_ptr<autoware::pointcloud_preprocessor::BlockageDiagComponent> blockage_diag_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
@@ -166,6 +191,9 @@ protected:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr output_sub_;
   sensor_msgs::msg::PointCloud2::SharedPtr output_msg_;
   bool output_received_;
+  rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_sub_;
+  diagnostic_msgs::msg::DiagnosticArray::SharedPtr diagnostics_msg_;
+  bool diagnostics_received_;
 };
 
 // Test case: Basic integration test
@@ -220,6 +248,34 @@ TEST_F(BlockageDiagIntegrationTest, MultiplePointcloudsTest)
     ASSERT_NE(output_msg_, nullptr);
     EXPECT_GT(output_msg_->width * output_msg_->height, 0);
   }
+}
+
+// Test case: Diagnostics STALE test when no input is published
+TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
+{
+  // Do not publish any input pointcloud
+  // Just wait for diagnostics to be published
+
+  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
+
+  // Verify diagnostics message
+  ASSERT_NE(diagnostics_msg_, nullptr);
+  ASSERT_GT(diagnostics_msg_->status.size(), 0);
+
+  // Find the blockage_diag status
+  bool found_blockage_diag_status = false;
+  for (const auto & status : diagnostics_msg_->status) {
+    if (status.name.find("BlockageDiag") != std::string::npos ||
+        status.name.find("blockage") != std::string::npos) {
+      found_blockage_diag_status = true;
+      // Check that the level is STALE (3)
+      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::STALE)
+        << "Expected STALE level but got: " << static_cast<int>(status.level);
+      break;
+    }
+  }
+
+  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
 }
 
 int main(int argc, char ** argv)
