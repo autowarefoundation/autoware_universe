@@ -144,7 +144,6 @@ struct GridGroundFilterParameter
   const uint16_t gnd_grid_continual_thresh = 3;
 
   float grid_size_m;
-  float grid_mode_switch_radius;
   int gnd_grid_buffer_size;
   float virtual_lidar_x;
   float virtual_lidar_y;
@@ -164,8 +163,9 @@ public:
     // initialize grid pointer
     grid_ptr_ = std::make_unique<Grid>(
       param_.virtual_lidar_x, param_.virtual_lidar_y, param_.virtual_lidar_z);
-    grid_ptr_->initialize(
-      param_.grid_size_m, param_.radial_divider_angle_rad, param_.grid_mode_switch_radius);
+    // TODO(badai-nguyen): Temporary add radial limit to 200.0m constant value.
+    // need to be updated unify with crob range parameter
+    grid_ptr_->initialize(param_.grid_size_m, param_.radial_divider_angle_rad, 200.0f);
   }
   ~GridGroundFilter() = default;
 

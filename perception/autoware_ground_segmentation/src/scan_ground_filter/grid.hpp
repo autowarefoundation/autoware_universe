@@ -71,27 +71,6 @@ float pseudoArcTan2(const float y, const float x)
   }
 }
 
-float pseudoTan(const float theta)
-{
-  // lightweight tangent
-
-  // normalize the angle, range of [-pi/2, pi/2]
-  float normalized_theta = theta;
-  while (normalized_theta > M_PI_2f) {
-    normalized_theta -= M_PIf;
-  }
-  while (normalized_theta < -M_PI_2f) {
-    normalized_theta += M_PIf;
-  }
-
-  // avoid divide-by-zero
-  if (normalized_theta == 0.0f) return 0.0f;
-
-  if (std::abs(normalized_theta) <= 1.0f) {
-    return normalized_theta / M_PI_4f;
-  }
-  return std::copysign(M_PI_4f / (M_PI_2f - std::abs(normalized_theta)), normalized_theta);
-}
 }  // namespace
 
 namespace autoware::ground_segmentation
@@ -159,20 +138,13 @@ public:
   }
 
   void initialize(
-    const float grid_dist_size, const float grid_azimuth_size,
-    const float grid_linearity_switch_radius)
+    const float grid_dist_size, const float grid_azimuth_size, const float grid_radial_limit)
   {
     grid_dist_size_ = grid_dist_size;
     grid_azimuth_size_ = grid_azimuth_size;
 
-    // set grid linearity switch radius
-    grid_linearity_switch_num_ = static_cast<int>(grid_linearity_switch_radius / grid_dist_size_);
-    grid_linearity_switch_radius_ = grid_linearity_switch_num_ * grid_dist_size_;
-
-    // calculate grid parameters
-    grid_dist_size_rad_ =
-      pseudoArcTan2(grid_linearity_switch_radius_ + grid_dist_size_, origin_z_) -
-      pseudoArcTan2(grid_linearity_switch_radius_, origin_z_);
+    grid_radial_limit_ = grid_radial_limit;
+    grid_radial_max_num_ = std::ceil(grid_radial_limit / grid_dist_size_);
     grid_dist_size_inv_ = 1.0f / grid_dist_size_;
 
     // generate grid geometry
@@ -260,9 +232,8 @@ private:
   float origin_x_;
   float origin_y_;
   float origin_z_;
-  float grid_dist_size_ = 1.0f;                 // meters
-  float grid_azimuth_size_ = 0.01f;             // radians
-  float grid_linearity_switch_radius_ = 20.0f;  // meters
+  float grid_dist_size_ = 1.0f;      // meters
+  float grid_azimuth_size_ = 0.01f;  // radians
 
   // calculated parameters
   float grid_dist_size_rad_ = 0.0f;           // radians
@@ -274,6 +245,7 @@ private:
 
   // configured parameters
   float grid_radial_limit_ = 200.0f;  // meters
+  int grid_radial_max_num_ = 0;
 
   // array of grid boundaries
   std::vector<float> grid_radial_boundaries_;
@@ -300,22 +272,8 @@ private:
     // radial boundaries
     {
       // constant distance
-      for (int i = 0; i < grid_linearity_switch_num_; i++) {
+      for (int i = 0; i < grid_radial_max_num_; i++) {
         grid_radial_boundaries_.push_back(i * grid_dist_size_);
-      }
-      // constant angle
-      grid_linearity_switch_angle_ = pseudoArcTan2(grid_linearity_switch_radius_, origin_z_);
-      float angle = grid_linearity_switch_angle_;
-      const float grid_angle_interval =
-        pseudoArcTan2(grid_linearity_switch_radius_ + grid_dist_size_, origin_z_) - angle;
-      grid_size_rad_inv_ = 1.0f / grid_angle_interval;
-      while (angle < M_PI_2) {
-        const float dist = pseudoTan(angle) * origin_z_;
-        grid_radial_boundaries_.push_back(dist);
-        if (dist > grid_radial_limit_) {
-          break;
-        }
-        angle += grid_angle_interval;
       }
     }
 
@@ -337,12 +295,6 @@ private:
 
       int divider = 1;
       for (size_t i = radial_grid_num - 1; i > 0; --i) {
-        // set divider
-        const float radius = grid_radial_boundaries_[i];
-        const int divider_next = std::ceil(grid_linearity_switch_radius_ / radius);
-        if (divider_next % divider == 0 && max_azimuth_grid_num % divider_next == 0) {
-          divider = divider_next;
-        }
         // set azimuth grid number
         const int grid_num = static_cast<int>(max_azimuth_grid_num / divider);
         const int azimuth_grid_num = std::max(std::min(grid_num, max_azimuth_grid_num), 1);
@@ -384,20 +336,7 @@ private:
     if (radius < 0) {
       return -1;
     }
-
-    // determine the grid id
-    int grid_rad_idx = -1;
-
-    // constant distance
-    if (radius < grid_linearity_switch_radius_) {
-      grid_rad_idx = static_cast<int>(radius * grid_dist_size_inv_);
-    } else if (radius < grid_radial_limit_) {
-      const float angle = pseudoArcTan2(radius, origin_z_);
-      grid_rad_idx = grid_linearity_switch_num_ +
-                     static_cast<int>((angle - grid_linearity_switch_angle_) * grid_size_rad_inv_);
-    }
-
-    return grid_rad_idx;
+    return static_cast<int>(radius * grid_dist_size_inv_);
   }
 
   int getGridIdx(const int & radial_idx, const int & azimuth_idx) const
