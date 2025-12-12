@@ -2,6 +2,18 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* feat(planning_evaluator): add PET and DRAC metrics, refactor obstacle metrics implementation
+  * Refactored obstacle metrics
+  * New metrics:
+    - obstacle_pet: Post Encroachment Time for objects with overlapping trajectories but no collision
+    - obstacle_drac: Deceleration Rate to Avoid Collision
+  * All obstacle metrics can now be published per object (using object UUID) instead of only worst values, use worst_only to control behavior
+  * Optimize polygon intersection detection using Separating Axis Theorem (SAT) for better performance
+  * Rename parameter: obstacle.dist_thr_m -> obstacle.collision_thr_m
+  * Add new parameters: worst_only, use_ego_traj_vel, stop_velocity_mps, min_time_interval_s, min_spatial_interval_m
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

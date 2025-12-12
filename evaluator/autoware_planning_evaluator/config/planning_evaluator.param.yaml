@@ -73,8 +73,8 @@
       collision_thr_m: 0.0 # [m] distance threshold to consider a collision occurs between object footprints and ego trajectory footprints
       stop_velocity_mps: 0.2777 # [m/s] velocity threshold to consider the object or ego is static, used for speed up the calculation
 
-      min_time_interval_s: 0.05 # [s] minimum time interval between two successive points to use for ego trajectory resampling
-      min_spatial_interval_m: 0.1 # [m] minimum spatial interval between two successive points to use for ego trajectory resampling
+      min_time_interval_s: 0.05 # [s] minimum time interval between two successive points to use for ego trajectory resampling to save calculation.
+      min_spatial_interval_m: 0.1 # [m] minimum spatial interval between two successive points to use for ego trajectory resampling to save calculation.
 
     stop_decision:
       topic_prefix: /planning/planning_factors/ # topic prefix for planning factors
