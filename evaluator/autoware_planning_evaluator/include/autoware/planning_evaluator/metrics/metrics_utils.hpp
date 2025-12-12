@@ -22,6 +22,11 @@
 #include "autoware_perception_msgs/msg/predicted_object.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
+#include "unique_identifier_msgs/msg/uuid.hpp"
+
+#include <iomanip>
+#include <sstream>
+#include <string>
 
 namespace planning_diagnostics
 {
@@ -34,6 +39,21 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Pose;
+
+/**
+ * @brief convert UUID to string representation
+ * @param [in] uuid UUID message
+ * @return hex string representation of UUID
+ */
+inline std::string uuid_to_string(const unique_identifier_msgs::msg::UUID & uuid)
+{
+  std::stringstream ss;
+  ss << std::hex << std::setfill('0');
+  for (const auto & byte : uuid.uuid) {
+    ss << std::setw(2) << static_cast<int>(byte);
+  }
+  return ss.str();
+}
 
 /**
  * @brief find the index in the trajectory at the given distance of the given index
@@ -68,15 +88,16 @@ Trajectory get_lookahead_trajectory(
 double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & ego_pose);
 
 /**
- * @brief calculate the distance between ego vehicle footprint and a predicted object
- * @param [in] local_ego_footprint ego vehicle footprint in local coordinates
- * @param [in] ego_pose current ego vehicle pose in world coordinates
- * @param [in] object predicted object with pose and shape information
- * @return minimum distance between ego footprint and object footprint in meters
+ * @brief Fast polygon intersection check using Separating Axis Theorem (SAT)
+ * @details Efficiently checks if two convex polygons intersect, faster than boost::geometry's
+ *          generic intersection check. Uses SAT with early exit for non-intersecting cases.
+ *
+ * @param [in] poly1 First polygon (typically ego vehicle footprint)
+ * @param [in] poly2 Second polygon (typically obstacle footprint)
+ * @return true if polygons intersect, false otherwise
  */
-double calc_ego_object_distance(
-  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
-  const PredictedObject & object);
+bool polygonIntersects(
+  const autoware_utils::Polygon2d & poly1, const autoware_utils::Polygon2d & poly2);
 
 }  // namespace utils
 }  // namespace metrics
