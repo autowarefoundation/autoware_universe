@@ -348,6 +348,95 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
   ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
 }
 
+// Test case: Diagnostics ERROR test
+TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
+{
+  // Create a pointcloud with significant blockage in the ground region
+  // This will trigger ERROR when blockage_ratio > 0.5 and blockage_count > 2
+  
+  // Parameters from SetUp:
+  // blockage_ratio_threshold = 0.5
+  // blockage_count_threshold = 2
+  // blockage_buffering_interval = 2
+  // horizontal_ring_id = 16 (ground is from channel 16 to 31)
+  
+  int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
+  int vertical_bins = 32;
+  
+  // Publish multiple frames with blockage to increase blockage_count
+  for (int frame = 0; frame < 5; ++frame) {
+    auto timestamp = test_node_->now();
+    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+    pcl_cloud.header.frame_id = "lidar_top";
+    pcl_cloud.is_dense = false;
+
+    // Generate points that create significant blockage in ground region
+    // Only cover 30% of horizontal bins to create >50% blockage ratio
+    int coverage_bins = static_cast<int>(horizontal_bins * 0.3);
+    
+    for (int h = 0; h < coverage_bins; ++h) {
+      for (int v = 0; v < vertical_bins; ++v) {
+        PointXYZIRCAEDT point;
+        double azimuth_deg = -180.0 + h * 0.4;
+        double azimuth_rad = azimuth_deg * M_PI / 180.0;
+        float distance = 50.0;
+
+        point.x = distance * std::cos(azimuth_rad);
+        point.y = distance * std::sin(azimuth_rad);
+        point.z = 0.0;
+        point.intensity = 100;
+        point.return_type = 0;
+        point.channel = v;
+        point.azimuth = azimuth_rad;
+        point.elevation = 0.0;
+        point.distance = distance;
+        point.time_stamp = (h * vertical_bins + v) * 1000;
+
+        pcl_cloud.points.push_back(point);
+      }
+    }
+
+    pcl_cloud.height = 1;
+    pcl_cloud.width = pcl_cloud.points.size();
+
+    sensor_msgs::msg::PointCloud2 input_cloud;
+    pcl::toROSMsg(pcl_cloud, input_cloud);
+    input_cloud.header.stamp = timestamp;
+    input_cloud.header.frame_id = "lidar_top";
+
+    input_pub_->publish(input_cloud);
+
+    // Wait for output to be processed
+    ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message on frame " << frame;
+
+    // Add delay between frames to allow buffering
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  // Wait for diagnostics after multiple frames
+  diagnostics_received_ = false;
+  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
+
+  // Verify diagnostics message
+  ASSERT_NE(diagnostics_msg_, nullptr);
+  ASSERT_GT(diagnostics_msg_->status.size(), 0);
+
+  // Find the blockage_diag status
+  bool found_blockage_diag_status = false;
+  for (const auto & status : diagnostics_msg_->status) {
+    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
+    if (is_blockage_diag_status) {
+      found_blockage_diag_status = true;
+      // Check that the level is ERROR (2)
+      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::ERROR)
+        << "Expected ERROR level but got: " << static_cast<int>(status.level);
+      break;
+    }
+  }
+
+  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
