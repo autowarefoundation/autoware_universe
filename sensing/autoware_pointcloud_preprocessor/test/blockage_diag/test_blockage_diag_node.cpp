@@ -116,6 +116,7 @@ protected:
     rclcpp::shutdown();
   }
 
+  // Create a simple test pointcloud with random points
   sensor_msgs::msg::PointCloud2 create_test_pointcloud(
     const rclcpp::Time & stamp, int num_points = 100)
   {
@@ -125,7 +126,6 @@ protected:
     pcl_cloud.width = num_points;
     pcl_cloud.is_dense = false;
 
-    // Generate test points
     for (int i = 0; i < num_points; ++i) {
       PointXYZIRCAEDT point;
       float angle = 2.0 * M_PI * i / num_points;
@@ -136,11 +136,11 @@ protected:
       point.z = 0.0;
       point.intensity = 100;
       point.return_type = 0;
-      point.channel = i % 32;  // 32 channels
+      point.channel = i % 32;
       point.azimuth = angle;
       point.elevation = 0.0;
       point.distance = distance;
-      point.time_stamp = i * 1000;  // nanoseconds
+      point.time_stamp = i * 1000;
 
       pcl_cloud.points.push_back(point);
     }
@@ -151,6 +151,114 @@ protected:
     ros_cloud.header.frame_id = "lidar_top";
 
     return ros_cloud;
+  }
+
+  // Create a dense pointcloud covering all bins (for OK status)
+  sensor_msgs::msg::PointCloud2 create_dense_pointcloud(const rclcpp::Time & stamp)
+  {
+    const int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
+    const int vertical_bins = 32;
+
+    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+    pcl_cloud.header.frame_id = "lidar_top";
+    pcl_cloud.is_dense = false;
+
+    for (int h = 0; h < horizontal_bins; ++h) {
+      for (int v = 0; v < vertical_bins; ++v) {
+        PointXYZIRCAEDT point;
+        double azimuth_deg = -180.0 + h * 0.4;
+        double azimuth_rad = azimuth_deg * M_PI / 180.0;
+        float distance = 50.0;
+
+        point.x = distance * std::cos(azimuth_rad);
+        point.y = distance * std::sin(azimuth_rad);
+        point.z = 0.0;
+        point.intensity = 100;
+        point.return_type = 0;
+        point.channel = v;
+        point.azimuth = azimuth_rad;
+        point.elevation = 0.0;
+        point.distance = distance;
+        point.time_stamp = (h * vertical_bins + v) * 1000;
+
+        pcl_cloud.points.push_back(point);
+      }
+    }
+
+    pcl_cloud.height = 1;
+    pcl_cloud.width = pcl_cloud.points.size();
+
+    sensor_msgs::msg::PointCloud2 ros_cloud;
+    pcl::toROSMsg(pcl_cloud, ros_cloud);
+    ros_cloud.header.stamp = stamp;
+    ros_cloud.header.frame_id = "lidar_top";
+
+    return ros_cloud;
+  }
+
+  // Create a sparse pointcloud with blockage (for ERROR status)
+  sensor_msgs::msg::PointCloud2 create_blocked_pointcloud(const rclcpp::Time & stamp)
+  {
+    const int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
+    const int vertical_bins = 32;
+    const int coverage_bins = static_cast<int>(horizontal_bins * 0.3);  // 30% coverage
+
+    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+    pcl_cloud.header.frame_id = "lidar_top";
+    pcl_cloud.is_dense = false;
+
+    for (int h = 0; h < coverage_bins; ++h) {
+      for (int v = 0; v < vertical_bins; ++v) {
+        PointXYZIRCAEDT point;
+        double azimuth_deg = -180.0 + h * 0.4;
+        double azimuth_rad = azimuth_deg * M_PI / 180.0;
+        float distance = 50.0;
+
+        point.x = distance * std::cos(azimuth_rad);
+        point.y = distance * std::sin(azimuth_rad);
+        point.z = 0.0;
+        point.intensity = 100;
+        point.return_type = 0;
+        point.channel = v;
+        point.azimuth = azimuth_rad;
+        point.elevation = 0.0;
+        point.distance = distance;
+        point.time_stamp = (h * vertical_bins + v) * 1000;
+
+        pcl_cloud.points.push_back(point);
+      }
+    }
+
+    pcl_cloud.height = 1;
+    pcl_cloud.width = pcl_cloud.points.size();
+
+    sensor_msgs::msg::PointCloud2 ros_cloud;
+    pcl::toROSMsg(pcl_cloud, ros_cloud);
+    ros_cloud.header.stamp = stamp;
+    ros_cloud.header.frame_id = "lidar_top";
+
+    return ros_cloud;
+  }
+
+  // Helper to verify diagnostic status level
+  void verify_diagnostic_level(
+    uint8_t expected_level, const std::string & test_description)
+  {
+    ASSERT_NE(diagnostics_msg_, nullptr) << test_description;
+    ASSERT_GT(diagnostics_msg_->status.size(), 0) << test_description;
+
+    bool found = false;
+    for (const auto & status : diagnostics_msg_->status) {
+      if (status.name.find("blockage") != std::string::npos) {
+        found = true;
+        EXPECT_EQ(status.level, expected_level)
+          << test_description << ": Expected level " << static_cast<int>(expected_level)
+          << " but got " << static_cast<int>(status.level);
+        break;
+      }
+    }
+
+    ASSERT_TRUE(found) << test_description << ": Could not find blockage_diag status";
   }
 
   bool wait_for_output(std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
@@ -196,245 +304,63 @@ protected:
   bool diagnostics_received_;
 };
 
-// Test case: Empty pointcloud
+// Test case: Empty pointcloud passes through
 TEST_F(BlockageDiagIntegrationTest, EmptyPointcloudTest)
 {
-  // Create and publish empty pointcloud
-  auto timestamp = test_node_->now();
-  auto input_cloud = create_test_pointcloud(timestamp, 0);
-
+  auto input_cloud = create_test_pointcloud(test_node_->now(), 0);
   input_pub_->publish(input_cloud);
 
-  // Wait for output
   ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message";
-
-  // Verify output
   ASSERT_NE(output_msg_, nullptr);
   EXPECT_EQ(output_msg_->width * output_msg_->height, 0);
 }
 
-// Test case: Diagnostics STALE test when no input is published
+// Test case: No input produces STALE diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
 {
-  // Do not publish any input pointcloud
-  // Just wait for diagnostics to be published
-
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-
-  // Verify diagnostics message
-  ASSERT_NE(diagnostics_msg_, nullptr);
-  ASSERT_GT(diagnostics_msg_->status.size(), 0);
-
-  // Find the blockage_diag status
-  bool found_blockage_diag_status = false;
-  for (const auto & status : diagnostics_msg_->status) {
-    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
-    if (is_blockage_diag_status) {
-      found_blockage_diag_status = true;
-      // Check that the level is STALE (3)
-      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::STALE)
-        << "Expected STALE level but got: " << static_cast<int>(status.level);
-      break;
-    }
-  }
-
-  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::STALE, "STALE test");
 }
 
-// Test case: Diagnostics STALE test when no input is published
+// Test case: Empty pointcloud produces WARN diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 {
-
-  // Create and publish empty pointcloud
-  auto timestamp = test_node_->now();
-  auto input_cloud = create_test_pointcloud(timestamp, 0);
-
+  auto input_cloud = create_test_pointcloud(test_node_->now(), 0);
   input_pub_->publish(input_cloud);
 
-  diagnostics_received_ = false;  // reset received diagnostics
-  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-
-  // Verify diagnostics message
-  ASSERT_NE(diagnostics_msg_, nullptr);
-  ASSERT_GT(diagnostics_msg_->status.size(), 0);
-
-  // Find the blockage_diag status
-  bool found_blockage_diag_status = false;
-  for (const auto & status : diagnostics_msg_->status) {
-    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
-    if (is_blockage_diag_status) {
-      found_blockage_diag_status = true;
-      // Check that the level is WARN (1)
-      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::WARN)
-        << "Expected WARN level but got: " << static_cast<int>(status.level);
-      break;
-    }
-  }
-
-  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
-}
-
-// Test case: Diagnostics OK test
-TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
-{
-  // Create a dense pointcloud that covers all bins to ensure no blockage is detected
-  // horizontal_bins = 360 / 0.4 = 900, vertical_bins = 32
-  auto timestamp = test_node_->now();
-  
-  pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-  pcl_cloud.header.frame_id = "lidar_top";
-  pcl_cloud.is_dense = false;
-
-  // Generate dense points to cover all horizontal and vertical bins
-  int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
-  int vertical_bins = 32;
-  
-  for (int h = 0; h < horizontal_bins; ++h) {
-    for (int v = 0; v < vertical_bins; ++v) {
-      PointXYZIRCAEDT point;
-      double azimuth_deg = -180.0 + h * 0.4;
-      double azimuth_rad = azimuth_deg * M_PI / 180.0;
-      float distance = 50.0;  // Well within max_distance_range of 200.0
-
-      point.x = distance * std::cos(azimuth_rad);
-      point.y = distance * std::sin(azimuth_rad);
-      point.z = 0.0;
-      point.intensity = 100;
-      point.return_type = 0;
-      point.channel = v;
-      point.azimuth = azimuth_rad;
-      point.elevation = 0.0;
-      point.distance = distance;
-      point.time_stamp = (h * vertical_bins + v) * 1000;
-
-      pcl_cloud.points.push_back(point);
-    }
-  }
-
-  pcl_cloud.height = 1;
-  pcl_cloud.width = pcl_cloud.points.size();
-
-  sensor_msgs::msg::PointCloud2 input_cloud;
-  pcl::toROSMsg(pcl_cloud, input_cloud);
-  input_cloud.header.stamp = timestamp;
-  input_cloud.header.frame_id = "lidar_top";
-
-  input_pub_->publish(input_cloud);
-
-  // Wait for output to be processed
-  ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message";
-
-  // Reset diagnostics received flag and wait for diagnostics
   diagnostics_received_ = false;
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-
-  // Verify diagnostics message
-  ASSERT_NE(diagnostics_msg_, nullptr);
-  ASSERT_GT(diagnostics_msg_->status.size(), 0);
-
-  // Find the blockage_diag status
-  bool found_blockage_diag_status = false;
-  for (const auto & status : diagnostics_msg_->status) {
-    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
-    if (is_blockage_diag_status) {
-      found_blockage_diag_status = true;
-      // Check that the level is OK (0)
-      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::OK)
-        << "Expected OK level but got: " << static_cast<int>(status.level);
-      break;
-    }
-  }
-
-  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::WARN, "WARN test");
 }
 
-// Test case: Diagnostics ERROR test
+// Test case: Dense pointcloud produces OK diagnostic
+TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
+{
+  auto input_cloud = create_dense_pointcloud(test_node_->now());
+  input_pub_->publish(input_cloud);
+
+  ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message";
+
+  diagnostics_received_ = false;
+  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
+  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK test");
+}
+
+// Test case: Blocked pointcloud produces ERROR diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
 {
-  // Create a pointcloud with significant blockage in the ground region
-  // This will trigger ERROR when blockage_ratio > 0.5 and blockage_count > 2
-  
-  // Parameters from SetUp:
-  // blockage_ratio_threshold = 0.5
-  // blockage_count_threshold = 2
-  // blockage_buffering_interval = 2
-  // horizontal_ring_id = 16 (ground is from channel 16 to 31)
-  
-  int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
-  int vertical_bins = 32;
-  
-  // Publish multiple frames with blockage to increase blockage_count
+  // Publish multiple frames with blockage to trigger ERROR
   for (int frame = 0; frame < 5; ++frame) {
-    auto timestamp = test_node_->now();
-    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-    pcl_cloud.header.frame_id = "lidar_top";
-    pcl_cloud.is_dense = false;
-
-    // Generate points that create significant blockage in ground region
-    // Only cover 30% of horizontal bins to create >50% blockage ratio
-    int coverage_bins = static_cast<int>(horizontal_bins * 0.3);
-    
-    for (int h = 0; h < coverage_bins; ++h) {
-      for (int v = 0; v < vertical_bins; ++v) {
-        PointXYZIRCAEDT point;
-        double azimuth_deg = -180.0 + h * 0.4;
-        double azimuth_rad = azimuth_deg * M_PI / 180.0;
-        float distance = 50.0;
-
-        point.x = distance * std::cos(azimuth_rad);
-        point.y = distance * std::sin(azimuth_rad);
-        point.z = 0.0;
-        point.intensity = 100;
-        point.return_type = 0;
-        point.channel = v;
-        point.azimuth = azimuth_rad;
-        point.elevation = 0.0;
-        point.distance = distance;
-        point.time_stamp = (h * vertical_bins + v) * 1000;
-
-        pcl_cloud.points.push_back(point);
-      }
-    }
-
-    pcl_cloud.height = 1;
-    pcl_cloud.width = pcl_cloud.points.size();
-
-    sensor_msgs::msg::PointCloud2 input_cloud;
-    pcl::toROSMsg(pcl_cloud, input_cloud);
-    input_cloud.header.stamp = timestamp;
-    input_cloud.header.frame_id = "lidar_top";
-
+    auto input_cloud = create_blocked_pointcloud(test_node_->now());
     input_pub_->publish(input_cloud);
 
-    // Wait for output to be processed
-    ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message on frame " << frame;
-
-    // Add delay between frames to allow buffering
+    ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output on frame " << frame;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  // Wait for diagnostics after multiple frames
   diagnostics_received_ = false;
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-
-  // Verify diagnostics message
-  ASSERT_NE(diagnostics_msg_, nullptr);
-  ASSERT_GT(diagnostics_msg_->status.size(), 0);
-
-  // Find the blockage_diag status
-  bool found_blockage_diag_status = false;
-  for (const auto & status : diagnostics_msg_->status) {
-    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
-    if (is_blockage_diag_status) {
-      found_blockage_diag_status = true;
-      // Check that the level is ERROR (2)
-      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::ERROR)
-        << "Expected ERROR level but got: " << static_cast<int>(status.level);
-      break;
-    }
-  }
-
-  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "ERROR test");
 }
 
 int main(int argc, char ** argv)
