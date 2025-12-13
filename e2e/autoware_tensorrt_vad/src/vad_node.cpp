@@ -165,11 +165,11 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
     "VAD Node has been initialized - VAD model will be initialized after first callback");
 }
 
-void VadNode::image_callback(
+bool VadNode::image_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
   if (!validate_camera_id(camera_id, "image_callback")) {
-    return;
+    return false;
   }
 
   const std::string callback_name = "image (camera " + std::to_string(camera_id) + ")";
@@ -180,54 +180,62 @@ void VadNode::image_callback(
     });
 
   if (processed && static_cast<int32_t>(camera_id) == front_camera_id_) {
-    anchor_callback();
+    return anchor_callback();
   }
+
+  return processed;
 }
 
-void VadNode::camera_info_callback(
+bool VadNode::camera_info_callback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id)
 {
   if (!validate_camera_id(camera_id, "camera_info_callback")) {
-    return;
+    return false;
   }
 
   const std::string callback_name = "camera_info (camera " + std::to_string(camera_id) + ")";
-  process_callback<sensor_msgs::msg::CameraInfo>(
+  return process_callback<sensor_msgs::msg::CameraInfo>(
     msg, callback_name,
     [this, camera_id](const sensor_msgs::msg::CameraInfo::ConstSharedPtr & info_msg) {
       vad_input_topic_data_current_frame_.set_camera_info(camera_id, info_msg);
     });
 }
 
-void VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
+bool VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
-  process_callback<nav_msgs::msg::Odometry>(
+  return process_callback<nav_msgs::msg::Odometry>(
     msg, "odometry", [this](const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg) {
       vad_input_topic_data_current_frame_.set_kinematic_state(odometry_msg);
     });
 }
 
-void VadNode::acceleration_callback(
+bool VadNode::acceleration_callback(
   const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg)
 {
-  process_callback<geometry_msgs::msg::AccelWithCovarianceStamped>(
+  return process_callback<geometry_msgs::msg::AccelWithCovarianceStamped>(
     msg, "acceleration",
     [this](const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr & accel_msg) {
       vad_input_topic_data_current_frame_.set_acceleration(accel_msg);
     });
 }
 
-void VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
+bool VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
 {
-  // Register transforms in tf_buffer
-  for (const auto & transform : msg->transforms) {
-    tf_buffer_.setTransform(transform, "default_authority", true);
+  try {
+    // Register transforms in tf_buffer
+    for (const auto & transform : msg->transforms) {
+      tf_buffer_.setTransform(transform, "default_authority", true);
+    }
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received TF static data");
+  } catch (...) {
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Exception in tf_static_callback");
+    return false;
   }
-
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received TF static data");
+  return true;
 }
 
-void VadNode::anchor_callback()
+bool VadNode::anchor_callback()
 {
   try {
     std::optional<VadInputTopicData> frame_data;
@@ -236,24 +244,20 @@ void VadNode::anchor_callback()
       if (!sync_strategy_) {
         RCLCPP_ERROR_THROTTLE(
           this->get_logger(), *this->get_clock(), 5000, "Sync strategy not initialized");
-        return;
+        return false;
       }
-
       if (!sync_strategy_->is_ready(vad_input_topic_data_current_frame_)) {
         RCLCPP_DEBUG_THROTTLE(
           this->get_logger(), *this->get_clock(), 5000,
           "Synchronization strategy indicates data is not ready for inference");
-        return;
+        return false;
       }
-
       frame_data.emplace(vad_input_topic_data_current_frame_);
       vad_input_topic_data_current_frame_.reset();
     }
-
     if (!frame_data.has_value()) {
-      return;
+      return false;
     }
-
     auto vad_output_topic_data = trigger_inference(std::move(*frame_data));
     if (vad_output_topic_data.has_value()) {
       publish(vad_output_topic_data.value());
@@ -261,7 +265,9 @@ void VadNode::anchor_callback()
   } catch (const std::exception & e) {
     RCLCPP_ERROR_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000, "Exception in anchor_callback: %s", e.what());
+    return false;
   }
+  return true;
 }
 
 std::optional<VadOutputTopicData> VadNode::trigger_inference(

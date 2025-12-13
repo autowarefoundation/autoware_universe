@@ -104,14 +104,14 @@ private:
   void create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos);
 
   // Callback methods
-  void image_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id);
-  void camera_info_callback(
+  bool image_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id);
+  bool camera_info_callback(
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id);
-  void odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void acceleration_callback(
+  bool odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+  bool acceleration_callback(
     const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg);
-  void tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg);
-  void anchor_callback();
+  bool tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg);
+  bool anchor_callback();
 
   // Generic callback handler template
   template <typename MsgType>
