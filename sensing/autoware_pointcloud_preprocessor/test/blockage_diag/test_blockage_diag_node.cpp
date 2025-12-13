@@ -274,6 +274,80 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
   ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
 }
 
+// Test case: Diagnostics OK test
+TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
+{
+  // Create a dense pointcloud that covers all bins to ensure no blockage is detected
+  // horizontal_bins = 360 / 0.4 = 900, vertical_bins = 32
+  auto timestamp = test_node_->now();
+  
+  pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+  pcl_cloud.header.frame_id = "lidar_top";
+  pcl_cloud.is_dense = false;
+
+  // Generate dense points to cover all horizontal and vertical bins
+  int horizontal_bins = static_cast<int>(360.0 / 0.4);  // 900 bins
+  int vertical_bins = 32;
+  
+  for (int h = 0; h < horizontal_bins; ++h) {
+    for (int v = 0; v < vertical_bins; ++v) {
+      PointXYZIRCAEDT point;
+      double azimuth_deg = -180.0 + h * 0.4;
+      double azimuth_rad = azimuth_deg * M_PI / 180.0;
+      float distance = 50.0;  // Well within max_distance_range of 200.0
+
+      point.x = distance * std::cos(azimuth_rad);
+      point.y = distance * std::sin(azimuth_rad);
+      point.z = 0.0;
+      point.intensity = 100;
+      point.return_type = 0;
+      point.channel = v;
+      point.azimuth = azimuth_rad;
+      point.elevation = 0.0;
+      point.distance = distance;
+      point.time_stamp = (h * vertical_bins + v) * 1000;
+
+      pcl_cloud.points.push_back(point);
+    }
+  }
+
+  pcl_cloud.height = 1;
+  pcl_cloud.width = pcl_cloud.points.size();
+
+  sensor_msgs::msg::PointCloud2 input_cloud;
+  pcl::toROSMsg(pcl_cloud, input_cloud);
+  input_cloud.header.stamp = timestamp;
+  input_cloud.header.frame_id = "lidar_top";
+
+  input_pub_->publish(input_cloud);
+
+  // Wait for output to be processed
+  ASSERT_TRUE(wait_for_output()) << "Timeout waiting for output message";
+
+  // Reset diagnostics received flag and wait for diagnostics
+  diagnostics_received_ = false;
+  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
+
+  // Verify diagnostics message
+  ASSERT_NE(diagnostics_msg_, nullptr);
+  ASSERT_GT(diagnostics_msg_->status.size(), 0);
+
+  // Find the blockage_diag status
+  bool found_blockage_diag_status = false;
+  for (const auto & status : diagnostics_msg_->status) {
+    bool is_blockage_diag_status = status.name.find("blockage") != std::string::npos;
+    if (is_blockage_diag_status) {
+      found_blockage_diag_status = true;
+      // Check that the level is OK (0)
+      EXPECT_EQ(status.level, diagnostic_msgs::msg::DiagnosticStatus::OK)
+        << "Expected OK level but got: " << static_cast<int>(status.level);
+      break;
+    }
+  }
+
+  ASSERT_TRUE(found_blockage_diag_status) << "Could not find blockage_diag status in diagnostics";
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
