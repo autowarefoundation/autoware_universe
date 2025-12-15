@@ -107,40 +107,17 @@ protected:
     rclcpp::shutdown();
   }
 
-  // Create a simple test pointcloud with random points
-  sensor_msgs::msg::PointCloud2 create_test_pointcloud(
-    const rclcpp::Time & stamp, int num_points = 100)
+  // Create zero length pointcloud
+  sensor_msgs::msg::PointCloud2 create_zero_length_pointcloud()
   {
     pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
     pcl_cloud.header.frame_id = "lidar_top";
     pcl_cloud.height = 1;
-    pcl_cloud.width = num_points;
+    pcl_cloud.width = 0;
     pcl_cloud.is_dense = false;
-
-    for (int i = 0; i < num_points; ++i) {
-      PointXYZIRCAEDT point;
-      float angle = 2.0 * M_PI * i / num_points;
-      float distance = 10.0 + (i % 10);
-
-      point.x = distance * std::cos(angle);
-      point.y = distance * std::sin(angle);
-      point.z = 0.0;
-      point.intensity = 100;
-      point.return_type = 0;
-      point.channel = i % 4;
-      point.azimuth = angle;
-      point.elevation = 0.0;
-      point.distance = distance;
-      point.time_stamp = i * 1000;
-
-      pcl_cloud.points.push_back(point);
-    }
 
     sensor_msgs::msg::PointCloud2 ros_cloud;
     pcl::toROSMsg(pcl_cloud, ros_cloud);
-    ros_cloud.header.stamp = stamp;
-    ros_cloud.header.frame_id = "lidar_top";
-
     return ros_cloud;
   }
 
@@ -287,7 +264,7 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
 // Test case: Empty pointcloud produces WARN diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 {
-  auto input_cloud = create_test_pointcloud(test_node_->now(), 0);
+  auto input_cloud = create_zero_length_pointcloud();
   input_pub_->publish(input_cloud);
 
   diagnostics_received_ = false;
