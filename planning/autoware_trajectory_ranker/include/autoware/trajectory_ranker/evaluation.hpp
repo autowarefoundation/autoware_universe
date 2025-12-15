@@ -43,12 +43,14 @@ class Evaluator
 public:
   explicit Evaluator(
     const std::shared_ptr<RouteHandler> & route_handler,
-    const std::shared_ptr<VehicleInfo> & vehicle_info, const rclcpp::Logger & logger)
+    const std::shared_ptr<VehicleInfo> & vehicle_info, const rclcpp::Logger & logger,
+    rclcpp::Node * node = nullptr)
   : plugin_loader_(
       "autoware_trajectory_ranker", "autoware::trajectory_ranker::metrics::MetricInterface"),
     route_handler_{route_handler},
     vehicle_info_{vehicle_info},
-    logger_{logger}
+    logger_{logger},
+    node_ptr_{node}
   {
   }
 
@@ -161,6 +163,8 @@ private:
   std::shared_ptr<VehicleInfo> vehicle_info_;
 
   rclcpp::Logger logger_;
+
+  rclcpp::Node * node_ptr_{nullptr};
 };
 
 }  // namespace autoware::trajectory_ranker

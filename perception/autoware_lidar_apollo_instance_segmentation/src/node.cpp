@@ -52,6 +52,12 @@ LidarInstanceSegmentationNode::LidarInstanceSegmentationNode(
 void LidarInstanceSegmentationNode::pointCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
 {
+  // check for empty point cloud
+  if (msg->data.empty() || msg->width == 0 || msg->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    return;
+  }
+
   stop_watch_ptr_->toc("processing_time", true);
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output_msg;
   detector_ptr_->detectDynamicObjects(*msg, output_msg);

@@ -332,6 +332,70 @@ bool BicycleMotionModel::updateStatePoseFront(
   return ekf_.update(Y, C, R);
 }
 
+bool BicycleMotionModel::updateStateLength(
+  const double & new_length, const LengthUpdateAnchor anchor)
+{
+  // check if the state is initialized
+  if (!checkInitialized()) {
+    RCLCPP_WARN(logger_, "BicycleMotionModel::updateStateLength Cannot update state");
+    return false;
+  }
+
+  // Get current state
+  StateVec X_t;
+  StateMat P_t;
+  ekf_.getX(X_t);
+  ekf_.getP(P_t);
+
+  // Get current yaw and calculate trigonometric values once
+  const double current_yaw = getYawState();
+  const double cos_yaw = std::cos(current_yaw);
+  const double sin_yaw = std::sin(current_yaw);
+
+  const double current_length = getLength();
+  const double new_wheelbase = new_length * (motion_params_.lf_ratio + motion_params_.lr_ratio);
+
+  double new_x1 = 0.0;
+  double new_y1 = 0.0;
+  double new_x2 = 0.0;
+  double new_y2 = 0.0;
+
+  if (anchor == LengthUpdateAnchor::FRONT) {
+    // Keep front wheel fixed, extend/contract from the rear
+    new_x2 = X_t(IDX::X2);
+    new_y2 = X_t(IDX::Y2);
+    new_x1 = new_x2 - new_wheelbase * cos_yaw;
+    new_y1 = new_y2 - new_wheelbase * sin_yaw;
+
+  } else if (anchor == LengthUpdateAnchor::REAR) {
+    // Keep rear wheel fixed, extend/contract from the front
+    new_x1 = X_t(IDX::X1);
+    new_y1 = X_t(IDX::Y1);
+    new_x2 = new_x1 + new_wheelbase * cos_yaw;
+    new_y2 = new_y1 + new_wheelbase * sin_yaw;
+
+  } else {
+    // Default: Keep center fixed, extend/contract equally from both ends
+    const double lr_delta = (new_length - current_length) * motion_params_.lr_ratio;
+    new_x1 = X_t(IDX::X1) - lr_delta * cos_yaw;
+    new_y1 = X_t(IDX::Y1) - lr_delta * sin_yaw;
+    new_x2 = new_x1 + new_wheelbase * cos_yaw;
+    new_y2 = new_y1 + new_wheelbase * sin_yaw;
+  }
+
+  // Update state with new wheel positions, keeping velocities unchanged
+  X_t(IDX::X1) = new_x1;
+  X_t(IDX::Y1) = new_y1;
+  X_t(IDX::X2) = new_x2;
+  X_t(IDX::Y2) = new_y2;
+  // Keep velocities (U, V) unchanged
+
+  // Reinitialize with updated state (no covariance change)
+  ekf_.init(X_t, P_t);
+
+  return true;
+}
+
 bool BicycleMotionModel::limitStates()
 {
   StateVec X_t;
