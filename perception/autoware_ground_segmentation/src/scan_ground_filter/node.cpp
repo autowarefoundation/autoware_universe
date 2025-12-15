@@ -21,6 +21,7 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -78,10 +79,7 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
 
     // grid parameters
     grid_size_m_ = static_cast<float>(declare_parameter<double>("grid_size_m"));
-    grid_mode_switch_radius_ =
-      static_cast<float>(declare_parameter<double>("grid_mode_switch_radius"));
     gnd_grid_buffer_size_ = declare_parameter<int>("gnd_grid_buffer_size");
-    virtual_lidar_z_ = vehicle_info_.vehicle_height_m;
 
     // initialize grid filter
     {
@@ -97,11 +95,9 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.non_ground_height_threshold = non_ground_height_threshold_;
 
       param.grid_size_m = grid_size_m_;
-      param.grid_mode_switch_radius = grid_mode_switch_radius_;
       param.gnd_grid_buffer_size = gnd_grid_buffer_size_;
       param.virtual_lidar_x = vehicle_info_.wheel_base_m / 2.0f + center_pcl_shift_;
       param.virtual_lidar_y = 0.0f;
-      param.virtual_lidar_z = virtual_lidar_z_;
 
       grid_ground_filter_ptr_ = std::make_unique<GridGroundFilter>(param);
     }
@@ -396,10 +392,7 @@ rcl_interfaces::msg::SetParametersResult ScanGroundFilterComponent::onParameter(
   const std::vector<rclcpp::Parameter> & param)
 {
   if (get_param(param, "grid_size_m", grid_size_m_)) {
-    // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_, grid_mode_switch_radius_);
-  }
-  if (get_param(param, "grid_mode_switch_radius", grid_mode_switch_radius_)) {
-    // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_, grid_mode_switch_radius_);
+    // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_);
   }
   double global_slope_max_angle_deg{get_parameter("global_slope_max_angle_deg").as_double()};
   if (get_param(param, "global_slope_max_angle_deg", global_slope_max_angle_deg)) {
@@ -421,7 +414,7 @@ rcl_interfaces::msg::SetParametersResult ScanGroundFilterComponent::onParameter(
   if (get_param(param, "radial_divider_angle_deg", radial_divider_angle_deg)) {
     radial_divider_angle_rad_ = deg2rad(radial_divider_angle_deg);
     radial_dividers_num_ = std::ceil(2.0 * M_PI / radial_divider_angle_rad_);
-    // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_, grid_mode_switch_radius_);
+    // grid_ptr_->initialize(grid_size_m_, radial_divider_angle_rad_);
     RCLCPP_DEBUG(
       get_logger(), "Setting radial_divider_angle_rad to: %f.", radial_divider_angle_rad_);
     RCLCPP_DEBUG(get_logger(), "Setting radial_dividers_num to: %zu.", radial_dividers_num_);
