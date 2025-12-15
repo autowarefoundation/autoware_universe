@@ -65,7 +65,7 @@ __global__ void cropBoxKernel(
       const float & max_x = crop_box_parameters.max_x;
       const float & max_y = crop_box_parameters.max_y;
       const float & max_z = crop_box_parameters.max_z;
-      const std::uint8_t negative = crop_box_parameters.negative;
+      const bool negative = crop_box_parameters.negative;
 
       // Check if point is inside the box
       const bool point_is_inside =
