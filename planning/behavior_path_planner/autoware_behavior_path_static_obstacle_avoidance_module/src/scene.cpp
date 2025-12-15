@@ -1040,7 +1040,7 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   auto shift_lines = path_shifter_.getShiftLines();
   auto selected_spline_shift_path = spline_shift_path;
   auto selected_linear_shift_path = linear_shift_path;
-  if (avoid_data_.yield_required) {
+  if (parameters_->enable_signalling_during_yield && avoid_data_.yield_required) {
     if (avoid_data_.candidate_path.path.points.empty()) {
       return getPreviousModuleOutput().turn_signal_info;
     }
@@ -1315,8 +1315,10 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::planWaitingApproval()
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   BehaviorModuleOutput out = plan();
 
-  const bool is_no_shift_lines = !avoid_data_.yield_required ? path_shifter_.getShiftLines().empty()
-                                                             : avoid_data_.safe_shift_line.empty();
+  const bool is_no_shift_lines =
+    !(parameters_->enable_signalling_during_yield && avoid_data_.yield_required)
+      ? path_shifter_.getShiftLines().empty()
+      : avoid_data_.safe_shift_line.empty();
   if (is_no_shift_lines) {
     out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
   }

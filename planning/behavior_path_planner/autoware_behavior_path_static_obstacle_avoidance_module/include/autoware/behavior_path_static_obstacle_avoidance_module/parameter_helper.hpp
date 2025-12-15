@@ -333,6 +333,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
     p.enable_yield_maneuver = get_or_declare_parameter<bool>(*node, ns + "enable");
     p.enable_yield_maneuver_during_shifting =
       get_or_declare_parameter<bool>(*node, ns + "enable_during_shifting");
+    p.enable_signalling_during_yield =
+      get_or_declare_parameter<bool>(*node, ns + "enable_signalling_during_yield");
   }
 
   // stop
