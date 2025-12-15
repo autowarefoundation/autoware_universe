@@ -214,7 +214,8 @@ void ElevationMapLoaderNode::onPointcloudMap(
   // check for empty point cloud
   if (pointcloud_map->data.empty() || pointcloud_map->width == 0 || pointcloud_map->height == 0) {
     RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *get_clock(), 10000, "Empty pointcloud_map received, skipping processing");
+      this->get_logger(), *get_clock(), 10000,
+      "Empty pointcloud_map received, skipping processing");
     return;
   }
 
@@ -308,8 +309,7 @@ bool ElevationMapLoaderNode::receiveMap()
   // TODO(youtalk): add unit test for empty point cloud handling
   if (pointcloud_map.data.empty() || pointcloud_map.width == 0 || pointcloud_map.height == 0) {
     RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *get_clock(), 10000,
-      "Empty pointcloud_map received after concatenation");
+      this->get_logger(), *get_clock(), 10000, "Empty pointcloud_map received after concatenation");
     return false;
   }
 
