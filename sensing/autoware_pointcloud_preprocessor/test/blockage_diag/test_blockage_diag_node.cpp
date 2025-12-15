@@ -75,8 +75,8 @@ protected:
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     // Create publisher for input topic (blockage_diag subscribes to "input")
-    input_pub_ = test_node_->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "input", rclcpp::SensorDataQoS());
+    input_pub_ =
+      test_node_->create_publisher<sensor_msgs::msg::PointCloud2>("input", rclcpp::SensorDataQoS());
 
     // Create subscriber for diagnostics topic
     diagnostics_received_ = false;
@@ -201,8 +201,7 @@ protected:
   }
 
   // Helper to verify diagnostic status level
-  void verify_diagnostic_level(
-    uint8_t expected_level, const std::string & test_description)
+  void verify_diagnostic_level(uint8_t expected_level, const std::string & test_description)
   {
     ASSERT_NE(diagnostics_msg_, nullptr) << test_description;
     ASSERT_GT(diagnostics_msg_->status.size(), 0) << test_description;
