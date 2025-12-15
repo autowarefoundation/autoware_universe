@@ -494,7 +494,8 @@ void write_results(
 
   // Check if the file was opened successfully
   if (!file.is_open()) {
-    RCLCPP_ERROR_ONCE(node->get_logger(), "Failed to open file: %s", ss.str().c_str());
+    const std::string & str = ss.str();
+    RCLCPP_ERROR_ONCE(node->get_logger(), "Failed to open file: %s", str.c_str());
     return;
   }
 
@@ -588,6 +589,7 @@ void write_results(
          << stats_total_latency.std_dev << "\n";
   }
   file.close();
-  RCLCPP_INFO(node->get_logger(), "Results written to: %s", ss.str().c_str());
+  const std::string & str = ss.str();
+  RCLCPP_INFO(node->get_logger(), "Results written to: %s", str.c_str());
 }
 }  // namespace reaction_analyzer
