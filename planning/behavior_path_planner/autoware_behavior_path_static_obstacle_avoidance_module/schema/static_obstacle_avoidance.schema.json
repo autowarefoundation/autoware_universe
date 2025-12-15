@@ -1351,11 +1351,7 @@
               "default": "false"
             }
           },
-          "required": [
-            "enable",
-            "enable_during_shifting",
-            "enable_signalling_during_yield"
-          ],
+          "required": ["enable", "enable_during_shifting", "enable_signalling_during_yield"],
           "additionalProperties": false
         },
         "cancel": {
