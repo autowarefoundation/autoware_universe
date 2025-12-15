@@ -6,12 +6,23 @@
   <arg name="output/high_speed_objects" default="~/output/high_speed_objects"/>
   <!-- Parameter -->
   <arg name="param_path" default="$(find-pkg-share autoware_object_velocity_splitter)/config/object_velocity_splitter.param.yaml"/>
+  <arg name="container_name" default="" description="Container name for composable node. If empty, standalone node is launched."/>
 
-  <!-- Node -->
-  <node pkg="autoware_object_velocity_splitter" exec="object_velocity_splitter_node" name="object_velocity_splitter" output="screen">
+  <!-- Standalone mode: launch as a regular node when container_name is empty -->
+  <node pkg="autoware_object_velocity_splitter" exec="object_velocity_splitter_node" name="object_velocity_splitter" output="screen" if="$(eval &quot;'$(var container_name)'==''&quot;)">
     <remap from="~/input/objects" to="$(var input/objects)"/>
     <remap from="~/output/low_speed_objects" to="$(var output/low_speed_objects)"/>
     <remap from="~/output/high_speed_objects" to="$(var output/high_speed_objects)"/>
     <param from="$(var param_path)"/>
   </node>
+
+  <!-- Composable mode: load into existing container when container_name is specified -->
+  <load_composable_node target="$(var container_name)" if="$(eval &quot;'$(var container_name)'!=''&quot;)">
+    <composable_node pkg="autoware_object_velocity_splitter" plugin="autoware::object_velocity_splitter::ObjectVelocitySplitterNode" name="object_velocity_splitter" namespace="">
+      <remap from="~/input/objects" to="$(var input/objects)"/>
+      <remap from="~/output/low_speed_objects" to="$(var output/low_speed_objects)"/>
+      <remap from="~/output/high_speed_objects" to="$(var output/high_speed_objects)"/>
+      <param from="$(var param_path)"/>
+    </composable_node>
+  </load_composable_node>
 </launch>
