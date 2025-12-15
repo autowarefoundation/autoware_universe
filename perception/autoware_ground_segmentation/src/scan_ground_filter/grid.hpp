@@ -126,10 +126,7 @@ public:
 class Grid
 {
 public:
-  Grid(const float origin_x, const float origin_y)
-  : origin_x_(origin_x), origin_y_(origin_y)
-  {
-  }
+  Grid(const float origin_x, const float origin_y) : origin_x_(origin_x), origin_y_(origin_y) {}
   ~Grid() = default;
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
