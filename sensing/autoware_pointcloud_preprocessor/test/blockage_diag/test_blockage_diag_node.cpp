@@ -122,7 +122,7 @@ protected:
   }
 
   // Create a dense pointcloud covering all bins (for OK status)
-  sensor_msgs::msg::PointCloud2 create_dense_pointcloud(const rclcpp::Time & stamp)
+  sensor_msgs::msg::PointCloud2 create_dense_pointcloud()
   {
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
@@ -158,14 +158,12 @@ protected:
 
     sensor_msgs::msg::PointCloud2 ros_cloud;
     pcl::toROSMsg(pcl_cloud, ros_cloud);
-    ros_cloud.header.stamp = stamp;
-    ros_cloud.header.frame_id = "lidar_top";
 
     return ros_cloud;
   }
 
   // Create a sparse pointcloud with blockage (for ERROR status)
-  sensor_msgs::msg::PointCloud2 create_blocked_pointcloud(const rclcpp::Time & stamp)
+  sensor_msgs::msg::PointCloud2 create_blocked_pointcloud()
   {
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
@@ -202,8 +200,6 @@ protected:
 
     sensor_msgs::msg::PointCloud2 ros_cloud;
     pcl::toROSMsg(pcl_cloud, ros_cloud);
-    ros_cloud.header.stamp = stamp;
-    ros_cloud.header.frame_id = "lidar_top";
 
     return ros_cloud;
   }
@@ -275,7 +271,7 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 // Test case: Dense pointcloud produces OK diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
 {
-  auto input_cloud = create_dense_pointcloud(test_node_->now());
+  auto input_cloud = create_dense_pointcloud();
   input_pub_->publish(input_cloud);
 
   diagnostics_received_ = false;
@@ -288,7 +284,7 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
 {
   // Publish multiple frames with blockage to trigger ERROR
   for (int frame = 0; frame < 5; ++frame) {
-    auto input_cloud = create_blocked_pointcloud(test_node_->now());
+    auto input_cloud = create_blocked_pointcloud();
     input_pub_->publish(input_cloud);
 
     diagnostics_received_ = false;
