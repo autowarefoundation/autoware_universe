@@ -80,7 +80,6 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
     // grid parameters
     grid_size_m_ = static_cast<float>(declare_parameter<double>("grid_size_m"));
     gnd_grid_buffer_size_ = declare_parameter<int>("gnd_grid_buffer_size");
-    virtual_lidar_z_ = vehicle_info_.vehicle_height_m;
 
     // initialize grid filter
     {
@@ -99,7 +98,6 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.gnd_grid_buffer_size = gnd_grid_buffer_size_;
       param.virtual_lidar_x = vehicle_info_.wheel_base_m / 2.0f + center_pcl_shift_;
       param.virtual_lidar_y = 0.0f;
-      param.virtual_lidar_z = virtual_lidar_z_;
 
       grid_ground_filter_ptr_ = std::make_unique<GridGroundFilter>(param);
     }

@@ -184,7 +184,6 @@ private:
   // grid parameters
   float grid_size_m_;
   uint16_t gnd_grid_buffer_size_;
-  float virtual_lidar_z_;
 
   // grid ground filter processor
   std::unique_ptr<GridGroundFilter> grid_ground_filter_ptr_;

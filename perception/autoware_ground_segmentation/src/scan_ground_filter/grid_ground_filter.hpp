@@ -147,7 +147,6 @@ struct GridGroundFilterParameter
   int gnd_grid_buffer_size;
   float virtual_lidar_x;
   float virtual_lidar_y;
-  float virtual_lidar_z;
 };
 
 class GridGroundFilter
