@@ -111,10 +111,8 @@ protected:
   sensor_msgs::msg::PointCloud2 create_zero_length_pointcloud()
   {
     pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-    pcl_cloud.header.frame_id = "lidar_top";
     pcl_cloud.height = 1;
     pcl_cloud.width = 0;
-    pcl_cloud.is_dense = false;
 
     sensor_msgs::msg::PointCloud2 ros_cloud;
     pcl::toROSMsg(pcl_cloud, ros_cloud);
@@ -128,8 +126,6 @@ protected:
     const int vertical_bins = 4;
 
     pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-    pcl_cloud.header.frame_id = "lidar_top";
-    pcl_cloud.is_dense = false;
 
     for (int h = 0; h < horizontal_bins; ++h) {
       for (int v = 0; v < vertical_bins; ++v) {
@@ -170,8 +166,6 @@ protected:
     const int coverage_bins = static_cast<int>(horizontal_bins * 0.3);  // 30% coverage
 
     pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-    pcl_cloud.header.frame_id = "lidar_top";
-    pcl_cloud.is_dense = false;
 
     for (int h = 0; h < coverage_bins; ++h) {
       for (int v = 0; v < vertical_bins; ++v) {
