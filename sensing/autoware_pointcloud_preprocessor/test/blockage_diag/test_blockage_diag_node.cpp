@@ -103,68 +103,12 @@ protected:
     rclcpp::shutdown();
   }
 
-  // Create zero length pointcloud
-  sensor_msgs::msg::PointCloud2 create_zero_length_pointcloud()
-  {
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.height = 1;
-    cloud.width = 0;
-
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-    modifier.setPointCloud2Fields(
-      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
-      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
-
-    modifier.resize(0);
-    return cloud;
-  }
-
-  // Create a pointcloud covering all bins (for OK status)
-  sensor_msgs::msg::PointCloud2 create_normal_pointcloud()
+  // Helper function to create a pointcloud with specified horizontal bin coverage
+  sensor_msgs::msg::PointCloud2 create_pointcloud(double coverage_ratio)
   {
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
-    const int num_points = horizontal_bins * vertical_bins;
-
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.height = 1;
-
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-    modifier.setPointCloud2Fields(
-      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
-      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
-
-    modifier.resize(num_points);
-
-    sensor_msgs::PointCloud2Iterator<uint16_t> iter_channel(cloud, "channel");
-    sensor_msgs::PointCloud2Iterator<float> iter_azimuth(cloud, "azimuth");
-    sensor_msgs::PointCloud2Iterator<float> iter_distance(cloud, "distance");
-
-    for (int h = 0; h < horizontal_bins; ++h) {
-      for (int v = 0; v < vertical_bins; ++v) {
-        double azimuth_deg = -180.0 + h * 60.0;
-        double azimuth_rad = azimuth_deg * M_PI / 180.0;
-        float distance = 50.0;
-
-        *iter_channel = v;
-        *iter_azimuth = azimuth_rad;
-        *iter_distance = distance;
-
-        ++iter_channel;
-        ++iter_azimuth;
-        ++iter_distance;
-      }
-    }
-
-    return cloud;
-  }
-
-  // Create a sparse pointcloud with blockage (for ERROR status)
-  sensor_msgs::msg::PointCloud2 create_blocked_pointcloud()
-  {
-    const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
-    const int vertical_bins = 4;
-    const int coverage_bins = static_cast<int>(horizontal_bins * 0.3);  // 30% coverage
+    const int coverage_bins = static_cast<int>(horizontal_bins * coverage_ratio);
     const int num_points = coverage_bins * vertical_bins;
 
     sensor_msgs::msg::PointCloud2 cloud;
@@ -255,8 +199,8 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
 // Test case: Empty pointcloud produces WARN diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 {
-  auto input_cloud = create_zero_length_pointcloud();
-  input_pub_->publish(input_cloud);
+  auto zero_length_pointcloud = create_pointcloud(0.0);
+  input_pub_->publish(zero_length_pointcloud);
 
   diagnostics_received_ = false;
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
@@ -266,8 +210,8 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 // Test case: Dense pointcloud produces OK diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
 {
-  auto input_cloud = create_normal_pointcloud();
-  input_pub_->publish(input_cloud);
+  auto no_blockage_pointcloud = create_pointcloud(1.0);
+  input_pub_->publish(no_blockage_pointcloud);
 
   diagnostics_received_ = false;
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
@@ -279,8 +223,8 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
 {
   // Publish multiple frames with blockage to trigger ERROR
   for (int frame = 0; frame < 5; ++frame) {
-    auto input_cloud = create_blocked_pointcloud();
-    input_pub_->publish(input_cloud);
+    auto blocked_pointcloud = create_pointcloud(0.3);
+    input_pub_->publish(blocked_pointcloud);
 
     diagnostics_received_ = false;
     ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics on frame " << frame;
