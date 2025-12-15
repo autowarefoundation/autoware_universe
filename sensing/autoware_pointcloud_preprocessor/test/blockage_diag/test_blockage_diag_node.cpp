@@ -107,14 +107,9 @@ protected:
   sensor_msgs::msg::PointCloud2 create_zero_length_pointcloud()
   {
     sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header.frame_id = "base_link";
-    cloud.header.stamp = rclcpp::Clock().now();
     cloud.height = 1;
     cloud.width = 0;
-    cloud.is_dense = true;
-    cloud.is_bigendian = false;
 
-    // Create point cloud fields with only required fields
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
       3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
@@ -124,21 +119,16 @@ protected:
     return cloud;
   }
 
-  // Create a dense pointcloud covering all bins (for OK status)
-  sensor_msgs::msg::PointCloud2 create_dense_pointcloud()
+  // Create a pointcloud covering all bins (for OK status)
+  sensor_msgs::msg::PointCloud2 create_normal_pointcloud()
   {
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
     const int num_points = horizontal_bins * vertical_bins;
 
     sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header.frame_id = "base_link";
-    cloud.header.stamp = rclcpp::Clock().now();
     cloud.height = 1;
-    cloud.is_dense = true;
-    cloud.is_bigendian = false;
 
-    // Create point cloud fields with only required fields
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
       3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
@@ -178,13 +168,8 @@ protected:
     const int num_points = coverage_bins * vertical_bins;
 
     sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header.frame_id = "base_link";
-    cloud.header.stamp = rclcpp::Clock().now();
     cloud.height = 1;
-    cloud.is_dense = true;
-    cloud.is_bigendian = false;
 
-    // Create point cloud fields with only required fields
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
       3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
@@ -282,7 +267,7 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
 // Test case: Dense pointcloud produces OK diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
 {
-  auto input_cloud = create_dense_pointcloud();
+  auto input_cloud = create_normal_pointcloud();
   input_pub_->publish(input_cloud);
 
   diagnostics_received_ = false;
