@@ -111,6 +111,8 @@ void RoadUserStopModule::init(rclcpp::Node & node, const std::string & module_na
       &node, "road_user_stop");
 
   debug_publisher_ = node.create_publisher<MarkerArray>("~/road_user_stop/debug_markers", 1);
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/road_user_stop/trajectory", 1);
 
   processing_time_detail_pub_ = node.create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/road_user_stop", 1);
