@@ -126,8 +126,8 @@ public:
 class Grid
 {
 public:
-  Grid(const float origin_x, const float origin_y, [[maybe_unused]] const float origin_z)
-  : origin_x_(origin_x), origin_y_(origin_y), origin_z_(origin_z)
+  Grid(const float origin_x, const float origin_y)
+  : origin_x_(origin_x), origin_y_(origin_y)
   {
   }
   ~Grid() = default;
@@ -231,7 +231,6 @@ private:
   // given parameters
   float origin_x_;
   float origin_y_;
-  float origin_z_;                   // NOLINT
   float grid_dist_size_ = 1.0f;      // meters
   float grid_azimuth_size_ = 0.01f;  // radians
 
