@@ -68,13 +68,13 @@ __global__ void cropBoxKernel(
       const std::uint8_t negative = crop_box_parameters.negative;
 
       // Check if point is inside the box
-      bool point_is_inside =
+      const bool point_is_inside =
         (x > min_x && x < max_x) && (y > min_y && y < max_y) && (z > min_z && z < max_z);
 
       // If negative mode (negative == 1): remove points within the box → preserve points outside
       // If positive mode (negative == 0): remove points outside the box → preserve points inside
-      bool should_preserve = (negative == 0) ? point_is_inside : !point_is_inside;
-      passed_crop_box_mask &= (should_preserve ? 1 : 0);
+      const bool should_preserve = negative ? !point_is_inside : point_is_inside;
+      passed_crop_box_mask &= should_preserve;
     }
 
     output_crop_mask[idx] = passed_crop_box_mask;
