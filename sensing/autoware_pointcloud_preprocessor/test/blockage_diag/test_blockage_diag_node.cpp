@@ -21,16 +21,12 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
 
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <thread>
 #include <vector>
-
-using PointXYZIRCAEDT = autoware::point_types::PointXYZIRCAEDT;
 
 class BlockageDiagIntegrationTest : public ::testing::Test
 {
@@ -110,13 +106,22 @@ protected:
   // Create zero length pointcloud
   sensor_msgs::msg::PointCloud2 create_zero_length_pointcloud()
   {
-    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
-    pcl_cloud.height = 1;
-    pcl_cloud.width = 0;
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.header.frame_id = "base_link";
+    cloud.header.stamp = rclcpp::Clock().now();
+    cloud.height = 1;
+    cloud.width = 0;
+    cloud.is_dense = true;
+    cloud.is_bigendian = false;
 
-    sensor_msgs::msg::PointCloud2 ros_cloud;
-    pcl::toROSMsg(pcl_cloud, ros_cloud);
-    return ros_cloud;
+    // Create point cloud fields with only required fields
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+    modifier.resize(0);
+    return cloud;
   }
 
   // Create a dense pointcloud covering all bins (for OK status)
@@ -124,38 +129,44 @@ protected:
   {
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
+    const int num_points = horizontal_bins * vertical_bins;
 
-    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.header.frame_id = "base_link";
+    cloud.header.stamp = rclcpp::Clock().now();
+    cloud.height = 1;
+    cloud.is_dense = true;
+    cloud.is_bigendian = false;
+
+    // Create point cloud fields with only required fields
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+    modifier.resize(num_points);
+
+    sensor_msgs::PointCloud2Iterator<uint16_t> iter_channel(cloud, "channel");
+    sensor_msgs::PointCloud2Iterator<float> iter_azimuth(cloud, "azimuth");
+    sensor_msgs::PointCloud2Iterator<float> iter_distance(cloud, "distance");
 
     for (int h = 0; h < horizontal_bins; ++h) {
       for (int v = 0; v < vertical_bins; ++v) {
-        PointXYZIRCAEDT point;
         double azimuth_deg = -180.0 + h * 60.0;
         double azimuth_rad = azimuth_deg * M_PI / 180.0;
         float distance = 50.0;
 
-        point.x = distance * std::cos(azimuth_rad);
-        point.y = distance * std::sin(azimuth_rad);
-        point.z = 0.0;
-        point.intensity = 100;
-        point.return_type = 0;
-        point.channel = v;
-        point.azimuth = azimuth_rad;
-        point.elevation = 0.0;
-        point.distance = distance;
-        point.time_stamp = (h * vertical_bins + v) * 1000;
+        *iter_channel = v;
+        *iter_azimuth = azimuth_rad;
+        *iter_distance = distance;
 
-        pcl_cloud.points.push_back(point);
+        ++iter_channel;
+        ++iter_azimuth;
+        ++iter_distance;
       }
     }
 
-    pcl_cloud.height = 1;
-    pcl_cloud.width = pcl_cloud.points.size();
-
-    sensor_msgs::msg::PointCloud2 ros_cloud;
-    pcl::toROSMsg(pcl_cloud, ros_cloud);
-
-    return ros_cloud;
+    return cloud;
   }
 
   // Create a sparse pointcloud with blockage (for ERROR status)
@@ -164,38 +175,44 @@ protected:
     const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
     const int vertical_bins = 4;
     const int coverage_bins = static_cast<int>(horizontal_bins * 0.3);  // 30% coverage
+    const int num_points = coverage_bins * vertical_bins;
 
-    pcl::PointCloud<PointXYZIRCAEDT> pcl_cloud;
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.header.frame_id = "base_link";
+    cloud.header.stamp = rclcpp::Clock().now();
+    cloud.height = 1;
+    cloud.is_dense = true;
+    cloud.is_bigendian = false;
+
+    // Create point cloud fields with only required fields
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+
+    modifier.resize(num_points);
+
+    sensor_msgs::PointCloud2Iterator<uint16_t> iter_channel(cloud, "channel");
+    sensor_msgs::PointCloud2Iterator<float> iter_azimuth(cloud, "azimuth");
+    sensor_msgs::PointCloud2Iterator<float> iter_distance(cloud, "distance");
 
     for (int h = 0; h < coverage_bins; ++h) {
       for (int v = 0; v < vertical_bins; ++v) {
-        PointXYZIRCAEDT point;
         double azimuth_deg = -180.0 + h * 60.0;
         double azimuth_rad = azimuth_deg * M_PI / 180.0;
         float distance = 50.0;
 
-        point.x = distance * std::cos(azimuth_rad);
-        point.y = distance * std::sin(azimuth_rad);
-        point.z = 0.0;
-        point.intensity = 100;
-        point.return_type = 0;
-        point.channel = v;
-        point.azimuth = azimuth_rad;
-        point.elevation = 0.0;
-        point.distance = distance;
-        point.time_stamp = (h * vertical_bins + v) * 1000;
+        *iter_channel = v;
+        *iter_azimuth = azimuth_rad;
+        *iter_distance = distance;
 
-        pcl_cloud.points.push_back(point);
+        ++iter_channel;
+        ++iter_azimuth;
+        ++iter_distance;
       }
     }
 
-    pcl_cloud.height = 1;
-    pcl_cloud.width = pcl_cloud.points.size();
-
-    sensor_msgs::msg::PointCloud2 ros_cloud;
-    pcl::toROSMsg(pcl_cloud, ros_cloud);
-
-    return ros_cloud;
+    return cloud;
   }
 
   // Helper to verify diagnostic status level
