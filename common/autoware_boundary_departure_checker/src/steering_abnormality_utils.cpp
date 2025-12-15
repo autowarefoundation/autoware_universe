@@ -104,7 +104,7 @@ std::vector<autoware_utils_geometry::LinearRing2d> create_vehicle_footprints(
     pose = update_pose_with_bicycle_model(
       pose, steering_angle, v, dt.seconds(), vehicle_info.wheel_base_m);
     vehicle_footprints.push_back(
-      transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(pose)));
+      transform_vector(local_vehicle_footprint, autoware_utils_geometry::pose2transform(pose)));
 
     // update the simulated steering angle
     const auto steering_change = original_steering_changes[i - *delayed_index] * config.factor +
