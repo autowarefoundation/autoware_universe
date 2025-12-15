@@ -126,7 +126,7 @@ public:
 class Grid
 {
 public:
-  Grid(const float origin_x, const float origin_y, const float origin_z)
+  Grid(const float origin_x, const float origin_y, [[maybe_unused]] const float origin_z)
   : origin_x_(origin_x), origin_y_(origin_y), origin_z_(origin_z)
   {
   }
@@ -231,15 +231,12 @@ private:
   // given parameters
   float origin_x_;
   float origin_y_;
-  float origin_z_;
+  float origin_z_;                   // NOLINT
   float grid_dist_size_ = 1.0f;      // meters
   float grid_azimuth_size_ = 0.01f;  // radians
 
   // calculated parameters
-  float grid_dist_size_rad_ = 0.0f;    // radians
-  float grid_dist_size_inv_ = 0.0f;    // inverse of the grid size in meters
-  int grid_linearity_switch_num_ = 0;  // number of grids within the switch radius
-  float grid_size_rad_inv_ = 0.0f;     // inverse of the grid size in radians
+  float grid_dist_size_inv_ = 0.0f;  // inverse of the grid size in meters
   bool is_initialized_ = false;
 
   // configured parameters
