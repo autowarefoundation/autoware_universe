@@ -157,15 +157,6 @@ public:
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> finalizeOutputPublic(
     const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state);
 
-  /**
-   * @brief Create processing state from organized pointcloud (ENTRY POINT)
-   * @param input Organized pointcloud (from organizePointcloudPublic)
-   * @return Processing state pointing to internal device_organized_points_
-   * NOTE: state.device_data points to internal buffer (non-owning)
-   */
-  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState
-  createProcessingStateFromOrganized(const cuda_blackboard::CudaPointCloud2 & input);
-
 private:
   static cudaStream_t initialize_stream();
 
