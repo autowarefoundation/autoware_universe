@@ -4,11 +4,14 @@ project(autoware_dummy_perception_publisher)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(autoware_point_types REQUIRED)
+
 # See ndt_omp package for documentation on why PCL is special
 find_package(PCL REQUIRED COMPONENTS common filters)
 
 set(${PROJECT_NAME}_DEPENDENCIES
   autoware_perception_msgs
+  autoware_point_types
   tier4_perception_msgs
   pcl_conversions
   rclcpp

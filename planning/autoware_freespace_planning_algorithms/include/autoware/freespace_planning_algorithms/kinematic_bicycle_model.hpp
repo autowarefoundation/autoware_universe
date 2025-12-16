@@ -15,10 +15,9 @@
 #ifndef AUTOWARE__FREESPACE_PLANNING_ALGORITHMS__KINEMATIC_BICYCLE_MODEL_HPP_
 #define AUTOWARE__FREESPACE_PLANNING_ALGORITHMS__KINEMATIC_BICYCLE_MODEL_HPP_
 
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <vector>
 
@@ -50,7 +49,7 @@ inline geometry_msgs::msg::Pose getPose(
   const double beta = distance / R;
   pose.position.x += (R * std::sin(yaw + beta) - R * std::sin(yaw));
   pose.position.y += (R * std::cos(yaw) - R * std::cos(yaw + beta));
-  pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw + beta);
+  pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw + beta);
   return pose;
 }
 

@@ -2,6 +2,21 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(planning_factor_rviz_plugin): add wall visualization of UNKNOWN behavior (`#11344 <https://github.com/autowarefoundation/autoware_universe/issues/11344>`_)
+  add wall visualization of UNKNOWN behavior
+* feat(planning_factor_rviz_plugin): change some property (`#11218 <https://github.com/autowarefoundation/autoware_universe/issues/11218>`_)
+  * add show safety factors flag
+  * remove baselink2flont property
+  ---------
+* fix(tier4_planning_factor_rviz_plugin): remove unused function (`#11193 <https://github.com/autowarefoundation/autoware_universe/issues/11193>`_)
+* Contributors: Kotakku, Ryohsuke Mitsudome, Ryuta Kambe
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

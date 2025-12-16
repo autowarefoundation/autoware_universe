@@ -17,8 +17,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <cmath>
 

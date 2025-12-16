@@ -39,6 +39,7 @@ ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
   src/metrics/distance_metric.cpp
   src/metrics/lateral_deviation_metric.cpp
   src/metrics/steering_consistency_metric.cpp
+  src/metrics/trajectory_consistency_metric.cpp
   src/metrics/metrics_utils.cpp
 )
 

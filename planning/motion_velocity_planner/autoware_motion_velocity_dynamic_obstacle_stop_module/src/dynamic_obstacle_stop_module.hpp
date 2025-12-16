@@ -35,12 +35,12 @@ public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
   void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
-  void publish_processing_time(const double processing_time_ms);
   VelocityPlanningResult plan(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  std::string get_short_module_name() const override { return "dynamic_obstacle_stop"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     RequiredSubscriptionInfo required_subscription_info;

@@ -12,7 +12,7 @@ To calculate the total latency, the node works backward from the last step in th
 
 The total latency is the sum of these chronologically-consistent individual latencies. The node also allows for adding fixed offset values to the final sum.
 
-The calculated total latency is published continuously and also used to report diagnostic information. A WARN status is published if the latency exceeds a configurable threshold.
+The calculated total latency is published continuously and also used to report diagnostic information. An ERROR status is published if the latency exceeds a configurable threshold.
 
 ## Inputs / Outputs
 
@@ -28,19 +28,19 @@ Only 2 message types are currently supported.
 
 ### Output
 
-| Name                                | Type                                              | Description                                                                                                         |
-| ----------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `~/output/total_latency_ms`         | `autoware_internal_debug_msgs/msg/Float64Stamped` | The calculated total pipeline latency in milliseconds.                                                              |
-| `/diagnostics`                      | `diagnostic_msgs/DiagnosticArray`                 | Publishes the diagnostic status. Reports `OK` if the latency is within the threshold, and `WARN` if it is exceeded. |
-| `~/debug/<step_name>_latency_ms`    | `autoware_internal_debug_msgs/msg/Float64Stamped` | For each processing step, publishes the latest latency value received from its input topic.                         |
-| `~/debug/pipeline_total_latency_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped` | A debug topic that also publishes the calculated total latency.                                                     |
+| Name                                | Type                                              | Description                                                                                                          |
+| ----------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `~/output/total_latency_ms`         | `autoware_internal_debug_msgs/msg/Float64Stamped` | The calculated total pipeline latency in milliseconds.                                                               |
+| `/diagnostics`                      | `diagnostic_msgs/DiagnosticArray`                 | Publishes the diagnostic status. Reports `OK` if the latency is within the threshold, and `ERROR` if it is exceeded. |
+| `~/debug/<step_name>_latency_ms`    | `autoware_internal_debug_msgs/msg/Float64Stamped` | For each processing step, publishes the latest latency value received from its input topic.                          |
+| `~/debug/pipeline_total_latency_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped` | A debug topic that also publishes the calculated total latency.                                                      |
 
 ## Parameters
 
 | Name                                              | Type       | Default Value | Description                                                                                                                                                          |
 | ------------------------------------------------- | ---------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `update_rate`                                     | `double`   | 10            | The rate [Hz] at which the total latency is calculated and published.                                                                                                |
-| `latency_threshold_ms`                            | `double`   | 1000          | The latency threshold in milliseconds. If the total latency exceeds this value, a `WARN` diagnostic is reported.                                                     |
+| `latency_threshold_ms`                            | `double`   | 1000          | The latency threshold in milliseconds. If the total latency exceeds this value, an `ERROR` diagnostic is reported.                                                   |
 | `window_size`                                     | `int`      | 10            | The number of historical latency messages to store for each processing step.                                                                                         |
 | `processing_steps.sequence`                       | `string[]` | `[]`          | An array of names defining the ordered sequence of processing steps to measure.                                                                                      |
 | `processing_steps.<step_name>.topic`              | `string`   | -             | The input topic that provides the latency for this step.                                                                                                             |

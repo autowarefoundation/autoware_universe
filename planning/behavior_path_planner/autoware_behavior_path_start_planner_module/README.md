@@ -514,6 +514,54 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 Generate smooth paths using clothoid curves that provide continuous curvature transitions. The clothoid path consists of three segments: entry clothoid, circular arc, and exit clothoid, ensuring smooth steering transitions.
 
+![clothoid_pull_out](./images/clothoid_pullout.drawio.svg)
+
+#### Path Generation Flow
+
+The path is generated with following flow.
+
+1. **Parameter Setting and Initialization**
+
+2. **Get lane information**
+   - Get road lane (target lane) and shoulder lane (start lane) information.
+
+3. **Start and Target Path Generation**
+   - Generate the centerline path of the target lane.
+   - Generated the straight path of the shoulder lane.
+
+4. **Circular Arc Path Generation (red dotted line in the following figure)**
+   - Generate circular arc path using the same method as geometric pull out.
+   - Calculate composite arc path with two arc segments (entry and exit arcs).
+   - This process is repeated with gradually increasing maximum steering angles from the parameter list `clothoid_max_steer_angles_deg` (e.g., [5.0, 10.0, 20.0] degrees) until a valid path is found.
+
+5. **Clothoid Approximation**
+   - Convert the circular arc segments to clothoid curves.
+   - Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path (**black dotted line in the following figure**).
+   - Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path (**black line in the following figure**).
+
+6. **Lane Departure Check and Path Validation**
+
+7. **Collision Check**
+
+![clothoid_pullout_path_generation_flow](./images/clothoid_flow.drawio.svg)
+
+The following diagram illustrates the process flow for generating clothoid paths:
+
+```mermaid
+flowchart TD
+    A[Start: Parameter Setting and Initialization] --> B[Get Lane Information]
+    B --> C[Start and Target Path Generation]
+    C --> D[Select a candidate max steer angle]
+    D --> E[Generate Circular Arc Path]
+    E --> F[Clothoid Approximation]
+    F --> G[Lane Departure Check and Path Validation]
+    G --> H[Collision Check]
+    H --> I[Is the path valid?]
+    I -->|No| D
+    I -->|Yes| J[End: Return Path]
+    D -->|No More Candidate| K[Path Generation Failure]
+```
+
 #### parameters for clothoid pull out
 
 | Name                                       | Unit    | Type   | Description                                                       | Default value     |
@@ -524,6 +572,12 @@ Generate smooth paths using clothoid curves that provide continuous curvature tr
 | clothoid_max_steer_angle_rate_deg_per_sec  | [deg/s] | double | maximum steer angle rate                                          | 10.0              |
 | clothoid_collision_check_distance_from_end | [m]     | double | collision check distance from end for clothoid planner            | 0.0               |
 | check_clothoid_path_lane_departure         | [-]     | bool   | flag whether to check if clothoid path footprints are out of lane | true              |
+
+#### Limitation
+
+- **Violation of the max curvature**: During the rigid transformation of the approximated clothoid path to align with the original circular arc path, the scaling factor may cause the maximum steering angle constraint to be violated. When the scale factor is smaller than 1.0, the curvature of the transformed clothoid path may exceed the maximum curvature corresponding to the specified maximum steering angle.
+
+- **Yaw Angle Deviation at Path Endpoints**: The rigid transformation process introduces yaw angle deviations at the start and end points of the clothoid path. As shown in the figure above, note that the yaw angles at the start and end points differ between the original circular arc path (red dotted line) and the transformed clothoid path (black solid line).
 
 ## **backward pull out start point search**
 

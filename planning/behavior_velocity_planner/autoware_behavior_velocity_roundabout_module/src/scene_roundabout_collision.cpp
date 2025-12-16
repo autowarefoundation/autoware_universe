@@ -32,6 +32,7 @@
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <fmt/format.h>
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
@@ -253,7 +254,7 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
       const double ego_end_arc_length = std::min(
         closest_arc_coords.length + ego_end_itr->second +
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
-        lanelet::utils::getLaneletLength2d(concat_lanelets));
+        lanelet::geometry::length2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
         {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {

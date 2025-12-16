@@ -16,7 +16,8 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 #include "gtest/gtest.h"
-#include "tf2/LinearMath/Quaternion.h"
+
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"

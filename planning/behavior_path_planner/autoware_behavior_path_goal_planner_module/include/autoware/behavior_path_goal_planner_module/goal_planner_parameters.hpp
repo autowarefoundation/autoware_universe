@@ -127,6 +127,8 @@ struct GoalPlannerParameters
   {
     double pull_over_angle_threshold;
     double after_shift_straight_distance;
+    double lateral_acceleration_threshold;
+    double lateral_acceleration_filtering_duration;
   } bezier_parking;
 
   // stop condition

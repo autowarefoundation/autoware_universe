@@ -337,6 +337,13 @@ void RayGroundFilterComponent::filter(
 
   std::scoped_lock lock(mutex_);
 
+  // check for empty point cloud
+  if (input->data.empty() || input->width == 0 || input->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    output = *input;
+    return;
+  }
+
   pcl::PointCloud<PointType_>::Ptr current_sensor_cloud_ptr(new pcl::PointCloud<PointType_>);
   pcl::fromROSMsg(*input, *current_sensor_cloud_ptr);
 

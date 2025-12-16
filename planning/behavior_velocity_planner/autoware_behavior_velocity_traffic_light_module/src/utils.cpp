@@ -16,6 +16,7 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -144,6 +145,24 @@ auto calcStopPointAndInsertIndex(
     if (output.has_value()) {
       return output;
     }
+  }
+  return std::nullopt;
+}
+
+std::optional<double> calcStopPoint(
+  const Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound,
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
+{
+  for (size_t i = 0; i < lanelet_stop_lines.size() - 1; ++i) {
+    const auto stop_line = planning_utils::extendSegmentToBounds(
+      {lanelet_stop_lines[i].basicPoint2d(), lanelet_stop_lines[i + 1].basicPoint2d()}, left_bound,
+      right_bound);
+    const auto stop_point = autoware::experimental::trajectory::crossed(path, stop_line);
+    if (stop_point.empty()) {
+      continue;
+    }
+    return stop_point.front() - offset;
   }
   return std::nullopt;
 }

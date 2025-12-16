@@ -40,12 +40,15 @@ geometry_msgs::msg::Point interpolated_point_at_time(
     [&](const autoware_planning_msgs::msg::TrajectoryPoint & t) {
       return rclcpp::Duration(t.time_from_start).seconds() >= time;
     });
+  if (prev_it == trajectory.end()) {
+    return trajectory.back().pose.position;
+  }
   const auto prev_time = rclcpp::Duration(prev_it->time_from_start).seconds();
-  if (prev_time == time) {
+  if (std::next(prev_it) == trajectory.end() || std::abs(prev_time - time) < 1e-3) {
     return prev_it->pose.position;
   }
   const auto next_time = rclcpp::Duration(std::next(prev_it)->time_from_start).seconds();
-  if (next_time == prev_time) {
+  if (std::abs(next_time - prev_time) < 1e-3) {
     return std::next(prev_it)->pose.position;
   }
   const auto t_delta = next_time - prev_time;
@@ -65,6 +68,15 @@ std::optional<geometry_msgs::msg::Point> get_most_recent_slowdown_point(
     if (it->slowdown_interval) {
       return it->slowdown_interval->to;
     }
+  }
+  return std::nullopt;
+}
+
+/// @brief return the optional previous stop point in the given history
+std::optional<geometry_msgs::msg::Point> get_previous_stop_point(const DecisionHistory & history)
+{
+  if (history.decisions.size() > 1) {
+    return history.decisions[history.decisions.size() - 2].stop_point;
   }
   return std::nullopt;
 }
@@ -106,9 +118,18 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
     }
     const auto t_stop = std::max(0.0, t_coll);
     const auto base_link_stop_point = interpolated_point_at_time(trajectory, t_stop);
-    const auto stop_point_length = std::max(
+    auto stop_point_length = std::max(
       0.0, motion_utils::calcSignedArcLength(trajectory, 0, base_link_stop_point) -
              params.stop_distance_buffer);
+    const auto previous_stop_point = get_previous_stop_point(history);
+    if (previous_stop_point) {
+      const auto previous_stop_point_length =
+        std::max(0.0, motion_utils::calcSignedArcLength(trajectory, 0, *previous_stop_point));
+      const auto diff = std::abs(stop_point_length - previous_stop_point_length);
+      if (stop_point_length > previous_stop_point_length && diff < params.stop_reuse_margin) {
+        stop_point_length = previous_stop_point_length;
+      }
+    }
     current_decision.stop_point =
       motion_utils::calcInterpolatedPose(trajectory, stop_point_length).position;
     if (check_unfeasible_stop(stop_point_length)) {
@@ -133,13 +154,19 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
     return std::nullopt;
   }
   const auto t_collision = current_decision.collision->ego_collision_time;
-  const auto p_collision = [&]() {
+  const auto p_collision = [&]() -> std::optional<geometry_msgs::msg::Point> {
     if (current_decision.collision && current_decision.collision->type == collision) {
-      return std::make_optional(interpolated_point_at_time(trajectory, t_collision));
+      return interpolated_point_at_time(trajectory, t_collision);
     }
-    return get_most_recent_slowdown_point(history);
+    const auto most_recent_slowdown_point = get_most_recent_slowdown_point(history);
+    if (most_recent_slowdown_point) {  // project onto the current trajectory
+      const auto arc_length =
+        motion_utils::calcSignedArcLength(trajectory, 0, *most_recent_slowdown_point);
+      return motion_utils::calcInterpolatedPose(trajectory, arc_length).position;
+    }
+    return std::nullopt;
   }();
-  if (!p_collision) {
+  if (!p_collision.has_value()) {
     return std::nullopt;
   }
   const auto min_slow_arc_length = current_velocity * 0.1;

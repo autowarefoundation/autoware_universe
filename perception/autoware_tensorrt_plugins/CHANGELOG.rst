@@ -2,6 +2,20 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_tensorrt_plugins): install cuda_ops to be available when autoware_tensorrt_plugins installs (`#11354 <https://github.com/autowarefoundation/autoware_universe/issues/11354>`_)
+  * fix(cmake): install cuda_ops to be available when autoware_tensorrt_plugins installs
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, oabdelgawad
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_tensorrt_plugins): add vad trt plugins suppport (`#11092 <https://github.com/autowarefoundation/autoware_universe/issues/11092>`_)

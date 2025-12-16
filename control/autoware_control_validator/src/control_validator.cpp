@@ -19,6 +19,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
+
 #include <angles/angles/angles.h>
 
 #include <algorithm>
@@ -133,7 +135,7 @@ void AccelerationValidator::validate(
 {
   desired_acc_lpf.filter(
     control_cmd.longitudinal.acceleration +
-    9.8 * autoware_utils::get_rpy(kinematic_state.pose.pose).y);
+    9.8 * autoware_utils_geometry::get_rpy(kinematic_state.pose.pose).y);
   measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
   if (std::abs(kinematic_state.twist.twist.linear.x) < 0.3) {
     desired_acc_lpf.reset(0.0);
@@ -163,20 +165,31 @@ void VelocityValidator::validate(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
       .longitudinal_velocity_mps);
 
+  const bool is_stopped = std::abs(v_vel) < 0.05;
+
   const bool is_rolling_back =
     std::signbit(v_vel * t_vel) && std::abs(v_vel) > rolling_back_velocity_th;
-  if (!hold_velocity_error_until_stop || !res.is_rolling_back || std::abs(v_vel) < 0.05) {
+  if (!hold_velocity_error_until_stop || !res.is_rolling_back || is_stopped) {
     res.is_rolling_back = is_rolling_back;
   }
 
+  const double over_velocity_v_vel =
+    over_velocity_vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
+  const double over_velocity_t_vel = over_velocity_target_vel_lpf.filter(
+    autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
+      .longitudinal_velocity_mps);
+
   const bool is_over_velocity =
-    std::abs(v_vel) > std::abs(t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
-  if (!hold_velocity_error_until_stop || !res.is_over_velocity || std::abs(v_vel) < 0.05) {
+    std::abs(over_velocity_v_vel) >
+    std::abs(over_velocity_t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
+  if (!hold_velocity_error_until_stop || !res.is_over_velocity || is_stopped) {
     res.is_over_velocity = is_over_velocity;
   }
 
   res.vehicle_vel = v_vel;
   res.target_vel = t_vel;
+  res.over_velocity_vehicle_vel = over_velocity_v_vel;
+  res.over_velocity_target_vel = over_velocity_t_vel;
 }
 
 void OverrunValidator::validate(

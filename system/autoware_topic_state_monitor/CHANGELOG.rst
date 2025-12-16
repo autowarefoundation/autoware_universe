@@ -2,6 +2,24 @@
 Changelog for package autoware_topic_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(component_state_monitor): use topic_state_monitor component (`#11308 <https://github.com/autowarefoundation/autoware_universe/issues/11308>`_)
+  * move private headers
+  * use component
+  * remove empty line
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix(topic_state_monitor): cppcheck uninitMemberVar (`#11332 <https://github.com/autowarefoundation/autoware_universe/issues/11332>`_)
+  fix(topic_state_monitor): cppcheck uninitialized param
+* feat(autoware_topic_state_monitor): enable to remap diagnostics topic (`#11294 <https://github.com/autowarefoundation/autoware_universe/issues/11294>`_)
+  feat: enable to remap diagnostics topic
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu, Tetsuhiro Kawaguchi
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

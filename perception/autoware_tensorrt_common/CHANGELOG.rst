@@ -2,6 +2,34 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(tensorrt_common): resolve error message of clang (`#11434 <https://github.com/autowarefoundation/autoware_universe/issues/11434>`_)
+  fix: resolve error message by clang
+* feat(autoware_camera_streampetr): implementation of StreamPETR using tensorrt (`#11139 <https://github.com/autowarefoundation/autoware_universe/issues/11139>`_)
+  * added streampetr
+  * use trt_common for build and forward pass
+  * style(pre-commit): autofix
+  * use optional parameters
+  * remove unused methods
+  * style(pre-commit): autofix
+  * fix lint errors
+  * ament
+  * style(pre-commit): autofix
+  * refactor complex code
+  * simplified functions
+  * style(pre-commit): autofix
+  * removed uncrustify
+  * fix clang errors
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kotaro Uetake, Ryohsuke Mitsudome, Samrat Thapa
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * chore(autoware_tensorrt_common): improved logging when loading plugins (`#10605 <https://github.com/autowarefoundation/autoware_universe/issues/10605>`_)

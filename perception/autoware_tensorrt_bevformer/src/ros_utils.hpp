@@ -36,13 +36,13 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 
 #include <cuda_runtime.h>
-#include <tf2/LinearMath/Quaternion.h>
 
 // TensorRT headers
 #pragma GCC diagnostic push

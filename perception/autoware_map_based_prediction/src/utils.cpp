@@ -510,8 +510,9 @@ double lateral_distance_to_lanelet_bounds(
 {
   auto distance = std::numeric_limits<double>::max();
   for (const auto & bound : {ll.leftBound(), ll.rightBound()}) {
-    const auto p = lanelet::BasicPoint2d(point.x, point.y);
-    const auto nearest_segment = lanelet::utils::getClosestSegment(p, bound);
+    const auto p = autoware::experimental::lanelet2_utils::from_ros(point);
+    const auto nearest_segment =
+      autoware::experimental::lanelet2_utils::get_closest_segment(bound, p);
     if (nearest_segment.size() < 2) {
       continue;
     }
@@ -526,7 +527,7 @@ double lateral_distance_to_lanelet_bounds(
                      (nearest_segment_vector.squaredNorm());
     const auto projected_object = nearest_segment[0].basicPoint2d() + nearest_segment_vector * t;
     const auto bound_distance = boost::geometry::distance(
-      p, lanelet::BasicPoint2d(projected_object.x(), projected_object.y()));
+      lanelet::utils::to2D(p), lanelet::BasicPoint2d(projected_object.x(), projected_object.y()));
     distance = std::min(distance, bound_distance);
   }
   return distance;

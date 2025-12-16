@@ -103,7 +103,7 @@ jobs:
         if: ${{ inputs.pull-ccache || inputs.push-ccache }}
         run: |
           rm -f "${CCACHE_DIR}/ccache.conf"
-          echo -e "# Set maximum cache size\nmax_size = 600MB" >> "${CCACHE_DIR}/ccache.conf"
+          echo -e "# Set maximum cache size\nmax_size = 900MB" >> "${CCACHE_DIR}/ccache.conf"
         shell: bash
 
       - name: Show ccache stats before build and reset stats

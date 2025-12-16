@@ -16,9 +16,17 @@ find_package(OpenCV REQUIRED)
 ament_auto_find_build_dependencies()
 autoware_package()
 
+set(${PROJECT_NAME}_src
+  src/bbox_object_locator_node.cpp
+)
+
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/bbox_object_locator_node.cpp
+  ${${PROJECT_NAME}_src}
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -16,50 +16,36 @@
 
 #include <iostream>
 #include <map>
+#include <vector>
 
 namespace autoware::diffusion_planner::preprocess
 {
 void process_traffic_signals(
-  const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr msg,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr> & msgs,
   std::map<lanelet::Id, TrafficSignalStamped> & traffic_signal_id_map,
-  const rclcpp::Time & current_time, const double time_threshold_seconds,
-  const bool keep_last_observation)
+  const rclcpp::Time & current_time, const double time_threshold_seconds)
 {
-  // clear previous observation
-  if (!msg) {
-    return;
-  }
-
-  rclcpp::Time msg_time = msg->stamp;
-  const auto time_diff = (current_time - msg_time).seconds();
-  if (time_diff > time_threshold_seconds) {
-    std::cerr << "WARNING(" << __func__
-              << ") TrafficLightGroupArray message is too old. Message discarded.\n";
-    // Discard outdated message
-    return;
-  }
-  const auto traffic_light_id_map_last_observed_old = traffic_signal_id_map;
-  traffic_signal_id_map.clear();
-
-  for (const auto & signal : msg->traffic_light_groups) {
-    TrafficSignalStamped traffic_signal;
-    traffic_signal.stamp = msg->stamp;
-    traffic_signal.signal = signal;
-    traffic_signal_id_map[signal.traffic_light_group_id] = traffic_signal;
-    if (!keep_last_observation) {
-      continue;
+  // Update traffic signals with the latest information
+  for (const auto & msg : msgs) {
+    const rclcpp::Time msg_time = msg->stamp;
+    for (const auto & signal : msg->traffic_light_groups) {
+      auto & curr = traffic_signal_id_map[signal.traffic_light_group_id];
+      if (msg_time > rclcpp::Time(curr.stamp)) {
+        curr.signal = signal;
+        curr.stamp = msg_time;
+      }
     }
+  }
 
-    const bool is_unknown_observation =
-      std::any_of(signal.elements.begin(), signal.elements.end(), [](const auto & element) {
-        return element.color == autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      });
-    const auto old_data =
-      traffic_light_id_map_last_observed_old.find(signal.traffic_light_group_id);
-
-    if (is_unknown_observation && old_data != traffic_light_id_map_last_observed_old.end()) {
-      traffic_signal_id_map[signal.traffic_light_group_id] = old_data->second;
-      traffic_signal_id_map[signal.traffic_light_group_id].stamp = msg->stamp;
+  // Remove outdated traffic signals
+  auto itr = traffic_signal_id_map.begin();
+  while (itr != traffic_signal_id_map.end()) {
+    rclcpp::Time signal_time = itr->second.stamp;
+    const double age = (current_time - signal_time).seconds();
+    if (age > time_threshold_seconds) {
+      itr = traffic_signal_id_map.erase(itr);
+    } else {
+      ++itr;
     }
   }
 }

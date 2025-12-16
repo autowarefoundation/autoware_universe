@@ -45,6 +45,7 @@
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
@@ -55,7 +56,6 @@
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
-#include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
@@ -410,7 +410,8 @@ bool isParkedObject(
   const double obj_width = std::max(max_dist_to_bound - min_dist_to_bound, 0.0);
 
   // distance from centerline to the boundary line with object width
-  const auto centerline_pose = lanelet::utils::getClosestCenterPose(closest_lanelet, obj_point);
+  const auto centerline_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(obj_point));
   const lanelet::BasicPoint3d centerline_point(
     centerline_pose.position.x, centerline_pose.position.y, centerline_pose.position.z);
   const double dist_bound_to_centerline =
@@ -772,7 +773,8 @@ double calc_angle_to_lanelet_segment(const lanelet::ConstLanelets & lanelets, co
   if (!lanelet::utils::query::getClosestLanelet(lanelets, pose, &closest_lanelet)) {
     return autoware_utils::deg2rad(180);
   }
-  const auto closest_pose = lanelet::utils::getClosestCenterPose(closest_lanelet, pose.position);
+  const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
+    closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(pose));
   return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, pose));
 }
 
@@ -1211,5 +1213,13 @@ bool is_moving_object(const CommonDataPtr & common_data_ptr, const ExtendedPredi
 {
   return object.initial_twist.linear.x >
          common_data_ptr->lc_param_ptr->safety.th_stopped_object_velocity;
+}
+
+bool is_lanelet_in_lanelet_collections(
+  const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet)
+{
+  return std::any_of(
+    lanelet_collections.begin(), lanelet_collections.end(),
+    [&](const auto & lane) { return lane.id() == lanelet.id(); });
 }
 }  // namespace autoware::behavior_path_planner::utils::lane_change

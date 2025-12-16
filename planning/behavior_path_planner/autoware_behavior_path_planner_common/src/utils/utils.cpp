@@ -17,6 +17,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
+#include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -30,6 +31,7 @@
 
 #include <boost/geometry/algorithms/is_valid.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
@@ -634,7 +636,7 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
 double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLanelets & lanelets)
 {
   const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
-  const double lanelet_length = lanelet::utils::getLaneletLength3d(lanelets);
+  const double lanelet_length = lanelet::geometry::length3d(lanelet::LaneletSequence(lanelets));
   return lanelet_length - arc_coordinates.length;
 }
 
@@ -674,7 +676,7 @@ double getDistanceToNextIntersection(
         return distance - arc_coordinates.length;
       }
     }
-    distance += lanelet::utils::getLaneletLength3d(llt);
+    distance += lanelet::geometry::length3d(llt);
   }
 
   return std::numeric_limits<double>::max();
@@ -785,12 +787,10 @@ std::optional<double> calc_distance_to_next_turn_direction_lane(
   const auto distance_covered =
     lanelet::utils::getArcCoordinates({*current_llt_itr}, current_pose).length;
   const auto remaining_dist_on_current_lane =
-    lanelet::utils::getLaneletLength3d(*current_llt_itr) - distance_covered;
+    lanelet::geometry::length3d(*current_llt_itr) - distance_covered;
   const auto dist_to_next_turn_direction_lane = std::accumulate(
     std::next(current_llt_itr), std::next(nearest_turn_llt_itr), 0.0,
-    [](const auto & sum, const auto & llt) {
-      return sum + lanelet::utils::getLaneletLength3d(llt);
-    });
+    [](const auto & sum, const auto & llt) { return sum + lanelet::geometry::length3d(llt); });
 
   return remaining_dist_on_current_lane + dist_to_next_turn_direction_lane;
 }
@@ -856,7 +856,7 @@ double getDistanceToCrosswalk(
         }
       }
     }
-    distance += lanelet::utils::getLaneletLength3d(llt);
+    distance += lanelet::geometry::length3d(llt);
   }
 
   return std::numeric_limits<double>::infinity();
@@ -1172,7 +1172,8 @@ PathWithLaneId getCenterLinePath(
   double s_forward = s + forward_path_length;
 
   if (route_handler.isDeadEndLanelet(lanelet_sequence.back())) {
-    const auto lane_length = lanelet::utils::getLaneletLength2d(lanelet_sequence);
+    const auto lane_length =
+      lanelet::geometry::length2d(lanelet::LaneletSequence(lanelet_sequence));
     s_forward = std::clamp(s_forward, 0.0, lane_length);
   }
 
@@ -1387,7 +1388,7 @@ lanelet::ConstLanelets getExtendedCurrentLanes(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      backward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.front());
+      backward_length_sum += lanelet::geometry::length2d(extended_lanes.front());
     } else {
       break;  // no more previous lanes to add
     }
@@ -1407,7 +1408,7 @@ lanelet::ConstLanelets getExtendedCurrentLanes(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      forward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.back());
+      forward_length_sum += lanelet::geometry::length2d(extended_lanes.back());
     } else {
       break;  // no more next lanes to add
     }
@@ -1457,7 +1458,7 @@ lanelet::ConstLanelets getExtendedCurrentLanesFromPath(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      backward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.front());
+      backward_length_sum += lanelet::geometry::length2d(extended_lanes.front());
     } else {
       break;  // no more previous lanes to add
     }
@@ -1477,7 +1478,7 @@ lanelet::ConstLanelets getExtendedCurrentLanesFromPath(
     }
 
     if (extended_lanes.size() > lanes.size()) {
-      forward_length_sum += lanelet::utils::getLaneletLength2d(extended_lanes.back());
+      forward_length_sum += lanelet::geometry::length2d(extended_lanes.back());
     } else {
       break;  // no more next lanes to add
     }
@@ -1713,5 +1714,38 @@ PoseWithDetailOpt insert_feasible_stop_point(
   }
 
   return PoseWithDetail(current_path.points.at(*stop_idx).point.pose, stop_reason);
+}
+
+std::optional<double> calc_point_dist_to_closest_lane_boundary(
+  const RouteHandler & route_handler, const Pose & ego_baselink_pose,
+  const vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & direction)
+{
+  if (direction != "left" && direction != "right") {
+    return std::nullopt;
+  }
+
+  const auto local_footprint = vehicle_info.createFootprint();
+  const auto vehicle_footprint = autoware_utils::transform_vector(
+    local_footprint, autoware_utils::pose2transform(ego_baselink_pose));
+
+  const auto fp_corner_idx = (direction == "left")
+                               ? vehicle_info_utils::VehicleInfo::FrontLeftIndex
+                               : vehicle_info_utils::VehicleInfo::FrontRightIndex;
+  const auto & corner_point = vehicle_footprint.at(fp_corner_idx);
+
+  Pose corner_pose;
+  corner_pose.position = autoware_utils::to_msg(corner_point.to_3d(ego_baselink_pose.position.z));
+  corner_pose.orientation = ego_baselink_pose.orientation;
+
+  lanelet::ConstLanelet lanelet;
+  if (!route_handler.getClosestLaneletWithinRoute(corner_pose, &lanelet)) {
+    return std::nullopt;
+  }
+
+  const auto & nearest_linestring =
+    (direction == "left") ? lanelet.leftBound() : lanelet.rightBound();
+
+  return boundary_departure_checker::utils::calc_signed_lateral_distance_to_boundary(
+    nearest_linestring, corner_pose);
 }
 }  // namespace autoware::behavior_path_planner::utils

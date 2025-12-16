@@ -113,6 +113,11 @@ public:
     return core_data_->preferred_lanes;
   }
 
+  std::shared_ptr<std::deque<Trajectory>> trajectory_history() const
+  {
+    return core_data_->trajectory_history;
+  }
+
   Header header() const { return core_data_->header; }
 
   UUID uuid() const { return core_data_->generator_id; }

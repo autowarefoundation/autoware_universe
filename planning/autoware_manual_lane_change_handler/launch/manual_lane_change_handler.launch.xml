@@ -1,0 +1,10 @@
+<launch>
+  <arg name="map_topic_name" default="/map/vector_map"/>
+  <arg name="manual_lane_change_handler_param_path" default="$(find-pkg-share autoware_manual_lane_change_handler)/config/manual_lane_change_handler.param.yaml"/>
+
+  <node pkg="autoware_manual_lane_change_handler" exec="autoware_manual_lane_change_handler_node" name="manual_lane_change_handler" namespace="">
+    <param from="$(var manual_lane_change_handler_param_path)"/>
+    <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+  </node>
+</launch>

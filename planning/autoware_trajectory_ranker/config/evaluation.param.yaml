@@ -6,9 +6,11 @@
               "autoware::trajectory_ranker::metrics::TravelDistance",
               "autoware::trajectory_ranker::metrics::TimeToCollision",
               "autoware::trajectory_ranker::metrics::LateralDeviation",
-              "autoware::trajectory_ranker::metrics::SteeringConsistency"]
+              "autoware::trajectory_ranker::metrics::SteeringConsistency",
+              "autoware::trajectory_ranker::metrics::TrajectoryConsistency"]
 
-    score_weight: [0.1, 0.1, 0.3, 0.6, 0.3, 0.3]
+    score_weight: [0.1, 0.1, 0.3, 0.6, 0.3, 0.3, 0.2]
+    trajectory_history_size: 10
     time_decay_weight:
       s0: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
       s1: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
@@ -16,3 +18,4 @@
       s3: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
       s4: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
       s5: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]
+      s6: [1.0, 0.8, 0.64, 0.51, 0.41, 0.33, 0.26, 0.21, 0.17, 0.13, 0.10, 0.08, 0.067, 0.053, 0.043, 0.034]

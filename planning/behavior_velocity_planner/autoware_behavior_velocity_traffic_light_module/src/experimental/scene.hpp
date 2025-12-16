@@ -1,0 +1,149 @@
+// Copyright 2025 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef EXPERIMENTAL__SCENE_HPP_
+#define EXPERIMENTAL__SCENE_HPP_
+
+#define EIGEN_MPL2_ONLY
+
+#include <autoware/behavior_velocity_rtc_interface/experimental/scene_module_interface_with_rtc.hpp>
+
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <vector>
+
+namespace autoware::behavior_velocity_planner::experimental
+{
+class TrafficLightModule : public SceneModuleInterfaceWithRTC
+{
+public:
+  using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
+  using TrafficSignalElement = autoware_perception_msgs::msg::TrafficLightElement;
+  using Time = rclcpp::Time;
+
+  enum class State { APPROACH, GO_OUT };
+
+  struct DebugData
+  {
+    double base_link2front;
+    std::vector<std::tuple<
+      std::shared_ptr<const lanelet::TrafficLight>,
+      autoware_perception_msgs::msg::TrafficLightGroup>>
+      tl_state;
+    std::vector<geometry_msgs::msg::Pose> stop_poses;
+    geometry_msgs::msg::Pose first_stop_pose;
+    std::vector<geometry_msgs::msg::Pose> dead_line_poses;
+    std::vector<geometry_msgs::msg::Point> traffic_light_points;
+    std::optional<geometry_msgs::msg::Point> highest_confidence_traffic_light_point = {
+      std::nullopt};
+    bool is_remaining_time_used{false};
+  };
+
+  struct PlannerParam
+  {
+    double stop_margin;
+    double tl_state_timeout;
+    double yellow_lamp_period;
+    double yellow_light_stop_velocity;
+    double stop_time_hysteresis;
+    bool enable_pass_judge;
+    // Restart Suppression Parameter
+    double max_behind_dist_to_stop_for_restart_suppression;
+    double min_behind_dist_to_stop_for_restart_suppression;
+    // V2I Parameter
+    bool v2i_use_remaining_time;
+    double v2i_last_time_allowed_to_pass;
+    double v2i_velocity_threshold;
+    double v2i_required_time_to_departure;
+  };
+
+public:
+  TrafficLightModule(
+    const lanelet::Id module_id, const lanelet::TrafficLight & traffic_light_reg_elem,
+    lanelet::ConstLanelet lane, const lanelet::ConstLineString3d & initial_stop_line,
+    const PlannerParam & planner_param, const rclcpp::Logger logger,
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
+
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
+
+  visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
+  autoware::motion_utils::VirtualWalls createVirtualWalls() override;
+
+  inline TrafficSignal getTrafficSignal() const { return looking_tl_state_; }
+
+  inline State getTrafficLightModuleState() const { return state_; }
+
+  inline std::optional<double> getFirstStopPointArcLength() const { return first_stop_point_s_; }
+
+  void updateStopLine(const lanelet::ConstLineString3d & stop_line);
+
+private:
+  bool isStopSignal(const PlannerData & planner_data);
+
+  bool willTrafficLightTurnRedBeforeReachingStopLine(
+    const double & distance_to_stop_line, const PlannerData & planner_data) const;
+
+  Trajectory insertStopVelocity(
+    const Trajectory & input, const double & stop_point_s, const PlannerData & planner_data);
+
+  bool isPassthrough(const double & signed_arc_length, const PlannerData & planner_data) const;
+
+  bool findValidTrafficSignal(
+    TrafficSignalStamped & valid_traffic_signal, const PlannerData & planner_data) const;
+
+  bool isTrafficSignalTimedOut() const;
+
+  void updateTrafficSignal(const PlannerData & planner_data);
+
+  // Key Feature
+  const lanelet::TrafficLight & traffic_light_reg_elem_;
+  lanelet::ConstLanelet lane_;
+  lanelet::ConstLineString3d
+    stop_line_;  // Note: this stop_line_ may not be the one bound to the traffic light regulatory
+                 // element. this is the one bound to the traffic light (line string)
+
+  // State
+  State state_;
+
+  // Parameter
+  PlannerParam planner_param_;
+
+  // Debug
+  DebugData debug_data_;
+
+  // prevent pass through chattering
+  bool is_prev_state_stop_;
+
+  // prevent stop chattering
+  std::unique_ptr<Time> stop_signal_received_time_ptr_{};
+
+  std::optional<double> first_stop_point_s_;
+
+  std::optional<Time> traffic_signal_stamp_;
+
+  // Traffic Light State
+  TrafficSignal looking_tl_state_;
+};
+}  // namespace autoware::behavior_velocity_planner::experimental
+
+#endif  // EXPERIMENTAL__SCENE_HPP_

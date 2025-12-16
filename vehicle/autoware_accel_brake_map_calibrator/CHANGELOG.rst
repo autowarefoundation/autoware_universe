@@ -2,6 +2,16 @@
 Changelog for package autoware_accel_brake_map_calibrator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* chore(accel_brake_map_calibrator): change output topic name of accel_brake_map_calibrator (`#11251 <https://github.com/autowarefoundation/autoware_universe/issues/11251>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas, Yukinari Hisaki
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

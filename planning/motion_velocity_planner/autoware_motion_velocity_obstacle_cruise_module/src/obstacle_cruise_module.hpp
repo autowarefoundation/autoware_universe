@@ -50,6 +50,7 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override;
+  std::string get_short_module_name() const override { return "obstacle_cruise"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     RequiredSubscriptionInfo required_subscription_info;
@@ -79,7 +80,6 @@ private:
   std::unique_ptr<CruisePlannerInterface> cruise_planner_;
 
   // internal variables
-  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   std::vector<CruiseObstacle> prev_cruise_object_obstacles_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
   bool need_to_clear_velocity_limit_{false};

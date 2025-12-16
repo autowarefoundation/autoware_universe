@@ -21,6 +21,13 @@
 
   <group>
     <push-ros-namespace namespace="planning"/>
+    <!-- manual lane change handler module -->
+    <group>
+      <push-ros-namespace namespace="mission_planning"/>
+      <include file="$(find-pkg-share autoware_manual_lane_change_handler)/launch/manual_lane_change_handler.launch.xml">
+        <arg name="mission_planner_param_path" value="$(var mission_planner_param_path)"/>
+      </include>
+    </group>
     <!-- mission planning module -->
     <group>
       <push-ros-namespace namespace="mission_planning"/>

@@ -50,6 +50,12 @@ void EuclideanClusterNode::onPointCloud(
 {
   stop_watch_ptr_->toc("processing_time", true);
 
+  // check for empty point cloud
+  if (input_msg->data.empty() || input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    return;
+  }
+
   // convert ros to pcl
   pcl::PointCloud<pcl::PointXYZ>::Ptr raw_pointcloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromROSMsg(*input_msg, *raw_pointcloud_ptr);

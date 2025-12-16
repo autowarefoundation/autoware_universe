@@ -14,9 +14,10 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_spline_smoother.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 
 #include <vector>
@@ -25,15 +26,18 @@ namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectorySplineSmoother::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  [[maybe_unused]] const TrajectoryOptimizerData & data)
+  const TrajectoryOptimizerData & data)
 {
-  // Apply spline to smooth the trajectory
   if (!params.use_akima_spline_interpolation) {
     return;
   }
-  utils::apply_spline(
-    traj_points, spline_params_.interpolation_resolution_m, spline_params_.max_yaw_discrepancy_deg,
-    spline_params_.max_distance_discrepancy_m, spline_params_.copy_original_orientation);
+  trajectory_spline_smoother_utils::apply_spline(
+    traj_points, spline_params_.interpolation_resolution_m,
+    spline_params_.max_distance_discrepancy_m,
+    spline_params_.preserve_input_trajectory_orientation);
+
+  autoware::motion_utils::calculate_time_from_start(
+    traj_points, data.current_odometry.pose.pose.position);
 }
 
 void TrajectorySplineSmoother::set_up_params()
@@ -43,12 +47,10 @@ void TrajectorySplineSmoother::set_up_params()
 
   spline_params_.interpolation_resolution_m = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_spline_smoother.interpolation_resolution_m");
-  spline_params_.max_yaw_discrepancy_deg = get_or_declare_parameter<double>(
-    *node_ptr, "trajectory_spline_smoother.max_yaw_discrepancy_deg");
   spline_params_.max_distance_discrepancy_m = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_spline_smoother.max_distance_discrepancy_m");
-  spline_params_.copy_original_orientation = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_spline_smoother.copy_original_orientation");
+  spline_params_.preserve_input_trajectory_orientation = get_or_declare_parameter<bool>(
+    *node_ptr, "trajectory_spline_smoother.preserve_input_trajectory_orientation");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
@@ -60,14 +62,11 @@ rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
     parameters, "trajectory_spline_smoother.interpolation_resolution_m",
     spline_params_.interpolation_resolution_m);
   update_param(
-    parameters, "trajectory_spline_smoother.max_yaw_discrepancy_deg",
-    spline_params_.max_yaw_discrepancy_deg);
-  update_param(
     parameters, "trajectory_spline_smoother.max_distance_discrepancy_m",
     spline_params_.max_distance_discrepancy_m);
   update_param(
-    parameters, "trajectory_spline_smoother.copy_original_orientation",
-    spline_params_.copy_original_orientation);
+    parameters, "trajectory_spline_smoother.preserve_input_trajectory_orientation",
+    spline_params_.preserve_input_trajectory_orientation);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
@@ -76,3 +75,8 @@ rcl_interfaces::msg::SetParametersResult TrajectorySplineSmoother::on_parameter(
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother,
+  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)

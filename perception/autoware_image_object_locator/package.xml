@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_image_object_locator</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>The autoware_image_object_locator package</description>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
@@ -18,6 +18,7 @@
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils_math</depend>
   <depend>libopencv-dev</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>

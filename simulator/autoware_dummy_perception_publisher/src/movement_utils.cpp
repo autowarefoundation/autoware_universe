@@ -19,9 +19,9 @@
 #include "autoware/trajectory/pose.hpp"
 #include "autoware_utils_geometry/geometry.hpp"
 
-#include <geometry_msgs/msg/transform.hpp>
+#include <tf2/LinearMath/Transform.hpp>
 
-#include <tf2/LinearMath/Transform.h>
+#include <geometry_msgs/msg/transform.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>

@@ -147,6 +147,7 @@ private:
   /// @brief return true if the given predicted path crosses a fence before arriving at the
   /// crosswalk
   bool doesPathCrossAnyFenceBeforeCrosswalk(const PredictedPathWithArrivalIndex & predicted_path);
+  PredictedPath cutPathBeforeFences(const PredictedPath & predicted_path) const;
   std::optional<TrafficLightElement> getTrafficSignalElement(const lanelet::Id & id);
 };
 

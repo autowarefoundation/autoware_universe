@@ -41,7 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using autoware_utils::ScopedTimeTrack;
+using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -287,8 +287,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_area_matrix"));
       associator_config.min_area_matrix =
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
-      associator_config.max_rad_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_rad_matrix"));
       associator_config.min_iou_matrix =
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
 
@@ -296,7 +294,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       const int label_num = associator_config.max_dist_matrix.rows();
       for (int i = 0; i < label_num; i++) {
         for (int j = 0; j < label_num; j++) {
-          associator_config.max_rad_matrix(i, j) = std::abs(associator_config.max_rad_matrix(i, j));
           associator_config.max_dist_matrix(i, j) =
             associator_config.max_dist_matrix(i, j) * associator_config.max_dist_matrix(i, j);
         }
@@ -331,14 +328,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
     time_keeper_ =
-      std::make_shared<autoware_utils::TimeKeeper>(detailed_processing_time_publisher_);
+      std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
     processor_->setTimeKeeper(time_keeper_);
   }
 }

@@ -152,6 +152,45 @@ TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloud)
   EXPECT_EQ(second_source.length, test_cloud_2_.width * test_cloud_2_.height);
 }
 
+TEST_F(ConcatenationInfoTest, SuccessWithEmptyPointCloud)
+{
+  // Add extra empty cloud
+  std::vector<std::string> input_topics = input_topics_;
+  input_topics.emplace_back("/topic_empty");
+  pcl::PointCloud<pcl::PointXYZ> pcl_cloud_4;
+  pcl_cloud_4.width = 0;
+  pcl_cloud_4.height = 0;
+  pcl_cloud_4.is_dense = false;
+  pcl_cloud_4.points.resize(0);
+  sensor_msgs::msg::PointCloud2 test_cloud_4;
+  pcl::toROSMsg(pcl_cloud_4, test_cloud_4);
+  test_cloud_4.header = test_header_;
+
+  // Apply point clouds
+  ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics);
+  auto concatenated_point_cloud_info_msg = concatenation_info_manager.reset_and_get_base_info();
+
+  concatenation_info_manager.update_source_from_point_cloud(
+    test_cloud_1_, input_topics[0], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+    concatenated_point_cloud_info_msg);
+  concatenation_info_manager.update_source_from_point_cloud(
+    test_cloud_2_, input_topics[1], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+    concatenated_point_cloud_info_msg);
+  concatenation_info_manager.update_source_from_point_cloud(
+    test_cloud_3_, input_topics[2], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+    concatenated_point_cloud_info_msg);
+  concatenation_info_manager.update_source_from_point_cloud(
+    test_cloud_4, input_topics[3], autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_OK,
+    concatenated_point_cloud_info_msg);  // Empty cloud
+
+  // Set result
+  concatenation_info_manager.set_result(
+    sensor_msgs::msg::PointCloud2(), concatenated_point_cloud_info_msg);
+
+  // Check that concatenation_success is true
+  EXPECT_TRUE(concatenated_point_cloud_info_msg.concatenation_success);
+}
+
 TEST_F(ConcatenationInfoTest, ApplySourceWithPointCloudNonOkStatus)
 {
   ConcatenationInfoManager concatenation_info_manager(strategy_name_, input_topics_);

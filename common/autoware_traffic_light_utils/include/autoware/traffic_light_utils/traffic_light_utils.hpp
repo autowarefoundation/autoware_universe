@@ -15,6 +15,9 @@
 #ifndef AUTOWARE__TRAFFIC_LIGHT_UTILS__TRAFFIC_LIGHT_UTILS_HPP_
 #define AUTOWARE__TRAFFIC_LIGHT_UTILS__TRAFFIC_LIGHT_UTILS_HPP_
 
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Transform.hpp>
+
 #include "autoware_perception_msgs/msg/traffic_light_element.hpp"
 #include "autoware_perception_msgs/msg/traffic_light_group.hpp"
 #include "tier4_perception_msgs/msg/traffic_light.hpp"
@@ -24,8 +27,6 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Primitive.h>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Transform.h>
 
 #include <vector>
 

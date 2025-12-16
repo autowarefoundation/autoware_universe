@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_pipeline_latency_monitor</name>
-  <version>0.47.0</version>
+  <version>0.48.0</version>
   <description>Monitor latency in the Autoware pipeline and publish diagnostics when a threshold is exceeded</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>

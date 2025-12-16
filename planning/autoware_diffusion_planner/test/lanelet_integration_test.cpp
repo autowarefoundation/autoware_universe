@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
+#include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
@@ -34,7 +35,7 @@
 #include <string>
 #include <vector>
 
-using autoware::diffusion_planner::convert_to_lane_segments;
+using autoware::diffusion_planner::convert_to_internal_lanelet_map;
 using autoware::diffusion_planner::LaneSegment;
 using autoware_map_msgs::msg::LaneletMapBin;
 
@@ -73,57 +74,34 @@ protected:
 
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
 {
-  // Test basic functionality of convert_to_lane_segments
-  const int64_t num_lane_points = 10;
-
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
+  using autoware::diffusion_planner::POINTS_PER_SEGMENT;
+  auto lane_segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
   // Basic assertions
-  EXPECT_FALSE(lane_segments.empty()) << "Lane segments should not be empty";
+  EXPECT_FALSE(lane_segments.lane_segments.empty()) << "Lane segments should not be empty";
 
   // Check that each lane segment has the expected number of points
-  for (const auto & segment : lane_segments) {
-    EXPECT_EQ(segment.centerline.size(), static_cast<size_t>(num_lane_points))
-      << "Lane polyline should have " << num_lane_points << " points";
+  for (const auto & segment : lane_segments.lane_segments) {
+    EXPECT_EQ(segment.centerline.size(), static_cast<size_t>(POINTS_PER_SEGMENT))
+      << "Lane polyline should have " << POINTS_PER_SEGMENT << " points";
 
     // Each boundary should have the expected number of points
-    EXPECT_EQ(segment.left_boundary.size(), static_cast<size_t>(num_lane_points))
-      << "Left boundary should have " << num_lane_points << " points";
+    EXPECT_EQ(segment.left_boundary.size(), static_cast<size_t>(POINTS_PER_SEGMENT))
+      << "Left boundary should have " << POINTS_PER_SEGMENT << " points";
 
-    EXPECT_EQ(segment.right_boundary.size(), static_cast<size_t>(num_lane_points))
-      << "Right boundary should have " << num_lane_points << " points";
-  }
-}
-
-TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsWithDifferentPointCounts)
-{
-  // Test with different numbers of lane points
-  const std::vector<int64_t> point_counts = {5, 20, 50};
-
-  for (const auto num_points : point_counts) {
-    auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_points);
-
-    EXPECT_FALSE(lane_segments.empty())
-      << "Lane segments should not be empty for " << num_points << " points";
-
-    for (const auto & segment : lane_segments) {
-      EXPECT_EQ(segment.centerline.size(), static_cast<size_t>(num_points))
-        << "Lane polyline should have " << num_points << " points";
-    }
+    EXPECT_EQ(segment.right_boundary.size(), static_cast<size_t>(POINTS_PER_SEGMENT))
+      << "Right boundary should have " << POINTS_PER_SEGMENT << " points";
   }
 }
 
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
 {
-  // Test that lane attributes are properly extracted
-  const int64_t num_lane_points = 10;
+  auto lane_segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-
-  EXPECT_FALSE(lane_segments.empty());
+  EXPECT_FALSE(lane_segments.lane_segments.empty());
 
   // Check various attributes
-  for (const auto & segment : lane_segments) {
+  for (const auto & segment : lane_segments.lane_segments) {
     // Check ID is valid
     EXPECT_GT(segment.id, 0) << "Lane segment ID should be positive";
   }
@@ -131,35 +109,31 @@ TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsAttributes)
 
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsConsistency)
 {
-  // Test that multiple calls with same parameters produce consistent results
-  const int64_t num_lane_points = 10;
+  auto lane_segments_1 = convert_to_internal_lanelet_map(lanelet_map_ptr_);
+  auto lane_segments_2 = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  auto lane_segments_1 = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-  auto lane_segments_2 = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
-
-  EXPECT_EQ(lane_segments_1.size(), lane_segments_2.size())
+  EXPECT_EQ(lane_segments_1.lane_segments.size(), lane_segments_2.lane_segments.size())
     << "Multiple calls should produce the same number of segments";
 
   // Check that segments are in the same order with same IDs
-  for (size_t i = 0; i < lane_segments_1.size(); ++i) {
-    EXPECT_EQ(lane_segments_1[i].id, lane_segments_2[i].id)
+  for (size_t i = 0; i < lane_segments_1.lane_segments.size(); ++i) {
+    EXPECT_EQ(lane_segments_1.lane_segments[i].id, lane_segments_2.lane_segments[i].id)
       << "Segment IDs should be consistent across calls";
 
-    EXPECT_EQ(lane_segments_1[i].centerline.size(), lane_segments_2[i].centerline.size())
+    EXPECT_EQ(
+      lane_segments_1.lane_segments[i].centerline.size(),
+      lane_segments_2.lane_segments[i].centerline.size())
       << "Polyline sizes should be consistent";
   }
 }
 
 TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
 {
-  // Test that no NaN or infinite values exist in the processed data
-  const int64_t num_lane_points = 10;
+  auto lane_segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
+  EXPECT_FALSE(lane_segments.lane_segments.empty());
 
-  EXPECT_FALSE(lane_segments.empty());
-
-  for (const auto & segment : lane_segments) {
+  for (const auto & segment : lane_segments.lane_segments) {
     // Check polyline points
     const auto & waypoints = segment.centerline;
     for (size_t i = 0; i < waypoints.size(); ++i) {
@@ -205,9 +179,6 @@ TEST_F(LaneletIntegrationTest, CheckForNaNAndInfiniteValues)
 
 TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
 {
-  // Test that interpolated coordinates are within the original map bounds
-  const int64_t num_lane_points = 10;
-
   // First, get the bounds from the original lanelet map
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
@@ -259,12 +230,12 @@ TEST_F(LaneletIntegrationTest, CheckReasonableCoordinateRanges)
   const float max_z_allowed = max_z + tolerance;
 
   // Now convert and check that interpolated points are within bounds
-  auto lane_segments = convert_to_lane_segments(lanelet_map_ptr_, num_lane_points);
+  auto lane_segments = convert_to_internal_lanelet_map(lanelet_map_ptr_);
 
-  EXPECT_FALSE(lane_segments.empty());
+  EXPECT_FALSE(lane_segments.lane_segments.empty());
 
   // Check all interpolated points are within the original map bounds
-  for (const auto & segment : lane_segments) {
+  for (const auto & segment : lane_segments.lane_segments) {
     const auto & waypoints = segment.centerline;
 
     for (size_t i = 0; i < waypoints.size(); ++i) {

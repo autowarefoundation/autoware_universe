@@ -37,6 +37,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -46,6 +47,12 @@ namespace autoware::bevfusion
 {
 
 using autoware::cuda_utils::CudaUniquePtr;
+
+struct TrtBEVFusionConfig
+{
+  tensorrt_common::TrtCommonConfig common;
+  std::optional<tensorrt_common::TrtCommonConfig> image_backbone;
+};
 
 class NetworkParam
 {
@@ -73,8 +80,9 @@ public:
   using Matrix4fRowM = Eigen::Matrix<float, 4, 4, Eigen::RowMajor>;
 
   explicit BEVFusionTRT(
-    const tensorrt_common::TrtCommonConfig & trt_config,
-    const DensificationParam & densification_param, const BEVFusionConfig & config);
+    const TrtBEVFusionConfig & trt_config, const DensificationParam & densification_param,
+    const BEVFusionConfig & config);
+
   virtual ~BEVFusionTRT();
 
   bool detect(
@@ -90,7 +98,7 @@ public:
 
 protected:
   void initPtr();
-  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initTrt(const TrtBEVFusionConfig & trt_config);
 
   bool preProcess(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
@@ -98,11 +106,34 @@ protected:
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
     bool & is_num_voxels_within_range);
 
+  bool validatePointCloud(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr);
+
+  void clearDeviceMemory();
+
+  void processImages(
+    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+    const std::vector<float> & camera_masks);
+
+  std::int64_t processPointCloudVoxelization(
+    std::size_t num_points, bool & is_num_voxels_within_range);
+
+  void configureTensorRTInputs(std::int64_t num_voxels, std::size_t num_points);
+
+  void setupImageBackbone(const TrtBEVFusionConfig & trt_config);
+
+  void addCameraNetworkIO(std::vector<autoware::tensorrt_common::NetworkIO> & network_io);
+
+  void addCameraProfileDims(std::vector<autoware::tensorrt_common::ProfileDims> & profile_dims);
+
+  void setSensorFusionTensorAddresses();
+
   bool inference();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> image_backbone_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
   std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
     nullptr};
@@ -113,6 +144,7 @@ protected:
 
   BEVFusionConfig config_;
   std::vector<int> roi_start_y_vector_;
+  std::vector<Matrix4fRowM> img_aug_matrices_;
 
   // pre-process inputs
 
@@ -141,6 +173,10 @@ protected:
   CudaUniquePtr<std::uint8_t[]> roi_tensor_d_{nullptr};
   std::vector<CudaUniquePtr<std::uint8_t[]>> image_buffers_d_{};
   CudaUniquePtr<float[]> camera_masks_d_{nullptr};
+
+  // image feature buffers for fusion model
+  CudaUniquePtr<float[]> image_feats_d_{nullptr};
+  CudaUniquePtr<float[]> img_aug_matrix_d_{nullptr};
 
   // output buffers
   CudaUniquePtr<std::int64_t[]> label_pred_output_d_{nullptr};

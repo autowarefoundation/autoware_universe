@@ -15,22 +15,26 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#define EIGEN_MPL2_ONLY
+
+#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
+
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+
+#include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
+
 #include <optional>
 #include <utility>
 #include <vector>
 
-#define EIGEN_MPL2_ONLY
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-
-#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-
 namespace autoware::behavior_velocity_planner
 {
+
+using Trajectory = autoware::experimental::trajectory::Trajectory<
+  autoware_internal_planning_msgs::msg::PathPointWithLaneId>;
 
 /**
  * @brief create offset point.
@@ -78,6 +82,19 @@ auto calcStopPointAndInsertIndex(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
   const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
   -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
+
+/**
+ * @brief find intersection point between path and stop line and return arc length.
+ * @param path input path.
+ * @param left_bound left bound.
+ * @param right_bound right bound.
+ * @param lanelet_stop_lines stop lines.
+ * @return arc length of stop point. if there is no intersection point, return std::nullopt.
+ */
+std::optional<double> calcStopPoint(
+  const Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+  const std::vector<geometry_msgs::msg::Point> & right_bound,
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset);
 
 /**
  * @brief check if the traffic signal is red stop.

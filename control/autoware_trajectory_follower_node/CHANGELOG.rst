@@ -2,6 +2,27 @@
 Changelog for package autoware_trajectory_follower_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(simple_trajectory_follower): update remapping (`#11645 <https://github.com/autowarefoundation/autoware_universe/issues/11645>`_)
+  * move private headers
+  * use component
+  * remove empty line
+  * update topic names
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* fix(autoware_trajectory_follower_node): change plot label of data[25] from calculated into feedback (`#11266 <https://github.com/autowarefoundation/autoware_universe/issues/11266>`_)
+* feat(pid_longitudinal_controller): don't switch to DRIVE if the state conditions are not met (`#11369 <https://github.com/autowarefoundation/autoware_universe/issues/11369>`_)
+  * feat(pid_longitudinal_controller): don't switch to DRIVE if the state conditions are not met
+  * add is_autoware_control_enabled field for tests
+  ---------
+* Contributors: Mert Çolak, Ryohsuke Mitsudome, Takagi, Isamu, Tim Clephas, Xiaoyu WANG
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="ns" description="current namespace"/>
+  <push-ros-namespace namespace="camera_vru"/>
+
+  <!-- External interfaces -->
+  <arg name="input/camera0/info" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera0/rois" default="/perception/object_recognition/detection/rois0"/>
+  <arg name="input/camera1/info" default="/sensing/camera/camera1/camera_info"/>
+  <arg name="input/camera1/rois" default="/perception/object_recognition/detection/rois1"/>
+  <arg name="input/camera2/info" default="/sensing/camera/camera2/camera_info"/>
+  <arg name="input/camera2/rois" default="/perception/object_recognition/detection/rois2"/>
+  <arg name="input/camera3/info" default="/sensing/camera/camera3/camera_info"/>
+  <arg name="input/camera3/rois" default="/perception/object_recognition/detection/rois3"/>
+  <arg name="input/camera4/info" default="/sensing/camera/camera4/camera_info"/>
+  <arg name="input/camera4/rois" default="/perception/object_recognition/detection/rois4"/>
+  <arg name="input/camera5/info" default="/sensing/camera/camera5/camera_info"/>
+  <arg name="input/camera5/rois" default="/perception/object_recognition/detection/rois5"/>
+  <arg name="input/camera6/info" default="/sensing/camera/camera6/camera_info"/>
+  <arg name="input/camera6/rois" default="/perception/object_recognition/detection/rois6"/>
+  <arg name="input/camera7/info" default="/sensing/camera/camera7/camera_info"/>
+  <arg name="input/camera7/rois" default="/perception/object_recognition/detection/rois7"/>
+
+  <arg name="output/objects" default="/perception/object_recognition/detection/camera_vru/objects"/>
+
+  <arg name="bbox_object_locator_param_path" default="$(find-pkg-share autoware_image_object_locator)/config/bbox_object_locator.param.yaml"/>
+
+  <!-- internal interfaces -->
+  <let name="roi_detector/output/objects0" value="roi_detector_objects0"/>
+  <let name="roi_detector/output/objects1" value="roi_detector_objects1"/>
+  <let name="roi_detector/output/objects2" value="roi_detector_objects2"/>
+  <let name="roi_detector/output/objects3" value="roi_detector_objects3"/>
+  <let name="roi_detector/output/objects4" value="roi_detector_objects4"/>
+  <let name="roi_detector/output/objects5" value="roi_detector_objects5"/>
+  <let name="roi_detector/output/objects6" value="roi_detector_objects6"/>
+  <let name="roi_detector/output/objects7" value="roi_detector_objects7"/>
+
+  <!-- parameters -->
+  <arg name="rois_ids" default="[0, 1]"/>
+
+  <!-- near range roi based VRU detection -->
+  <group>
+    <include file="$(find-pkg-share autoware_image_object_locator)/launch/bbox_object_locator.launch.xml">
+      <arg name="rois_ids" value="$(var rois_ids)"/>
+
+      <arg name="input/rois0" value="$(var input/camera0/rois)"/>
+      <arg name="input/rois1" value="$(var input/camera1/rois)"/>
+      <arg name="input/rois2" value="$(var input/camera2/rois)"/>
+      <arg name="input/rois3" value="$(var input/camera3/rois)"/>
+      <arg name="input/rois4" value="$(var input/camera4/rois)"/>
+      <arg name="input/rois5" value="$(var input/camera5/rois)"/>
+      <arg name="input/rois6" value="$(var input/camera6/rois)"/>
+      <arg name="input/rois7" value="$(var input/camera7/rois)"/>
+
+      <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
+      <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
+      <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
+      <arg name="input/camera_info3" value="$(var input/camera3/info)"/>
+      <arg name="input/camera_info4" value="$(var input/camera4/info)"/>
+      <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
+      <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
+      <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
+
+      <arg name="output/rois0/objects" value="$(var roi_detector/output/objects0)"/>
+      <arg name="output/rois1/objects" value="$(var roi_detector/output/objects1)"/>
+      <arg name="output/rois2/objects" value="$(var roi_detector/output/objects2)"/>
+      <arg name="output/rois3/objects" value="$(var roi_detector/output/objects3)"/>
+      <arg name="output/rois4/objects" value="$(var roi_detector/output/objects4)"/>
+      <arg name="output/rois5/objects" value="$(var roi_detector/output/objects5)"/>
+      <arg name="output/rois6/objects" value="$(var roi_detector/output/objects6)"/>
+      <arg name="output/rois7/objects" value="$(var roi_detector/output/objects7)"/>
+
+      <arg name="param_path" value="$(var bbox_object_locator_param_path)"/>
+    </include>
+  </group>
+
+  <!-- object merger -->
+  <group>
+    <include file="$(find-pkg-share autoware_simple_object_merger)/launch/simple_object_merger.launch.xml">
+      <arg name="input_topics" value="[
+        '$(var roi_detector/output/objects0)',
+        '$(var roi_detector/output/objects1)'
+       ]"/>
+      <arg name="output/objects" value="$(var output/objects)"/>
+    </include>
+  </group>
+</launch>

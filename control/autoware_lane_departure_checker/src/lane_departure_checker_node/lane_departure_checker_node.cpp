@@ -14,10 +14,10 @@
 
 #include "autoware/lane_departure_checker/lane_departure_checker_node.hpp"
 
+#include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
@@ -533,7 +533,8 @@ lanelet::ConstLanelets LaneDepartureCheckerNode::getAllSharedLineStringLanelets(
 
   if (is_conflicting) {
     const auto conflicting_lanelets =
-      lanelet::utils::getConflictingLanelets(routing_graph_, current_lane);
+      autoware::experimental::lanelet2_utils::get_conflicting_lanelets(
+        current_lane, routing_graph_);
     shared.insert(shared.end(), conflicting_lanelets.begin(), conflicting_lanelets.end());
   }
   return shared;
