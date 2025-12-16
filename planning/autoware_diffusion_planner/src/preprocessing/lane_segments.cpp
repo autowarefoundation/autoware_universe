@@ -92,21 +92,21 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   }
 
   std::vector<int64_t> selected_indices;
-  bool start_inside = false;
+  bool has_entered_valid_region = false;
 
   // Select route segment indices
   for (size_t i = closest_index; i < array_indices.size(); ++i) {
     const int64_t segment_idx = array_indices[i];
 
     if (!is_segment_inside(lanelet_map_.lane_segments[segment_idx], center_x, center_y)) {
-      if (start_inside) {
+      if (has_entered_valid_region) {
         break;
       } else {
         continue;
       }
     }
 
-    start_inside = true;
+    has_entered_valid_region = true;
 
     selected_indices.push_back(segment_idx);
     if (selected_indices.size() >= static_cast<size_t>(max_segments)) {
