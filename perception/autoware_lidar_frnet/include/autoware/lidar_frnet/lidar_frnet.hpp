@@ -30,10 +30,8 @@
 #include <rclcpp/logger.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_msgs/msg/header.hpp>
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -59,32 +57,20 @@ public:
 
   bool process(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
-    const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing);
-
-  void setPublishSegmentedPointcloud(
-    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
-  void setPublishVisualizationPointcloud(
-    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
-  void setPublishFilteredPointcloud(
-    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
+    std::unordered_map<std::string, double> & proc_timing);
 
 private:
   bool preprocess(const uint32_t input_num_points);
   bool inference();
   bool postprocess(
     const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-    const std_msgs::msg::Header & header);
+    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered);
   void initTensors();
-  /**
-   * @brief Allocate output point cloud messages for segmentation, visualization, and filtering
-   *
-   * This function initializes three types of output point cloud messages:
-   * - Segmentation pointcloud: Contains x, y, z coordinates and class_id
-   * - Visualization pointcloud: Contains x, y, z coordinates and RGB color
-   * - Filtered pointcloud: Contains x, y, z coordinates, intensity, return_type, and channel
-   *
-   */
-  void allocateMessages();
 
   std::once_flag init_cloud_;
 
@@ -115,19 +101,6 @@ private:
   CudaUniquePtr<OutputVisualizationPointType[]> viz_data_d_{nullptr};
   CudaUniquePtr<InputPointType[]> cloud_filtered_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_filtered_d_{nullptr};
-
-  // Output messages
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> cloud_seg_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> cloud_viz_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> cloud_filtered_msg_ptr_{nullptr};
-
-  // Publisher callbacks
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_segmented_pointcloud_;
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_visualization_pointcloud_;
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_filtered_pointcloud_;
 };
 
 }  // namespace autoware::lidar_frnet

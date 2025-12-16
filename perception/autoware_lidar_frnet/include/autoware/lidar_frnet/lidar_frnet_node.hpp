@@ -16,6 +16,7 @@
 #define AUTOWARE__LIDAR_FRNET__LIDAR_FRNET_NODE_HPP_
 
 #include "autoware/lidar_frnet/lidar_frnet.hpp"
+#include "autoware/lidar_frnet/ros_utils.hpp"
 #include "autoware/lidar_frnet/utils.hpp"
 #include "autoware/lidar_frnet/visibility_control.hpp"
 
@@ -44,11 +45,6 @@ public:
   void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  void publishSegmentedPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
-  void publishVisualizationPointcloud(
-    std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
-  void publishFilteredPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
-
 private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     cloud_in_sub_{nullptr};
@@ -65,6 +61,10 @@ private:
 
   std::unique_ptr<LidarFRNet> frnet_{nullptr};
   std::unique_ptr<diagnostic_updater::Updater> diag_updater_{nullptr};
+
+  ros_utils::PointCloudLayout cloud_seg_layout_{ros_utils::generateSegmentationPointCloudLayout()};
+  ros_utils::PointCloudLayout cloud_viz_layout_{ros_utils::generateVisualizationPointCloudLayout()};
+  ros_utils::PointCloudLayout cloud_filtered_layout_{ros_utils::generateFilteredPointCloudLayout()};
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;
