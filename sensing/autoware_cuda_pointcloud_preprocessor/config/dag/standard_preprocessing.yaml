@@ -85,7 +85,7 @@ dag:
       parameters:
         distance_ratio: 1.03
         object_length_threshold: 0.05
-        enabled: true
+        inplace: true
 
   # Output definitions (what to publish to ROS topics)
   # NOTE: Finalize is automatic - masks are applied and points are extracted before publishing
