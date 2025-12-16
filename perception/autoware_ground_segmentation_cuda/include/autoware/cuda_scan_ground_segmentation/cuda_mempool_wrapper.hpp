@@ -19,6 +19,8 @@
 
 #include <cuda_runtime_api.h>
 
+#include <utility>
+
 namespace autoware
 {
 

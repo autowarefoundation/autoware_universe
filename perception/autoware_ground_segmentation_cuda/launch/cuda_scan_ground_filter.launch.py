@@ -77,6 +77,10 @@ def generate_launch_description():
     def add_launch_arg(name: str, default_value=None):
         return DeclareLaunchArgument(name, default_value=default_value)
 
+    default_param_path = [
+        FindPackageShare("autoware_ground_segmentation_cuda"),
+        "/config/cuda_scan_ground_segmentation_filter.param.yaml",
+    ]
     return launch.LaunchDescription(
         [
             add_launch_arg("container", ""),
@@ -84,10 +88,7 @@ def generate_launch_description():
             add_launch_arg("output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
             add_launch_arg(
                 "cuda_ground_segmentation_node_param_path",
-                [
-                    FindPackageShare("autoware_ground_segmentation_cuda"),
-                    "/config/cuda_scan_ground_segmentation_filter.param.yaml",
-                ],
+                default_param_path,
             ),
         ]
         + [OpaqueFunction(function=launch_setup)]

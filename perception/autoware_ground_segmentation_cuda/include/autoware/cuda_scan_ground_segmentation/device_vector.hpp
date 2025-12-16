@@ -212,7 +212,6 @@ device_vector<T> & device_vector<T>::operator=(device_vector && other)
   stream_ = other.stream_;
   mempool_ = other.mempool_;
 
-  // TODO: is stream_ = other.stream_ necessary?
   other.data_ = nullptr;
   other.ele_num_ = other.actual_ele_num_ = 0;
   other.mempool_.reset();

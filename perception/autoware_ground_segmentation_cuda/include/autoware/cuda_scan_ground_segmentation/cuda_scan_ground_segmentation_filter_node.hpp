@@ -29,6 +29,8 @@
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 
+#include <memory>
+
 namespace autoware::cuda_ground_segmentation
 {
 class CudaScanGroundSegmentationFilterNode : public rclcpp::Node

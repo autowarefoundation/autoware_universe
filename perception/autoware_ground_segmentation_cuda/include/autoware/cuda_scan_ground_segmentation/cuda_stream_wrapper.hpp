@@ -20,6 +20,7 @@
 #include <cuda_runtime_api.h>
 
 #include <memory>
+#include <utility>
 
 namespace autoware
 {
@@ -28,7 +29,7 @@ namespace autoware
 class CudaStream
 {
 public:
-  inline CudaStream(bool is_null = false)
+  inline explicit CudaStream(bool is_null = false)
   {
     // If is_null is true, we use the default stream
     // Otherwise, we create a new stream
