@@ -10,7 +10,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME} cpprest crypto fmt)
+target_link_libraries(${PROJECT_NAME} cpprest crypto)
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::velodyne_monitor::VelodyneMonitor"
