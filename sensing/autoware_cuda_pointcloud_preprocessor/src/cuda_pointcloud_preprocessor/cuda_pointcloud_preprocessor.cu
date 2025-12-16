@@ -520,8 +520,6 @@ CudaPointcloudPreprocessor::organizePointcloudPublic(const cuda_blackboard::Cuda
   // Initialize crop mask to 0 (all points pass by default, 1 means should be cropped)
   CHECK_CUDA_ERROR(
     cudaMalloc(&state.device_crop_mask, num_organized_points_ * sizeof(std::uint32_t)));
-  CHECK_CUDA_ERROR(cudaMemsetAsync(
-    state.device_crop_mask, 0, num_organized_points_ * sizeof(std::uint32_t), stream_));
 
   // Copy metadata
   state.header = input.header;
@@ -532,6 +530,10 @@ CudaPointcloudPreprocessor::organizePointcloudPublic(const cuda_blackboard::Cuda
   state.fields = point_fields_;
   state.is_bigendian = input.is_bigendian;
   state.is_dense = false;
+
+  const int num_points = state.numPoints();
+  thrust::device_ptr<std::uint32_t> mask_ptr(state.device_crop_mask);
+  thrust::fill(thrust::cuda::par.on(stream_), mask_ptr, mask_ptr + num_points, 1U);
   return state;
 }
 
@@ -594,8 +596,9 @@ void CudaPointcloudPreprocessor::applyCropBoxPublic(
   // Ensure state.device_crop_mask is properly sized (reallocate if needed)
   if (state.device_crop_mask == nullptr) {
     CHECK_CUDA_ERROR(cudaMalloc(&state.device_crop_mask, num_points * sizeof(std::uint32_t)));
-    CHECK_CUDA_ERROR(
-      cudaMemsetAsync(state.device_crop_mask, 1, num_points * sizeof(std::uint32_t), stream_));
+    // Initialize to 1 (pass) - must use thrust::fill, not cudaMemsetAsync which sets bytes
+    thrust::device_ptr<std::uint32_t> mask_ptr(state.device_crop_mask);
+    thrust::fill(thrust::cuda::par.on(stream_), mask_ptr, mask_ptr + num_points, 1U);
   }
   // Note: We assume state.device_crop_mask is already large enough
   // If resizing is needed, we would need to track the size, but for now we assume it's managed
@@ -606,7 +609,8 @@ void CudaPointcloudPreprocessor::applyCropBoxPublic(
   }
 
   // Reset temporary masks for crop box computation
-  thrust_stream::fill_n(device_crop_mask_, num_points, 0U, stream_);
+  // Initialize to 1 (pass/outside box by default, cropBoxKernel will set to 0 for points inside)
+  thrust_stream::fill_n(device_crop_mask_, num_points, 1U, stream_);
   if (static_cast<std::size_t>(num_points) > device_nan_mask_.size()) {
     device_nan_mask_.resize(num_points);
   }
@@ -630,7 +634,7 @@ void CudaPointcloudPreprocessor::applyCropBoxPublic(
       static_cast<int>(device_crop_box_structs_.size()), crop_box_blocks_per_grid,
       threads_per_block_, stream_);
   } else {
-    // No crop boxes - all points pass (0 means pass, 1 means should be cropped)
+    // No crop boxes - all points pass (1 means pass/outside)
     thrust_stream::fill_n(device_crop_mask_, num_points, 1U, stream_);
   }
 

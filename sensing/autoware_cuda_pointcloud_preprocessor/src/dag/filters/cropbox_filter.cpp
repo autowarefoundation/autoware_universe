@@ -33,9 +33,8 @@ void CropBoxFilter::initialize(const std::map<std::string, std::any> & parameter
       const auto & crop_boxes_any = parameters.at("crop_boxes");
 
       // Handle vector<map<string, double>>
-      if (crop_boxes_any.type() == typeid(std::vector<std::map<std::string, double>>)) {
-        const auto & boxes =
-          std::any_cast<std::vector<std::map<std::string, double>>>(crop_boxes_any);
+      if (crop_boxes_any.type() == typeid(std::vector<std::map<std::string, any>>)) {
+        const auto & boxes = std::any_cast<std::vector<std::map<std::string, any>>>(crop_boxes_any);
 
         for (const auto & box_map : boxes) {
           CropBoxParameters box;
@@ -59,17 +58,17 @@ void CropBoxFilter::initialize(const std::map<std::string, std::any> & parameter
             throw std::runtime_error("CropBoxFilter: crop_boxes entry missing 'max_z'");
           }
 
-          box.min_x = box_map.at("min_x");
-          box.min_y = box_map.at("min_y");
-          box.min_z = box_map.at("min_z");
-          box.max_x = box_map.at("max_x");
-          box.max_y = box_map.at("max_y");
-          box.max_z = box_map.at("max_z");
+          box.min_x = std::any_cast<double>(box_map.at("min_x"));
+          box.min_y = std::any_cast<double>(box_map.at("min_y"));
+          box.min_z = std::any_cast<double>(box_map.at("min_z"));
+          box.max_x = std::any_cast<double>(box_map.at("max_x"));
+          box.max_y = std::any_cast<double>(box_map.at("max_y"));
+          box.max_z = std::any_cast<double>(box_map.at("max_z"));
 
           crop_boxes_.push_back(box);
         }
-      } else if (crop_boxes_any.type() == typeid(std::vector<double>)) {
-        const auto & vec = std::any_cast<std::vector<double>>(crop_boxes_any);
+      } else if (crop_boxes_any.type() == typeid(std::vector<any>)) {
+        const auto & vec = std::any_cast<std::vector<any>>(crop_boxes_any);
         if (!vec.empty()) {
           throw std::runtime_error("CropBoxFilter: crop_boxes as vector<double> should be empty");
         }
