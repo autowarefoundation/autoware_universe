@@ -249,7 +249,8 @@ TEST_F(ConcatenateCloudTest, TestComputeTransformToAdjustForOldTimestamp)
   oss << "Transformation matrix from cloud 2 to cloud 1:\n" << transform;
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 
   // case 2: time difference smaller than 100 miliseconds
@@ -285,7 +286,8 @@ TEST_F(ConcatenateCloudTest, TestComputeTransformToAdjustForOldTimestamp)
   oss << "Transformation matrix from cloud 4 to cloud 3:\n" << transform;
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -380,7 +382,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   }
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 
   // test concatenate cloud has the oldest pointcloud's timestamp
@@ -419,7 +422,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   }
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 
   oss.clear();
@@ -442,7 +446,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   }
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 
   oss.clear();
@@ -465,7 +470,8 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   }
 
   if (debug_) {
-    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(concatenate_node_->get_logger(), "%s", str.c_str());
   }
 
   // test original cloud's timestamps
