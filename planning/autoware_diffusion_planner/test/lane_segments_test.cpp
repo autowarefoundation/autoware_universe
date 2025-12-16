@@ -54,12 +54,13 @@ TEST_F(LaneSegmentsTest, LaneSegmentContextFunctionality)
   // Set center coordinates (middle of the test lanelet)
   const double center_x = 10.0;  // Middle point along the lanelet
   const double center_y = 0.0;   // Center of the lane
+  const double center_z = 0.0;   // Ground level
 
   /////////
   // Act //
   /////////
-  const std::vector<int64_t> segment_indices =
-    context.select_route_segment_indices(route, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
+  const std::vector<int64_t> segment_indices = context.select_route_segment_indices(
+    route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
   const std::pair<std::vector<float>, std::vector<float>> result =
     context.create_tensor_data_from_indices(
       transform_matrix, traffic_light_id_map, segment_indices, NUM_SEGMENTS_IN_ROUTE);
