@@ -450,6 +450,7 @@ InputDataMap DiffusionPlanner::create_input_data()
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
   const auto & center_x = static_cast<float>(pose_base_link.position.x);
   const auto & center_y = static_cast<float>(pose_base_link.position.y);
+  const auto & center_z = static_cast<float>(pose_base_link.position.z);
   ego_to_map_transform_ = ego_to_map_transform;
 
   // Add current state to ego history
@@ -505,7 +506,7 @@ InputDataMap DiffusionPlanner::create_input_data()
   {
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
-        *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
+        *route_ptr_, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
