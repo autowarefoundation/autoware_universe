@@ -62,7 +62,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
 {
   diagnostic_updater_.emplace(&node);
   module_name_ = module_name;
-  logger_ = node.get_logger();
+  logger_ = node.get_logger().get_child(module_name_);
   clock_ = node.get_clock();
 
   debug_publisher_ =
