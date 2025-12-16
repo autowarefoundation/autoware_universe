@@ -108,7 +108,7 @@ struct ObstacleTrajectoryPoint
   bool is_overlapping_with_ego_trajectory = false;
   bool is_collision_with_ego_trajectory = false;
   size_t first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
-  size_t last_overlapping_ego_trajectory_index = -1;
+  size_t last_overlapping_ego_trajectory_index = 0;
 
   double velocity_mps = 0.0;
   double time_from_start_s = 0.0;
@@ -128,7 +128,7 @@ struct ObstacleTrajectoryPoint
     this->is_overlapping_with_ego_trajectory = false;
     this->is_collision_with_ego_trajectory = false;
     this->first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
-    this->last_overlapping_ego_trajectory_index = -1;
+    this->last_overlapping_ego_trajectory_index = 0;
     this->velocity_mps = velocity_mps;
     this->time_from_start_s = time_from_start_s;
     this->distance_from_start_m = distance_from_start_m;
@@ -147,7 +147,7 @@ struct ObstacleTrajectoryPoint
     this->is_overlapping_with_ego_trajectory = false;
     this->is_collision_with_ego_trajectory = false;
     this->first_overlapping_ego_trajectory_index = std::numeric_limits<size_t>::max();
-    this->last_overlapping_ego_trajectory_index = -1;
+    this->last_overlapping_ego_trajectory_index = 0;
 
     this->velocity_mps = reference_point.velocity_mps;
     this->time_from_start_s = reference_point.time_from_start_s + time_from_reference_s;

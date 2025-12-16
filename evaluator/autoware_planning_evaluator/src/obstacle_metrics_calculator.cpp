@@ -389,6 +389,26 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
       }
     }
 
+    // // Debug prints, uncomment to check trajectory points if needed
+    // std::cerr << "Obstacle traj" << std::endl;
+    // for (size_t i = 0; i < obstacle_trajectory_points_.size(); ++i) {
+    //   const auto & p = obstacle_trajectory_points_[i];
+    //   std::cerr << "[" << i << "] t: " << p.time_from_start_s << ", pos: (" << p.pose.position.x
+    //   << ", "
+    //             << p.pose.position.y << "), is_overlapping: " <<
+    //             p.is_overlapping_with_ego_trajectory << ", is_collision: "
+    //             << p.is_collision_with_ego_trajectory << ", first_overlapping_idx: " <<
+    //             p.first_overlapping_ego_trajectory_index << ", last_overlapping_idx: " <<
+    //             p.last_overlapping_ego_trajectory_index << std::endl;
+    // }
+    // std::cerr << "Ego traj" << std::endl;
+    // for (size_t i = 0; i < ego_trajectory_points_.size(); ++i) {
+    //   const auto & p = ego_trajectory_points_[i];
+    //   std::cerr << "[" << i << "] t: " << p.time_from_start_s << ", pos: (" << p.pose.position.x
+    //   << ", "
+    //             << p.pose.position.y << ")" << std::endl;
+    // }
+
     // ------------------------------------------------------------------------------------------------
     // 6. get `obstacle_ttc` metrics
 
@@ -413,8 +433,12 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         if (obstacle_trajectory_point.is_overlapping_with_ego_trajectory) {
           const size_t ego_first_overlap_idx =
             obstacle_trajectory_point.first_overlapping_ego_trajectory_index;
-          const double point_pet = obstacle_trajectory_point.time_from_start_s -
-                                   ego_trajectory_points_[ego_first_overlap_idx].time_from_start_s;
+          if (ego_first_overlap_idx == 0) {  // skip if overlap at t=0 (pet = 0)
+            continue;
+          }
+          const double point_pet =
+            ego_trajectory_points_[ego_first_overlap_idx - 1].time_from_start_s -
+            obstacle_trajectory_point.time_from_start_s;
           if (point_pet > 0) {  // Only consider the case where obstacle leaves before ego arrives.
             obstacle_pet = std::min(obstacle_pet, point_pet);
           }
@@ -449,9 +473,10 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         ego_end_vel =
           ego_start_vel >= 0.0 ? std::max(ego_end_vel, 0.0) : std::min(ego_end_vel, 0.0);
 
-        const double point_drac =
-          (ego_start_vel - ego_end_vel) / ego_trajectory_point.time_from_start_s;
-        obstacle_drac = std::max(obstacle_drac, point_drac);
+        const double distance_to_collision = ego_trajectory_point.distance_from_start_m;
+        const double point_drac = (ego_end_vel * ego_end_vel - ego_start_vel * ego_start_vel) /
+                                  (2.0 * distance_to_collision + 1e-6);
+        obstacle_drac = std::max(obstacle_drac, std::abs(point_drac));
       }
 
       // Add to metric statistics if we found any valid DRAC value

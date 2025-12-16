@@ -399,6 +399,7 @@ void PlanningEvaluatorNode::onTrajectory(
     }
   }
 
+  metrics_calculator_.setPreviousTrajectory(*traj_msg);
   auto runtime_trajectory = (now() - trajectory_start).seconds();
   RCLCPP_DEBUG(
     get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
