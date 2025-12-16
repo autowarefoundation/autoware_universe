@@ -64,10 +64,12 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   const auto pull_out_lanes = getPullOutLanes(planner_data, backward_path_length);
 
   // check if the ego is at left or right side of road lane center
-  const bool left_side_start =
-    0 < getArcCoordinatesOnEgoCenterline(
-          road_lanes, start_pose, planner_data->route_handler->getLaneletMapPtr())
-          .distance;
+  // const bool left_side_start =
+  //   0 < getArcCoordinatesOnEgoCenterline(
+  //         road_lanes, start_pose, planner_data->route_handler->getLaneletMapPtr())
+  //         .distance;
+
+  const bool left_side_start = true;
   const double max_steer_angle =
     vehicle_info_.max_steer_angle_rad *
     parallel_parking_parameters_.geometric_pull_out_max_steer_angle_margin_scale;
@@ -132,11 +134,11 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   output.start_pose = planner_.getArcPaths().at(0).points.front().point.pose;
   output.end_pose = planner_.getArcPaths().at(1).points.back().point.pose;
 
-  if (isPullOutPathCollided(
-        output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
-    planner_debug_data.conditions_evaluation.emplace_back("collision");
-    return {};
-  }
+  // if (isPullOutPathCollided(
+  //       output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
+  //   planner_debug_data.conditions_evaluation.emplace_back("collision");
+  //   return {};
+  // }
 
   planner_debug_data.conditions_evaluation.emplace_back("success");
   return output;

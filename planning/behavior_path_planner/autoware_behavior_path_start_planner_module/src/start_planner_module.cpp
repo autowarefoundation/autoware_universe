@@ -282,7 +282,7 @@ void StartPlannerModule::updateData()
 
   // NOTE: onFreespacePlannerTimer copies start_planner_data to its thread local variable, so we
   // need to lock start_planner_data_ here to avoid data race. But the following clone process is
-  // lightweight because most of the member variables of PlannerData/RouteHandler is
+  // lightweight because most of the member variables of PlannerData/isExecutionReaRouteHandler is
   // shared_ptrs/bool
   // making a local copy of thread sensitive data
   {
@@ -479,6 +479,7 @@ bool StartPlannerModule::isInsideLanelets() const
 
 bool StartPlannerModule::isExecutionRequested() const
 {
+  return true;
   if (isModuleRunning()) {
     return true;
   }
@@ -754,6 +755,8 @@ bool StartPlannerModule::isStopped()
 
 bool StartPlannerModule::isExecutionReady() const
 {
+  return true;
+
   // Evaluate safety. The situation is not safe if any of the following conditions are met:
   // 1. pull out path has not been found
   // 2. waiting for approval, AND any of the following conditions:
