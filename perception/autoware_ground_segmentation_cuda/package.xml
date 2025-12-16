@@ -7,8 +7,10 @@
   <maintainer email="dai.nguyen@tier4.jp">badai-nguyen</maintainer>
   <maintainer email="anh.nguyen.2@tier4.jp">Anh Nguyen</maintainer>
   <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
-  <author email="dai.nguyen@tier4.jp">badai-nguyen</author>
+
   <license>Apache License 2.0</license>
+
+  <author email="dai.nguyen@tier4.jp">badai-nguyen</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
