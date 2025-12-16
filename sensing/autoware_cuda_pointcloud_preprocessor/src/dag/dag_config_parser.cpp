@@ -47,7 +47,7 @@ DagConfig DagConfigParser::parseFromString(const std::string & yaml_content)
     config.name = dag_node["name"] ? dag_node["name"].as<std::string>() : "unnamed_dag";
     config.version = dag_node["version"] ? dag_node["version"].as<std::string>() : "1.0";
 
-    // Parse inputs
+    // Parse ROS inputs
     if (dag_node["inputs"]) {
       for (const auto & input_yaml : dag_node["inputs"]) {
         DagInputConfig input;
@@ -82,7 +82,6 @@ DagConfig DagConfigParser::parseFromString(const std::string & yaml_content)
     }
 
     return config;
-
   } catch (const YAML::Exception & e) {
     throw std::runtime_error("Failed to parse YAML: " + std::string(e.what()));
   }
@@ -208,6 +207,22 @@ void DagConfigParser::validateFilterParameters(const DagNodeConfig & config)
   }
 }
 
+std::any DagConfigParser::parseSingleParameterValue(const YAML::Node & value)
+{
+  try {
+    if (value.as<std::string>() == "true" || value.as<std::string>() == "false") {
+      return value.as<bool>();
+    } else if (value.Tag() == "?" && value.as<std::string>().find('.') == std::string::npos) {
+      return value.as<int>();
+    } else {
+      return value.as<double>();
+    }
+  } catch (...) {
+    // Fallback to string
+    return value.as<std::string>();
+  }
+}
+
 std::map<std::string, std::any> DagConfigParser::parseParameters(const YAML::Node & params_yaml)
 {
   std::map<std::string, std::any> params;
@@ -222,50 +237,31 @@ std::map<std::string, std::any> DagConfigParser::parseParameters(const YAML::Nod
 
     // Handle different YAML types
     if (value.IsScalar()) {
-      // Try to parse as different types
-      try {
-        // Try bool
-        if (value.as<std::string>() == "true" || value.as<std::string>() == "false") {
-          params[key] = value.as<bool>();
-        }
-        // Try int
-        else if (value.Tag() == "?" && value.as<std::string>().find('.') == std::string::npos) {
-          params[key] = value.as<int>();
-        }
-        // Try double
-        else {
-          params[key] = value.as<double>();
-        }
-      } catch (...) {
-        // Fallback to string
-        params[key] = value.as<std::string>();
-      }
+      params[key] = parseSingleParameterValue(value);
     } else if (value.IsSequence()) {
       // Handle array of maps (e.g., crop_boxes)
       if (value.size() > 0 && value[0].IsMap()) {
-        std::vector<std::map<std::string, double>> vec_of_maps;
+        std::vector<std::map<std::string, std::any>> vec_of_maps;
         for (const auto & item : value) {
-          std::map<std::string, double> map_item;
+          std::map<std::string, std::any> map_item;
           for (const auto & kv : item) {
-            map_item[kv.first.as<std::string>()] = kv.second.as<double>();
+            map_item[kv.first.as<std::string>()] = parseSingleParameterValue(kv.second);
           }
           vec_of_maps.push_back(map_item);
         }
         params[key] = vec_of_maps;
-      }
-      // Handle simple arrays
-      else {
-        std::vector<double> vec;
+      } else {
+        std::vector<std::any> vec;
         for (const auto & item : value) {
-          vec.push_back(item.as<double>());
+          vec.push_back(parseSingleParameterValue(item));
         }
         params[key] = vec;
       }
     } else if (value.IsMap()) {
       // Nested map - convert to map<string, double>
-      std::map<std::string, double> nested_map;
+      std::map<std::string, std::any> nested_map;
       for (const auto & nested : value) {
-        nested_map[nested.first.as<std::string>()] = nested.second.as<double>();
+        nested_map[nested.first.as<std::string>()] = parseSingleParameterValue(nested.second);
       }
       params[key] = nested_map;
     }

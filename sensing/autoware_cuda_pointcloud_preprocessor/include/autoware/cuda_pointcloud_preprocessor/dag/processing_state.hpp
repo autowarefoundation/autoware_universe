@@ -1,5 +1,21 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__DAG__PROCESSING_STATE_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__DAG__PROCESSING_STATE_HPP_
+
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
@@ -28,8 +44,6 @@ struct PointcloudProcessingState
 {
   std::uint8_t * device_data{nullptr};
   bool owns_memory{false};
-  bool is_finalized{
-    false};  // True if already compacted (e.g., downsample output), false if needs mask application
 
   std_msgs::msg::Header header;
   std::uint32_t height{0};
@@ -39,6 +53,7 @@ struct PointcloudProcessingState
   std::vector<sensor_msgs::msg::PointField> fields;
   bool is_bigendian{false};
   bool is_dense{false};
+  std::uint32_t * device_crop_mask{nullptr};
 
   inline std::uint32_t numPoints() const { return width * height; }
   inline std::size_t dataSize() const { return row_step * height; }
@@ -50,12 +65,15 @@ struct PointcloudProcessingState
     if (owns_memory && device_data != nullptr) {
       cudaFree(device_data);
     }
+    // device_crop_mask is always owned by the state
+    if (device_crop_mask != nullptr) {
+      cudaFree(device_crop_mask);
+    }
   }
 
   PointcloudProcessingState(const PointcloudProcessingState & other)
   : device_data(other.device_data),
     owns_memory(false),
-    is_finalized(other.is_finalized),
     header(other.header),
     height(other.height),
     width(other.width),
@@ -63,14 +81,24 @@ struct PointcloudProcessingState
     row_step(other.row_step),
     fields(other.fields),
     is_bigendian(other.is_bigendian),
-    is_dense(other.is_dense)
+    is_dense(other.is_dense),
+    device_crop_mask(nullptr)
   {
+    // Copy crop mask data if it exists
+    if (other.device_crop_mask != nullptr) {
+      const std::size_t num_points = other.numPoints();
+      if (num_points > 0) {
+        CHECK_CUDA_ERROR(cudaMalloc(&device_crop_mask, num_points * sizeof(std::uint32_t)));
+        CHECK_CUDA_ERROR(cudaMemcpy(
+          device_crop_mask, other.device_crop_mask, num_points * sizeof(std::uint32_t),
+          cudaMemcpyDeviceToDevice));
+      }
+    }
   }
 
   PointcloudProcessingState(PointcloudProcessingState && other) noexcept
   : device_data(other.device_data),
     owns_memory(other.owns_memory),
-    is_finalized(other.is_finalized),
     header(std::move(other.header)),
     height(other.height),
     width(other.width),
@@ -78,11 +106,12 @@ struct PointcloudProcessingState
     row_step(other.row_step),
     fields(std::move(other.fields)),
     is_bigendian(other.is_bigendian),
-    is_dense(other.is_dense)
+    is_dense(other.is_dense),
+    device_crop_mask(other.device_crop_mask)
   {
     other.device_data = nullptr;
+    other.device_crop_mask = nullptr;
     other.owns_memory = false;
-    other.is_finalized = false;
   }
 
   PointcloudProcessingState & operator=(const PointcloudProcessingState & other)
@@ -91,10 +120,13 @@ struct PointcloudProcessingState
       if (owns_memory && device_data != nullptr) {
         cudaFree(device_data);
       }
+      // device_crop_mask is always owned
+      if (device_crop_mask != nullptr) {
+        cudaFree(device_crop_mask);
+      }
 
       device_data = other.device_data;
       owns_memory = false;
-      is_finalized = other.is_finalized;
       header = other.header;
       height = other.height;
       width = other.width;
@@ -103,6 +135,17 @@ struct PointcloudProcessingState
       fields = other.fields;
       is_bigendian = other.is_bigendian;
       is_dense = other.is_dense;
+      // Copy crop mask data if it exists
+      device_crop_mask = nullptr;
+      if (other.device_crop_mask != nullptr) {
+        const std::size_t num_points = other.numPoints();
+        if (num_points > 0) {
+          CHECK_CUDA_ERROR(cudaMalloc(&device_crop_mask, num_points * sizeof(std::uint32_t)));
+          CHECK_CUDA_ERROR(cudaMemcpy(
+            device_crop_mask, other.device_crop_mask, num_points * sizeof(std::uint32_t),
+            cudaMemcpyDeviceToDevice));
+        }
+      }
     }
     return *this;
   }
@@ -113,10 +156,13 @@ struct PointcloudProcessingState
       if (owns_memory && device_data != nullptr) {
         cudaFree(device_data);
       }
+      // device_crop_mask is always owned
+      if (device_crop_mask != nullptr) {
+        cudaFree(device_crop_mask);
+      }
 
       device_data = other.device_data;
       owns_memory = other.owns_memory;
-      is_finalized = other.is_finalized;
       header = std::move(other.header);
       height = other.height;
       width = other.width;
@@ -125,10 +171,11 @@ struct PointcloudProcessingState
       fields = std::move(other.fields);
       is_bigendian = other.is_bigendian;
       is_dense = other.is_dense;
+      device_crop_mask = other.device_crop_mask;
 
       other.device_data = nullptr;
+      other.device_crop_mask = nullptr;
       other.owns_memory = false;
-      other.is_finalized = false;
     }
     return *this;
   }

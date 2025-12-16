@@ -68,9 +68,7 @@ void CropBoxFilter::initialize(const std::map<std::string, std::any> & parameter
 
           crop_boxes_.push_back(box);
         }
-      }
-      // Handle empty vector
-      else if (crop_boxes_any.type() == typeid(std::vector<double>)) {
+      } else if (crop_boxes_any.type() == typeid(std::vector<double>)) {
         const auto & vec = std::any_cast<std::vector<double>>(crop_boxes_any);
         if (!vec.empty()) {
           throw std::runtime_error("CropBoxFilter: crop_boxes as vector<double> should be empty");
@@ -80,6 +78,16 @@ void CropBoxFilter::initialize(const std::map<std::string, std::any> & parameter
     } catch (const std::bad_any_cast & e) {
       throw std::runtime_error(
         "CropBoxFilter: Failed to parse 'crop_boxes' parameter: " + std::string(e.what()));
+    }
+  }
+
+  // Parse optional enabled parameter
+  if (parameters.find("inplace") != parameters.end()) {
+    try {
+      inplace_ = std::any_cast<bool>(parameters.at("inplace"));
+    } catch (const std::bad_any_cast & e) {
+      throw std::runtime_error(
+        "RingOutlierFilter: Failed to parse 'inplace' as bool: " + std::string(e.what()));
     }
   }
   // Empty crop_boxes is valid - no cropping will be applied
@@ -97,7 +105,7 @@ void CropBoxFilter::process(
 
   // Apply crop box filter with filter-specific parameters
   // NOTE: This only updates masks, doesn't modify device_data (zero-copy!)
-  context.shared_preprocessor->applyCropBoxPublic(*input_state, crop_boxes_);
+  context.shared_preprocessor->applyCropBoxPublic(*input_state, crop_boxes_, inplace_);
 
   // Pass through state (actual point filtering happens in finalize step)
   // Use the output name specified in YAML configuration

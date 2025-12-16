@@ -114,8 +114,17 @@ private:
       source,
     cudaStream_t stream) const;
 
+  /**
+   * @brief General Topological Sort algorithm
+   * // https://www.geeksforgeeks.org/dsa/topological-sorting/
+   */
   std::vector<std::size_t> topologicalSort() const;
 
+  /**
+   * @brief Extract input mapping data from existing pools
+   * If remaining consumers for this data is more than one, than we create a copy
+   * Otherwise, use the original process pointer
+   */
   std::map<std::string, std::shared_ptr<void>> resolveInputs(
     std::size_t node_index, const std::map<std::string, std::shared_ptr<void>> & external_inputs);
 

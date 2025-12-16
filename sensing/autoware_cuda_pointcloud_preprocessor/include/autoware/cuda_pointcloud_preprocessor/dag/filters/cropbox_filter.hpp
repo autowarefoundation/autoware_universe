@@ -18,6 +18,9 @@
 #include "autoware/cuda_pointcloud_preprocessor/dag/filter_interface.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/types.hpp"
 
+#include <map>
+#include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::cuda_pointcloud_preprocessor::dag
@@ -50,6 +53,7 @@ public:
 
 private:
   std::vector<CropBoxParameters> crop_boxes_;
+  bool inplace_{true};
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor::dag

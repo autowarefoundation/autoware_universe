@@ -693,7 +693,6 @@ CudaVoxelGridDownsampleFilter::filterProcessingState(
   output_state->row_step = num_valid_voxel * sizeof(OutputPointType);
   output_state->is_bigendian = input_state->is_bigendian;
   output_state->is_dense = true;
-  output_state->is_finalized = true;  // Downsample output is already compacted, no masks to apply
 
   // Return buffers to pool
   returnBufferToPool(coord_buffer_dev);

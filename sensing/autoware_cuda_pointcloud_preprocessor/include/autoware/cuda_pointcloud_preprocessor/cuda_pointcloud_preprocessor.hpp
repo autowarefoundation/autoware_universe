@@ -88,19 +88,11 @@ public:
   cudaMemPool_t getMemoryPool() const { return device_memory_pool_; }
 
   /**
-   * @brief Load raw pointcloud into internal buffers and organize by ring
-   * @param input_msg Raw unorganized pointcloud (CPU memory)
-   * @return Organized pointcloud in CudaPointCloud2 format
-   */
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> organizePointcloudPublic(
-    const sensor_msgs::msg::PointCloud2 & input_msg);
-
-  /**
    * @brief Organize pointcloud that is already on GPU
    * @param input Raw unorganized pointcloud (GPU memory)
    * @return Organized pointcloud in CudaPointCloud2 format
    */
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> organizePointcloudPublic(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState organizePointcloudPublic(
     const cuda_blackboard::CudaPointCloud2 & input);
 
   /**
@@ -116,13 +108,15 @@ public:
 
   /**
    * @brief Apply cropbox filtering (updates masks only, zero-copy)
-   * @param state Processing state (device_data is read, masks are updated)
+   * @param state Processing state (device_data is read, crop_mask is updated)
    * @param crop_boxes Vector of crop box parameters to apply
-   * NOTE: Works on state.device_data in-place, only updates crop mask
+   * @param inplace If true, compact the pointcloud in-place and mark as finalized
+   * NOTE: Works on state.device_data in-place, updates state.crop_mask by combining with new crop
+   * box mask
    */
   void applyCropBoxPublic(
-    const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
-    const std::vector<CropBoxParameters> & crop_boxes);
+    autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const std::vector<CropBoxParameters> & crop_boxes, bool inplace = false);
 
   /**
    * @brief Correct motion distortion (in-place on internal buffers)
@@ -147,11 +141,12 @@ public:
    * @param state Processing state (device_data is read, masks are updated)
    * @param params Ring outlier filter parameters
    * @param enabled Whether the filter is enabled
-   * NOTE: Works on state.device_data in-place, only updates outlier mask
+   * @param inplace If true, compact the pointcloud in-place and mark as finalized
+   * NOTE: Works on state.device_data in-place, updates crop_mask by combining with outlier mask
    */
   void applyRingOutlierFilterPublic(
-    const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
-    const RingOutlierFilterParameters & params, bool enabled);
+    autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+    const RingOutlierFilterParameters & params, bool inplace = false);
 
   /**
    * @brief Finalize processing and generate output pointcloud from processing state
@@ -175,6 +170,17 @@ private:
   static cudaStream_t initialize_stream();
 
   void organizePointcloud();
+
+  /**
+   * @brief Helper function to compact pointcloud based on mask
+   * @param state Processing state to compact
+   * @param num_points Number of points in the current state
+   * @param blocks_per_grid Grid size for kernel launch
+   * NOTE: This function modifies state in-place, compacting points and marking as finalized
+   */
+  void compactPointcloudInPlace(
+    autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state, int num_points,
+    int blocks_per_grid);
 
   CropBoxParameters self_crop_box_parameters_{};
   CropBoxParameters mirror_crop_box_parameters_{};

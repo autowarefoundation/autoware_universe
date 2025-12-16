@@ -18,6 +18,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/dag/filter_interface.hpp"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>

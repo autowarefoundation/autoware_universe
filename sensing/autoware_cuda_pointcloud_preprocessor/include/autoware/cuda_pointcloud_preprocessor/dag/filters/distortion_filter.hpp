@@ -18,6 +18,11 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/dag/filter_interface.hpp"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::cuda_pointcloud_preprocessor::dag
 {
 

@@ -215,7 +215,7 @@ TEST_F(FilterIntegrationTest, MetadataValidation)
   // OrganizeFilter accepts any pointcloud input name
   EXPECT_EQ(metadata.required_inputs[0], "*");
   EXPECT_FALSE(metadata.outputs.empty());
-  EXPECT_EQ(metadata.outputs[0], "organized");
+  EXPECT_EQ(metadata.outputs[0], "transformed");
 }
 
 // ============================================================================
@@ -321,7 +321,7 @@ TEST_F(FilterIntegrationTest, FinalizeFilterMetadata)
 
   EXPECT_EQ(metadata.filter_type, "CropBoxFilter");
   EXPECT_EQ(metadata.required_inputs[0], "*");
-  EXPECT_EQ(metadata.outputs[0], "output");
+  EXPECT_EQ(metadata.outputs[0], "filtered");
 }
 
 // ============================================================================

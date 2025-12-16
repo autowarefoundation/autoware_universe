@@ -63,12 +63,12 @@ void RingOutlierFilter::initialize(const std::map<std::string, std::any> & param
   }
 
   // Parse optional enabled parameter
-  if (parameters.find("enabled") != parameters.end()) {
+  if (parameters.find("inplace") != parameters.end()) {
     try {
-      enabled_ = std::any_cast<bool>(parameters.at("enabled"));
+      inplace_ = std::any_cast<bool>(parameters.at("inplace"));
     } catch (const std::bad_any_cast & e) {
       throw std::runtime_error(
-        "RingOutlierFilter: Failed to parse 'enabled' as bool: " + std::string(e.what()));
+        "RingOutlierFilter: Failed to parse 'inplace' as bool: " + std::string(e.what()));
     }
   }
 
@@ -97,7 +97,7 @@ void RingOutlierFilter::process(
 
   // Apply ring outlier filter with filter-specific parameters
   // NOTE: This only updates masks, doesn't modify device_data (zero-copy!)
-  context.shared_preprocessor->applyRingOutlierFilterPublic(*input_state, params_, enabled_);
+  context.shared_preprocessor->applyRingOutlierFilterPublic(*input_state, params_, inplace_);
 
   // Pass through state (actual point filtering happens in finalize step)
   outputs[output_names[0]] = std::static_pointer_cast<void>(input_state);

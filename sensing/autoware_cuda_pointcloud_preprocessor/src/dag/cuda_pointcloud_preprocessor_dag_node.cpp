@@ -120,7 +120,6 @@ std::vector<DagNodeConfig> CudaPointcloudPreprocessorDagNode::parseDagConfig()
     dag_output_configs_ = config.outputs;
 
     return config.nodes;
-
   } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "Failed to parse DAG configuration: %s", e.what());
     throw;
@@ -212,28 +211,19 @@ void CudaPointcloudPreprocessorDagNode::pointcloudCallback(
 
   // STEP 1: INTERNALIZED ORGANIZE - Automatically organize input pointcloud
   // This is always required for CUDA processing, so we do it automatically
-  auto organized_unique = shared_preprocessor_->organizePointcloudPublic(input_pointcloud_msg);
-
-  // STEP 2: Create PointcloudProcessingState (ENTRY to zero-copy pipeline)
-  // This state points to internal device_organized_points_ (non-owning pointer)
-  auto processing_state =
-    std::make_shared<autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState>(
-      shared_preprocessor_->createProcessingStateFromOrganized(*organized_unique));
+  // Notice: currently, the code is not stateless, so organize only runs once.
+  auto processing_state = shared_preprocessor_->organizePointcloudPublic(input_pointcloud_msg);
 
   // Prepare inputs with processing state for DAG execution
+  // Wrap the state in a shared_ptr as required by the DAG executor
   std::map<std::string, std::shared_ptr<void>> inputs;
-  inputs["pointcloud"] = processing_state;
+  inputs["pointcloud"] = std::make_shared<PointcloudProcessingState>(std::move(processing_state));
 
   try {
     // Execute DAG with publishers for immediate publishing
     // Publishers are passed to execute() so outputs are finalized and published immediately
     // after each node produces them, preventing modification by subsequent filters
     auto outputs = executor_.execute(inputs, publishers_);
-
-    // STEP 3: Publishing is now handled inside execute() for immediate publication
-    // No need to iterate here - outputs are already published when produced
-    // The outputs map only contains intermediate results for downstream consumers
-
   } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "Error executing DAG: %s", e.what());
   }

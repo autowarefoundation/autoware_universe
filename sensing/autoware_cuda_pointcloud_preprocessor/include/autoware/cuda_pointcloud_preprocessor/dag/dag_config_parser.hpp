@@ -30,7 +30,7 @@ namespace autoware::cuda_pointcloud_preprocessor::dag
 {
 
 /**
- * @brief Input definition from YAML
+ * @brief ROS Input definition from YAML
  */
 struct DagInputConfig
 {
@@ -41,7 +41,7 @@ struct DagInputConfig
 };
 
 /**
- * @brief Output definition from YAML
+ * @brief ROS Output definition from YAML
  */
 struct DagOutputConfig
 {
@@ -97,6 +97,10 @@ private:
    */
   static DagNodeConfig parseNode(const YAML::Node & node_yaml);
 
+  /**
+   * @brief Parse a single scalar parameter into dynamic types
+   */
+  static std::any parseSingleParameterValue(const YAML::Node & value);
   /**
    * @brief Parse parameters map from YAML node
    */

@@ -60,13 +60,14 @@ std::map<std::string, std::shared_ptr<void>> DagExecutor::execute(
     publishers)
 {
   node_outputs_.clear();
-  analyzeConsumers();
+  analyzeConsumers();  // determine if outputs need to be copied.
   const auto execution_order = topologicalSort();
 
   for (const auto node_index : execution_order) {
     auto & node = nodes_[node_index];
     auto raw_inputs = resolveInputs(node_index, inputs);
-    auto typed_inputs = prepareTypedInputs(raw_inputs);
+    auto typed_inputs =
+      prepareTypedInputs(raw_inputs);  // Currently just transformed to named processing state
 
     if (!node.filter->validateInputs(typed_inputs)) {
       throw std::runtime_error(
@@ -97,6 +98,7 @@ std::map<std::string, std::shared_ptr<void>> DagExecutor::execute(
             auto output_state = std::static_pointer_cast<PointcloudProcessingState>(it->second);
             if (output_state && output_state->width > 0) {
               // Finalize: apply all masks and compact the pointcloud
+              // Copy happens.
               auto finalized_unique =
                 context_.shared_preprocessor->finalizeOutputPublic(*output_state);
 
@@ -177,9 +179,11 @@ std::vector<std::size_t> DagExecutor::getExecutionOrder() const
 
 std::vector<std::size_t> DagExecutor::topologicalSort() const
 {
+  // https://www.geeksforgeeks.org/dsa/topological-sorting/
   std::vector<std::vector<std::size_t>> adj_list(nodes_.size());
   std::vector<int> in_degree(nodes_.size(), 0);
 
+  // Create adjacent lists (the children for each node)
   for (std::size_t i = 0; i < nodes_.size(); ++i) {
     for (const auto & input : nodes_[i].config.inputs) {
       if (!input.from_node.empty()) {
@@ -194,6 +198,7 @@ std::vector<std::size_t> DagExecutor::topologicalSort() const
     }
   }
 
+  // nodes with input degree==0 means they should be the first to execute
   std::queue<std::size_t> queue;
   for (std::size_t i = 0; i < nodes_.size(); ++i) {
     if (in_degree[i] == 0) {
@@ -201,6 +206,7 @@ std::vector<std::size_t> DagExecutor::topologicalSort() const
     }
   }
 
+  // Iteratively pop out nodes which has all inputs resolved
   std::vector<std::size_t> result;
   while (!queue.empty()) {
     auto u = queue.front();
