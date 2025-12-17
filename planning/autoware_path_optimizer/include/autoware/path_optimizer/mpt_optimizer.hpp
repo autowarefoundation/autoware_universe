@@ -323,7 +323,8 @@ private:
 
   // Add new publishers for spline coefficients and curvatures
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_steering_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr
+    debug_acados_optimised_steering_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_states_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_states_pub_;
 
@@ -419,10 +420,8 @@ private:
 
   // Helper method to build parameters for Acados solver
   std::array<double, NP> buildParameters(
-    const double e_y_ego, const double e_psi_ego,
-    const std::vector<double> & knots,
-    const std::vector<double> & x_coeffs_flat,
-    const std::vector<double> & y_coeffs_flat,
+    const double e_y_ego, const double e_psi_ego, const std::vector<double> & knots,
+    const std::vector<double> & x_coeffs_flat, const std::vector<double> & y_coeffs_flat,
     const std::vector<double> & curvatures,
     const std::vector<geometry_msgs::msg::Point> & body_points,
     const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
@@ -437,9 +436,8 @@ private:
   // Extend spline coefficients linearly forward
   void extendSplineCoefficients(
     std::vector<double> & knots, std::vector<double> & x_coeffs_flat,
-    std::vector<double> & y_coeffs_flat, std::vector<double> & curvatures,
-    size_t n_segments, size_t target_segments, size_t target_n_knots,
-    double delta_arc_length) const;
+    std::vector<double> & y_coeffs_flat, std::vector<double> & curvatures, size_t n_segments,
+    size_t target_segments, size_t target_n_knots, double delta_arc_length) const;
 
   // Convert Acados solution to trajectory points
   std::optional<std::vector<TrajectoryPoint>> convertAcadosSolutionToTrajectory(

@@ -15,12 +15,13 @@
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
 #include "acados_mpc/include/acados_interface.hpp"
-#include <autoware_utils/math/normalization.hpp>
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/utils/geometry_utils.hpp"
 #include "autoware/path_optimizer/utils/trajectory_utils.hpp"
+
+#include <autoware_utils/math/normalization.hpp>
 #include <rclcpp/logging.hpp>
 #include <tf2/utils.hpp>
 
@@ -433,13 +434,12 @@ MPTOptimizer::MPTOptimizer(
     node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
 
   debug_acados_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/acados_mpt_traj", 1);
-  debug_acados_optimised_steering_pub_ =
-    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/acados_optimised_steering", 1);
+  debug_acados_optimised_steering_pub_ = node->create_publisher<std_msgs::msg::Float32MultiArray>(
+    "~/debug/acados_optimised_steering", 1);
   debug_optimised_states_pub_ =
     node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_states", 1);
   debug_acados_optimised_states_pub_ =
     node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/acados_optimised_states", 1);
-
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -508,8 +508,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   AcadosSolution acados_result;
 
   if (mpt_param_.use_acados) {
-    acados_result =
-      runAcadosMPT(ref_points_spline, p.ego_pose, vehicle_info_);
+    acados_result = runAcadosMPT(ref_points_spline, p.ego_pose, vehicle_info_);
 
     std::cout << "utraj:" << std::endl;
     for (const auto & control : acados_result.utraj) {
@@ -539,14 +538,15 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
       std::make_shared<std::vector<TrajectoryPoint>>(*acados_traj_points);
 
     std_msgs::msg::Float32MultiArray acados_steering_msg;
-    for (const auto& delta : acados_result.utraj) {
+    for (const auto & delta : acados_result.utraj) {
       acados_steering_msg.data.push_back(static_cast<float>(delta[0]));
     }
 
     debug_acados_optimised_steering_pub_->publish(acados_steering_msg);
 
     // Publish acados trajectory to separate topic for comparison
-    const auto acados_traj = autoware::motion_utils::convertToTrajectory(*acados_traj_points, p.header);
+    const auto acados_traj =
+      autoware::motion_utils::convertToTrajectory(*acados_traj_points, p.header);
 
     debug_acados_mpt_traj_pub_->publish(acados_traj);
 
@@ -608,11 +608,10 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   prev_optimized_traj_points_ptr_ =
     std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
 
-
   if (mpt_param_.use_acados) {
     return acados_traj_points;
   }
-  
+
   return mpt_traj_points;
 }
 
@@ -723,8 +722,8 @@ std::vector<double> MPTOptimizer::computeCubicSplineCoeffs(
   }
 
   // Compute cubic polynomial coefficients for each segment
-  // SymbolicCubicSpline expects: [a_seg0, a_seg1, ..., b_seg0, b_seg1, ..., c_seg0, ..., d_seg0, ...]
-  // where p(t) = a*t^3 + b*t^2 + c*t + d
+  // SymbolicCubicSpline expects: [a_seg0, a_seg1, ..., b_seg0, b_seg1, ..., c_seg0, ..., d_seg0,
+  // ...] where p(t) = a*t^3 + b*t^2 + c*t + d
   std::vector<double> a_coeffs, b_coeffs, c_coeffs, d_coeffs;
   a_coeffs.reserve(n_segments);
   b_coeffs.reserve(n_segments);
@@ -762,13 +761,12 @@ std::vector<double> MPTOptimizer::computeCubicSplineCoeffs(
 
 void MPTOptimizer::extendSplineCoefficients(
   std::vector<double> & knots, std::vector<double> & x_coeffs_flat,
-  std::vector<double> & y_coeffs_flat, std::vector<double> & curvatures,
-  size_t n_segments, size_t target_segments, size_t target_n_knots,
-  double delta_arc_length) const
+  std::vector<double> & y_coeffs_flat, std::vector<double> & curvatures, size_t n_segments,
+  size_t target_segments, size_t target_n_knots, double delta_arc_length) const
 {
   RCLCPP_ERROR(
-    logger_, "Extending from %ld to %ld segments (to match %ld knots)", n_segments,
-    target_segments, target_n_knots);
+    logger_, "Extending from %ld to %ld segments (to match %ld knots)", n_segments, target_segments,
+    target_n_knots);
   size_t n_missing = target_segments - n_segments;
   double last_knot = knots.back();
   double ds = delta_arc_length;
@@ -778,54 +776,54 @@ void MPTOptimizer::extendSplineCoefficients(
   }
 
   // extend coeffs: linear extension (straight line)
-  // Coefficients are stored column-major: [a0, a1, ..., an, b0, b1, ..., bn, c0, c1, ..., cn, d0, d1, ..., dn]
-  // For linear extension: a=0, b=0, c=derivative at end, d=value at end
+  // Coefficients are stored column-major: [a0, a1, ..., an, b0, b1, ..., bn, c0, c1, ..., cn, d0,
+  // d1, ..., dn] For linear extension: a=0, b=0, c=derivative at end, d=value at end
   size_t last_seg_idx = n_segments - 1;
   double last_a_x = x_coeffs_flat[last_seg_idx * 4 + 0];
   double last_b_x = x_coeffs_flat[last_seg_idx * 4 + 1];
   double last_c_x = x_coeffs_flat[last_seg_idx * 4 + 2];
   double last_d_x = x_coeffs_flat[last_seg_idx * 4 + 3];
-  
+
   double last_a_y = y_coeffs_flat[last_seg_idx * 4 + 0];
   double last_b_y = y_coeffs_flat[last_seg_idx * 4 + 1];
   double last_c_y = y_coeffs_flat[last_seg_idx * 4 + 2];
   double last_d_y = y_coeffs_flat[last_seg_idx * 4 + 3];
-  
+
   // Evaluate last segment at s=1 (end of segment) to get value and derivative
   // f(s) = a*s^3 + b*s^2 + c*s + d
   // f'(s) = 3*a*s^2 + 2*b*s + c
   // At s=1: value = a + b + c + d, derivative = 3*a + 2*b + c
   double end_val_x = last_a_x + last_b_x + last_c_x + last_d_x;
   double end_deriv_x = 3.0 * last_a_x + 2.0 * last_b_x + last_c_x;
-  
+
   double end_val_y = last_a_y + last_b_y + last_c_y + last_d_y;
   double end_deriv_y = 3.0 * last_a_y + 2.0 * last_b_y + last_c_y;
-  
+
   // For linear extension: a=0, b=0, c=derivative, d=value
   // Add all a coefficients (zeros for linear)
   for (size_t j = 0; j < n_missing; ++j) {
     x_coeffs_flat.push_back(0.0);
     y_coeffs_flat.push_back(0.0);
   }
-  
+
   // Add all b coefficients (zeros for linear)
   for (size_t j = 0; j < n_missing; ++j) {
     x_coeffs_flat.push_back(0.0);
     y_coeffs_flat.push_back(0.0);
   }
-  
+
   // Add all c coefficients (derivative for linear continuation)
   for (size_t j = 0; j < n_missing; ++j) {
     x_coeffs_flat.push_back(end_deriv_x);
     y_coeffs_flat.push_back(end_deriv_y);
   }
-  
+
   // Add all d coefficients (starting value for linear continuation)
   for (size_t j = 0; j < n_missing; ++j) {
     x_coeffs_flat.push_back(end_val_x);
     y_coeffs_flat.push_back(end_val_y);
   }
-  
+
   // Add curvatures (zero for linear extension)
   for (size_t j = 0; j < n_missing; ++j) {
     curvatures.push_back(0.0);
@@ -841,10 +839,8 @@ void MPTOptimizer::extendSplineCoefficients(
 // is detected, this will set skipSolve=true and populate resp with empty results.
 std::array<double, NP> MPTOptimizer::buildParameters(
   [[maybe_unused]] const double e_y_ego, [[maybe_unused]] const double e_psi_ego,
-  const std::vector<double> & knots_in,
-  const std::vector<double> & x_coeffs_flat_in,
-  const std::vector<double> & y_coeffs_flat_in,
-  const std::vector<double> & curvatures_in,
+  const std::vector<double> & knots_in, const std::vector<double> & x_coeffs_flat_in,
+  const std::vector<double> & y_coeffs_flat_in, const std::vector<double> & curvatures_in,
   const std::vector<geometry_msgs::msg::Point> & body_points,
   const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
   std::array<double, NX> & x0) const
@@ -864,8 +860,7 @@ std::array<double, NP> MPTOptimizer::buildParameters(
     RCLCPP_ERROR(
       logger_, "body points length mismatch: body_points=%zu body_points_curvilinear=%zu",
       body_points.size(), body_points_curvilinear.size());
-    assert(
-      body_points.size() == body_points_curvilinear.size() && "body points mismatch");
+    assert(body_points.size() == body_points_curvilinear.size() && "body points mismatch");
   }
 
   // body points curvilinear -> vector of doubles (s values then eY values)
@@ -1010,7 +1005,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
     ref_point.optimized_kinematic_state = KinematicState{lat_error, yaw_error};
 
     // Store steering input (last state has no control)
-    if (i == N_ref -1 ) {
+    if (i == N_ref - 1) {
       ref_point.optimized_input = 0.0;
     } else {
       ref_point.optimized_input = acados_solution.utraj[i][0];
@@ -1047,7 +1042,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   // So front = max_longitudinal_offset_m (distance from center to front)
   // And rear = -min_longitudinal_offset_m (distance from center to rear, positive value)
   const double front = vehicle_info.max_longitudinal_offset_m;
-  const double rear  = vehicle_info.min_longitudinal_offset_m;
+  const double rear = vehicle_info.min_longitudinal_offset_m;
 
   const size_t num_body_points = 6;
 
@@ -1072,7 +1067,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
       projected.z = 0.0;
       return projected;
     });
-  
+
   const auto [s_ego, e_y_ego] =
     ref_points_spline.projectPointOntoSpline(ego_pose.position.x, ego_pose.position.y);
   std::cout << "s_ego: " << s_ego << ", e_y_ego: " << e_y_ego << std::endl;
@@ -1086,7 +1081,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   std::vector<double> x_coeffs_vec(x_coeffs.begin(), x_coeffs.end());
   std::vector<double> y_coeffs_vec(y_coeffs.begin(), y_coeffs.end());
   std::vector<double> curvatures_vec(curvatures.begin(), curvatures.end());
-  
+
   std::vector<geometry_msgs::msg::Point> body_points_vec(
     boundary_points_global_frame.begin(), boundary_points_global_frame.end());
   std::vector<geometry_msgs::msg::Point> body_points_curvilinear_vec(
@@ -1102,7 +1097,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
     // extendSplineCoefficients(
     //   knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, n_segments, target_segments,
     //   target_n_knots, mpt_param_.delta_arc_length);
-    
+
     ref_points_spline.extendLinearlyForward(target_n_knots, mpt_param_.delta_arc_length);
 
     const auto & knots_new = ref_points_spline.getSplineKnots();
@@ -1132,9 +1127,8 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   // x0[1] = e_psi_ego;
 
   std::array<double, NP> parameters = buildParameters(
-    e_y_ego, e_psi_ego,
-    knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec,
-    body_points_vec, body_points_curvilinear_vec, x0);
+    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, body_points_vec,
+    body_points_curvilinear_vec, x0);
 
   setParametersToSolver(parameters);
 

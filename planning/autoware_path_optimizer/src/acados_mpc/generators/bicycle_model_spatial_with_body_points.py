@@ -127,9 +127,9 @@ def bicycle_model_spatial_with_body_points(n_points, num_body_points):
     )
 
     # Model bounds
-    model.eY_min = -1.5 # width of the track [m]
-    model.eY_max =  1.5  # width of the track [m]
-    model.ePsi_min = -0.1 # maximum steering angle [rad]
+    model.eY_min = -1.5  # width of the track [m]
+    model.eY_max = 1.5  # width of the track [m]
+    model.ePsi_min = -0.1  # maximum steering angle [rad]
     model.ePsi_max = 0.1  # maximum steering angle [rad]
 
     # input bounds

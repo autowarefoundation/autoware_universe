@@ -98,7 +98,7 @@ LDLIBS+= -lacados
 LDLIBS+= -lhpipm
 LDLIBS+= -lblasfeo
 LDLIBS+= -lm
-LDLIBS+= 
+LDLIBS+=
 
 # libraries
 LIBACADOS_SOLVER=libacados_solver_curvilinear_bicycle_model_spatial.so

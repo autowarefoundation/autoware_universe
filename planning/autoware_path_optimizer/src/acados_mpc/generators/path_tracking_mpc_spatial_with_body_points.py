@@ -101,8 +101,12 @@ class PathTrackingMPCSpatialWithBodyPoints:
 
         ocp.constraints.idxbx = np.array(np.concatenate((idxbx_eY, idxbx_ePsi)))
 
-        ocp.constraints.lbx = np.array(np.concatenate(([model.eY_min] * len(idxbx_eY), [model.ePsi_min] * len(idxbx_ePsi))))
-        ocp.constraints.ubx = np.array(np.concatenate(([model.eY_max] * len(idxbx_eY), [model.ePsi_max] * len(idxbx_ePsi))))
+        ocp.constraints.lbx = np.array(
+            np.concatenate(([model.eY_min] * len(idxbx_eY), [model.ePsi_min] * len(idxbx_ePsi)))
+        )
+        ocp.constraints.ubx = np.array(
+            np.concatenate(([model.eY_max] * len(idxbx_eY), [model.ePsi_max] * len(idxbx_ePsi)))
+        )
 
         ocp.constraints.lbu = np.array(
             [

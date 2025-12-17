@@ -30,6 +30,7 @@
 
 cimport acados_solver_common
 
+
 cdef extern from "acados_solver_curvilinear_bicycle_model_spatial.h":
     ctypedef struct nlp_solver_capsule "curvilinear_bicycle_model_spatial_solver_capsule":
         pass

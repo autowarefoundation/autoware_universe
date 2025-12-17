@@ -28,44 +28,44 @@
  * POSSIBILITY OF SUCH DAMAGE.;
  */
 
-#ifndef curvilinear_bicycle_model_spatial_MODEL
-#define curvilinear_bicycle_model_spatial_MODEL
+#ifndef ACADOS_MPC__C_GENERATED_CODE__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL_H_
+#define ACADOS_MPC__C_GENERATED_CODE__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
 /* explicit ODE */
 
 // explicit ODE
-int curvilinear_bicycle_model_spatial_expl_ode_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int curvilinear_bicycle_model_spatial_expl_ode_fun(
+  const real_t ** arg, real_t ** res, int * iw, real_t * w, void * mem);
 int curvilinear_bicycle_model_spatial_expl_ode_fun_work(int *, int *, int *, int *);
-const int *curvilinear_bicycle_model_spatial_expl_ode_fun_sparsity_in(int);
-const int *curvilinear_bicycle_model_spatial_expl_ode_fun_sparsity_out(int);
+const int * curvilinear_bicycle_model_spatial_expl_ode_fun_sparsity_in(int);
+const int * curvilinear_bicycle_model_spatial_expl_ode_fun_sparsity_out(int);
 int curvilinear_bicycle_model_spatial_expl_ode_fun_n_in(void);
 int curvilinear_bicycle_model_spatial_expl_ode_fun_n_out(void);
 
 // explicit forward VDE
-int curvilinear_bicycle_model_spatial_expl_vde_forw(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int curvilinear_bicycle_model_spatial_expl_vde_forw(
+  const real_t ** arg, real_t ** res, int * iw, real_t * w, void * mem);
 int curvilinear_bicycle_model_spatial_expl_vde_forw_work(int *, int *, int *, int *);
-const int *curvilinear_bicycle_model_spatial_expl_vde_forw_sparsity_in(int);
-const int *curvilinear_bicycle_model_spatial_expl_vde_forw_sparsity_out(int);
+const int * curvilinear_bicycle_model_spatial_expl_vde_forw_sparsity_in(int);
+const int * curvilinear_bicycle_model_spatial_expl_vde_forw_sparsity_out(int);
 int curvilinear_bicycle_model_spatial_expl_vde_forw_n_in(void);
 int curvilinear_bicycle_model_spatial_expl_vde_forw_n_out(void);
 
 // explicit adjoint VDE
-int curvilinear_bicycle_model_spatial_expl_vde_adj(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
+int curvilinear_bicycle_model_spatial_expl_vde_adj(
+  const real_t ** arg, real_t ** res, int * iw, real_t * w, void * mem);
 int curvilinear_bicycle_model_spatial_expl_vde_adj_work(int *, int *, int *, int *);
-const int *curvilinear_bicycle_model_spatial_expl_vde_adj_sparsity_in(int);
-const int *curvilinear_bicycle_model_spatial_expl_vde_adj_sparsity_out(int);
+const int * curvilinear_bicycle_model_spatial_expl_vde_adj_sparsity_in(int);
+const int * curvilinear_bicycle_model_spatial_expl_vde_adj_sparsity_out(int);
 int curvilinear_bicycle_model_spatial_expl_vde_adj_n_in(void);
 int curvilinear_bicycle_model_spatial_expl_vde_adj_n_out(void);
-
-
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
-#endif  // curvilinear_bicycle_model_spatial_MODEL
+#endif  // ACADOS_MPC__C_GENERATED_CODE__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL__CURVILINEAR_BICYCLE_MODEL_SPATIAL_MODEL_H_
