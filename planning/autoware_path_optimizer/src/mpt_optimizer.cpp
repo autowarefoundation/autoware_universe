@@ -925,8 +925,8 @@ std::array<double, NP> MPTOptimizer::buildParameters(
             << vehicle_info_.min_longitudinal_offset_m << ", "
             << vehicle_info_.max_longitudinal_offset_m << std::endl;
 
-  const double lf =  vehicle_info_.max_longitudinal_offset_m * 0.5;
-  const double lr = -vehicle_info_.min_longitudinal_offset_m * 0.5;
+  const double lf = vehicle_info_.wheel_base_m;
+  const double lr = 0.0;
 
   const double L = lf + lr;
 
@@ -936,10 +936,10 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   parameters[idx++] = (1 - alpha) * L;
 
   // set x0: initial state vector
-  // idx = 0;
-  // x0[idx++] = e_y_ego;
-  // x0[idx++] = e_psi_ego;
-  idx = 2;
+  idx = 0;
+  x0[idx++] = e_y_ego;
+  x0[idx++] = e_psi_ego;
+  // idx = 2;
   for (const auto & body_point_curvilinear : body_points_curvilinear_vec) {
     x0[idx++] = body_point_curvilinear;
   }
