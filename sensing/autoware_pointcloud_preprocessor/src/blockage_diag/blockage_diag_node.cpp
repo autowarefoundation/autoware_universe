@@ -28,7 +28,7 @@ using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options)
-: Filter("BlockageDiag", options)
+: rclcpp::Node("BlockageDiag", options)
 {
   {
     // LiDAR configuration
@@ -115,6 +115,10 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&BlockageDiagComponent::param_callback, this, _1));
+
+  pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "input", rclcpp::SensorDataQoS(),
+    std::bind(&BlockageDiagComponent::detect_blockage, this, std::placeholders::_1));
 }
 
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
@@ -514,9 +518,8 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
-void BlockageDiagComponent::filter(
-  const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
-  PointCloud2 & output)
+void BlockageDiagComponent::detect_blockage(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
   std::scoped_lock lock(mutex_);
 
@@ -544,9 +547,6 @@ void BlockageDiagComponent::filter(
   }
 
   publish_debug_info(debug_info);
-
-  pcl::toROSMsg(pcl_input, output);
-  output.header = input->header;
 }
 
 rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
