@@ -62,9 +62,12 @@ private:
   std::unique_ptr<LidarFRNet> frnet_{nullptr};
   std::unique_ptr<diagnostic_updater::Updater> diag_updater_{nullptr};
 
-  ros_utils::PointCloudLayout cloud_seg_layout_{ros_utils::generateSegmentationPointCloudLayout()};
-  ros_utils::PointCloudLayout cloud_viz_layout_{ros_utils::generateVisualizationPointCloudLayout()};
-  ros_utils::PointCloudLayout cloud_filtered_layout_{ros_utils::generateFilteredPointCloudLayout()};
+  const ros_utils::PointCloudLayout cloud_seg_layout_{
+    ros_utils::generateSegmentationPointCloudLayout()};
+  const ros_utils::PointCloudLayout cloud_viz_layout_{
+    ros_utils::generateVisualizationPointCloudLayout()};
+  const ros_utils::PointCloudLayout cloud_filtered_layout_{
+    ros_utils::generateFilteredPointCloudLayout()};
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;
