@@ -50,11 +50,9 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
-class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
+class BlockageDiagComponent : public rclcpp::Node
 {
-protected:
-  void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
+private:
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
@@ -73,7 +71,11 @@ protected:
     ground_dust_ratio_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
-private:
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
+
+  mutable std::mutex mutex_;
+
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
