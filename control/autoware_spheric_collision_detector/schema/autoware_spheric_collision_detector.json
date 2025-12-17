@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for spheric collision detector",
+  "type": "object",
+  "definitions": {
+    "vehicle_cmd_gate": {
+      "type": "object",
+      "properties": {
+        "delay_time": {
+          "type": "number",
+          "default": 0.3,
+          "description": "Delay time of vehicles."
+        },
+        "update_rate": {
+          "type": "number",
+          "default": 10.0
+        },
+        "max_deceleration": {
+          "type": "number",
+          "default": 2.0,
+          "description": "Max deceleration for ego vehicle to stop."
+        }
+      },
+      "required": ["delay_time", "max_deceleration", "update_rate"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/spheric_collision_detector"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
