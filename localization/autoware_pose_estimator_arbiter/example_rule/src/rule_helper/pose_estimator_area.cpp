@@ -15,7 +15,6 @@
 #include "rule_helper/pose_estimator_area.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <boost/geometry/geometry.hpp>
