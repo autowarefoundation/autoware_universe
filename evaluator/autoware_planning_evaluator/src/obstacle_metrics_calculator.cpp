@@ -17,7 +17,6 @@
 #include "autoware/planning_evaluator/metrics/metrics_utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
-#include <Eigen/Core>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -25,7 +24,7 @@
 #include <boost/geometry.hpp>
 
 #include <algorithm>
-#include <chrono>
+#include <cmath>
 #include <limits>
 #include <vector>
 
