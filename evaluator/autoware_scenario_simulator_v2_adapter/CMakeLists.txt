@@ -12,12 +12,17 @@ endif()
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 ament_auto_find_build_dependencies()
 
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/converter_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+  yaml-cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

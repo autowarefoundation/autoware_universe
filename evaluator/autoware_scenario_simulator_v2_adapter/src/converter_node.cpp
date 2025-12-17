@@ -14,8 +14,13 @@
 
 #include "autoware/scenario_simulator_v2_adapter/converter_node.hpp"
 
+#include <yaml-cpp/yaml.h>
+
+#include <algorithm>
 #include <regex>
+#include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::scenario_simulator_v2_adapter
@@ -26,7 +31,7 @@ std::string removeInvalidTopicString(const std::string & input_string)
 
   std::string result;
   for (std::sregex_iterator itr(std::begin(input_string), std::end(input_string), pattern), end;
-       itr != end; ++itr) {
+        itr != end; ++itr) {
     result += itr->str();
   }
 
@@ -50,8 +55,10 @@ MetricConverter::MetricConverter(const rclcpp::NodeOptions & node_options)
   }
 
   // diagnostics subscription
-  diagnostics_sub_ = create_subscription<DiagnosticArray>(
-    "/diagnostics", 10, std::bind(&MetricConverter::onDiagnostics, this, std::placeholders::_1));
+  loadDiagnosticConfig();
+  const std::function<void(const DiagnosticArray::ConstSharedPtr)> fn =
+    std::bind(&MetricConverter::onDiagnostics, this, _1, std::cref(diagnostic_aggregation_map_));
+  diagnostics_sub_ = create_subscription<DiagnosticArray>("/diagnostics", 1, fn);
 }
 
 void MetricConverter::onMetrics(
@@ -64,7 +71,9 @@ void MetricConverter::onMetrics(
   }
 }
 
-void MetricConverter::onDiagnostics(const DiagnosticArray::ConstSharedPtr diagnostics_msg)
+void MetricConverter::onDiagnostics(
+  const DiagnosticArray::ConstSharedPtr diagnostics_msg,
+  const std::unordered_map<std::string, std::unordered_set<std::string>> & diagnostic_aggregation_map)
 {
   for (const auto & status : diagnostics_msg->status) {
     std::string diag_name = "/diagnostics/" + status.name;
@@ -74,6 +83,16 @@ void MetricConverter::onDiagnostics(const DiagnosticArray::ConstSharedPtr diagno
     }
     const auto valid_topic_name = removeInvalidTopicString(diag_name);
     getPublisher(valid_topic_name)->publish(createUserDefinedValue(status));
+
+    // Check if the diagnostic is in any of the aggregation lists
+    for (const auto & [output_topic_name, diagnostic_aggregation_set] : diagnostic_aggregation_map) {
+      if (diagnostic_aggregation_set.find(valid_topic_name) != diagnostic_aggregation_set.end()) {
+        getPublisher(output_topic_name)->publish(createUserDefinedValue(status));
+        if (status.level == DiagnosticStatus::ERROR) {
+          RCLCPP_WARN(get_logger(), "Diagnostic ERROR %s is in the aggregation list for %s", valid_topic_name.c_str(), output_topic_name.c_str());
+        }
+      }
+    }
   }
 }
 
@@ -100,6 +119,87 @@ rclcpp::Publisher<UserDefinedValue>::SharedPtr MetricConverter::getPublisher(
     params_pub_[topic_name] = create_publisher<UserDefinedValue>(topic_name, 1);
   }
   return params_pub_.at(topic_name);
+}
+
+void MetricConverter::loadDiagnosticConfig()
+{
+  declare_parameter<std::string>("diagnostic_config_file", "");
+  std::string yaml_path = get_parameter("diagnostic_config_file").as_string();
+  
+  if (yaml_path.empty()) {
+    return;
+  }
+
+  try {
+    YAML::Node config = YAML::LoadFile(yaml_path);
+    YAML::Node params = config["/**"]["ros__parameters"];
+    
+    if (!params["diagnostic_groups"]) {
+      return;
+    }
+
+    // First pass: Load all groups first (needed for lookup during expansion)
+    std::unordered_map<std::string, std::vector<std::string>> temp_map;
+    for (const auto & group : params["diagnostic_groups"]) {
+      if (!group["output_topic_name"] || !group["aggregation_list"]) {
+        continue;
+      }
+
+      std::string output_topic = group["output_topic_name"].as<std::string>();
+      std::vector<std::string> aggregation_list;
+      
+      for (const auto & item : group["aggregation_list"]) {
+        aggregation_list.push_back(item.as<std::string>());
+      }
+      
+      temp_map[output_topic] = aggregation_list;
+    }
+    
+    // Second pass: Recursively expand nested groups to individual diagnostic topics, then convert to set for O(1) lookup
+    for (auto & [output_topic, aggregation_list] : temp_map) {
+      std::set<std::string> visited;
+      std::vector<std::string> expanded = expandAggregationList(output_topic, aggregation_list, temp_map, visited);
+      diagnostic_aggregation_map_[output_topic] = std::unordered_set<std::string>(expanded.begin(), expanded.end());
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(get_logger(), "Failed to load diagnostic config file '%s': %s", yaml_path.c_str(), e.what());
+  }
+}
+
+std::vector<std::string> MetricConverter::expandAggregationList(
+  const std::string & group_output_topic,
+  const std::vector<std::string> & aggregation_list,
+  const std::unordered_map<std::string, std::vector<std::string>> & temp_map,
+  std::set<std::string> & visited)
+{
+  // Detect circular dependencies to prevent infinite recursion
+  if (visited.find(group_output_topic) != visited.end()) {
+    RCLCPP_WARN(
+      get_logger(), 
+      "Circular dependency detected for group: %s", 
+      group_output_topic.c_str()
+    );
+    return aggregation_list;
+  }
+  
+  visited.insert(group_output_topic);
+  
+  std::vector<std::string> expanded_list;
+  
+  for (const auto & item : aggregation_list) {
+    auto it = temp_map.find(item);
+    if (it != temp_map.end()) {
+      // Item is a group, recursively expand it
+      const auto & nested_list = it->second;
+      auto expanded_nested = expandAggregationList(item, nested_list, temp_map, visited);
+      expanded_list.insert(expanded_list.end(), expanded_nested.begin(), expanded_nested.end());
+    } else {
+      expanded_list.push_back(item);
+    }
+  }
+
+  visited.erase(group_output_topic);  // Allow same group in different branches
+  return expanded_list;
 }
 }  // namespace autoware::scenario_simulator_v2_adapter
 

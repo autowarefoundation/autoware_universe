@@ -27,6 +27,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::scenario_simulator_v2_adapter
@@ -55,8 +56,11 @@ public:
   /**
    * @brief callback for DiagnosticArray msgs that can be used to handle diagnostics if needed
    * @param [in] diagnostics_msg received diagnostics message
+   * @param [in] diagnostic_aggregation_map map of output_topic_name to aggregation_list
    */
-  void onDiagnostics(const DiagnosticArray::ConstSharedPtr diagnostics_msg);
+  void onDiagnostics(
+    const DiagnosticArray::ConstSharedPtr diagnostics_msg,
+    const std::unordered_map<std::string, std::unordered_set<std::string>> & diagnostic_aggregation_map);
 
   UserDefinedValue createUserDefinedValue(const Metric & metric) const;
   UserDefinedValue createUserDefinedValue(const DiagnosticStatus & status) const;
@@ -64,11 +68,20 @@ public:
   rclcpp::Publisher<UserDefinedValue>::SharedPtr getPublisher(const std::string & topic);
 
 private:
+  void loadDiagnosticConfig();
+
+  std::vector<std::string> expandAggregationList(
+    const std::string & group_output_topic,
+    const std::vector<std::string> & aggregation_list,
+    const std::unordered_map<std::string, std::vector<std::string>> & temp_map,
+    std::set<std::string> & visited);
+
   // ROS
   std::vector<rclcpp::Subscription<MetricArray>::SharedPtr> metrics_sub_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr diagnostics_sub_;
 
   std::unordered_map<std::string, rclcpp::Publisher<UserDefinedValue>::SharedPtr> params_pub_;
+  std::unordered_map<std::string, std::unordered_set<std::string>> diagnostic_aggregation_map_;
 };
 }  // namespace autoware::scenario_simulator_v2_adapter
 

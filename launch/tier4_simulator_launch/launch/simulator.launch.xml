@@ -46,6 +46,9 @@
   <arg name="sensing/visible_range" default="300.0" description="visible range when using dummy perception"/>
   <arg name="use_perception_online_evaluator" default="false" description="use perception online evaluator"/>
   <arg name="use_perception_analytics_publisher" default="true" description="use perception analytics publisher"/>
+  <!-- <arg name="parameter_file_path" default="./simulation/config/scenario_test_parameter" description="path to diagnostic configuration file for scenario simulator v2 adapter"/> -->
+  <arg name="diagnostic_config_file" default="./simulation/config/ssv2_adaptor_diagnostic_config_file.yaml" description="path to diagnostic configuration file for scenario simulator v2 adapter"/>
+  <!-- <arg name="diagnostic_config_file" default="$(find-pkg-share autoware_scenario_simulator_v2_adapter)/config/diagnostic_config_file.param.yaml" description="path to diagnostic configuration file for scenario simulator v2 adapter"/> -->
 
   <arg name="vehicle_model" description="vehicle model name"/>
   <arg name="initial_engage_state" default="true" description="/vehicle/engage state after starting Autoware"/>
@@ -247,6 +250,7 @@
   <group if="$(var launch_scenario_simulator_v2_adapter)">
     <node exec="autoware_scenario_simulator_v2_adapter_node" pkg="autoware_scenario_simulator_v2_adapter" output="screen">
       <param name="metric_topic_list" value="[/planning/planning_evaluator/metrics, /control/control_evaluator/metrics, /system/processing_time_checker/metrics]"/>
+      <param name="diagnostic_config_file" value="$(var diagnostic_config_file)"/>
     </node>
   </group>
 
