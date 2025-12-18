@@ -31,7 +31,7 @@ std::string removeInvalidTopicString(const std::string & input_string)
 
   std::string result;
   for (std::sregex_iterator itr(std::begin(input_string), std::end(input_string), pattern), end;
-        itr != end; ++itr) {
+       itr != end; ++itr) {
     result += itr->str();
   }
 
