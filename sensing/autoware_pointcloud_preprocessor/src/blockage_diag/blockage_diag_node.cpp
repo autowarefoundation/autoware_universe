@@ -255,8 +255,7 @@ cv::Mat BlockageDiagComponent::make_normalized_depth_image(
     }
 
     // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth =
-      UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
+    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
     depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
   }
 
