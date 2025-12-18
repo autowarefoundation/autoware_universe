@@ -13,6 +13,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE object_range_splitter_node
 )
 
+if(BUILD_TESTING)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/test_launch.py)
+  add_launch_test(test/test_launch_composable.py)
+endif()
+
 ament_auto_package(
   INSTALL_TO_SHARE
     launch

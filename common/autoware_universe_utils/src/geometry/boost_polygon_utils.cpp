@@ -15,7 +15,9 @@
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
 #include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware/vehicle_info_utils/vehicle_info.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>
 
 #include <boost/geometry/geometry.hpp>
@@ -204,25 +206,28 @@ Polygon2d toFootprint(
   const geometry_msgs::msg::Pose & base_link_pose, const double base_to_front,
   const double base_to_rear, const double width)
 {
-  Polygon2d polygon;
-  const auto point0 =
-    autoware::universe_utils::calcOffsetPose(base_link_pose, base_to_front, width / 2.0, 0.0)
-      .position;
-  const auto point1 =
-    autoware::universe_utils::calcOffsetPose(base_link_pose, base_to_front, -width / 2.0, 0.0)
-      .position;
-  const auto point2 =
-    autoware::universe_utils::calcOffsetPose(base_link_pose, -base_to_rear, -width / 2.0, 0.0)
-      .position;
-  const auto point3 =
-    autoware::universe_utils::calcOffsetPose(base_link_pose, -base_to_rear, width / 2.0, 0.0)
-      .position;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.front_overhang_m = base_to_front;
+  vehicle_info.rear_overhang_m = base_to_rear;
+  vehicle_info.wheel_base_m = 0.0;
+  vehicle_info.left_overhang_m = width / 2;
+  vehicle_info.right_overhang_m = width / 2;
+  vehicle_info.wheel_tread_m = 0.0;
 
-  appendPointToPolygon(polygon, point0);
-  appendPointToPolygon(polygon, point1);
-  appendPointToPolygon(polygon, point2);
-  appendPointToPolygon(polygon, point3);
-  appendPointToPolygon(polygon, point0);
+  auto base_footprint = vehicle_info.createFootprint();
+
+  // remove center point
+  auto center_left_index = base_footprint.begin() + 5;
+  auto center_right_index = base_footprint.begin() + 2;
+
+  base_footprint.erase(center_left_index);
+  base_footprint.erase(center_right_index);
+
+  auto footprint = autoware_utils::transform_vector(
+    base_footprint, autoware_utils::pose2transform(base_link_pose));
+
+  Polygon2d polygon;
+  polygon.outer() = footprint;
 
   return isClockwise(polygon) ? polygon : inverseClockwise(polygon);
 }
