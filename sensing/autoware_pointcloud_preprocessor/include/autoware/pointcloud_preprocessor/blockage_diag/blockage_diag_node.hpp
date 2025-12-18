@@ -28,9 +28,8 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
-
-#include <pcl/PCLPointCloud2.h>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
@@ -45,10 +44,8 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
-using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
 class BlockageDiagComponent : public rclcpp::Node
 {
@@ -127,7 +124,7 @@ private:
    * @param input The input point cloud.
    * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
    */
-  cv::Mat make_normalized_depth_image(const PCLCloudXYZIRCAEDT & input) const;
+  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
