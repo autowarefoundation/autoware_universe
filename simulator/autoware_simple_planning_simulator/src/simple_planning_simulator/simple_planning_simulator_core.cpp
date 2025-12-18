@@ -23,6 +23,7 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -43,14 +44,6 @@
 #include <vector>
 
 using namespace std::literals::chrono_literals;
-
-namespace
-{
-lanelet::Lanelet remove_const(const lanelet::ConstLanelet & const_lanelet)
-{
-  return lanelet::Lanelet{std::const_pointer_cast<lanelet::LaneletData>(const_lanelet.constData())};
-}
-}  // namespace
 
 namespace autoware::simulator::simple_planning_simulator
 {
@@ -439,7 +432,7 @@ double SimplePlanningSimulator::calculate_ego_pitch() const
   if (!opt.has_value()) {
     return 0.0;
   }
-  lanelet::Lanelet ego_lanelet = remove_const(*opt);
+  lanelet::Lanelet ego_lanelet = autoware::experimental::lanelet2_utils::remove_const(*opt);
   const auto centerline_points = convert_centerline_to_points(ego_lanelet);
   const size_t ego_seg_idx =
     autoware::motion_utils::findNearestSegmentIndex(centerline_points, ego_pose.position);
