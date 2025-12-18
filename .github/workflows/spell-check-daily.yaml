@@ -25,7 +25,7 @@ jobs:
         with:
           local-cspell-json: .cspell.json
           incremental-files-only: false
-          cspell-json-url: https://raw.githubusercontent.com/tier4/autoware-spell-check-dict/main/.cspell.json
+          cspell-json-url: https://raw.githubusercontent.com/autowarefoundation/autoware-spell-check-dict/main/.cspell.json
           dict-packages: |
             https://github.com/autowarefoundation/autoware-spell-check-dict
             https://github.com/tier4/cspell-dicts
