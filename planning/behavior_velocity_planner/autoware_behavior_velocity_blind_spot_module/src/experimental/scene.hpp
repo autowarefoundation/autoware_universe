@@ -16,7 +16,6 @@
 #define EXPERIMENTAL__SCENE_HPP_
 
 #include "autoware/behavior_velocity_blind_spot_module/parameter.hpp"
-#include "autoware/behavior_velocity_blind_spot_module/util.hpp"
 #include "time_to_collision.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
@@ -47,12 +46,44 @@ struct OverPassJudge
 
 struct Unsafe
 {
-  const size_t stop_line_idx;
+  const double stop_s;
 };
 
 struct Safe
 {
-  const size_t stop_line_idx;
+  const double stop_s;
+};
+
+struct UnsafeObject
+{
+  UnsafeObject(
+    const autoware_perception_msgs::msg::PredictedObject & object_, const double critical_time_,
+    const autoware_perception_msgs::msg::PredictedPath & predicted_path_,
+    const TimeInterval & object_passage_interval_)
+  : object(object_),
+    critical_time(critical_time_),
+    predicted_path(predicted_path_),
+    object_passage_interval(object_passage_interval_)
+  {
+  }
+
+  autoware_perception_msgs::msg::PredictedObject object;
+  double critical_time;
+  autoware_perception_msgs::msg::PredictedPath predicted_path;
+  TimeInterval object_passage_interval;
+
+  [[nodiscard]] autoware_internal_planning_msgs::msg::SafetyFactor to_safety_factor() const
+  {
+    autoware_internal_planning_msgs::msg::SafetyFactor factor;
+    factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
+    factor.object_id = object.object_id;
+    factor.predicted_path = predicted_path;
+    factor.ttc_begin = object_passage_interval.start;
+    factor.ttc_end = object_passage_interval.end;
+    factor.points.push_back(object.kinematics.initial_pose_with_covariance.pose.position);
+    factor.is_safe = false;
+    return factor;
+  }
 };
 
 using BlindSpotDecision = std::variant<InternalError, OverPassJudge, Unsafe, Safe>;
@@ -68,7 +99,7 @@ public:
     std::optional<lanelet::CompoundPolygon3d> path_polygon;
     std::optional<lanelet::ConstLineString3d> virtual_blind_lane_boundary_after_turning;
     std::optional<lanelet::ConstLineString3d> virtual_ego_straight_path_after_turning;
-    std::optional<std::pair<double, double>> ego_passage_interval;
+    std::optional<TimeInterval> ego_passage_interval;
     std::optional<double> critical_time;
     std::optional<std::vector<UnsafeObject>> unsafe_objects;
   };
@@ -113,24 +144,19 @@ private:
   // Parameter
 
   void initializeRTCStatus();
-  BlindSpotDecision modifyPathVelocityDetail(
-    PathWithLaneId * path, const PlannerData & planner_data);
+  BlindSpotDecision modifyPathVelocityDetail(Trajectory & path, const PlannerData & planner_data);
   // setSafe(), setDistance()
   void setRTCStatus(
-    const BlindSpotDecision & decision,
-    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const PlannerData & planner_data);
+    const BlindSpotDecision & decision, const Trajectory & path, const PlannerData & planner_data);
   template <typename Decision>
   void setRTCStatusByDecision(
-    const Decision & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const PlannerData & planner_data);
+    const Decision & decision, const Trajectory & path, const PlannerData & planner_data);
   // stop/GO
   void reactRTCApproval(
-    const BlindSpotDecision & decision, PathWithLaneId * path, const PlannerData & planner_data);
+    const BlindSpotDecision & decision, Trajectory & path, const PlannerData & planner_data);
   template <typename Decision>
   void reactRTCApprovalByDecision(
-    const Decision & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path,
-    const PlannerData & planner_data);
+    const Decision & decision, Trajectory & path, const PlannerData & planner_data);
 
   /**
    * @brief obtain object with ttc information which is considered dangerous
@@ -138,8 +164,8 @@ private:
    */
   std::vector<UnsafeObject> collect_unsafe_objects(
     const std::vector<autoware_perception_msgs::msg::PredictedObject> & attention_objects,
-    const lanelet::ConstLanelet & ego_path_lanelet,
-    const std::pair<double, double> & ego_passage_time_interval) const;
+    const lanelet::ConstLanelet & ego_path_polygon,
+    const TimeInterval & ego_passage_time_interval) const;
 
   /**
    * @brief filter objects whose position is inside the attention_area and whose type is target type
