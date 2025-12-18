@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_UTILS_HPP_  // NOLINT
-#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_UTILS_HPP_  // NOLINT
+// NOLINTNEXTLINE
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
+// NOLINTNEXTLINE
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -107,7 +109,29 @@ void resample_single_cluster(
 void resample_close_proximity_points(
   TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m);
 
+/**
+ * @brief Removes invalid points from the trajectory.
+ *
+ * Removes points with NaN or Inf values from the trajectory. Validates each point
+ * using validate_point() from common utils.
+ *
+ * @param input_trajectory The trajectory points to be cleaned (modified in place)
+ */
+void remove_invalid_points(TrajectoryPoints & input_trajectory);
+
+/**
+ * @brief Removes points from the trajectory that are too close to each other.
+ *
+ * Iterates through the trajectory and removes consecutive points that are closer
+ * than the minimum distance threshold. Always keeps the first point.
+ *
+ * @param input_trajectory_array The trajectory points to be cleaned (modified in place)
+ * @param min_dist The minimum distance between points (default: 1E-2)
+ */
+void remove_close_proximity_points(
+  TrajectoryPoints & input_trajectory_array, const double min_dist = 1e-2);
+
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
 
 // NOLINTNEXTLINE
-#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_

@@ -186,6 +186,7 @@
   <arg name="output/tracker_merged_objects" default="/perception/object_recognition/detection/objects"/>
   <!-- Downsample pointcloud for perception usage -->
   <arg name="downsample_perception_common_pointcloud" default="false"/>
+  <arg name="cuda_pointcloud_preprocessing" default="false"/>
   <arg name="common_downsample_voxel_size_x" default="0.05"/>
   <arg name="common_downsample_voxel_size_y" default="0.05"/>
   <arg name="common_downsample_voxel_size_z" default="0.05"/>
@@ -199,21 +200,42 @@
     <let name="perception_pointcloud" value="$(var downsampled_pointcloud)" if="$(var downsample_perception_common_pointcloud)"/>
     <group if="$(var downsample_perception_common_pointcloud)">
       <push-ros-namespace namespace="common"/>
-      <load_composable_node target="$(var pointcloud_container_name)">
-        <composable_node
-          pkg="autoware_pointcloud_preprocessor"
-          plugin="autoware::pointcloud_preprocessor::PickupBasedVoxelGridDownsampleFilterComponent"
-          name="pointcloud_downsample_node"
-          namespace=""
-        >
-          <remap from="input" to="$(var input/pointcloud)"/>
-          <remap from="output" to="$(var downsampled_pointcloud)"/>
-          <param name="voxel_size_x" value="$(var common_downsample_voxel_size_x)"/>
-          <param name="voxel_size_y" value="$(var common_downsample_voxel_size_y)"/>
-          <param name="voxel_size_z" value="$(var common_downsample_voxel_size_z)"/>
-          <extra_arg name="use_intra_process_comms" value="true"/>
-        </composable_node>
-      </load_composable_node>
+      <group unless="$(var cuda_pointcloud_preprocessing)">
+        <load_composable_node target="$(var pointcloud_container_name)">
+          <composable_node
+            pkg="autoware_pointcloud_preprocessor"
+            plugin="autoware::pointcloud_preprocessor::PickupBasedVoxelGridDownsampleFilterComponent"
+            name="pointcloud_downsample_node"
+            namespace=""
+          >
+            <remap from="input" to="$(var input/pointcloud)"/>
+            <remap from="output" to="$(var downsampled_pointcloud)"/>
+            <param name="voxel_size_x" value="$(var common_downsample_voxel_size_x)"/>
+            <param name="voxel_size_y" value="$(var common_downsample_voxel_size_y)"/>
+            <param name="voxel_size_z" value="$(var common_downsample_voxel_size_z)"/>
+            <extra_arg name="use_intra_process_comms" value="true"/>
+          </composable_node>
+        </load_composable_node>
+      </group>
+
+      <group if="$(var cuda_pointcloud_preprocessing)">
+        <load_composable_node target="$(var pointcloud_container_name)">
+          <composable_node
+            pkg="autoware_cuda_pointcloud_preprocessor"
+            plugin="autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
+            name="pointcloud_downsample_node"
+            namespace=""
+          >
+            <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+            <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
+            <remap from="~/output/pointcloud" to="$(var downsampled_pointcloud)"/>
+            <remap from="~/output/pointcloud/cuda" to="$(var downsampled_pointcloud)/cuda"/>
+            <param name="voxel_size_x" value="$(var common_downsample_voxel_size_x)"/>
+            <param name="voxel_size_y" value="$(var common_downsample_voxel_size_y)"/>
+            <param name="voxel_size_z" value="$(var common_downsample_voxel_size_z)"/>
+          </composable_node>
+        </load_composable_node>
+      </group>
     </group>
 
     <!-- Object segmentation module -->

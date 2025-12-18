@@ -17,8 +17,8 @@
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/logging.hpp>
 

@@ -126,10 +126,10 @@ void DiffusionPlanner::set_up_params()
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
-  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.5});
+  params_.temperature_list = this->declare_parameter<std::vector<double>>("temperature", {0.0});
   params_.velocity_smoothing_window =
     this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
-  params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.0);
+  params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.3);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -450,6 +450,7 @@ InputDataMap DiffusionPlanner::create_input_data()
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
   const auto & center_x = static_cast<float>(pose_base_link.position.x);
   const auto & center_y = static_cast<float>(pose_base_link.position.y);
+  const auto & center_z = static_cast<float>(pose_base_link.position.z);
   ego_to_map_transform_ = ego_to_map_transform;
 
   // Add current state to ego history
@@ -505,7 +506,7 @@ InputDataMap DiffusionPlanner::create_input_data()
   {
     const std::vector<int64_t> segment_indices =
       lane_segment_context_->select_route_segment_indices(
-        *route_ptr_, center_x, center_y, NUM_SEGMENTS_IN_ROUTE);
+        *route_ptr_, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
