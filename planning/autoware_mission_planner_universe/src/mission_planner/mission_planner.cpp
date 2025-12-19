@@ -375,12 +375,17 @@ void MissionPlanner::on_set_preferred_primitive(
       autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
       "There is no saved original route to reset to.");
   }
+
+  const bool is_autonomous_driving =
+    operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
+                              operation_mode_state_->is_autoware_control_enabled
+                          : false;
   
   if (is_reroute && is_autonomous_driving) {
     const auto reroute_availability = sub_reroute_availability_.take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
-        ResponseCode::ERROR_INVALID_STATE,
+        autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
         "Cannot reroute as the planner is not in lane following.");
     }
   }
