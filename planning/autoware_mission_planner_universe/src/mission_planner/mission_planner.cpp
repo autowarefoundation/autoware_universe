@@ -380,7 +380,7 @@ void MissionPlanner::on_set_preferred_primitive(
     operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
                               operation_mode_state_->is_autoware_control_enabled
                           : false;
-  
+
   if (is_reroute && is_autonomous_driving) {
     const auto reroute_availability = sub_reroute_availability_.take_data();
     if (!reroute_availability || !reroute_availability->availability) {
