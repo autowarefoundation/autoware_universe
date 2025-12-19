@@ -1,11 +1,11 @@
 # author: Arjun Jagdish Ram
 import os
+import subprocess
 import sys
 import time
 
 import numpy as np
 import scipy.linalg
-import subprocess
 
 # Add the parent directory to sys.path to find 'utils' and 'bicycle_model'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,12 +13,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Check for ACADOS_SOURCE_DIR environment variable to use local acados installation
 if "ACADOS_SOURCE_DIR" in os.environ:
     acados_source_dir = os.environ["ACADOS_SOURCE_DIR"]
-    acados_template_path = os.path.join(
-        acados_source_dir, "interfaces", "acados_template"
-    )
+    acados_template_path = os.path.join(acados_source_dir, "interfaces", "acados_template")
     if os.path.exists(acados_template_path):
         sys.path.append(acados_template_path)
-    
+
     # Non-interactively ensure t_renderer is present
     bin_dir = os.path.join(acados_source_dir, "bin")
     if not os.path.exists(bin_dir):
@@ -72,7 +70,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
 
         # Set solver options to skip heavy CasADi simplifications that might hang
         ocp.code_export_directory = "c_generated_code"
-        
+
         # dimensions
         nx = model.x.rows()
         nu = model.u.rows()
@@ -170,7 +168,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
             # If we only want to generate code, use the static method to avoid loading the library
             AcadosOcpSolver.generate(ocp, json_file="acados_ocp.json")
             return constraint, model, None
-        
+
         acados_solver = AcadosOcpSolver(
             ocp, json_file="acados_ocp.json", build=build, generate=generate
         )

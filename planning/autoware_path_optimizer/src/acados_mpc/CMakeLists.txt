@@ -14,7 +14,7 @@ else()
     message(STATUS "Building acados from source...")
     get_filename_component(ACADOS_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/acados_install" ABSOLUTE)
     get_filename_component(ACADOS_BUILD_DIR "${CMAKE_BINARY_DIR}/acados_build" ABSOLUTE)
-    
+
     set(ACADOS_INCLUDE_DIR "${ACADOS_INSTALL_PREFIX}/include")
     set(ACADOS_LIB_DIR "${ACADOS_INSTALL_PREFIX}/lib")
 
