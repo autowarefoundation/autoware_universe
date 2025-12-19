@@ -541,15 +541,23 @@ void BlockageDiagComponent::validate_pointcloud_fields(
     }
   }
 
+  bool has_all_required_fields = has_channel && has_azimuth && has_distance;
+  if (has_all_required_fields) {
+    return;
+  }
+
+  std::string error_msg = "PointCloud2 missing required fields:";
   if (!has_channel) {
-    throw std::runtime_error("PointCloud2 missing required field: channel");
+    error_msg += " channel";
   }
   if (!has_azimuth) {
-    throw std::runtime_error("PointCloud2 missing required field: azimuth");
+    error_msg += " azimuth";
   }
   if (!has_distance) {
-    throw std::runtime_error("PointCloud2 missing required field: distance");
+    error_msg += " distance";
   }
+  RCLCPP_ERROR(get_logger(), "%s", error_msg.c_str());
+  throw std::runtime_error(error_msg);
 }
 
 void BlockageDiagComponent::detect_blockage(
