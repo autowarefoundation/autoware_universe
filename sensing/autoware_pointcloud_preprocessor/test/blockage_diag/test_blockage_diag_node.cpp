@@ -240,7 +240,8 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
 class BlockageDiagValidationTest : public ::testing::Test
 {
 protected:
-  void SetUp() {
+  void SetUp()
+  {
     rclcpp::init(0, nullptr);
 
     rclcpp::NodeOptions node_options;
@@ -264,10 +265,12 @@ protected:
     node_options.append_parameter_override("horizontal_ring_id", 2);
 
     // Create the blockage_diag node
-    blockage_diag_node_ = std::make_shared<autoware::pointcloud_preprocessor::BlockageDiagComponent>(node_options);
+    blockage_diag_node_ =
+      std::make_shared<autoware::pointcloud_preprocessor::BlockageDiagComponent>(node_options);
   }
 
-  void TearDown() {
+  void TearDown()
+  {
     blockage_diag_node_.reset();
     rclcpp::shutdown();
   }
@@ -278,8 +281,8 @@ protected:
     cloud.height = 1;
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
-      2, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
-      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+      2, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32, "distance", 1,
+      sensor_msgs::msg::PointField::FLOAT32);
     modifier.resize(10);
     return cloud;
   }
@@ -290,8 +293,8 @@ protected:
     cloud.height = 1;
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
-      2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+      2, "channel", 1, sensor_msgs::msg::PointField::UINT16, "distance", 1,
+      sensor_msgs::msg::PointField::FLOAT32);
     modifier.resize(10);
     return cloud;
   }
@@ -302,8 +305,8 @@ protected:
     cloud.height = 1;
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
-      2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-      "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32);
+      2, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+      sensor_msgs::msg::PointField::FLOAT32);
     modifier.resize(10);
     return cloud;
   }
@@ -314,9 +317,8 @@ protected:
     cloud.height = 1;
     sensor_msgs::PointCloud2Modifier modifier(cloud);
     modifier.setPointCloud2Fields(
-      3, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-      "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
-      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+      3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+      sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
     modifier.resize(10);
     return cloud;
   }
@@ -328,21 +330,27 @@ TEST_F(BlockageDiagValidationTest, MissingChannelFieldTest)
 {
   auto cloud_without_channel = create_pointcloud_with_azimuth_and_distance();
 
-  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_channel); }, std::runtime_error);
+  EXPECT_THROW(
+    { blockage_diag_node_->validate_pointcloud_fields(cloud_without_channel); },
+    std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, MissingAzimuthFieldTest)
 {
   auto cloud_without_azimuth = create_pointcloud_with_channel_and_distance();
 
-  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_azimuth); }, std::runtime_error);
+  EXPECT_THROW(
+    { blockage_diag_node_->validate_pointcloud_fields(cloud_without_azimuth); },
+    std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, MissingDistanceFieldTest)
 {
   auto cloud_without_distance = create_pointcloud_with_channel_and_azimuth();
 
-  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_distance); }, std::runtime_error);
+  EXPECT_THROW(
+    { blockage_diag_node_->validate_pointcloud_fields(cloud_without_distance); },
+    std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, ValidFieldsTest)
