@@ -272,25 +272,51 @@ protected:
     rclcpp::shutdown();
   }
 
-  // Helper function to create a PointCloud2 with specified fields
-  sensor_msgs::msg::PointCloud2 create_pointcloud_with_fields(
-    const std::vector<std::string> & field_names)
+  sensor_msgs::msg::PointCloud2 create_pointcloud_with_azimuth_and_distance()
   {
     sensor_msgs::msg::PointCloud2 cloud;
     cloud.height = 1;
     sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      2, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
+      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+    modifier.resize(10);
+    return cloud;
+  }
 
-    if (field_names.size() == 3) {
-      modifier.setPointCloud2Fields(
-        3, field_names[0].c_str(), 1, sensor_msgs::msg::PointField::UINT16,
-        field_names[1].c_str(), 1, sensor_msgs::msg::PointField::FLOAT32,
-        field_names[2].c_str(), 1, sensor_msgs::msg::PointField::FLOAT32);
-    } else if (field_names.size() == 2) {
-      modifier.setPointCloud2Fields(
-        2, field_names[0].c_str(), 1, sensor_msgs::msg::PointField::UINT16,
-        field_names[1].c_str(), 1, sensor_msgs::msg::PointField::FLOAT32);
-    }
+  sensor_msgs::msg::PointCloud2 create_pointcloud_with_channel_and_distance()
+  {
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.height = 1;
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
+      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+    modifier.resize(10);
+    return cloud;
+  }
 
+  sensor_msgs::msg::PointCloud2 create_pointcloud_with_channel_and_azimuth()
+  {
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.height = 1;
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
+      "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32);
+    modifier.resize(10);
+    return cloud;
+  }
+
+  sensor_msgs::msg::PointCloud2 create_pointcloud_with_channel_azimuth_and_distance()
+  {
+    sensor_msgs::msg::PointCloud2 cloud;
+    cloud.height = 1;
+    sensor_msgs::PointCloud2Modifier modifier(cloud);
+    modifier.setPointCloud2Fields(
+      3, "channel", 1, sensor_msgs::msg::PointField::UINT16,
+      "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
+      "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
     modifier.resize(10);
     return cloud;
   }
@@ -300,28 +326,28 @@ protected:
 
 TEST_F(BlockageDiagValidationTest, MissingChannelFieldTest)
 {
-  auto cloud_without_channel = create_pointcloud_with_fields({"azimuth", "distance"});
+  auto cloud_without_channel = create_pointcloud_with_azimuth_and_distance();
 
   EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_channel); }, std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, MissingAzimuthFieldTest)
 {
-  auto cloud_without_azimuth = create_pointcloud_with_fields({"channel", "distance"});
+  auto cloud_without_azimuth = create_pointcloud_with_channel_and_distance();
 
   EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_azimuth); }, std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, MissingDistanceFieldTest)
 {
-  auto cloud_without_distance = create_pointcloud_with_fields({"channel", "azimuth"});
+  auto cloud_without_distance = create_pointcloud_with_channel_and_azimuth();
 
   EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_distance); }, std::runtime_error);
 }
 
 TEST_F(BlockageDiagValidationTest, ValidFieldsTest)
 {
-  auto cloud = create_pointcloud_with_fields({"channel", "azimuth", "distance"});
+  auto cloud = create_pointcloud_with_channel_azimuth_and_distance();
 
   EXPECT_NO_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud); });
 }
