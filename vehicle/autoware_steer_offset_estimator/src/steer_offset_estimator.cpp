@@ -95,9 +95,4 @@ SteerOffsetEstimator::update(
   return updated_result;
 }
 
-const SteerOffsetEstimatorParameters & SteerOffsetEstimator::get_parameters() const
-{
-  return params_;
-}
-
 }  // namespace autoware::steer_offset_estimator

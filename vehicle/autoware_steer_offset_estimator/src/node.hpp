@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__STEER_OFFSET_ESTIMATOR__NODE_HPP_
-#define AUTOWARE__STEER_OFFSET_ESTIMATOR__NODE_HPP_
+#ifndef NODE_HPP_
+#define NODE_HPP_
 
 #include "autoware/steer_offset_estimator/steer_offset_estimator.hpp"
 #include "autoware_utils_rclcpp/polling_subscriber.hpp"
@@ -72,7 +72,14 @@ private:
   SteerOffsetEstimator estimator_;
 
   // Subscribers
+  /**
+   * @brief Subscriber for pose
+   */
   PollingSubscriber<PoseStamped>::SharedPtr sub_pose_;
+
+  /**
+   * @brief Subscriber for steering report
+   */
   PollingSubscriber<SteeringReport>::SharedPtr sub_steer_;
 
   // Publishers
@@ -104,4 +111,4 @@ private:
 
 }  // namespace autoware::steer_offset_estimator
 
-#endif  // AUTOWARE__STEER_OFFSET_ESTIMATOR__NODE_HPP_
+#endif  // NODE_HPP_
