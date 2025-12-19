@@ -264,6 +264,14 @@ private:
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief Validate that the PointCloud2 message has required fields (for testing).
+   *
+   * @param input The input point cloud.
+   * @throws std::runtime_error if any required field is missing.
+   */
+  void validate_pointcloud_fields(const sensor_msgs::msg::PointCloud2 & input) const;
 };
 
 }  // namespace autoware::pointcloud_preprocessor

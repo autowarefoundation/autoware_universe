@@ -524,10 +524,40 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
+void BlockageDiagComponent::validate_pointcloud_fields(
+  const sensor_msgs::msg::PointCloud2 & input) const
+{
+  bool has_channel = false;
+  bool has_azimuth = false;
+  bool has_distance = false;
+
+  for (const auto & field : input.fields) {
+    if (field.name == "channel") {
+      has_channel = true;
+    } else if (field.name == "azimuth") {
+      has_azimuth = true;
+    } else if (field.name == "distance") {
+      has_distance = true;
+    }
+  }
+
+  if (!has_channel) {
+    throw std::runtime_error("PointCloud2 missing required field: channel");
+  }
+  if (!has_azimuth) {
+    throw std::runtime_error("PointCloud2 missing required field: azimuth");
+  }
+  if (!has_distance) {
+    throw std::runtime_error("PointCloud2 missing required field: distance");
+  }
+}
+
 void BlockageDiagComponent::detect_blockage(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
   std::scoped_lock lock(mutex_);
+
+  validate_pointcloud_fields(*input);
 
   cv::Mat depth_image_16u = make_normalized_depth_image(*input);
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
