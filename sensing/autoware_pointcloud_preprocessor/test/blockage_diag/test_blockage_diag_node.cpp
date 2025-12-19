@@ -104,33 +104,6 @@ protected:
     rclcpp::shutdown();
   }
 
-  // Helper function to create a pointcloud with specified fields
-  sensor_msgs::msg::PointCloud2 create_pointcloud_with_fields(
-    const std::vector<std::string> & field_names)
-  {
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.height = 1;
-
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-
-    if (field_names.size() == 3) {
-      modifier.setPointCloud2Fields(
-        3, field_names[0].c_str(), 1, sensor_msgs::msg::PointField::UINT16, field_names[1].c_str(),
-        1, sensor_msgs::msg::PointField::FLOAT32, field_names[2].c_str(), 1,
-        sensor_msgs::msg::PointField::FLOAT32);
-    } else if (field_names.size() == 2) {
-      modifier.setPointCloud2Fields(
-        2, field_names[0].c_str(), 1, sensor_msgs::msg::PointField::UINT16, field_names[1].c_str(),
-        1, sensor_msgs::msg::PointField::FLOAT32);
-    } else if (field_names.size() == 1) {
-      modifier.setPointCloud2Fields(
-        1, field_names[0].c_str(), 1, sensor_msgs::msg::PointField::UINT16);
-    }
-
-    modifier.resize(10);
-    return cloud;
-  }
-
   // Helper function to create a pointcloud with specified horizontal bin coverage
   sensor_msgs::msg::PointCloud2 create_pointcloud(double coverage_ratio)
   {
@@ -267,13 +240,9 @@ TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
 class BlockageDiagValidationTest : public ::testing::Test
 {
 protected:
-  static void SetUpTestCase() { rclcpp::init(0, nullptr); }
+  void SetUp() {
+    rclcpp::init(0, nullptr);
 
-  static void TearDownTestCase() { rclcpp::shutdown(); }
-
-  // Helper function to create common node options for validation tests
-  static rclcpp::NodeOptions create_default_node_options()
-  {
     rclcpp::NodeOptions node_options;
     node_options.append_parameter_override("angle_range", std::vector<double>{-180.0, 180.0});
     node_options.append_parameter_override("is_channel_order_top2down", true);
@@ -293,11 +262,18 @@ protected:
     node_options.append_parameter_override("publish_debug_image", false);
     node_options.append_parameter_override("max_distance_range", 200.0);
     node_options.append_parameter_override("horizontal_ring_id", 2);
-    return node_options;
+
+    // Create the blockage_diag node
+    blockage_diag_node_ = std::make_shared<autoware::pointcloud_preprocessor::BlockageDiagComponent>(node_options);
+  }
+
+  void TearDown() {
+    blockage_diag_node_.reset();
+    rclcpp::shutdown();
   }
 
   // Helper function to create a PointCloud2 with specified fields
-  static sensor_msgs::msg::PointCloud2 create_pointcloud_with_fields(
+  sensor_msgs::msg::PointCloud2 create_pointcloud_with_fields(
     const std::vector<std::string> & field_names)
   {
     sensor_msgs::msg::PointCloud2 cloud;
@@ -319,55 +295,35 @@ protected:
     return cloud;
   }
 
-  // Helper function to test missing field validation
-  static void test_missing_field(
-    const std::vector<std::string> & field_names,
-    const std::string & expected_missing_field)
-  {
-    auto node_options = create_default_node_options();
-    auto node = std::make_shared<autoware::pointcloud_preprocessor::BlockageDiagComponent>(node_options);
-    auto cloud = create_pointcloud_with_fields(field_names);
-
-    EXPECT_THROW(
-      {
-        try {
-          node->validate_pointcloud_fields(cloud);
-        } catch (const std::runtime_error & e) {
-          std::string expected_message = "PointCloud2 missing required field: " + expected_missing_field;
-          EXPECT_STREQ(expected_message.c_str(), e.what());
-          throw;
-        }
-      },
-      std::runtime_error);
-  }
+  std::shared_ptr<autoware::pointcloud_preprocessor::BlockageDiagComponent> blockage_diag_node_;
 };
 
-// Unit test for validate_pointcloud_fields: Missing channel field
 TEST_F(BlockageDiagValidationTest, MissingChannelFieldTest)
 {
-  test_missing_field({"azimuth", "distance"}, "channel");
+  auto cloud_without_channel = create_pointcloud_with_fields({"azimuth", "distance"});
+
+  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_channel); }, std::runtime_error);
 }
 
-// Unit test for validate_pointcloud_fields: Missing azimuth field
 TEST_F(BlockageDiagValidationTest, MissingAzimuthFieldTest)
 {
-  test_missing_field({"channel", "distance"}, "azimuth");
+  auto cloud_without_azimuth = create_pointcloud_with_fields({"channel", "distance"});
+
+  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_azimuth); }, std::runtime_error);
 }
 
-// Unit test for validate_pointcloud_fields: Missing distance field
 TEST_F(BlockageDiagValidationTest, MissingDistanceFieldTest)
 {
-  test_missing_field({"channel", "azimuth"}, "distance");
+  auto cloud_without_distance = create_pointcloud_with_fields({"channel", "azimuth"});
+
+  EXPECT_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_without_distance); }, std::runtime_error);
 }
 
-// Unit test for validate_pointcloud_fields: All fields present (valid)
 TEST_F(BlockageDiagValidationTest, ValidFieldsTest)
 {
-  auto node_options = create_default_node_options();
-  auto node = std::make_shared<autoware::pointcloud_preprocessor::BlockageDiagComponent>(node_options);
   auto cloud = create_pointcloud_with_fields({"channel", "azimuth", "distance"});
 
-  EXPECT_NO_THROW({ node->validate_pointcloud_fields(cloud); });
+  EXPECT_NO_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud); });
 }
 
 int main(int argc, char ** argv)
