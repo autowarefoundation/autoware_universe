@@ -283,8 +283,8 @@ TEST_F(BlockageDiagValidationTest, MissingChannelFieldTest)
   sensor_msgs::msg::PointCloud2 cloud_without_channel;
   sensor_msgs::PointCloud2Modifier modifier(cloud_without_channel);
   modifier.setPointCloud2Fields(
-    2, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
-    "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+    2, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32, "distance", 1,
+    sensor_msgs::msg::PointField::FLOAT32);
 
   EXPECT_THROW(
     { blockage_diag_node_->validate_pointcloud_fields(cloud_without_channel); },
@@ -296,8 +296,8 @@ TEST_F(BlockageDiagValidationTest, MissingAzimuthFieldTest)
   sensor_msgs::msg::PointCloud2 cloud_without_azimuth;
   sensor_msgs::PointCloud2Modifier modifier(cloud_without_azimuth);
   modifier.setPointCloud2Fields(
-    2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-    "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+    2, "channel", 1, sensor_msgs::msg::PointField::UINT16, "distance", 1,
+    sensor_msgs::msg::PointField::FLOAT32);
 
   EXPECT_THROW(
     { blockage_diag_node_->validate_pointcloud_fields(cloud_without_azimuth); },
@@ -309,8 +309,8 @@ TEST_F(BlockageDiagValidationTest, MissingDistanceFieldTest)
   sensor_msgs::msg::PointCloud2 cloud_without_distance;
   sensor_msgs::PointCloud2Modifier modifier(cloud_without_distance);
   modifier.setPointCloud2Fields(
-    2, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-    "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32);
+    2, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+    sensor_msgs::msg::PointField::FLOAT32);
 
   EXPECT_THROW(
     { blockage_diag_node_->validate_pointcloud_fields(cloud_without_distance); },
@@ -322,9 +322,8 @@ TEST_F(BlockageDiagValidationTest, ValidFieldsTest)
   sensor_msgs::msg::PointCloud2 cloud_with_all_fields;
   sensor_msgs::PointCloud2Modifier modifier(cloud_with_all_fields);
   modifier.setPointCloud2Fields(
-    3, "channel", 1, sensor_msgs::msg::PointField::UINT16,
-    "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
-    "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
+    3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
+    sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
 
   EXPECT_NO_THROW({ blockage_diag_node_->validate_pointcloud_fields(cloud_with_all_fields); });
 }
