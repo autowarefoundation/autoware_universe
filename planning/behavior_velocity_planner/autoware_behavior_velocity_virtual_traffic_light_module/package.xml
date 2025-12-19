@@ -5,10 +5,10 @@
   <version>0.48.0</version>
   <description>The autoware_behavior_velocity_virtual_traffic_light_module package</description>
 
-  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
-  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
-  <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
-  <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
+  <maintainer email="masahiro.kubota@tier4.jp">Masahiro Kubota</maintainer>
+  <maintainer email="riku.kimura@tier4.jp">Riku Kimura</maintainer>
+  <maintainer email="akiro.harada@tier4.jp">Akiro Harada</maintainer>
+  <maintainer email="takeshi.miura@tier4.jp">Takeshi Miura</maintainer>
 
   <license>Apache License 2.0</license>
 
