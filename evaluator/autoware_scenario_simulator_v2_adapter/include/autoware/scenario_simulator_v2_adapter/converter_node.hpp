@@ -60,7 +60,8 @@ public:
    */
   void onDiagnostics(
     const DiagnosticArray::ConstSharedPtr diagnostics_msg,
-    const std::unordered_map<std::string, std::unordered_set<std::string>> & diagnostic_aggregation_map);
+    const std::unordered_map<std::string, std::unordered_set<std::string>> &
+      diagnostic_aggregation_map);
 
   UserDefinedValue createUserDefinedValue(const Metric & metric) const;
   UserDefinedValue createUserDefinedValue(const DiagnosticStatus & status) const;
@@ -71,8 +72,7 @@ private:
   void loadDiagnosticConfig();
 
   std::vector<std::string> expandAggregationList(
-    const std::string & group_output_topic,
-    const std::vector<std::string> & aggregation_list,
+    const std::string & group_output_topic, const std::vector<std::string> & aggregation_list,
     const std::unordered_map<std::string, std::vector<std::string>> & temp_map,
     std::set<std::string> & visited);
 

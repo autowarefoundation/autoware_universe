@@ -73,7 +73,8 @@ void MetricConverter::onMetrics(
 
 void MetricConverter::onDiagnostics(
   const DiagnosticArray::ConstSharedPtr diagnostics_msg,
-  const std::unordered_map<std::string, std::unordered_set<std::string>> & diagnostic_aggregation_map)
+  const std::unordered_map<std::string, std::unordered_set<std::string>> &
+    diagnostic_aggregation_map)
 {
   for (const auto & status : diagnostics_msg->status) {
     std::string diag_name = "/diagnostics/" + status.name;
@@ -85,11 +86,14 @@ void MetricConverter::onDiagnostics(
     getPublisher(valid_topic_name)->publish(createUserDefinedValue(status));
 
     // Check if the diagnostic is in any of the aggregation lists
-    for (const auto & [output_topic_name, diagnostic_aggregation_set] : diagnostic_aggregation_map) {
+    for (const auto & [output_topic_name, diagnostic_aggregation_set] :
+         diagnostic_aggregation_map) {
       if (diagnostic_aggregation_set.find(valid_topic_name) != diagnostic_aggregation_set.end()) {
         getPublisher(output_topic_name)->publish(createUserDefinedValue(status));
         if (status.level == DiagnosticStatus::ERROR) {
-          RCLCPP_WARN(get_logger(), "Diagnostic ERROR %s is in the aggregation list for %s", valid_topic_name.c_str(), output_topic_name.c_str());
+          RCLCPP_WARN(
+            get_logger(), "Diagnostic ERROR %s is in the aggregation list for %s",
+            valid_topic_name.c_str(), output_topic_name.c_str());
         }
       }
     }
@@ -125,7 +129,7 @@ void MetricConverter::loadDiagnosticConfig()
 {
   declare_parameter<std::string>("diagnostic_config_file", "");
   std::string yaml_path = get_parameter("diagnostic_config_file").as_string();
-  
+
   if (yaml_path.empty()) {
     return;
   }
@@ -133,7 +137,7 @@ void MetricConverter::loadDiagnosticConfig()
   try {
     YAML::Node config = YAML::LoadFile(yaml_path);
     YAML::Node params = config["/**"]["ros__parameters"];
-    
+
     if (!params["diagnostic_groups"]) {
       return;
     }
@@ -147,45 +151,45 @@ void MetricConverter::loadDiagnosticConfig()
 
       std::string output_topic = group["output_topic_name"].as<std::string>();
       std::vector<std::string> aggregation_list;
-      
+
       for (const auto & item : group["aggregation_list"]) {
         aggregation_list.push_back(item.as<std::string>());
       }
-      
+
       temp_map[output_topic] = aggregation_list;
     }
-    
-    // Second pass: Recursively expand nested groups to individual diagnostic topics, then convert to set for O(1) lookup
+
+    // Second pass: Recursively expand nested groups to individual diagnostic topics, then convert
+    // to set for O(1) lookup
     for (auto & [output_topic, aggregation_list] : temp_map) {
       std::set<std::string> visited;
-      std::vector<std::string> expanded = expandAggregationList(output_topic, aggregation_list, temp_map, visited);
-      diagnostic_aggregation_map_[output_topic] = std::unordered_set<std::string>(expanded.begin(), expanded.end());
+      std::vector<std::string> expanded =
+        expandAggregationList(output_topic, aggregation_list, temp_map, visited);
+      diagnostic_aggregation_map_[output_topic] =
+        std::unordered_set<std::string>(expanded.begin(), expanded.end());
     }
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(get_logger(), "Failed to load diagnostic config file '%s': %s", yaml_path.c_str(), e.what());
+    RCLCPP_ERROR(
+      get_logger(), "Failed to load diagnostic config file '%s': %s", yaml_path.c_str(), e.what());
   }
 }
 
 std::vector<std::string> MetricConverter::expandAggregationList(
-  const std::string & group_output_topic,
-  const std::vector<std::string> & aggregation_list,
+  const std::string & group_output_topic, const std::vector<std::string> & aggregation_list,
   const std::unordered_map<std::string, std::vector<std::string>> & temp_map,
   std::set<std::string> & visited)
 {
   // Detect circular dependencies to prevent infinite recursion
   if (visited.find(group_output_topic) != visited.end()) {
     RCLCPP_WARN(
-      get_logger(), 
-      "Circular dependency detected for group: %s", 
-      group_output_topic.c_str()
-    );
+      get_logger(), "Circular dependency detected for group: %s", group_output_topic.c_str());
     return aggregation_list;
   }
-  
+
   visited.insert(group_output_topic);
-  
+
   std::vector<std::string> expanded_list;
-  
+
   for (const auto & item : aggregation_list) {
     auto it = temp_map.find(item);
     if (it != temp_map.end()) {
