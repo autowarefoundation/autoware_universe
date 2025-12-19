@@ -527,34 +527,24 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
 void BlockageDiagComponent::validate_pointcloud_fields(
   const sensor_msgs::msg::PointCloud2 & input) const
 {
-  bool has_channel = false;
-  bool has_azimuth = false;
-  bool has_distance = false;
+  std::vector<std::string> required_fields = {"channel", "azimuth", "distance"};
 
   for (const auto & field : input.fields) {
-    if (field.name == "channel") {
-      has_channel = true;
-    } else if (field.name == "azimuth") {
-      has_azimuth = true;
-    } else if (field.name == "distance") {
-      has_distance = true;
+    auto it = std::find(required_fields.begin(), required_fields.end(), field.name);
+    bool is_field_found = (it != required_fields.end());
+    if (is_field_found) {
+      required_fields.erase(it);
     }
   }
 
-  bool has_all_required_fields = has_channel && has_azimuth && has_distance;
+  bool has_all_required_fields = required_fields.empty();
   if (has_all_required_fields) {
     return;
   }
 
   std::string error_msg = "PointCloud2 missing required fields:";
-  if (!has_channel) {
-    error_msg += " channel";
-  }
-  if (!has_azimuth) {
-    error_msg += " azimuth";
-  }
-  if (!has_distance) {
-    error_msg += " distance";
+  for (const auto & missing_field : required_fields) {
+    error_msg += " " + missing_field;
   }
   RCLCPP_ERROR(get_logger(), "%s", error_msg.c_str());
   throw std::runtime_error(error_msg);
