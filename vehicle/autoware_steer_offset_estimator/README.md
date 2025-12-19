@@ -7,7 +7,7 @@ k
 
 ## Inner-workings / Algorithms
 
-This module estimates the steering offset using a **Recursive Least Squares (RLS)** algorithm based on vehicle kinematic model constraints.
+This module estimates the steering offset using a **Kalman Filter** algorithm based on vehicle kinematic model constraints.
 
 ### Kinematic Model
 
@@ -36,48 +36,59 @@ $$
 
 The algorithm estimates $\delta_{offset}$ by minimizing the error between observed and predicted angular velocity.
 
-### Recursive Least Squares Algorithm
+### Kalman Filter Algorithm
 
-The RLS algorithm updates the offset estimate and covariance recursively:
+The Kalman Filter algorithm updates the offset estimate and covariance recursively with time and measurement updates:
 
-- **Prediction coefficient calculation:**
+- **Regressor and measurement formulation:**
 
   $$
   \phi = \frac{v}{L}
   $$
 
-- **Covariance update with forgetting factor:**
+  $$
+  y = \omega_{observed} - \phi \times \delta_{measured}
+  $$
+
+- **Time update (process model):**
 
   $$
-  P_k = \frac{P_{k-1} - \frac{P_{k-1} \times \phi^2 \times P_{k-1}}{\lambda + \phi \times P_{k-1} \times \phi}}{\lambda}
+  P_{prior} = P_{k-1} + Q
+  $$
+
+- **Measurement update denominator:**
+
+  $$
+  denom = R + \phi^2 \times P_{prior}
   $$
 
 - **Kalman gain calculation:**
 
   $$
-  K = \frac{P_k \times \phi}{\lambda + \phi \times P_k \times \phi}
+  K = \frac{P_{prior} \times \phi}{denom}
   $$
 
-- **Error calculation:**
+- **Innovation (residual) and state update:**
 
   $$
-  e_{observed} = \omega_{observed} - \phi \times \delta_{measured}
+  residual = y - \phi \times \delta_{offset,prev}
   $$
 
   $$
-  e_{estimated} = \phi \times \delta_{offset,prev}
+  \delta_{offset,new} = \delta_{offset,prev} + K \times residual
   $$
 
-- **Offset estimate update:**
+- **Covariance update:**
 
   $$
-  \delta_{offset,new} = \delta_{offset,prev} + K \times (e_{observed} - e_{estimated})
+  P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
   $$
 
 Where:
 
 - $P$: Estimation covariance matrix (scalar in this 1D case)
-- $\lambda$: Forgetting factor (typically 0.999) for adaptation to changing conditions
+- $Q$: Process noise covariance (allows parameter drift)
+- $R$: Measurement noise covariance
 - $K$: Kalman gain
 - $k$: Current time step
 
@@ -89,7 +100,7 @@ The algorithm only updates when:
 - $|\delta_{measured}|$ < `max_steer` (avoids nonlinear tire behavior)
 - Both pose and steering data are available
 
-This approach provides continuous, real-time calibration of steering offset during normal driving operations.
+This Kalman Filter approach provides continuous, real-time calibration of steering offset during normal driving operations, with process noise allowing adaptation to changing conditions and measurement noise handling sensor uncertainties.
 
 ## Inputs / Outputs
 
