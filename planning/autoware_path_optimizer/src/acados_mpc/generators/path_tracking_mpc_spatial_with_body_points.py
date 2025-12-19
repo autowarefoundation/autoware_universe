@@ -5,8 +5,34 @@ import time
 
 import numpy as np
 import scipy.linalg
+import subprocess
 
+# Add the parent directory to sys.path to find 'utils' and 'bicycle_model'
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Check for ACADOS_SOURCE_DIR environment variable to use local acados installation
+if "ACADOS_SOURCE_DIR" in os.environ:
+    acados_source_dir = os.environ["ACADOS_SOURCE_DIR"]
+    acados_template_path = os.path.join(
+        acados_source_dir, "interfaces", "acados_template"
+    )
+    if os.path.exists(acados_template_path):
+        sys.path.append(acados_template_path)
+    
+    # Non-interactively ensure t_renderer is present
+    bin_dir = os.path.join(acados_source_dir, "bin")
+    if not os.path.exists(bin_dir):
+        os.makedirs(bin_dir)
+    t_renderer_path = os.path.join(bin_dir, "t_renderer")
+    if not os.path.exists(t_renderer_path):
+        print(f"DEBUG: t_renderer not found at {t_renderer_path}. Downloading...")
+        url = "https://github.com/acados/tera_renderer/releases/download/v0.0.34/t_renderer-v0.0.34-linux"
+        try:
+            subprocess.run(["wget", url, "-O", t_renderer_path], check=True)
+            subprocess.run(["chmod", "+x", t_renderer_path], check=True)
+            print("DEBUG: t_renderer downloaded successfully.")
+        except Exception as e:
+            print(f"DEBUG: Failed to download t_renderer: {e}")
 
 from acados_template import AcadosModel
 from acados_template import AcadosOcp
@@ -44,6 +70,9 @@ class PathTrackingMPCSpatialWithBodyPoints:
         model_ac.name = model.name
         ocp.model = model_ac
 
+        # Set solver options to skip heavy CasADi simplifications that might hang
+        ocp.code_export_directory = "c_generated_code"
+        
         # dimensions
         nx = model.x.rows()
         nu = model.u.rows()
@@ -137,7 +166,11 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp.solver_options.tol = 1e-4
 
         # create solver
-        print("Creating acados solver...")
+        if not build:
+            # If we only want to generate code, use the static method to avoid loading the library
+            AcadosOcpSolver.generate(ocp, json_file="acados_ocp.json")
+            return constraint, model, None
+        
         acados_solver = AcadosOcpSolver(
             ocp, json_file="acados_ocp.json", build=build, generate=generate
         )
@@ -259,7 +292,9 @@ def main():
     Sf = 100
     num_body_points = 6
 
-    _ = PathTrackingMPCSpatialWithBodyPoints(Sf, N, N, num_body_points)
+    # Set build=False and generate=True to only generate the C code
+    # without trying to compile the solver inside the Python process.
+    _ = PathTrackingMPCSpatialWithBodyPoints(Sf, N, N, num_body_points, build=False, generate=True)
 
 
 if __name__ == "__main__":

@@ -3,21 +3,9 @@ project(autoware_path_optimizer)
 
 include(CheckCXXCompilerFlag)
 
-# Run MPT generator script at configure time so generated code exists
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E echo "Running generate_mpt.sh"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc
-)
-execute_process(
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc/generators/path_tracking_mpc_spatial_with_body_points.py
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc
-  RESULT_VARIABLE _generate_mpt_result
-  OUTPUT_VARIABLE _generate_mpt_out
-  ERROR_VARIABLE _generate_mpt_err
-)
-if(NOT _generate_mpt_result EQUAL 0)
-  message(FATAL_ERROR "generate_mpt.sh failed: ${_generate_mpt_err}")
-endif()
+# Run MPT generator script at configure time is removed because it depends on acados_template
+# which is only available at build time when building acados from source.
+# Generation is now handled by add_custom_command in src/acados_mpc/CMakeLists.txt.
 
 # NOTE: With the following option, when the compile-time and runtime CPU
 #       architectures are different, the node will die.
@@ -50,30 +38,30 @@ ament_auto_add_library(autoware_path_optimizer SHARED
   src/utils/geometry_utils.cpp
 )
 
+# Add acados_mpc subdir first to set up acados paths
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc)
+
 target_include_directories(autoware_path_optimizer
   SYSTEM PUBLIC
     ${EIGEN3_INCLUDE_DIR}
-    /home/arjunram/Workspace/acados/include
-    /home/arjunram/Workspace/acados/include/acados
-    /home/arjunram/Workspace/acados/include/acados_c
-    /home/arjunram/Workspace/acados/include/blasfeo/include
-    /home/arjunram/Workspace/acados/include/hpipm/include
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados_c>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/blasfeo/include>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/hpipm/include>
 )
 
 # Link against acados helper library which depends on generated code
 target_link_libraries(autoware_path_optimizer acados_interface acados_generated_code)
+
+# Ensure package library depends on generated acados code, generator target, and acados itself
+add_dependencies(autoware_path_optimizer acados_generated_code generate_mpt ${ACADOS_TARGET})
 
 # register node
 rclcpp_components_register_node(autoware_path_optimizer
   PLUGIN "autoware::path_optimizer::PathOptimizer"
   EXECUTABLE path_optimizer_node
 )
-
-# Add acados_mpc subdir which contains generator script and generated-code target
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc)
-
-# Ensure package library depends on generated acados code and generator target
-add_dependencies(autoware_path_optimizer acados_generated_code generate_mpt)
 
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
