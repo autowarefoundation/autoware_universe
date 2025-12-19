@@ -18,6 +18,7 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>
@@ -359,13 +360,13 @@ autoware::motion_utils::VirtualWalls TrafficLightModule::createVirtualWalls()
 
   wall.style = autoware::motion_utils::VirtualWallType::deadline;
   for (const auto & p : debug_data_.dead_line_poses) {
-    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils_geometry::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 
   wall.style = autoware::motion_utils::VirtualWallType::stop;
   for (const auto & p : debug_data_.stop_poses) {
-    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils_geometry::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 
