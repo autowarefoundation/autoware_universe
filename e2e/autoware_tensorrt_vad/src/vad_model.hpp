@@ -112,18 +112,19 @@ public:
   [[nodiscard]] std::optional<VadOutputData> infer(const VadInputData & vad_input_data)
   {
     // Change head name based on whether it's the first frame
-    std::string head_name;
-    if (is_first_frame_) {
-      head_name = "head_no_prev";
-    } else {
-      head_name = "head";
-    }
+    std::string head_name = is_first_frame_ ? "head_no_prev" : "head";
 
     // Load to bindings
-    load_inputs(vad_input_data, head_name);
+    if (!load_inputs(vad_input_data, head_name)) {
+      logger_->error("Failed to load inputs.");
+      return std::nullopt;
+    }
 
     // Enqueue backbone and head
-    enqueue(head_name);
+    if (!enqueue(head_name)) {
+      logger_->error("Failed to enqueue networks.");
+      return std::nullopt;
+    }
 
     // Save prev_bev
     saved_prev_bev_ = save_prev_bev(head_name);
@@ -133,8 +134,10 @@ public:
 
     // If it's the first frame, release "head_no_prev" and load "head"
     if (is_first_frame_) {
-      release_network("head_no_prev");
-      load_head();
+      if (!release_network("head_no_prev") || !load_head()) {
+        logger_->error("Failed to handle head networks for the first frame.");
+        return std::nullopt;
+      }
       is_first_frame_ = false;
     }
 
@@ -197,9 +200,9 @@ private:
   }
 
   // Helper functions used in infer function
-  void load_inputs(const VadInputData & vad_input_data, const std::string & head_name)
+  bool load_inputs(const VadInputData & vad_input_data, const std::string & head_name)
   {
-    // Use MultiCameraPreprocessor to process camera images
+    // Process camera images with MultiCameraPreprocessor
     cudaError_t preprocess_result = preprocessor_->preprocess_images(
       vad_input_data.camera_images, static_cast<float *>(nets_["backbone"]->bindings["img"]->ptr),
       stream_);
@@ -207,24 +210,40 @@ private:
     if (preprocess_result != cudaSuccess) {
       logger_->error(
         "CUDA preprocessing failed: " + std::string(cudaGetErrorString(preprocess_result)));
-      return;
+      return false;
     }
 
-    nets_[head_name]->bindings["img_metas.0[shift]"]->load(vad_input_data.shift, stream_);
-    nets_[head_name]->bindings["img_metas.0[lidar2img]"]->load(
-      vad_input_data.vad_base2img, stream_);
-    nets_[head_name]->bindings["img_metas.0[can_bus]"]->load(vad_input_data.can_bus, stream_);
+    try {
+      nets_[head_name]->bindings["img_metas.0[shift]"]->load(vad_input_data.shift, stream_);
+      nets_[head_name]->bindings["img_metas.0[lidar2img]"]->load(
+          vad_input_data.vad_base2img, stream_);
+      nets_[head_name]->bindings["img_metas.0[can_bus]"]->load(vad_input_data.can_bus, stream_);
 
-    if (head_name == "head") {
-      nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
+      if (head_name == "head") {
+          nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
+      }
+    } catch (const std::exception & e) {
+      logger_->error("Exception during input loading: " + std::string(e.what()));
+      return false;
     }
+
+    return true;
   }
 
-  void enqueue(const std::string & head_name)
+  bool enqueue(const std::string & head_name)
   {
-    nets_["backbone"]->enqueue(stream_);
-    nets_[head_name]->enqueue(stream_);
-    cudaStreamSynchronize(stream_);
+    try {
+      nets_["backbone"]->enqueue(stream_);
+      nets_[head_name]->enqueue(stream_);
+      cudaStreamSynchronize(stream_);
+      return true;
+    } catch (const std::exception & e) {
+      logger_->error("Enqueue failed: " + std::string(e.what()));
+      return false;
+    } catch (...) {
+      logger_->error("Unknown error during enqueue.");
+      return false;
+    }
   }
 
   std::shared_ptr<Tensor> save_prev_bev(const std::string & head_name)
@@ -236,40 +255,57 @@ private:
     return prev_bev;
   }
 
-  void release_network(const std::string & network_name)
+  bool release_network(const std::string & network_name)
   {
-    if (nets_.find(network_name) != nets_.end()) {
-      // First clear bindings
-      nets_[network_name]->bindings.clear();
-      cudaStreamSynchronize(stream_);
+    auto net_itr = nets_.find(network_name);
+    if (net_itr != nets_.end()) {
+      try {
+        // Clear bindings and release Net object
+        net_itr->second->bindings.clear();
 
-      // Then release Net object
-      nets_[network_name].reset();
-      nets_.erase(network_name);
-      cudaStreamSynchronize(stream_);
+        // REVIEW NEEDED: Do we need to synchronize twice?
+        cudaStreamSynchronize(stream_);
+
+        net_itr->second.reset();
+        nets_.erase(net_itr);
+        cudaStreamSynchronize(stream_);
+        return true;
+      } catch (const std::exception & e) {
+        logger_->error("Error releasing network: " + std::string(e.what()));
+        return false;
+      }
     }
+    logger_->error("Network not found: " + network_name);
+    return false;
   }
 
-  void load_head()
-  {
+  bool load_head() {
     auto head_engine = std::find_if(
       vad_config_.nets_config.begin(), vad_config_.nets_config.end(),
       [](const NetConfig & engine) { return engine.name == "head"; });
 
     if (head_engine == vad_config_.nets_config.end()) {
       logger_->error("Head engine configuration not found");
-      return;
+      return false;
     }
 
     std::unordered_map<std::string, std::shared_ptr<Tensor>> external_bindings;
-    for (const auto & input_pair : head_engine->inputs) {
-      const std::string & k = input_pair.first;
-      auto [external_network, external_input_name] = parse_external_inputs(input_pair);
-      logger_->info(k + " <- " + external_network + "[" + external_input_name + "]");
-      external_bindings[k] = nets_[external_network]->bindings[external_input_name];
+
+    try {
+      for (const auto & input_pair : head_engine->inputs) {
+        const std::string & k = input_pair.first;
+        auto [external_network, external_input_name] = parse_external_inputs(input_pair);
+        logger_->info(k + " <- " + external_network + "[" + external_input_name + "]");
+        external_bindings[k] = nets_[external_network]->bindings[external_input_name];
+      }
+
+      nets_["head"]->set_input_tensor(external_bindings);
+    } catch (const std::exception & e) {
+      logger_->error("Exception during head loading: " + std::string(e.what()));
+      return false;
     }
 
-    nets_["head"]->set_input_tensor(external_bindings);
+    return true;
   }
 
   VadOutputData postprocess(const std::string & head_name, int32_t cmd)
