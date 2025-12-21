@@ -216,11 +216,11 @@ private:
     try {
       nets_[head_name]->bindings["img_metas.0[shift]"]->load(vad_input_data.shift, stream_);
       nets_[head_name]->bindings["img_metas.0[lidar2img]"]->load(
-          vad_input_data.vad_base2img, stream_);
+        vad_input_data.vad_base2img, stream_);
       nets_[head_name]->bindings["img_metas.0[can_bus]"]->load(vad_input_data.can_bus, stream_);
 
       if (head_name == "head") {
-          nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
+        nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
       }
     } catch (const std::exception & e) {
       logger_->error("Exception during input loading: " + std::string(e.what()));
@@ -279,7 +279,8 @@ private:
     return false;
   }
 
-  bool load_head() {
+  bool load_head()
+  {
     auto head_engine = std::find_if(
       vad_config_.nets_config.begin(), vad_config_.nets_config.end(),
       [](const NetConfig & engine) { return engine.name == "head"; });
