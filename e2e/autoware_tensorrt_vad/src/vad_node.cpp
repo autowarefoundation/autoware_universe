@@ -129,10 +129,16 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
   auto reliable_qos = rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable);
 
   // Subscribers for each camera
-  create_camera_image_subscribers(sensor_qos);
+  if (!create_camera_image_subscribers(sensor_qos)) {
+    // Throw not to use partially initialized object
+    throw std::runtime_error("Failed to create camera image subscribers");
+  }
 
   // Subscribers for camera info
-  create_camera_info_subscribers(camera_info_qos);
+  if (!create_camera_info_subscribers(camera_info_qos)) {
+    // Throw as critical error
+    throw std::runtime_error("Failed to create camera info subscribers");
+  }
 
   // Odometry subscriber (kinematic state is usually reliable)
   odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -291,24 +297,31 @@ std::optional<VadOutputTopicData> VadNode::trigger_inference(
   }
 }
 
-void VadNode::initialize_vad_model()
+bool VadNode::initialize_vad_model()
 {
-  // load configs
-  VadConfig vad_config = load_vad_config();
-  auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] = load_trt_common_configs();
+  try {
+    // load configs
+    VadConfig vad_config = load_vad_config();
+    auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] = load_trt_common_configs();
 
-  // Initialize VAD interface and model
-  auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
-  vad_interface_ptr_ = std::make_unique<VadInterface>(*vad_interface_config_, tf_buffer_shared);
+    // Initialize VAD interface and model
+    auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
+    vad_interface_ptr_ = std::make_unique<VadInterface>(*vad_interface_config_, tf_buffer_shared);
 
-  // Create RosVadLogger using the logger
-  auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
-  vad_model_ptr_ = std::make_unique<VadModel<RosVadLogger>>(
-    vad_config, backbone_trt_config, head_trt_config, head_no_prev_trt_config, ros_logger);
+    // Create RosVadLogger using the logger
+    auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
+    vad_model_ptr_ = std::make_unique<VadModel<RosVadLogger>>(
+      vad_config, backbone_trt_config, head_trt_config, head_no_prev_trt_config, ros_logger);
 
-  RCLCPP_INFO_THROTTLE(
-    this->get_logger(), *this->get_clock(), 5000,
-    "VAD model and interface initialized successfully");
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "VAD model and interface initialized successfully");
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      this->get_logger(), "Error during VAD model initialization: %s", e.what());
+    return false;
+  }
 }
 
 VadConfig VadNode::load_vad_config()
@@ -589,25 +602,31 @@ std::optional<VadOutputTopicData> VadNode::execute_inference(
   return std::nullopt;
 }
 
-void VadNode::publish(const VadOutputTopicData & vad_output_topic_data)
+bool VadNode::publish(const VadOutputTopicData & vad_output_topic_data)
 {
-  // Publish selected trajectory
-  trajectory_publisher_->publish(vad_output_topic_data.trajectory);
+  try {
+    // Publish selected trajectory
+    trajectory_publisher_->publish(vad_output_topic_data.trajectory);
 
-  // Publish candidate trajectories
-  candidate_trajectories_publisher_->publish(vad_output_topic_data.candidate_trajectories);
+    // Publish candidate trajectories
+    candidate_trajectories_publisher_->publish(vad_output_topic_data.candidate_trajectories);
 
-  // // Publish predicted objects
-  predicted_objects_publisher_->publish(vad_output_topic_data.objects);
+    // Publish predicted objects
+    predicted_objects_publisher_->publish(vad_output_topic_data.objects);
 
-  // Publish map points
-  map_points_publisher_->publish(vad_output_topic_data.map_points);
+    // Publish map points
+    map_points_publisher_->publish(vad_output_topic_data.map_points);
 
-  RCLCPP_DEBUG_THROTTLE(
-    this->get_logger(), *this->get_clock(), 5000, "Published trajectories and predicted objects");
+    RCLCPP_DEBUG_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Published trajectories and predicted objects");
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Error during publishing: %s", e.what());
+    return false;
+  }
 }
 
-void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
+bool VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
 {
   try {
     camera_image_subs_.resize(num_cameras_);
@@ -619,8 +638,7 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
       RCLCPP_ERROR(
         this->get_logger(), "use_raw parameter size (%zu) does not match num_cameras (%d)",
         use_raw_cameras.size(), num_cameras_);
-      throw std::runtime_error(
-        "Parameter array length mismatch: use_raw size must match num_cameras");
+      return false;
     }
 
     auto resolve_topic_name = [this](const std::string & query) {
@@ -640,22 +658,30 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
         this, image_topic, callback, transport, sensor_qos.get_rmw_qos_profile());
       RCLCPP_INFO(this->get_logger(), "Image subscriber %d created successfully", i);
     }
+    return true;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Exception in create_camera_image_subscribers: %s", e.what());
-    throw;  // Re-throw to prevent partial initialization
+    // Need to handle partial initialization properly
+    return false;
   }
 }
 
-void VadNode::create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos)
+bool VadNode::create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos)
 {
-  camera_info_subs_.resize(num_cameras_);
-  for (int32_t i = 0; i < num_cameras_; ++i) {
-    auto callback = [this, i](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
-      this->camera_info_callback(msg, i);
-    };
+  try {
+    camera_info_subs_.resize(num_cameras_);
+    for (int32_t i = 0; i < num_cameras_; ++i) {
+      auto callback = [this, i](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
+        this->camera_info_callback(msg, i);
+      };
 
-    camera_info_subs_[i] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-      "~/input/camera_info" + std::to_string(i), camera_info_qos, callback);
+      camera_info_subs_[i] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+        "~/input/camera_info" + std::to_string(i), camera_info_qos, callback);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Exception in create_camera_info_subscribers: %s", e.what());
+    return false;
   }
 }
 
