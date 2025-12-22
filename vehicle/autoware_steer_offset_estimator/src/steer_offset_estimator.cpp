@@ -72,29 +72,32 @@ SteerOffsetEstimator::update(
     return tl::make_unexpected(SteerOffsetEstimationNotUpdated{"steering angle is too large"});
   }
 
-  const double phi = velocity / params_.wheel_base;
+  // 1) Regressor and measurement for the regression model y = phi * theta + noise
+  const double phi = velocity / params_.wheel_base;          // regressor
+  const double y = angular_velocity - phi * steering_angle;  // measurement for regression
 
-  const double y = angular_velocity - phi * steering_angle;
+  // 2) Time update (process model): theta_k = theta_{k-1} + w,  w ~ N(0, Q)
+  //    This inflates the PRIOR covariance to allow parameter drift.
+  const double Q = params_.process_noise_covariance;  // NOLINT
+  const double P_prior = covariance_ + Q;             // prior covariance // NOLINT
 
-  double denominator =
-    params_.forgetting_factor * params_.measurement_noise + phi * phi * covariance_;
+  // 3) Measurement update: compute denominator with PRIOR covariance
+  //    denom = R + phi^2 * P_prior
+  double denom = params_.measurement_noise_covariance + phi * phi * P_prior;
+  if (denom < params_.denominator_floor) denom = params_.denominator_floor;  // numerical safety
 
-  const double kalman_gain = (covariance_ * phi) / denominator;
+  // 4) Kalman-like gain using PRIOR covariance
+  const double K = (P_prior * phi) / denom;  // NOLINT
 
-  if (denominator < params_.denominator_floor) {
-    denominator = params_.denominator_floor;
-  }
+  // 5) Innovation (residual) and parameter update
+  const double residual = y - phi * estimated_offset_;   // r = y - phi * theta_{k-1}
+  estimated_offset_ = estimated_offset_ + K * residual;  // theta_k
 
-  const double residual = y - phi * estimated_offset_;
-
-  estimated_offset_ = estimated_offset_ + kalman_gain * residual;
-
-  covariance_ = (covariance_ - (covariance_ * phi * phi * covariance_) / denominator) /
-                params_.forgetting_factor;
-
-  if (covariance_ < params_.covariance_floor) {
-    covariance_ = params_.covariance_floor;
-  }
+  // 6) Covariance update (scalar Joseph form)
+  //    P_k = P_prior - (P_prior * phi^2 * P_prior) / denom = (1 - K*phi) * P_prior
+  double P_new = P_prior - (P_prior * phi * phi * P_prior) / denom;  // NOLINT
+  if (P_new < params_.covariance_floor) P_new = params_.covariance_floor;
+  covariance_ = P_new;
 
   SteerOffsetEstimationUpdated updated_result;
   updated_result.offset = estimated_offset_;
@@ -102,7 +105,7 @@ SteerOffsetEstimator::update(
   updated_result.velocity = velocity;
   updated_result.angular_velocity = angular_velocity;
   updated_result.steering_angle = steering_angle;
-  updated_result.kalman_gain = kalman_gain;
+  updated_result.kalman_gain = K;
   updated_result.residual = residual;
   return updated_result;
 }

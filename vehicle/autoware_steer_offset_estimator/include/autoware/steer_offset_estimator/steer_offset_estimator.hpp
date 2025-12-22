@@ -62,15 +62,15 @@ struct SteerOffsetEstimationNotUpdated
  */
 struct SteerOffsetEstimatorParameters
 {
-  double initial_covariance{1.0};     ///< Initial covariance value
-  double initial_offset{0.0};         ///< Initial steering offset [rad]
-  double wheel_base{0.0};             ///< Vehicle wheelbase [m]
-  double min_velocity{2.0};           ///< Minimum valid velocity [m/s]
-  double max_steer{0.5};              ///< Maximum valid steering angle [rad]
-  double forgetting_factor{0.99};     ///< Forgetting factor for covariance matrix
-  double measurement_noise{0.01};     ///< Measurement noise variance
-  double denominator_floor{1.0e-12};  ///< Denominator floor value
-  double covariance_floor{1.0e-12};   ///< Covariance floor value
+  double initial_covariance{1.0};             ///< Initial covariance value
+  double initial_offset{0.0};                 ///< Initial steering offset [rad]
+  double wheel_base{0.0};                     ///< Vehicle wheelbase [m]
+  double min_velocity{2.0};                   ///< Minimum valid velocity [m/s]
+  double max_steer{0.5};                      ///< Maximum valid steering angle [rad]
+  double measurement_noise_covariance{0.01};  ///< Measurement noise covariance
+  double process_noise_covariance{0.01};      ///< Process noise covariance
+  double denominator_floor{1.0e-12};          ///< Denominator floor value
+  double covariance_floor{1.0e-12};           ///< Covariance floor value
 };
 
 /**

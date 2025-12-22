@@ -3,9 +3,9 @@
     update_hz: 10.0 # [Hz]
     initial_covariance: 1000.0
     initial_offset: 0.0 # [rad]
-    measurement_noise: 0.01
+    process_noise_covariance: 0.01
+    measurement_noise_covariance: 0.01
     denominator_floor: 1.0e-12
     covariance_floor: 1.0e-12
     min_velocity: 1.0 # [m/s]
     max_steer: 0.03 # [rad]
-    forgetting_factor: 0.999
