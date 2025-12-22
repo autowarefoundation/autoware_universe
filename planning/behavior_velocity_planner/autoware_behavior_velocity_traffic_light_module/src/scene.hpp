@@ -90,8 +90,6 @@ public:
 
   bool modifyPathVelocity(PathWithLaneId * path) override;
 
-
-
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
@@ -114,7 +112,6 @@ public:
   std::optional<Time> traffic_signal_stamp_;
 
 private:
-
   bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
   autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
@@ -157,8 +154,6 @@ private:
 
   // prevent stop chattering
   std::unique_ptr<Time> stop_signal_received_time_ptr_{};
-
-
 
   std::optional<int> first_ref_stop_path_point_index_;
 
