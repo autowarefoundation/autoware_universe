@@ -151,13 +151,10 @@ void IntersectionModule::updateObjectInfoManagerArea()
   }
 }
 
-lanelet::Point3d remove_const(const lanelet::ConstPoint3d & point)
-{
-  return lanelet::Point3d{std::const_pointer_cast<lanelet::PointData>(point.constData())};
-}
 static bool check_if_path_is_overtaking_ego(
   const lanelet::ConstLanelet ego_lanelet, const Polygon2d & initial_collision_object_bbox)
 {
+  using autoware::experimental::lanelet2_utils::remove_const;
   lanelet::ConstLineString3d entry{
     lanelet::InvalId, lanelet::Points3d{
                         remove_const(ego_lanelet.leftBound().front()),
