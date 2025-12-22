@@ -14,9 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag_node.hpp"
 
-#include "autoware/point_types/types.hpp"
-
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -24,7 +23,6 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options)
@@ -225,31 +223,39 @@ std::optional<int> BlockageDiagComponent::get_vertical_bin(uint16_t channel) con
   return {vertical_bins_ - channel - 1};
 }
 
-cv::Mat BlockageDiagComponent::make_normalized_depth_image(const PCLCloudXYZIRCAEDT & input) const
+cv::Mat BlockageDiagComponent::make_normalized_depth_image(
+  const sensor_msgs::msg::PointCloud2 & input) const
 {
   auto dimensions = get_mask_dimensions();
   cv::Mat depth_image(dimensions, CV_16UC1, cv::Scalar(0));
 
-  for (const auto & p : input.points) {
-    auto vertical_bin = get_vertical_bin(p.channel);
+  sensor_msgs::PointCloud2ConstIterator<uint16_t> iter_channel(input, "channel");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
+  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(input, "distance");
+
+  for (; iter_channel != iter_channel.end(); ++iter_channel, ++iter_azimuth, ++iter_distance) {
+    uint16_t channel = *iter_channel;
+    float azimuth = *iter_azimuth;
+    float distance = *iter_distance;
+
+    auto vertical_bin = get_vertical_bin(channel);
     if (!vertical_bin) {
       RCLCPP_ERROR(
         this->get_logger(),
-        "p.channel: %d is larger than vertical_bins: %d. Please check the parameter "
+        "channel: %d is larger than vertical_bins: %d. Please check the parameter "
         "'vertical_bins'.",
-        p.channel, vertical_bins_);
+        channel, vertical_bins_);
       throw std::runtime_error("Parameter is not valid");
     }
 
-    double azimuth_deg = p.azimuth * (180.0 / M_PI);
+    double azimuth_deg = azimuth * (180.0 / M_PI);
     auto horizontal_bin = get_horizontal_bin(azimuth_deg);
     if (!horizontal_bin) {
       continue;
     }
 
     // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth =
-      UINT16_MAX * (1.0 - std::min(p.distance / max_distance_range_, 1.0));
+    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
     depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
   }
 
@@ -518,15 +524,40 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
+void BlockageDiagComponent::validate_pointcloud_fields(
+  const sensor_msgs::msg::PointCloud2 & input) const
+{
+  std::vector<std::string> required_fields = {"channel", "azimuth", "distance"};
+
+  for (const auto & field : input.fields) {
+    auto it = std::find(required_fields.begin(), required_fields.end(), field.name);
+    bool is_field_found = (it != required_fields.end());
+    if (is_field_found) {
+      required_fields.erase(it);
+    }
+  }
+
+  bool has_all_required_fields = required_fields.empty();
+  if (has_all_required_fields) {
+    return;
+  }
+
+  std::string error_msg = "PointCloud2 missing required fields:";
+  for (const auto & missing_field : required_fields) {
+    error_msg += " " + missing_field;
+  }
+  RCLCPP_ERROR(get_logger(), "%s", error_msg.c_str());
+  throw std::runtime_error(error_msg);
+}
+
 void BlockageDiagComponent::detect_blockage(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
   std::scoped_lock lock(mutex_);
 
-  PCLCloudXYZIRCAEDT pcl_input;
-  pcl::fromROSMsg(*input, pcl_input);
+  validate_pointcloud_fields(*input);
 
-  cv::Mat depth_image_16u = make_normalized_depth_image(pcl_input);
+  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
