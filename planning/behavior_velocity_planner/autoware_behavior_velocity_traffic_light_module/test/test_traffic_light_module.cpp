@@ -196,7 +196,7 @@ TEST_F(TrafficLightModuleTest, TransitionToYellowFromRed)
   bool stop = module_->isStopSignal();
 
   // Verify state transition
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromRedArrow);
+  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromNonGreen);
 
   // Should STOP (return true for stop signal) because it did NOT come from Green
   EXPECT_TRUE(stop);

@@ -251,7 +251,7 @@ bool TrafficLightModule::isStopSignal()
           RCLCPP_DEBUG_THROTTLE(
             logger_, *clock_, 1000,
             "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
-          yellow_transition_state_ = YellowState::kFromRedArrow;
+          yellow_transition_state_ = YellowState::kFromNonGreen;
         }
       }
 

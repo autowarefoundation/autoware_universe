@@ -40,7 +40,7 @@ public:
   using TrafficSignalElement = autoware_perception_msgs::msg::TrafficLightElement;
   using Time = rclcpp::Time;
   enum class State { APPROACH, GO_OUT };
-  enum class YellowState { kNotYellow, kFromGreen, kFromRedArrow };
+  enum class YellowState { kNotYellow, kFromGreen, kFromNonGreen };
 
   struct DebugData
   {
