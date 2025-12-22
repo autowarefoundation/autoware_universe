@@ -28,9 +28,23 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
   // Init diagnostics graph.
   {
     const auto graph_file = declare_parameter<std::string>("graph_file");
+
+    // Parse graph variables from "key=value" format.
+    auto variables = std::make_shared<std::unordered_map<std::string, std::string>>();
+    const auto var_list =
+      declare_parameter<std::vector<std::string>>("graph_vars", std::vector<std::string>{});
+    for (const auto & var : var_list) {
+      const auto pos = var.find('=');
+      if (pos != std::string::npos) {
+        const auto key = var.substr(0, pos);
+        const auto value = var.substr(pos + 1);
+        variables->emplace(key, value);
+      }
+    }
+
     std::ostringstream id;
     id << std::hex << stamp.nanoseconds();
-    graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr);
+    graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr, variables);
   }
 
   // Init plugins.

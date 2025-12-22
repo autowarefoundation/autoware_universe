@@ -40,8 +40,15 @@ namespace autoware::diagnostic_graph_aggregator
 {
 
 ConfigLoader::ConfigLoader(std::shared_ptr<Logger> logger)
+: ConfigLoader(logger, nullptr)
+{
+}
+
+ConfigLoader::ConfigLoader(
+  std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables)
 {
   logger_ = logger ? logger : std::make_shared<DummyLogger>();
+  variables_ = variables;
 }
 
 ConfigLoader::~ConfigLoader()
@@ -50,7 +57,14 @@ ConfigLoader::~ConfigLoader()
 
 GraphData ConfigLoader::Load(const std::string & path, std::shared_ptr<Logger> logger)
 {
-  ConfigLoader loader(logger);
+  return Load(path, logger, nullptr);
+}
+
+GraphData ConfigLoader::Load(
+  const std::string & path, std::shared_ptr<Logger> logger,
+  std::shared_ptr<VariablesMap> variables)
+{
+  ConfigLoader loader(logger, variables);
   loader.load(path);
   return loader.take();
 }
@@ -109,7 +123,7 @@ FileData * ConfigLoader::load_file(const FileContext & context, const std::strin
   result->original_path = path;
   result->resolved_path = resolved_path;
   result->yaml = ConfigYaml::LoadFile(result->resolved_path);
-  result->files = load_files(FileContext{resolved_path, context.visited}, result->yaml);
+  result->files = load_files(FileContext{resolved_path, context.visited, context.variables}, result->yaml);
   return result;
 }
 
@@ -134,7 +148,7 @@ BaseUnit * ConfigLoader::load_diag(ConfigYaml yaml, const std::string & name)
 void ConfigLoader::load_file_tree(const std::string & path)
 {
   const auto visited = std::make_shared<std::unordered_set<std::string>>();
-  root_file_ = load_file(FileContext{"ROOT_FILE", visited}, path);
+  root_file_ = load_file(FileContext{"ROOT_FILE", visited, variables_}, path);
 }
 
 void ConfigLoader::make_node_units()
