@@ -29,10 +29,6 @@
 namespace autoware::diagnostic_graph_aggregator
 {
 using VariablesMap = std::unordered_map<std::string, std::string>;
-}  // namespace autoware::diagnostic_graph_aggregator
-
-namespace autoware::diagnostic_graph_aggregator
-{
 
 class Graph
 {
