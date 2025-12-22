@@ -39,13 +39,11 @@
 namespace autoware::diagnostic_graph_aggregator
 {
 
-ConfigLoader::ConfigLoader(std::shared_ptr<Logger> logger)
-: ConfigLoader(logger, nullptr)
+ConfigLoader::ConfigLoader(std::shared_ptr<Logger> logger) : ConfigLoader(logger, nullptr)
 {
 }
 
-ConfigLoader::ConfigLoader(
-  std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables)
+ConfigLoader::ConfigLoader(std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables)
 {
   logger_ = logger ? logger : std::make_shared<DummyLogger>();
   variables_ = variables;
@@ -61,8 +59,7 @@ GraphData ConfigLoader::Load(const std::string & path, std::shared_ptr<Logger> l
 }
 
 GraphData ConfigLoader::Load(
-  const std::string & path, std::shared_ptr<Logger> logger,
-  std::shared_ptr<VariablesMap> variables)
+  const std::string & path, std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables)
 {
   ConfigLoader loader(logger, variables);
   loader.load(path);
@@ -123,7 +120,8 @@ FileData * ConfigLoader::load_file(const FileContext & context, const std::strin
   result->original_path = path;
   result->resolved_path = resolved_path;
   result->yaml = ConfigYaml::LoadFile(result->resolved_path);
-  result->files = load_files(FileContext{resolved_path, context.visited, context.variables}, result->yaml);
+  result->files =
+    load_files(FileContext{resolved_path, context.visited, context.variables}, result->yaml);
   return result;
 }
 

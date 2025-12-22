@@ -33,8 +33,7 @@ class ConfigLoader
 {
 public:
   explicit ConfigLoader(std::shared_ptr<Logger> logger);
-  ConfigLoader(
-    std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables);
+  ConfigLoader(std::shared_ptr<Logger> logger, std::shared_ptr<VariablesMap> variables);
   ~ConfigLoader();
 
   // Overall execution for normal use
