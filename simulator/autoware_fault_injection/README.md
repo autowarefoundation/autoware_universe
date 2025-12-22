@@ -24,12 +24,17 @@ launch_test test/test_fault_injection_node.test.py
 | Name                        | Type                                           | Description       |
 | --------------------------- | ---------------------------------------------- | ----------------- |
 | `~/input/simulation_events` | `tier4_simulation_msgs::msg::SimulationEvents` | simulation events |
+| `~/input/diagnostics` | `diagnostic_msgs::msg::DiagnosticArray` | Diagnostics from nodes |
 
 ### Output
 
 | Name           | Type                                    | Description       |
 | -------------- | --------------------------------------- | ----------------- |
-| `/diagnostics` | `diagnostic_msgs::msg::DiagnosticArray` | Dummy diagnostics |
+| `~/output/diagnostics` | `diagnostic_msgs::msg::DiagnosticArray` | Diagnostics with fault injection applied |
+
+### Notes
+
+- Use separate input/output topics (default remaps are `/diagnostics` -> `~/input/diagnostics` and `/diagnostics/fault_injection` -> `~/output/diagnostics`) to avoid mixing raw and modified diagnostics.
 
 ## Parameters
 
