@@ -66,6 +66,7 @@ public:
     double yellow_light_stop_velocity;
     double stop_time_hysteresis;
     bool enable_pass_judge;
+    // Enable arrow-aware passing logic for yellow signals in turn lanes.
     bool enable_arrow_aware_yellow_passing;
     // Restart Suppression Parameter
     double max_behind_dist_to_stop_for_restart_suppression;
@@ -137,7 +138,9 @@ private:
                  // element. this is the one bound to the traffic light (line string)
 
   // Map based information
+  // Whether the current lane is a left or right turn lane.
   const bool is_turn_lane_;
+  // Whether the traffic light has a static arrow bulb defined in the map.
   const bool has_static_arrow_;
 
   // State
