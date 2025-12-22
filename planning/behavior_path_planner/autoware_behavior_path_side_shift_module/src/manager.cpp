@@ -40,6 +40,8 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   p.min_shifting_distance = node->declare_parameter<double>(ns + "min_shifting_distance");
   p.min_shifting_speed = node->declare_parameter<double>(ns + "min_shifting_speed");
   p.shift_request_time_limit = node->declare_parameter<double>(ns + "shift_request_time_limit");
+  p.drivable_area_check_mode = node->declare_parameter<int>(ns + "drivable_area_check_mode");
+  p.drivable_area_margin = node->declare_parameter<double>(ns + "drivable_area_margin");
   p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
