@@ -231,27 +231,36 @@ bool TrafficLightModule::isStopSignal()
       // This is a yellow light. Check if this is the *start* of the yellow sequence.
       if (yellow_transition_state_ == YellowState::kNotYellow) {
         // This is the first frame of yellow. Determine how it started.
-        bool prev_had_green_circle = false;
+        if (!prev_looking_tl_state_.elements.empty()) {
+          bool prev_had_green_circle = false;
 
-        for (const auto & element : prev_looking_tl_state_.elements) {
-          // Check for Green Circle
-          if (
-            element.shape == TrafficSignalElement::CIRCLE &&
-            element.color == TrafficSignalElement::GREEN) {
-            prev_had_green_circle = true;
-            break;
+          for (const auto & element : prev_looking_tl_state_.elements) {
+            // Check for Green Circle
+            if (
+              element.shape == TrafficSignalElement::CIRCLE &&
+              element.color == TrafficSignalElement::GREEN) {
+              prev_had_green_circle = true;
+              break;
+            }
           }
-        }
 
-        if (prev_had_green_circle) {
-          RCLCPP_DEBUG_THROTTLE(
-            logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
-          yellow_transition_state_ = YellowState::kFromGreen;
+          if (prev_had_green_circle) {
+            RCLCPP_DEBUG_THROTTLE(
+              logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
+            yellow_transition_state_ = YellowState::kFromGreen;
+          } else {
+            RCLCPP_DEBUG_THROTTLE(
+              logger_, *clock_, 1000,
+              "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
+            yellow_transition_state_ = YellowState::kFromNonGreen;
+          }
         } else {
+          // No previous traffic light state available; cannot determine transition origin.
           RCLCPP_DEBUG_THROTTLE(
             logger_, *clock_, 1000,
-            "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
-          yellow_transition_state_ = YellowState::kFromNonGreen;
+            "[TrafficLight Debug]   -> Previous TL state unavailable; "
+            "treating Yellow transition origin as unknown.");
+          // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is applied.
         }
       }
 
