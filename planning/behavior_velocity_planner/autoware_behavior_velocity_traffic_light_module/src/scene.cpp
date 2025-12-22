@@ -246,7 +246,8 @@ bool TrafficLightModule::isStopSignal()
 
           if (prev_had_green_circle) {
             RCLCPP_DEBUG_THROTTLE(
-              logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
+              logger_, *clock_, 1000,
+              "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
             yellow_transition_state_ = YellowState::kFromGreen;
           } else {
             RCLCPP_DEBUG_THROTTLE(
@@ -260,7 +261,8 @@ bool TrafficLightModule::isStopSignal()
             logger_, *clock_, 1000,
             "[TrafficLight Debug]   -> Previous TL state unavailable; "
             "treating Yellow transition origin as unknown.");
-          // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is applied.
+          // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is
+          // applied.
         }
       }
 
