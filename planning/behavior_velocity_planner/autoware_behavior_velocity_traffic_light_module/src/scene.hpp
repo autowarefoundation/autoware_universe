@@ -40,6 +40,7 @@ public:
   using TrafficSignalElement = autoware_perception_msgs::msg::TrafficLightElement;
   using Time = rclcpp::Time;
   enum class State { APPROACH, GO_OUT };
+  enum class YellowState { kNotYellow, kFromGreen, kFromRedArrow };
 
   struct DebugData
   {
@@ -89,6 +90,8 @@ public:
 
   bool modifyPathVelocity(PathWithLaneId * path) override;
 
+
+
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
@@ -103,8 +106,14 @@ public:
 
   void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
-private:
+  // Store how the current yellow sequence started
+  YellowState yellow_transition_state_;
+
   bool isStopSignal();
+  TrafficSignal looking_tl_state_;
+  std::optional<Time> traffic_signal_stamp_;
+
+private:
 
   bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
@@ -149,17 +158,14 @@ private:
   // prevent stop chattering
   std::unique_ptr<Time> stop_signal_received_time_ptr_{};
 
+
+
   std::optional<int> first_ref_stop_path_point_index_;
 
-  std::optional<Time> traffic_signal_stamp_;
-
   // Traffic Light State
-  TrafficSignal looking_tl_state_;
   TrafficSignal prev_looking_tl_state_;  // Store previous state
 
-  // Store how the current yellow sequence started
-  enum class YellowState { kNotYellow, kFromGreen, kFromRedArrow };
-  YellowState yellow_transition_state_;
+  friend class TrafficLightModuleTest;
 };
 }  // namespace autoware::behavior_velocity_planner
 
