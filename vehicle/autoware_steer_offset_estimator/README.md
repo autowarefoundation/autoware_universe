@@ -106,6 +106,7 @@ This approach provides continuous, real-time calibration of steering offset duri
 | ------------------------------------- | --------------------------------------------------- | ----------------------------- |
 | `~/output/steering_offset`            | `autoware_internal_debug_msgs::msg::Float32Stamped` | steering offset               |
 | `~/output/steering_offset_covariance` | `autoware_internal_debug_msgs::msg::Float32Stamped` | covariance of steering offset |
+| `~/output/debug_info`                 | `autoware_internal_debug_msgs::msg::StringStamped`  | debug info                    |
 
 ## Parameters
 
