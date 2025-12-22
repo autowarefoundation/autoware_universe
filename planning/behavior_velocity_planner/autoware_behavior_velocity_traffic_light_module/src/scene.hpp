@@ -41,6 +41,10 @@ public:
   using Time = rclcpp::Time;
   enum class State { APPROACH, GO_OUT };
   enum class YellowState { kNotYellow, kFromGreen, kFromNonGreen };
+  // YellowState represents how the current yellow phase was reached:
+  // - kNotYellow     : not currently in a yellow state.
+  // - kFromGreen     : yellow reached from green; passing through may be allowed.
+  // - kFromNonGreen  : yellow reached from non-green; vehicle is expected to stop.
 
   struct DebugData
   {
