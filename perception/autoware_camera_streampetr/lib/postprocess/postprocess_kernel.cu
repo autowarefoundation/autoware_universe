@@ -151,6 +151,10 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
     yaw_norm_thresholds_d_.get(), score_thresholds_d_.get(), detection_range_d_.get(),
     boxes3d_d_.get());
 
+  // Synchronize the custom stream before using thrust on default stream
+  // This ensures the kernel output is ready before thrust reads it
+  cudaStreamSynchronize(stream);
+
   // Wrap raw pointer with thrust device pointer for thrust algorithms
   auto boxes3d_ptr = thrust::device_pointer_cast(boxes3d_d_.get());
 
