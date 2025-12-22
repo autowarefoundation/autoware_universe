@@ -16,18 +16,22 @@
 #define AUTOWARE__FAULT_INJECTION__FAULT_INJECTION_NODE_HPP_
 
 #include "autoware/fault_injection/diagnostic_storage.hpp"
-#include "autoware/fault_injection/fault_injection_diag_updater.hpp"
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_simulation_msgs/msg/simulation_events.hpp>
 
+#include <cstdint>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::simulator::fault_injection
 {
 using tier4_simulation_msgs::msg::SimulationEvents;
+using diagnostic_msgs::msg::DiagnosticArray;
 
 class FaultInjectionNode : public rclcpp::Node
 {
@@ -37,16 +41,22 @@ public:
 private:
   // Subscribers
   void on_simulation_events(const SimulationEvents::ConstSharedPtr msg);
+  void on_diagnostics(const DiagnosticArray::ConstSharedPtr msg);
   rclcpp::Subscription<SimulationEvents>::SharedPtr sub_simulation_events_;
+  rclcpp::Subscription<DiagnosticArray>::SharedPtr sub_diagnostics_;
 
-  void update_event_diag(
-    diagnostic_updater::DiagnosticStatusWrapper & wrap, const std::string & event_name);
+  void publish_modified_diagnostics(const DiagnosticArray & msg);
+  void apply_fault_injection(DiagnosticArray & msg);
+
+  rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_diagnostics_;
 
   std::vector<DiagConfig> read_event_diag_list();
 
-  FaultInjectionDiagUpdater updater_;
-
-  DiagnosticStorage diagnostic_storage_;
+  std::unordered_map<std::string, std::string> event_to_diag_map_;
+  std::unordered_map<std::string, int8_t> diag_override_levels_;
+  DiagnosticArray last_diagnostics_;
+  bool has_last_diagnostics_{false};
+  std::mutex data_mutex_;
 };
 
 }  // namespace autoware::simulator::fault_injection
