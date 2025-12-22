@@ -325,7 +325,7 @@ TEST_F(TrafficLightModuleTest, NoStaticArrow)
   bool stop = module_->isStopSignal();
 
   // State is tracked
-  EXPECT_EQ(module_->yellow_transition_state_, TrafficLightModule::YellowState::kFromGreen);
+  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromGreen);
 
   // But should STOP because there is no static arrow
   EXPECT_TRUE(stop);
