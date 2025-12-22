@@ -13,11 +13,11 @@ The structure of the subgraph file should be [graph object](./graph.md).
 
 File paths can contain substitutions like ROS 2 launch. The supported substitutions are as follows.
 
-| Substitution                  | Description                                      |
-| ----------------------------- | ------------------------------------------------ |
-| `$(dirname)`                  | The path of this file directory.                 |
-| `$(find-pkg-share <package>)` | The path of the package.                         |
-| `$(var <name>)`               | The value of the variable passed from the node.  |
+| Substitution                  | Description                                     |
+| ----------------------------- | ----------------------------------------------- |
+| `$(dirname)`                  | The path of this file directory.                |
+| `$(find-pkg-share <package>)` | The path of the package.                        |
+| `$(var <name>)`               | The value of the variable passed from the node. |
 
 ### Using `$(var <name>)`
 
