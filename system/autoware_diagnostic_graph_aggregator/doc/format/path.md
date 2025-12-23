@@ -21,19 +21,14 @@ File paths can contain substitutions like ROS 2 launch. The supported substituti
 
 ### Using `$(var <name>)`
 
-The `$(var <name>)` substitution allows you to use variables passed from the node.
-Variables can be set using the `graph_vars` parameter in the node configuration.
-
-The parameter accepts a list of strings in "key=value" format:
+The `$(var <name>)` substitution allows you to use variables in the graph file.
+Variables are passed via the `graph_vars` parameter as a YAML map string.
 
 ```xml
-<node pkg="autoware_diagnostic_graph_aggregator" exec="aggregator" name="aggregator">
-  <param name="graph_file" value="$(find-pkg-share my_package)/config/graph.yaml"/>
-  <param name="graph_vars" value="['vehicle_id=vehicle1', 'config_dir=/path/to/config']"/>
-</node>
+<param name="graph_vars" value="{vehicle_id: vehicle1, config_dir: /path/to/config}"/>
 ```
 
-Then in your YAML file:
+Then in your graph file:
 
 ```yaml
 files:
