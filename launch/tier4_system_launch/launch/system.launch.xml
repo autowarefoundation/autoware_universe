@@ -25,6 +25,7 @@
   <arg name="mrm_handler_param_path"/>
   <arg name="diagnostic_graph_aggregator_param_path"/>
   <arg name="diagnostic_graph_aggregator_graph_path"/>
+  <arg name="diagnostic_graph_aggregator_graph_vars" default=""/>
   <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
   <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
   <arg name="diag_reset_srv" default="/diagnostics_graph/reset"/>
@@ -129,6 +130,7 @@
       <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
         <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
+        <arg name="graph_vars" value="$(var diagnostic_graph_aggregator_graph_vars)"/>
         <arg name="~/struct" value="$(var diag_struct_topic)"/>
         <arg name="~/status" value="$(var diag_status_topic)"/>
         <arg name="~/reset" value="$(var diag_reset_srv)"/>

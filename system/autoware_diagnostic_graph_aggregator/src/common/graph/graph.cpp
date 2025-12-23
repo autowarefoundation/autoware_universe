@@ -35,10 +35,17 @@ Graph::Graph(const std::string & path) : Graph(path, "", nullptr)
 }
 
 Graph::Graph(const std::string & path, const std::string & id, std::shared_ptr<Logger> logger)
+: Graph(path, id, logger, nullptr)
+{
+}
+
+Graph::Graph(
+  const std::string & path, const std::string & id, std::shared_ptr<Logger> logger,
+  std::shared_ptr<VariablesMap> variables)
 {
   id_ = id;
 
-  auto graph = ConfigLoader::Load(path, logger);
+  auto graph = ConfigLoader::Load(path, logger, variables);
   alloc_nodes_ = std::move(graph.nodes);
   alloc_diags_ = std::move(graph.diags);
   alloc_ports_ = std::move(graph.ports);
