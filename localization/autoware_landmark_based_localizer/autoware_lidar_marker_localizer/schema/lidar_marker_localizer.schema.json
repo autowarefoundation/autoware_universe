@@ -6,6 +6,22 @@
     "lidar_marker_localizer": {
       "type": "object",
       "properties": {
+        "enable_read_all_target_ids": {
+          "type": "boolean",
+          "description": "",
+          "default": true
+        },
+        "target_ids": {
+          "type": "array",
+          "description": "List of target marker IDs to be detected.",
+          "default": ["0000", "0001", "0002", "0003", "0004", "0005"]
+        },
+        "queue_size_for_output_pose": {
+          "type": "number",
+          "description": "Queue size for output/pose_with_covariance publisher",
+          "default": 10,
+          "minimum": 0
+        },
         "marker_name": {
           "type": "string",
           "description": "The name of the markers listed in the HD map.",
@@ -46,10 +62,32 @@
           "default": 20,
           "minimum": 0
         },
+        "marker_to_vehicle_offset_y": {
+          "type": "number",
+          "description": "Y-axis offset from the center of the marker to vehicle. [m]",
+          "default": 0.0
+        },
         "marker_height_from_ground": {
           "type": "number",
           "description": "Height from the ground to the center of the marker. [m]",
           "default": 1.075
+        },
+        "lower_ring_id_init": {
+          "type": "number",
+          "description": "Initial value when searching for the lowest ring ID within the point cloud",
+          "default": 128,
+          "minimum": 0
+        },
+        "upper_ring_id_init": {
+          "type": "number",
+          "description": "Initial value when searching for the highest ring ID within the point cloud",
+          "default": 0,
+          "minimum": 0
+        },
+        "reference_ring_number": {
+          "type": "number",
+          "description": "Reference ring number when detecting the marker. Set 255 to disable ring filtering",
+          "default": 255
         },
         "self_pose_timeout_sec": {
           "type": "number",
@@ -67,6 +105,12 @@
           "type": "number",
           "description": "Distance limit for the purpose of determining whether the node should detect a marker. [m]",
           "default": 2.0,
+          "minimum": 0.0
+        },
+        "limit_distance_from_self_pose_to_nearest_marker_y": {
+          "type": "number",
+          "description": "Y-axis distance limit for the purpose of determining whether the node should detect a marker. [m]",
+          "default": 1.0,
           "minimum": 0.0
         },
         "limit_distance_from_self_pose_to_marker": {
@@ -109,6 +153,18 @@
           "type": "string",
           "description": "",
           "default": "velodyne_top"
+        },
+        "radius_for_extracting_marker_pointcloud": {
+          "type": "number",
+          "description": "Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]",
+          "default": 0.4,
+          "minimum": 0.0
+        },
+        "queue_size_for_debug_pub_msg": {
+          "type": "number",
+          "description": "Queue size for debug publishers",
+          "default": 10,
+          "minimum": 0.0
         }
       },
       "required": [
@@ -118,9 +174,13 @@
         "positive_match_num_threshold",
         "negative_match_num_threshold",
         "vote_threshold_for_detect_marker",
+        "marker_to_vehicle_offset_y",
+        "marker_height_from_ground",
+        "reference_ring_number",
         "self_pose_timeout_sec",
         "self_pose_distance_tolerance_m",
         "limit_distance_from_self_pose_to_nearest_marker",
+        "limit_distance_from_self_pose_to_nearest_marker_y",
         "limit_distance_from_self_pose_to_marker",
         "base_covariance",
         "marker_width",
