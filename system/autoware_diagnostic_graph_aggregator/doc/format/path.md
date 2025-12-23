@@ -24,8 +24,10 @@ File paths can contain substitutions like ROS 2 launch. The supported substituti
 The `$(var <name>)` substitution allows you to use variables in the graph file.
 Variables are passed via the `graph_vars` parameter as a YAML map string.
 
+Note: In launch XML, the value must be wrapped in single quotes to prevent YAML parsing.
+
 ```xml
-<param name="graph_vars" value="{vehicle_id: vehicle1, config_dir: /path/to/config}"/>
+<arg name="graph_vars" value="'{vehicle_id: vehicle1, config_dir: /path/to/config}'"/>
 ```
 
 Then in your graph file:
