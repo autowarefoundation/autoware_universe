@@ -320,6 +320,9 @@ void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
 
   virtual_wall_publisher_ = node.create_publisher<MarkerArray>("~/" + ns + "/virtual_walls", 1);
 
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/" + ns + "/trajectory", 1);
+
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/" + ns, 1);
 }
