@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 
@@ -53,8 +53,8 @@ private:
 
   void on_vector_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
   {
-    lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map_ptr_);
+    lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
     std::vector<double> points_x;
     std::vector<double> points_y;
     std::vector<double> points_z;
