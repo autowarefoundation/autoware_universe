@@ -248,7 +248,7 @@ private:
 
   /**
    * @brief Prepare input data for inference.
-   * @return Map of input data for the model.
+   * @return FrameContext containing preprocessed data.
    */
   std::optional<FrameContext> create_frame_context();
 
