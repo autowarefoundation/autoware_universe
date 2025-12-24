@@ -42,8 +42,8 @@ TrafficLightRecognitionMarkerPublisher::TrafficLightRecognitionMarkerPublisher(
 void TrafficLightRecognitionMarkerPublisher::onMap(const LaneletMapBin::ConstSharedPtr msg_ptr)
 {
   is_map_ready_ = false;
-  lanelet::LaneletMapPtr viz_lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(*msg_ptr, viz_lanelet_map);
+  lanelet::LaneletMapPtr viz_lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg_ptr));
   lanelet::ConstLanelets lanelets = lanelet::utils::query::laneletLayer(viz_lanelet_map);
   std::vector<lanelet::AutowareTrafficLightConstPtr> tl_regulatory_elements =
     lanelet::utils::query::autowareTrafficLights(lanelets);
