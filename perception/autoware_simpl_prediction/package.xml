@@ -19,7 +19,7 @@
 
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_internal_debug_msgs</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>

@@ -29,6 +29,7 @@
 
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_pcl_extensions</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_sensing_msgs</depend>
