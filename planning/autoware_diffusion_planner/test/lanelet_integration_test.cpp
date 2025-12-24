@@ -16,7 +16,7 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -54,9 +54,16 @@ protected:
     map_bin_msg_ = autoware::test_utils::make_map_bin_msg(test_map_path, 1.0);
 
     // Convert HADMapBin to lanelet map
-    lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::utils::conversion::fromBinMsg(
-      map_bin_msg_, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+    lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(map_bin_msg_));
+
+    auto routing_graph_and_traffic_rules =
+      autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+        lanelet_map_ptr_);
+
+    routing_graph_ptr_ =
+      autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+    traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
   }
 
   void TearDown() override

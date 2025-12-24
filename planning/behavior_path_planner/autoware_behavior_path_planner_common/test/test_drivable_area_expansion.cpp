@@ -16,7 +16,8 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/drivable_area_expansion.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/path_projection.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/types.hpp"
-#include "autoware_lanelet2_extension/utility/message_conversion.hpp"
+
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -178,9 +179,9 @@ TEST(DrivableAreaExpansionProjection, expand_drivable_area)
 {
   autoware::behavior_path_planner::drivable_area_expansion::DrivableAreaExpansionParameters params;
   autoware::behavior_path_planner::drivable_area_expansion::PredictedObjects dynamic_objects;
-  autoware_map_msgs::msg::LaneletMapBin map;
   lanelet::LaneletMapPtr empty_lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::toBinMsg(empty_lanelet_map_ptr, &map);
+  autoware_map_msgs::msg::LaneletMapBin map =
+    autoware::experimental::lanelet2_utils::to_autoware_map_msgs(empty_lanelet_map_ptr);
   autoware::route_handler::RouteHandler route_handler(map);
   lanelet::ConstLanelets path_lanes = {};
   autoware::behavior_path_planner::drivable_area_expansion::PathWithLaneId path;

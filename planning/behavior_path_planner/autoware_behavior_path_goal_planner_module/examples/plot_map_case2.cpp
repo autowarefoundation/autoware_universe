@@ -24,10 +24,10 @@
 #include <autoware/behavior_path_planner_common/utils/parking_departure/utils.hpp>
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp>
 #include <autoware/behavior_path_planner_common/utils/path_utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_test_utils/mock_data_parser.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -218,9 +218,9 @@ std::shared_ptr<PlannerData> instantiate_planner_data(
     }
     return nullptr;
   }
-  autoware_map_msgs::msg::LaneletMapBin map_bin;
-  lanelet::utils::conversion::toBinMsg(
-    lanelet_map_ptr, &map_bin);  // TODO(soblin): pass lanelet_map_ptr to RouteHandler
+  autoware_map_msgs::msg::LaneletMapBin map_bin =
+    autoware::experimental::lanelet2_utils::to_autoware_map_msgs(
+      lanelet_map_ptr);  // TODO(soblin): pass lanelet_map_ptr to RouteHandler
 
   YAML::Node config = YAML::LoadFile(sample_planner_data_yaml_path);
 
