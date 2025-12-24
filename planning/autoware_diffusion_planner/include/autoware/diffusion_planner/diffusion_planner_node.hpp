@@ -222,6 +222,7 @@ private:
   /**
    * @brief Publish model predictions.
    * @param predictions Output from the model.
+   * @param frame_context Context of the current frame.
    */
   void publish_predictions(
     const std::vector<float> & predictions, const FrameContext & frame_context) const;
