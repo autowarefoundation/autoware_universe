@@ -7,6 +7,11 @@
       min_shifting_distance: 5.0
       min_shifting_speed: 5.56
       shift_request_time_limit: 1.0
-      drivable_area_check_mode: 0 # 0: no check, 1: current lane, 2: current lane + neighbor lane
-      drivable_area_margin: 0.1 # [m]
+      # Lane departure prevention mode
+      # 0: No check (allow any lateral offset)
+      # 1: Current lane only (prevent departure from current lane)
+      # 2: Current lane + same-direction neighbor lanes (allow shifting into adjacent lanes)
+      drivable_area_check_mode: 0
+      # Minimum margin [m] between vehicle edge and lane boundary
+      drivable_area_margin: 0.1
       publish_debug_marker: false
