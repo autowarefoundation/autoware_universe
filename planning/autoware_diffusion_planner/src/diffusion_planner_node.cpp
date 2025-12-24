@@ -377,7 +377,7 @@ void DiffusionPlanner::load_engine(const std::string & model_path)
 
 std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   auto objects = sub_tracked_objects_.take_data();
   auto ego_kinematic_state = sub_current_odometry_.take_data();
   auto ego_acceleration = sub_current_acceleration_.take_data();
@@ -452,7 +452,7 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 
 InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_context)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   InputDataMap input_data_map;
 
   // random sample trajectories
@@ -676,7 +676,7 @@ void DiffusionPlanner::publish_predictions(
 
 std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_map)
 {
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   auto sampled_trajectories = input_data_map["sampled_trajectories"];
   auto ego_history = input_data_map["ego_agent_past"];
   auto ego_current_state = input_data_map["ego_current_state"];
@@ -887,7 +887,7 @@ std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
 void DiffusionPlanner::on_timer()
 {
   // Timer callback function
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   diagnostics_inference_->clear();
 
