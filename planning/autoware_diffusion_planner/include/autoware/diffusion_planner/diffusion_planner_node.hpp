@@ -232,7 +232,7 @@ private:
    * @brief Run inference on input data output is stored on member output_d_.
    * @param input_data_map Input data for the model.
    */
-  std::vector<float> do_inference_trt(InputDataMap & input_data_map);
+  std::vector<float> do_inference_trt(const InputDataMap & input_data_map);
 
   /**
    * @brief Get turn indicator logit from the last inference.

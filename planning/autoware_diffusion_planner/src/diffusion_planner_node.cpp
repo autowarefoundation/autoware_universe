@@ -678,23 +678,23 @@ void DiffusionPlanner::publish_predictions(
   }
 }
 
-std::vector<float> DiffusionPlanner::do_inference_trt(InputDataMap & input_data_map)
+std::vector<float> DiffusionPlanner::do_inference_trt(const InputDataMap & input_data_map)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  auto sampled_trajectories = input_data_map["sampled_trajectories"];
-  auto ego_history = input_data_map["ego_agent_past"];
-  auto ego_current_state = input_data_map["ego_current_state"];
-  auto neighbor_agents_past = input_data_map["neighbor_agents_past"];
-  auto static_objects = input_data_map["static_objects"];
-  auto lanes = input_data_map["lanes"];
-  auto lanes_speed_limit = input_data_map["lanes_speed_limit"];
-  auto route_lanes = input_data_map["route_lanes"];
-  auto route_lanes_speed_limit = input_data_map["route_lanes_speed_limit"];
-  auto polygons = input_data_map["polygons"];
-  auto line_strings = input_data_map["line_strings"];
-  auto goal_pose = input_data_map["goal_pose"];
-  auto ego_shape = input_data_map["ego_shape"];
-  auto turn_indicators = input_data_map["turn_indicators"];
+  const auto sampled_trajectories = input_data_map.at("sampled_trajectories");
+  const auto ego_history = input_data_map.at("ego_agent_past");
+  const auto ego_current_state = input_data_map.at("ego_current_state");
+  const auto neighbor_agents_past = input_data_map.at("neighbor_agents_past");
+  const auto static_objects = input_data_map.at("static_objects");
+  const auto lanes = input_data_map.at("lanes");
+  const auto lanes_speed_limit = input_data_map.at("lanes_speed_limit");
+  const auto route_lanes = input_data_map.at("route_lanes");
+  const auto route_lanes_speed_limit = input_data_map.at("route_lanes_speed_limit");
+  const auto polygons = input_data_map.at("polygons");
+  const auto line_strings = input_data_map.at("line_strings");
+  const auto goal_pose = input_data_map.at("goal_pose");
+  const auto ego_shape = input_data_map.at("ego_shape");
+  const auto turn_indicators = input_data_map.at("turn_indicators");
 
   // Allocate bool array for lane speed limits
   // Note: Using std::vector<uint8_t> instead of std::vector<bool> to ensure contiguous memory
