@@ -20,7 +20,7 @@
 #include "autoware/simpl_prediction/conversion/tracked_object.hpp"
 #include "autoware/simpl_prediction/processing/preprocessor.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -155,8 +155,7 @@ void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
 
 void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
 {
-  auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr);
+  auto lanelet_map_ptr = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
 
   lanelet_converter_ptr_->convert(lanelet_map_ptr);
 }

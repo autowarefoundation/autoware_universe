@@ -20,7 +20,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_cv/InpaintFilter.hpp>
@@ -257,8 +257,8 @@ void ElevationMapLoaderNode::onVectorMap(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr vector_map)
 {
   RCLCPP_INFO(this->get_logger(), "Vector_map has been subscribed");
-  data_manager_.lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*vector_map, data_manager_.lanelet_map_ptr_);
+  data_manager_.lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*vector_map));
   const lanelet::ConstLanelets all_lanelets =
     lanelet::utils::query::laneletLayer(data_manager_.lanelet_map_ptr_);
   lane_filter_.road_lanelets_ = lanelet::utils::query::roadLanelets(all_lanelets);

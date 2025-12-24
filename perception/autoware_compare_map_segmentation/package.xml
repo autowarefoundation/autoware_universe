@@ -23,7 +23,7 @@
 
   <depend>ament_index_cpp</depend>
   <depend>autoware_internal_debug_msgs</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_pointcloud_preprocessor</depend>

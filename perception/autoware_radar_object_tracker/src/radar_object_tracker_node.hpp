@@ -17,7 +17,7 @@
 
 #include "autoware_radar_object_tracker/association/data_association.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>

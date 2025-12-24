@@ -50,7 +50,7 @@ ament_target_dependencies(${PROJECT_NAME}
   autoware_utils
   autoware_internal_debug_msgs
   autoware_map_msgs
-  autoware_lanelet2_extension
+  autoware_lanelet2_utils
   geometry_msgs
   lanelet2_core
   lanelet2_projection
