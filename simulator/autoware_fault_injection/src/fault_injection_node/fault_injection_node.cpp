@@ -50,11 +50,11 @@ FaultInjectionNode::FaultInjectionNode(rclcpp::NodeOptions node_options)
   rclcpp::SubscriptionOptions sub_options;
   sub_options.ignore_local_publications = true;
   sub_diagnostics_ = this->create_subscription<DiagnosticArray>(
-    "~/input/diagnostics", rclcpp::QoS{rclcpp::KeepLast(10)},
+    "~/input/diagnostics", rclcpp::SystemDefaultsQoS().keep_last(1000),
     std::bind(&FaultInjectionNode::on_diagnostics, this, _1), sub_options);
 
   pub_diagnostics_ = this->create_publisher<DiagnosticArray>(
-    "~/output/diagnostics", rclcpp::QoS{rclcpp::KeepLast(10)});
+    "~/output/diagnostics", rclcpp::SystemDefaultsQoS().keep_last(1000));
 
   // Load all config
   for (const auto & diag : read_event_diag_list()) {
