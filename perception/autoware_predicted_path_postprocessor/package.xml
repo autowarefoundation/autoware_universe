@@ -14,7 +14,7 @@
 
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_interpolation</depend>
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_utils_debug</depend>
