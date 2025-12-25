@@ -23,6 +23,9 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_blackboard_publisher.hpp>
+#include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -39,14 +42,18 @@ class LIDAR_FRNET_PUBLIC LidarFRNetNode : public rclcpp::Node
 public:
   explicit LidarFRNetNode(const rclcpp::NodeOptions & options);
 
-  void cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
+  void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 private:
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_in_sub_{nullptr};
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_seg_pub_{nullptr};
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_viz_pub_{nullptr};
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_filtered_pub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    cloud_in_sub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    cloud_seg_pub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    cloud_viz_pub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+    cloud_filtered_pub_{nullptr};
 
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
@@ -55,9 +62,12 @@ private:
   std::unique_ptr<LidarFRNet> frnet_{nullptr};
   std::unique_ptr<diagnostic_updater::Updater> diag_updater_{nullptr};
 
-  const ros_utils::PointCloudLayout cloud_seg_layout_;
-  const ros_utils::PointCloudLayout cloud_viz_layout_;
-  const ros_utils::PointCloudLayout cloud_filtered_layout_;
+  const ros_utils::PointCloudLayout cloud_seg_layout_{
+    ros_utils::generateSegmentationPointCloudLayout()};
+  const ros_utils::PointCloudLayout cloud_viz_layout_{
+    ros_utils::generateVisualizationPointCloudLayout()};
+  const ros_utils::PointCloudLayout cloud_filtered_layout_{
+    ros_utils::generateFilteredPointCloudLayout()};
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;
