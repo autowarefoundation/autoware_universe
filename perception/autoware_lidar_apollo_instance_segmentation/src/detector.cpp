@@ -17,9 +17,12 @@
 #include "autoware/lidar_apollo_instance_segmentation/feature_map.hpp"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 #include <NvInfer.h>
-#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/PointIndices.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include <functional>
 #include <memory>
@@ -83,7 +86,6 @@ bool LidarApolloInstanceSegmentation::transformCloud(
   const sensor_msgs::msg::PointCloud2 & input, sensor_msgs::msg::PointCloud2 & transformed_cloud,
   float z_offset)
 {
-  // TODO(mitsudome-r): remove conversion once pcl_ros transform are available.
   // transform pointcloud to target_frame
   if (target_frame_ != input.header.frame_id) {
     try {
@@ -119,7 +121,6 @@ bool LidarApolloInstanceSegmentation::detectDynamicObjects(
 
   // convert from ros to pcl
   pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_pointcloud_raw_ptr(new pcl::PointCloud<pcl::PointXYZI>);
-  // pcl::fromROSMsg(transformed_cloud, *pcl_pointcloud_raw_ptr);
 
   auto & pcl_pointcloud_raw = *pcl_pointcloud_raw_ptr;
   pcl_pointcloud_raw.width = transformed_cloud.width;
