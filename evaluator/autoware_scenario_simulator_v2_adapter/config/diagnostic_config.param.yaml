@@ -6,7 +6,7 @@
         aggregation_list:
           # - /diagnostics/scenario_simulator_v2_adapter/aeb_diagnostics
           - /diagnostics/scenario_simulator_v2_adapter/planning_validator_diagnostics
-          - /diagnostics/scenario_simulator_v2_adapter/collision_ditector_diagnostics
+          - /diagnostics/scenario_simulator_v2_adapter/collision_detector_diagnostics
           - /diagnostics/scenario_simulator_v2_adapter/control_validator_diagnostics
           - /diagnostics/scenario_simulator_v2_adapter/topic_state_monitor_diagnostics
           # - /diagnostics/scenario_simulator_v2_adapter/path_optimizer_diagnostics
@@ -35,8 +35,8 @@
           # - /diagnostics/planning_validator/trajectory_validation_deceleration
           # - /diagnostics/planning_validator/trajectory_validation_longitudinal_distance_deviation
 
-      collision_ditector_diagnostics:
-        output_topic_name: /diagnostics/scenario_simulator_v2_adapter/collision_ditector_diagnostics
+      collision_detector_diagnostics:
+        output_topic_name: /diagnostics/scenario_simulator_v2_adapter/collision_detector_diagnostics
         aggregation_list:
           - /diagnostics/collision_detector/collision_detect
 
