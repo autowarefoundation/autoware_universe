@@ -49,7 +49,6 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   only_allow_inside_cluster_ = declare_parameter<bool>("only_allow_inside_cluster");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
   iou_threshold_ = declare_parameter<double>("iou_threshold");
-  unknown_iou_threshold_ = declare_parameter<double>("unknown_iou_threshold");
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
   strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
