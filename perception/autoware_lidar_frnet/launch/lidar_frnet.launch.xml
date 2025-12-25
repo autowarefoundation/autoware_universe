@@ -37,8 +37,11 @@
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
       <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/pointcloud/segmentation" to="$(var output/pointcloud/segmentation)"/>
+      <remap from="~/output/pointcloud/segmentation/cuda" to="$(var output/pointcloud/segmentation)/cuda"/>
       <remap from="~/output/pointcloud/visualization" to="$(var output/pointcloud/visualization)"/>
+      <remap from="~/output/pointcloud/visualization/cuda" to="$(var output/pointcloud/visualization)/cuda"/>
       <remap from="~/output/pointcloud/filtered" to="$(var output/pointcloud/filtered)"/>
+      <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)"/>
       <param from="$(var diagnostics_param_path)"/>
