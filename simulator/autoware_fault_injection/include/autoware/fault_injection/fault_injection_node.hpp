@@ -17,9 +17,9 @@
 
 #include "autoware/fault_injection/diagnostic_storage.hpp"
 
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <tier4_simulation_msgs/msg/simulation_events.hpp>
 
 #include <cstdint>
@@ -30,8 +30,8 @@
 
 namespace autoware::simulator::fault_injection
 {
-using tier4_simulation_msgs::msg::SimulationEvents;
 using diagnostic_msgs::msg::DiagnosticArray;
+using tier4_simulation_msgs::msg::SimulationEvents;
 
 class FaultInjectionNode : public rclcpp::Node
 {
