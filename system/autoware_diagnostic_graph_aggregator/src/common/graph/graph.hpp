@@ -28,12 +28,16 @@
 
 namespace autoware::diagnostic_graph_aggregator
 {
+using VariablesMap = std::unordered_map<std::string, std::string>;
 
 class Graph
 {
 public:
   explicit Graph(const std::string & path);
   Graph(const std::string & path, const std::string & id, std::shared_ptr<Logger> logger);
+  Graph(
+    const std::string & path, const std::string & id, std::shared_ptr<Logger> logger,
+    std::shared_ptr<VariablesMap> variables);
   ~Graph();
   void update(const rclcpp::Time & stamp);
   bool update(const rclcpp::Time & stamp, const DiagnosticArray & array);

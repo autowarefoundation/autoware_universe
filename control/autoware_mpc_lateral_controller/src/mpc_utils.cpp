@@ -174,7 +174,7 @@ bool linearInterpMPCTrajectory(
     out_traj.x = lerp_arc_length(in_traj.x);
     out_traj.y = lerp_arc_length(in_traj.y);
     out_traj.z = lerp_arc_length(in_traj.z);
-    out_traj.yaw = lerp_arc_length(in_traj.yaw);
+    out_traj.yaw = lerp_arc_length(in_traj_yaw);
     out_traj.vx = lerp_arc_length(in_traj.vx);
     out_traj.k = lerp_arc_length(in_traj.k);
     out_traj.smooth_k = lerp_arc_length(in_traj.smooth_k);
