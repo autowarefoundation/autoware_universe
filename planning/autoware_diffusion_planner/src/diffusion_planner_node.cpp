@@ -406,14 +406,10 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
     return std::nullopt;
   }
 
-  const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
-  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map;
-  preprocess::process_traffic_signals(
-    traffic_signals, traffic_light_id_map, this->now(), traffic_light_msg_timeout_s);
   if (traffic_signals.empty()) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-      "no traffic signal received. traffic light info will not be updated/used");
+      "no traffic signal received. traffic light info will not be updated");
   }
 
   // Get transforms
@@ -440,14 +436,17 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
   } else {
     agent_data_->update_histories(*objects, params_.ignore_unknown_neighbors);
   }
-
   auto ego_centric_neighbor_agent_data = agent_data_.value();
   ego_centric_neighbor_agent_data.apply_transform(map_to_ego_transform);
   ego_centric_neighbor_agent_data.trim_to_k_closest_agents();
 
+  // Update traffic light map
+  const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
+  preprocess::process_traffic_signals(
+    traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s);
+
   const FrameContext frame_context{
-    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, ego_centric_neighbor_agent_data,
-    traffic_light_id_map};
+    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, ego_centric_neighbor_agent_data};
 
   return frame_context;
 }
@@ -507,8 +506,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     const std::vector<int64_t> segment_indices = lane_segment_context_->select_lane_segment_indices(
       map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
     const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
-      map_to_ego_transform, frame_context.traffic_light_id_map, segment_indices,
-      NUM_SEGMENTS_IN_LANE);
+      map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
     input_data_map["lanes"] = replicate_for_batch(lanes);
     input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
   }
@@ -520,8 +518,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
         *route_ptr_, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
-        map_to_ego_transform, frame_context.traffic_light_id_map, segment_indices,
-        NUM_SEGMENTS_IN_ROUTE);
+        map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
     input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
   }
