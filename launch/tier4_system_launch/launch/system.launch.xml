@@ -129,7 +129,7 @@
 
     <!-- Diagnostic Graph Aggregator -->
     <group if="$(var launch_fault_injection)">
-        <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
+      <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
         <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
         <arg name="~/diagnostics" value="$(var fault_injection_output_diagnostics)"/>
