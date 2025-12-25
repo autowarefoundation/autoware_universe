@@ -166,8 +166,10 @@ void RoiClusterFusionNode::fuse_on_single_image(
     int index = -1;
     bool associated = false;
     double max_iou = 0.0;
-    const bool is_roi_label_known =
-      feature_obj.object.classification.front().label != ObjectClassification::UNKNOWN;
+    const auto obj_label = feature_obj.object.classification.front().label;
+    const float obj_class_iou_threshold = ObjClassIoUThresh::get_class_iou_thresh(obj_label);
+
+    const bool is_roi_label_known = obj_label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
       bool use_rough_iou_match = is_far_enough(
@@ -199,9 +201,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
       auto & fused_object = output_cluster_msg.feature_objects.at(index).object;
       const bool is_roi_existence_prob_higher =
         fused_object.existence_probability <= feature_obj.object.existence_probability;
-      const bool is_roi_iou_over_threshold =
-        (is_roi_label_known && iou_threshold_ < max_iou) ||
-        (!is_roi_label_known && unknown_iou_threshold_ < max_iou);
+      const bool is_roi_iou_over_threshold = obj_class_iou_threshold < max_iou;
 
       if (is_roi_iou_over_threshold && is_roi_existence_prob_higher) {
         fused_object.classification = feature_obj.object.classification;
