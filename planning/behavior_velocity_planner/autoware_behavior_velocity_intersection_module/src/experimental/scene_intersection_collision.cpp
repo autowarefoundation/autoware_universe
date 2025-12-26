@@ -275,7 +275,8 @@ void IntersectionModule::updateObjectInfoManagerCollision(
         continue;
       }
       cutPredictPathWithinDuration(
-        planner_data.predicted_objects->header.stamp, passing_time, &predicted_path);
+        planner_data.predicted_objects->header.stamp, passing_time + collision_start_margin_time,
+        &predicted_path);
       if (predicted_path.path.size() < 2) {
         continue;
       }
