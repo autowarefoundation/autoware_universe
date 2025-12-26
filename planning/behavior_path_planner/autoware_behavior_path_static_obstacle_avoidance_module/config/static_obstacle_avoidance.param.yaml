@@ -276,6 +276,7 @@
       yield:
         enable: true                                    # [-]
         enable_during_shifting: false                   # [-]
+        enable_signalling_during_yield: false           # [-]
 
       # For stop maneuver
       stop:
