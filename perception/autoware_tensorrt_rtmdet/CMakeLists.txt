@@ -31,60 +31,60 @@ endif()
 
 # tensorrt_rtmdet
 ament_auto_add_library(${PROJECT_NAME} SHARED
-        src/tensorrt_rtmdet.cpp
+  src/tensorrt_rtmdet.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
-        OpenCV
+  OpenCV
 )
 
 if(CMAKE_CUDA_COMPILER)
   # preprocess
   cuda_add_library(${PROJECT_NAME}_gpu_preprocess
-          SHARED
-          src/preprocess.cu
+    SHARED
+    src/preprocess.cu
   )
 
   target_include_directories(${PROJECT_NAME}_gpu_preprocess PUBLIC
-          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-          $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   )
 
   target_link_libraries(${PROJECT_NAME}
-          ${autoware_tensorrt_common_LIBRARIES}
-          ${PROJECT_NAME}_gpu_preprocess
+    ${autoware_tensorrt_common_LIBRARIES}
+    ${PROJECT_NAME}_gpu_preprocess
   )
 
 else()
   target_link_libraries(${PROJECT_NAME}
-          ${autoware_tensorrt_common_LIBRARIES}
+    ${autoware_tensorrt_common_LIBRARIES}
   )
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-        TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
+  TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
 )
 
 # tensorrt_rtmdet_node
 ament_auto_add_library(${PROJECT_NAME}_node SHARED
-        src/tensorrt_rtmdet_node.cpp
+  src/tensorrt_rtmdet_node.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}_node
-        OpenCV
+  OpenCV
 )
 
 target_link_libraries(${PROJECT_NAME}_node
-        ${PROJECT_NAME}
+  ${PROJECT_NAME}
 )
 
 target_compile_definitions(${PROJECT_NAME}_node PRIVATE
-        TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
+  TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}_node
-        PLUGIN "autoware::tensorrt_rtmdet::TrtRTMDetNode"
-        EXECUTABLE ${PROJECT_NAME}_node_exe
+  PLUGIN "autoware::tensorrt_rtmdet::TrtRTMDetNode"
+  EXECUTABLE ${PROJECT_NAME}_node_exe
 )
 
 if(BUILD_TESTING)
@@ -99,7 +99,7 @@ if(BUILD_TESTING)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
-        launch
-        config
-        test/data
+  launch
+  config
+  test/data
 )
