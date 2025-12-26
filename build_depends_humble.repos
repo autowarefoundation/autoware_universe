@@ -72,3 +72,7 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
     version: bevdet_vendor-ros2
+  universe/external/trt_batched_nms:
+    type: git
+    url: https://github.com/autowarefoundation/trt_batched_nms.git
+    version: main
