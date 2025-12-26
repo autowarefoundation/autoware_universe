@@ -665,4 +665,4 @@ The intersections lanelet map consist of a variety of intersections including:
 - intersection with a loop
 - complicated intersection
 
-![intersection_test](./docs/intersection_test_map.png)
+![intersection_test](https://github.com/autowarefoundation/autoware_core/blob/main/testing/autoware_test_utils/images/intersection_test_map.png)

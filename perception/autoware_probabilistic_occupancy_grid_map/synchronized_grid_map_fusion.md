@@ -4,12 +4,6 @@
 
 This package is used to fuse the OGMs from synchronized sensors. Especially for the lidar.
 
-Here shows the example OGM for the this synchronized OGM fusion.
-
-| left lidar OGM                    | right lidar OGM                     | top lidar OGM                   |
-| --------------------------------- | ----------------------------------- | ------------------------------- |
-| ![left](image/left_lidar_ogm.png) | ![right](image/right_lidar_ogm.png) | ![top](image/top_lidar_ogm.png) |
-
 OGM fusion with asynchronous sensor outputs is not suitable for this package. Asynchronous OGM fusion is under construction.
 
 ## Processing flow
@@ -136,31 +130,16 @@ Also, remember to set `enable_single_frame_mode` and `filter_obstacle_pointcloud
 
 ### Run both OGM generation node and fusion node
 
-We prepared the launch file to run both OGM generation node and fusion node in [`grid_map_fusion_with_synchronized_pointclouds.launch.py`](launch/grid_map_fusion_with_synchronized_pointclouds.launch.py)
+We prepared the launch file to run both OGM generation node and fusion node in [`synchronized_occupancy_grid_map_fusion.launch.xml`](launch/synchronized_occupancy_grid_map_fusion.launch.xml)
 
 You can include this launch file like the following.
 
 ```xml
-<include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/grid_map_fusion_with_synchronized_pointclouds.launch.py">
-  <arg name="output" value="/perception/occupancy_grid_map/fusion/map"/>
-  <arg name="use_intra_process" value="true"/>
-  <arg name="use_multithread" value="true"/>
-  <arg name="use_pointcloud_container" value="$(var use_pointcloud_container)"/>
-  <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
-  <arg name="method" value="pointcloud_based_occupancy_grid_map"/>
-  <arg name="fusion_config_file" value="$(var fusion_config_file)"/>
-  <arg name="ogm_config_file" value="$(var ogm_config_file)"/>
+<include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/synchronized_occupancy_grid_map_fusion.launch.xml">
+  <arg name="output_topic" value="~/output/occupancy_grid_map"/>
+  <arg name="fusion_node_param_path" value="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"/>
 </include>
 ```
-
-The minimum parameter for the launch file is shown in the following table.
-
-| Parameter            | Description                                                                                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `output`             | The output topic of the finally fused OGM.                                                                                                                                           |
-| `method`             | The method for the OGM generation. Currently we support `pointcloud_based_occupancy_grid_map` and `laser_scan_based_occupancy_grid_map`. The pointcloud based method is recommended. |
-| `fusion_config_file` | The parameter file for the grid map fusion. See [example parameter file](config/grid_map_fusion.param.yaml)                                                                          |
-| `ogm_config_file`    | The parameter file for the OGM generation. See [example parameter file](config/pointcloud_based_occupancy_grid_map_for_fusion.param.yaml)                                            |
 
 ## References
 
