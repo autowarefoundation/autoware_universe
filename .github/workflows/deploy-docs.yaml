@@ -23,18 +23,18 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  prevent-no-label-execution:
-    uses: autowarefoundation/autoware-github-actions/.github/workflows/prevent-no-label-execution.yaml@v1
+  make-sure-label-is-present:
+    uses: autowarefoundation/autoware-github-actions/.github/workflows/make-sure-label-is-present.yaml@v1
     with:
       label: run:deploy-docs
 
   deploy-docs:
-    needs: prevent-no-label-execution
-    if: ${{ needs.prevent-no-label-execution.outputs.run == 'true' }}
+    needs: make-sure-label-is-present
+    if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
