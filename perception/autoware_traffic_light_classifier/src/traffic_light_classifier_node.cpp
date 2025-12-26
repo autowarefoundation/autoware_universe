@@ -175,11 +175,13 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
   // publish diagnostics
   diagnostics_interface_ptr_->clear();
   bool detect_out_of_range_brightness = exposure_out_of_range_indices.size() != 0;
-  diagnostics_interface_ptr_->add_key_value("detect_out_of_range_exposure", detect_out_of_range_brightness);
+  diagnostics_interface_ptr_->add_key_value(
+    "detect_out_of_range_exposure", detect_out_of_range_brightness);
   if (detect_out_of_range_brightness) {
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "Detected out-of-range exposure in ROI(s). Corresponding ROI(s) were overwritten with UNKNOWN.");
+      "Detected out-of-range exposure in ROI(s). Corresponding ROI(s) were overwritten with "
+      "UNKNOWN.");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
 }
