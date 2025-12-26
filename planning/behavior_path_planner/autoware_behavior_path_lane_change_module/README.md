@@ -998,7 +998,7 @@ Once the lane change path is approved, there are several situations where we may
 
 1. The ego vehicle is near a traffic light, crosswalk, or intersection, and it is possible to complete the lane change after the ego vehicle passes these areas.
 2. The target object list is updated, requiring us to [delay lane change](#delay-lane-change-check)
-3. The lane change is forcefully canceled via [RTC](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/features/cooperation/).
+3. The lane change is forcefully canceled via [RTC](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/features/cooperation/).
 4. The path has become unsafe. (see [Checking Approved Path Safety](#checking-approved-path-safety))
 
 Furthermore, if the path has become unsafe, there are three possible outcomes for the maneuver:

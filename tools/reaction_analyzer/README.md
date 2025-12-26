@@ -8,7 +8,7 @@ evaluating the performance of perception, planning, and control pipelines in res
 environment, such as sudden obstacles. To be able to measure both control outputs and perception outputs, it was
 necessary to divide the node into two running_mode: `planning_control` and `perception_planning`.
 
-![ReactionAnalyzerDesign.png](media%2FReactionAnalyzerDesign.png)
+![ReactionAnalyzerDesign.png](media/ReactionAnalyzerDesign.png)
 
 ### Planning Control Mode
 
@@ -36,7 +36,7 @@ To get better analyze for Perception & Sensing pipeline, the reaction analyzer c
 different ways: `async_header_sync_publish`, `sync_header_sync_publish` or `async_publish`. (`T` is the period of the
 lidar's output)
 
-![PointcloudPublisherType.png](media%2FPointcloudPublisherType.png)
+![PointcloudPublisherType.png](media/PointcloudPublisherType.png)
 
 - `async_header_sync_publish`: It publishes the point cloud messages synchronously with asynchronous header times. It
   means that each of the lidar's output will be published at the same time, but the headers of the point cloud messages
@@ -81,7 +81,7 @@ start to test. After the test is completed, the results will be stored in the `o
 #### Perception Planning Mode
 
 - Download the rosbag files from the Google Drive
-  link [here](https://drive.google.com/drive/folders/1eJMEdt4WbU-W6MPXlNTkIhZtwpof0HcO?usp=sharing).
+  link <❌ link is no longer available.>.
 - Extract the zip file and set the path of the `.db3` files to parameters `path_bag_without_object`
   and `path_bag_with_object`.
 - You can start to test with the following command:
@@ -98,12 +98,12 @@ to test. After the test is completed, the results will be stored in the `output_
 #### Prepared Test Environment
 
 **Scene without object:**
-![sc1-awsim.png](media%2Fsc1-awsim.png)
-![sc1-rviz.png](media%2Fsc1-rviz.png)
+![sc1-awsim.png](media/sc1-awsim.png)
+![sc1-rviz.png](media/sc1-rviz.png)
 
 **Scene object:**
-![sc2-awsim.png](media%2Fsc2-awsim.png)
-![sc2-rviz.png](media%2Fsc2-rviz.png)
+![sc2-awsim.png](media/sc2-awsim.png)
+![sc2-rviz.png](media/sc2-rviz.png)
 
 ### Custom Test Environment
 
@@ -114,7 +114,7 @@ for `perception_planning` mode) parameters.**
 
 - To set `initialization_pose`, `entity_params`, `goal_pose`:
 - Run the AWSIM environment. Tutorial for AWSIM can be found
-  [here](https://autowarefoundation.github.io/AWSIM/main/GettingStarted/QuickStartDemo/).
+  [here](https://tier4.github.io/AWSIM/GettingStarted/QuickStartDemo/).
 - Run the e2e_simulator with the following command:
 
 ```bash
