@@ -3,6 +3,10 @@ project(autoware_path_optimizer)
 
 include(CheckCXXCompilerFlag)
 
+# Run MPT generator script at configure time is removed because it depends on acados_template
+# which is only available at build time when building acados from source.
+# Generation is now handled by add_custom_command in src/acados_mpc/CMakeLists.txt.
+
 # NOTE: With the following option, when the compile-time and runtime CPU
 #       architectures are different, the node will die.
 # For Eigen vectorization.
@@ -34,10 +38,24 @@ ament_auto_add_library(autoware_path_optimizer SHARED
   src/utils/geometry_utils.cpp
 )
 
+# Add acados_mpc subdir first to set up acados paths
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc)
+
 target_include_directories(autoware_path_optimizer
   SYSTEM PUBLIC
     ${EIGEN3_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados_c>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/blasfeo/include>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/hpipm/include>
 )
+
+# Link against acados helper library which depends on generated code
+target_link_libraries(autoware_path_optimizer acados_interface acados_generated_code)
+
+# Ensure package library depends on generated acados code, generator target, and acados itself
+add_dependencies(autoware_path_optimizer acados_generated_code generate_mpt ${ACADOS_TARGET})
 
 # register node
 rclcpp_components_register_node(autoware_path_optimizer
@@ -54,6 +72,9 @@ if(BUILD_TESTING)
   )
 endif()
 
+# Export acados libraries for downstream packages
+ament_export_targets(export_acados_libs HAS_LIBRARY_TARGET)
+
 ament_auto_package(
   INSTALL_TO_SHARE
     launch
@@ -64,4 +85,21 @@ ament_auto_package(
 install(PROGRAMS
   scripts/calculation_time_plotter.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install acados_interface library and headers for downstream packages
+install(TARGETS acados_interface acados_generated_code
+  EXPORT export_acados_libs
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(FILES src/acados_mpc/include/acados_interface.hpp
+  DESTINATION include
+)
+
+install(DIRECTORY src/acados_mpc/c_generated_code/
+  DESTINATION include/c_generated_code
+  FILES_MATCHING PATTERN "*.h"
 )

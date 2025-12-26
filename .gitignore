@@ -11,6 +11,10 @@ build/
 install/
 log/
 
+# acados
+planning/autoware_path_optimizer/src/acados_mpc/acados_ocp.json
+planning/autoware_path_optimizer/src/acados_mpc/c_generated_code/
+
 # Python
 *.pyc
 
