@@ -3,6 +3,7 @@
   <arg name="param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/default.param.yaml"/>
   <arg name="graph_file"/>
   <arg name="graph_vars" default=""/>
+  <arg name="~/diagnostics" default="/diagnostics"/>
   <arg name="~/struct" default="/diagnostics_graph/struct"/>
   <arg name="~/status" default="/diagnostics_graph/status"/>
   <arg name="~/unknowns" default="/diagnostics_graph/unknowns"/>
@@ -13,6 +14,7 @@
     <param from="$(var param_file)"/>
     <param name="graph_file" value="$(var graph_file)"/>
     <param name="graph_vars" value="$(var graph_vars)"/>
+    <remap from="~/diagnostics" to="$(var ~/diagnostics)"/>
     <remap from="~/struct" to="$(var ~/struct)"/>
     <remap from="~/status" to="$(var ~/status)"/>
     <remap from="~/unknowns" to="$(var ~/unknowns)"/>
