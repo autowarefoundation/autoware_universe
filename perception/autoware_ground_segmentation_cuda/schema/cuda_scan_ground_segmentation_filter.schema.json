@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cuda Scan Ground Segmentation Filter Node Params",
+  "type": "object",
+  "definitions": {
+    "cuda_scan_ground_segmentation_filter": {
+      "type": "object",
+      "properties": {
+        "global_slope_max_angle_deg": {
+          "type": "number",
+          "description": "Maximum global ground slope angle [deg]. Larger values reduce false negatives on steep roads but can increase false positives (classifying objects as ground).",
+          "default": 10.0
+        },
+        "local_slope_max_angle_deg": {
+          "type": "number",
+          "description": "Maximum local slope angle [deg] between adjacent points (used for fine discrimination of small objects or ramps).",
+          "default": 13.0
+        },
+        "non_ground_height_threshold": {
+          "type": "number",
+          "description": "Absolute vertical distance threshold [m] above estimated ground line to classify a point as non-ground.",
+          "default": 0.2
+        },
+        "grid_size_m": {
+          "type": "number",
+          "description": "Radial cell size in polar grid [m]; larger values smooth ground estimation but may miss small objects.",
+          "default": 0.1
+        },
+        "gnd_cell_buffer_size": {
+          "type": "integer",
+          "description": "Number of previous ground cells used to estimate local ground slope.",
+          "default": 4
+        },
+        "detection_range_z_max": {
+          "type": "number",
+          "description": "Maximum Z height (above base_link) considered in classification [m].",
+          "default": 2.5
+        },
+        "center_pcl_shift": {
+          "type": "number",
+          "description": "X-axis offset [m] applied to additional LiDAR point clouds relative to vehicle reference (positive forward).",
+          "default": 0.0
+        },
+        "sector_angle_deg": {
+          "type": "number",
+          "description": "Angular width of each polar sector [deg].",
+          "default": 1.0
+        },
+        "use_recheck_ground_cluster": {
+          "type": "boolean",
+          "description": "Enable secondary pass to re-evaluate ground clusters (may reduce false ground on elevated points).",
+          "default": true
+        },
+        "recheck_start_distance": {
+          "type": "number",
+          "description": "Minimum radial distance [m] at which ground cluster recheck logic begins.",
+          "default": 20.0,
+          "minimum": 0.0
+        },
+        "use_lowest_point": {
+          "type": "boolean",
+          "description": "Use lowest point in cell as reference during ground recheck (otherwise median-like selection).",
+          "default": true
+        },
+        "min_x": {
+          "type": "number",
+          "description": "Minimum X range relative to base_link [m] included in processing.",
+          "default": -100.0
+        },
+        "max_x": {
+          "type": "number",
+          "description": "Maximum X (forward) range relative to base_link [m] included in processing.",
+          "default": 150.0
+        },
+        "min_y": {
+          "type": "number",
+          "description": "Minimum Y range relative to base_link [m] included in processing.",
+          "default": -70.0
+        },
+        "max_y": {
+          "type": "number",
+          "description": "Maximum Y range relative to base_link [m] included in processing.",
+          "default": 70.0
+        },
+        "min_z": {
+          "type": "number",
+          "description": "Minimum Z range relative to base_link [m] included in processing.",
+          "default": -2.5
+        },
+        "max_z": {
+          "type": "number",
+          "description": "Maximum Z range relative to base_link [m] included in processing.",
+          "default": 2.5
+        }
+      },
+      "required": [
+        "global_slope_max_angle_deg",
+        "local_slope_max_angle_deg",
+        "non_ground_height_threshold",
+        "grid_size_m",
+        "detection_range_z_max",
+        "use_recheck_ground_cluster",
+        "recheck_start_distance",
+        "use_lowest_point",
+        "center_pcl_shift",
+        "sector_angle_deg",
+        "gnd_cell_buffer_size"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/cuda_scan_ground_segmentation_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
