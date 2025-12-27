@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Speed Scale Corrector Module",
+  "type": "object",
+  "definitions": {
+    "speed_scale_corrector": {
+      "type": "object",
+      "properties": {
+        "time_window": {
+          "type": "number",
+          "description": "Time window for data collection and analysis in seconds. Must be sufficient for reliable estimation. Unit is **[s]**.",
+          "minimum": 0.0,
+          "default": 4.0
+        },
+        "time_interval": {
+          "type": "number",
+          "description": "Time interval for uniform sampling within the time window in seconds. Unit is **[s]**.",
+          "minimum": 0.0,
+          "default": 0.1
+        },
+        "initial_speed_scale_factor": {
+          "type": "number",
+          "description": "Initial speed scale factor value used before estimation begins. Typically set to 1.0 for no initial correction.",
+          "minimum": 0.0,
+          "default": 1.0
+        },
+        "max_angular_velocity": {
+          "type": "number",
+          "description": "Maximum allowed angular velocity in rad/s. States exceeding this value are filtered out to avoid estimation during sharp turns. Unit is **[rad/s]**.",
+          "minimum": 0.0,
+          "default": 1.0
+        },
+        "max_speed": {
+          "type": "number",
+          "description": "Maximum allowed vehicle speed in m/s. States exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is **[m/s]**.",
+          "minimum": 0.0,
+          "default": 15.0
+        },
+        "min_speed": {
+          "type": "number",
+          "description": "Minimum required vehicle speed in m/s. States below this value are filtered out to ensure sufficient motion for accurate differentiation. Unit is **[m/s]**.",
+          "minimum": 0.0,
+          "default": 2.0
+        },
+        "max_speed_change": {
+          "type": "number",
+          "description": "Maximum allowed speed change in m/s^2. States exceeding this value are filtered out to avoid periods of rapid acceleration/deceleration where tire slip may occur. Unit is **[m/s^2]**.",
+          "minimum": 0.0,
+          "default": 1.0
+        }
+      },
+      "required": [
+        "time_window",
+        "time_interval",
+        "initial_speed_scale_factor",
+        "max_angular_velocity",
+        "max_speed",
+        "min_speed",
+        "max_speed_change"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "speed_scale_corrector": {
+              "type": "object",
+              "$ref": "#/definitions/speed_scale_corrector"
+            }
+          },
+          "required": ["speed_scale_corrector"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
