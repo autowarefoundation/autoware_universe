@@ -645,6 +645,10 @@ bool TrajectoryChecker::check_trajectory_shift()
     return is_valid;
   }
 
+  const auto ego_speed = std::abs(data->current_kinematics->twist.twist.linear.x);
+  if (ego_speed < 1.0 / 3.6) {
+    return true;  // Ego is almost stopped.
+  }
   auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
   const auto & prev_trajectory = *data->last_valid_trajectory;
