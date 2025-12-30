@@ -2,6 +2,9 @@
 Changelog for package autoware_glog_component
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.48.0 (2025-11-18)
 -------------------
 

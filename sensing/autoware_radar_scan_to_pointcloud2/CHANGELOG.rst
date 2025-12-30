@@ -2,6 +2,9 @@
 Changelog for package autoware_radar_scan_to_pointcloud2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.48.0 (2025-11-18)
 -------------------
 
