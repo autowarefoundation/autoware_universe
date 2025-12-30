@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
+#include "autoware/predicted_path_postprocessor/processor/refine_penetration_by_static_objects.hpp"
 
+#include "autoware/predicted_path_postprocessor/processor/collision.hpp"
 #include "autoware/predicted_path_postprocessor/processor/result.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
-#include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::predicted_path_postprocessor::processor
 {
-RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name)
+RefinePenetrationByStaticObjects::RefinePenetrationByStaticObjects(
+  rclcpp::Node * node_ptr, const std::string & processor_name)
 : ProcessorInterface(processor_name)
 {
   speed_threshold_ = node_ptr->declare_parameter<double>(processor_name + ".speed_threshold");
@@ -37,17 +37,21 @@ RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & proces
   interpolator_ = to_interpolator(std::move(interpolation));
 }
 
-RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Context &)
+RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::check_context(
+  const Context & context) const noexcept
+{
+  if (!context.as_objects()) {
+    return make_err<error_type>(name() + ": Context does not contain objects");
+  }
+  return make_ok<error_type>();
+}
+
+RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::process(
+  target_type & target, const Context & context)
 {
   const auto speed = std::abs(target.kinematics.initial_twist_with_covariance.twist.linear.x);
-  // skip if the speed is higher than the threshold
-  if (speed > speed_threshold_) {
-    return make_ok<error_type>();
-  }
 
-  // Refine the predicted path based on the current speed
   for (auto & mode : target.kinematics.predicted_paths) {
-    // Refine the path based on the current speed
     const auto delta_t = rclcpp::Duration(mode.time_step).seconds();
 
     if (delta_t <= 0.0) {
@@ -61,6 +65,13 @@ RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Co
       continue;
     }
 
+    const auto collision =
+      find_collision(mode, target.object_id, context.as_objects()->objects, speed_threshold_);
+    if (!collision) {
+      continue;
+    }
+
+    // TODO(ktro2828): refactor interpolation
     // containers of values and keys
     constexpr double epsilon = 1e-6;
     std::vector<double> base_xs({waypoints[0].position.x});
@@ -69,7 +80,6 @@ RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Co
     std::vector<double> base_keys({0.0});
     std::vector<double> query_keys({0.0});
     for (size_t i = 1; i < num_waypoints; ++i) {
-      // push values only if the distance is greater than epsilon to ensure monotonically increasing
       const auto distance =
         autoware_utils_geometry::calc_distance2d(waypoints[i - 1], waypoints[i]);
       if (distance > epsilon) {
@@ -81,13 +91,14 @@ RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Co
       query_keys.push_back(query_keys.back() + speed * delta_t);
     }
 
-    const auto s_max = base_keys.back();
+    auto s_max = base_keys.back();
     // skip if the path is too short
-    if (s_max <= 1e-6 || base_keys.size() < 2) {
+    if (s_max < epsilon || base_keys.size() < 2) {
       continue;
     }
 
-    // clip values from 0.0 to s_max
+    s_max = std::clamp(collision->distance, 0.0, s_max);
+
     std::transform(
       query_keys.begin(), query_keys.end(), query_keys.begin(),
       [s_max](const auto & s) { return std::clamp(s, 0.0, s_max); });
@@ -106,6 +117,7 @@ RefineBySpeed::result_type RefineBySpeed::process(target_type & target, const Co
       waypoints[i].orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
     }
   }
+
   return make_ok<error_type>();
 }
 }  // namespace autoware::predicted_path_postprocessor::processor
