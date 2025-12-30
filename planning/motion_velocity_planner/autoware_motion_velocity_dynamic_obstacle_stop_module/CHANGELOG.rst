@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_dynamic_obstacle_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
   * delete bdp time publish

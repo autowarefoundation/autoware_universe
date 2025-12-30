@@ -2,8 +2,8 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(multi_object_tracker): improve shape unstable object tracking (`#10864 <https://github.com/autowarefoundation/autoware_universe/issues/10864>`_)
   * refactor: rebase to latest version and solve conflict

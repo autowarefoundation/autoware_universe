@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_vad
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * chore: align version number
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor: migrate autoware_tensorrt_vad to e2e directory (`#11730 <https://github.com/autowarefoundation/autoware_universe/issues/11730>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_freespace_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(freespace_planner): build testing failure (`#11759 <https://github.com/autowarefoundation/autoware_universe/issues/11759>`_)
 * fix: resolve clock type mismatch in tf2 lookups with simulation time (`#11523 <https://github.com/autowarefoundation/autoware_universe/issues/11523>`_)

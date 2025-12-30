@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_ranker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(trajectory_ranker): add trajectory consistency score (`#11762 <https://github.com/autowarefoundation/autoware_universe/issues/11762>`_)
   * add trajectory consistency score

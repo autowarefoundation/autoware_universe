@@ -2,8 +2,8 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(operation_mode_transition_manager): fix debug value update (`#11664 <https://github.com/autowarefoundation/autoware_universe/issues/11664>`_)
   * fix debug value update

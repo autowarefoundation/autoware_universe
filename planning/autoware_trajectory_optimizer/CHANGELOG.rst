@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor(autoware_trajectory_optimizer): move functions and change parameter names to accommodate standard (`#11760 <https://github.com/autowarefoundation/autoware_universe/issues/11760>`_)
   * wip refactor point fixer

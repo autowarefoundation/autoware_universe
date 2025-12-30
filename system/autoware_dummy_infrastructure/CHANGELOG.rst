@@ -2,8 +2,8 @@
 Changelog for package autoware_dummy_infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * chore(autoware_dummy_infrastructure): remove unused boost/optional (`#11713 <https://github.com/autowarefoundation/autoware_universe/issues/11713>`_)
   Remove boost/optional

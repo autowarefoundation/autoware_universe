@@ -2,8 +2,8 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(diagnostic_graph_aggregator): "var" substitution support (`#11802 <https://github.com/autowarefoundation/autoware_universe/issues/11802>`_)
   * implement vars substitution

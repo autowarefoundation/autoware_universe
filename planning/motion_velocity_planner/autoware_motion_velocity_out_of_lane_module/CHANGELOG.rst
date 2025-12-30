@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(autoware_vehicle_info_utils): refactor footprint generation (`#11696 <https://github.com/autowarefoundation/autoware_universe/issues/11696>`_)
   Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>

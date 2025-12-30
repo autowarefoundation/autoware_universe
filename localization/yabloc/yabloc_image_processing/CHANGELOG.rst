@@ -2,8 +2,8 @@
 Changelog for package yabloc_image_processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * chore(yabloc_image_processing, autoware_pose_estimator_arbiter): resolve cmake targets (`#11795 <https://github.com/autowarefoundation/autoware_universe/issues/11795>`_)
   * resolve sophus

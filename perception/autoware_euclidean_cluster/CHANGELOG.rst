@@ -2,8 +2,8 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(autoware_euclidean_cluster): add empty point cloud guards (`#11744 <https://github.com/autowarefoundation/autoware_universe/issues/11744>`_)
   Add validation to check for empty point clouds before processing to prevent

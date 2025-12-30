@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_apollo_instance_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(lidar_apollo_instance_segmentation): fixed preprocessing (`#8172 <https://github.com/autowarefoundation/autoware_universe/issues/8172>`_)
   Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>

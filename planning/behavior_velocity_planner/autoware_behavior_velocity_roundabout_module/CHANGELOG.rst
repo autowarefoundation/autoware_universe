@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_roundabout_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(intersection): correct stop line calculation by returning last point outside polygon (`#11796 <https://github.com/autowarefoundation/autoware_universe/issues/11796>`_)
   Rename getFirstPointInsidePolygonByFootprint to getLastPointOutsidePolygonByFootprint

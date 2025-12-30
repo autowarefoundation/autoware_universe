@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
 * feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)

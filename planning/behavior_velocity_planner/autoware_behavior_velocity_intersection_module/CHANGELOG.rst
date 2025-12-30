@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
 * fix(intersection): correct stop line calculation by returning last point outside polygon (`#11796 <https://github.com/autowarefoundation/autoware_universe/issues/11796>`_)

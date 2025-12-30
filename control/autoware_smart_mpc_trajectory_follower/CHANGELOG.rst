@@ -2,8 +2,8 @@
 Changelog for package autoware_smart_mpc_trajectory_follower
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * chore: sync files (`#11500 <https://github.com/autowarefoundation/autoware_universe/issues/11500>`_)
   * chore: sync files

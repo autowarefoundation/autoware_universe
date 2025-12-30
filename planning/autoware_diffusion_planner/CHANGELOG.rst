@@ -2,8 +2,8 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(diffusion_planner): traffic_light_id_map (`#11812 <https://github.com/autowarefoundation/autoware_universe/issues/11812>`_)
   Revert https://github.com/autowarefoundation/autoware_universe/pull/11805/changes/b6058db6f9ba83df47e5c5015a1aa8ee5ba058c8

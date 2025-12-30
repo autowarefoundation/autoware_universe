@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * chore(autoware_behavior_velocity_virtual_traffic_light_module): modify maintainers of path_generator (`#11791 <https://github.com/autowarefoundation/autoware_universe/issues/11791>`_)
   * chore: add new maintainers to package.xml of path_generator

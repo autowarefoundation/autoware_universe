@@ -2,8 +2,8 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat: add option for gpu-preprocessing in perception launch (`#11728 <https://github.com/autowarefoundation/autoware_universe/issues/11728>`_)
   * add option for GPU preprocessing

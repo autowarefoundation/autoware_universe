@@ -2,8 +2,8 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(mpc_lateral_controller):  correct variable used for yaw input (`#11809 <https://github.com/autowarefoundation/autoware_universe/issues/11809>`_)
   fix yaw input for lerp

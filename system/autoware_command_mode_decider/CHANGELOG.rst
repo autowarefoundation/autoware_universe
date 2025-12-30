@@ -2,8 +2,8 @@
 Changelog for package autoware_command_mode_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(command_mode_decider, switcher): use velocity only and steer only conditions (`#11811 <https://github.com/autowarefoundation/autoware_universe/issues/11811>`_)
   * feat(command_mode_decider): fix to use velocity only and steer only

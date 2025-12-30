@@ -2,8 +2,8 @@
 Changelog for package autoware_velodyne_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(autoware_velodyne_monitor): add respawn_delay to prevent rapid respawn loop (`#11743 <https://github.com/autowarefoundation/autoware_universe/issues/11743>`_)
   Add respawn_delay="5.0" to the launch file to prevent rapid respawn

@@ -2,8 +2,8 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor(ground_segmentation): remove grid_mode_switch_radius param (`#11773 <https://github.com/autowarefoundation/autoware_universe/issues/11773>`_)
   * remove grid mode switch radius

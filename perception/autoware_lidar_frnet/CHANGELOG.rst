@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_frnet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(autoware_lidar_frnet): integrate cuda blackboard into point clooud process (`#11677 <https://github.com/autowarefoundation/autoware_universe/issues/11677>`_)
   * feat(lidar_frnet): integrate cuda_blackboard for enhanced point cloud processing

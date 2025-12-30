@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_road_user_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
 * fix(road_user_stop): fix topic name string (`#11678 <https://github.com/autowarefoundation/autoware_universe/issues/11678>`_)

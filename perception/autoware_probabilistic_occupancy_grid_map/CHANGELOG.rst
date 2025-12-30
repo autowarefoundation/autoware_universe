@@ -2,8 +2,8 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
 * fix(autoware_probabilistic_occupancy_grid_map): prevent local_map leak in occupancy grid map updateOrigin (`#11765 <https://github.com/autowarefoundation/autoware_universe/issues/11765>`_)

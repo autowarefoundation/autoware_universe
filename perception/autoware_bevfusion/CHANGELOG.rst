@@ -2,8 +2,8 @@
 Changelog for package autoware_bevfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * feat(autoware_bevfusion): separate image backbone from fusion model and add lidar intensity option (`#11468 <https://github.com/autowarefoundation/autoware_universe/issues/11468>`_)
   * image backbone building

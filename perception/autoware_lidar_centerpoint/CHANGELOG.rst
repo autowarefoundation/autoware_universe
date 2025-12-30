@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(lidar_centerpoint): correct index check in shufflePoints_kernel (`#11711 <https://github.com/autowarefoundation/autoware_universe/issues/11711>`_)
   fix(lidar_centerpoint): correct index check in shufflePoints_kernel function

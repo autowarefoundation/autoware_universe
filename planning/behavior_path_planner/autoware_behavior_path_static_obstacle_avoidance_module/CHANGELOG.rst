@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(autoware_behavior_path_static_obstacle_avoidance): remove unnecessary postProcess (`#11668 <https://github.com/autowarefoundation/autoware_universe/issues/11668>`_)
   * fix(autoware_behavior_path_static_obstacle_avoidance): remove unnecessary postProcess

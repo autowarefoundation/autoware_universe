@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * refactor(boundary_departure_checker): replace autoware_utils (`#11733 <https://github.com/autowarefoundation/autoware_universe/issues/11733>`_)
 * feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * chore(streampetr): removed thrust stream policy (`#11800 <https://github.com/autowarefoundation/autoware_universe/issues/11800>`_)
   * removed thrust stream

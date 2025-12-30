@@ -2,8 +2,8 @@
 Changelog for package autoware_pose_estimator_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
 * feat(autoware_lanelet2_utils): replace from/toBinMsg (Map and Localization Component) (`#11787 <https://github.com/autowarefoundation/autoware_universe/issues/11787>`_)

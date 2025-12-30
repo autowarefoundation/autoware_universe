@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(run_out): update the previous slowdown point before using it (`#11703 <https://github.com/autowarefoundation/autoware_universe/issues/11703>`_)
 * fix(run_out): reuse the previous stop pose when possible (`#11681 <https://github.com/autowarefoundation/autoware_universe/issues/11681>`_)

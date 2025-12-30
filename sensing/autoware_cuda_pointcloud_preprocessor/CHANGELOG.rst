@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.49.0 (2025-12-30)
+-------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
 * fix(cuda_pointcloud_preprocessor): cast timestamp value properly (`#11714 <https://github.com/autowarefoundation/autoware_universe/issues/11714>`_)
   * fix(cuda_pointcloud_preprocessor): cast timestamp value properly
