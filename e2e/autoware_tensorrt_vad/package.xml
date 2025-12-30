@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_tensorrt_vad</name>
-  <version>0.0.0</version>
+  <version>0.49.0</version>
   <description>VAD ROS Node for Autoware</description>
   <maintainer email="aquashin0202@gmail.com">shintarotomie</maintainer>
   <maintainer email="vborisw@gmail.com">Max-Bin</maintainer>

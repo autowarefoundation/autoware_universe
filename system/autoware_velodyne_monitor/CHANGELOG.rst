@@ -2,6 +2,16 @@
 Changelog for package autoware_velodyne_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(autoware_velodyne_monitor): add respawn_delay to prevent rapid respawn loop (`#11743 <https://github.com/autowarefoundation/autoware_universe/issues/11743>`_)
+  Add respawn_delay="5.0" to the launch file to prevent rapid respawn
+  loops when the node crashes. This addresses the Process Respawn Loop
+  anti-pattern by ensuring a 5-second delay between node restarts.
+  Fixes `#11736 <https://github.com/autowarefoundation/autoware_universe/issues/11736>`_
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 

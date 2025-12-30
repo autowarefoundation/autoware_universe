@@ -2,6 +2,9 @@
 Changelog for package yabloc_particle_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

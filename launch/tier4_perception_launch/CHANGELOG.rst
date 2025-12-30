@@ -2,6 +2,18 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat: add option for gpu-preprocessing in perception launch (`#11728 <https://github.com/autowarefoundation/autoware_universe/issues/11728>`_)
+  * add option for GPU preprocessing
+  * Rename CUDA pointclouds argument in perception launch
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* feat(camera_streampetr): add camera streampetr to tracker input (`#11635 <https://github.com/autowarefoundation/autoware_universe/issues/11635>`_)
+  add camera streampetr to tracker
+* Contributors: Ryohsuke Mitsudome, Yoshi Ri, Yuxuan Liu
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

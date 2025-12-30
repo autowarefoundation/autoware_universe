@@ -2,6 +2,14 @@
 Changelog for package autoware_livox_tag_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(autoware_livox_tag_filter): add empty point cloud guard (`#11746 <https://github.com/autowarefoundation/autoware_universe/issues/11746>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 

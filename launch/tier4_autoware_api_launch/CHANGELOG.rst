@@ -2,6 +2,12 @@
 Changelog for package tier4_autoware_api_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(tier4_autoware_api_launch): pass api mode (`#11687 <https://github.com/autowarefoundation/autoware_universe/issues/11687>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

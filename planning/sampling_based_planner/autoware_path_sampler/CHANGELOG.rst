@@ -2,6 +2,9 @@
 Changelog for package autoware_path_sampler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

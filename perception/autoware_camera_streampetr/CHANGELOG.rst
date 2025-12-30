@@ -2,6 +2,49 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore(streampetr): removed thrust stream policy (`#11800 <https://github.com/autowarefoundation/autoware_universe/issues/11800>`_)
+  * removed thrust stream
+  * syncronize stream before thrust
+  ---------
+* fix: prevent possible dangling pointer from .str().c_str() pattern (`#11609 <https://github.com/autowarefoundation/autoware_universe/issues/11609>`_)
+  * Fix dangling pointer caused by the .str().c_str() pattern.
+  std::stringstream::str() returns a temporary std::string,
+  and taking its c_str() leads to a dangling pointer when the temporary is destroyed.
+  This patch replaces such usage with a const reference of std::string variable to ensure pointer validity.
+  * Revert the changes made to the functions. They should only be applied to the macros.
+  ---------
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(streampetr): class wise confidence threshold (`#11756 <https://github.com/autowarefoundation/autoware_universe/issues/11756>`_)
+  * class wise threshold
+  * style(pre-commit): autofix
+  * add checks
+  * style(pre-commit): autofix
+  * prevent cuda reallocatoin
+  * updated conf values
+  * style(pre-commit): autofix
+  * removed unused import
+  * add policy for thrust
+  * style(pre-commit): autofix
+  * use cuda_utils helpers
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(stream_petr): use dynamic triangle filter for image downsampling   (`#11724 <https://github.com/autowarefoundation/autoware_universe/issues/11724>`_)
+  * downsample with anti-aliasing
+  * synchronize streams
+  * remove unused changes
+  * style(pre-commit): autofix
+  * fixed cuda sync location
+  * remove unused code
+  * added optimize TODO
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Samrat Thapa, Takatoshi Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

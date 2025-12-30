@@ -2,6 +2,19 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Common and Simulator Component) (`#11786 <https://github.com/autowarefoundation/autoware_universe/issues/11786>`_)
+  * common component fromBinMsg replacement
+  * simulator component fromBinMsg replacement
+  ---------
+* feat(autoware_lanelet2_utils): replace the usage of remove_const (`#11727 <https://github.com/autowarefoundation/autoware_universe/issues/11727>`_)
+  replace the usage of remove_const
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* fix(autoware_simple_planning_simulator): fix dimension for DELAY_STEER_ACC_GEARED_WO_FALL_GUARD when set_initial_state() (`#11725 <https://github.com/autowarefoundation/autoware_universe/issues/11725>`_)
+* Contributors: Hiroki OTA, Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

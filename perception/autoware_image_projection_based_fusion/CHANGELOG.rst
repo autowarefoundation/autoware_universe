@@ -2,6 +2,20 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix: prevent possible dangling pointer from .str().c_str() pattern (`#11609 <https://github.com/autowarefoundation/autoware_universe/issues/11609>`_)
+  * Fix dangling pointer caused by the .str().c_str() pattern.
+  std::stringstream::str() returns a temporary std::string,
+  and taking its c_str() leads to a dangling pointer when the temporary is destroyed.
+  This patch replaces such usage with a const reference of std::string variable to ensure pointer validity.
+  * Revert the changes made to the functions. They should only be applied to the macros.
+  ---------
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Takatoshi Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
