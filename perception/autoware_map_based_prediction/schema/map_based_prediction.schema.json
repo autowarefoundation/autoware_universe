@@ -7,32 +7,34 @@
       "type": "object",
       "properties": {
         "prediction_time_horizon": {
+          "type": "object",
           "properties": {
             "vehicle": {
               "type": "number",
-              "default": "15.0",
+              "default": 15.0,
               "description": "predict time duration for predicted path of vehicle"
             },
             "pedestrian": {
               "type": "number",
-              "default": "10.0",
+              "default": 10.0,
               "description": "predict time duration for predicted path of pedestrian"
             },
             "unknown": {
               "type": "number",
-              "default": "10.0",
+              "default": 10.0,
               "description": "predict time duration for predicted path of unknown"
             }
-          }
+          },
+          "required": ["vehicle", "pedestrian", "unknown"]
         },
         "lateral_control_time_horizon": {
           "type": "number",
-          "default": "5.0",
+          "default": 5.0,
           "description": "time duration for predicted path will reach the reference path (mostly center of the lane)"
         },
         "prediction_sampling_delta_time": {
           "type": "number",
-          "default": "0.5",
+          "default": 0.5,
           "description": "sampling time for points in predicted path"
         },
         "min_velocity_for_map_based_prediction": {
@@ -85,10 +87,86 @@
           "default": 1.0,
           "description": "Time span of object information used for prediction"
         },
+        "check_lateral_acceleration_constraints": {
+          "type": "boolean",
+          "default": false,
+          "description": "whether to check if the predicted path complies with lateral acceleration constraints"
+        },
+        "max_lateral_accel": {
+          "type": "number",
+          "default": 2.0,
+          "description": "max acceptable lateral acceleration for predicted vehicle paths"
+        },
+        "min_acceleration_before_curve": {
+          "type": "number",
+          "default": -2.0,
+          "description": "min acceleration a vehicle might take to decelerate before a curve"
+        },
+        "use_vehicle_acceleration": {
+          "type": "boolean",
+          "default": false,
+          "description": "whether to consider current vehicle acceleration when predicting paths or not"
+        },
+        "speed_limit_multiplier": {
+          "type": "number",
+          "default": 1.5,
+          "description": "When using vehicle acceleration. Set vehicle's maximum predicted speed as the legal speed limit in that lanelet times this value"
+        },
+        "acceleration_exponential_half_life": {
+          "type": "number",
+          "default": 2.5,
+          "description": "When using vehicle acceleration. The decaying acceleration model considers that the current vehicle acceleration will be halved after this many seconds"
+        },
+        "crosswalk_with_signal": {
+          "type": "object",
+          "properties": {
+            "use_crosswalk_signal": {
+              "type": "boolean",
+              "default": true
+            },
+            "threshold_velocity_assumed_as_stopping": {
+              "type": "number",
+              "default": 0.25,
+              "description": "velocity threshold for the module to judge whether the objects is stopped"
+            },
+            "distance_set_for_no_intention_to_walk": {
+              "type": "array",
+              "items": { "type": "number" },
+              "default": [1.0, 5.0],
+              "description": "ascending order, keys of map"
+            },
+            "timeout_set_for_no_intention_to_walk": {
+              "type": "array",
+              "items": { "type": "number" },
+              "default": [1.0, 0.0],
+              "description": "values of map"
+            }
+          },
+          "required": [
+            "use_crosswalk_signal",
+            "threshold_velocity_assumed_as_stopping",
+            "distance_set_for_no_intention_to_walk",
+            "timeout_set_for_no_intention_to_walk"
+          ]
+        },
         "prediction_time_horizon_rate_for_validate_shoulder_lane_length": {
           "type": "number",
           "default": 0.8,
           "description": "prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length"
+        },
+        "use_crosswalk_user_history": {
+          "type": "object",
+          "properties": {
+            "match_lost_and_appeared_users": {
+              "type": "boolean",
+              "default": false
+            },
+            "remember_lost_users": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": ["match_lost_and_appeared_users", "remember_lost_users"]
         },
         "crossing_intention_duration": {
           "type": "number",
@@ -103,6 +181,11 @@
         "lane_change_detection": {
           "type": "object",
           "properties": {
+            "method": {
+              "type": "string",
+              "enum": ["lat_diff_distance", "time_to_change_lane"],
+              "default": "lat_diff_distance"
+            },
             "time_to_change_lane": {
               "type": "object",
               "properties": {
@@ -151,13 +234,48 @@
                 "diff_dist_threshold_to_left_bound",
                 "diff_dist_threshold_to_right_bound"
               ]
+            },
+            "num_continuous_state_transition": {
+              "type": "number",
+              "default": 3
+            },
+            "consider_only_routable_neighbours": {
+              "type": "boolean",
+              "default": false
             }
-          }
+          },
+          "required": [
+            "method",
+            "time_to_change_lane",
+            "lat_diff_distance",
+            "num_continuous_state_transition",
+            "consider_only_routable_neighbours"
+          ]
         },
         "reference_path_resolution": {
           "type": "number",
           "default": 0.5,
           "description": "Standard deviation for lateral position of objects "
+        },
+        "publish_processing_time": {
+          "type": "boolean",
+          "default": false
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "default": false
+        },
+        "publish_debug_markers": {
+          "type": "boolean",
+          "default": false
+        },
+        "processing_time_tolerance": {
+          "type": "number",
+          "default": 0.5
+        },
+        "processing_time_consecutive_excess_tolerance": {
+          "type": "number",
+          "default": 1.0
         }
       },
       "required": [
@@ -174,9 +292,24 @@
         "sigma_yaw_angle_deg",
         "object_buffer_time_length",
         "history_time_length",
+        "check_lateral_acceleration_constraints",
+        "max_lateral_accel",
+        "min_acceleration_before_curve",
+        "use_vehicle_acceleration",
+        "speed_limit_multiplier",
+        "acceleration_exponential_half_life",
+        "crosswalk_with_signal",
         "prediction_time_horizon_rate_for_validate_shoulder_lane_length",
+        "use_crosswalk_user_history",
         "crossing_intention_duration",
-        "no_crossing_intention_duration"
+        "no_crossing_intention_duration",
+        "lane_change_detection",
+        "reference_path_resolution",
+        "publish_processing_time",
+        "publish_processing_time_detail",
+        "publish_debug_markers",
+        "processing_time_tolerance",
+        "processing_time_consecutive_excess_tolerance"
       ]
     }
   },

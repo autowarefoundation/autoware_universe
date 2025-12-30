@@ -1,0 +1,20 @@
+/**:
+  ros__parameters:
+    # ============================================================================
+    # CARLA Tiny to Autoware Object Class Mapping
+    # ============================================================================
+    # Maps VAD model output classes to Autoware ObjectClassification constants
+    # CARLA Tiny: [car, van, truck, bicycle, traffic_sign, traffic_cone, traffic_light, pedestrian, others]
+    # Autoware: [CAR, TRUCK, BUS, BICYCLE, MOTORCYCLE, PEDESTRIAN, UNKNOWN]
+
+    class_mapping: [
+      "CAR",        # 0: car
+      "CAR",        # 1: van (treated as car)
+      "TRUCK",      # 2: truck
+      "BICYCLE",    # 3: bicycle
+      "UNKNOWN",    # 4: traffic_sign (static)
+      "UNKNOWN",    # 5: traffic_cone (static)
+      "UNKNOWN",    # 6: traffic_light (static)
+      "PEDESTRIAN", # 7: pedestrian
+      "UNKNOWN"     # 8: others
+    ]

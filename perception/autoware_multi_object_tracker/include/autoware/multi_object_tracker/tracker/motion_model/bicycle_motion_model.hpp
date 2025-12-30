@@ -116,6 +116,10 @@ public:
   bool updateStatePoseFront(
     const double & xf, const double & yf, const std::array<double, 36> & pose_cov);
 
+  enum class LengthUpdateAnchor { CENTER, FRONT, REAR };
+  bool updateStateLength(
+    const double & new_length, const LengthUpdateAnchor anchor = LengthUpdateAnchor::CENTER);
+
   bool adjustPosition(const double & delta_x, const double & delta_y);
 
   bool limitStates();

@@ -17,8 +17,12 @@
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_test_utils/mock_data_parser.hpp>
+
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <gtest/gtest.h>
+#include <yaml-cpp/yaml.h>
 
 #include <memory>
 #include <string>
@@ -328,4 +332,78 @@ TEST_F(TestUtilWithMap, calcSignedLateralDistanceToBoundary_NegativeYDirection)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_NEAR(result.value(), -2.0, 1e-6);
+}
+
+TEST_F(TestUtilWithMap, isLateralAccelerationAcceptableNearStart_SharpCurvature)
+{
+  // Load test data from YAML file
+  const auto yaml_path =
+    ament_index_cpp::get_package_share_directory("autoware_behavior_path_goal_planner_module") +
+    "/test_data/sharp_start_path_data.yaml";
+  YAML::Node yaml_node = YAML::LoadFile(yaml_path);
+
+  // Parse PathWithLaneId
+  const auto path_with_lane_id =
+    autoware::test_utils::parse<autoware_internal_planning_msgs::msg::PathWithLaneId>(
+      yaml_node["path_with_lane_id"]);
+
+  // Find the pull_over_start_pose marker in marker_array
+  geometry_msgs::msg::Pose start_pose;
+  bool found_start_pose = false;
+  for (const auto & marker_node : yaml_node["marker_array"]["markers"]) {
+    if (marker_node["ns"].as<std::string>() == "pull_over_start_pose") {
+      start_pose = autoware::test_utils::parse<geometry_msgs::msg::Pose>(marker_node["pose"]);
+      found_start_pose = true;
+      break;
+    }
+  }
+  ASSERT_TRUE(found_start_pose) << "Failed to find pull_over_start_pose marker";
+
+  {
+    const double velocity = 3.0;                        // m/s
+    const double duration = 0.5;                        // seconds
+    const double lateral_acceleration_threshold = 1.0;  // m/s^2
+
+    const bool result = autoware::behavior_path_planner::goal_planner_utils::
+      is_lateral_acceleration_acceptable_near_start(
+        path_with_lane_id.points, start_pose, velocity, duration, lateral_acceleration_threshold);
+    EXPECT_FALSE(result) << "Expected false for path with high curvature near start pose";
+  }
+
+  {
+    const double velocity = 2.0;
+    const double duration = 0.5;
+    const double lateral_acceleration_threshold = 1.0;
+
+    const bool result = autoware::behavior_path_planner::goal_planner_utils::
+      is_lateral_acceleration_acceptable_near_start(
+        path_with_lane_id.points, start_pose, velocity, duration, lateral_acceleration_threshold);
+    EXPECT_FALSE(result) << "Expected false for path with high curvature near start pose";
+  }
+
+  {
+    const double velocity = 3.0;
+    const double duration = 0.5;
+    const double lateral_acceleration_threshold = 3.0;
+
+    const bool result = autoware::behavior_path_planner::goal_planner_utils::
+      is_lateral_acceleration_acceptable_near_start(
+        path_with_lane_id.points, start_pose, velocity, duration, lateral_acceleration_threshold);
+
+    EXPECT_TRUE(result) << "Expected true for path with sharp curvature near start pose with high "
+                           "lateral acceleration threshold";
+  }
+
+  {
+    const double velocity = 1.0;
+    const double duration = 0.5;
+    const double lateral_acceleration_threshold = 3.0;
+
+    const bool result = autoware::behavior_path_planner::goal_planner_utils::
+      is_lateral_acceleration_acceptable_near_start(
+        path_with_lane_id.points, start_pose, velocity, duration, lateral_acceleration_threshold);
+
+    EXPECT_TRUE(result)
+      << "Expected true for path with sharp curvature near start pose at low velocity";
+  }
 }

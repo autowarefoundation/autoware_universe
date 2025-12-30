@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_no_drivable_lane_module</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>The autoware_behavior_velocity_no_drivable_lane_module package</description>
 
   <maintainer email="ahmed.ebrahim@leodrive.ai">Ahmed Ebrahim</maintainer>
@@ -25,6 +25,7 @@
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>libboost-dev</depend>
