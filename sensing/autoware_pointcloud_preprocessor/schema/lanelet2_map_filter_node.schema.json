@@ -9,13 +9,13 @@
         "voxel_size_x": {
           "type": "number",
           "description": "voxel size along x-axis [m]",
-          "default": "0.04",
+          "default": 0.04,
           "minimum": 0
         },
         "voxel_size_y": {
           "type": "number",
           "description": "voxel size along y-axis [m]",
-          "default": "0.04",
+          "default": 0.04,
           "minimum": 0
         }
       },
