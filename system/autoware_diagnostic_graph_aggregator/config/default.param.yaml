@@ -4,7 +4,7 @@
     rate: 10.0
     input_qos_depth: 1000
     graph_qos_depth: 1
-
+    graph_file: "string"  # This parameter expects a string value.
     use_command_mode_mappings: true
     command_mode_mappings:
       - "{mode: 1001, path: /autoware/modes/stop}"
