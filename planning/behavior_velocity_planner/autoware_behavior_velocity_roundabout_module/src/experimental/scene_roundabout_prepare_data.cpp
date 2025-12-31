@@ -139,7 +139,7 @@ std::optional<RoundaboutStopLines> RoundaboutModule::generateRoundaboutStopLines
   // find the index of the first point whose vehicle footprint on it intersects with attention_area
   const auto local_footprint = planner_data.vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
-    util::getFirstPointInsidePolygonByFootprint(
+    util::getLastPointOutsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
   if (!first_footprint_inside_1st_attention_ip_opt) {
     return std::nullopt;

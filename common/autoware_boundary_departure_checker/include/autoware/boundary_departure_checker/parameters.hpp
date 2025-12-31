@@ -18,13 +18,12 @@
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 #include "data_structs.hpp"
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_geometry/pose_deviation.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>

@@ -252,7 +252,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   // attention_area for the first time
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
-    util::getFirstPointInsidePolygonByFootprint(
+    util::getLastPointOutsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
   if (!first_footprint_inside_1st_attention_ip_opt) {
     return std::nullopt;
@@ -265,7 +265,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     planner_data_->current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
     planner_param_.common.max_jerk, 0.0);
   int first_pass_judge_ip_int =
-    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds));
+    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds)) -
+    static_cast<int>(std::ceil(planner_param_.common.pass_judge_line_margin / ds));
   const auto first_pass_judge_line_ip = static_cast<size_t>(
     std::clamp<int>(first_pass_judge_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
 
@@ -403,7 +404,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
       // NOTE: when ego vehicle is approaching attention area and already passed
       // first_conflicting_area, this could be null.
       // ==========================================================================================
-      const auto stuck_stopline_idx_ip_opt = util::getFirstPointInsidePolygonByFootprint(
+      const auto stuck_stopline_idx_ip_opt = util::getLastPointOutsidePolygonByFootprint(
         first_conflicting_area, interpolated_path_info, local_footprint, baselink2front);
       if (!stuck_stopline_idx_ip_opt) {
         return {0, false};

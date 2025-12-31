@@ -9,15 +9,12 @@ on:
     - cron: 0 0 * * *
   workflow_dispatch:
 
-jobs:
-  check-secret:
-    uses: autowarefoundation/autoware-github-actions/.github/workflows/check-secret.yaml@v1
-    secrets:
-      secret: ${{ secrets.APP_ID }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   sync-files:
-    needs: check-secret
-    if: ${{ needs.check-secret.outputs.set == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Generate token

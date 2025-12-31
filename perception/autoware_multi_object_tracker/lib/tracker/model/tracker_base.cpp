@@ -20,7 +20,14 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
+#ifdef ROS_DISTRO_GALACTIC
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#else
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#endif
+
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <random>
 #include <vector>
@@ -109,7 +116,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool has_significant_shape_change)
 {
   // Update existence probability
   {
@@ -163,11 +170,52 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  // Update strategies:
+  // 1. Normal update: Update position and shape by Kalman filter
+  // 2. Extension update: Apply the new stable shape and update position
+  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3
+  // conditions
+  //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
+  //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
+  //    - WEAK_UPDATE: Update tending to predicted position
+
+  if (!has_significant_shape_change) {
+    unstable_shape_filter_.processNormalMeasurement(object);
+    // 1. Normal update
+    measure(object, measurement_time, channel_info);
+    object_.trust_extension = object.trust_extension;
+
+  } else {
+    unstable_shape_filter_.processNoisyMeasurement(object);
+    if (unstable_shape_filter_.isStable()) {
+      // 2. Extension update
+      autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
+
+      setObjectShape(smoothed_shape);
+
+      auto smoothed_object = object;
+      smoothed_object.shape = smoothed_shape;
+      measure(smoothed_object, measurement_time, channel_info);
+      object_.trust_extension = smoothed_object.trust_extension;
+
+      unstable_shape_filter_.clear();
+
+    } else {
+      // 3. Conditioned update
+      const auto tracker_shape = object_.shape;
+
+      types::DynamicObject predicted_object;
+      getTrackedObject(measurement_time, predicted_object);
+
+      conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
+    }
+  }
 
   // Update object status
   getTrackedObject(measurement_time, object_);
+
+  // update time
+  object_.time = measurement_time;
 
   return true;
 }
@@ -188,6 +236,69 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 
   // Update object status
   getTrackedObject(timestamp, object_);
+
+  return true;
+}
+
+bool Tracker::createPseudoMeasurement(
+  const types::DynamicObject & meas, types::DynamicObject & pred,
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
+{
+  // Apply linear fall‑off weight on dist square
+  const double dx = meas.pose.position.x - pred.pose.position.x;
+  const double dy = meas.pose.position.y - pred.pose.position.y;
+  const double dist2 = dx * dx + dy * dy;
+  constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
+  constexpr double min_w = 0.0;
+  const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+  // Blend position
+  pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
+  pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+
+  // Use smoothed shape and its area
+  pred.shape = tracker_shape;
+  pred.area = types::getArea(tracker_shape);
+
+  // Blend orientation
+  if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
+    double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    double yaw_meas = tf2::getYaw(meas.pose.orientation);
+
+    double yaw_diff = yaw_meas - yaw_pred;
+    // Normalize yaw_diff to [-π, π] using fmod
+    yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
+    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°]
+    if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
+      if (yaw_diff > M_PI_2) {
+        yaw_diff -= M_PI;
+      } else if (yaw_diff < -M_PI_2) {
+        yaw_diff += M_PI;
+      }
+    }
+    double yaw_fused = yaw_pred + yaw_diff * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    pred.pose.orientation = tf2::toMsg(q);
+  }
+
+  // Enlarge covariance if requested (for weak updates)
+  if (enlarge_covariance) {
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    constexpr double additional_position_cov = 9.0;     // [m^2] additional variance
+    constexpr double additional_orientation_cov = 0.5;  // [rad^2] additional variance
+    constexpr double additional_velocity_cov = 25.0;    // [m^2/s^2] additional variance
+
+    pred.pose_covariance[XYZRPY_COV_IDX::X_X] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::Y_Y] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] += additional_orientation_cov;
+
+    // Enlarge velocity covariance if available
+    if (pred.kinematics.has_twist_covariance) {
+      pred.twist_covariance[XYZRPY_COV_IDX::X_X] += additional_velocity_cov;
+      pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
+    }
+  }
 
   return true;
 }
@@ -481,6 +592,33 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
+}
+
+bool Tracker::conditionedUpdate(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
+  const types::InputChannel & channel_info)
+{
+  (void)measurement;
+  (void)prediction;
+  (void)tracker_shape;
+  (void)measurement_time;
+  (void)channel_info;
+  RCLCPP_ERROR(
+    rclcpp::get_logger("Tracker"),
+    "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
+  return false;
+
+  // NOTE: The following default implementation is commented out as it not well-tested yet.
+  //
+  // // For non-vehicle trackers, create pseudo measurement
+  // types::DynamicObject pseudo_measurement = prediction;
+  // createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
+  //
+  // // Apply the measurement update directly
+  // measure(pseudo_measurement, measurement_time, channel_info);
+  //
+  // return true;
 }
 
 }  // namespace autoware::multi_object_tracker

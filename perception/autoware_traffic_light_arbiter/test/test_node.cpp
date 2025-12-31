@@ -15,7 +15,7 @@
 #include "autoware/traffic_light_arbiter/traffic_light_arbiter.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 
@@ -64,13 +64,15 @@ std::shared_ptr<TrafficLightArbiter> generateNodeWithPriority(const std::string 
   return std::make_shared<TrafficLightArbiter>(node_options);
 }
 
-void generateMap(LaneletMapBin & vector_map_msg)
+LaneletMapBin generateMap()
 {
   const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
   lanelet::LaneletMapPtr vector_map_ptr =
     autoware::test_utils::loadMap(package_dir + "/test_map/lanelet2_map.osm");
+  LaneletMapBin vector_map_msg =
+    autoware::experimental::lanelet2_utils::to_autoware_map_msgs(vector_map_ptr);
   vector_map_msg.header.frame_id = "base_link";
-  lanelet::utils::conversion::toBinMsg(vector_map_ptr, &vector_map_msg);
+  return vector_map_msg;
 }
 
 void generatePerceptionMsg(
@@ -390,8 +392,7 @@ TEST(TrafficLightArbiterTest, testWithoutPredictions)
   auto test_target_node = generateNode();
 
   // map preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -464,8 +465,7 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
   auto test_target_node = generateNode();
 
   // map msg preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -497,8 +497,7 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyExternalMsg)
   auto test_target_node = generateNode();
 
   // map msg preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -532,8 +531,7 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   auto test_target_node = generateNode();
 
   // map preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -622,8 +620,7 @@ TEST(TrafficLightArbiterTest, testMultipleExternalSources)
   auto test_target_node = generateNode();
 
   // map msg preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -707,8 +704,7 @@ TEST(TrafficLightArbiterTest, testExternalSourceTimeout)
   auto test_target_node = generateNode();
 
   // map msg preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;
@@ -777,8 +773,7 @@ TEST(TrafficLightArbiterTest, testPerceptionPriorityWithExternalPredictions)
   auto test_target_node = generateNodeWithPriority("perception");
 
   // map preparation
-  LaneletMapBin vector_map_msg;
-  generateMap(vector_map_msg);
+  LaneletMapBin vector_map_msg = generateMap();
 
   // test callback preparation
   TrafficSignalArray latest_msg;

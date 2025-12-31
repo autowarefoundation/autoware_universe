@@ -31,4 +31,4 @@
 
       # Point constraints
       num_constrained_points_start: 3        # Number of points from start to constrain (preserves initial state)
-      num_constrained_points_end: 3          # Number of points from end to constrain
+      num_constrained_points_end: 0          # Number of points from end to constrain

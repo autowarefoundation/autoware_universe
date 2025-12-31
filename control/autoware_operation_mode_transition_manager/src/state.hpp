@@ -74,7 +74,7 @@ public:
   DebugInfo getDebugInfo() override { return debug_info_; }
 
 private:
-  bool hasDangerAcceleration(const Odometry & kinematics, const Control & control_cmd);
+  bool hasDangerAcceleration(const Odometry & kinematics, const Control & control_cmd) const;
   std::pair<bool, bool> hasDangerLateralAcceleration(
     const Odometry & kinematics, const Control & control_cmd);
 

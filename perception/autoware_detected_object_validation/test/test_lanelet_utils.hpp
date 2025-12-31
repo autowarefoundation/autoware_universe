@@ -14,7 +14,7 @@
 #ifndef TEST_LANELET_UTILS_HPP_
 #define TEST_LANELET_UTILS_HPP_
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
@@ -59,8 +59,8 @@ inline autoware_map_msgs::msg::LaneletMapBin createSimpleLaneletMapMsg()
   lanelet_map->add(lanelet_section);
 
   // 5) Convert the LaneletMap to a LaneletMapBin message.
-  autoware_map_msgs::msg::LaneletMapBin map_bin_msg;
-  lanelet::utils::conversion::toBinMsg(lanelet_map, &map_bin_msg);
+  autoware_map_msgs::msg::LaneletMapBin map_bin_msg =
+    autoware::experimental::lanelet2_utils::to_autoware_map_msgs(lanelet_map);
 
   // 6) Set the frame_id in the header.
   map_bin_msg.header.frame_id = "map";

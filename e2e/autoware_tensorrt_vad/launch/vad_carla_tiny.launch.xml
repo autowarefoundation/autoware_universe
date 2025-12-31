@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<!--
+  VAD (Vectorized Autonomous Driving) - CARLA Tiny Configuration
+
+  This launch file runs the TensorRT-optimized VAD model trained on Bench2Drive CARLA dataset
+  using the standard Autoware coordinate system (Y->X, -X->Y transformation, rear axis origin).
+
+  Key requirements:
+  - 6 surround-view cameras in specific order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
+  - ONNX models in model_path: vad-carla-tiny_backbone.onnx, vad-carla-tiny_head_no_prev.onnx, vad-carla-tiny_head.onnx
+  - TensorRT engines will be built automatically on first run (GPU-specific)
+
+  For more information, see: README.md
+-->
+<launch>
+  <!-- ========================================
+       Node Configuration
+       ======================================== -->
+  <arg name="log_level" default="info" description="ROS 2 log level: debug, info, warn, error, fatal"/>
+  <arg name="use_sim_time" default="true" description="Use simulation time for CARLA"/>
+
+  <!-- ========================================
+       Model and Plugin Paths
+       ======================================== -->
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="Root directory for data and models"/>
+  <arg name="model_path" default="$(var data_path)/vad" description="VAD ONNX models and TensorRT engines directory"/>
+  <arg name="plugins_path" default="$(find-pkg-share autoware_tensorrt_plugins)" description="Custom TensorRT plugins library"/>
+
+  <!-- ========================================
+       Input Topics - Camera Calibration
+       ⚠️  CRITICAL: Camera order must match training data order
+       Training order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
+       ======================================== -->
+  <arg name="camera_info0" default="/sensing/camera/CAM_FRONT/camera_info" description="Front camera calibration"/>
+  <arg name="camera_info1" default="/sensing/camera/CAM_BACK/camera_info" description="Back camera calibration"/>
+  <arg name="camera_info2" default="/sensing/camera/CAM_FRONT_LEFT/camera_info" description="Front-left camera calibration"/>
+  <arg name="camera_info3" default="/sensing/camera/CAM_BACK_LEFT/camera_info" description="Back-left camera calibration"/>
+  <arg name="camera_info4" default="/sensing/camera/CAM_FRONT_RIGHT/camera_info" description="Front-right camera calibration"/>
+  <arg name="camera_info5" default="/sensing/camera/CAM_BACK_RIGHT/camera_info" description="Back-right camera calibration"/>
+
+  <!-- ========================================
+       Input Topics - Camera Images
+       ⚠️  CRITICAL: Image order must match training data order
+       Training order: FRONT, BACK, FRONT_LEFT, BACK_LEFT, FRONT_RIGHT, BACK_RIGHT
+       Use image_raw for uncompressed or image_raw/compressed for compressed images
+       ======================================== -->
+  <arg name="image0" default="/sensing/camera/CAM_FRONT/image_raw" description="Front camera image (1600x900)"/>
+  <arg name="image1" default="/sensing/camera/CAM_BACK/image_raw" description="Back camera image (1600x900)"/>
+  <arg name="image2" default="/sensing/camera/CAM_FRONT_LEFT/image_raw" description="Front-left camera image (1600x900)"/>
+  <arg name="image3" default="/sensing/camera/CAM_BACK_LEFT/image_raw" description="Back-left camera image (1600x900)"/>
+  <arg name="image4" default="/sensing/camera/CAM_FRONT_RIGHT/image_raw" description="Front-right camera image (1600x900)"/>
+  <arg name="image5" default="/sensing/camera/CAM_BACK_RIGHT/image_raw" description="Back-right camera image (1600x900)"/>
+
+  <!-- ========================================
+       Input Topics - Vehicle State
+       ======================================== -->
+  <arg name="kinematic_state" default="/localization/kinematic_state" description="Vehicle odometry (nav_msgs/Odometry)"/>
+  <arg name="acceleration" default="/localization/acceleration" description="Vehicle acceleration (geometry_msgs/AccelWithCovarianceStamped)"/>
+
+  <!-- ========================================
+       Output Topics
+       ======================================== -->
+  <arg name="output_objects" default="/perception/object_recognition/objects" description="Predicted objects with trajectories"/>
+  <arg name="output_trajectory" default="/planning/scenario_planning/trajectory" description="Selected ego trajectory"/>
+  <arg name="output_candidate_trajectories" default="/planning/scenario_planning/vad/candidate_trajectories" description="All 6 candidate trajectories (visualization)"/>
+  <arg name="output_map_points" default="/perception/vad/map_points" description="Predicted map elements (PointCloud2)"/>
+
+  <!-- ========================================
+       VAD Node
+       ======================================== -->
+  <node pkg="autoware_tensorrt_vad" exec="vad_node" name="vad_carla_tiny" output="screen" args="--ros-args --log-level $(var log_level)">
+    <!-- Simulation time parameter -->
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+
+    <!-- Load configuration files
+         - vad_carla_tiny.param.yaml: All deployment-specific configuration
+         - object_class_remapper_carla_tiny.param.yaml: CARLA class to Autoware class mapping
+         Model-specific parameters are loaded from vad-carla-tiny.param.json
+    -->
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/vad_carla_tiny.param.yaml" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_tensorrt_vad)/config/object_class_remapper_carla_tiny.param.yaml" allow_substs="true"/>
+
+    <!-- Output topic remapping -->
+    <remap from="~/output/objects" to="$(var output_objects)"/>
+    <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+    <remap from="~/output/trajectories" to="$(var output_candidate_trajectories)"/>
+    <remap from="~/output/map" to="$(var output_map_points)"/>
+
+    <!-- Camera calibration topic remapping -->
+    <remap from="~/input/camera_info0" to="$(var camera_info0)"/>
+    <remap from="~/input/camera_info1" to="$(var camera_info1)"/>
+    <remap from="~/input/camera_info2" to="$(var camera_info2)"/>
+    <remap from="~/input/camera_info3" to="$(var camera_info3)"/>
+    <remap from="~/input/camera_info4" to="$(var camera_info4)"/>
+    <remap from="~/input/camera_info5" to="$(var camera_info5)"/>
+
+    <!-- Camera image topic remapping -->
+    <remap from="~/input/image0" to="$(var image0)"/>
+    <remap from="~/input/image1" to="$(var image1)"/>
+    <remap from="~/input/image2" to="$(var image2)"/>
+    <remap from="~/input/image3" to="$(var image3)"/>
+    <remap from="~/input/image4" to="$(var image4)"/>
+    <remap from="~/input/image5" to="$(var image5)"/>
+
+    <!-- Vehicle state topic remapping -->
+    <remap from="~/input/kinematic_state" to="$(var kinematic_state)"/>
+    <remap from="~/input/acceleration" to="$(var acceleration)"/>
+  </node>
+</launch>

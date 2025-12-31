@@ -17,6 +17,8 @@
 
 #include "autoware/camera_streampetr/utils.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 
@@ -29,21 +31,32 @@ class PostProcessingConfig
 {
 public:
   PostProcessingConfig(
-    const int32_t num_classes, const float circle_nms_dist_threshold, const float score_threshold,
-    const std::vector<double> & yaw_norm_thresholds, const int32_t num_proposals,
-    const std::vector<float> & detection_range)
+    const int32_t num_classes, const float circle_nms_dist_threshold,
+    const std::vector<double> & score_thresholds, const std::vector<double> & yaw_norm_thresholds,
+    const int32_t num_proposals, const std::vector<float> & detection_range)
   : num_classes_(num_classes),
     num_proposals_(num_proposals),
-    score_threshold_(score_threshold),
     circle_nms_dist_threshold_(circle_nms_dist_threshold),
     detection_range_(detection_range)
   {
+    if (static_cast<int32_t>(yaw_norm_thresholds.size()) != num_classes) {
+      throw std::invalid_argument(
+        "yaw_norm_thresholds size (" + std::to_string(yaw_norm_thresholds.size()) +
+        ") must equal num_classes (" + std::to_string(num_classes) + ")");
+    }
+    if (static_cast<int32_t>(score_thresholds.size()) != num_classes) {
+      throw std::invalid_argument(
+        "score_thresholds size (" + std::to_string(score_thresholds.size()) +
+        ") must equal num_classes (" + std::to_string(num_classes) + ")");
+    }
+
     yaw_norm_thresholds_ =
       std::vector<float>(yaw_norm_thresholds.begin(), yaw_norm_thresholds.end());
     for (auto & yaw_norm_threshold : yaw_norm_thresholds_) {
       yaw_norm_threshold =
         (yaw_norm_threshold >= 0.0 && yaw_norm_threshold < 1.0) ? yaw_norm_threshold : 0.0;
     }
+    score_thresholds_ = std::vector<float>(score_thresholds.begin(), score_thresholds.end());
   }
 
   ///// NETWORK PARAMETERS /////
@@ -51,7 +64,7 @@ public:
   int32_t num_proposals_{5400};
 
   // Post processing parameters
-  float score_threshold_{0.1};
+  std::vector<float> score_thresholds_{0.1, 0.1, 0.1, 0.1, 0.1};
   float circle_nms_dist_threshold_{0.5};
   std::vector<float> yaw_norm_thresholds_{0.3, 0.3, 0.3, 0.3, 0.0};
   std::vector<float> detection_range_{-61.2, -61.2, -10.0, 61.2, 61.2, 10.0};
@@ -71,6 +84,12 @@ private:
   cudaStream_t stream_;
   cudaStream_t stream_event_;
   cudaEvent_t start_, stop_;
+
+  // Pre-allocated device arrays to avoid repeated allocations
+  autoware::cuda_utils::CudaUniquePtr<float[]> yaw_norm_thresholds_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> score_thresholds_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> detection_range_d_;
+  autoware::cuda_utils::CudaUniquePtr<Box3D[]> boxes3d_d_;
 };
 
 }  // namespace autoware::camera_streampetr

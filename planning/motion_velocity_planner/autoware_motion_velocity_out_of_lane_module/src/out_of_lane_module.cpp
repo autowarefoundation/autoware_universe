@@ -79,9 +79,6 @@ void OutOfLaneModule::init(rclcpp::Node & node, const std::string & module_name)
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
   processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
-  processing_time_publisher_ =
-    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "~/debug/" + ns_ + "/processing_time_ms", 1);
 }
 void OutOfLaneModule::init_parameters(rclcpp::Node & node)
 {
@@ -509,10 +506,6 @@ VelocityPlanningResult OutOfLaneModule::plan(
   processing_times["publish_markers"] = pub_markers_us / 1000;
   processing_times["Total"] = total_time_us / 1000;
   processing_diag_publisher_->publish(processing_times);
-  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = clock_->now();
-  processing_time_msg.data = processing_times["Total"];
-  processing_time_publisher_->publish(processing_time_msg);
   return result;
 }
 

@@ -28,9 +28,8 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
-
-#include <pcl/PCLPointCloud2.h>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
@@ -45,16 +44,12 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
-using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
-class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
+class BlockageDiagComponent : public rclcpp::Node
 {
-protected:
-  void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
+private:
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
@@ -73,7 +68,11 @@ protected:
     ground_dust_ratio_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
-private:
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
+
+  mutable std::mutex mutex_;
+
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
@@ -125,7 +124,7 @@ private:
    * @param input The input point cloud.
    * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
    */
-  cv::Mat make_normalized_depth_image(const PCLCloudXYZIRCAEDT & input) const;
+  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
@@ -265,6 +264,14 @@ private:
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief Validate that the PointCloud2 message has required fields (for testing).
+   *
+   * @param input The input point cloud.
+   * @throws std::runtime_error if any required field is missing.
+   */
+  void validate_pointcloud_fields(const sensor_msgs::msg::PointCloud2 & input) const;
 };
 
 }  // namespace autoware::pointcloud_preprocessor

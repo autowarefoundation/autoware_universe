@@ -163,7 +163,8 @@ void GridGroundFilter::initializeGround(pcl::PointIndices & out_no_ground_indice
         // this point is obstacle
         out_no_ground_indices.indices.push_back(pt_idx);
       } else if (
-        abs(height) < global_slope_threshold && abs(height) < param_.non_ground_height_threshold) {
+        std::abs(height) < global_slope_threshold &&
+        std::abs(height) < param_.non_ground_height_threshold) {
         // this point is ground
         ground_bin.addPoint(radius, height, pt_idx);
         is_ground_found = true;
@@ -219,7 +220,7 @@ void GridGroundFilter::SegmentContinuousCell(
 
     // 3. local slope
     const float delta_radius = radius - prev_cell.avg_radius_;
-    if (abs(delta_z) < param_.local_slope_max_ratio * delta_radius) {
+    if (std::abs(delta_z) < param_.local_slope_max_ratio * delta_radius) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
@@ -237,7 +238,7 @@ void GridGroundFilter::SegmentContinuousCell(
       // go to the next point
       continue;
     }
-    if (abs(delta_gnd_z) <= gnd_z_threshold) {
+    if (std::abs(delta_gnd_z) <= gnd_z_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
@@ -276,21 +277,21 @@ void GridGroundFilter::SegmentDiscontinuousCell(
     // 3. local slope
     const float delta_radius = radius - prev_cell.avg_radius_;
     const float local_slope_threshold = param_.local_slope_max_ratio * delta_radius;
-    if (abs(delta_avg_z) < local_slope_threshold) {
+    if (std::abs(delta_avg_z) < local_slope_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
       continue;
     }
     // 4. height from the estimated ground
-    if (abs(delta_avg_z) < param_.non_ground_height_threshold) {
+    if (std::abs(delta_avg_z) < param_.non_ground_height_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
       continue;
     }
     const float delta_max_z = height - prev_cell.max_height_;
-    if (abs(delta_max_z) < param_.non_ground_height_threshold) {
+    if (std::abs(delta_max_z) < param_.non_ground_height_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
@@ -337,7 +338,7 @@ void GridGroundFilter::SegmentBreakCell(
     // 3. the point is over discontinuous grid
     const float delta_radius = radius - prev_cell.avg_radius_;
     const float global_slope_threshold = param_.global_slope_max_ratio * delta_radius;
-    if (abs(delta_z) < global_slope_threshold) {
+    if (std::abs(delta_z) < global_slope_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point

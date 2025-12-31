@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_spline_smoother.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -31,7 +31,7 @@ void TrajectorySplineSmoother::optimize_trajectory(
   if (!params.use_akima_spline_interpolation) {
     return;
   }
-  utils::apply_spline(
+  trajectory_spline_smoother_utils::apply_spline(
     traj_points, spline_params_.interpolation_resolution_m,
     spline_params_.max_distance_discrepancy_m,
     spline_params_.preserve_input_trajectory_orientation);

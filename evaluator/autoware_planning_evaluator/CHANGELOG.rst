@@ -2,6 +2,34 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix: resolve clock type mismatch in tf2 lookups with simulation time (`#11523 <https://github.com/autowarefoundation/autoware_universe/issues/11523>`_)
+  * fix: resolve clock type mismatch in tf2 transform lookups
+  Replace rclcpp::Time(0) with tf2::TimePointZero in lookupTransform calls
+  to fix clock type conflicts when using simulation time.
+  The issue:
+  - rclcpp::Time(0) creates a time with SYSTEM_TIME clock type
+  - When nodes run with use_sim_time:=true, transforms use ROS_TIME clock
+  - This causes clock type mismatch errors in tf2 lookups
+  - Error: "Lookup would require extrapolation into the past"
+  The fix:
+  - tf2::TimePointZero is clock-type agnostic
+  - Correctly represents "get latest available transform"
+  - Also replaced rclcpp::Duration::from_seconds() with tf2::durationFromSec()
+  This bug affects transform lookups in critical safety and planning
+  components, causing runtime errors when simulation time is enabled.
+  Affected packages:
+  - autoware_autonomous_emergency_braking
+  - autoware_planning_evaluator
+  - autoware_freespace_planner
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, ralwing
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

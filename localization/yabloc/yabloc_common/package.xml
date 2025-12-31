@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>yabloc_common</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>YabLoc common library</description>
   <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
   <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
@@ -14,7 +14,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_signal_processing</depend>
   <depend>autoware_utils_visualization</depend>

@@ -17,8 +17,7 @@ $$
 where $\tilde{\omega}$ denotes observed angular velocity, $\omega$ denotes true angular velocity, $b$ denotes an offset, $s$ denotes the scale, and $n$ denotes a gaussian noise.
 We also assume that $n\sim\mathcal{N}(0, \sigma^2)$.
 
-<!-- TODO(TIER IV): Make this repository public or change the link. -->
-<!-- Use the value estimated by [deviation_estimator](https://github.com/tier4/calibration_tools/tree/main/localization/deviation_estimation_tools) as the parameters for this node. -->
+<!-- Use the value estimated by [deviation_estimator](https://github.com/autowarefoundation/autoware_tools/tree/main/localization/deviation_estimation_tools) as the parameters for this node. -->
 
 ### Input
 
@@ -43,6 +42,8 @@ We also assume that $n\sim\mathcal{N}(0, \sigma^2)$.
 | `angular_velocity_stddev_yy` | double | pitch rate standard deviation imu_link [rad/s]   |
 | `angular_velocity_stddev_zz` | double | yaw rate standard deviation imu_link [rad/s]     |
 | `acceleration_stddev`        | double | acceleration standard deviation imu_link [m/s^2] |
+
+**Note:** The angular velocity offset values introduce a fixed compensation that is not considered in the gyro bias estimation. If the `on_off_correction.correct_for_dynamic_bias` flag and the `on_off_correction.correct_for_static_bias` flags are enabled, automatically the `correct_for_static_bias` will be disabled to avoid correction errors.
 
 ## gyro_bias_estimator
 
@@ -133,3 +134,34 @@ In order to test the result of the scale and bias estimation for the gyro, an op
 | `bias_on_purpose`  | double | Value to inject as bias                                             |
 | `drift_scale`      | double | Value to add to the scale value every loop, to simulate scale drift |
 | `drift_bias`       | double | Value to add to the bias value every loop, to simulate bias drift   |
+
+## IMU Correction control
+
+These parameters control how gyroscope bias and scale are corrected. **Only one bias-correction method should be enabled at a time.**  
+If both flags are enabled, **static bias correction is automatically disabled**.
+
+### Static Bias Correction (`correct_for_static_bias`)
+
+- Offset values must be precomputed and stored in the configuration file under the parameter:
+  `angular_velocity_offset_[x, y, z]`
+- Applies these offsets directly to the raw gyroscope data:
+  `~/input/imu_raw`
+  -Should be used only if the gyroscope offset doesn't change along the time.
+
+### Dynamic Bias Correction (`correct_for_dynamic_bias`)
+
+- Uses bias estimates published on:
+  `~/output/gyro_bias`
+- Bias is estimated with the help of the odometry data:
+  `~/input/odometry`
+- The estimated bias is applied to correct the raw gyroscope data:
+  `~/input/imu_raw`
+  -Should be used when the gyroscope offset is changing along the time and odometry data is accessible.
+
+### Parameters
+
+| Name                                         | Type | Description                                                |
+| -------------------------------------------- | ---- | ---------------------------------------------------------- |
+| `on_off_correction.correct_for_static_bias`  | bool | Enable or disable static bias correction (default: true)   |
+| `on_off_correction.correct_for_dynamic_bias` | bool | Enable or disable dynamic bias correction (default: false) |
+| `on_off_correction.correct_for_scale`        | bool | Enable or disable scale correction (default: false)        |

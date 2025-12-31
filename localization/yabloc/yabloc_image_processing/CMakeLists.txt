@@ -14,6 +14,9 @@ find_package(OpenCV REQUIRED)
 # PCL
 find_package(PCL REQUIRED COMPONENTS common)
 
+# Sophus
+find_package(Sophus REQUIRED COMPONENTS common)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/line_segment_detector/line_segment_detector_core.cpp
   src/graph_segment/graph_segment_core.cpp
@@ -25,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 target_include_directories(${PROJECT_NAME} PUBLIC include ${EIGEN3_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} Sophus::Sophus)
 
 # ===================================================
 # Executable

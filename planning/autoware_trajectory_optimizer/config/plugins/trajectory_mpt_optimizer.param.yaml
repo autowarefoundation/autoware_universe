@@ -1,0 +1,91 @@
+/**:
+  ros__parameters:
+    trajectory_mpt_optimizer:
+      # Bounds Generation (custom parameters for trajectory_optimizer)
+      corridor_width_m: 3.5
+      enable_adaptive_width: true
+      curvature_width_factor: 0.5
+      velocity_width_factor: 0.3
+      min_clearance_m: 0.5
+      reset_previous_data_each_iteration: true
+      enable_debug_info: false
+      output_delta_arc_length_m: 1.0
+      output_backward_traj_length_m: 5.0
+      ego_nearest_dist_threshold_m: 3.0
+      ego_nearest_yaw_threshold_deg: 45.0
+      acceleration_moving_average_window: 5  # Moving average window size (larger = smoother)
+
+    # MPT Algorithm Parameters (required by autoware_path_optimizer MPTOptimizer)
+    # NOTE: These are solver parameters passed to the underlying MPT optimizer.
+    # Clearance parameters use "road" terminology from the solver, but in this implementation
+    # they represent clearance from the generated corridor bounds (simple perpendicular offsets),
+    # NOT actual road boundaries or drivable area from maps.
+    mpt:
+      option:
+        steer_limit_constraint: false
+        visualize_sampling_num: 1
+        enable_manual_warm_start: false
+        enable_warm_start: false
+        enable_optimization_validation: false
+
+      common:
+        num_points: 100
+        delta_arc_length: 1.0
+
+      clearance:
+        hard_clearance_from_road: 0.0  # Clearance from corridor bounds (not actual road)
+        soft_clearance_from_road: 0.1  # Clearance from corridor bounds (not actual road)
+
+      weight:
+        soft_collision_free_weight: 1.0
+        lat_error_weight: 1.0
+        yaw_error_weight: 0.0
+        yaw_error_rate_weight: 0.0
+        steer_input_weight: 1.0
+        steer_rate_weight: 1.0
+        terminal_lat_error_weight: 100.0
+        terminal_yaw_error_weight: 100.0
+        goal_lat_error_weight: 1000.0
+        goal_yaw_error_weight: 1000.0
+
+      avoidance:
+        max_bound_fixing_time: 1.0
+        max_longitudinal_margin_for_bound_violation: 1.0
+        max_avoidance_cost: 0.5
+        avoidance_cost_margin: 0.0
+        avoidance_cost_band_length: 5.0
+        avoidance_cost_decrease_rate: 0.05
+        min_drivable_width: 0.2
+
+        weight:
+          lat_error_weight: 0.0
+          yaw_error_weight: 10.0
+          steer_input_weight: 100.0
+
+      collision_free_constraints:
+        # NOTE: Collision avoidance is NOT active in this implementation.
+        # These parameters are part of the MPT solver configuration but unused
+        # because we don't provide obstacle data - only geometric corridor bounds.
+        option:
+          l_inf_norm: true
+          soft_constraint: true
+          hard_constraint: false
+
+        vehicle_circles:
+          method: "fitting_uniform_circle"
+
+          bicycle_model:
+            num_for_calculation: 3
+            front_radius_ratio: 1.0
+            rear_radius_ratio: 1.0
+
+          uniform_circle:
+            num: 3
+            radius_ratio: 1.0
+
+          fitting_uniform_circle:
+            num: 3
+
+      validation:
+        max_lat_error: 5.0
+        max_yaw_error: 1.046

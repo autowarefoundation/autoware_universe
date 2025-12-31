@@ -10,6 +10,7 @@
 
   <node pkg="autoware_trajectory_ranker" exec="autoware_trajectory_ranker_node" name="trajectory_ranker_node" output="screen">
     <param from="$(var trajectory_ranker_param_path)" allow_substs="true"/>
+    <param from="$(find-pkg-share autoware_trajectory_ranker)/config/metrics/trajectory_consistency.param.yaml"/>
 
     <remap from="~/input/candidate_trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/scored_trajectories" to="$(var output_trajectories)"/>
