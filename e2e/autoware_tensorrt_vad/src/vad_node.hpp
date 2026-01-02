@@ -166,7 +166,7 @@ private:
     const VadInputTopicData & vad_input_topic_data);
   std::optional<VadOutputTopicData> trigger_inference(
     VadInputTopicData vad_input_topic_data_current_frame);
-  void publish(const VadOutputTopicData & vad_output_topic_data);
+  bool publish(const VadOutputTopicData & vad_output_topic_data);
 };
 }  // namespace autoware::tensorrt_vad
 
