@@ -266,7 +266,9 @@ bool VadNode::anchor_callback()
     }
     auto vad_output_topic_data = trigger_inference(std::move(*frame_data));
     if (vad_output_topic_data.has_value()) {
-      publish(vad_output_topic_data.value());
+      if (!publish(vad_output_topic_data.value())) {
+        return false;
+      }
     }
   } catch (const std::exception & e) {
     RCLCPP_ERROR_THROTTLE(
@@ -366,13 +368,22 @@ VadConfig VadNode::load_vad_config()
   vad_config.image_normalization_param_std = model_params.image_normalization_std;
 
   // Deployment-specific parameters (from YAML)
-  load_detection_range(vad_config);
+  auto ensure_config_step = [](bool ok, const std::string & context) {
+    if (!ok) {
+      throw std::runtime_error("Failed to " + context);
+    }
+  };
+  ensure_config_step(load_detection_range(vad_config), "load_detection_range");
 
   // Map configuration: use class names from param.json but thresholds from YAML
-  load_map_configuration_with_model_params(vad_config, model_params);
+  ensure_config_step(
+    load_map_configuration_with_model_params(vad_config, model_params),
+    "load_map_configuration_with_model_params");
 
   // Object configuration: use class names from param.json but thresholds from YAML
-  load_object_configuration_with_model_params(vad_config, model_params);
+  ensure_config_step(
+    load_object_configuration_with_model_params(vad_config, model_params),
+    "load_object_configuration_with_model_params");
 
   vad_config.plugins_path = this->declare_parameter<std::string>("model_params.plugins_path");
   vad_config.input_image_width =
@@ -380,134 +391,160 @@ VadConfig VadNode::load_vad_config()
   vad_config.input_image_height =
     this->declare_parameter<int32_t>("interface_params.input_image_height");
 
-  load_network_configurations(vad_config);
+  ensure_config_step(load_network_configurations(vad_config), "load_network_configurations");
 
   return vad_config;
 }
 
-void VadNode::load_detection_range(VadConfig & config)
+bool VadNode::load_detection_range(VadConfig & config)
 {
-  const auto detection_range =
-    this->get_parameter("interface_params.detection_range").as_double_array();
-  const std::size_t entries =
-    std::min<std::size_t>(config.detection_range.size(), detection_range.size());
-  for (std::size_t i = 0; i < entries; ++i) {
-    config.detection_range[i] = static_cast<float>(detection_range[i]);
+  try {
+    const auto detection_range =
+      this->get_parameter("interface_params.detection_range").as_double_array();
+    const std::size_t entries =
+      std::min<std::size_t>(config.detection_range.size(), detection_range.size());
+    for (std::size_t i = 0; i < entries; ++i) {
+      config.detection_range[i] = static_cast<float>(detection_range[i]);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_detection_range failed: %s", e.what());
+    return false;
   }
 }
 
-void VadNode::load_classification_config(const ClassificationConfig & params)
+bool VadNode::load_classification_config(const ClassificationConfig & params)
 {
   if (params.class_names.size() != params.thresholds.size()) {
     RCLCPP_ERROR(
       this->get_logger(), "%s: class_names (%zu) and thresholds (%zu) size mismatch",
       params.validation_context.c_str(), params.class_names.size(), params.thresholds.size());
-    throw std::runtime_error(params.validation_context + ": Parameter array length mismatch");
+    return false;
   }
 
-  params.target_class_names->assign(params.class_names.begin(), params.class_names.end());
-  if (params.num_classes != nullptr) {
-    *params.num_classes = static_cast<int32_t>(params.class_names.size());
-  }
+  try {
+    params.target_class_names->assign(params.class_names.begin(), params.class_names.end());
+    if (params.num_classes != nullptr) {
+      *params.num_classes = static_cast<int32_t>(params.class_names.size());
+    }
 
-  params.target_thresholds->clear();
-  for (std::size_t i = 0; i < params.class_names.size(); ++i) {
-    (*params.target_thresholds)[params.class_names[i]] = static_cast<float>(params.thresholds[i]);
+    params.target_thresholds->clear();
+    for (std::size_t i = 0; i < params.class_names.size(); ++i) {
+      (*params.target_thresholds)[params.class_names[i]] = static_cast<float>(params.thresholds[i]);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      this->get_logger(), "%s: exception while loading classification config: %s",
+      params.validation_context.c_str(), e.what());
+    return false;
   }
 }
 
-void VadNode::load_map_configuration(VadConfig & config)
+bool VadNode::load_map_configuration(VadConfig & config)
 {
-  load_classification_config(
+  return load_classification_config(
     {this->get_parameter("model_params.map_class_names").as_string_array(),
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
      "load_map_configuration"});
 }
 
-void VadNode::load_map_configuration_with_model_params(
+bool VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  load_classification_config(
+  return load_classification_config(
     {model_params.map_classes,
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
      "load_map_configuration_with_model_params"});
 }
 
-void VadNode::load_object_configuration(VadConfig & config)
+bool VadNode::load_object_configuration(VadConfig & config)
 {
-  load_classification_config(
+  return load_classification_config(
     {this->get_parameter("model_params.object_class_names").as_string_array(),
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
      "load_object_configuration"});
 }
 
-void VadNode::load_object_configuration_with_model_params(
+bool VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  load_classification_config(
+  return load_classification_config(
     {model_params.object_classes,
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
      "load_object_configuration_with_model_params"});
 }
 
-void VadNode::load_image_normalization(VadConfig & config)
+bool VadNode::load_image_normalization(VadConfig & config)
 {
-  const auto image_mean =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
-  const auto image_std =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
+  try {
+    const auto image_mean =
+      this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
+    const auto image_std =
+      this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
 
-  const std::size_t mean_entries =
-    std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
-  const std::size_t std_entries =
-    std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
+    const std::size_t mean_entries =
+      std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
+    const std::size_t std_entries =
+      std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
 
-  for (std::size_t i = 0; i < mean_entries; ++i) {
-    config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
-  }
+    for (std::size_t i = 0; i < mean_entries; ++i) {
+      config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
+    }
 
-  for (std::size_t i = 0; i < std_entries; ++i) {
-    config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
+    for (std::size_t i = 0; i < std_entries; ++i) {
+      config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_image_normalization failed: %s", e.what());
+    return false;
   }
 }
 
-void VadNode::load_network_configurations(VadConfig & config)
+bool VadNode::load_network_configurations(VadConfig & config)
 {
-  config.nets_config.clear();
+  try {
+    config.nets_config.clear();
 
-  NetConfig backbone_config;
-  backbone_config.name = this->declare_parameter<std::string>("model_params.nets.backbone.name");
+    NetConfig backbone_config;
+    backbone_config.name = this->declare_parameter<std::string>("model_params.nets.backbone.name");
 
-  NetConfig head_config;
-  head_config.name = this->declare_parameter<std::string>("model_params.nets.head.name");
-  const std::string head_input_feature =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.input_feature");
-  const std::string head_input_net =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
-  const std::string head_input_name =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.name");
-  head_config.inputs[head_input_feature]["net"] = head_input_net;
-  head_config.inputs[head_input_feature]["name"] = head_input_name;
+    NetConfig head_config;
+    head_config.name = this->declare_parameter<std::string>("model_params.nets.head.name");
+    const std::string head_input_feature =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.input_feature");
+    const std::string head_input_net =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
+    const std::string head_input_name =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.name");
+    head_config.inputs[head_input_feature]["net"] = head_input_net;
+    head_config.inputs[head_input_feature]["name"] = head_input_name;
 
-  NetConfig head_no_prev_config;
-  head_no_prev_config.name =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.name");
-  const std::string head_no_prev_input_feature =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.input_feature");
-  const std::string head_no_prev_input_net =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.net");
-  const std::string head_no_prev_input_name =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.name");
-  head_no_prev_config.inputs[head_no_prev_input_feature]["net"] = head_no_prev_input_net;
-  head_no_prev_config.inputs[head_no_prev_input_feature]["name"] = head_no_prev_input_name;
+    NetConfig head_no_prev_config;
+    head_no_prev_config.name =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.name");
+    const std::string head_no_prev_input_feature =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.input_feature");
+    const std::string head_no_prev_input_net =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.net");
+    const std::string head_no_prev_input_name =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.name");
+    head_no_prev_config.inputs[head_no_prev_input_feature]["net"] = head_no_prev_input_net;
+    head_no_prev_config.inputs[head_no_prev_input_feature]["name"] = head_no_prev_input_name;
 
-  config.nets_config.push_back(backbone_config);
-  config.nets_config.push_back(head_config);
-  config.nets_config.push_back(head_no_prev_config);
+    config.nets_config.push_back(backbone_config);
+    config.nets_config.push_back(head_config);
+    config.nets_config.push_back(head_no_prev_config);
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_network_configurations failed: %s", e.what());
+    return false;
+  }
 }
 
 std::tuple<
