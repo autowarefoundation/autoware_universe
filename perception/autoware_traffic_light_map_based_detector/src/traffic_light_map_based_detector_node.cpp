@@ -17,8 +17,8 @@
 #include "traffic_light_map_based_detector_node.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/math/normalization.hpp>
@@ -295,9 +295,8 @@ bool MapBasedDetector::getTrafficLightRoi(
 void MapBasedDetector::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-
-  lanelet::utils::conversion::fromBinMsg(*input_msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_msg));
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   std::vector<lanelet::AutowareTrafficLightConstPtr> all_lanelet_traffic_lights =
     lanelet::utils::query::autowareTrafficLights(all_lanelets);

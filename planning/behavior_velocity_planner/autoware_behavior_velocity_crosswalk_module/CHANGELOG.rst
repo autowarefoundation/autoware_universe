@@ -2,6 +2,13 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(crosswalk): update the previous stop pose before using it (`#11699 <https://github.com/autowarefoundation/autoware_universe/issues/11699>`_)
+* fix(crosswalk): always choose the nearest stop pose (incl previous one) (`#11658 <https://github.com/autowarefoundation/autoware_universe/issues/11658>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
