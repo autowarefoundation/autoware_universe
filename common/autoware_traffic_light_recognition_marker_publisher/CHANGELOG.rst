@@ -2,6 +2,15 @@
 Changelog for package autoware_traffic_light_recognition_marker_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Common and Simulator Component) (`#11786 <https://github.com/autowarefoundation/autoware_universe/issues/11786>`_)
+  * common component fromBinMsg replacement
+  * simulator component fromBinMsg replacement
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 

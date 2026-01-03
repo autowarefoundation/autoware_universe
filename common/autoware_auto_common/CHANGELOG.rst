@@ -2,6 +2,18 @@
 Changelog for package autoware_auto_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore: sync files (`#11500 <https://github.com/autowarefoundation/autoware_universe/issues/11500>`_)
+  * chore: sync files
+  * clang-format fixes
+  * markdownlint fix table
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* Contributors: Ryohsuke Mitsudome, awf-autoware-bot[bot]
+
 0.48.0 (2025-11-18)
 -------------------
 
