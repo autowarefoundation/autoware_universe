@@ -252,7 +252,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   // attention_area for the first time
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
-    util::getFirstPointInsidePolygonByFootprint(
+    util::getLastPointOutsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
   if (!first_footprint_inside_1st_attention_ip_opt) {
     return std::nullopt;
@@ -404,7 +404,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
       // NOTE: when ego vehicle is approaching attention area and already passed
       // first_conflicting_area, this could be null.
       // ==========================================================================================
-      const auto stuck_stopline_idx_ip_opt = util::getFirstPointInsidePolygonByFootprint(
+      const auto stuck_stopline_idx_ip_opt = util::getLastPointOutsidePolygonByFootprint(
         first_conflicting_area, interpolated_path_info, local_footprint, baselink2front);
       if (!stuck_stopline_idx_ip_opt) {
         return {0, false};

@@ -84,7 +84,7 @@ void VehicleDoorNode::on_command(
   }
 
   // For safety, do not open the door if the vehicle is not stopped.
-  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/list/api/vehicle/doors/command/
+  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/list/api/vehicle/doors/command/
   bool is_open = false;
   for (const auto & door : req->doors) {
     if (door.command == autoware_adapi_v1_msgs::msg::DoorCommand::OPEN) {
