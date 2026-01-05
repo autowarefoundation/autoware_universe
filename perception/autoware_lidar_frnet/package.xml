@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_lidar_frnet</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>LiDAR segmentation based on FRNet</description>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <license>Apache License 2.0</license>
@@ -18,6 +18,7 @@
   <depend>autoware_point_types</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
+  <depend>cuda_blackboard</depend>
   <depend>diagnostic_updater</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>

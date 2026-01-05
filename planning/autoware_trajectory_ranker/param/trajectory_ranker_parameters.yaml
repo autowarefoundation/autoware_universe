@@ -11,13 +11,21 @@ evaluation:
     description: trajectory sampling parameter.
     read_only: false
 
+  trajectory_history_size:
+    type: int
+    default_value: 10
+    description: Number of past trajectory cycles to keep for consistency evaluation.
+    read_only: false
+    validation:
+      bounds<>: [1, 100]
+
   score_weight:
     type: double_array
     description: weight.
     read_only: false
     validation:
       element_bounds<>: [0.0, 1.0]
-      fixed_size<>: [6]
+      fixed_size<>: [7]
 
   metrics:
     name:
@@ -29,11 +37,11 @@ evaluation:
         not_empty<>: []
     maximum:
       type: double_array
-      default_value: [5.0, 10.0, 500.0, 6.0, 10.0, 0.1]
+      default_value: [5.0, 10.0, 500.0, 6.0, 10.0, 0.1, 1.0]
       description: metrics maximum value used to obtain the normalized value
       read_only: false
       validation:
-        fixed_size<>: [6]
+        fixed_size<>: [7]
 
   time_decay_weight:
     s0:
@@ -72,6 +80,13 @@ evaluation:
         element_bounds<>: [0.0, 1.0]
         fixed_size<>: [16]
     s5:
+      type: double_array
+      description: weight.
+      read_only: false
+      validation:
+        element_bounds<>: [0.0, 1.0]
+        fixed_size<>: [16]
+    s6:
       type: double_array
       description: weight.
       read_only: false

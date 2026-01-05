@@ -92,13 +92,19 @@ void TrackerProcessor::update(
   const auto & time = detected_objects.header.stamp;
   for (auto tracker_itr = list_tracker_.begin(); tracker_itr != list_tracker_.end();
        ++tracker_itr, ++tracker_idx) {
-    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
+    auto it = direct_assignment.find(tracker_idx);
+    if (it != direct_assignment.end()) {
       // found
-      const auto & associated_object =
-        detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
+      size_t measurement_idx = static_cast<size_t>(it->second);
+      const auto & associated_object = detected_objects.objects.at(measurement_idx);
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
-      (*(tracker_itr))->updateWithMeasurement(associated_object, time, channel_info);
 
+      // do conditioned update based on significant shape change info
+      bool has_significant_shape_change =
+        association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
+      (*(tracker_itr))
+        ->updateWithMeasurement(
+          associated_object, time, channel_info, has_significant_shape_change);
     } else {
       // not found
       (*(tracker_itr))->updateWithoutMeasurement(time);

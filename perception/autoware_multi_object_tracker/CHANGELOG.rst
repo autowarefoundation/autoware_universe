@@ -2,6 +2,110 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(multi_object_tracker): improve shape unstable object tracking (`#10864 <https://github.com/autowarefoundation/autoware_universe/issues/10864>`_)
+  * refactor: rebase to latest version and solve conflict
+  feat: implement giou for multi_object_tracker association
+  feat: replace angle gate and iou gate with giou gate
+  feat: check significant shape change (unstable) between tracker and measurement for vehicle trackers
+  feat: implement weak update which mainly trust predicted states for measurement with significant shape change
+  * fix: solve rebase conflict
+  chore: remove unused angle gate logic and related config
+  * style(pre-commit): autofix
+  * fix: cppcheck error
+  * chore: remove unused getFormedYawAngle function.
+  * fix: rebase error
+  * fix: solve conflict
+  feat: change shape smoothing to full shape update when recent measurement is stable
+  perf: use 1d-iou for pedestrain and unknown object during association for better computational performance
+  perf: remove min/max area gate for association of vehicle trackers and detections
+  * fix: style by prettier
+  * perf: relax unknown object association threshold to improve robustness
+  * style(pre-commit): autofix
+  * feat: use approximate dimensions for polygon (e.g. unknown) object for 1d-IoU calculation during association
+  perf: set association threshold to -0.5 to enable MOTORBIKE association without GIOU overlap (negative value)
+  chore: rename giou back to iou for variables/configs due to mixed use of 1d-iou and 3d-giou during association
+  * fix: copy mistake
+  * fix: (typo) pedestrain -> pedestrian
+  fix: remove max_rad_matrix in test bench due to removal from multi_object_tracker association
+  * fix: CI error
+  * refactor: use shared MIN_AREA definition
+  fix: giou return value ranges from -1 to 1, use INVALID_SCORE of -1 instead of 0.0
+  * perf: increase adaptive threshold on bev area to relax cov threshold on large vehicle
+  feat: implement shape update mechanism that utilizing exponential moving average for shape smoothing and handle process noise inflation due to consecutive weak update
+  chore: add some commented-out print out to debug tracker states (only for git memo, delete in next commit)
+  * chore: remove code for tracker status monitoring and debug.
+  * feat: modify shape update logic to be more robust against outlier detection
+  perf: tune threshold to reduce shape change
+  * fix: handle rebase error
+  fix: linearly rescale iou value to [0, 1] since mussp only handle positive value (> 0)
+  * chore: add comments for explanation
+  refactor: use explicit constant label
+  * style(pre-commit): autofix
+  * refactor: create exponential moving average (EMA) shape class for smoothing bounding box detections with large shape change
+  feat: change if conditions to do EMA on bounding box and ignore other shape type
+  fix: do pose blend for measurement that yaw info is available
+  * style(pre-commit): autofix
+  * fix: fix typo and improve comment
+  fix: refactor error
+  * refactor: simplify 3d-giou implementation
+  feat: use 2d/3d giou association based on height info availability for different detectors
+  feat: handle OrientationAvailability::SIGN_UNKNOWN
+  * refactor: 3d giou implementation to improve readability
+  feat: use axis aligned bounding box approx. to replace circle equivalent for association robustness
+  * fix: ci error
+  * refactor: change EMA implementation for dimension smoothing
+  feat: use dual-alpha cofficient in EMA to handle noisy input
+  feat: implement conditioned update for both vehicle and non-vehicle update
+  feat: implement logic to estimate wheel to update
+  * feat: improve logic to estimated wheel to update and wheel position calculation
+  * feat: change EMA class to only smooth boundingbox and keep other shape type untouched
+  feat: change setObjectShape implementation for vehicle with bicycle_motion_model to update wheel positions
+  feat: consider partial update for body vehicle using weak update stragety
+  * fix: correct cache handling
+  refactor: use consistant naming
+  * chore(multi_object_tracker): rename util folder to components to avoid possible confusion on inside functions
+  * feat(multi_object_tracker): improve shape unstable object tracking with exponential moving average shape and conditioned update
+  feat(multi_object_tracker): change exponential moving average shape implementation to handle shape jump better
+  fix(multi_object_tracker): correct override for vehicle tracker in multiple_vehicle_tracker.cpp
+  * fix(multi_object_tracker): rebase conflict error
+  * style(pre-commit): autofix
+  * fix(multi_object_tracker): fix rebase and cherry-pick error
+  * refactor(multi_object_tracker): rename functions and variables for better understanding
+  refactor(multi_object_tracker): refactor determineUpdateStrategy for readability
+  * chore(multi_object_tracker): improve updateWithMeasurement comment to clarify update strategies.
+  refactor(multi_object_tracker): create a separate class to check tracker / measurement index pair with significant shape change.
+  * feat(multi_object_tracker): add functionality to change anchor point by last update strategy for updateStateLength for vehicle tracker.
+  * style(pre-commit): autofix
+  * fix(multi_object_tracker): fix linter error and remove not-used header file
+  * refactor(multi_object_tracker): change file directory according to main usage
+  chore(multi_object_tracker): add comment to clarify usage
+  feat(multi_object_tracker): normalization yaw difference also for orientation available measurement
+  refactor(multi_object_tracker): move important threshold to header file
+  * style(pre-commit): autofix
+  * chore(multi_object_tracker): delete util folder
+  * style(pre-commit): autofix
+  * perf(multi_object_tracker): fallback to use original max_dist_matrix to pass planning evaluator
+  * perf(multi_object_tracker): use same config as autoware_launch
+  * style(pre-commit): autofix
+  * fix(multi_object_tracker): conside measurement yaw flip in calculating anchor point
+  * perf(multi_object_tracker): use prediction yaw in anchor position calculation to make conditioned udpate more stable
+  * fix(multi_object_tracker): use measurement edge center for conditioned update to stabilize tracking
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(multi-object-tracker): correct sign of lateral and longitudinal velocity terms in state prediction matrix (`#11683 <https://github.com/autowarefoundation/autoware_universe/issues/11683>`_)
+  * fix(bicycle_motion_model): correct sign of lateral and longitudinal velocity terms in state prediction matrix
+  * insert proper line change and space for equation comment
+  ---------
+* feat(camera_streampetr): add camera streampetr to tracker input (`#11635 <https://github.com/autowarefoundation/autoware_universe/issues/11635>`_)
+  add camera streampetr to tracker
+* Contributors: Kang, Ryohsuke Mitsudome, Taekjin LEE, Yoshi Ri
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

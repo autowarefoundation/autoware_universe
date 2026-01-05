@@ -18,7 +18,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -101,9 +101,7 @@ void TrafficLightOcclusionPredictorNode::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
   traffic_light_position_map_.clear();
-  auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-
-  lanelet::utils::conversion::fromBinMsg(*input_msg, lanelet_map_ptr);
+  auto lanelet_map_ptr = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_msg);
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr);
   std::vector<lanelet::AutowareTrafficLightConstPtr> all_lanelet_traffic_lights =
     lanelet::utils::query::autowareTrafficLights(all_lanelets);

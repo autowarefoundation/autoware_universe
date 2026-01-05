@@ -2,6 +2,29 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix link to deviation_estimator in README (`#11695 <https://github.com/autowarefoundation/autoware_universe/issues/11695>`_)
+  Updated the link for deviation_estimator in README.
+* feat: implement bias correction controls and update README (`#11474 <https://github.com/autowarefoundation/autoware_universe/issues/11474>`_)
+  * chore: modified readme description for clarification on imu correction
+  * style(pre-commit): autofix
+  * new: flag for static or dynamic bias correction
+  * style(pre-commit): autofix
+  * chore: throw exception when dual bias correction is selected
+  * style(pre-commit): autofix
+  * chore: correction configuration loged and moved mutualexclusion
+  * style(pre-commit): autofix
+  * chore: disabled static bias correctio when static and dynamic are enabled
+  * fix: schema updated to pass review
+  * chore: enabled static bias by default
+  * chore: enhanced readme explanation and fixed default variables state
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* Contributors: Masahiro Kubota, Ryohsuke Mitsudome, SergioReyesSan
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
