@@ -461,7 +461,7 @@ void extendTrajectoryInYawDirection(
   auto extended_pose = autoware_traj.points.back().pose;
 
   constexpr double extend_dist = 10.0;
-  constexpr double extend_vel = 10.0;
+  const double extend_vel = std::max(std::fabs(traj.vx.back()), 1.0);
   const double x_offset = is_forward_shift ? interval : -interval;
   const double dt = interval / extend_vel;
   const size_t num_extended_point = static_cast<size_t>(extend_dist / interval);
