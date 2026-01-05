@@ -27,7 +27,7 @@ using Label = autoware_perception_msgs::msg::ObjectClassification;
 float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label){
   switch (label)
   {
-  case Label::UNKNOW:
+  case Label::UNKNOWN:
     return UNKNOWN;
     break;
   case Label::CAR:
@@ -42,16 +42,17 @@ float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label){
   case Label::TRAILER:
     return TRAILER;
     break;
-  case Label::MOTOCYCLE:
+  case Label::MOTORCYCLE:
     return MOTORCYCLE;
     break;
-  case Label::BYCICLE:
+  case Label::BICYCLE:
     return BICYCLE;
     break;
   case Label::PEDESTRIAN:
     return PEDESTRIAN;
     break;
   default:
+    return UNKNOWN;
     break;
   }
 }

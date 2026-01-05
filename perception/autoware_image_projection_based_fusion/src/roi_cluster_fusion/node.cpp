@@ -48,7 +48,15 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   use_cluster_semantic_type_ = declare_parameter<bool>("use_cluster_semantic_type");
   only_allow_inside_cluster_ = declare_parameter<bool>("only_allow_inside_cluster");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
-  iou_threshold_ = declare_parameter<double>("iou_threshold");
+  iou_threshold_.BICYCLE = declare_parameter<double>("iou_threshold.BICYCLE");
+  iou_threshold_.BUS = declare_parameter<double>("iou_threshold.BUS");
+  iou_threshold_.CAR = declare_parameter<double>("iou_threshold.CAR");
+  iou_threshold_.TRAILER = declare_parameter<double>("iou_threshold.TRAILER");
+  iou_threshold_.MOTORCYCLE = declare_parameter<double>("iou_threshold.MOTORCYCLE");
+  iou_threshold_.PEDESTRIAN = declare_parameter<double>("iou_threshold.PEDESTRIAN");
+  iou_threshold_.TRUCK = declare_parameter<double>("iou_threshold.TRUCK");
+  iou_threshold_.UNKNOWN = declare_parameter<double>("iou_threshold.UNKNOWN");
+
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
   strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
@@ -166,7 +174,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     bool associated = false;
     double max_iou = 0.0;
     const auto obj_label = feature_obj.object.classification.front().label;
-    const float obj_class_iou_threshold = ObjClassIoUThresh::get_class_iou_thresh(obj_label);
+    const float obj_class_iou_threshold = iou_threshold_.get_class_iou_thresh(obj_label);
 
     const bool is_roi_label_known = obj_label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {

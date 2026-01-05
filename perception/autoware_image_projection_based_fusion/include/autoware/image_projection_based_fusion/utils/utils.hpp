@@ -75,7 +75,7 @@ struct ObjClassIoUThresh
   float BICYCLE;
   float PEDESTRIAN;
   float get_class_iou_thresh(const uint8_t label);
-}
+};
 
 bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info);
 
