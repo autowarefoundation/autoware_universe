@@ -28,7 +28,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_frenet_planner/structures.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -51,6 +50,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -185,7 +185,7 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
   transient_data.max_prepare_length = calculation::calc_maximum_prepare_length(common_data_ptr_);
 
   transient_data.target_lane_length =
-    lanelet::utils::getLaneletLength2d(common_data_ptr_->lanes_ptr->target);
+    lanelet::geometry::length2d(lanelet::LaneletSequence(common_data_ptr_->lanes_ptr->target));
 
   transient_data.current_lanes_ego_arc = lanelet::utils::getArcCoordinates(
     common_data_ptr_->lanes_ptr->current, common_data_ptr_->get_ego_pose());
@@ -198,6 +198,10 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
 
   transient_data.current_footprint = utils::lane_change::get_ego_footprint(
     common_data_ptr_->get_ego_pose(), common_data_ptr_->bpp_param_ptr->vehicle_info);
+
+  transient_data.ego_to_terminal_end_proximity =
+    utils::lane_change::calc_polygon_dist_range_from_terminal_end(
+      common_data_ptr_->current_lanes_path, transient_data.current_footprint);
 
   const auto & ego_lane = common_data_ptr_->lanes_ptr->ego_lane;
   const auto & route_handler_ptr = common_data_ptr_->route_handler_ptr;
@@ -342,12 +346,20 @@ TurnSignalInfo NormalLaneChange::get_current_turn_signal_info() const
     return original_turn_signal_info;
   }
 
-  const auto & path = prev_module_output_.path;
+  const auto & prev_path = prev_module_output_.path.points;
+  if (prev_path.empty()) {
+    return original_turn_signal_info;
+  }
+
   const auto & original_command = original_turn_signal_info.turn_signal.command;
   if (
-    !path.points.empty() && original_command != TurnIndicatorsCommand::DISABLE &&
+    original_command != TurnIndicatorsCommand::DISABLE &&
     original_command != TurnIndicatorsCommand::NO_COMMAND) {
     return get_terminal_turn_signal_info();
+  }
+
+  if (!status_.is_valid_path) {
+    return get_turn_signal(getEgoPose(), prev_path.back().point.pose);
   }
 
   set_signal_activation_time();
@@ -1001,11 +1013,13 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
     const auto is_before_terminal =
       utils::lane_change::is_before_terminal(common_data_ptr_, current_lanes_ref_path, ext_object);
 
-    const auto ahead_of_ego =
-      utils::lane_change::is_ahead_of_ego(common_data_ptr_, current_lanes_ref_path, ext_object);
+    const auto ego_object_proximity = utils::lane_change::calc_ego_object_proximity(
+      common_data_ptr_, current_lanes_ref_path, ext_object);
+
+    const auto ahead_of_ego = ego_object_proximity.is_ahead_of_ego;
 
     if (utils::lane_change::filter_target_lane_objects(
-          common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ahead_of_ego,
+          common_data_ptr_, ext_object, dist_ego_to_current_lanes_center, ego_object_proximity,
           is_before_terminal, target_lane_leading, filtered_objects.target_lane_trailing)) {
       continue;
     }
@@ -1496,11 +1510,11 @@ PathSafetyStatus NormalLaneChange::isApprovedPathSafe() const
 
   const auto decel_sampling_num =
     static_cast<size_t>(lane_change_parameters_->cancel.deceleration_sampling_num);
-  const auto ego_predicted_paths =
-    utils::lane_change::convert_to_predicted_paths(common_data_ptr_, path, decel_sampling_num);
+  const auto ego_predicted_paths = utils::lane_change::convert_to_predicted_paths(
+    common_data_ptr_, path, decel_sampling_num, true);
   const auto safety_status = isLaneChangePathSafe(
     path, ego_predicted_paths, target_objects, lane_change_parameters_->safety.rss_params_for_abort,
-    debug_data);
+    debug_data, true);
   {
     // only for debug purpose
     lane_change_debug_.collision_check_objects.clear();
@@ -1603,7 +1617,9 @@ bool NormalLaneChange::calcAbortPath()
   const auto lane_changing_end_pose_idx = std::invoke([&]() {
     constexpr double s_start = 0.0;
     const double s_end = std::max(
-      lanelet::utils::getLaneletLength2d(reference_lanelets) - current_min_dist_buffer, 0.0);
+      lanelet::geometry::length2d(lanelet::LaneletSequence(reference_lanelets)) -
+        current_min_dist_buffer,
+      0.0);
 
     const auto ref = route_handler->getCenterLinePath(reference_lanelets, s_start, s_end);
     return autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
@@ -1724,41 +1740,98 @@ bool NormalLaneChange::calcAbortPath()
   return true;
 }
 
+std::optional<std::vector<ExtendedPredictedObject>>
+NormalLaneChange::find_colliding_object_if_all_paths_collide(
+  const LaneChangePath & lane_change_path,
+  const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
+  const ExtendedPredictedObjects & objects,
+  const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+  const bool is_approved) const
+{
+  std::vector<ExtendedPredictedObject> colliding_objects;
+  std::unordered_set<size_t> objects_idx;
+
+  const auto check_for_collision = [&](const auto & ego_predicted_path, const auto & object) {
+    return is_colliding(
+      lane_change_path, object, ego_predicted_path, rss_params, debug_data, is_approved);
+  };
+
+  const auto check_for_collisions = [&](const auto & ego_predicted_path) {
+    std::vector<ExtendedPredictedObject> current_colliding_objects;
+    current_colliding_objects.reserve(objects.size());
+
+    for (const auto & [idx, object] : objects | ranges::views::enumerate) {
+      const auto is_colliding_object = check_for_collision(ego_predicted_path, object);
+      if (!is_colliding_object) {
+        continue;
+      }
+      if (objects_idx.find(idx) == objects_idx.end()) {
+        current_colliding_objects.push_back(object);
+        objects_idx.insert(idx);
+      }
+    }
+
+    if (current_colliding_objects.empty()) {
+      return false;
+    }
+
+    std::move(
+      current_colliding_objects.begin(), current_colliding_objects.end(),
+      std::back_inserter(colliding_objects));
+
+    return true;
+  };
+
+  if (ranges::all_of(ego_predicted_paths, check_for_collisions)) {
+    return colliding_objects;
+  }
+
+  return std::nullopt;
+}
+
 PathSafetyStatus NormalLaneChange::isLaneChangePathSafe(
   const LaneChangePath & lane_change_path,
   const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
   const lane_change::TargetObjects & collision_check_objects,
-  const utils::path_safety_checker::RSSparams & rss_params,
-  CollisionCheckDebugMap & debug_data) const
+  const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+  const bool is_approved) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   constexpr auto is_safe = true;
-  constexpr auto is_object_behind_ego = true;
+  constexpr auto is_moving_object_behind_ego = true;
+  if (ego_predicted_paths.empty()) {
+    return {is_safe, !is_moving_object_behind_ego};
+  }
 
-  const auto all_paths_collide = [&](const auto & objects) {
-    return ranges::all_of(ego_predicted_paths, [&](const auto & ego_predicted_path) {
-      const auto check_for_collision = [&](const auto & object) {
-        return is_colliding(lane_change_path, object, ego_predicted_path, rss_params, debug_data);
-      };
-      return ranges::any_of(objects, check_for_collision);
-    });
+  const auto check_for_colliding_objects =
+    [&](decltype(ego_predicted_paths) & ego_pred_paths, const auto & objects) {
+      return find_colliding_object_if_all_paths_collide(
+        lane_change_path, ego_pred_paths, objects, rss_params, debug_data, is_approved);
+    };
+
+  const auto check_for_moving_objects = [this](const auto & object) {
+    return utils::lane_change::is_moving_object(common_data_ptr_, object);
   };
 
-  if (all_paths_collide(collision_check_objects.trailing)) {
-    return {!is_safe, is_object_behind_ego};
+  if (
+    const auto found_colliding_objects_opt = check_for_colliding_objects(
+      {ego_predicted_paths.front()}, collision_check_objects.trailing)) {
+    const auto is_moving_object =
+      ranges::any_of(*found_colliding_objects_opt, check_for_moving_objects);
+    return {!is_safe, is_moving_object};
   }
 
-  if (all_paths_collide(collision_check_objects.leading)) {
-    return {!is_safe, !is_object_behind_ego};
+  if (check_for_colliding_objects(ego_predicted_paths, collision_check_objects.leading)) {
+    return {!is_safe, !is_moving_object_behind_ego};
   }
 
-  return {is_safe, !is_object_behind_ego};
+  return {is_safe, !is_moving_object_behind_ego};
 }
 
 bool NormalLaneChange::is_colliding(
   const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
   const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-  CollisionCheckDebugMap & debug_data) const
+  CollisionCheckDebugMap & debug_data, const bool is_approved) const
 {
   constexpr auto is_colliding{true};
 
@@ -1792,7 +1865,7 @@ bool NormalLaneChange::is_colliding(
 
   const auto & th_stopped_obj_vel = lane_change_parameters_->safety.th_stopped_object_velocity;
   const auto & lane_changing_phase_rss_param =
-    (obj.initial_twist.linear.x <= th_stopped_obj_vel)
+    (!is_approved && obj.initial_twist.linear.x <= th_stopped_obj_vel)
       ? lane_change_parameters_->safety.rss_params_for_parked
       : rss_param;
 
@@ -1888,9 +1961,7 @@ bool NormalLaneChange::is_ego_stuck() const
     filtered_objects_.current_lane.begin(), filtered_objects_.current_lane.end(),
     [&](const auto & object) {
       // Note: it needs chattering prevention.
-      if (
-        std::abs(object.initial_twist.linear.x) >
-        lc_param_ptr->safety.th_stopped_object_velocity) {  // check if stationary
+      if (utils::lane_change::is_moving_object(common_data_ptr_, object)) {  // check if stationary
         return false;
       }
 
@@ -1969,5 +2040,28 @@ void NormalLaneChange::update_dist_from_intersection()
 
   path_after_intersection_.clear();
   transient_data.dist_from_prev_intersection = std::numeric_limits<double>::max();
+}
+
+bool NormalLaneChange::is_ego_in_current_or_target_lanes() const
+{
+  lanelet::ConstLanelet current_lane;
+  if (!common_data_ptr_->route_handler_ptr->getClosestLaneletWithinRoute(
+        common_data_ptr_->get_ego_pose(), &current_lane)) {
+    return false;
+  }
+
+  const auto & current_lanes = get_current_lanes();
+  const auto in_current =
+    utils::lane_change::is_lanelet_in_lanelet_collections(current_lanes, current_lane);
+
+  if (in_current) {
+    return true;
+  }
+
+  const auto & target_lanes = get_target_lanes();
+  const auto in_target =
+    utils::lane_change::is_lanelet_in_lanelet_collections(target_lanes, current_lane);
+
+  return in_target;
 }
 }  // namespace autoware::behavior_path_planner

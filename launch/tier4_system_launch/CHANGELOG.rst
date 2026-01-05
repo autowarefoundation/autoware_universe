@@ -2,6 +2,32 @@
 Changelog for package tier4_system_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(diagnostic_graph_aggregator): "var" substitution support (`#11802 <https://github.com/autowarefoundation/autoware_universe/issues/11802>`_)
+  * implement vars substitution
+  * add test
+  * update launch
+  * update doc
+  * add parameter passing
+  * fix [build/include_what_you_use]
+  * format code
+  * format table
+  * unify same namespace block
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * refactor(autoware_diagnostic_graph_aggregator): use YAML map format for graph_vars parameter
+  * update path.md
+  ---------
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Autumn60, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_pipeline_latency_monitor): add autoware_pipeline_latency_monitor package (`#10798 <https://github.com/autowarefoundation/autoware_universe/issues/10798>`_)

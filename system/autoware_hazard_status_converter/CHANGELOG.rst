@@ -2,6 +2,18 @@
 Changelog for package autoware_hazard_status_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(hazard_status_converter): use latch level for holding status (`#11721 <https://github.com/autowarefoundation/autoware_universe/issues/11721>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

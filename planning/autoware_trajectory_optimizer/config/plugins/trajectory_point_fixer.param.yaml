@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    trajectory_point_fixer:
+      # Distance thresholds for point processing
+      remove_close_points: true    # Enable removal of close proximity points
+      resample_close_points: true     # Enable resampling of close proximity points
+      min_dist_to_remove_m: 0.01  # [m] Minimum distance to remove close proximity points
+      min_dist_to_resample_m: 0.05   # [m] Minimum distance to merge close proximity points

@@ -33,22 +33,28 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
-class TrajectorySplineSmoother : TrajectoryOptimizerPluginBase
+// Plugin-specific parameter struct
+struct TrajectorySplineSmootherParams
+{
+  double interpolation_resolution_m{0.5};
+  double max_distance_discrepancy_m{5.0};
+  bool preserve_input_trajectory_orientation{true};
+};
+
+class TrajectorySplineSmoother : public TrajectoryOptimizerPluginBase
 {
 public:
-  TrajectorySplineSmoother(
-    const std::string name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const TrajectoryOptimizerParams & params)
-  : TrajectoryOptimizerPluginBase(name, node_ptr, time_keeper, params)
-  {
-  }
+  TrajectorySplineSmoother() = default;
   ~TrajectorySplineSmoother() = default;
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params) override;
+    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+    const TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
+
+private:
+  TrajectorySplineSmootherParams spline_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

@@ -8,7 +8,7 @@ Moreover, the planner responds to the behavior of other traffic participants, pr
 
 !!! note
 
-    The [Planning Component Design](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/planning/) documentation outlines the foundational philosophy guiding the design and future development of the Behavior Path Planner module. We strongly encourage readers to consult this document to understand the rationale behind its current configuration and the direction of its ongoing development.
+    The [Planning Component Design](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/components/planning/) documentation outlines the foundational philosophy guiding the design and future development of the Behavior Path Planner module. We strongly encourage readers to consult this document to understand the rationale behind its current configuration and the direction of its ongoing development.
 
 ## Purpose / Use Cases
 
@@ -57,7 +57,7 @@ Behavior Path Planner has the following scene modules
 
 !!! Note
 
-    Users can refer to [Planning component design](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/planning/#supported-functions) for some additional behavior.
+    Users can refer to [Planning component design](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/components/planning/#supported-functions) for some additional behavior.
 
 #### How to add or implement new module
 

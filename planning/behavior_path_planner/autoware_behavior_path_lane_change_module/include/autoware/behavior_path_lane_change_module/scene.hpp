@@ -157,17 +157,24 @@ protected:
 
   bool isValidPath(const PathWithLaneId & path) const override;
 
+  std::optional<std::vector<ExtendedPredictedObject>> find_colliding_object_if_all_paths_collide(
+    const LaneChangePath & lane_change_path,
+    const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
+    const ExtendedPredictedObjects & objects,
+    const utils::path_safety_checker::RSSparams & rss_params,
+    CollisionCheckDebugMap & debug_dataconst, const bool is_approved) const;
+
   PathSafetyStatus isLaneChangePathSafe(
     const LaneChangePath & lane_change_path,
     const std::vector<std::vector<PoseWithVelocityStamped>> & ego_predicted_paths,
     const lane_change::TargetObjects & collision_check_objects,
-    const utils::path_safety_checker::RSSparams & rss_params,
-    CollisionCheckDebugMap & debug_data) const;
+    const utils::path_safety_checker::RSSparams & rss_params, CollisionCheckDebugMap & debug_data,
+    const bool is_approved = false) const;
 
   bool is_colliding(
     const LaneChangePath & lane_change_path, const ExtendedPredictedObject & obj,
     const std::vector<PoseWithVelocityStamped> & ego_predicted_path, const RSSparams & rss_param,
-    CollisionCheckDebugMap & debug_data) const;
+    CollisionCheckDebugMap & debug_data, const bool is_approved) const;
 
   double get_max_velocity_for_safety_check() const;
 
@@ -186,6 +193,14 @@ protected:
   }
 
   void update_dist_from_intersection();
+
+  /**
+   * @brief Check whether the ego vehicle is currently located in either the
+   *        current lanes or the target lanes used for lane change planning.
+   *
+   * @return true   ego vehicle is on one of the current or target lanelets.
+   */
+  bool is_ego_in_current_or_target_lanes() const final;
 
   std::vector<PathPointWithLaneId> path_after_intersection_;
   double stop_time_{0.0};

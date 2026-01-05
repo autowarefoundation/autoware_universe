@@ -23,12 +23,11 @@
 
 #include <Eigen/Dense>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/route_handler/route_handler.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -49,6 +48,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -81,15 +81,16 @@ using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
-using autoware::route_handler::RouteHandler;
 using autoware::vehicle_info_utils::VehicleInfo;
 using builtin_interfaces::msg::Duration;
 using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
 using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
 using std_msgs::msg::ColorRGBA;
@@ -102,6 +103,14 @@ using autoware::cuda_utils::CudaUniquePtr;
 using autoware::tensorrt_common::TrtConvCalib;
 using autoware_utils_diagnostics::DiagnosticsInterface;
 
+struct FrameContext
+{
+  nav_msgs::msg::Odometry ego_kinematic_state;
+  geometry_msgs::msg::AccelWithCovarianceStamped ego_acceleration;
+  Eigen::Matrix4d ego_to_map_transform;
+  AgentData ego_centric_neighbor_agent_data;
+};
+
 struct DiffusionPlannerParams
 {
   std::string model_path;
@@ -112,14 +121,15 @@ struct DiffusionPlannerParams
   bool ignore_neighbors;
   bool ignore_unknown_neighbors;
   bool predict_neighbor_trajectory;
-  bool update_traffic_light_group_info;
-  bool keep_last_traffic_light_group_info;
   double traffic_light_group_msg_timeout_seconds;
   int batch_size;
+  std::vector<double> temperature_list;
+  int64_t velocity_smoothing_window;
+  double stopping_threshold;
 };
 struct DiffusionPlannerDebugParams
 {
-  bool publish_debug_route{false};
+  bool publish_debug_route{true};
   bool publish_debug_map{false};
 };
 
@@ -152,16 +162,11 @@ struct DiffusionPlannerDebugParams
  * - do_inference: Run inference on input data and return predictions.
  * - on_parameter: Callback for dynamic parameter updates.
  * - create_input_data: Prepare input data for inference.
- * - get_ego_centric_agent_data: Extract ego-centric agent data from tracked objects.
  * - create_trajectory: Convert predictions to a trajectory in map coordinates.
  * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
  *
  * @section Internal State
  * @brief
- * - route_handler_: Handles route-related operations.
- * - transforms_: Stores transformation matrices between map and ego frames.
- * - ego_kinematic_state_: Current odometry state of the ego vehicle.
- * - ONNX Runtime members: env_, session_options_, session_, allocator_, cuda_options_.
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
  * - Lanelet map and routing members: route_ptr_, routing_graph_ptr_,
@@ -175,6 +180,8 @@ class DiffusionPlanner : public rclcpp::Node
 public:
   explicit DiffusionPlanner(const rclcpp::NodeOptions & options);
   ~DiffusionPlanner();
+
+private:
   /**
    * @brief Initialize and declare node parameters.
    */
@@ -207,20 +214,24 @@ public:
   /**
    * @brief Publish visualization markers for debugging.
    * @param input_data_map Input data used for inference.
+   * @param ego_to_map_transform Transform from ego to map frame for visualization.
    */
-  void publish_debug_markers(InputDataMap & input_data_map) const;
+  void publish_debug_markers(
+    const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform) const;
 
   /**
    * @brief Publish model predictions.
    * @param predictions Output from the model.
+   * @param frame_context Context of the current frame.
    */
-  void publish_predictions(const std::vector<float> & predictions) const;
+  void publish_predictions(
+    const std::vector<float> & predictions, const FrameContext & frame_context) const;
 
   /**
    * @brief Run inference on input data output is stored on member output_d_.
    * @param input_data_map Input data for the model.
    */
-  std::vector<float> do_inference_trt(InputDataMap & input_data_map);
+  std::vector<float> do_inference_trt(const InputDataMap & input_data_map);
 
   /**
    * @brief Get turn indicator logit from the last inference.
@@ -237,33 +248,30 @@ public:
 
   /**
    * @brief Prepare input data for inference.
+   * @return FrameContext containing preprocessed data.
+   */
+  std::optional<FrameContext> create_frame_context();
+
+  /**
+   * @brief Build model input tensors from frame context.
+   * @param frame_context Preprocessed frame context.
    * @return Map of input data for the model.
    */
-  InputDataMap create_input_data();
+  InputDataMap create_input_data(const FrameContext & frame_context);
 
   // preprocessing
-  std::shared_ptr<RouteHandler> route_handler_{std::make_shared<RouteHandler>()};
-  std::pair<Eigen::Matrix4d, Eigen::Matrix4d> transforms_;
-  AgentData get_ego_centric_agent_data(
-    const TrackedObjects & objects, const Eigen::Matrix4d & map_to_ego_transform);
-
   /**
    * @brief Replicate single sample data for batch processing.
    * @param single_data Single sample data.
    * @return Vector replicated for the configured batch size.
    */
-  std::vector<float> replicate_for_batch(const std::vector<float> & single_data);
-
-  // current state
-  Odometry ego_kinematic_state_;
-
-  // ego history for ego_agent_past
-  std::deque<Odometry> ego_history_;
+  std::vector<float> replicate_for_batch(const std::vector<float> & single_data) const;
 
   // TensorRT
   std::unique_ptr<TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   // For float inputs and output
+  CudaUniquePtr<float[]> sampled_trajectories_d_;
   CudaUniquePtr<float[]> ego_history_d_;
   CudaUniquePtr<float[]> ego_current_state_d_;
   CudaUniquePtr<float[]> neighbor_agents_past_d_;
@@ -274,14 +282,20 @@ public:
   CudaUniquePtr<float[]> route_lanes_d_;
   CudaUniquePtr<bool[]> route_lanes_has_speed_limit_d_;
   CudaUniquePtr<float[]> route_lanes_speed_limit_d_;
+  CudaUniquePtr<float[]> polygons_d_;
+  CudaUniquePtr<float[]> line_strings_d_;
   CudaUniquePtr<float[]> goal_pose_d_;
   CudaUniquePtr<float[]> ego_shape_d_;
+  CudaUniquePtr<float[]> turn_indicators_d_;
   CudaUniquePtr<float[]> output_d_;                // shape: [1, 11, 80, 4]
   CudaUniquePtr<float[]> turn_indicator_logit_d_;  // shape: [1, 4]
   cudaStream_t stream_{nullptr};
 
-  // Model input data
+  // history data
+  std::deque<Pose> ego_history_;
+  std::deque<TurnIndicatorsReport> turn_indicators_history_;
   std::optional<AgentData> agent_data_{std::nullopt};
+  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
@@ -293,7 +307,6 @@ public:
   LaneletRoute::ConstSharedPtr route_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
-  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
   std::unique_ptr<preprocess::LaneSegmentContext> lane_segment_context_;
   bool is_map_loaded_{false};
 
@@ -315,8 +328,10 @@ public:
   autoware_utils::InterProcessPollingSubscriber<TrackedObjects> sub_tracked_objects_{
     this, "~/input/tracked_objects"};
   autoware_utils::InterProcessPollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>
-    sub_traffic_signals_{this, "~/input/traffic_signals"};
+    autoware_perception_msgs::msg::TrafficLightGroupArray, autoware_utils::polling_policy::All>
+    sub_traffic_signals_{this, "~/input/traffic_signals", rclcpp::QoS{10}};
+  autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsReport> sub_turn_indicators_{
+    this, "~/input/turn_indicators"};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};

@@ -15,12 +15,17 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
+#include "traffic_light_multi_camera_fusion_process.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tier4_perception_msgs/msg/traffic_light.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <lanelet2_core/Forward.h>
@@ -38,29 +43,18 @@
 
 namespace autoware::traffic_light
 {
-
 namespace mf = message_filters;
 
-struct FusionRecord
+using StateKey = std::pair<uint8_t, uint8_t>;
+
+struct GroupFusionInfo
 {
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoi roi;
-  tier4_perception_msgs::msg::TrafficLight signal;
+  std::map<StateKey, double> accumulated_log_odds;
+  std::map<StateKey, utils::FusionRecord> best_record_for_state;
 };
 
-struct FusionRecordArr
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoiArray rois;
-  tier4_perception_msgs::msg::TrafficLightArray signals;
-};
-
-bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
-{
-  return rclcpp::Time(r1.header.stamp) < rclcpp::Time(r2.header.stamp);
-}
+using GroupFusionInfoMap =
+  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
 class MultiCameraFusion : public rclcpp::Node
 {
@@ -85,14 +79,54 @@ private:
 
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
 
-  void multiCameraFusion(std::map<IdType, FusionRecord> & fused_record_map);
+  void multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   void convertOutputMsg(
-    const std::map<IdType, FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
+    const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
 
   void groupFusion(
-    const std::map<IdType, FusionRecord> & fused_record_map,
-    std::map<IdType, FusionRecord> & grouped_record_map);
+    const std::map<IdType, utils::FusionRecord> & fused_record_map,
+    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+
+  /**
+   * @brief Accumulates log-odds evidence for each traffic light group from individual fused
+   * records.
+   */
+  GroupFusionInfoMap accumulateGroupEvidence(
+    const std::map<IdType, utils::FusionRecord> & fused_record_map);
+
+  /**
+   * @brief Processes a single fused record and updates the group_fusion_info_map.
+   */
+  void processFusedRecord(
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
+
+  /**
+   * @brief Updates the map for a single (element, regulatory_id) combination.
+   */
+  void updateGroupInfoForElement(
+    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
+    const tier4_perception_msgs::msg::TrafficLightElement & element,
+    const utils::FusionRecord & record);
+
+  /**
+   * @brief Handles the log-odds accumulation logic.
+   */
+  void updateLogOdds(
+    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
+
+  /**
+   * @brief Handles the logic for tracking the best record for a given state.
+   */
+  void updateBestRecord(
+    std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
+    double confidence, const utils::FusionRecord & record);
+  /**
+   * @brief Determines the best state for each group based on accumulated evidence.
+   */
+  void determineBestGroupState(
+    const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
+    std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
@@ -109,21 +143,25 @@ private:
 
   rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
   /*
-  the mapping from traffic light id (instance id) to regulatory element id (group id)
+  Mapping from traffic light instance id to regulatory element id (group id)
   */
   std::map<lanelet::Id, std::vector<lanelet::Id>> traffic_light_id_to_regulatory_ele_id_;
   /*
-  save record arrays by increasing timestamp order.
-  use multiset in case there are multiple cameras publishing images at exactly the same time
+  Store record arrays in increasing timestamp order.
+  Use multiset in case multiple cameras publish images at the exact same time.
   */
-  std::multiset<FusionRecordArr> record_arr_set_;
+  std::multiset<utils::FusionRecordArr> record_arr_set_;
   bool is_approximate_sync_;
   /*
-  for every input message input_m, if the timestamp difference between input_m and the latest
+  For every input message input_m, if the timestamp difference between input_m and the latest
   message is smaller than message_lifespan_, then input_m would be used for the fusion. Otherwise,
-  it would be discarded
+  it would be discarded.
   */
   double message_lifespan_;
+  /**
+   * @brief The prior log-odds for a traffic light state.
+   */
+  double prior_log_odds_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_

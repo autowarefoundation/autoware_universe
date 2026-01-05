@@ -2,6 +2,171 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* feat(blockage_diag_node): use PointCloud2 message directly in BlockageDiag node (`#11792 <https://github.com/autowarefoundation/autoware_universe/issues/11792>`_)
+  * feat(blockage_diag_node): refactor depth image processing to use sensor_msgs::msg::PointCloud2
+  * style(pre-commit): autofix
+  * feat(blockage_diag_node): add validation for required fields in PointCloud2 messages
+  * feat(blockage_diag_node): refactor validation tests and remove unused helper function
+  * feat(blockage_diag_node): improve error handling for missing PointCloud2 fields
+  * refactor(blockage_diag_node): enhance PointCloud2 test helpers for improved field validation
+  * style(pre-commit): autofix
+  * refactor(blockage_diag_node): reduce cyclomatic complication of validation
+  * refactor(blockage_diag_node): inline PointCloud2 creation in validation tests
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(blockage_diag_node): delete pointcloud publisher from blockage diag node (`#11779 <https://github.com/autowarefoundation/autoware_universe/issues/11779>`_)
+  * feat(blockage_diag_node): remove pointcloud publisher from blockage diag node
+  * doc(blockage_diag): remove outdated note from documentation
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* test: add integration test to blockage diag node (`#11777 <https://github.com/autowarefoundation/autoware_universe/issues/11777>`_)
+  * test(blockage_diag_node): add test file for blockage_diag_node
+  * test(blockage_diag_node): add integration tests for blockage_diag_node functionality
+  * test(blockage_diag_node): add diagnostics subscription and stale status test
+  * test(blockage_diag_node): simplify blockage_diag status check in DiagnosticsStaleTest
+  * test(blockage_diag_node): remove redundant basic and multiple pointcloud integration tests
+  * test(blockage_diag_node): add diagnostics WARN test for empty input scenario
+  * test(blockage_diag_node): add Diagnostics OK test for dense pointcloud scenario
+  * test(blockage_diag_node): add Diagnostics ERROR test for significant blockage scenario
+  * test(blockage_diag_node): enhance diagnostic tests with new pointcloud creation methods
+  * test(blockage_diag_node): update parameters for blockage diagnostics and remove unused output handling
+  * test(blockage_diag_node): create zero length pointcloud for diagnostics WARN test
+  * test(blockage_diag_node): refactor pointcloud creation methods to remove timestamp parameter
+  * test(blockage_diag_node): remove unused frame_id and is_dense parameters from pointcloud creation methods
+  * test(blockage_diag_node): refactor pointcloud creation methods to use sensor_msgs instead of pcl
+  * test(blockage_diag_node): refactor pointcloud creation methods to remove unused parameters and rename dense pointcloud method
+  * style(pre-commit): autofix
+  * test(blockage_diag_node): refactor pointcloud creation methods to use coverage ratio
+  * style(test_blockage_diag_node): include string header for improved functionality
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: prevent possible dangling pointer from .str().c_str() pattern (`#11609 <https://github.com/autowarefoundation/autoware_universe/issues/11609>`_)
+  * Fix dangling pointer caused by the .str().c_str() pattern.
+  std::stringstream::str() returns a temporary std::string,
+  and taking its c_str() leads to a dangling pointer when the temporary is destroyed.
+  This patch replaces such usage with a const reference of std::string variable to ensure pointer validity.
+  * Revert the changes made to the functions. They should only be applied to the macros.
+  ---------
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(autoware_pointcloud_preprocessor): empty cloud is valid for cloud info (`#11632 <https://github.com/autowarefoundation/autoware_universe/issues/11632>`_)
+  * feat(autoware_pointcloud_preprocessor): empty cloud is valid for cloud info
+  * fix(autoware_pointcloud_preprocessor): confirmation for already added cloud in sequence
+  ---------
+  Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
+* fix(pointcloud_preprocessor): correct latency unit in concatenate pointcloud (`#11710 <https://github.com/autowarefoundation/autoware_universe/issues/11710>`_)
+  fix(pointcloud_preprocessor): correct latency unit in concatenate function
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Takahisa Ishikawa, Takatoshi Kondo
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat: limit area for visibility estimation (`#11549 <https://github.com/autowarefoundation/autoware_universe/issues/11549>`_)
+  * feat: introduce new thresholds to limit area used for visibility estimation
+  * feat: introduce HysteresisStateMachine to visibility diag
+  * docs: update document and schema
+  * style(pre-commit): autofix
+  * fix: correct typos
+  * fix: add newly introduced parameters to the test as well
+  * docs: replace parameters table by including json
+  * fix(polar_voxel_outlier_filter): use full range (no filter) for `vivisibility_estimation\_(min|max)_(azimuth|elevation)_rad` as default
+  * feat(polar_voxel_outlier): support min\_(azimuth|elevation)_rad > max\_(azimuth|elevation)_rad case
+  * refactor(polar_voxel_outlier): re-group some parameters
+  * refactor(polar_voxel_outlier): move hysteresis_state_machine.hpp under include/autoware/pointcloud_preprocessor/diagnostics
+  * refactor(polar_voxel_outlier): rename variables
+  * style(pre-commit): autofix
+  * fix(polar_voxel_outlier): correct typo
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_pointcloud_preprocessor): polar voxel filter (`#10996 <https://github.com/autowarefoundation/autoware_universe/issues/10996>`_)
+  * feat(pointcloud_preprocessor): add basic polar voxel filter
+  * feat(pointcloud_preprocessor): add initial dual return logic
+  * feat(pointcloud_preprocessor): refactor and add return type options, documetation
+  * feat(pointcloud_preprocessor): add visibility to polar voxel filter
+  * feat(pointcloud_preprocessor): update documentation
+  * feat(pointcloud_preprocessor): merge readme and documentation files for polar voxel filter
+  * chore(pointcloud_preprocessor): pass pre-commit
+  * refector(polar_voxel_filter): simplify return type classification
+  * refector(polar_voxel_filter): add suffix to parameters with units, update default values
+  * refector(polar_voxel_filter): explicity speficy index integer type
+  * refector(polar_voxel_filter): re-work to be O(n) using hashed unordered map, and reduce allocation overhead with multi-stage pass of a single large vector
+  * refector(polar_voxel_filter): use custom types for cartesian and polar coordinates
+  * refector(polar_voxel_filter): snake case for functions
+  * refector(polar_voxel_filter): std::optional for visibility and filter ratio
+  * Update sensing/autoware_pointcloud_preprocessor/src/outlier_filter/polar_voxel_outlier_filter_node.cpp
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * refector(polar_voxel_filter): remove log spam and unneccesary comments
+  * refector(polar_voxel_filter): rename valid points mask and unnecessary variable
+  * refector(polar_voxel_filter): style and pre-commit fixes
+  * refactor(pointcloud_preprocessor): address code complexity, duplication
+  * feat(pointcloud_preprocessor): make noise pointcloud publishing optional
+  * refactor(pointcloud_preprocessor): simplify by enforcing use of XYZIRC or XYZIRCAEDT
+  * refactor(pointcloud_preprocessor): limit range in visibilty calculation
+  * chore(autoware_pointcloud_preprocessor): code complexity and clang-tidy
+  * feat(polar_voxel_outlier_filter): add visibility estimation parameters, update documentation to match
+  * feat(polar_voxel_outlier_filter): add option to not publish a filtered pointcloud (only estimate visibility), update documentation to match
+  * refactor(polar_voxel_outlier_filter): reduce cyclic complexity, code smells
+  * refactor(polar_voxel_outlier_filter): complex conditionals, code smells
+  * refactor(polar_voxel_outlier_filter): repeated code refactoring
+  * refactor(polar_voxel_outlier_filter): some more complex conditionals
+  * feat(polar_voxel_outlier_filter): add unit tests
+  * refactor(polar_voxel_outlier_filter): code duplication in tests
+  * refactor(polar_voxel_outlier_filter): more code duplication in tests
+  * chore(autoware_pointcloud_preprocessor): re-add tests to CMakeLists after rebase
+  * chore(autoware_pointcloud_preprocessor): prettier for documentation file
+  * refactor(polar_voxel_filter): remove raw pointers
+  * feat(polar_voxel_outlier_filter): add intensity parameter for secondary returns
+  * refactor(polar_voxel_outlier_filter): rename parameter, validation complexity
+  * refactor(polar_voxel_outlier_filter): reduce cyclic complexity in parameter callback validation
+  * chore(polar_voxel_filter): unity parameter map for parameter callback
+  * refactor(polar_voxel_filter): address review feedback - some naming, default parameters, and pointcloud pointer changes
+  * chore(polar_voxel_outlier_filter): remove default params in node construction
+  * fix(polar_voxel_outlier_filter): ensure consistent voxel sizes across a full 2pi range, and enforce in schema
+  * chore(polar_voxel_outlier_filter): tidy unused headers, mutables, clearer function and variable names
+  * chore(polar_voxel_outlier_filter): tidy uneccesary helper functions, duplicate code, parameter defaults
+  * refactor(polar_voxel_outlier_filter): simplify use of iterators
+  * refactor(polar_voxel_outlier_filter): noise pointcloud setup simplification
+  * test(polar_voxel_outlier_filter): re-do unit test to only test the filter interface
+  * test(polar_voxel_outlier_filter): test individual filtered points and visibility
+  * chore(polar_voxel_outlier_filter): pass prettier pre-commit
+  ---------
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* fix(fusion node): subscribe from concatenation info (`#11258 <https://github.com/autowarefoundation/autoware_universe/issues/11258>`_)
+  * chore: rename concatenate info to manager for clearity
+  * feat: add reference min max in the concatenated info
+  * chore: replace reading from diagnositc to concatenate info
+  * fix: qos settting
+  * chore: update for cuda pointcloud preprocessor
+  * chore: move info to matching strategy
+  * chore: clean code
+  * feat: move concat info in launcher
+  * chore: fix readme
+  * feat: sub to concat info in launcher
+  * chore: add concat info in irregular launch
+  ---------
+* feat: add pre-commit-lite workflow (`#11240 <https://github.com/autowarefoundation/autoware_universe/issues/11240>`_)
+* Contributors: David Wong, Manato Hirabayashi, Mete Fatih Cırıt, Ryohsuke Mitsudome, Tim Clephas, Yi-Hsiang Fang (Vivid)
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * refactor(pointcloud_preprocessor): extract downsample logic from pickup_based_voxel_downsample_filter (`#11098 <https://github.com/autowarefoundation/autoware_universe/issues/11098>`_)

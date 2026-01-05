@@ -18,6 +18,8 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -122,7 +124,8 @@ template <class LaneletPointType>
 Pose to_geom_msg_pose(const LaneletPointType & src_point, const lanelet::ConstLanelet & target_lane)
 {
   const auto point = lanelet::utils::conversion::toGeomMsgPt(src_point);
-  const auto yaw = lanelet::utils::getLaneletAngle(target_lane, point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
   geometry_msgs::msg::Pose pose;
   pose.position = point;
   tf2::Quaternion quat;
@@ -132,7 +135,6 @@ Pose to_geom_msg_pose(const LaneletPointType & src_point, const lanelet::ConstLa
 }
 
 // distance (arclength) calculation
-
 double l2Norm(const Vector3 vector);
 
 double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLanelets & lanelets);
@@ -145,6 +147,58 @@ double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLan
  */
 double getDistanceToNextIntersection(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets);
+
+/**
+ * @brief Checks if a lanelet attribute string indicates a turn direction lane.
+ *
+ * @param lanelet_attribute_string The string value of the lanelet's "turn_direction" attribute.
+ * @return bool True if the string is "left" or "right", false otherwise.
+ */
+bool is_turn_direction_lane(const std::string & lanelet_attribute_string);
+
+/**
+ * @brief Checks if a given lanelet is designated as a turn direction lane.
+ *
+ * @param lanelet The lanelet to check.
+ * @return bool True if the lanelet has the turn_direction attribute set to "left" or "right",
+ * false otherwise.
+ */
+bool is_turn_direction_lane(const lanelet::ConstLanelet & lanelet);
+
+/**
+ * @brief Finds the nearest turn direction lanelet(s) in the route that precede the current lanelet.
+ *
+ * @param current_pose The ego vehicle's current pose.
+ * @param route_handler The route handler providing map and routing graph access (for previous/next
+ * lane lookups).
+ * @param lanelets The sequential list of lanelets representing the path to search along.
+ * @return lanelet::ConstLanelets A vector containing the nearest turn direction lanelet(s)
+ * that immediately precede the current lanelet and contain the ego pose,
+ * or an empty vector if none are found or inputs are invalid.
+ *
+ * @note This function appears to contain a logical flaw: the check for
+ * 'is_in_turn_direction_lane(lane)' should typically be applied to the *current* lane, not the
+ * *previous* lane in a reverse search. The current implementation only returns a lanelet if the
+ * vehicle's pose is inside that previous lanelet.
+ */
+lanelet::ConstLanelets nearest_turn_direction_lane_within_route(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets);
+
+/**
+ * @brief Calculates the remaining distance to the start of the lane with turn direction.
+ *
+ * @param current_pose The ego vehicle's current pose.
+ * @param route_handler The route handler containing the full map and routing information.
+ * @param lanelets The sequence of candidate lanelets to search along (e.g., the current path).
+ * @param shift_direction_str The intended shift direction (must be left or right).
+ * @return std::optional<double> The distance (in meters) to the start of the turn lane, or
+ * std::nullopt if the shift direction is invalid, the current lanelet is not found,
+ * or no succeeding turn lanelet is found in the path.
+ */
+std::optional<double> calc_distance_to_next_turn_direction_lane(
+  const Pose & current_pose, const RouteHandler & route_handler,
+  const lanelet::ConstLanelets & lanelets, const std::string & shift_direction_str);
 
 /**
  * @brief Calculates the distance to the next crosswalk.
@@ -229,14 +283,19 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
  * from the goal posture information is also inserted for the smooth connection of the goal pose.
  * @param [in] search_radius_range distance on path to be modified for goal insertion
  * @param [in] search_rad_range [unused]
+ * @param [in] output_path_interval interval of output path
  * @param [in] input original path
  * @param [in] goal original goal pose
  * @param [in] goal_lane_id [unused]
+ * @param [in] route_handler Route handler.
  * @param [in] output_ptr output path with modified points for the goal
  */
 bool set_goal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id, PathWithLaneId * output_ptr);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id,
+  PathWithLaneId * output_ptr);
 
 /**
  * @brief Recreate the goal pose to prevent the goal point being too far from the lanelet, which
@@ -252,14 +311,18 @@ const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lane
  * @brief Recreate the path with a given goal pose.
  * @param search_radius_range Searching radius.
  * @param search_rad_range Searching angle.
+ * @param output_path_interval Interval of output path.
  * @param input Input path.
  * @param goal Goal pose.
  * @param goal_lane_id Lane ID of goal lanelet.
+ * @param get_lanelet_by_id Function to get lanelet by ID.
  * @return Recreated path
  */
 PathWithLaneId refinePathForGoal(
-  const double search_radius_range, const double search_rad_range, const PathWithLaneId & input,
-  const Pose & goal, const int64_t goal_lane_id);
+  const double search_radius_range, const double search_rad_range,
+  const double output_path_interval, const PathWithLaneId & input, const Pose & goal,
+  const int64_t goal_lane_id,
+  const std::function<lanelet::ConstLanelet(int64_t)> & get_lanelet_by_id);
 
 bool isAllowedGoalModification(const std::shared_ptr<RouteHandler> & route_handler);
 bool checkOriginalGoalIsInShoulder(const std::shared_ptr<RouteHandler> & route_handler);
@@ -452,6 +515,11 @@ lanelet::ConstLanelets calcLaneAroundPose(
  */
 bool checkPathRelativeAngle(const PathWithLaneId & path, const double angle_threshold);
 
+std::vector<lanelet::Id> get_lanelet_id_from_path(const PathWithLaneId & path);
+
+lanelet::ConstLanelets get_lanelet_sequence_from_path(
+  const PathWithLaneId & path, const RouteHandler & route_handler);
+
 lanelet::ConstLanelets getLaneletsFromPath(
   const PathWithLaneId & path, const std::shared_ptr<RouteHandler> & route_handler);
 
@@ -479,6 +547,60 @@ size_t findNearestSegmentIndex(
 
   return autoware::motion_utils::findNearestSegmentIndex(points, pose.position);
 }
+
+/**
+ * @brief Calculates the minimum feasible distance required to decelerate from the current velocity
+ * to a target velocity, considering acceleration and jerk limits.
+ *
+ * @param planner_data Shared pointer to the current planner data (includes velocity and
+ * acceleration).
+ * @param acc_lim The maximum *negative* acceleration (deceleration limit) in [m/s^2]. Must be <
+ * 0.0.
+ * @param jerk_lim The maximum jerk magnitude (positive value) in [m/s^3].
+ * @param target_velocity The desired final velocity in [m/s].
+ * @return std::optional<double> The minimum required deceleration distance in [m],
+ * or std::nullopt if the current velocity is already below the target velocity,
+ * or if the motion utility calculation fails.
+ * @throws std::invalid_argument if acc_lim is not a negative value.
+ */
+std::optional<double> calc_feasible_decel_distance(
+  const std::shared_ptr<const PlannerData> & planner_data, const double acc_lim,
+  const double jerk_lim, const double target_velocity);
+
+/**
+ * @brief Calculates the feasible stopping distance and inserts a stop point into the current path.
+ *
+ * @param current_path The path to be modified (stop point will be inserted into its points vector).
+ * @param planner_data Shared pointer to the current planner data (for current velocity and
+ * acceleration).
+ * @param maximum_deceleration The maximum allowable deceleration (negative value) in [m/s^2].
+ * @param maximum_jerk The maximum allowable jerk (positive magnitude) in [m/s^3].
+ * @param stop_reason A string detailing the reason for the stop.
+ * @return PoseWithDetailOpt The pose and reason of the inserted stop point, or std::nullopt if
+ * the path is empty, the stopping distance cannot be calculated, or the stop point
+ * cannot be inserted into the path.
+ */
+PoseWithDetailOpt insert_feasible_stop_point(
+  PathWithLaneId & current_path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double maximum_deceleration, const double maximum_jerk,
+  const std::string & stop_reason = "");
+
+/**
+ * @brief Calculates the signed lateral distance from the ego vehicle's specified corner point
+ * to the closest lane boundary (left or right).
+ *
+ * @param route_handler Reference to the RouteHandler object for map and route lookup.
+ * @param ego_baselink_pose The pose of the ego vehicle's base_link frame.
+ * @param vehicle_info The VehicleInfo object containing vehicle dimensions (used to determine
+ * footprint).
+ * @param direction The side of the vehicle to check ("left" or "right").
+ * @return std::optional<double> The signed lateral distance [m] from the corner point to the lane
+ * boundary, or std::nullopt if the direction is invalid or no valid lanelet is found near the
+ * corner.
+ */
+std::optional<double> calc_point_dist_to_closest_lane_boundary(
+  const RouteHandler & route_handler, const Pose & ego_baselink_pose,
+  const vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & direction);
 }  // namespace autoware::behavior_path_planner::utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__UTILS_HPP_

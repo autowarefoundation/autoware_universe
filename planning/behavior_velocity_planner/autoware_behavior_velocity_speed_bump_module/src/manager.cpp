@@ -18,8 +18,7 @@
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/ros/parameter.hpp>
-
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <memory>
 #include <set>

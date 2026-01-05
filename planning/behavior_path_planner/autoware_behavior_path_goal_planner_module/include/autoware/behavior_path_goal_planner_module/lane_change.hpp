@@ -23,7 +23,13 @@
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <optional>
+#include <string>
 #include <variant>
+
+namespace autoware::route_handler
+{
+class RouteHandler;
+}
 
 namespace autoware::behavior_path_planner
 {
@@ -76,9 +82,8 @@ public:
    */
   State get_next_state(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-    const lanelet::LaneletMapConstPtr lanelet_map,
-    lanelet::routing::RoutingGraphConstPtr routing_graph, const rclcpp::Time & now,
-    const lanelet::Id goal_lanelet_id) const;
+    const lanelet::Id ego_lane_id, const autoware::route_handler::RouteHandler & route_handler,
+    const rclcpp::Time & now) const;
 
   State get_current_state() const { return state_; }
 
@@ -106,6 +111,27 @@ public:
   static bool is_not_consistent_transition(const State & from, const State & to);
 
   bool is_in_consistent_transition() const { return is_in_consistent_transition_; }
+
+  static std::string state_to_string(const State & state)
+  {
+    return std::visit(
+      [](const auto & s) -> std::string {
+        using T = std::decay_t<decltype(s)>;
+        if constexpr (std::is_same_v<T, Started>) {
+          return "Started";
+        } else if constexpr (std::is_same_v<T, Executing>) {
+          return "Executing";
+        } else if constexpr (std::is_same_v<T, Aborted>) {
+          return "Aborted";
+        } else if constexpr (std::is_same_v<T, Completed>) {
+          return "Completed";
+        } else if constexpr (std::is_same_v<T, NotLaneChanging>) {
+          return "NotLaneChanging";
+        }
+        return "Unknown";
+      },
+      state);
+  }
 
 private:
   State state_{LaneChangeContext::NotLaneChanging{}};

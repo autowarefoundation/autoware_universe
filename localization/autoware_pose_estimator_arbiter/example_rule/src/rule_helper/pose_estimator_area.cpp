@@ -14,8 +14,7 @@
 
 #include "rule_helper/pose_estimator_area.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <boost/geometry/geometry.hpp>
@@ -81,8 +80,8 @@ void PoseEstimatorArea::Impl::init(HADMapBin::ConstSharedPtr msg)
     return;
   }
 
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map);
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 
   const auto & polygon_layer = lanelet_map->polygonLayer;
   RCLCPP_DEBUG_STREAM(logger_, "Polygon layer size: " << polygon_layer.size());
