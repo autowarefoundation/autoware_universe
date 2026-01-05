@@ -77,7 +77,7 @@ void NormalLaneChange::update_lanes(const bool is_approved)
   }
 
   auto current_lanes = utils::getCurrentLanesFromPath(prev_module_output_.path, planner_data_);
-  utils::lane_change::exclude_lanelets(
+  utils::lane_change::trim_preferred_after_alternative(
     current_lanes, common_data_ptr_->route_handler_ptr->getPreferredLanelets());
 
   if (current_lanes.empty()) {
