@@ -20326,6 +20326,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Substitutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-var-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using $(var &lt;name&gt;)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -23838,6 +23855,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Substitutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-var-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using $(var &lt;name&gt;)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -23900,8 +23934,22 @@ The structure of the subgraph file should be <a href="../graph/">graph object</a
 <td><code>$(find-pkg-share &lt;package&gt;)</code></td>
 <td>The path of the package.</td>
 </tr>
+<tr>
+<td><code>$(var &lt;name&gt;)</code></td>
+<td>The value of the variable passed from the node.</td>
+</tr>
 </tbody>
-</table></div>
+</table>
+<h3 id="using-var-name">Using <code>$(var &lt;name&gt;)</code><a class="headerlink" href="#using-var-name" title="Permanent link">#</a></h3>
+<p>The <code>$(var &lt;name&gt;)</code> substitution allows you to use variables in the graph file.
+Variables are passed via the <code>graph_vars</code> parameter as a YAML map string.</p>
+<p>Note: In launch XML, the value must be wrapped in single quotes to prevent YAML parsing.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"graph_vars"</span><span class="w"> </span><span class="na">value=</span><span class="s">"'{vehicle_id: vehicle1, config_dir: /path/to/config}'"</span><span class="nt">/&gt;</span>
+</code></pre></div>
+<p>Then in your graph file:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">files</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">$(var config_dir)/$(var vehicle_id)/module.yaml</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div></div>
 
 
 

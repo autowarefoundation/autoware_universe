@@ -24086,7 +24086,7 @@
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>This node can remove rain and fog by considering the light reflected from the object in two stages according to the attenuation factor. The <code>dual_return_outlier_filter</code> is named because it removes noise using data that contains two types of return values separated by attenuation factor, as shown in the figure below.</p>
 <p><img alt="outlier_filter-return_type" src="../image/outlier_filter-return_type.drawio.svg"></p>
-<p>Therefore, in order to use this node, the sensor driver must publish custom data including <code>return_type</code>. please refer to <a href="../../../common/autoware_point_types/include/autoware_point_types/types.hpp#L95-L116">PointXYZIRCAEDT</a> data structure.</p>
+<p>Therefore, in order to use this node, the sensor driver must publish custom data including <code>return_type</code>. please refer to <a href="https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116">PointXYZIRCAEDT</a> data structure.</p>
 <p>Another feature of this node is that it publishes visibility as a diagnostic topic. With this function, for example, in heavy rain, the sensing module can notify that the processing performance has reached its limit, which can lead to ensuring the safety of the vehicle.</p>
 <p>In some complicated road scenes where normal objects also reflect the light in two stages, for instance plants, leaves, some plastic net etc, the visibility faces some drop in fine weather condition. To deal with that, optional settings of a region of interest (ROI) are added.</p>
 <ol>
@@ -24266,7 +24266,7 @@
 </table>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <p>Not recommended for use as it is under development.
-Input data must be <a href="../../../common/autoware_point_types/include/autoware_point_types/types.hpp#L95-L116">PointXYZIRCAEDT</a> type data including <code>return_type</code>.</p>
+Input data must be <a href="https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116">PointXYZIRCAEDT</a> type data including <code>return_type</code>.</p>
 <h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
 <h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
 <h2 id="referencesexternal-links">References/External links<a class="headerlink" href="#referencesexternal-links" title="Permanent link">#</a></h2>

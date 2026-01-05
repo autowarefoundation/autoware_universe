@@ -24016,7 +24016,7 @@
 <p>The model was fine-tuned on around 17,000 TIER IV internal images of Japanese traffic lights.</p>
 <h3 id="trained-onnx-model">Trained Onnx model<a class="headerlink" href="#trained-onnx-model" title="Permanent link">#</a></h3>
 <p>You can download the ONNX file using these instructions.<br>
-Please visit <a href="https://github.com/autowarefoundation/autoware-documentation/blob/main/docs/models/index.md">autoware-documentation</a> for more information.</p>
+Please visit <a href="https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts#readme">Autoware artifacts documentation</a> for more information.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>Based on the camera image and the global ROI array detected by <code>map_based_detector</code> node, a CNN-based detection method enables highly accurate traffic light detection. If can not detect traffic light, x_offset, y_offset, height and width of output ROI become <code>0</code>.
 ROIs detected from YOLOX will be selected by a combination of <code>expect/rois</code>. At this time, evaluate the whole as ROIs, not just the ROI alone.</p>

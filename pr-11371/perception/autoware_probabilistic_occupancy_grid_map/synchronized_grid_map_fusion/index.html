@@ -24124,23 +24124,6 @@
 <p>For simplicity, we use OGM as the meaning of the occupancy grid map.</p>
 </blockquote>
 <p>This package is used to fuse the OGMs from synchronized sensors. Especially for the lidar.</p>
-<p>Here shows the example OGM for the this synchronized OGM fusion.</p>
-<table>
-<thead>
-<tr>
-<th>left lidar OGM</th>
-<th>right lidar OGM</th>
-<th>top lidar OGM</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><img alt="left" src="image/left_lidar_ogm.png"></td>
-<td><img alt="right" src="image/right_lidar_ogm.png"></td>
-<td><img alt="top" src="image/top_lidar_ogm.png"></td>
-</tr>
-</tbody>
-</table>
 <p>OGM fusion with asynchronous sensor outputs is not suitable for this package. Asynchronous OGM fusion is under construction.</p>
 <h2 id="processing-flow">Processing flow<a class="headerlink" href="#processing-flow" title="Permanent link">#</a></h2>
 <p>The processing flow of this package is shown in the following figure.</p>
@@ -24347,46 +24330,13 @@ The<span class="w"> </span>minimum<span class="w"> </span>parameter<span class="
 Also, remember to set <code>enable_single_frame_mode</code> and <code>filter_obstacle_pointcloud_by_raw_pointcloud</code> to <code>true</code> in the <code>autoware_probabilistic_occupancy_grid_map</code> package (you do not need to set these parameters if you use the above example config file).</p>
 <p><br></p>
 <h3 id="run-both-ogm-generation-node-and-fusion-node">Run both OGM generation node and fusion node<a class="headerlink" href="#run-both-ogm-generation-node-and-fusion-node" title="Permanent link">#</a></h3>
-<p>We prepared the launch file to run both OGM generation node and fusion node in <a href="launch/grid_map_fusion_with_synchronized_pointclouds.launch.py"><code>grid_map_fusion_with_synchronized_pointclouds.launch.py</code></a></p>
+<p>We prepared the launch file to run both OGM generation node and fusion node in <a href="launch/synchronized_occupancy_grid_map_fusion.launch.xml"><code>synchronized_occupancy_grid_map_fusion.launch.xml</code></a></p>
 <p>You can include this launch file like the following.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&lt;include</span><span class="w"> </span><span class="na">file=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/grid_map_fusion_with_synchronized_pointclouds.launch.py"</span><span class="nt">&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"output"</span><span class="w"> </span><span class="na">value=</span><span class="s">"/perception/occupancy_grid_map/fusion/map"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_intra_process"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_multithread"</span><span class="w"> </span><span class="na">value=</span><span class="s">"true"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"use_pointcloud_container"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var use_pointcloud_container)"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"pointcloud_container_name"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var pointcloud_container_name)"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"method"</span><span class="w"> </span><span class="na">value=</span><span class="s">"pointcloud_based_occupancy_grid_map"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"fusion_config_file"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var fusion_config_file)"</span><span class="nt">/&gt;</span>
-<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"ogm_config_file"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(var ogm_config_file)"</span><span class="nt">/&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;include</span><span class="w"> </span><span class="na">file=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/synchronized_occupancy_grid_map_fusion.launch.xml"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"output_topic"</span><span class="w"> </span><span class="na">value=</span><span class="s">"~/output/occupancy_grid_map"</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"fusion_node_param_path"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/config/synchronized_grid_map_fusion_node.param.yaml"</span><span class="nt">/&gt;</span>
 <span class="nt">&lt;/include&gt;</span>
 </code></pre></div>
-<p>The minimum parameter for the launch file is shown in the following table.</p>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>output</code></td>
-<td>The output topic of the finally fused OGM.</td>
-</tr>
-<tr>
-<td><code>method</code></td>
-<td>The method for the OGM generation. Currently we support <code>pointcloud_based_occupancy_grid_map</code> and <code>laser_scan_based_occupancy_grid_map</code>. The pointcloud based method is recommended.</td>
-</tr>
-<tr>
-<td><code>fusion_config_file</code></td>
-<td>The parameter file for the grid map fusion. See <a href="config/grid_map_fusion.param.yaml">example parameter file</a></td>
-</tr>
-<tr>
-<td><code>ogm_config_file</code></td>
-<td>The parameter file for the OGM generation. See <a href="config/pointcloud_based_occupancy_grid_map_for_fusion.param.yaml">example parameter file</a></td>
-</tr>
-</tbody>
-</table>
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
 <ul>
 <li>[1] Dempster, A. P., Laird, N. M., &amp; Rubin, D. B. (1977). Maximum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society. Series B (Methodological), 39(1), 1-38.</li>
