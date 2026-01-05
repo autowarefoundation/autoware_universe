@@ -2,6 +2,21 @@
 Changelog for package autoware_trajectory_ranker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(trajectory_ranker): add trajectory consistency score (`#11762 <https://github.com/autowarefoundation/autoware_universe/issues/11762>`_)
+  * add trajectory consistency score
+  * add test
+  * metric with configurable parameters
+  * fix pre-commit
+  * fix comments
+  * fix calculation of total variance
+  * extract common ego frame transformation logic
+  * updated test
+  ---------
+* Contributors: Go Sakayori, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

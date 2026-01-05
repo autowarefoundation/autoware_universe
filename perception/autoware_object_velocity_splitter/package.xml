@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_object_velocity_splitter</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>autoware_object_velocity_splitter</description>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
@@ -21,6 +21,8 @@
   <build_depend>autoware_cmake</build_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
+  <test_depend>launch_testing</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

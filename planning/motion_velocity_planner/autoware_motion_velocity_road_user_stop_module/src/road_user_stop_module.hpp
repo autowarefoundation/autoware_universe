@@ -52,6 +52,7 @@ public:
     const std::vector<TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  std::string get_short_module_name() const override { return "road_user_stop"; }
   void publish_planning_factor() override;
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {

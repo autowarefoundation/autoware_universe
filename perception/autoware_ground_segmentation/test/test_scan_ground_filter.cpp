@@ -114,7 +114,6 @@ protected:
     parameters.emplace_back(
       rclcpp::Parameter("non_ground_height_threshold", non_ground_height_threshold_));
     parameters.emplace_back(rclcpp::Parameter("grid_size_m", grid_size_m_));
-    parameters.emplace_back(rclcpp::Parameter("grid_mode_switch_radius", grid_mode_switch_radius_));
     parameters.emplace_back(rclcpp::Parameter("gnd_grid_buffer_size", gnd_grid_buffer_size_));
     parameters.emplace_back(rclcpp::Parameter("detection_range_z_max", detection_range_z_max_));
     parameters.emplace_back(rclcpp::Parameter("elevation_grid_mode", elevation_grid_mode_));
@@ -196,7 +195,6 @@ public:
     split_height_distance_ = params["split_height_distance"].as<float>();
     non_ground_height_threshold_ = params["non_ground_height_threshold"].as<float>();
     grid_size_m_ = params["grid_size_m"].as<float>();
-    grid_mode_switch_radius_ = params["grid_mode_switch_radius"].as<float>();
     gnd_grid_buffer_size_ = params["gnd_grid_buffer_size"].as<uint16_t>();
     detection_range_z_max_ = params["detection_range_z_max"].as<float>();
     elevation_grid_mode_ = params["elevation_grid_mode"].as<bool>();
@@ -216,7 +214,6 @@ public:
   float split_height_distance_ = 0.0;
   float non_ground_height_threshold_ = 0.0;
   float grid_size_m_ = 0.0;
-  float grid_mode_switch_radius_ = 0.0;
   uint16_t gnd_grid_buffer_size_ = 0;
   float detection_range_z_max_ = 0.0;
   bool elevation_grid_mode_ = false;

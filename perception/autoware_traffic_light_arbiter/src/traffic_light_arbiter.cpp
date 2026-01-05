@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_arbiter/traffic_light_arbiter.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/time.hpp>
 
@@ -115,8 +115,7 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 
 void TrafficLightArbiter::onMap(const LaneletMapBin::ConstSharedPtr msg)
 {
-  const auto map = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*msg, map);
+  const auto map = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg);
 
   const auto signals = lanelet::filter_traffic_signals(map);
   map_regulatory_elements_set_ = std::make_unique<std::unordered_set<lanelet::Id>>();
