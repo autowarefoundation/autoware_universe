@@ -108,7 +108,16 @@
               "maximum": 1.0
             }
           },
-          "required": ["UNKNOWN", "CAR", "TRUCK", "BUS", "TRAILER", "MOTORCYCLE", "BICYCLE", "PEDESTRIAN"]
+          "required": [
+            "UNKNOWN",
+            "CAR",
+            "TRUCK",
+            "BUS",
+            "TRAILER",
+            "MOTORCYCLE",
+            "BICYCLE",
+            "PEDESTRIAN"
+          ]
         },
         "remove_unknown": {
           "type": "boolean",

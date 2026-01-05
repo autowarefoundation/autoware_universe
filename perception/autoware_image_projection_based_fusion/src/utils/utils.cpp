@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
+
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <sensor_msgs/distortion_models.hpp>
 

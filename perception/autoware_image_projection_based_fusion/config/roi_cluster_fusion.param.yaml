@@ -7,7 +7,7 @@
     use_cluster_semantic_type: false
     only_allow_inside_cluster: true
     roi_scale_factor: 1.1
-    iou_threshold: 
+    iou_threshold:
       UNKNOWN : 0.1
       CAR : 0.65
       TRUCK : 0.65
