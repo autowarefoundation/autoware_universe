@@ -3,15 +3,15 @@
     side_shift:
       min_distance_to_start_shifting: 5.0
       time_to_start_shifting: 1.0
-      shifting_lateral_jerk: 0.2
-      min_shifting_distance: 5.0
+      shifting_lateral_jerk: 0.6
+      min_shifting_distance: 30.0
       min_shifting_speed: 5.56
       shift_request_time_limit: 1.0
       # Lane departure prevention mode
       # 0: No check (allow any lateral offset)
       # 1: Current lane only (prevent departure from current lane)
       # 2: Current lane + same-direction neighbor lanes (allow shifting into adjacent lanes)
-      drivable_area_check_mode: 0
+      drivable_area_check_mode: 2
       # Minimum margin [m] between vehicle edge and lane boundary
-      drivable_area_margin: 0.1
+      drivable_area_margin: 0.3
       publish_debug_marker: false

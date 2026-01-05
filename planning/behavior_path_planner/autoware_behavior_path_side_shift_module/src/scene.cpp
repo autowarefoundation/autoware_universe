@@ -122,7 +122,19 @@ bool SideShiftModule::canTransitSuccessState()
   // drivable area,this module can stop the computation and return SUCCESS.
   constexpr double ZERO_THRESHOLD = 1.0e-4;
 
-  const auto isOffsetDiffAlmostZero = [this]() noexcept { return true; }();
+  const auto isOffsetDiffAlmostZero = [this]() noexcept {
+    const auto last_sp = path_shifter_.getLastShiftLine();
+    if (last_sp) {
+      const auto length = std::fabs(last_sp.value().end_shift_length);
+      const auto lateral_offset = std::fabs(requested_lateral_offset_);
+      const auto offset_diff = lateral_offset - length;
+      if (std::fabs(offset_diff) >= ZERO_THRESHOLD) {
+        lateral_offset_change_request_ = true;
+        return false;
+      }
+    }
+    return true;
+  }();
 
   const bool no_offset_diff = isOffsetDiffAlmostZero;
   const bool no_request = std::fabs(requested_lateral_offset_) < ZERO_THRESHOLD;
@@ -146,17 +158,6 @@ bool SideShiftModule::canTransitSuccessState()
     return true;
   }
 
-  // Check if inserted_shift_line_ is valid (has been set with actual shift line)
-  const bool has_valid_shift_line =
-    std::abs(inserted_shift_line_.end_shift_length) > ZERO_THRESHOLD ||
-    inserted_shift_line_.start_idx != inserted_shift_line_.end_idx;
-
-  if (!has_valid_shift_line) {
-    // No valid shift line has been inserted yet, stay in BEFORE_SHIFT
-    shift_status_ = SideShiftStatus::BEFORE_SHIFT;
-    return false;
-  }
-
   const auto & current_lanes = utils::getCurrentLanes(planner_data_);
   const auto & current_pose = planner_data_->self_odometry->pose.pose;
   const auto & inserted_shift_line_start_pose = inserted_shift_line_.start;
@@ -167,11 +168,6 @@ bool SideShiftModule::canTransitSuccessState()
   const double self_to_shift_line_end_arc_length =
     autoware::behavior_path_planner::utils::getSignedDistance(
       current_pose, inserted_shift_line_end_pose, current_lanes);
-
-  RCLCPP_DEBUG(
-    getLogger(), "SideShift: start_arc=%.2f, end_arc=%.2f", self_to_shift_line_start_arc_length,
-    self_to_shift_line_end_arc_length);
-
   if (self_to_shift_line_start_arc_length >= 0) {
     shift_status_ = SideShiftStatus::BEFORE_SHIFT;
   } else if (self_to_shift_line_start_arc_length < 0 && self_to_shift_line_end_arc_length > 0) {
@@ -249,6 +245,26 @@ void SideShiftModule::replaceShiftLine()
 
   const auto new_sl = calcShiftLine();
 
+  // Check if the shift was aborted (indicated by zero-length shift with same start/end index)
+  const bool shift_aborted =
+    (new_sl.start_idx == new_sl.end_idx) && (std::abs(new_sl.end_shift_length) < 0.01);
+
+  if (shift_aborted) {
+    RCLCPP_WARN(
+      getLogger(),
+      "SideShift: Shift aborted due to insufficient space. Clearing request to accept next "
+      "command.");
+
+    // Clear the request flags to allow accepting new commands immediately
+    lateral_offset_change_request_ = false;
+    requested_lateral_offset_ = 0.0;
+    inserted_lateral_offset_ = 0.0;
+
+    // Don't insert the aborted shift line - keep the shifter empty
+    path_shifter_.setShiftLines(shift_lines);  // Empty list
+    return;
+  }
+
   // if no conflict, then add the new point.
   shift_lines.push_back(new_sl);
   const bool new_sl_is_same_with_previous =
@@ -264,20 +280,71 @@ void SideShiftModule::replaceShiftLine()
   inserted_lateral_offset_ = requested_lateral_offset_;
   inserted_shift_line_ = new_sl;
 
-  RCLCPP_DEBUG(
-    getLogger(), "SideShift: replaceShiftLine called. start_idx=%lu, end_idx=%lu, end_shift=%.2f",
-    new_sl.start_idx, new_sl.end_idx, new_sl.end_shift_length);
-
   return;
 }
 
 BehaviorModuleOutput SideShiftModule::plan()
 {
-  // Replace shift line only when change is requested and not currently shifting
+  // Check if we have a valid shift line that was previously set
+  // A shift line is valid if it was inserted (even if shift length is 0 due to boundary
+  // restrictions)
+  const bool has_valid_shift_line =
+    (inserted_shift_line_.start_idx != inserted_shift_line_.end_idx);
+
+  // Update shift status based on current ego position and shift line (only if shift line exists)
+  if (has_valid_shift_line) {
+    const auto & current_lanes = utils::getCurrentLanes(planner_data_);
+    const auto & current_pose = planner_data_->self_odometry->pose.pose;
+    const auto & inserted_shift_line_start_pose = inserted_shift_line_.start;
+    const auto & inserted_shift_line_end_pose = inserted_shift_line_.end;
+    const double self_to_shift_line_start_arc_length =
+      autoware::behavior_path_planner::utils::getSignedDistance(
+        current_pose, inserted_shift_line_start_pose, current_lanes);
+    const double self_to_shift_line_end_arc_length =
+      autoware::behavior_path_planner::utils::getSignedDistance(
+        current_pose, inserted_shift_line_end_pose, current_lanes);
+
+    if (self_to_shift_line_start_arc_length >= 0) {
+      shift_status_ = SideShiftStatus::BEFORE_SHIFT;
+    } else if (self_to_shift_line_start_arc_length < 0 && self_to_shift_line_end_arc_length > 0) {
+      shift_status_ = SideShiftStatus::SHIFTING;
+    } else {
+      shift_status_ = SideShiftStatus::AFTER_SHIFT;
+    }
+  } else {
+    // No valid shift line yet, stay in BEFORE_SHIFT to allow new requests
+    shift_status_ = SideShiftStatus::BEFORE_SHIFT;
+  }
+
+  // Replace shift line only when:
+  // 1. Change is explicitly requested (lateral_offset_change_request_ is true)
+  // 2. Not currently shifting
+  // 3. The requested offset is different from what was already inserted
+  //
+  // IMPORTANT: This prevents the shift line from being recalculated every cycle
+  // and moving with ego position. Once a shift is inserted, it stays fixed.
+  const bool offset_actually_changed =
+    std::abs(requested_lateral_offset_ - inserted_lateral_offset_) > 0.01;
+
   if (
-    lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
-                                       (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
+    lateral_offset_change_request_ && offset_actually_changed &&
+    ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
+     (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
     replaceShiftLine();
+
+    // After replacing, re-check the status immediately to prevent re-replacement
+    // This ensures we don't replace the shift line again in the next cycle
+    if (inserted_shift_line_.start_idx != inserted_shift_line_.end_idx) {
+      const auto & current_lanes = utils::getCurrentLanes(planner_data_);
+      const auto & current_pose = planner_data_->self_odometry->pose.pose;
+      const double self_to_shift_line_start_arc_length =
+        autoware::behavior_path_planner::utils::getSignedDistance(
+          current_pose, inserted_shift_line_.start, current_lanes);
+
+      if (self_to_shift_line_start_arc_length >= 0) {
+        shift_status_ = SideShiftStatus::BEFORE_SHIFT;
+      }
+    }
   }
 
   // Refine path
@@ -358,21 +425,79 @@ ShiftLine SideShiftModule::calcShiftLine() const
   const double dist_to_end = [&]() {
     const double shift_length =
       requested_lateral_offset_ - getClosestShiftLength(prev_output_, getEgoPose().position);
+    // Use actual ego speed with a minimum of 1.0 m/s to avoid overly short shift distances
+    const double speed_for_calc = std::max(ego_speed, 1.0);
     const double jerk_shifting_distance = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
-      shift_length, p->shifting_lateral_jerk, std::max(ego_speed, p->min_shifting_speed));
+      shift_length, p->shifting_lateral_jerk, speed_for_calc);
     const double shifting_distance = std::max(jerk_shifting_distance, p->min_shifting_distance);
     const double dist_to_end = dist_to_start + shifting_distance;
     RCLCPP_DEBUG(
-      getLogger(), "min_distance_to_start_shifting = %f, dist_to_start = %f, dist_to_end = %f",
-      parameters_->min_distance_to_start_shifting, dist_to_start, dist_to_end);
+      getLogger(),
+      "shift_length = %.2f, speed = %.2f, jerk_distance = %.2f, shifting_distance = %.2f, "
+      "dist_to_start = %.2f, dist_to_end = %.2f",
+      shift_length, speed_for_calc, jerk_shifting_distance, shifting_distance, dist_to_start,
+      dist_to_end);
     return dist_to_end;
   }();
 
-  const double limited_offset = calcMaxLateralOffset(requested_lateral_offset_);
+  // Apply drivable area check and clamp the requested offset to safe limits
+  double actual_shift_offset = requested_lateral_offset_;
+
+  if (parameters_->drivable_area_check_mode > 0) {
+    const double max_safe_offset = calcMaxLateralOffset(requested_lateral_offset_);
+
+    if (parameters_->drivable_area_check_mode == 1) {
+      // Mode 1: Abort if less than 30% of requested offset is achievable
+      constexpr double FEASIBILITY_THRESHOLD = 0.3;
+      const bool is_feasible =
+        (std::abs(requested_lateral_offset_) < 0.1) ||
+        (std::abs(max_safe_offset) >= std::abs(requested_lateral_offset_) * FEASIBILITY_THRESHOLD);
+
+      if (!is_feasible) {
+        RCLCPP_DEBUG(
+          getLogger(), "Shift aborted (mode 1): requested=%.2f, safe=%.2f",
+          requested_lateral_offset_, max_safe_offset);
+
+        const size_t nearest_idx = planner_data_->findEgoIndex(reference_path_.points);
+        ShiftLine shift_line;
+        shift_line.end_shift_length = 0.0;
+        shift_line.start_idx = nearest_idx;
+        shift_line.start = reference_path_.points.at(nearest_idx).point.pose;
+        shift_line.end_idx = nearest_idx;
+        shift_line.end = reference_path_.points.at(nearest_idx).point.pose;
+        return shift_line;
+      }
+    } else if (parameters_->drivable_area_check_mode == 2) {
+      // Mode 2: Clamp requested offset to margin limit (always execute shift up to margin)
+      actual_shift_offset = max_safe_offset;
+
+      if (std::abs(actual_shift_offset) < 0.05) {
+        // No space at all (less than 5cm), abort
+        RCLCPP_DEBUG(
+          getLogger(), "Shift aborted (mode 2): no space, requested=%.2f, safe=%.2f",
+          requested_lateral_offset_, max_safe_offset);
+
+        const size_t nearest_idx = planner_data_->findEgoIndex(reference_path_.points);
+        ShiftLine shift_line;
+        shift_line.end_shift_length = 0.0;
+        shift_line.start_idx = nearest_idx;
+        shift_line.start = reference_path_.points.at(nearest_idx).point.pose;
+        shift_line.end_idx = nearest_idx;
+        shift_line.end = reference_path_.points.at(nearest_idx).point.pose;
+        return shift_line;
+      }
+
+      RCLCPP_DEBUG(
+        getLogger(), "Shift clamped (mode 2): requested=%.2f -> actual=%.2f",
+        requested_lateral_offset_, actual_shift_offset);
+    }
+
+    actual_shift_offset = max_safe_offset;
+  }
 
   const size_t nearest_idx = planner_data_->findEgoIndex(reference_path_.points);
   ShiftLine shift_line;
-  shift_line.end_shift_length = limited_offset;
+  shift_line.end_shift_length = actual_shift_offset;
   shift_line.start_idx = utils::getIdxByArclength(reference_path_, nearest_idx, dist_to_start);
   shift_line.start = reference_path_.points.at(shift_line.start_idx).point.pose;
   shift_line.end_idx = utils::getIdxByArclength(reference_path_, nearest_idx, dist_to_end);
@@ -404,33 +529,7 @@ BehaviorModuleOutput SideShiftModule::adjustDrivableArea(const ShiftedPath & pat
     output_path.points, current_pose.position, current_seg_idx, p.forward_path_length,
     p.backward_path_length + p.input_path_interval);
 
-  auto drivable_lanes = utils::generateDrivableLanes(current_lanelets_);
-
-  if (parameters_->drivable_area_check_mode == 2) {
-    const auto & route_handler = planner_data_->route_handler;
-    const auto itr = std::minmax_element(path.shift_length.begin(), path.shift_length.end());
-    const double max_left_shift = *itr.second;
-    const double max_right_shift = *itr.first;
-
-    for (auto & dl : drivable_lanes) {
-      if (dl.middle_lanes.empty()) continue;
-      const auto & current_lane = dl.middle_lanes.front();
-
-      if (max_left_shift > 0.1) {
-        const auto left_lane = route_handler->getLeftLanelet(current_lane, true, false);
-        if (left_lane) {
-          dl.left_lane = *left_lane;
-        }
-      }
-      if (max_right_shift < -0.1) {
-        const auto right_lane = route_handler->getRightLanelet(current_lane, true, false);
-        if (right_lane) {
-          dl.right_lane = *right_lane;
-        }
-      }
-    }
-  }
-
+  const auto drivable_lanes = utils::generateDrivableLanes(current_lanelets_);
   const auto shorten_lanes = utils::cutOverlappedLanes(output_path, drivable_lanes);
   const auto expanded_lanes =
     utils::expandLanelets(shorten_lanes, left_offset, right_offset, dp.drivable_area_types_to_skip);
@@ -638,11 +737,6 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
   if (std::abs(result) < 1e-3) {
     result = 0.0;
   }
-
-  RCLCPP_DEBUG_THROTTLE(
-    getLogger(), *clock_, 1000, "SideShift: req=%.2f, safe_l=%.2f, safe_r=%.2f, res=%.2f, mode=%d",
-    requested_offset, safe_left_limit, safe_right_limit, result,
-    parameters_->drivable_area_check_mode);
 
   return result;
 }
