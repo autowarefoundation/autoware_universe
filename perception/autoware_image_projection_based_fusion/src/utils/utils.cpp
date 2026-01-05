@@ -24,36 +24,28 @@ namespace autoware::image_projection_based_fusion
 {
 
 using Label = autoware_perception_msgs::msg::ObjectClassification;
-float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label){
-  switch (label)
-  {
-  case Label::UNKNOWN:
-    return UNKNOWN;
-    break;
-  case Label::CAR:
-    return CAR;
-    break;
-  case Label::TRUCK:
-    return TRUCK;
-    break;
-  case Label::BUS:
-    return BUS;
-    break;
-  case Label::TRAILER:
-    return TRAILER;
-    break;
-  case Label::MOTORCYCLE:
-    return MOTORCYCLE;
-    break;
-  case Label::BICYCLE:
-    return BICYCLE;
-    break;
-  case Label::PEDESTRIAN:
-    return PEDESTRIAN;
-    break;
-  default:
-    return UNKNOWN;
-    break;
+
+float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label)
+{
+  switch (label) {
+    case Label::UNKNOWN:
+      return UNKNOWN;
+    case Label::CAR:
+      return CAR;
+    case Label::TRUCK:
+      return TRUCK;
+    case Label::BUS:
+      return BUS;
+    case Label::TRAILER:
+      return TRAILER;
+    case Label::MOTORCYCLE:
+      return MOTORCYCLE;
+    case Label::BICYCLE:
+      return BICYCLE;
+    case Label::PEDESTRIAN:
+      return PEDESTRIAN;
+    default:
+      return UNKNOWN;
   }
 }
 bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info)
