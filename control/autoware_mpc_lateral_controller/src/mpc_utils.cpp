@@ -453,6 +453,8 @@ double calcStopDistance(const Trajectory & current_trajectory, const int origin)
 void extendTrajectoryInYawDirection(
   const double yaw, const double interval, const bool is_forward_shift, MPCTrajectory & traj)
 {
+  if (traj.empty()) return;
+
   // set terminal yaw
   traj.yaw.back() = yaw;
 
