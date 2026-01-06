@@ -467,9 +467,9 @@ generate_blind_side_lanelets_before_turning(
     }
   }
   */
-  const auto intersection_lanelet = lanelet_map_ptr->laneletLayer.get(intersection_lane_id);
+  const auto intersection_lane = lanelet_map_ptr->laneletLayer.get(intersection_lane_id);
 
-  const auto is_private_intersection = is_private_lanelet(intersection_lanelet);
+  const auto is_private_intersection = is_private_lanelet(intersection_lane);
   const auto validate_lane_attribute = [is_private_intersection](
                                          const lanelet::ConstLanelet & lanelet) {
     return is_private_intersection
@@ -478,7 +478,7 @@ generate_blind_side_lanelets_before_turning(
   };
 
   const auto previous_lane_opt =
-    helper::previous_lane_straight_priority(intersection_lanelet, routing_graph_ptr);
+    helper::previous_lane_straight_priority(intersection_lane, routing_graph_ptr);
   if (previous_lane_opt && validate_lane_attribute(previous_lane_opt.value())) {
     const auto & previous_lane = previous_lane_opt.value();
     road_lanelets.push_back(previous_lane);
