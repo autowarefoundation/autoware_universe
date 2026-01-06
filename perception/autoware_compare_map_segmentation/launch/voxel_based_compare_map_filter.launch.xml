@@ -12,5 +12,6 @@
     <remap from="map" to="$(var input_map)"/>
     <remap from="output" to="$(var output)"/>
     <param from="$(var voxel_based_compare_map_filter_param_file)"/>
+    <remap from="map_loader_service" to="$(var map_loader_service)"/>
   </node>
 </launch>
