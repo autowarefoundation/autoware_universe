@@ -53,11 +53,6 @@ void LandmarkManager::parse_landmarks(
     const auto & v1 = vertices[1];
     const auto & v2 = vertices[2];
     const auto & v3 = vertices[3];
-    // const double volume = (v1 - v0).cross(v2 - v0).dot(v3 - v0) / 6.0;
-    // const double volume_threshold = 1e-3;
-    // if (volume > volume_threshold) {
-    //   continue;
-    // }
 
     // Calculate the center of the quadrilateral
     const auto center = (v0 + v1 + v2 + v3) / 4.0;
@@ -114,11 +109,6 @@ void LandmarkManager::parse_landmarks(
     const auto & v1 = vertices[1];
     const auto & v2 = vertices[2];
     const auto & v3 = vertices[3];
-    // const double volume = (v1 - v0).cross(v2 - v0).dot(v3 - v0) / 6.0;
-    // const double volume_threshold = 1e-3;
-    // if (volume > volume_threshold) {
-    //   continue;
-    // }
 
     // Calculate the center of the quadrilateral
     const auto center = (v0 + v1 + v2 + v3) / 4.0;
@@ -227,11 +217,6 @@ geometry_msgs::msg::Pose LandmarkManager::calculate_new_self_pose(
     // convert base_link to map
     const Pose detected_landmark_on_map =
       autoware_utils_geometry::transform_pose(detected_landmark_on_base_link, self_pose);
-
-    // match to map
-    // if (landmarks_map_.count(landmark.id) == 0) {
-    //   continue;
-    // }
 
     // check all poses
     // for (const Pose mapped_landmark_on_map : landmarks_map_.at(landmark.id)) {
