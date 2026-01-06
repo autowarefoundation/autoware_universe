@@ -491,5 +491,15 @@ bool is_moving_object(
  */
 bool is_lanelet_in_lanelet_collections(
   const lanelet::ConstLanelets & lanelet_collections, const lanelet::ConstLanelet & lanelet);
+
+/**
+ * @brief Trim the lanelet sequence by removing preferred lanes that appear after the first
+ *        alternative lane.
+ *
+ * @param base_lanes       Lanelet sequence to be modified in-place.
+ * @param preferred_lanes  Set of lanelets used to classify which entries are considered preferred.
+ */
+void trim_preferred_after_alternative(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
