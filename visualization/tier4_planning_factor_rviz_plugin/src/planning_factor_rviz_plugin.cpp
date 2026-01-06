@@ -178,7 +178,7 @@ void PlanningFactorRvizPlugin::start_vehicle_info_request()
 
       // Wait for service to be ready
       while (rclcpp::ok() && !client->wait_for_service(std::chrono::seconds(1))) {
-        RCLCPP_INFO(
+        RCLCPP_WARN_ONCE(
           rclcpp::get_logger("PlanningFactorRvizPlugin"), "Waiting for vehicle_info service...");
       }
 
