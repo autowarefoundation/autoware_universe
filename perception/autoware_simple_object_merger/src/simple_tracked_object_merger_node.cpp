@@ -180,8 +180,8 @@ void SimpleTrackedObjectMergerNode::onTimer()
       continue;
     }
 
-    double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
-                       latest_stamp.seconds();
+    double time_diff =
+      rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() - latest_stamp.seconds();
     if (std::abs(time_diff) < node_param_.timeout_threshold) {
       TrackedObjects::SharedPtr transformed_objects;
       if (node_param_.new_frame_id == objects_data_.at(i)->header.frame_id) {
