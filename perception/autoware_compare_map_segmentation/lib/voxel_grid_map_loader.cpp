@@ -507,7 +507,7 @@ void VoxelGridDynamicMapLoader::request_update_map(const geometry_msgs::msg::Poi
       rclcpp::Client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>::SharedFuture future) {
       try {
         auto result = future.get();
-        if (result->new_pointcloud_with_ids.size() == 0 && result->ids_to_remove.size() == 0) {
+        if (result->new_pointcloud_with_ids.empty() && result->ids_to_remove.empty()) {
           return;
         }
         updateDifferentialMapCells(result->new_pointcloud_with_ids, result->ids_to_remove);
