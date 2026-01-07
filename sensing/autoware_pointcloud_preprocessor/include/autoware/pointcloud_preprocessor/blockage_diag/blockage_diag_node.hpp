@@ -66,9 +66,6 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
   void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
-
-  mutable std::mutex mutex_;
-
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;

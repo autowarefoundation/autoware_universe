@@ -555,8 +555,6 @@ void BlockageDiagComponent::validate_pointcloud_fields(
 void BlockageDiagComponent::detect_blockage(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
-  std::scoped_lock lock(mutex_);
-
   validate_pointcloud_fields(*input);
 
   cv::Mat depth_image_16u = make_normalized_depth_image(*input);
