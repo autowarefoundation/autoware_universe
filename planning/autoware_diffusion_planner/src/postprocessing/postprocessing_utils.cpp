@@ -48,6 +48,7 @@ namespace
  * @param poses The vector of 4x4 transformation matrices representing poses.
  * @param base_x The base x position to calculate relative velocities.
  * @param base_y The base y position to calculate relative velocities.
+ * @param base_z The base z position to calculate relative velocities.
  * @param stamp The ROS time stamp for the message.
  * @param velocity_smoothing_window The window size for velocity smoothing.
  * @param enable_force_stop Whether to enable force stop logic.
@@ -56,8 +57,8 @@ namespace
  */
 Trajectory get_trajectory_from_poses(
   const std::vector<Eigen::Matrix4d> & poses, const double base_x, const double base_y,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold);
+  const double base_z, const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const bool enable_force_stop, const double stopping_threshold);
 };  // namespace
 
 std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
@@ -150,11 +151,12 @@ PredictedObjects create_predicted_objects(
 
     const double base_x = objects_history.at(neighbor_id).get_latest_state_position().x;
     const double base_y = objects_history.at(neighbor_id).get_latest_state_position().y;
+    const double base_z = objects_history.at(neighbor_id).get_latest_state_position().z;
     constexpr int64_t velocity_smoothing_window = 1;
     constexpr bool enable_force_stop = false;  // Don't force stop for neighbors
     constexpr double stopping_threshold = 0.0;
     const Trajectory trajectory_points_in_map_reference = get_trajectory_from_poses(
-      neighbor_poses, base_x, base_y, stamp, velocity_smoothing_window, enable_force_stop,
+      neighbor_poses, base_x, base_y, base_z, stamp, velocity_smoothing_window, enable_force_stop,
       stopping_threshold);
 
     PredictedObject object;
@@ -215,9 +217,10 @@ Trajectory create_ego_trajectory(
 
   const double base_x = transform_ego_to_map(0, 3);
   const double base_y = transform_ego_to_map(1, 3);
+  const double base_z = transform_ego_to_map(2, 3);
 
   return get_trajectory_from_poses(
-    ego_poses, base_x, base_y, stamp, velocity_smoothing_window, enable_force_stop,
+    ego_poses, base_x, base_y, base_z, stamp, velocity_smoothing_window, enable_force_stop,
     stopping_threshold);
 }
 
@@ -294,8 +297,8 @@ namespace
 {
 Trajectory get_trajectory_from_poses(
   const std::vector<Eigen::Matrix4d> & poses, const double base_x, const double base_y,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold)
+  const double base_z, const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const bool enable_force_stop, const double stopping_threshold)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -304,6 +307,7 @@ Trajectory get_trajectory_from_poses(
 
   double prev_x = base_x;
   double prev_y = base_y;
+  double prev_z = base_z;
 
   for (size_t i = 0; i < poses.size(); ++i) {
     TrajectoryPoint p;
@@ -324,11 +328,13 @@ Trajectory get_trajectory_from_poses(
     p.pose.orientation.z = quaternion.z();
     p.pose.orientation.w = quaternion.w();
 
-    auto distance = std::hypot(p.pose.position.x - prev_x, p.pose.position.y - prev_y);
+    const double distance = std::hypot(
+      p.pose.position.x - prev_x, p.pose.position.y - prev_y, p.pose.position.z - prev_z);
     p.longitudinal_velocity_mps = static_cast<float>(distance / dt);
 
     prev_x = p.pose.position.x;
     prev_y = p.pose.position.y;
+    prev_z = p.pose.position.z;
     trajectory.points.push_back(p);
   }
 

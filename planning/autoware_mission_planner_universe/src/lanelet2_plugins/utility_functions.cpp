@@ -27,14 +27,6 @@
 #include <limits>
 #include <vector>
 
-namespace
-{
-lanelet::Lanelet remove_const(const lanelet::ConstLanelet & const_lanelet)
-{
-  return lanelet::Lanelet{std::const_pointer_cast<lanelet::LaneletData>(const_lanelet.constData())};
-}
-}  // namespace
-
 namespace autoware::mission_planner_universe::lanelet2
 {
 autoware_utils::Polygon2d convert_linear_ring_to_polygon(autoware_utils::LinearRing2d footprint)
@@ -145,7 +137,7 @@ geometry_msgs::msg::Pose get_closest_centerline_pose(
     // point is not on any lanelet.
     return point;
   }
-  lanelet::Lanelet closest_lanelet = remove_const(*opt);
+  lanelet::Lanelet closest_lanelet = autoware::experimental::lanelet2_utils::remove_const(*opt);
 
   const auto refined_center_line = lanelet::utils::generateFineCenterline(closest_lanelet, 1.0);
   closest_lanelet.setCenterline(refined_center_line);

@@ -138,7 +138,7 @@ std::optional<std::pair<size_t, size_t>> findLaneIdsInterval(
   return found ? std::make_optional(std::make_pair(start, end)) : std::nullopt;
 }
 
-std::optional<size_t> getFirstPointInsidePolygonByFootprint(
+std::optional<size_t> getLastPointOutsidePolygonByFootprint(
   const lanelet::CompoundPolygon3d & polygon, const InterpolatedPathInfo & interpolated_path_info,
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
@@ -160,7 +160,8 @@ std::optional<size_t> getFirstPointInsidePolygonByFootprint(
       path_footprint.at(vehicle_info_utils::VehicleInfo::FrontRightIndex)};
     if (
       bg::intersects(footprint_front_part, area_2d) || bg::within(footprint_front_part, area_2d)) {
-      return std::make_optional<size_t>(i);
+      if (i == 0) return std::nullopt;
+      return std::make_optional<size_t>(i - 1);
     }
   }
   return std::nullopt;
