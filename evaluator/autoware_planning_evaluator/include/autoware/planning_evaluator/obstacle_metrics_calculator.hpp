@@ -312,18 +312,6 @@ private:
    */
   void ProcessObstaclesTrajectory();
 
-  /**
-   * @brief Calculate min and max distance from a pose to polygon edges
-   * @param [in] pose The reference pose (position is used as the point)
-   * @param [in] polygon The polygon to calculate distance to
-   * @param [out] min_dist Minimum distance from pose position to polygon edges (distance to nearest
-   * edge segment)
-   * @param [out] max_dist Maximum distance from pose position to polygon vertices (distance to
-   * farthest vertex)
-   */
-  void calculatePointToPolygonBoundaryDistances(
-    const Pose & pose, const Polygon2d & polygon, double & min_dist, double & max_dist) const;
-
   // input data
   std::optional<PredictedObjects> predicted_objects_;
   std::optional<nav_msgs::msg::Odometry> ego_odometry_;

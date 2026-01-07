@@ -32,9 +32,13 @@ namespace metrics
 {
 namespace utils
 {
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
+using autoware_utils::Segment2d;
 namespace bg = boost::geometry;
 
-size_t getIndexAfterDistance(const Trajectory & traj, const size_t curr_id, const double distance)
+size_t get_index_after_distance(
+  const Trajectory & traj, const size_t curr_id, const double distance)
 {
   // Get Current Trajectory Point
   const TrajectoryPoint & curr_p = traj.points.at(curr_id);
@@ -98,8 +102,7 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
   return dist;
 }
 
-bool polygonIntersects(
-  const autoware_utils::Polygon2d & poly1, const autoware_utils::Polygon2d & poly2)
+bool polygon_intersects(const Polygon2d & poly1, const Polygon2d & poly2)
 {
   const auto & outer1 = poly1.outer();
   const auto & outer2 = poly2.outer();
@@ -144,6 +147,35 @@ bool polygonIntersects(
   };
 
   return test_axes(outer1, outer2) && test_axes(outer2, outer1);
+}
+
+std::pair<double, double> calculate_point_to_polygon_boundary_distances(
+  const Pose & pose, const Polygon2d & polygon)
+{
+  const Point2d point(pose.position.x, pose.position.y);
+  const auto & outer = polygon.outer();
+
+  // Calculate max distance: distance to farthest vertex
+  double max_dist = 0.0;
+  for (const auto & vertex : outer) {
+    const double dist = bg::distance(point, vertex);
+    max_dist = std::max(max_dist, dist);
+  }
+
+  // Calculate min distance: distance to nearest edge segment
+  double min_dist = std::numeric_limits<double>::max();
+  const size_t num_vertices = outer.size();
+  for (size_t i = 0; i < num_vertices; ++i) {
+    const auto & p1 = outer[i];
+    const auto & p2 = outer[(i + 1) % num_vertices];
+
+    // Use boost::geometry segment to calculate distance from point to line segment
+    Segment2d segment(p1, p2);
+    const double dist = bg::distance(point, segment);
+    min_dist = std::min(min_dist, dist);
+  }
+
+  return {min_dist, max_dist};
 }
 
 }  // namespace utils

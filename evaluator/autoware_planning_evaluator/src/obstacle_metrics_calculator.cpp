@@ -91,33 +91,6 @@ bool ObstacleMetricsCalculator::isDataReady() const
          ego_odometry_.has_value() && vehicle_info_.has_value();
 }
 
-void ObstacleMetricsCalculator::calculatePointToPolygonBoundaryDistances(
-  const Pose & pose, const Polygon2d & polygon, double & min_dist, double & max_dist) const
-{
-  const Point2d point(pose.position.x, pose.position.y);
-  const auto & outer = polygon.outer();
-
-  // Calculate max distance: distance to farthest vertex
-  max_dist = 0.0;
-  for (const auto & vertex : outer) {
-    const double dist = bg::distance(point, vertex);
-    max_dist = std::max(max_dist, dist);
-  }
-
-  // Calculate min distance: distance to nearest edge segment
-  min_dist = std::numeric_limits<double>::max();
-  const size_t num_vertices = outer.size();
-  for (size_t i = 0; i < num_vertices; ++i) {
-    const auto & p1 = outer[i];
-    const auto & p2 = outer[(i + 1) % num_vertices];
-
-    // Use boost::geometry segment to calculate distance from point to line segment
-    Segment2d segment(p1, p2);
-    const double dist = bg::distance(point, segment);
-    min_dist = std::min(min_dist, dist);
-  }
-}
-
 void ObstacleMetricsCalculator::PreprocessEgoTrajectory()
 {
   ego_trajectory_points_.clear();
@@ -218,10 +191,9 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
 
   const auto & first_ego_point = ego_trajectory_points_.front();
 
-  double ego_margin_min = 0.0;
-  double ego_margin_max = std::numeric_limits<double>::max();
-  calculatePointToPolygonBoundaryDistances(
-    first_ego_point.pose, first_ego_point.polygon.value(), ego_margin_min, ego_margin_max);
+  const auto [ego_margin_min, ego_margin_max] =
+    metrics::utils::calculate_point_to_polygon_boundary_distances(
+      first_ego_point.pose, first_ego_point.polygon.value());
 
   for (const auto & object : predicted_objects_->objects) {
     // ------------------------------------------------------------------------------------------------
@@ -240,10 +212,9 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
     // 2. roughly check if obstacle trajectory is no overlapping with ego trajectory.
 
     const auto obstacle_polygon = autoware_utils::to_polygon2d(obstacle_pose, object.shape);
-    double obstacle_margin_min = 0.0;
-    double obstacle_margin_max = std::numeric_limits<double>::max();
-    calculatePointToPolygonBoundaryDistances(
-      obstacle_pose, obstacle_polygon, obstacle_margin_min, obstacle_margin_max);
+    const auto [obstacle_margin_min, obstacle_margin_max] =
+      metrics::utils::calculate_point_to_polygon_boundary_distances(
+        obstacle_pose, obstacle_polygon);
 
     const auto & ego_initial_pose = ego_trajectory_points_.front().pose;
     const auto & ego_final_time = ego_trajectory_points_.back().time_from_start_s;
@@ -369,7 +340,7 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
           is_overlapping = false;
         } else {
           obstacle_trajectory_point.setPolygon(object.shape);
-          is_overlapping = metrics::utils::polygonIntersects(
+          is_overlapping = metrics::utils::polygon_intersects(
             ego_trajectory_point.polygon.value(), obstacle_trajectory_point.polygon.value());
         }
 
@@ -387,26 +358,6 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         }
       }
     }
-
-    // // Debug prints, uncomment to check trajectory points if needed
-    // std::cerr << "Obstacle traj" << std::endl;
-    // for (size_t i = 0; i < obstacle_trajectory_points_.size(); ++i) {
-    //   const auto & p = obstacle_trajectory_points_[i];
-    //   std::cerr << "[" << i << "] t: " << p.time_from_start_s << ", pos: (" << p.pose.position.x
-    //   << ", "
-    //             << p.pose.position.y << "), is_overlapping: " <<
-    //             p.is_overlapping_with_ego_trajectory << ", is_collision: "
-    //             << p.is_collision_with_ego_trajectory << ", first_overlapping_idx: " <<
-    //             p.first_overlapping_ego_trajectory_index << ", last_overlapping_idx: " <<
-    //             p.last_overlapping_ego_trajectory_index << std::endl;
-    // }
-    // std::cerr << "Ego traj" << std::endl;
-    // for (size_t i = 0; i < ego_trajectory_points_.size(); ++i) {
-    //   const auto & p = ego_trajectory_points_[i];
-    //   std::cerr << "[" << i << "] t: " << p.time_from_start_s << ", pos: (" << p.pose.position.x
-    //   << ", "
-    //             << p.pose.position.y << ")" << std::endl;
-    // }
 
     // ------------------------------------------------------------------------------------------------
     // 6. get `obstacle_ttc` metrics
@@ -463,8 +414,8 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         const auto & ego_trajectory_point = ego_trajectory_points_[i];
         if (!obstacle_trajectory_point.is_collision_with_ego_trajectory) continue;
 
-        // calculate ego end velocity
-        //  - ego decelerate max to stop,
+        // calculate ego_end_vel at the collision point needed for deceleration:
+        //  - ego decelerate max to stop.
         //  - consider two cases of forward and backward.
         const double yaw_diff = tf2::getYaw(ego_trajectory_point.pose.orientation) -
                                 tf2::getYaw(obstacle_trajectory_point.pose.orientation);
@@ -472,6 +423,7 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
         ego_end_vel =
           ego_start_vel >= 0.0 ? std::max(ego_end_vel, 0.0) : std::min(ego_end_vel, 0.0);
 
+        // calculate DRAC
         const double distance_to_collision = ego_trajectory_point.distance_from_start_m;
         const double point_drac = (ego_end_vel * ego_end_vel - ego_start_vel * ego_start_vel) /
                                   (2.0 * distance_to_collision + 1e-6);

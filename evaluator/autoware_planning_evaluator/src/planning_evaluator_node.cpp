@@ -385,7 +385,7 @@ void PlanningEvaluatorNode::onTrajectory(
   }
 
   // Calculate planning trajectory metrics
-  auto trajectory_start = now();
+  const auto trajectory_start = now();
 
   for (Metric metric : metrics_for_publish_) {
     const auto metric_stat = metrics_calculator_.calculate(Metric(metric), *traj_msg);
@@ -400,12 +400,12 @@ void PlanningEvaluatorNode::onTrajectory(
   }
 
   metrics_calculator_.setPreviousTrajectory(*traj_msg);
-  auto runtime_trajectory = (now() - trajectory_start).seconds();
+  const auto runtime_trajectory = (now() - trajectory_start).seconds();
   RCLCPP_DEBUG(
     get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
 
   // Calculate obstacle metrics
-  auto obstacle_start = now();
+  const auto obstacle_start = now();
 
   obstacle_metrics_calculator_.setTrajectory(*traj_msg);
   obstacle_metrics_calculator_.calculateMetrics();
@@ -428,7 +428,7 @@ void PlanningEvaluatorNode::onTrajectory(
 
   obstacle_metrics_calculator_.clearData();
 
-  auto runtime_obstacle = (now() - obstacle_start).seconds();
+  const auto runtime_obstacle = (now() - obstacle_start).seconds();
   RCLCPP_DEBUG(
     get_logger(), "Planning evaluation obstacle metrics calculation time: %2.2f ms",
     runtime_obstacle * 1e3);
@@ -441,7 +441,7 @@ void PlanningEvaluatorNode::onModifiedGoal(
   if (!modified_goal_msg || !ego_state_ptr) {
     return;
   }
-  auto start = now();
+  const auto start = now();
   const auto is_ego_stopped_near_goal =
     std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
     autoware_utils::calc_distance2d(
@@ -460,7 +460,7 @@ void PlanningEvaluatorNode::onModifiedGoal(
       metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }
   }
-  auto runtime = (now() - start).seconds();
+  const auto runtime = (now() - start).seconds();
   RCLCPP_DEBUG(
     get_logger(), "Planning evaluation modified goal deviation calculation time: %2.2f ms",
     runtime * 1e3);
