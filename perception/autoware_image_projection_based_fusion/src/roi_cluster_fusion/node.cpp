@@ -16,6 +16,7 @@
 
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -38,6 +39,8 @@
 
 namespace autoware::image_projection_based_fusion
 {
+using autoware::object_recognition_utils::getHighestProbLabel;
+using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_utils::ScopedTimeTrack;
 
 RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
@@ -173,7 +176,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     int index = -1;
     bool associated = false;
     double max_iou = 0.0;
-    const auto obj_label = feature_obj.object.classification.front().label;
+    const auto obj_label = getHighestProbLabel(feature_obj.object.classification);
     const float obj_class_iou_threshold = iou_threshold_.get_class_iou_thresh(obj_label);
 
     const bool is_roi_label_known = obj_label != ObjectClassification::UNKNOWN;
@@ -300,9 +303,9 @@ void RoiClusterFusionNode::postprocess(
     // filter by object classification and existence probability
     output_msg.feature_objects.clear();
     for (const auto & feature_object : processing_msg.feature_objects) {
+      const auto obj_label = getHighestProbLabel(feature_object.object.classification);
       if (
-        feature_object.object.classification.front().label !=
-          autoware_perception_msgs::msg::ObjectClassification::UNKNOWN ||
+        obj_label != ObjectClassification::UNKNOWN ||
         feature_object.object.existence_probability >= min_roi_existence_prob_) {
         output_msg.feature_objects.push_back(feature_object);
       }
