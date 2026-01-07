@@ -14,9 +14,9 @@
 
 #include "autoware/trajectory_traffic_rule_filter/trajectory_traffic_rule_filter_node.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
@@ -112,9 +112,17 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
 void TrajectoryTrafficRuleFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr_);
+
+  routing_graph_ptr_ =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+
   for (const auto & plugin : plugins_) {
     plugin->set_lanelet_map(lanelet_map_ptr_, routing_graph_ptr_, traffic_rules_ptr_);
   }

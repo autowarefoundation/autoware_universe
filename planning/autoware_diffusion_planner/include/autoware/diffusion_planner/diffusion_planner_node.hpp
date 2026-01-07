@@ -23,11 +23,11 @@
 
 #include <Eigen/Dense>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -109,7 +109,6 @@ struct FrameContext
   geometry_msgs::msg::AccelWithCovarianceStamped ego_acceleration;
   Eigen::Matrix4d ego_to_map_transform;
   AgentData ego_centric_neighbor_agent_data;
-  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map;
 };
 
 struct DiffusionPlannerParams
@@ -296,6 +295,7 @@ private:
   std::deque<Pose> ego_history_;
   std::deque<TurnIndicatorsReport> turn_indicators_history_;
   std::optional<AgentData> agent_data_{std::nullopt};
+  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
