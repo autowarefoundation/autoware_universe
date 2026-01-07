@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_traffic_light_multi_camera_fusion</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>The autoware_traffic_light_multi_camera_fusion package</description>
   <maintainer email="tao.zhong@tier4.jp">Tao Zhong</maintainer>
   <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
@@ -16,6 +16,7 @@
   <build_depend>autoware_cmake</build_depend>
 
   <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>message_filters</depend>
