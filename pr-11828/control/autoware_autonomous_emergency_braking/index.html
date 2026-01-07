@@ -23848,10 +23848,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-collision-check-with-target-obstacles-using-rss-distance" class="md-nav__link">
+  <a href="#5-collision-check-with-target-obstacles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Collision check with target obstacles using RSS distance
+        5. Collision check with target obstacles
       
     </span>
   </a>
@@ -24186,23 +24186,29 @@ v_{norm} = d_{x} / d_{t}
 v_{obj} = v_{norm} * Cos(yaw_{diff}) + v_{ego}
 \]</div>
 <p>where <span class="arithmatex">\(yaw_{diff}\)</span> is the difference in yaw between the ego path and the displacement vector <script type="math/tex; mode=display">v_{pos} = o_{pos} - prev_{pos} </script> and <span class="arithmatex">\(v_{ego}\)</span> is the ego's current speed, which accounts for the movement of points caused by the ego moving and not the object. All these equations are performed disregarding the z axis (in 2D).</p>
-<p>Note that the object velocity is calculated against the ego's current movement direction. If the object moves in the opposite direction to the ego's movement, the object velocity will be negative, which will reduce the rss distance on the next step.</p>
-<p>The resulting estimated object speed is added to a queue of speeds with timestamps. The AEB then checks for expiration of past speed estimations and eliminates expired speed measurements from the queue, the object expiration is determined by checking if the time elapsed since the speed was first added to the queue is larger than the parameter <code>previous_obstacle_keep_time</code>. Finally, the median speed of the queue is calculated. The median speed will be used to calculate the RSS distance used for collision checking.</p>
-<h3 id="5-collision-check-with-target-obstacles-using-rss-distance">5. Collision check with target obstacles using RSS distance<a class="headerlink" href="#5-collision-check-with-target-obstacles-using-rss-distance" title="Permanent link">#</a></h3>
-<p>In the fifth step, the AEB module checks for collision with the closest target obstacle using RSS distance.
-Only the closest target object is evaluated because RSS distance is used to determine collision risk. If the nearest target point is deemed safe, all other potential obstacles within the path are also assumed to be safe.</p>
-<p>RSS distance is formulated as:</p>
+<p>Note that the object velocity is calculated against the ego's current movement direction. If the object moves in the opposite direction to the ego's movement, the object velocity will be negative, which will reduce the collision assessment's metrics on the next step.</p>
+<p>The AEB module adds the estimated object speed and its timestamp to a speed history queue. The module then checks this queue for expired data. If the time elapsed since a speed measurement was recorded is greater than the <code>previous_obstacle_keep_time</code> parameter, the module removes that speed measurement and its timestamp from the queue. Finally, the module calculates the median speed of the remaining speed measurements in the queue. The AEB module uses this median value to determine the braking distance required for collision checking.</p>
+<h3 id="5-collision-check-with-target-obstacles">5. Collision check with target obstacles<a class="headerlink" href="#5-collision-check-with-target-obstacles" title="Permanent link">#</a></h3>
+<p>In the fifth step, the AEB module checks for a potential collision with the closest target object. To do this, the module calculates the minimum safe braking distance required to prevent a rear-end collision.</p>
+<p>The module only evaluates the closest target object because this safe braking distance acts as a threshold for all target objects. If the distance to the nearest target object is determined to be safe, the module assumes that all other objects further along the path are also safe.</p>
+<p>The braking distance is formulated as:</p>
 <div class="arithmatex">\[
-d = v_{ego}*t_{response} + v_{ego}^2/(2*a_{min}) -(sign(v_{obj})) * v_{obj}^2/(2*a_{obj_{min}}) + offset
+d_{braking} = v_{ego}*t_{response} + v_{ego}^2/(2*a_{min}) -(sign(v_{obj})) * v_{obj}^2/(2*a_{obj_{min}}) + offset
 \]</div>
-<p>where <span class="arithmatex">\(v_{ego}\)</span> and <span class="arithmatex">\(v_{obj}\)</span> is current ego and obstacle velocity, <span class="arithmatex">\(a_{min}\)</span> and <span class="arithmatex">\(a_{obj_{min}}\)</span> is ego and object minimum acceleration (maximum deceleration), <span class="arithmatex">\(t_{response}\)</span> is response time of the ego vehicle to start deceleration. Therefore the distance from the ego vehicle to the obstacle is smaller than this RSS distance <span class="arithmatex">\(d\)</span>, the ego vehicle send emergency stop signals.</p>
-<p>Only obstacles classified as "targets" (as defined in Step #3) are considered for RSS distance calculations. Among these "target" obstacles, the one closest to the ego vehicle is used for the calculation. If no "target" obstacles are present—meaning no obstacles fall within the ego vehicle's predicted path (determined by its width and an expanded margin)—this step is skipped. Instead, the position of the closest obstacle is recorded for future speed calculations (Step #4). In this scenario, no emergency stop diagnostic message is generated. The process is illustrated in the accompanying diagram.</p>
-<p><img alt="rss_check" src="image/rss_check.drawio.svg"></p>
+<p>Where:</p>
+<ul>
+<li><span class="arithmatex">\(v_{ego}\)</span> and <span class="arithmatex">\(v_{obj}\)</span> are the current velocities of the ego vehicle and the obstacle.</li>
+<li><span class="arithmatex">\(a_{min}\)</span> and <span class="arithmatex">\(a_{obj\_min}\)</span> are the maximum decelerations (minimum accelerations) of the ego vehicle and the obstacle.</li>
+<li><span class="arithmatex">\(t_{response}\)</span> is the response time required for the ego vehicle to begin decelerating.</li>
+</ul>
+<p>If the actual distance to the obstacle is less than this calculated distance (<span class="arithmatex">\(d_{braking}\)</span>), the AEB module sends an emergency stop signal.</p>
+<p>Only objects classified as "targets" (as defined in Step #3) are considered for collision assessment. Among these "target" obstacles, the one closest to the ego vehicle is used for the calculation. If no "target" obstacles are present—meaning no obstacles fall within the ego vehicle's predicted path (determined by its width and an expanded margin)—this step is skipped. Instead, the position of the closest obstacle is recorded for future speed calculations (Step #4). In this scenario, no emergency stop diagnostic message is generated. The process is illustrated in the accompanying diagram.</p>
+<p><img alt="braking_distance" src="image/braking_distance.drawio.svg"></p>
 <h3 id="6-send-emergency-stop-signals-to-diagnostics">6. Send emergency stop signals to <code>/diagnostics</code><a class="headerlink" href="#6-send-emergency-stop-signals-to-diagnostics" title="Permanent link">#</a></h3>
 <p>If AEB detects collision with point cloud obstacles in the previous step, it sends emergency signal to <code>/diagnostics</code> in this step. Note that in order to enable emergency stop, it has to send ERROR level emergency. Moreover, AEB user should modify the setting file to keep the emergency level, otherwise Autoware does not hold the emergency state.</p>
 <h2 id="use-cases">Use cases<a class="headerlink" href="#use-cases" title="Permanent link">#</a></h2>
 <h3 id="front-vehicle-suddenly-brakes">Front vehicle suddenly brakes<a class="headerlink" href="#front-vehicle-suddenly-brakes" title="Permanent link">#</a></h3>
-<p>The AEB can activate when a vehicle in front suddenly brakes, and a collision is detected by the AEB module. Provided the distance between the ego vehicle and the front vehicle is large enough and the ego’s emergency acceleration value is high enough, it is possible to avoid or soften collisions with vehicles in front that suddenly brake. NOTE: the acceleration used by the AEB to calculate rss_distance is NOT necessarily the acceleration used by the ego while doing an emergency brake. The acceleration used by the real vehicle can be tuned by changing the <a href="https://github.com/tier4/autoware_launch/blob/d1b2688f2788acab95bb9995d72efd7182e9006a/autoware_launch/config/system/mrm_emergency_stop_operator/mrm_emergency_stop_operator.param.yaml#L4">mrm_emergency stop jerk and acceleration values</a>.</p>
+<p>The AEB can activate when a vehicle in front suddenly brakes, and a collision is detected by the AEB module. Provided the distance between the ego vehicle and the front vehicle is large enough and the ego’s emergency acceleration value is high enough, it is possible to avoid or soften collisions with vehicles in front that suddenly brake. NOTE: the acceleration used by the AEB to calculate braking distance is NOT necessarily the acceleration used by the ego while doing an emergency brake. The acceleration used by the real vehicle can be tuned by changing the <a href="https://github.com/tier4/autoware_launch/blob/d1b2688f2788acab95bb9995d72efd7182e9006a/autoware_launch/config/system/mrm_emergency_stop_operator/mrm_emergency_stop_operator.param.yaml#L4">mrm_emergency stop jerk and acceleration values</a>.</p>
 <p><img alt="front vehicle collision prevention" src="image/front_vehicle_collision.drawio.svg"></p>
 <h3 id="stop-for-objects-that-appear-suddenly">Stop for objects that appear suddenly<a class="headerlink" href="#stop-for-objects-that-appear-suddenly" title="Permanent link">#</a></h3>
 <p>When an object appears suddenly, the AEB can act as a fail-safe to stop the ego vehicle when other modules fail to detect the object on time. If sudden object cut ins are expected, it might be useful for the AEB module to detect collisions of objects BEFORE they enter the real ego vehicle path by increasing the <code>expand_width</code> parameter.</p>
