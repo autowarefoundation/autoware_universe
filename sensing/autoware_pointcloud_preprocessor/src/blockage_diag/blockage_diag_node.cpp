@@ -78,28 +78,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     return;
   }
 
-  updater_.setHardwareID("blockage_diag");
-  updater_.add(std::string(this->get_namespace()) + ": blockage_validation", [this](auto & stat) {
-    run_blockage_check(stat);
-  });
-
-  if (enable_dust_diag_) {
-    updater_.add(std::string(this->get_namespace()) + ": dust_validation", [this](auto & stat) {
-      run_dust_check(stat);
-    });
-
-    ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
-      "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
-    if (publish_debug_image_) {
-      single_frame_dust_mask_pub =
-        image_transport::create_publisher(this, "blockage_diag/debug/single_frame_dust_mask_image");
-      multi_frame_dust_mask_pub =
-        image_transport::create_publisher(this, "blockage_diag/debug/multi_frame_dust_mask_image");
-      blockage_dust_merged_pub =
-        image_transport::create_publisher(this, "blockage_diag/debug/blockage_dust_merged_image");
-    }
-  }
-  updater_.setPeriod(0.1);
+  // Publishers setup
   if (publish_debug_image_) {
     lidar_depth_map_pub_ =
       image_transport::create_publisher(this, "blockage_diag/debug/lidar_depth_map");
@@ -111,9 +90,35 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
 
+  if (enable_dust_diag_) {
+    ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
+      "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
+    if (publish_debug_image_) {
+      single_frame_dust_mask_pub =
+        image_transport::create_publisher(this, "blockage_diag/debug/single_frame_dust_mask_image");
+      multi_frame_dust_mask_pub =
+        image_transport::create_publisher(this, "blockage_diag/debug/multi_frame_dust_mask_image");
+      blockage_dust_merged_pub =
+        image_transport::create_publisher(this, "blockage_diag/debug/blockage_dust_merged_image");
+    }
+  }
+
+  // Subscriber setup
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS(),
     std::bind(&BlockageDiagComponent::detect_blockage, this, std::placeholders::_1));
+
+  // Diagnostic updater setup
+  updater_.setHardwareID("blockage_diag");
+  updater_.add(std::string(this->get_namespace()) + ": blockage_validation", [this](auto & stat) {
+    run_blockage_check(stat);
+  });
+  if (enable_dust_diag_) {
+    updater_.add(std::string(this->get_namespace()) + ": dust_validation", [this](auto & stat) {
+      run_dust_check(stat);
+    });
+  }
+  updater_.setPeriod(0.1);
 }
 
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
