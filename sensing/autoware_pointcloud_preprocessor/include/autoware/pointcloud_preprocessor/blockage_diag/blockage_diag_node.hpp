@@ -19,12 +19,10 @@
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
