@@ -1,6 +1,8 @@
 <launch>
   <!-- Parameter files -->
   <arg name="fault_injection_param_path"/>
+  <arg name="fault_injection_input_diagnostics" default="/diagnostics"/>
+  <arg name="fault_injection_output_diagnostics" default="/diagnostics/fault_injection"/>
   <arg name="obstacle_segmentation_ground_segmentation_elevation_map_param_path"/>
   <arg name="laserscan_based_occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater"/>
@@ -53,9 +55,11 @@
   <let name="vehicle_model_pkg" value="$(find-pkg-share $(var vehicle_model)_description)"/>
 
   <group if="$(var launch_simulator_perception_modules)">
-    <group if="$(var scenario_simulation)">
+    <group if="$(var launch_fault_injection)">
       <include file="$(find-pkg-share autoware_fault_injection)/launch/fault_injection.launch.xml">
         <arg name="config_file" value="$(var fault_injection_param_path)"/>
+        <arg name="input/diagnostics" value="$(var fault_injection_input_diagnostics)"/>
+        <arg name="output/diagnostics" value="$(var fault_injection_output_diagnostics)"/>
       </include>
     </group>
 
