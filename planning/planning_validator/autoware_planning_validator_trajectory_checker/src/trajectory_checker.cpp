@@ -614,11 +614,11 @@ bool TrajectoryChecker::check_valid_forward_trajectory_length()
   const auto & trajectory = *data->current_trajectory;
   const auto & ego_pose = data->current_kinematics->pose.pose;
 
-  const auto ego_speed = std::abs(data->current_kinematics->twist.twist.linear.x);
-  if (ego_speed < 1.0 / 3.6) {
-    return true;  // Ego is almost stopped.
+  if (context_->vehicle_stop_checker_->isVehicleStopped()) {
+    return true;
   }
 
+  const auto ego_speed = std::abs(data->current_kinematics->twist.twist.linear.x);
   const auto forward_length = autoware::motion_utils::calcSignedArcLength(
     trajectory.points, ego_pose.position, trajectory.points.size() - 1);
 
@@ -645,10 +645,10 @@ bool TrajectoryChecker::check_trajectory_shift()
     return is_valid;
   }
 
-  const auto ego_speed = std::abs(data->current_kinematics->twist.twist.linear.x);
-  if (ego_speed < 1.0 / 3.6) {
-    return true;  // Ego is almost stopped.
+  if (context_->vehicle_stop_checker_->isVehicleStopped()) {
+    return true;
   }
+
   auto & status = context_->validation_status;
   const auto & trajectory = *data->current_trajectory;
   const auto & prev_trajectory = *data->last_valid_trajectory;
