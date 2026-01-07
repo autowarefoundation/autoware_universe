@@ -251,7 +251,7 @@ Where:
 - $a_{min}$ and $a_{obj\_min}$ are the maximum decelerations (minimum accelerations) of the ego vehicle and the obstacle.
 - $t_{response}$ is the response time required for the ego vehicle to begin decelerating.
 
-If the actual distance to the obstacle is less than this calculated distance ($d_braking$), the AEB module sends an emergency stop signal.
+If the actual distance to the obstacle is less than this calculated distance ($d_{braking}$), the AEB module sends an emergency stop signal.
 
 Only objects classified as "targets" (as defined in Step #3) are considered for collision assessment. Among these "target" obstacles, the one closest to the ego vehicle is used for the calculation. If no "target" obstacles are present—meaning no obstacles fall within the ego vehicle's predicted path (determined by its width and an expanded margin)—this step is skipped. Instead, the position of the closest obstacle is recorded for future speed calculations (Step #4). In this scenario, no emergency stop diagnostic message is generated. The process is illustrated in the accompanying diagram.
 
