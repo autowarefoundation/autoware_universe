@@ -26,7 +26,7 @@ namespace autoware::pointcloud_preprocessor
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options)
-: rclcpp::Node("BlockageDiag", options)
+: rclcpp::Node("BlockageDiag", rclcpp::NodeOptions(options).start_parameter_services(false))
 {
   {
     // LiDAR configuration
