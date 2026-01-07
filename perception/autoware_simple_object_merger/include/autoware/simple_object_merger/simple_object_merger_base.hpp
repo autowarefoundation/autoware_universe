@@ -90,7 +90,6 @@ protected:
   // Parameter
   NodeParam node_param_{};
 
-  bool isDataReady();
   bool shouldLogThrottle(
     size_t index, const rclcpp::Time & now, std::vector<rclcpp::Time> & last_log_times,
     double throttle_interval_sec);
