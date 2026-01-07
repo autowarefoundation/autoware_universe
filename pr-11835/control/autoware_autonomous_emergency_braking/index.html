@@ -24201,7 +24201,7 @@ d_{braking} = v_{ego}*t_{response} + v_{ego}^2/(2*a_{min}) -(sign(v_{obj})) * v_
 <li><span class="arithmatex">\(a_{min}\)</span> and <span class="arithmatex">\(a_{obj\_min}\)</span> are the maximum decelerations (minimum accelerations) of the ego vehicle and the obstacle.</li>
 <li><span class="arithmatex">\(t_{response}\)</span> is the response time required for the ego vehicle to begin decelerating.</li>
 </ul>
-<p>If the actual distance to the obstacle is less than this calculated distance (<span class="arithmatex">\(d_braking\)</span>), the AEB module sends an emergency stop signal.</p>
+<p>If the actual distance to the obstacle is less than this calculated distance (<span class="arithmatex">\(d_{braking}\)</span>), the AEB module sends an emergency stop signal.</p>
 <p>Only objects classified as "targets" (as defined in Step #3) are considered for collision assessment. Among these "target" obstacles, the one closest to the ego vehicle is used for the calculation. If no "target" obstacles are present—meaning no obstacles fall within the ego vehicle's predicted path (determined by its width and an expanded margin)—this step is skipped. Instead, the position of the closest obstacle is recorded for future speed calculations (Step #4). In this scenario, no emergency stop diagnostic message is generated. The process is illustrated in the accompanying diagram.</p>
 <p><img alt="braking_distance" src="image/braking_distance.drawio.svg"></p>
 <h3 id="6-send-emergency-stop-signals-to-diagnostics">6. Send emergency stop signals to <code>/diagnostics</code><a class="headerlink" href="#6-send-emergency-stop-signals-to-diagnostics" title="Permanent link">#</a></h3>
