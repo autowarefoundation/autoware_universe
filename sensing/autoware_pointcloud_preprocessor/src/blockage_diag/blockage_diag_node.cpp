@@ -110,9 +110,6 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     "blockage_diag/debug/ground_blockage_ratio", rclcpp::SensorDataQoS());
   sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
-  using std::placeholders::_1;
-  set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&BlockageDiagComponent::param_callback, this, _1));
 
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS(),
@@ -578,62 +575,6 @@ void BlockageDiagComponent::detect_blockage(
   }
 
   publish_debug_info(debug_info);
-}
-
-rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
-  const std::vector<rclcpp::Parameter> & p)
-{
-  std::scoped_lock lock(mutex_);
-  if (get_param(p, "blockage_ratio_threshold", blockage_ratio_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_ratio_threshold to: %f.", blockage_ratio_threshold_);
-  }
-  if (get_param(p, "horizontal_ring_id", horizontal_ring_id_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new horizontal_ring_id to: %d.", horizontal_ring_id_);
-  }
-  if (get_param(p, "vertical_bins", vertical_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new vertical_bins to: %d.", vertical_bins_);
-  }
-  if (get_param(p, "blockage_count_threshold", blockage_count_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_count_threshold to: %d.", blockage_count_threshold_);
-  }
-  if (get_param(p, "is_channel_order_top2down", is_channel_order_top2down_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new lidar model to: %d. ", is_channel_order_top2down_);
-  }
-  if (get_param(p, "angle_range", angle_range_deg_)) {
-    RCLCPP_DEBUG(
-      get_logger(), " Setting new angle_range to: [%f , %f].", angle_range_deg_[0],
-      angle_range_deg_[1]);
-  }
-  if (get_param(p, "blockage_buffering_frames", blockage_buffering_frames_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_buffering_frames_ to: %d.", blockage_buffering_frames_);
-  }
-  if (get_param(p, "blockage_buffering_interval", blockage_buffering_interval_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_buffering_interval_ to: %d.",
-      blockage_buffering_interval_);
-  }
-  if (get_param(p, "dust_kernel_size", dust_kernel_size_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new dust_kernel_size_ to: %d.", dust_kernel_size_);
-  }
-  if (get_param(p, "dust_buffering_frames", dust_buffering_frames_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new dust_buffering_frames_ to: %d.", dust_buffering_frames_);
-    // note:NOT affects to actual variable.
-    // if you want change this param/variable, change the parameter called at launch this
-    // node(aip_launcher).
-  }
-  if (get_param(p, "dust_buffering_interval", dust_buffering_interval_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new dust_buffering_interval_ to: %d.", dust_buffering_interval_);
-    dust_buffering_frame_counter_ = 0;
-  }
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
 }
 }  // namespace autoware::pointcloud_preprocessor
 
