@@ -26,7 +26,7 @@ namespace autoware::pointcloud_preprocessor
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options)
-: rclcpp::Node("BlockageDiag", options)
+: rclcpp::Node("BlockageDiag", rclcpp::NodeOptions(options).start_parameter_services(false))
 {
   {
     // LiDAR configuration
@@ -78,16 +78,19 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     return;
   }
 
-  updater_.setHardwareID("blockage_diag");
-  updater_.add(std::string(this->get_namespace()) + ": blockage_validation", [this](auto & stat) {
-    run_blockage_check(stat);
-  });
+  // Publishers setup
+  if (publish_debug_image_) {
+    lidar_depth_map_pub_ =
+      image_transport::create_publisher(this, "blockage_diag/debug/lidar_depth_map");
+    blockage_mask_pub_ =
+      image_transport::create_publisher(this, "blockage_diag/debug/blockage_mask_image");
+  }
+  ground_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
+    "blockage_diag/debug/ground_blockage_ratio", rclcpp::SensorDataQoS());
+  sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
+    "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
 
   if (enable_dust_diag_) {
-    updater_.add(std::string(this->get_namespace()) + ": dust_validation", [this](auto & stat) {
-      run_dust_check(stat);
-    });
-
     ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
     if (publish_debug_image_) {
@@ -99,24 +102,23 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
         image_transport::create_publisher(this, "blockage_diag/debug/blockage_dust_merged_image");
     }
   }
-  updater_.setPeriod(0.1);
-  if (publish_debug_image_) {
-    lidar_depth_map_pub_ =
-      image_transport::create_publisher(this, "blockage_diag/debug/lidar_depth_map");
-    blockage_mask_pub_ =
-      image_transport::create_publisher(this, "blockage_diag/debug/blockage_mask_image");
-  }
-  ground_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
-    "blockage_diag/debug/ground_blockage_ratio", rclcpp::SensorDataQoS());
-  sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
-    "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
-  using std::placeholders::_1;
-  set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&BlockageDiagComponent::param_callback, this, _1));
 
+  // Subscriber setup
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS(),
     std::bind(&BlockageDiagComponent::detect_blockage, this, std::placeholders::_1));
+
+  // Diagnostic updater setup
+  updater_.setHardwareID("blockage_diag");
+  updater_.add(std::string(this->get_namespace()) + ": blockage_validation", [this](auto & stat) {
+    run_blockage_check(stat);
+  });
+  if (enable_dust_diag_) {
+    updater_.add(std::string(this->get_namespace()) + ": dust_validation", [this](auto & stat) {
+      run_dust_check(stat);
+    });
+  }
+  updater_.setPeriod(0.1);
 }
 
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
@@ -553,8 +555,6 @@ void BlockageDiagComponent::validate_pointcloud_fields(
 void BlockageDiagComponent::detect_blockage(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
-  std::scoped_lock lock(mutex_);
-
   validate_pointcloud_fields(*input);
 
   cv::Mat depth_image_16u = make_normalized_depth_image(*input);
@@ -578,62 +578,6 @@ void BlockageDiagComponent::detect_blockage(
   }
 
   publish_debug_info(debug_info);
-}
-
-rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
-  const std::vector<rclcpp::Parameter> & p)
-{
-  std::scoped_lock lock(mutex_);
-  if (get_param(p, "blockage_ratio_threshold", blockage_ratio_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_ratio_threshold to: %f.", blockage_ratio_threshold_);
-  }
-  if (get_param(p, "horizontal_ring_id", horizontal_ring_id_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new horizontal_ring_id to: %d.", horizontal_ring_id_);
-  }
-  if (get_param(p, "vertical_bins", vertical_bins_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new vertical_bins to: %d.", vertical_bins_);
-  }
-  if (get_param(p, "blockage_count_threshold", blockage_count_threshold_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_count_threshold to: %d.", blockage_count_threshold_);
-  }
-  if (get_param(p, "is_channel_order_top2down", is_channel_order_top2down_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new lidar model to: %d. ", is_channel_order_top2down_);
-  }
-  if (get_param(p, "angle_range", angle_range_deg_)) {
-    RCLCPP_DEBUG(
-      get_logger(), " Setting new angle_range to: [%f , %f].", angle_range_deg_[0],
-      angle_range_deg_[1]);
-  }
-  if (get_param(p, "blockage_buffering_frames", blockage_buffering_frames_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_buffering_frames_ to: %d.", blockage_buffering_frames_);
-  }
-  if (get_param(p, "blockage_buffering_interval", blockage_buffering_interval_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new blockage_buffering_interval_ to: %d.",
-      blockage_buffering_interval_);
-  }
-  if (get_param(p, "dust_kernel_size", dust_kernel_size_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new dust_kernel_size_ to: %d.", dust_kernel_size_);
-  }
-  if (get_param(p, "dust_buffering_frames", dust_buffering_frames_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new dust_buffering_frames_ to: %d.", dust_buffering_frames_);
-    // note:NOT affects to actual variable.
-    // if you want change this param/variable, change the parameter called at launch this
-    // node(aip_launcher).
-  }
-  if (get_param(p, "dust_buffering_interval", dust_buffering_interval_)) {
-    RCLCPP_DEBUG(
-      get_logger(), "Setting new dust_buffering_interval_ to: %d.", dust_buffering_interval_);
-    dust_buffering_frame_counter_ = 0;
-  }
-  rcl_interfaces::msg::SetParametersResult result;
-  result.successful = true;
-  result.reason = "success";
-  return result;
 }
 }  // namespace autoware::pointcloud_preprocessor
 
