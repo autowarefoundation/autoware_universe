@@ -2,6 +2,24 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(intersection): correct stop line calculation by returning last point outside polygon (`#11796 <https://github.com/autowarefoundation/autoware_universe/issues/11796>`_)
+  Rename getFirstPointInsidePolygonByFootprint to getLastPointOutsidePolygonByFootprint
+  and fix logic to return the correct index for stop line positioning.
+* feat(autoware_lanelet2_utils): replace the usage of remove_const (`#11727 <https://github.com/autowarefoundation/autoware_universe/issues/11727>`_)
+  replace the usage of remove_const
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(intersection_module): add pass_judge_line_margin parameter (`#11680 <https://github.com/autowarefoundation/autoware_universe/issues/11680>`_)
+  * feat(intersection_module): add pass_judge_line_margin parameter
+  * fix(intersection_module): update pass_judge_line_margin to 0.0 in intersection.param.yaml
+  * feat(intersection_module): integrate pass_judge_line_margin into experimental
+  * change log level from WARN to ERROR for stuck vehicle detection
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yukinari Hisaki
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

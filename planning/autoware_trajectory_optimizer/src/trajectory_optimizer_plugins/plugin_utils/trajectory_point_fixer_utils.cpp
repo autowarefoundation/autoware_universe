@@ -14,8 +14,11 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
+#include "autoware/trajectory_optimizer/utils.hpp"
+
 #include <Eigen/Core>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -200,6 +203,62 @@ void resample_close_proximity_points(
 
   for (const auto & cluster_of_indices : clusters_of_indices) {
     resample_single_cluster(cluster_of_indices, traj_points, ego_point);
+  }
+}
+
+void remove_invalid_points(TrajectoryPoints & input_trajectory)
+{
+  // remove points with nan or inf values
+  input_trajectory.erase(
+    std::remove_if(
+      input_trajectory.begin(), input_trajectory.end(),
+      [](const TrajectoryPoint & point) {
+        return !autoware::trajectory_optimizer::utils::validate_point(point);
+      }),
+    input_trajectory.end());
+
+  if (input_trajectory.size() < 2) {
+    auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
+      "Not enough points in trajectory after removing invalid points");
+    return;
+  }
+}
+
+void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
+{
+  if (input_trajectory_array.size() < 2) {
+    return;
+  }
+
+  // Keep the first point
+  size_t last_valid_idx = 0;
+
+  for (size_t i = 1; i < input_trajectory_array.size(); ++i) {
+    const double dist = autoware_utils_geometry::calc_distance2d(
+      input_trajectory_array[i],
+      input_trajectory_array[last_valid_idx]  // Compare against last kept index
+    );
+
+    if (dist >= min_dist) {
+      ++last_valid_idx;
+      // Overwrite the next slot in the same vector
+      input_trajectory_array[last_valid_idx] = input_trajectory_array[i];
+    }
+  }
+
+  // Shrink vector to the new size
+  const auto erase_start_itr =
+    std::next(input_trajectory_array.begin(), static_cast<std::ptrdiff_t>(last_valid_idx + 1));
+  input_trajectory_array.erase(erase_start_itr, input_trajectory_array.end());
+
+  if (input_trajectory_array.size() < 2) {
+    auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("trajectory_point_fixer"), *clock, 5000,
+      "Not enough points in trajectory after removing close proximity points");
+    return;
   }
 }
 

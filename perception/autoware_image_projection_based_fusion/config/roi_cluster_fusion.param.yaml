@@ -7,6 +7,13 @@
     use_cluster_semantic_type: false
     only_allow_inside_cluster: true
     roi_scale_factor: 1.1
-    iou_threshold: 0.65
-    unknown_iou_threshold: 0.1
+    iou_threshold:
+      UNKNOWN : 0.1
+      CAR : 0.65
+      TRUCK : 0.65
+      BUS : 0.65
+      TRAILER : 0.65
+      MOTORCYCLE : 0.65
+      BICYCLE : 0.65
+      PEDESTRIAN : 0.65
     remove_unknown: true

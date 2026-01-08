@@ -56,6 +56,11 @@ struct UnknownSubstitution : public Exception
   using Exception::Exception;
 };
 
+struct UnknownVariable : public Exception
+{
+  using Exception::Exception;
+};
+
 struct UnknownLogic : public Exception
 {
   using Exception::Exception;

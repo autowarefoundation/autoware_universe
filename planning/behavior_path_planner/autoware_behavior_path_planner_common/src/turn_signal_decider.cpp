@@ -96,7 +96,7 @@ TurnIndicatorsCommand TurnSignalDecider::getTurnSignal(
   const double forward_length = parameters.forward_path_length;
   const double nearest_dist_threshold = parameters.ego_nearest_dist_threshold;
   const double nearest_yaw_threshold = parameters.ego_nearest_yaw_threshold;
-  double backward_length = 50.0;
+  double backward_length = parameters.turn_signal_path_backward_length;
 
   // In roundabouts, backward length is needed to adjust the backward length to ensure proper path
   // planning.

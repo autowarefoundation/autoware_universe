@@ -2,6 +2,16 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(default_adapi_universe): add energy normalize parameter (`#11546 <https://github.com/autowarefoundation/autoware_universe/issues/11546>`_)
+  * fix(default_adapi_universe): add energy normalize parameter
+  * modify ratio
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -8,7 +8,6 @@
     ignore_unknown_neighbors: true
     predict_neighbor_trajectory: true
     traffic_light_group_msg_timeout_seconds: 0.2
-    build_only: false
     batch_size: 1
     temperature: [0.0]
     velocity_smoothing_window: 8

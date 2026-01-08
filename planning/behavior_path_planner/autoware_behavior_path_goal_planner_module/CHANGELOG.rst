@@ -2,6 +2,19 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Planning and Control Component) (`#11784 <https://github.com/autowarefoundation/autoware_universe/issues/11784>`_)
+  * planning component toBinMsg replacement
+  * control component fromBinMsg replacement
+  * planning component fromBinMsg replacement
+  ---------
+* chore(goal_planner): change bezier parking parameters in default config (`#11698 <https://github.com/autowarefoundation/autoware_universe/issues/11698>`_)
+* feat(goal_planner): filter out bezier path with high curvature near start  pose (`#11693 <https://github.com/autowarefoundation/autoware_universe/issues/11693>`_)
+  feat(goal_planner): fiter bezier path with high curvature near start pose
+* Contributors: Kosuke Takeuchi, Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

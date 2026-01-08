@@ -327,7 +327,7 @@ It is possible to interpolate the trajectory and reference trajectory to increas
 ## Future extensions / Unimplemented parts
 
 - Use `Route` or `Path` messages as reference trajectory.
-- RSS metrics (done in another node <https://tier4.atlassian.net/browse/AJD-263>).
+- The collision assessment metrics (done in another node <https://tier4.atlassian.net/browse/AJD-263>).
 - `motion_evaluator_node`.
   - Node which constructs a trajectory over time from the real motion of ego.
   - Only a proof of concept is currently implemented.

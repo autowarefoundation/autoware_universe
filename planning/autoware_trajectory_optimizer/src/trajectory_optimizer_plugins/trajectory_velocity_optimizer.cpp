@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_velocity_optimizer.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_velocity_optimizer_utils.hpp"
 
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
@@ -41,7 +41,7 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   const TrajectoryOptimizerData & data)
 {
-  if (!params.optimize_velocity) {
+  if (!params.use_velocity_optimizer) {
     return;
   }
 
@@ -54,7 +54,7 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   const double & max_speed_mps = velocity_params_.max_speed_mps;
 
   if (velocity_params_.limit_lateral_acceleration) {
-    utils::limit_lateral_acceleration(
+    trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
       traj_points, velocity_params_.max_lateral_accel_mps2, data.current_odometry);
   }
 
@@ -65,13 +65,14 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
                               : target_pull_out_acc_mps2;
 
   if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
-    utils::clamp_velocities(
+    trajectory_velocity_optimizer_utils::clamp_velocities(
       traj_points, static_cast<float>(initial_motion_speed),
       static_cast<float>(initial_motion_acc));
   }
 
   if (velocity_params_.limit_speed) {
-    utils::set_max_velocity(traj_points, static_cast<float>(max_speed_mps));
+    trajectory_velocity_optimizer_utils::set_max_velocity(
+      traj_points, static_cast<float>(max_speed_mps));
   }
 
   if (velocity_params_.smooth_velocities) {
@@ -79,7 +80,7 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
       set_up_velocity_smoother(get_node_ptr(), get_time_keeper());
     }
     InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
-    utils::filter_velocity(
+    trajectory_velocity_optimizer_utils::filter_velocity(
       traj_points, initial_motion, velocity_params_.nearest_dist_threshold_m,
       autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
       jerk_filtered_smoother_, current_odometry);

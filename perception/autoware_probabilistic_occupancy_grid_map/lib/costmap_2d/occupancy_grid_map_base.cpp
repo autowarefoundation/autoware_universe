@@ -69,6 +69,7 @@
 #endif
 
 #include <algorithm>
+#include <vector>
 
 namespace autoware::occupancy_grid_map
 {
@@ -128,7 +129,7 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
   unsigned int cell_size_y = upper_right_y - lower_left_y;
 
   // we need a map to store the obstacles in the window temporarily
-  unsigned char * local_map{nullptr};
+  std::vector<unsigned char> local_map;
 
 #ifdef USE_CUDA
   using autoware::occupancy_grid_map::utils::copyMapRegionLaunch;
@@ -148,12 +149,12 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
     return;
 #endif
   } else {
-    local_map = new unsigned char[cell_size_x * cell_size_y];
+    local_map.resize(static_cast<size_t>(cell_size_x) * static_cast<size_t>(cell_size_y));
 
     // copy the local window in the costmap to the local map
     copyMapRegion(
-      costmap_, lower_left_x, lower_left_y, size_x_, local_map, 0, 0, cell_size_x, cell_size_x,
-      cell_size_y);
+      costmap_, lower_left_x, lower_left_y, size_x_, local_map.data(), 0, 0, cell_size_x,
+      cell_size_x, cell_size_y);
 
     // now we'll set the costmap to be completely unknown if we track unknown space
     nav2_costmap_2d::Costmap2D::resetMaps();
@@ -200,12 +201,8 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
 #endif
   } else {
     copyMapRegion(
-      local_map, 0, 0, cell_size_x, costmap_, start_x, start_y, size_x_, cell_size_x, cell_size_y);
-
-    // make sure to clean up
-    if (local_map != nullptr) {
-      delete[] local_map;
-    }
+      local_map.data(), 0, 0, cell_size_x, costmap_, start_x, start_y, size_x_, cell_size_x,
+      cell_size_y);
   }
 }
 

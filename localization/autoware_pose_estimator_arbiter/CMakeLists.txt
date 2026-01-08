@@ -4,6 +4,8 @@ project(autoware_pose_estimator_arbiter)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(magic_enum CONFIG REQUIRED)
+
 find_package(PCL REQUIRED COMPONENTS common)
 include_directories(
   SYSTEM ${PCL_INCLUDE_DIRS}
@@ -17,6 +19,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/switch_rule/enable_all_rule.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC src)
+target_link_libraries(${PROJECT_NAME} magic_enum::magic_enum)
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::pose_estimator_arbiter::PoseEstimatorArbiter"

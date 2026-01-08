@@ -178,19 +178,6 @@ rcl_interfaces::msg::SetParametersResult SimpleObjectMergerBase<ObjsMsgType>::on
 }
 
 template <class ObjsMsgType>
-bool SimpleObjectMergerBase<ObjsMsgType>::isDataReady()
-{
-  for (size_t i = 0; i < input_topic_size_; i++) {
-    if (!objects_data_.at(i)) {
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for object msg...");
-      return false;
-    }
-  }
-
-  return true;
-}
-
-template <class ObjsMsgType>
 void SimpleObjectMergerBase<ObjsMsgType>::onTimer()
 {
   // This must be overridden

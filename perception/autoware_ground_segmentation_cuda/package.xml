@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_ground_segmentation_cuda</name>
+  <version>0.0.0</version>
+  <description>GPU-Accelerated ground segmentation</description>
+  <maintainer email="dai.nguyen@tier4.jp">badai-nguyen</maintainer>
+  <maintainer email="anh.nguyen.2@tier4.jp">Anh Nguyen</maintainer>
+  <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <author email="dai.nguyen@tier4.jp">badai-nguyen</author>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>agnocastlib</depend>
+  <depend>autoware_agnocast_wrapper</depend>
+  <depend>autoware_cuda_dependency_meta</depend>
+  <depend>autoware_cuda_pointcloud_preprocessor</depend>
+  <depend>autoware_cuda_utils</depend>
+  <depend>autoware_point_types</depend>
+  <depend>autoware_pointcloud_preprocessor</depend>
+  <depend>autoware_utils</depend>
+  <depend>cuda_blackboard</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_msgs</depend>
+  <depend>tier4_debug_msgs</depend>
+
+  <test_depend>ament_clang_format</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -43,6 +43,11 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
+  bool conditionedUpdate(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
+    const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;

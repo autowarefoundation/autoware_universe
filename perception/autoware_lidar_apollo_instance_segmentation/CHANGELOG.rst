@@ -2,6 +2,25 @@
 Changelog for package autoware_lidar_apollo_instance_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(lidar_apollo_instance_segmentation): fixed preprocessing (`#8172 <https://github.com/autowarefoundation/autoware_universe/issues/8172>`_)
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* fix(autoware_lidar_apollo_instance_segmentation): add empty point cloud guard (`#11745 <https://github.com/autowarefoundation/autoware_universe/issues/11745>`_)
+  * fix(autoware_lidar_apollo_instance_segmentation): add empty point cloud guard
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior and potential crashes.
+  * Apply suggestion from @Copilot
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Update perception/autoware_lidar_apollo_instance_segmentation/src/node.cpp
+  * Update perception/autoware_lidar_apollo_instance_segmentation/src/node.cpp
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kenzo Lobos Tsunekawa, Ryohsuke Mitsudome, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

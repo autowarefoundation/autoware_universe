@@ -502,30 +502,24 @@ void VoxelGridDynamicMapLoader::request_update_map(const geometry_msgs::msg::Poi
   request->area.radius = map_loader_radius_;
   request->cached_ids = getCurrentMapIDs();
 
-  auto result{map_update_client_->async_send_request(
-    request,
-    [](rclcpp::Client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>::SharedFuture) {})};
+  auto callback =
+    [this](
+      rclcpp::Client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>::SharedFuture future) {
+      try {
+        auto result = future.get();
+        if (result->new_pointcloud_with_ids.empty() && result->ids_to_remove.empty()) {
+          return;
+        }
+        updateDifferentialMapCells(result->new_pointcloud_with_ids, result->ids_to_remove);
+        if (debug_) {
+          publish_downsampled_map(getCurrentDownsampledMapPc());
+        }
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR(logger_, "Failed to get differential pointcloud map: %s", e.what());
+      }
+    };
 
-  std::future_status status = result.wait_for(std::chrono::seconds(0));
-  while (status != std::future_status::ready) {
-    RCLCPP_INFO(logger_, "Waiting for response...\n");
-    if (!rclcpp::ok()) {
-      return;
-    }
-    status = result.wait_for(std::chrono::seconds(1));
-  }
-  //
-  if (status == std::future_status::ready) {
-    if (
-      result.get()->new_pointcloud_with_ids.size() == 0 &&
-      result.get()->ids_to_remove.size() == 0) {
-      return;
-    }
-    updateDifferentialMapCells(result.get()->new_pointcloud_with_ids, result.get()->ids_to_remove);
-    if (debug_) {
-      publish_downsampled_map(getCurrentDownsampledMapPc());
-    }
-  }
+  map_update_client_->async_send_request(request, callback);
 }
 
 }  // namespace autoware::compare_map_segmentation

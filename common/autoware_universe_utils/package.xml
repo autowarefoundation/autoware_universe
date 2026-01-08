@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_universe_utils</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>The autoware_universe_utils package</description>
   <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
@@ -18,6 +18,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>builtin_interfaces</depend>
   <depend>diagnostic_msgs</depend>

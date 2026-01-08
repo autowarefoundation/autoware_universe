@@ -112,7 +112,10 @@ bool ControlGateInterface::is_in_transition() const
 
 bool VehicleGateInterface::is_autoware_control() const
 {
-  return status_.mode == ControlModeReport::AUTONOMOUS;
+  return (
+    status_.mode == ControlModeReport::AUTONOMOUS ||
+    status_.mode == ControlModeReport::AUTONOMOUS_VELOCITY_ONLY ||
+    status_.mode == ControlModeReport::AUTONOMOUS_STEER_ONLY);
 }
 
 bool VehicleGateInterface::is_manual_control() const
@@ -128,7 +131,10 @@ bool ControlGateInterface::is_selected(const CommandPlugin & plugin) const
 bool VehicleGateInterface::is_selected(const CommandPlugin & plugin) const
 {
   if (plugin.autoware_control()) {
-    return status_.mode == ControlModeReport::AUTONOMOUS;
+    return (
+      status_.mode == ControlModeReport::AUTONOMOUS ||
+      status_.mode == ControlModeReport::AUTONOMOUS_VELOCITY_ONLY ||
+      status_.mode == ControlModeReport::AUTONOMOUS_STEER_ONLY);
   } else {
     return status_.mode == ControlModeReport::MANUAL;
   }

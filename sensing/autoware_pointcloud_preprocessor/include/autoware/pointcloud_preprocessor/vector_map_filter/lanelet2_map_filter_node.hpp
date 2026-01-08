@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__VECTOR_MAP_FILTER__LANELET2_MAP_FILTER_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__VECTOR_MAP_FILTER__LANELET2_MAP_FILTER_NODE_HPP_
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <managed_transform_buffer/managed_transform_buffer.hpp>

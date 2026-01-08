@@ -15,7 +15,8 @@
 #ifndef PLANNING_FACTOR_RVIZ_PLUGIN_HPP_
 #define PLANNING_FACTOR_RVIZ_PLUGIN_HPP_
 
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rcl_interfaces/srv/get_parameters.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <rviz_common/display.hpp>
 #include <rviz_common/properties/bool_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
@@ -24,6 +25,8 @@
 
 #include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 
+#include <mutex>
+#include <optional>
 #include <string>
 
 namespace autoware::rviz_plugins
@@ -53,10 +56,8 @@ public:
     this->topic_property_->setValue(topic_name_.c_str());
     this->topic_property_->setDescription("Topic to subscribe to.");
 
-    const auto vehicle_info =
-      autoware::vehicle_info_utils::VehicleInfoUtils(*rviz_ros_node_.lock()->get_raw_node())
-        .getVehicleInfo();
-    baselink2front_ = vehicle_info.max_longitudinal_offset_m;
+    // Start background vehicle info request (non-blocking)
+    start_vehicle_info_request();
   }
 
   void load(const rviz_common::Config & config) override
@@ -99,12 +100,18 @@ private:
   void processMessage(
     const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg) override;
 
+  static void start_vehicle_info_request();
+
   rviz_default_plugins::displays::MarkerCommon marker_common_;
 
-  double baselink2front_ = 0;
   rviz_common::properties::BoolProperty show_safety_factors_;
 
   std::string topic_name_;
+
+  // Static members for cached vehicle info
+  static std::mutex s_mutex_;
+  static std::optional<double> s_baselink2front_;
+  static bool s_request_started_;
 };
 }  // namespace autoware::rviz_plugins
 

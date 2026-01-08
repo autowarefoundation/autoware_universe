@@ -16,6 +16,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -88,11 +89,6 @@ std::optional<std::pair<size_t, size_t>> findLaneIdInterval(
   return found ? std::make_optional(std::make_pair(start, end)) : std::nullopt;
 }
 
-lanelet::Point3d remove_const(const lanelet::ConstPoint3d & point)
-{
-  return lanelet::Point3d{std::const_pointer_cast<lanelet::PointData>(point.constData())};
-}
-
 [[maybe_unused]] lanelet::LineString3d remove_const(const lanelet::ConstLineString3d & line)
 {
   return lanelet::LineString3d{std::const_pointer_cast<lanelet::LineStringData>(line.constData())};
@@ -119,6 +115,7 @@ lanelet::LineString3d generate_segment_beyond_linestring_end(
   const lanelet::ConstLineString3d & line, const lanelet::ConstLanelet & intersection_lanelet,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction)
 {
+  using autoware::experimental::lanelet2_utils::remove_const;
   const auto extend_length = lanelet::geometry::length3d(intersection_lanelet);
   const auto size = line.size();
   const auto & p1 = line[size - 2];
@@ -355,6 +352,8 @@ std::vector<lanelet::Id> find_lane_ids_upto(
 
 lanelet::ConstLineString3d get_entry_line(const lanelet::ConstLanelet & lanelet)
 {
+  using autoware::experimental::lanelet2_utils::remove_const;
+
   return lanelet::ConstLineString3d{
     lanelet::InvalId,
     lanelet::Points3d{
@@ -389,10 +388,10 @@ std::optional<lanelet::CompoundPolygon3d> generate_attention_area(
       ? blind_side_lanelets_before_turning_merged.leftBound()
       : blind_side_lanelets_before_turning_merged.rightBound();
   for (const auto & point : blind_side_lanelet_boundary_before_turning) {
-    far_side_boundary.push_back(remove_const(point));
+    far_side_boundary.push_back(autoware::experimental::lanelet2_utils::remove_const(point));
   }
   for (const auto & point : virtual_blind_side_boundary_after_turning) {
-    far_side_boundary.push_back(remove_const(point));
+    far_side_boundary.push_back(autoware::experimental::lanelet2_utils::remove_const(point));
   }
   if (far_side_boundary.size() < 2) {
     return std::nullopt;
@@ -420,13 +419,13 @@ std::optional<lanelet::CompoundPolygon3d> generate_attention_area(
       // do not add anymore from this
       break;
     }
-    near_side_boundary.push_back(remove_const(point));
+    near_side_boundary.push_back(autoware::experimental::lanelet2_utils::remove_const(point));
   }
   for (const auto & point : blind_ego_side_path_boundary_before_turning) {
-    near_side_boundary.push_back(remove_const(point));
+    near_side_boundary.push_back(autoware::experimental::lanelet2_utils::remove_const(point));
   }
   for (const auto & point : virtual_ego_straight_path_after_turning) {
-    near_side_boundary.push_back(remove_const(point));
+    near_side_boundary.push_back(autoware::experimental::lanelet2_utils::remove_const(point));
   }
   if (near_side_boundary.size() < 2) {
     return std::nullopt;
@@ -634,8 +633,10 @@ std::optional<StopPoints> generate_stop_points(
 {
   const lanelet::ConstLineString3d traffic_light_stop_line{
     lanelet::InvalId, lanelet::Points3d{
-                        remove_const(intersection_lanelet.leftBound().front()),
-                        remove_const(intersection_lanelet.rightBound().front())}};
+                        autoware::experimental::lanelet2_utils::remove_const(
+                          intersection_lanelet.leftBound().front()),
+                        autoware::experimental::lanelet2_utils::remove_const(
+                          intersection_lanelet.rightBound().front())}};
   const auto traffic_light_stop_line_2d =
     lanelet::utils::to2D(traffic_light_stop_line).basicLineString();
   const auto [start_lane, end] = interpolated_path_info.lane_id_interval;
@@ -788,5 +789,58 @@ std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
   }
 
   return min_blind_side_distance;
+}
+
+std::optional<lanelet::ConstLanelet> get_neighboring_turn_lanelet(
+  const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler,
+  const lanelet::ConstLanelet & intersection_lanelet, const geometry_msgs::msg::Pose & ego_pose)
+{
+  const auto & lanelet_map_ptr = route_handler->getLaneletMapPtr();
+  const std::string turn_dir = intersection_lanelet.attributeOr("turn_direction", "else");
+
+  const auto search_linestring = (turn_dir == "right") ? intersection_lanelet.rightBound2d()
+                                                       : intersection_lanelet.leftBound2d();
+
+  auto get_dist_sq = [&ego_pose](const lanelet::BasicPoint2d & pt) {
+    const double dx = ego_pose.position.x - pt.x();
+    const double dy = ego_pose.position.y - pt.y();
+    return (dx * dx) + (dy * dy);
+  };
+
+  auto get_closest_start_point = [&get_dist_sq](const lanelet::ConstLineString2d & ls) {
+    const auto & front = ls.front().basicPoint2d();
+    const auto & back = ls.back().basicPoint2d();
+    return (get_dist_sq(front) < get_dist_sq(back)) ? front : back;
+  };
+
+  const auto & reference_pt = get_closest_start_point(search_linestring);
+
+  constexpr double search_distance = 0.1;
+  const auto offset = lanelet::BasicPoint2d(search_distance, search_distance);
+  const auto search_bbox = lanelet::BoundingBox2d(reference_pt - offset, reference_pt + offset);
+  const auto neighbor_lanelets = lanelet_map_ptr->laneletLayer.search(search_bbox);
+
+  for (const auto & lanelet : neighbor_lanelets) {
+    if (lanelet.id() == intersection_lanelet.id()) {
+      continue;
+    }
+
+    const std::string neighbor_turn_dir = lanelet.attributeOr("turn_direction", "else");
+
+    if (neighbor_turn_dir != turn_dir) {
+      continue;
+    }
+
+    const auto neighbor_boundary =
+      (turn_dir == "right") ? lanelet.leftBound2d() : lanelet.rightBound2d();
+
+    const auto & neighbor_pt = get_closest_start_point(neighbor_boundary);
+
+    if (boost::geometry::distance(neighbor_pt, reference_pt) < search_distance) {
+      return lanelet;
+    }
+  }
+
+  return std::nullopt;
 }
 }  // namespace autoware::behavior_velocity_planner

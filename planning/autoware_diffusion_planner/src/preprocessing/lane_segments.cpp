@@ -60,7 +60,7 @@ LaneSegmentContext::LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap
 }
 
 std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
-  const LaneletRoute & route, const double center_x, const double center_y,
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
   const int64_t max_segments) const
 {
   std::vector<int64_t> array_indices;
@@ -81,7 +81,8 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
     for (const LanePoint & point : route_segment.centerline) {
       const double diff_x = point.x() - center_x;
       const double diff_y = point.y() - center_y;
-      const double curr_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y);
+      const double diff_z = point.z() - center_z;
+      const double curr_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
       distance = std::min(distance, curr_distance);
     }
     if (distance < closest_distance) {
@@ -91,14 +92,21 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   }
 
   std::vector<int64_t> selected_indices;
+  bool has_entered_valid_region = false;
 
   // Select route segment indices
   for (size_t i = closest_index; i < array_indices.size(); ++i) {
     const int64_t segment_idx = array_indices[i];
 
     if (!is_segment_inside(lanelet_map_.lane_segments[segment_idx], center_x, center_y)) {
-      continue;
+      if (has_entered_valid_region) {
+        break;
+      } else {
+        continue;
+      }
     }
+
+    has_entered_valid_region = true;
 
     selected_indices.push_back(segment_idx);
     if (selected_indices.size() >= static_cast<size_t>(max_segments)) {

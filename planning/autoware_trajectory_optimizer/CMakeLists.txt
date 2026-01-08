@@ -24,8 +24,11 @@ ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/trajectory_qp_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_spline_smoother.cpp
   src/trajectory_optimizer_plugins/trajectory_velocity_optimizer.cpp
+  src/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.cpp
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_mpt_optimizer_utils.cpp
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.cpp
+  src/trajectory_optimizer_plugins/plugin_utils/trajectory_spline_smoother_utils.cpp
+  src/trajectory_optimizer_plugins/plugin_utils/trajectory_velocity_optimizer_utils.cpp
 )
 
 if(BUILD_TESTING)
