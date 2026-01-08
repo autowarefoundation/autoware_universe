@@ -17,7 +17,7 @@
  * @brief 802.11 netlink-based interface class
  */
 
-#include "system_monitor/net_monitor/nl80211.hpp"
+#include "nl80211.hpp"
 
 #include <linux/nl80211.h>
 #include <net/if.h>
@@ -137,7 +137,7 @@ float NL80211::getBitrate(const char * ifa_name)
 {
   int ret;
   struct nl_msg * msg;
-  void * hdr;
+  const void * hdr;
   int index;
 
   bitrate_ = 0.0;
