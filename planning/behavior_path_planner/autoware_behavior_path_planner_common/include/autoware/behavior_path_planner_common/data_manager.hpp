@@ -255,6 +255,8 @@ struct PlannerData
       node.declare_parameter<double>("turn_signal_roundabout_angle_threshold_deg");
     parameters.turn_signal_roundabout_backward_depth =
       node.declare_parameter<int>("turn_signal_roundabout_backward_depth");
+    parameters.turn_signal_path_backward_length =
+      node.declare_parameter<double>("turn_signal_path_backward_length");
 
     parameters.enable_akima_spline_first =
       node.declare_parameter<bool>("enable_akima_spline_first");
