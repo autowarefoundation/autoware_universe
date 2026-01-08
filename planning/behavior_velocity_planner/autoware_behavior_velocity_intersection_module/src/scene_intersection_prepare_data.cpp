@@ -187,10 +187,12 @@ std::optional<size_t> IntersectionModule::getStopLineIndexFromMap(
     assigned_lanelet.regulatoryElementsAs<lanelet::autoware::RoadMarking>();
   lanelet::ConstLineStrings3d stopline;
   for (const auto & road_marking : road_markings) {
-    const std::string type =
-      road_marking->roadMarking().attributeOr(lanelet::AttributeName::Type, "none");
-    if (type == lanelet::AttributeValueString::StopLine) {
-      stopline.push_back(road_marking->roadMarking());
+    const auto & line = road_marking->roadMarking();
+    const std::string type = line.attributeOr(lanelet::AttributeName::Type, "none");
+    const std::string stopline_type =
+      line.attributeOr("intersection_pass_judge_line_type_v1", "default");
+    if (type == lanelet::AttributeValueString::StopLine && stopline_type != "manual") {
+      stopline.push_back(line);
       break;  // only one stopline exists.
     }
   }
@@ -228,6 +230,51 @@ std::optional<size_t> IntersectionModule::getStopLineIndexFromMap(
     planner_data_->ego_nearest_yaw_threshold);
 }
 
+std::optional<size_t> IntersectionModule::getFirstAttentionLineFromMap(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const lanelet::ConstLanelet & assigned_lanelet, const double ds,
+  const autoware_utils::LinearRing2d & local_footprint, const double vehicle_length) const
+{
+  const auto & path = interpolated_path_info.path;
+  const auto & lane_interval = interpolated_path_info.lane_id_interval.value();
+
+  const auto road_markings =
+    assigned_lanelet.regulatoryElementsAs<lanelet::autoware::RoadMarking>();
+  lanelet::ConstLineStrings3d attention_stopline_3d;
+
+  for (const auto & road_marking : road_markings) {
+    const auto & line = road_marking->roadMarking();
+    const std::string type = line.attributeOr(lanelet::AttributeName::Type, "none");
+    const std::string stopline_type =
+      line.attributeOr("intersection_pass_judge_line_type_v1", "default");
+    if (type == lanelet::AttributeValueString::StopLine && stopline_type == "manual") {
+      attention_stopline_3d.push_back(line);
+      break;  // only one stopline exists.
+    }
+  }
+  if (attention_stopline_3d.empty()) {
+    return std::nullopt;
+  }
+
+  const auto p_start = attention_stopline_3d.front().front();
+  const auto p_end = attention_stopline_3d.front().back();
+  const LineString2d stopline = {{p_start.x(), p_start.y()}, {p_end.x(), p_end.y()}};
+  const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / ds);
+  const size_t start = static_cast<size_t>(
+    std::max<int>(0, static_cast<int>(lane_interval.first) - vehicle_length_idx));
+
+  for (size_t i = start; i <= lane_interval.second && i < path.points.size(); ++i) {
+    const auto & base_pose = path.points.at(i).point.pose;
+    const auto path_footprint =
+      autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose));
+    if (bg::intersects(path_footprint, stopline)) {
+      return static_cast<size_t>(std::max<int>(0, static_cast<int>(i - 1)));
+    }
+  }
+
+  return std::nullopt;
+}
+
 std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionStopLines(
   lanelet::ConstLanelet assigned_lanelet, const lanelet::CompoundPolygon3d & first_conflicting_area,
   const lanelet::ConstLanelet & first_attention_lane,
@@ -249,24 +296,34 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   const int base2front_idx_dist = std::ceil(baselink2front / ds);
 
   // (1) find the index of the first point whose vehicle footprint on it intersects with
-  // attention_area for the first time
+  // attention_area for the first time, or use map-defined attention_stop_line if available
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
+  const auto map_first_attention_stopline_ip_opt = getFirstAttentionLineFromMap(
+    interpolated_path_info, assigned_lanelet, ds, local_footprint, baselink2front);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
     util::getLastPointOutsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
-  if (!first_footprint_inside_1st_attention_ip_opt) {
+  if (!first_footprint_inside_1st_attention_ip_opt && !map_first_attention_stopline_ip_opt) {
     return std::nullopt;
   }
-  const auto first_attention_stopline_ip = first_footprint_inside_1st_attention_ip_opt.value();
+  const auto first_attention_stopline_ip = [&]() -> size_t {
+    if (map_first_attention_stopline_ip_opt) {
+      return map_first_attention_stopline_ip_opt.value();
+    } else {
+      return first_footprint_inside_1st_attention_ip_opt.value();
+    }
+  }();
 
   // (2) pass judge line position on interpolated path
   const double braking_dist = planning_utils::calcJudgeLineDistWithJerkLimit(
     planner_data_->current_velocity->twist.linear.x,
     planner_data_->current_acceleration->accel.accel.linear.x, planner_param_.common.max_accel,
     planner_param_.common.max_jerk, 0.0);
-  int first_pass_judge_ip_int =
-    static_cast<int>(first_attention_stopline_ip) - static_cast<int>(std::ceil(braking_dist / ds)) -
-    static_cast<int>(std::ceil(planner_param_.common.pass_judge_line_margin / ds));
+  const double pass_judge_line_margin =
+    map_first_attention_stopline_ip_opt ? 0.0 : planner_param_.common.pass_judge_line_margin;
+  const int first_pass_judge_ip_int = static_cast<int>(first_attention_stopline_ip) -
+                                      static_cast<int>(std::ceil(braking_dist / ds)) -
+                                      static_cast<int>(std::ceil(pass_judge_line_margin / ds));
   const auto first_pass_judge_line_ip = static_cast<size_t>(
     std::clamp<int>(first_pass_judge_ip_int, 0, static_cast<int>(path_ip.points.size()) - 1));
 

@@ -1554,8 +1554,8 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
     safely_passed_judge_line_first_time = true;
   }
   const double baselink2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
-  debug_data_.pass_judge_wall_pose =
-    planning_utils::getAheadPose(pass_judge_line_idx, baselink2front, path);
+  debug_data_.pass_judge_wall_pose = autoware_utils_geometry::calc_offset_pose(
+    path.points.at(pass_judge_line_idx).point.pose, baselink2front, 0.0, 0.0);
   debug_data_.passed_pass_judge = safely_passed_judge_line_time_.has_value();
 
   if ((is_over_pass_judge_line && was_safe) || is_permanent_go_) {
