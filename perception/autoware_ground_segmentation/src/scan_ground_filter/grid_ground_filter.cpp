@@ -24,6 +24,35 @@
 namespace autoware::ground_segmentation
 {
 
+float GridGroundFilter::getRadialDividerAngleRad(const float radius) const
+{
+  // Find the appropriate angle based on radius using the configurable map
+  // The map is sorted by radius in ascending order
+  // We find the last entry where radius >= entry.radius
+  if (param_.radial_divider_angle_map.empty()) {
+    // return error
+    return -1.0f;
+  }
+
+  // Find the appropriate entry: use the last entry where radius >= entry.radius
+  float angle_rad = param_.radial_divider_angle_map.back().angle_rad;  // Default to last entry
+  for (size_t i = 0; i < param_.radial_divider_angle_map.size(); ++i) {
+    if (radius < param_.radial_divider_angle_map[i].radius) {
+      // Use the previous entry (or first entry if at the beginning)
+      if (i > 0) {
+        angle_rad = param_.radial_divider_angle_map[i - 1].angle_rad;
+      } else {
+        angle_rad = param_.radial_divider_angle_map[0].angle_rad;
+      }
+      break;
+    }
+    // If we've reached the last entry and radius >= its threshold, use it
+    if (i == param_.radial_divider_angle_map.size() - 1) {
+      angle_rad = param_.radial_divider_angle_map[i].angle_rad;
+    }
+  }
+  return angle_rad;
+}
 // assign the pointcloud data to the grid
 void GridGroundFilter::convert()
 {

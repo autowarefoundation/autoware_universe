@@ -45,8 +45,22 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
     elevation_grid_mode_ = declare_parameter<bool>("elevation_grid_mode");
 
     // common parameters
-    radial_divider_angle_rad_ =
-      static_cast<float>(deg2rad(declare_parameter<double>("radial_divider_angle_deg")));
+    // Read radial divider angle map (list of radius/angle pairs)
+    // Since ROS 2 doesn't natively support array-of-maps, we use two parallel arrays
+    // and combine them, or read from YAML structure directly via parameter value
+
+    std::vector<double> radius_array =
+      declare_parameter<std::vector<double>>("radial_divider_angle_map_radii");
+    std::vector<double> angle_array_deg =
+      declare_parameter<std::vector<double>>("radial_divider_angle_map_angles");
+    std::vector<double> angle_array_rad;
+    for (const auto angle_deg : angle_array_deg) {
+      angle_array_rad.push_back(deg2rad(angle_deg));
+    } 
+    // Keep radial_divider_angle_deg for backward compatibility (schema requirement)
+    // Initialize radial_divider_angle_rad_ before it's used
+    const double radial_divider_angle_deg = declare_parameter<double>("radial_divider_angle_deg");
+    radial_divider_angle_rad_ = static_cast<float>(deg2rad(radial_divider_angle_deg));
     radial_dividers_num_ = std::ceil(2.0 * M_PI / radial_divider_angle_rad_);
 
     // common thresholds
@@ -98,6 +112,8 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.gnd_grid_buffer_size = gnd_grid_buffer_size_;
       param.virtual_lidar_x = vehicle_info_.wheel_base_m / 2.0f + center_pcl_shift_;
       param.virtual_lidar_y = 0.0f;
+      param.azimuth_divider_radius_array = radius_array;
+      param.azimuth_divider_angle_array = angle_array_rad;
 
       grid_ground_filter_ptr_ = std::make_unique<GridGroundFilter>(param);
     }
