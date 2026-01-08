@@ -16,6 +16,7 @@
 #define AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__ROI_CLUSTER_FUSION__NODE_HPP_
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
+#include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
 #include <map>
 #include <memory>
@@ -42,8 +43,7 @@ private:
   bool use_cluster_semantic_type_{false};
   bool only_allow_inside_cluster_{false};
   double roi_scale_factor_{1.1};
-  double iou_threshold_{0.0};
-  double unknown_iou_threshold_{0.0};
+  ObjClassIoUThresh iou_threshold_;
   const float min_roi_existence_prob_ =
     0.1;  // keep small value to lessen affect on merger object stage
   bool remove_unknown_;
