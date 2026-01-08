@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef EXPERIMENTAL__SCENE_CROSSWALK_HPP_
-#define EXPERIMENTAL__SCENE_CROSSWALK_HPP_
+#ifndef SCENE_CROSSWALK_HPP_
+#define SCENE_CROSSWALK_HPP_
 
 #include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 
@@ -41,8 +41,8 @@
 namespace autoware::behavior_velocity_planner::experimental
 {
 namespace bg = boost::geometry;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
+using autoware_internal_planning_msgs::msg::Trajectory;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -383,95 +383,91 @@ public:
 private:
   // main functions
   void applySlowDown(
-    PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const float safety_slow_down_speed, const std::string & reason,
     const PlannerData & planner_data);
 
   void applySlowDownByLanelet2Map(
-    PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   void applySlowDownByOcclusion(
-    PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
-    const PathWithLaneId & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const PlannerData & planner_data) const;
 
   std::optional<geometry_msgs::msg::Pose> calcStopPose(
-    const PathWithLaneId & ego_path, double dist_nearest_cp,
+    const Trajectory & ego_path, double dist_nearest_cp,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
-    const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
+    const Trajectory & ego_path, const Trajectory & sparse_resample_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
     const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
-    const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
+    const Trajectory & ego_path, const Trajectory & sparse_resample_path,
     const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose, const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
-    const PathWithLaneId & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
-    const PathWithLaneId & sparse_resample_path) const;
+    const Trajectory & sparse_resample_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
     const autoware_perception_msgs::msg::PredictedPath & path) const;
 
   std::optional<CollisionPoint> getCollisionPoint(
-    const PathWithLaneId & ego_path, const PredictedObject & object,
+    const Trajectory & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
     const PlannerData & planner_data);
 
   std::pair<std::optional<StopPoseWithObjectUuids>, std::string> getNearestStopFactorAndReason(
-    const PathWithLaneId & ego_path,
+    const Trajectory & ego_path,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles,
     const PlannerData & planner_data);
 
   void setDistanceToStop(
-    const PathWithLaneId & ego_path,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+    const Trajectory & ego_path, const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
     const std::optional<StopPoseWithObjectUuids> & stop_factor, const PlannerData & planner_data);
 
   void planGo(
-    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
+    Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
     const PlannerData & planner_data) const;
 
   void planStop(
-    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
+    Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose, const std::string & reason,
     const PlannerData & planner_data) const;
 
   // minor functions
   std::pair<double, double> getAttentionRange(
-    const PathWithLaneId & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   void insertDecelPointWithDebugInfo(
     const geometry_msgs::msg::Point & stop_point, const float target_velocity,
-    PathWithLaneId & output) const;
+    Trajectory & output) const;
 
   std::pair<double, double> clampAttentionRangeByNeighborCrosswalks(
-    const PathWithLaneId & ego_path, const double near_attention_range,
+    const Trajectory & ego_path, const double near_attention_range,
     const double far_attention_range, const PlannerData & planner_data);
 
   CollisionPoint createCollisionPoint(
@@ -482,16 +478,16 @@ private:
     const PlannerData & planner_data) const;
 
   float calcTargetVelocity(
-    const geometry_msgs::msg::Point & stop_point, const PathWithLaneId & ego_path,
+    const geometry_msgs::msg::Point & stop_point, const Trajectory & ego_path,
     const PlannerData & planner_data) const;
 
   Polygon2d getAttentionArea(
-    const PathWithLaneId & sparse_resample_path,
+    const Trajectory & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range,
     const PlannerData & planner_data) const;
 
   void updateObjectState(
-    const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
+    const double dist_ego_to_stop, const Trajectory & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
     const PlannerData & planner_data);
 
@@ -511,7 +507,7 @@ private:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 
   bool checkRestartSuppression(
-    const PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
+    const Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
     const PlannerData & planner_data) const;
 
   SafetyFactorArray createSafetyFactorArray(
@@ -606,4 +602,4 @@ private:
 };
 }  // namespace autoware::behavior_velocity_planner::experimental
 
-#endif  // EXPERIMENTAL__SCENE_CROSSWALK_HPP_
+#endif  // SCENE_CROSSWALK_HPP_
