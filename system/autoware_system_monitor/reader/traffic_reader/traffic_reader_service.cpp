@@ -26,6 +26,7 @@
 #include <signal.h>
 #include <syslog.h>
 
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
