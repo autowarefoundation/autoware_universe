@@ -263,7 +263,7 @@ protected:
   /// @param cloud_size The total number of points in the target cloud.
   /// @param logger Logger for outputting warnings on failure.
   /// @return True if indices are valid (or empty); false if null or out of bounds.
-  static inline bool is_valid_indices(
+  static bool is_valid_indices(
     const PointIndicesConstPtr & indices, size_t cloud_size, const rclcpp::Logger & logger)
   {
     if (!indices) {
