@@ -111,11 +111,6 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
     return;
   }
 
-  if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
-    RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
-    return;
-  }
-
   // Check whether the user has given a different input TF frame
   tf_input_orig_frame_ = cloud->header.frame_id;
   PointCloud2ConstPtr cloud_tf;
@@ -148,6 +143,10 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   // Need setInputCloud () here because we have to extract x/y/z
   IndicesPtr vindices;
   if (indices) {
+    if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
+      RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
+      return;
+    }
     vindices.reset(new std::vector<int>(indices->indices));
   }
 

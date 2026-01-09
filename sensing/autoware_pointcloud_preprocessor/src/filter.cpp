@@ -232,13 +232,13 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
     return;
   }
 
-  if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
-    RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
-    return;
-  }
-
   /// DEBUG
   if (indices) {
+    if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
+      RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
+      return;
+    }
+
     RCLCPP_DEBUG(
       this->get_logger(),
       "[input_indices_callback]\n"
@@ -394,12 +394,12 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
     return;
   }
 
-  if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
-    RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
-    return;
-  }
-
   if (indices) {
+    if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
+      RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
+      return;
+    }
+
     RCLCPP_DEBUG(
       this->get_logger(),
       "[input_indices_callback]\n"
