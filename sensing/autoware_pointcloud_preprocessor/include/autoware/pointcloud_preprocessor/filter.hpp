@@ -243,8 +243,7 @@ protected:
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  inline bool is_valid(
-    const PointCloud2ConstPtr & cloud, const std::string & /*topic_name*/ = "input")
+  inline bool is_valid(const PointCloud2ConstPtr & cloud)
   {
     if (cloud->width * cloud->height * cloud->point_step != cloud->data.size()) {
       RCLCPP_WARN(
@@ -255,18 +254,6 @@ protected:
         rclcpp::Time(cloud->header.stamp).seconds(), cloud->header.frame_id.c_str());
       return false;
     }
-    return true;
-  }
-
-  static inline bool is_valid(
-    const PointIndicesConstPtr & /*indices*/, const std::string & /*topic_name*/ = "indices")
-  {
-    return true;
-  }
-
-  static inline bool is_valid(
-    const ModelCoefficientsConstPtr & /*model*/, const std::string & /*topic_name*/ = "model")
-  {
     return true;
   }
 

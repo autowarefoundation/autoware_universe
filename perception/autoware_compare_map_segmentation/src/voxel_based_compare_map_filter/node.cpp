@@ -111,11 +111,6 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
-  // If indices are given, check if they are valid
-  if (indices && !is_valid(indices)) {
-    RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
-    return;
-  }
 
   // Check whether the user has given a different input TF frame
   tf_input_orig_frame_ = cloud->header.frame_id;
