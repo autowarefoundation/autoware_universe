@@ -564,38 +564,38 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     // Sample at 0.1m intervals for finer granularity
     std_msgs::msg::Float32MultiArray ref_steering_msg;
     constexpr double sampling_interval = 0.1;  // 0.1m sampling interval
-    
+
     if (ref_points_spline.getSize() > 1) {
       // Get total arc length
-      const double total_s = ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
-      
+      const double total_s =
+        ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
+
       // Sample at 0.1m intervals along the trajectory
       size_t current_segment = 0;
       for (double s = 0.0; s <= total_s; s += sampling_interval) {
         // Clamp s to valid range [0, total_s]
         const double clamped_s = std::min(s, total_s);
-        
+
         // Find which segment this s belongs to (optimize by starting from current segment)
         for (size_t i = current_segment; i < ref_points_spline.getSize() - 1; ++i) {
           const double segment_start = ref_points_spline.getAccumulatedLength(i);
           const double segment_end = (i + 1 < ref_points_spline.getSize() - 1)
                                        ? ref_points_spline.getAccumulatedLength(i + 1)
                                        : total_s;
-          
+
           if (clamped_s >= segment_start && clamped_s <= segment_end) {
             current_segment = i;
             // Calculate offset within the segment
             const double s_offset = clamped_s - segment_start;
-            
+
             // Get curvature at this point (function handles clamping internally)
             const double curvature = ref_points_spline.getSplineInterpolatedCurvature(i, s_offset);
-            const double ref_steer_angle =
-              std::atan2(vehicle_info_.wheel_base_m * curvature, 1.0);
+            const double ref_steer_angle = std::atan2(vehicle_info_.wheel_base_m * curvature, 1.0);
             ref_steering_msg.data.push_back(static_cast<float>(ref_steer_angle));
             break;
           }
         }
-        
+
         // Stop if we've reached the end
         if (clamped_s >= total_s - 1e-9) {
           break;

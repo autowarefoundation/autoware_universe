@@ -146,7 +146,7 @@ AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
      << elapsed_time * 1000 << " [ms]\n KKT " << kkt_norm_inf << std::endl;
 
   AcadosSolution solution;
-  
+
   solution.xtraj = getStateTrajectory();
   solution.utraj = getControlTrajectory();
 

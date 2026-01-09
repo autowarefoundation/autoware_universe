@@ -27,7 +27,7 @@ struct AcadosSolution
   int sqp_iter;
   double kkt_norm_inf;
   double elapsed_time;
-  
+
   int status;
   std::string info;
 };
