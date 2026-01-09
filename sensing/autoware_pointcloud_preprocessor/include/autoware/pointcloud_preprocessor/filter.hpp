@@ -53,6 +53,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__FILTER_HPP_
 
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
+#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <boost/thread/mutex.hpp>
 
@@ -244,17 +245,61 @@ protected:
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  inline bool is_valid(const PointCloud2ConstPtr & cloud)
+  static bool is_valid(const PointCloud2ConstPtr & cloud, const rclcpp::Logger & logger)
   {
-    if (cloud->width * cloud->height * cloud->point_step != cloud->data.size()) {
-      RCLCPP_WARN(
-        this->get_logger(),
-        "Invalid PointCloud (data = %zu, width = %d, height = %d, step = %d) with stamp %f, "
-        "and frame %s received!",
-        cloud->data.size(), cloud->width, cloud->height, cloud->point_step,
-        rclcpp::Time(cloud->header.stamp).seconds(), cloud->header.frame_id.c_str());
+    if (!cloud) {
+      RCLCPP_WARN(logger, "Invalid PointCloud: Null pointer received.");
       return false;
     }
+
+    // Check: Point Step
+    if (cloud->point_step == 0) {
+      RCLCPP_WARN(
+        logger,
+        "Invalid PointCloud: point_step is 0. "
+        "Frame: '%s', Stamp: %d.%09u",
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      return false;
+    }
+
+    // Check: Point field layout compatibility
+    if (!utils::is_data_layout_compatible_with_point_xyz(*cloud)) {
+      RCLCPP_WARN(
+        logger,
+        "The pointcloud layout is not compatible with PointXYZ. Aborting. "
+        "Make sure Point fields start with x, y, z as FLOAT32.");
+      return false;
+    }
+
+    // Check: Row step consistency
+    size_t expected_row_step =
+      static_cast<size_t>(cloud->width) * static_cast<size_t>(cloud->point_step);
+
+    if (expected_row_step != static_cast<size_t>(cloud->row_step)) {
+      RCLCPP_WARN(
+        logger,
+        "Invalid PointCloud: row_step mismatch. "
+        "Expected: %zu (width %u * point_step %u), Got: %u. "
+        "Frame: '%s', Stamp: %d.%09u",
+        expected_row_step, cloud->width, cloud->point_step, cloud->row_step,
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      return false;
+    }
+
+    // Check: Data buffer size consistency
+    size_t expected_data_size = static_cast<size_t>(cloud->height) * expected_row_step;
+
+    if (expected_data_size != cloud->data.size()) {
+      RCLCPP_WARN(
+        logger,
+        "Invalid PointCloud: data size mismatch. "
+        "Expected: %zu (height %u * row_step %u), Got: %zu. "
+        "Frame: '%s', Stamp: %d.%09u",
+        expected_data_size, cloud->height, cloud->row_step, cloud->data.size(),
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      return false;
+    }
+
     return true;
   }
 
