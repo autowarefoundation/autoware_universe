@@ -23,6 +23,7 @@
 #include <sys/time.h>
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <memory>
 #include <optional>
