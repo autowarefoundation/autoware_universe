@@ -12,7 +12,8 @@
     elevation_grid_mode: true
     low_priority_region_x: -20.0
     center_pcl_shift: 0.0
-    radial_divider_angle_deg: 1.0
+    radial_divider_angle_map_radii:  [0.0, 5.0, 10.0, 20.0, 40.0, 60.0,  80.0]
+    radial_divider_angle_map_angles: [4.0, 2.0, 1.0,  0.5,  0.25, 0.125, 0.0625]
     use_recheck_ground_cluster: true
     recheck_start_distance: 20.0
     use_lowest_point: true
