@@ -266,11 +266,7 @@ void fillLaneIdsFromMap(Iterator begin, Iterator end, const lanelet::ConstLanele
     const auto point = it->point;
     lanelet::ConstLanelet lanelet;
     if (lanelet::utils::query::getClosestLanelet(lanelets, point.pose, &lanelet)) {
-      // TODO(hisaki): Writing "it->lane_ids = {lanelet.id()}" may cause a segmentation fault.
-      // I'm not sure of the reason. (╥﹏╥)
-      auto & ids = it->lane_ids;
-      ids.clear();
-      ids.push_back(lanelet.id());
+      it->lane_ids = {lanelet.id()};
     }
   }
 }
