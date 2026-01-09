@@ -377,15 +377,24 @@ bool set_goal(
     // NOTE: remove the first point to keep the original path length
     output_ptr->points.erase(output_ptr->points.begin());
 
+    // find min_dist_out_of_circle_index whose distance to goal is longer than search_radius_range
+    const auto min_dist_out_of_circle_index_opt_of_output_path =
+      findIndexOutOfGoalSearchRange(output_ptr->points, goal, goal_lane_id, search_radius_range);
+    if (!min_dist_out_of_circle_index_opt_of_output_path) {
+      return false;
+    }
+    const size_t min_dist_out_of_circle_index_of_output_path =
+      min_dist_out_of_circle_index_opt_of_output_path.value();
+
     const auto lanelets = getUniqueLaneletsFromPath(
       input.points.begin() + min_dist_out_of_circle_index + 1, input.points.end(),
       get_lanelet_by_id);
     fillLaneIdsFromMap(
-      output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
-      lanelets);
+      output_ptr->points.begin() + min_dist_out_of_circle_index_of_output_path + 1,
+      output_ptr->points.end(), lanelets);
     fillLongitudinalVelocityFromInputPath(
-      output_ptr->points.begin() + min_dist_out_of_circle_index + 1, output_ptr->points.end(),
-      input);
+      output_ptr->points.begin() + min_dist_out_of_circle_index_of_output_path + 1,
+      output_ptr->points.end(), input);
 
     output_ptr->points.back().point.longitudinal_velocity_mps = 0.0;
     return true;
