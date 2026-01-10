@@ -18,15 +18,27 @@
 
 #include <boost/geometry.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <utility>
+#include <vector>
+
 namespace planning_diagnostics
 {
 namespace metrics
 {
 namespace utils
 {
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
+using autoware_utils::Segment2d;
 namespace bg = boost::geometry;
 
-size_t getIndexAfterDistance(const Trajectory & traj, const size_t curr_id, const double distance)
+size_t get_index_after_distance(
+  const Trajectory & traj, const size_t curr_id, const double distance)
 {
   // Get Current Trajectory Point
   const TrajectoryPoint & curr_p = traj.points.at(curr_id);
@@ -90,22 +102,82 @@ double calc_lookahead_trajectory_distance(const Trajectory & traj, const Pose & 
   return dist;
 }
 
-double calc_ego_object_distance(
-  const autoware_utils::LinearRing2d & local_ego_footprint, const Pose & ego_pose,
-  const PredictedObject & object)
+bool polygon_intersects(const Polygon2d & poly1, const Polygon2d & poly2)
 {
-  // create ego polygon
-  const autoware_utils::LinearRing2d ego_footprint =
-    autoware_utils::transform_vector(local_ego_footprint, autoware_utils::pose2transform(ego_pose));
-  autoware_utils::Polygon2d ego_polygon;
-  ego_polygon.outer() = ego_footprint;
-  bg::correct(ego_polygon);
+  const auto & outer1 = poly1.outer();
+  const auto & outer2 = poly2.outer();
 
-  // create object polygon
-  const auto object_polygon = autoware_utils::to_polygon2d(object);
+  // Separating Axis Theorem: test perpendicular axes of both polygon edges
+  const auto test_axes = [&](const auto & poly_outer, const auto & other_outer) {
+    const size_t n = poly_outer.size();
+    for (size_t i = 0; i < n; ++i) {
+      const auto & p1 = poly_outer[i];
+      const auto & p2 = poly_outer[(i + 1) % n];
 
-  return bg::distance(ego_polygon, object_polygon);
+      const double edge_x = p2.x() - p1.x();
+      const double edge_y = p2.y() - p1.y();
+      const double edge_len_sq = edge_x * edge_x + edge_y * edge_y;
+      if (edge_len_sq < 1e-2) continue;
+
+      const double axis_x = -edge_y;
+      const double axis_y = edge_x;
+
+      double min1 = poly_outer[0].x() * axis_x + poly_outer[0].y() * axis_y;
+      double max1 = min1;
+      for (size_t j = 1; j < n; ++j) {
+        const double proj = poly_outer[j].x() * axis_x + poly_outer[j].y() * axis_y;
+        min1 = std::min(min1, proj);
+        max1 = std::max(max1, proj);
+      }
+
+      const size_t m = other_outer.size();
+      double min2 = other_outer[0].x() * axis_x + other_outer[0].y() * axis_y;
+      double max2 = min2;
+      for (size_t j = 1; j < m; ++j) {
+        const double proj = other_outer[j].x() * axis_x + other_outer[j].y() * axis_y;
+        min2 = std::min(min2, proj);
+        max2 = std::max(max2, proj);
+      }
+
+      if (max1 < min2 || max2 < min1) {
+        return false;  // Found separating axis
+      }
+    }
+    return true;
+  };
+
+  return test_axes(outer1, outer2) && test_axes(outer2, outer1);
 }
+
+std::pair<double, double> calculate_point_to_polygon_boundary_distances(
+  const Pose & pose, const Polygon2d & polygon)
+{
+  const Point2d point(pose.position.x, pose.position.y);
+  const auto & outer = polygon.outer();
+
+  // Calculate max distance: distance to farthest vertex
+  double max_dist = 0.0;
+  for (const auto & vertex : outer) {
+    const double dist = bg::distance(point, vertex);
+    max_dist = std::max(max_dist, dist);
+  }
+
+  // Calculate min distance: distance to nearest edge segment
+  double min_dist = std::numeric_limits<double>::max();
+  const size_t num_vertices = outer.size();
+  for (size_t i = 0; i < num_vertices; ++i) {
+    const auto & p1 = outer[i];
+    const auto & p2 = outer[(i + 1) % num_vertices];
+
+    // Use boost::geometry segment to calculate distance from point to line segment
+    Segment2d segment(p1, p2);
+    const double dist = bg::distance(point, segment);
+    min_dist = std::min(min_dist, dist);
+  }
+
+  return {min_dist, max_dist};
+}
+
 }  // namespace utils
 }  // namespace metrics
 }  // namespace planning_diagnostics
