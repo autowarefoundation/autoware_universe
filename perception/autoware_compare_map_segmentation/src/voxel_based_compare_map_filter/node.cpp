@@ -106,7 +106,7 @@ void VoxelBasedCompareMapFilterComponent::checkStatus(
 void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud, const PointIndicesConstPtr indices)
 {
-  if (!is_valid(cloud)) {
+  if (!is_valid(cloud, this->get_logger(), *this->get_clock())) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }

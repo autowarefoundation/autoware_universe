@@ -53,6 +53,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__FILTER_HPP_
 
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
+#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <boost/thread/mutex.hpp>
 
@@ -244,17 +245,141 @@ protected:
 
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  inline bool is_valid(const PointCloud2ConstPtr & cloud)
+  /**
+   * @brief Validate a sensor_msgs::msg::PointCloud2 message for structural consistency and layout.
+   *
+   * This function performs a series of lightweight sanity checks to determine whether a
+   * PointCloud2 message is safe to consume by algorithms expecting an XYZ-compatible,
+   * organized (dense) point cloud.
+   *
+   * Validation errors and warnings are reported using throttled ROS logging to avoid
+   * excessive log spam when invalid data is repeatedly received.
+   *
+   * @details
+   * The following checks are performed in order:
+   *
+   * 1. **Null pointer check**
+   *    - Ensures the input PointCloud2 pointer is valid.
+   *
+   * 2. **Point step validation**
+   *    - Verifies that `point_step` is non-zero.
+   *
+   * 3. **Dense (organized) cloud requirement**
+   *    - Warns if `is_dense` is false.
+   *    - Currently does *not* fail validation, but will become a hard error
+   *      starting **July 2026**.
+   *
+   * 4. **Point field layout compatibility**
+   *    - Ensures the point data layout is compatible with `PointXYZ`
+   *      (fields must begin with `x`, `y`, `z` of type `FLOAT32`).
+   *
+   * 5. **Row step consistency**
+   *    - Validates that `row_step == width * point_step`.
+   *    - Currently logs a warning on mismatch.
+   *    - Will become a hard error starting **July 2026**.
+   *
+   * 6. **Data buffer size consistency**
+   *    - Ensures `data.size() == height * row_step`.
+   *
+   * @param cloud
+   *   Shared pointer to the input PointCloud2 message to validate.
+   *
+   * @param logger
+   *   ROS 2 logger used for emitting validation warnings.
+   *
+   * @param clock
+   *   ROS 2 clock used for throttled logging.
+   *
+   * @return true
+   *   If the point cloud passes all mandatory validation checks.
+   *
+   * @return false
+   *   If a critical validation failure is detected (e.g., null pointer,
+   *   incompatible data layout, or inconsistent buffer size).
+   *
+   * @note
+   * - All warnings are throttled with a fixed duration of 5000 ms.
+   * - Some warnings are marked as *future errors* and are expected to
+   *   become fatal after July 2026.
+   *
+   * @warning
+   * This function assumes consumers expect an XYZ-only point layout.
+   * Additional fields (e.g., intensity, color) are allowed only if they
+   * appear *after* the XYZ fields and do not alter the layout compatibility.
+   */
+  static bool is_valid(
+    const PointCloud2ConstPtr & cloud, const rclcpp::Logger & logger, rclcpp::Clock & clock)
   {
-    if (cloud->width * cloud->height * cloud->point_step != cloud->data.size()) {
-      RCLCPP_WARN(
-        this->get_logger(),
-        "Invalid PointCloud (data = %zu, width = %d, height = %d, step = %d) with stamp %f, "
-        "and frame %s received!",
-        cloud->data.size(), cloud->width, cloud->height, cloud->point_step,
-        rclcpp::Time(cloud->header.stamp).seconds(), cloud->header.frame_id.c_str());
+    static constexpr rcutils_duration_value_t throttle_duration_ms = 5000;
+
+    if (!cloud) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms, "Invalid PointCloud: Null pointer received.");
       return false;
     }
+
+    // Check: Point Step
+    if (cloud->point_step == 0) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms,
+        "Invalid PointCloud: point_step is 0. "
+        "Frame: '%s', Stamp: %d.%09u",
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      return false;
+    }
+
+    // Check: Only accept organized (dense) point clouds
+    if (!cloud->is_dense) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms,
+        "Invalid PointCloud: is_dense is false. "
+        "The point cloud should be organized (dense) and contain only valid points. "
+        "This will be an ERROR starting in 2026 July"
+        "Frame: '%s', Stamp: %d.%09u",
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      // TODO(mfc): return false; After 2026 July
+    }
+
+    // Check: Point field layout compatibility
+    if (!utils::is_data_layout_compatible_with_point_xyz(*cloud)) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms,
+        "The pointcloud layout is not compatible with PointXYZ. Aborting. "
+        "Make sure Point fields start with x, y, z as FLOAT32.");
+      return false;
+    }
+
+    // Check: Row step consistency
+    size_t expected_row_step =
+      static_cast<size_t>(cloud->width) * static_cast<size_t>(cloud->point_step);
+
+    if (expected_row_step != static_cast<size_t>(cloud->row_step)) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms,
+        "Invalid PointCloud: row_step mismatch. "
+        "Expected: %zu (width %u * point_step %u), Got: %u. "
+        "Frame: '%s', Stamp: %d.%09u"
+        " Please fill in the `cloud->row_step` field accordingly."
+        " This will be an ERROR starting in 2026 July",
+        expected_row_step, cloud->width, cloud->point_step, cloud->row_step,
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      // TODO(mfc): return false; After 2026 July
+    }
+
+    // Check: Data buffer size consistency
+    size_t expected_data_size = static_cast<size_t>(cloud->height) * expected_row_step;
+
+    if (expected_data_size != cloud->data.size()) {
+      RCLCPP_WARN_THROTTLE(
+        logger, clock, throttle_duration_ms,
+        "Invalid PointCloud: data size mismatch. "
+        "Expected: %zu (height %u * row_step %u), Got: %zu. "
+        "Frame: '%s', Stamp: %d.%09u",
+        expected_data_size, cloud->height, cloud->row_step, cloud->data.size(),
+        cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
+      return false;
+    }
+
     return true;
   }
 
