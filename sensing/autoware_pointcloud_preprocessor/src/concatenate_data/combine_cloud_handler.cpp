@@ -193,7 +193,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       pcl::concatenatePointCloud(
         *concatenate_cloud_result.concatenate_cloud_ptr, *transformed_delay_compensated_cloud_ptr,
         *concatenate_cloud_result.concatenate_cloud_ptr);
-      is_concatenated_cloud_dense &= cloud->is_dense;
+      is_concatenated_cloud_dense = is_concatenated_cloud_dense && cloud->is_dense;
     }
 
     // update concatenation info
