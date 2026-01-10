@@ -218,7 +218,7 @@ BehaviorModuleOutput StartPlannerModule::run()
   updateData();
   check_force_approval();
   if (
-    !status_.is_safety_check_override_by_rtc &&
+    !is_safety_check_override_by_rtc_ &&
     (!isActivated() || needToPrepareBlinkerBeforeStartDrivingForward())) {
     return planWaitingApproval();
   }
@@ -1140,7 +1140,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     status_.prev_approved_path = std::make_shared<PathWithLaneId>(current_path);
   }
 
-  if (isWaitingApproval() || status_.is_safety_check_override_by_rtc) return current_path;
+  if (isWaitingApproval() || is_safety_check_override_by_rtc_) return current_path;
 
   if (!stop_pose_) {
     status_.prev_stop_path_after_approval = nullptr;
@@ -1185,17 +1185,6 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
     status_.is_safe_dynamic_objects, tier4_rtc_msgs::msg::State::WAITING_FOR_EXECUTION);
 
   return current_path;
-}
-
-void StartPlannerModule::check_force_approval()
-{
-  if (is_rtc_force_activated()) {
-    status_.is_safety_check_override_by_rtc = true;
-  }
-
-  if (is_rtc_force_deactivated()) {
-    status_.is_safety_check_override_by_rtc = false;
-  }
 }
 
 void StartPlannerModule::planWithPriority(

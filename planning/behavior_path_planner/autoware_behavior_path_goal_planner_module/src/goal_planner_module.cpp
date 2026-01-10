@@ -1384,7 +1384,7 @@ void GoalPlannerModule::setOutput(
   }
 
   const auto & pull_over_path = selected_pull_over_path_with_velocity_opt.value();
-  if (!context_data.is_stable_safe_path && isActivated()) {
+  if (!context_data.is_stable_safe_path && isActivated() && !is_safety_check_override_by_rtc_) {
     // situation : not safe against dynamic objects after approval
     // insert stop point in current path if ego is able to stop with acceleration and jerk
     // constraints
@@ -1392,6 +1392,8 @@ void GoalPlannerModule::setOutput(
       generateFeasibleStopPath(pull_over_path.getCurrentPath(), "unsafe against dynamic objects");
     RCLCPP_INFO_THROTTLE(
       getLogger(), *clock_, 5000, "Not safe against dynamic objects, generate stop path");
+    waitApproval();
+    removeRTCStatus();
   } else {
     // situation : (safe against static and dynamic objects) or (safe against static objects and
     // before approval) don't stop
@@ -1775,6 +1777,43 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsOutput(PullOverContextData
   return output;
 }
 
+std::optional<BehaviorModuleOutput> GoalPlannerModule::planPullOverOutputAsCandidate()
+{
+  if (
+    path_decision_controller_.get_current_state().state !=
+    PathDecisionState::DecisionKind::DECIDED) {
+    return std::nullopt;
+  }
+
+  if (!context_data_ || !context_data_->pull_over_path_opt) {
+    return std::nullopt;
+  }
+
+  const auto & context_data = context_data_.value();
+
+  std::string detail =
+    context_data.is_stable_safe_path ? "waiting approval" : "unsafe against dynamic objects";
+
+  const auto & pull_over_path = context_data.pull_over_path_opt.value();
+  BehaviorModuleOutput output;
+  output.path = generateFeasibleStopPath(pull_over_path.getCurrentPath(), detail);
+  output.reference_path = getPreviousModuleOutput().reference_path;
+  setDrivableAreaInfo(context_data, output);
+  setTurnSignalInfo(context_data, output);
+  const auto [start, end] = calcDistanceToPathChange(context_data);
+  update_rtc_status(
+    start > 0.0 ? start : 0.0, end, context_data.is_stable_safe_path, State::WAITING_FOR_EXECUTION);
+  updatePlanningFactor(
+    context_data, {pull_over_path.start_pose(), pull_over_path.modified_goal_pose()}, {start, end});
+  set_longitudinal_planning_factor(output.path);
+
+  if (context_data.is_stable_safe_path || is_safety_check_override_by_rtc_) {
+    clearWaitingApproval();
+  }
+
+  return output;
+}
+
 void GoalPlannerModule::postProcess()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -1813,6 +1852,10 @@ void GoalPlannerModule::postProcess()
 BehaviorModuleOutput GoalPlannerModule::planWaitingApproval()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (const auto has_decided_output = planPullOverOutputAsCandidate()) {
+    return has_decided_output.value();
+  }
 
   if (utils::isAllowedGoalModification(planner_data_->route_handler)) {
     if (!context_data_) {

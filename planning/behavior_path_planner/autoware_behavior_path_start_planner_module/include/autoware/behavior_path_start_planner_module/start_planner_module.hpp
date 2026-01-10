@@ -78,7 +78,6 @@ struct PullOutStatus
   std::optional<rclcpp::Time> first_engaged_and_driving_forward_time{std::nullopt};
   // record if the ego has departed from the start point
   bool has_departed{false};
-  bool is_safety_check_override_by_rtc{false};  // true if rtc is force activated
 
   PullOutStatus() = default;
 };
@@ -371,7 +370,6 @@ ego pose.
     const PredictedObjects & filtered_objects, const TargetObjectsOnLane & target_objects_on_lane,
     const std::vector<PoseWithVelocityStamped> & ego_predicted_path) const;
   bool isSafePath() const;
-  void check_force_approval();
   void setDrivableAreaInfo(BehaviorModuleOutput & output) const;
 
   // check if the goal is located behind the ego in the same route segment.

@@ -140,6 +140,7 @@ public:
   virtual BehaviorModuleOutput run()
   {
     updateData();
+    check_force_approval();
     const auto output = isWaitingApproval() ? planWaitingApproval() : plan();
     try {
       autoware::motion_utils::validateNonEmpty(output.path.points);
@@ -183,6 +184,7 @@ public:
     clearWaitingApproval();
     unlockNewModuleLaunch();
     unlockOutputPath();
+    clear_force_approval();
 
     processOnExit();
   }
@@ -623,6 +625,19 @@ protected:
       });
   }
 
+  void check_force_approval()
+  {
+    if (is_rtc_force_activated()) {
+      is_safety_check_override_by_rtc_ = true;
+    }
+
+    if (is_rtc_force_deactivated()) {
+      clear_force_approval();
+    }
+  }
+
+  void clear_force_approval() { is_safety_check_override_by_rtc_ = false; }
+
   void removeRTCStatus()
   {
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
@@ -692,7 +707,7 @@ protected:
   std::shared_ptr<const PlannerData> planner_data_;
 
   bool is_waiting_approval_{false};
-
+  bool is_safety_check_override_by_rtc_{false};
   std::unordered_map<std::string, UUID> uuid_map_;
 
   PlanResult path_candidate_;
