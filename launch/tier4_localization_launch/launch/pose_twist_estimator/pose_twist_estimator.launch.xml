@@ -96,10 +96,28 @@
   <group if="$(var use_lidar_marker_pose)">
     <push-ros-namespace namespace="pose_estimator"/>
     <!-- TODO multi_localizer_mode -->
-    <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
-      <arg name="lidar_container_name" value="/sensing/lidar/top/pointcloud_preprocessor/pointcloud_container"/>
-      <arg name="input_pointcloud" value="/sensing/lidar/top/pointcloud"/>
-    </include>
+    <!-- modify lidar_marker_localizer group values following the lidar system that uses lidar_marker_localizer -->
+    <group>
+      <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
+        <arg name="group_namespace" value="lidar_marker_localizer/top_left"/>
+        <arg name="lidar_container_name" value="/sensing/lidar/top/pointcloud_preprocessor/pointcloud_container"/>
+        <arg name="input_pointcloud" value="/sensing/lidar/top/pointcloud_raw_ex"/>
+        <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/top_left/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/top_left/pointcloud_preprocessor/ring_filter_param_path)"/>
+        <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/top_left/lidar_marker_localizer_param_path)"/>
+      </include>
+    </group>
+
+    <group>
+      <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml">
+        <arg name="group_namespace" value="lidar_marker_localizer/top_right"/>
+        <arg name="lidar_container_name" value="/sensing/lidar/top/pointcloud_preprocessor/pointcloud_container"/>
+        <arg name="input_pointcloud" value="/sensing/lidar/top/pointcloud_raw_ex"/>
+        <arg name="crop_box_filter_measurement_range_param_path" value="$(var lidar_marker_localizer/top_right/pointcloud_preprocessor/crop_box_filter_measurement_range_param_path)"/>
+        <arg name="ring_filter_param_path" value="$(var lidar_marker_localizer/top_right/pointcloud_preprocessor/ring_filter_param_path)"/>
+        <arg name="lidar_marker_localizer_param_path" value="$(var lidar_marker_localizer/top_right/lidar_marker_localizer_param_path)"/>
+      </include>
+    </group>
   </group>
 
   <!-- Pose Estimator Arbiter Launch -->
