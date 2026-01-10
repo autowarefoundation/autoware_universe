@@ -575,6 +575,15 @@ private:
     lanelet::ConstLanelet assigned_lanelet) const;
 
   /**
+   * @brief find the path index where the vehicle footprint first intersects with the map-defined
+   * attention stop line
+   */
+  std::optional<size_t> getFirstAttentionLineFromMap(
+    const InterpolatedPathInfo & interpolated_path_info,
+    const lanelet::ConstLanelet & assigned_lanelet, const double ds,
+    const autoware_utils::LinearRing2d & local_footprint, const double vehicle_length) const;
+
+  /**
    * @brief generate IntersectionStopLines
    */
   std::optional<IntersectionStopLines> generateIntersectionStopLines(
