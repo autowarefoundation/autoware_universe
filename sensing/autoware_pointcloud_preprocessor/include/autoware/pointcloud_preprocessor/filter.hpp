@@ -68,6 +68,7 @@
 #include <pcl_msgs/msg/point_indices.h>
 #include <sensor_msgs/msg/point_cloud2.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -254,6 +255,44 @@ protected:
         rclcpp::Time(cloud->header.stamp).seconds(), cloud->header.frame_id.c_str());
       return false;
     }
+    return true;
+  }
+
+  /// @brief Validates that point indices are non-null and within the bounds of the cloud size.
+  /// @param indices Pointer to the indices to check.
+  /// @param cloud_size The total number of points in the target cloud.
+  /// @param logger Logger for outputting warnings on failure.
+  /// @return True if indices are valid (or empty); false if null or out of bounds.
+  static bool is_valid_indices(
+    const PointIndicesConstPtr & indices, size_t cloud_size, const rclcpp::Logger & logger)
+  {
+    if (!indices) {
+      RCLCPP_WARN(logger, "PointIndices pointer is null");
+      return false;
+    }
+
+    // Valid special case: empty indices
+    if (indices->indices.empty()) {
+      return true;
+    }
+
+    // Assumption: Indices represent a subset/filter.
+    if (indices->indices.size() > cloud_size) {
+      RCLCPP_WARN(
+        logger, "Received %zu indices for a cloud with %zu points", indices->indices.size(),
+        cloud_size);
+      return false;
+    }
+
+    for (const std::int32_t idx : indices->indices) {
+      // Optimization: Hint to branch predictor that invalid indices are rare.
+      // TODO(mfc): Replace __builtin_expect with [[unlikely]] when upgrading to C++20.
+      if (__builtin_expect(idx < 0 || static_cast<size_t>(idx) >= cloud_size, 0)) {
+        RCLCPP_WARN(logger, "Invalid point index detected: %d (cloud size: %zu)", idx, cloud_size);
+        return false;
+      }
+    }
+
     return true;
   }
 
