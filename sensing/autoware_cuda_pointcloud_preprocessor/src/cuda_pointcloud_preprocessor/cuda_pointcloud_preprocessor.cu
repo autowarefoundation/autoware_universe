@@ -14,6 +14,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/common_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/dag/processing_state.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/organize_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/outlier_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
@@ -341,9 +342,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
 
   // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec =
-    static_cast<std::uint64_t>(1'000'000'000) * input_pointcloud_msg.header.stamp.sec +
-    input_pointcloud_msg.header.stamp.nanosec;
+  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
+                                        input_pointcloud_msg.header.stamp.nanosec;
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
@@ -471,4 +471,379 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   return std::move(output_pointcloud_ptr_);
 }
 
+// ============================================================================
+// Public API implementations for DAG execution
+// ============================================================================
+
+autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState
+CudaPointcloudPreprocessor::organizePointcloudPublic(const cuda_blackboard::CudaPointCloud2 & input)
+{
+  // GPU memory input - data already on device (zero-copy path)
+  num_raw_points_ = static_cast<int>(input.width * input.height);
+  num_organized_points_ = num_rings_ * max_points_per_ring_;
+
+  // Create state pointing to device_organized_points_ (after organize step)
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState state;
+
+  if (num_raw_points_ == 0) {
+    state.row_step = 0;
+    state.width = 0;
+    state.height = 1;
+    state.fields = point_fields_;
+    state.is_dense = true;
+    state.is_bigendian = input.is_bigendian;
+    state.point_step = sizeof(OutputPointType);
+    state.header = input.header;
+    return state;
+  }
+
+  if (num_raw_points_ > device_input_points_.size()) {
+    std::size_t new_capacity = (num_raw_points_ + 1024) / 1024 * 1024;
+    device_input_points_.resize(new_capacity);
+  }
+
+  thrust_stream::fill(device_input_points_, InputPointType{}, stream_);
+  thrust_stream::fill(device_organized_points_, InputPointType{}, stream_);
+
+  // Copy from device to device (input GPU buffer to internal buffer)
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    thrust::raw_pointer_cast(device_input_points_.data()), input.data.get(),
+    num_raw_points_ * sizeof(InputPointType), cudaMemcpyDeviceToDevice, stream_));
+
+  organizePointcloud();
+
+  // Point to internal organized buffer (non-owning pointer)
+  state.device_data =
+    reinterpret_cast<std::uint8_t *>(thrust::raw_pointer_cast(device_organized_points_.data()));
+
+  // Allocate and initialize device_crop_mask owned by the state
+  // Initialize crop mask to 0 (all points pass by default, 1 means should be cropped)
+  CHECK_CUDA_ERROR(
+    cudaMalloc(&state.device_crop_mask, num_organized_points_ * sizeof(std::uint32_t)));
+
+  // Copy metadata
+  state.header = input.header;
+  state.height = 1;
+  state.width = num_organized_points_;
+  state.point_step = sizeof(InputPointType);
+  state.row_step = num_organized_points_ * sizeof(InputPointType);
+  state.fields = point_fields_;
+  state.is_bigendian = input.is_bigendian;
+  state.is_dense = false;
+
+  const int num_points = state.numPoints();
+  thrust::device_ptr<std::uint32_t> mask_ptr(state.device_crop_mask);
+  thrust::fill(thrust::cuda::par.on(stream_), mask_ptr, mask_ptr + num_points, 1U);
+  return state;
+}
+
+void CudaPointcloudPreprocessor::transformPointcloudPublic(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+  const geometry_msgs::msg::TransformStamped & transform_msg)
+{
+  // Ensure internal buffers are ready
+  thrust_stream::fill(device_transformed_points_, InputPointType{}, stream_);
+
+  // Convert transform to struct
+  tf2::Quaternion rotation_quaternion(
+    transform_msg.transform.rotation.x, transform_msg.transform.rotation.y,
+    transform_msg.transform.rotation.z, transform_msg.transform.rotation.w);
+  tf2::Matrix3x3 rotation_matrix;
+  rotation_matrix.setRotation(rotation_quaternion);
+
+  TransformStruct transform_struct{};
+  transform_struct.x = static_cast<float>(transform_msg.transform.translation.x);
+  transform_struct.y = static_cast<float>(transform_msg.transform.translation.y);
+  transform_struct.z = static_cast<float>(transform_msg.transform.translation.z);
+  transform_struct.m11 = static_cast<float>(rotation_matrix.getRow(0).getX());
+  transform_struct.m12 = static_cast<float>(rotation_matrix.getRow(0).getY());
+  transform_struct.m13 = static_cast<float>(rotation_matrix.getRow(0).getZ());
+  transform_struct.m21 = static_cast<float>(rotation_matrix.getRow(1).getX());
+  transform_struct.m22 = static_cast<float>(rotation_matrix.getRow(1).getY());
+  transform_struct.m23 = static_cast<float>(rotation_matrix.getRow(1).getZ());
+  transform_struct.m31 = static_cast<float>(rotation_matrix.getRow(2).getX());
+  transform_struct.m32 = static_cast<float>(rotation_matrix.getRow(2).getY());
+  transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
+
+  // Copy input from state.device_data to device_organized_points_ for processing
+  const int num_points = state.numPoints();
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    thrust::raw_pointer_cast(device_organized_points_.data()), state.device_data,
+    num_points * sizeof(InputPointType), cudaMemcpyDeviceToDevice, stream_));
+
+  const int blocks_per_grid = (num_points + threads_per_block_ - 1) / threads_per_block_;
+
+  // Apply transform: device_organized_points_ -> device_transformed_points_
+  transformPointsLaunch(
+    thrust::raw_pointer_cast(device_organized_points_.data()),
+    thrust::raw_pointer_cast(device_transformed_points_.data()), num_points, transform_struct,
+    threads_per_block_, blocks_per_grid, stream_);
+
+  // ZERO-COPY: Update state to point to device_transformed_points_ (no allocation!)
+  state.device_data =
+    reinterpret_cast<std::uint8_t *>(thrust::raw_pointer_cast(device_transformed_points_.data()));
+  state.height = 1;  // Transformed clouds are unorganized
+
+  // NO SYNC - let transform complete async for pipeline efficiency
+}
+
+void CudaPointcloudPreprocessor::applyCropBoxPublic(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+  const std::vector<CropBoxParameters> & crop_boxes, bool inplace)
+{
+  const int num_points = state.numPoints();
+
+  // Ensure state.device_crop_mask is properly sized (reallocate if needed)
+  if (state.device_crop_mask == nullptr) {
+    CHECK_CUDA_ERROR(cudaMalloc(&state.device_crop_mask, num_points * sizeof(std::uint32_t)));
+    // Initialize to 1 (pass) - must use thrust::fill, not cudaMemsetAsync which sets bytes
+    thrust::device_ptr<std::uint32_t> mask_ptr(state.device_crop_mask);
+    thrust::fill(thrust::cuda::par.on(stream_), mask_ptr, mask_ptr + num_points, 1U);
+  }
+  // Note: We assume state.device_crop_mask is already large enough
+  // If resizing is needed, we would need to track the size, but for now we assume it's managed
+
+  // Ensure device_crop_mask_ is properly sized for temporary crop box computation
+  if (static_cast<std::size_t>(num_points) > device_crop_mask_.size()) {
+    device_crop_mask_.resize(num_points);
+  }
+
+  // Reset temporary masks for crop box computation
+  // Initialize to 1 (pass/outside box by default, cropBoxKernel will set to 0 for points inside)
+  thrust_stream::fill_n(device_crop_mask_, num_points, 1U, stream_);
+  if (static_cast<std::size_t>(num_points) > device_nan_mask_.size()) {
+    device_nan_mask_.resize(num_points);
+  }
+  thrust_stream::fill_n(device_nan_mask_, num_points, static_cast<std::uint8_t>(0), stream_);
+
+  // ZERO-COPY: Work directly on state.device_data (no copy needed!)
+  InputPointType * device_points = reinterpret_cast<InputPointType *>(state.device_data);
+
+  const int blocks_per_grid = (num_points + threads_per_block_ - 1) / threads_per_block_;
+  int crop_box_blocks_per_grid = std::min(blocks_per_grid, max_blocks_per_grid_);
+
+  // Compute new crop box mask in temporary buffer (device_crop_mask_)
+  if (!crop_boxes.empty()) {
+    // Copy crop box parameters to device
+    device_crop_box_structs_ = crop_boxes;
+
+    cropBoxLaunch(
+      device_points, thrust::raw_pointer_cast(device_crop_mask_.data()),
+      thrust::raw_pointer_cast(device_nan_mask_.data()), num_points,
+      thrust::raw_pointer_cast(device_crop_box_structs_.data()),
+      static_cast<int>(device_crop_box_structs_.size()), crop_box_blocks_per_grid,
+      threads_per_block_, stream_);
+  } else {
+    // No crop boxes - all points pass (1 means pass/outside)
+    thrust_stream::fill_n(device_crop_mask_, num_points, 1U, stream_);
+  }
+
+  // Combine new crop box mask (device_crop_mask_) with existing state.device_crop_mask
+  // Result: state.device_crop_mask = device_crop_mask_ & state.device_crop_mask
+  // This is an in-place operation (safe because each thread writes to a different index)
+  std::uint32_t * device_crop_mask = thrust::raw_pointer_cast(device_crop_mask_.data());
+  combineMasksLaunch(
+    device_crop_mask, state.device_crop_mask, num_points, state.device_crop_mask,
+    threads_per_block_, blocks_per_grid, stream_);
+
+  // If inplace is true, compact the pointcloud now
+  if (inplace) {
+    compactPointcloudInPlace(state, num_points, blocks_per_grid);
+  }
+}
+
+void CudaPointcloudPreprocessor::correctDistortionPublic(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+  const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
+  const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
+  const std::uint32_t first_point_rel_stamp_nsec, UndistortionType undistortion_type, bool use_imu)
+{
+  const int num_points = state.numPoints();
+
+  // Reset mismatch mask
+  thrust_stream::fill<uint8_t>(device_mismatch_mask_, 0, stream_);
+
+  // NOTE: state.device_data already points to device_transformed_points_ from previous filter
+  // So we work on it directly (true in-place processing!)
+
+  std::uint64_t pointcloud_stamp_nsec =
+    1'000'000'000ULL * state.header.stamp.sec + state.header.stamp.nanosec;
+
+  // Use passed parameters instead of member variables
+  if (undistortion_type == UndistortionType::Undistortion3D) {
+    setupTwist3DStructs(
+      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
+      device_twist_3d_structs_, stream_);
+  } else if (undistortion_type == UndistortionType::Undistortion2D) {
+    setupTwist2DStructs(
+      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
+      device_twist_2d_structs_, stream_);
+  }
+
+  const int blocks_per_grid = (num_points + threads_per_block_ - 1) / threads_per_block_;
+
+  // Cast state.device_data to InputPointType* for processing
+  InputPointType * device_points = reinterpret_cast<InputPointType *>(state.device_data);
+
+  if (
+    undistortion_type == UndistortionType::Undistortion3D && device_twist_3d_structs_.size() > 0) {
+    undistort3DLaunch(
+      device_points, num_points, thrust::raw_pointer_cast(device_twist_3d_structs_.data()),
+      static_cast<int>(device_twist_3d_structs_.size()),
+      thrust::raw_pointer_cast(device_mismatch_mask_.data()), threads_per_block_, blocks_per_grid,
+      stream_);
+  } else if (
+    undistortion_type == UndistortionType::Undistortion2D && device_twist_2d_structs_.size() > 0) {
+    undistort2DLaunch(
+      device_points, num_points, thrust::raw_pointer_cast(device_twist_2d_structs_.data()),
+      static_cast<int>(device_twist_2d_structs_.size()),
+      thrust::raw_pointer_cast(device_mismatch_mask_.data()), threads_per_block_, blocks_per_grid,
+      stream_);
+  }
+
+  // Distortion applied in-place on device_transformed_points_
+  // state.device_data already points there, so nothing more to do!
+  // Metadata unchanged
+
+  // NO SYNC - async undistortion for pipeline efficiency
+}
+
+void CudaPointcloudPreprocessor::applyRingOutlierFilterPublic(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state,
+  const RingOutlierFilterParameters & params, bool inplace)
+{
+  const int num_points = state.numPoints();
+
+  // Ensure device_ring_outlier_mask_ is properly sized
+  if (static_cast<std::size_t>(num_points) > device_ring_outlier_mask_.size()) {
+    device_ring_outlier_mask_.resize(num_points);
+  }
+
+  // Reset ring outlier mask
+  thrust_stream::fill_n(device_ring_outlier_mask_, num_points, 0U, stream_);
+
+  // ZERO-COPY: Work directly on state.device_data (no copy needed!)
+  InputPointType * device_points = reinterpret_cast<InputPointType *>(state.device_data);
+
+  const int blocks_per_grid = (num_points + threads_per_block_ - 1) / threads_per_block_;
+
+  // Use passed parameters instead of member variables
+  ringOutlierFilterLaunch(
+    device_points, thrust::raw_pointer_cast(device_ring_outlier_mask_.data()), num_rings_,
+    max_points_per_ring_, params.distance_ratio,
+    params.object_length_threshold * params.object_length_threshold, threads_per_block_,
+    blocks_per_grid, stream_);
+
+  // Combine ring outlier mask with existing state.device_crop_mask
+  std::uint32_t * device_ring_outlier_mask =
+    thrust::raw_pointer_cast(device_ring_outlier_mask_.data());
+  combineMasksLaunch(
+    device_ring_outlier_mask, state.device_crop_mask, num_points, state.device_crop_mask,
+    threads_per_block_, blocks_per_grid, stream_);
+
+  // If inplace is true, compact the pointcloud now
+  if (inplace) {
+    compactPointcloudInPlace(state, num_points, blocks_per_grid);
+  }
+}
+
+void CudaPointcloudPreprocessor::compactPointcloudInPlace(
+  autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state, int num_points,
+  int blocks_per_grid)
+{
+  // Ensure device_indices_ is properly sized
+  if (static_cast<std::size_t>(num_points) > device_indices_.size()) {
+    device_indices_.resize(num_points);
+  }
+
+  // Compute prefix sum (inclusive scan) to get compaction indices
+  // state.device_crop_mask contains 1 for valid points, 0 for filtered points
+  std::uint32_t * device_indices = thrust::raw_pointer_cast(device_indices_.data());
+  thrust::inclusive_scan(
+    cuda_utils::thrust_on_stream(stream_), state.device_crop_mask,
+    state.device_crop_mask + num_points, device_indices);
+
+  // Get the number of valid points (last element of prefix sum)
+  int num_valid_points{};
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    &num_valid_points, device_indices + num_points - 1, sizeof(int), cudaMemcpyDeviceToHost,
+    stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  if (num_valid_points > 0) {
+    // Allocate new device memory for compacted data
+    std::uint8_t * compacted_device_data = nullptr;
+    const std::size_t compacted_data_size = num_valid_points * sizeof(InputPointType);
+    CHECK_CUDA_ERROR(cudaMalloc(&compacted_device_data, compacted_data_size));
+
+    // Extract valid points to compacted buffer
+    InputPointType * device_points_input = reinterpret_cast<InputPointType *>(state.device_data);
+    InputPointType * device_points_output =
+      reinterpret_cast<InputPointType *>(compacted_device_data);
+
+    // Use extractPointsLaunch to compact the data
+    // Note: extractPointsLaunch expects OutputPointType, so we need to cast
+    extractPointsLaunch(
+      device_points_input, state.device_crop_mask, device_indices, num_points,
+      reinterpret_cast<OutputPointType *>(device_points_output), threads_per_block_,
+      blocks_per_grid, stream_);
+
+    // Free old device_data if owned
+    if (state.owns_memory && state.device_data != nullptr) {
+      cudaFree(state.device_data);
+    }
+
+    // Update state to point to compacted data
+    state.device_data = compacted_device_data;
+    state.owns_memory = true;  // We now own this memory
+    state.width = num_valid_points;
+    state.height = 1;
+    state.row_step = num_valid_points * sizeof(InputPointType);
+
+    // Free the crop mask since it's no longer needed
+    if (state.device_crop_mask != nullptr) {
+      cudaFree(state.device_crop_mask);
+      state.device_crop_mask = nullptr;
+    }
+  } else {
+    // No valid points - create empty state
+    if (state.owns_memory && state.device_data != nullptr) {
+      cudaFree(state.device_data);
+    }
+    state.device_data = nullptr;
+    state.owns_memory = false;
+    state.width = 0;
+    state.height = 1;
+    state.row_step = 0;
+
+    if (state.device_crop_mask != nullptr) {
+      cudaFree(state.device_crop_mask);
+      state.device_crop_mask = nullptr;
+    }
+  }
+}
+
+std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::finalizeOutputPublic(
+  const autoware::cuda_pointcloud_preprocessor::dag::PointcloudProcessingState & state)
+{
+  // Already compacted - just copy the data to a CudaPointCloud2
+  auto output = std::make_unique<cuda_blackboard::CudaPointCloud2>();
+  output->header = state.header;
+  output->height = state.height;
+  output->width = state.width;
+  output->point_step = state.point_step;
+  output->row_step = state.row_step;
+  output->fields = state.fields;
+  output->is_dense = state.is_dense;
+  output->is_bigendian = state.is_bigendian;
+
+  const size_t data_size = state.dataSize();
+  output->data = cuda_blackboard::make_unique<std::uint8_t[]>(data_size);
+
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    output->data.get(), state.device_data, data_size, cudaMemcpyDeviceToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  return output;
+}
 }  // namespace autoware::cuda_pointcloud_preprocessor
