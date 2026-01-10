@@ -230,6 +230,9 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     }
   }
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+  concatenate_cloud_result.concatenate_cloud_ptr->height = 1; // concatenated cloud is no longer structured
+  concatenate_cloud_result.concatenate_cloud_ptr->row_step = concatenate_cloud_result.concatenate_cloud_ptr->data.size();
+  concatenate_cloud_result.concatenate_cloud_ptr->width = concatenate_cloud_result.concatenate_cloud_ptr->data.size() / concatenate_cloud_result.concatenate_cloud_ptr->point_step;
 
   if (const auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(collector_info)) {
     const auto reference_timestamp_min = advanced_info->timestamp - advanced_info->noise_window;
