@@ -280,10 +280,12 @@ protected:
         logger,
         "Invalid PointCloud: row_step mismatch. "
         "Expected: %zu (width %u * point_step %u), Got: %u. "
-        "Frame: '%s', Stamp: %d.%09u",
+        "Frame: '%s', Stamp: %d.%09u"
+        " Please fill in the `cloud->row_step` field accordingly."
+        " This will be an ERROR starting in 2026 July",
         expected_row_step, cloud->width, cloud->point_step, cloud->row_step,
         cloud->header.frame_id.c_str(), cloud->header.stamp.sec, cloud->header.stamp.nanosec);
-      return false;
+      // TODO(mfc): return false; After 2026 July
     }
 
     // Check: Data buffer size consistency
