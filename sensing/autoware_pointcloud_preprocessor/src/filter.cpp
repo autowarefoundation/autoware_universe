@@ -227,7 +227,7 @@ autoware::pointcloud_preprocessor::Filter::filter_param_callback(
 void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
   const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices)
 {
-  if (!is_valid(cloud)) {
+  if (!is_valid(cloud, this->get_logger(), *this->get_clock())) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
@@ -389,7 +389,7 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
     return;
   }
 
-  if (!is_valid(cloud)) {
+  if (!is_valid(cloud, this->get_logger(), *this->get_clock())) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
