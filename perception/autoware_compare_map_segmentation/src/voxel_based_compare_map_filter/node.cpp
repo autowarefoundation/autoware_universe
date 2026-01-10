@@ -106,7 +106,6 @@ void VoxelBasedCompareMapFilterComponent::checkStatus(
 void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud, const PointIndicesConstPtr indices)
 {
-  // If cloud is given, check if it's valid
   if (!is_valid(cloud)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
@@ -144,6 +143,10 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   // Need setInputCloud () here because we have to extract x/y/z
   IndicesPtr vindices;
   if (indices) {
+    if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
+      RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
+      return;
+    }
     vindices.reset(new std::vector<int>(indices->indices));
   }
 
