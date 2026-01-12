@@ -21,6 +21,7 @@
 #define SYSTEM_MONITOR__MEM_MONITOR__MEM_MONITOR_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_external_api_msgs/msg/memory_status.hpp>
 
