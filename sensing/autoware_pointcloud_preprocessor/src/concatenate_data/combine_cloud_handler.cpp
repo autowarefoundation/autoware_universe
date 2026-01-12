@@ -234,6 +234,18 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
   concatenate_cloud_result.concatenate_cloud_ptr->is_dense = is_concatenated_cloud_dense;
 
+  // concatenated cloud is no longer structured so recalculate the height, width, and row_step
+  concatenate_cloud_result.concatenate_cloud_ptr->height = 1;
+  {
+    const auto & data_size = concatenate_cloud_result.concatenate_cloud_ptr->data.size();
+    const auto & point_step = concatenate_cloud_result.concatenate_cloud_ptr->point_step;
+    if (data_size % point_step != 0) {
+      throw std::runtime_error("PointCloud2 data size is not divisible by point_step");
+    }
+    concatenate_cloud_result.concatenate_cloud_ptr->row_step = data_size;
+    concatenate_cloud_result.concatenate_cloud_ptr->width = data_size / point_step;
+  }
+
   if (const auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(collector_info)) {
     const auto reference_timestamp_min = advanced_info->timestamp - advanced_info->noise_window;
     const auto reference_timestamp_max = advanced_info->timestamp + advanced_info->noise_window;
