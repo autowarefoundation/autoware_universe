@@ -19,6 +19,7 @@
   <depend>autoware_signal_processing</depend>
   <depend>autoware_utils_visualization</depend>
   <depend>cv_bridge</depend>
+  <depend>geographiclib</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>
   <depend>pcl_conversions</depend>
