@@ -367,7 +367,8 @@ protected:
     }
 
     // Check: Data buffer size consistency
-    std::uint64_t expected_data_size = static_cast<std::uint64_t>(cloud->height) * expected_row_step;
+    std::uint64_t expected_data_size =
+      static_cast<std::uint64_t>(cloud->height) * expected_row_step;
 
     if (expected_data_size != cloud->data.size()) {
       RCLCPP_WARN_THROTTLE(
