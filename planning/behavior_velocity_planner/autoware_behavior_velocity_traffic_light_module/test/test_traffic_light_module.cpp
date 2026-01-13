@@ -14,6 +14,8 @@
 
 #include "../src/scene.hpp"
 
+#include <memory>
+
 #include <autoware/behavior_velocity_planner/test_utils.hpp>
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 
