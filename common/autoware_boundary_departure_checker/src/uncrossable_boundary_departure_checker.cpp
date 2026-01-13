@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
+
+#include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
