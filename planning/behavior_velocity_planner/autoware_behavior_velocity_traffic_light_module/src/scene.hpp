@@ -131,6 +131,10 @@ private:
 
   void updateTrafficSignal();
 
+  bool isTrafficSignalYellow() const;
+
+  void updateYellowState(const bool is_yellow_now);
+
   // Lane id
   const int64_t lane_id_;
 

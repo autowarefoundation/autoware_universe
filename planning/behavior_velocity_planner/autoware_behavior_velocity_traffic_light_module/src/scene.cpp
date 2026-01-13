@@ -214,80 +214,87 @@ bool TrafficLightModule::isStopSignal()
   }
 
   // Check if current state is yellow
-  bool is_yellow_now = false;
-  for (const auto & element : looking_tl_state_.elements) {
-    if (
-      element.color == TrafficSignalElement::AMBER &&
-      (element.status == TrafficSignalElement::SOLID_ON ||
-       element.status == TrafficSignalElement::UNKNOWN)) {
-      is_yellow_now = true;
-      break;
-    }
-  }
+  const bool is_yellow_now = isTrafficSignalYellow();
 
   // Override for yellow light on turn lanes with static arrows
   if (planner_param_.enable_arrow_aware_yellow_passing) {
-    if (is_yellow_now) {
-      // This is a yellow light. Check if this is the *start* of the yellow sequence.
-      if (yellow_transition_state_ == YellowState::kNotYellow) {
-        // This is the first frame of yellow. Determine how it started.
-        if (!prev_looking_tl_state_.elements.empty()) {
-          bool prev_had_green_circle = false;
+    updateYellowState(is_yellow_now);
 
-          for (const auto & element : prev_looking_tl_state_.elements) {
-            // Check for Green Circle
-            if (
-              element.shape == TrafficSignalElement::CIRCLE &&
-              element.color == TrafficSignalElement::GREEN) {
-              prev_had_green_circle = true;
-              break;
-            }
-          }
-
-          if (prev_had_green_circle) {
-            RCLCPP_DEBUG_THROTTLE(
-              logger_, *clock_, 1000,
-              "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
-            yellow_transition_state_ = YellowState::kFromGreen;
-          } else {
-            RCLCPP_DEBUG_THROTTLE(
-              logger_, *clock_, 1000,
-              "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
-            yellow_transition_state_ = YellowState::kFromNonGreen;
-          }
-        } else {
-          // No previous traffic light state available; cannot determine transition origin.
-          RCLCPP_DEBUG_THROTTLE(
-            logger_, *clock_, 1000,
-            "[TrafficLight Debug]   -> Previous TL state unavailable; "
-            "treating Yellow transition origin as unknown.");
-          // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is
-          // applied.
-        }
-      }
-
-      // Check if conditions are met (Green->Yellow, turn lane, static arrow)
-      if (
-        is_turn_lane_ && has_static_arrow_ && yellow_transition_state_ == YellowState::kFromGreen) {
-        // This is a "Green -> Yellow" sequence. This is the state we *do* want to override (pass).
-        return false;
-      } else {
-        // This is a "Red+Arrow -> Yellow" sequence (or param/map mismatch).
-        // Do not return false. Fall through to normal stop logic.
-      }
-    } else {
-      // Not yellow. Reset the state.
-      if (yellow_transition_state_ != YellowState::kNotYellow) {
-        RCLCPP_DEBUG_THROTTLE(
-          logger_, *clock_, 1000, "[TrafficLight Debug] Lane %ld: Yellow ended. Resetting state.",
-          lane_id_);
-      }
-      yellow_transition_state_ = YellowState::kNotYellow;
+    // Check if conditions are met (Green->Yellow, turn lane, static arrow)
+    if (
+      is_yellow_now && is_turn_lane_ && has_static_arrow_ &&
+      yellow_transition_state_ == YellowState::kFromGreen) {
+      // This is a "Green -> Yellow" sequence. This is the state we *do* want to override (pass).
+      return false;
     }
   }
 
   // Check if the current traffic signal state requires stopping
   return autoware::traffic_light_utils::isTrafficSignalStop(lane_, looking_tl_state_);
+}
+
+bool TrafficLightModule::isTrafficSignalYellow() const
+{
+  for (const auto & element : looking_tl_state_.elements) {
+    if (
+      element.color == TrafficSignalElement::AMBER &&
+      (element.status == TrafficSignalElement::SOLID_ON ||
+       element.status == TrafficSignalElement::UNKNOWN)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void TrafficLightModule::updateYellowState(const bool is_yellow_now)
+{
+  if (is_yellow_now) {
+    // This is a yellow light. Check if this is the *start* of the yellow sequence.
+    if (yellow_transition_state_ == YellowState::kNotYellow) {
+      // This is the first frame of yellow. Determine how it started.
+      if (!prev_looking_tl_state_.elements.empty()) {
+        bool prev_had_green_circle = false;
+
+        for (const auto & element : prev_looking_tl_state_.elements) {
+          // Check for Green Circle
+          if (
+            element.shape == TrafficSignalElement::CIRCLE &&
+            element.color == TrafficSignalElement::GREEN) {
+            prev_had_green_circle = true;
+            break;
+          }
+        }
+
+        if (prev_had_green_circle) {
+          RCLCPP_DEBUG_THROTTLE(
+            logger_, *clock_, 1000,
+            "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
+          yellow_transition_state_ = YellowState::kFromGreen;
+        } else {
+          RCLCPP_DEBUG_THROTTLE(
+            logger_, *clock_, 1000,
+            "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
+          yellow_transition_state_ = YellowState::kFromNonGreen;
+        }
+      } else {
+        // No previous traffic light state available; cannot determine transition origin.
+        RCLCPP_DEBUG_THROTTLE(
+          logger_, *clock_, 1000,
+          "[TrafficLight Debug]   -> Previous TL state unavailable; "
+          "treating Yellow transition origin as unknown.");
+        // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is
+        // applied.
+      }
+    }
+  } else {
+    // Not yellow. Reset the state.
+    if (yellow_transition_state_ != YellowState::kNotYellow) {
+      RCLCPP_DEBUG_THROTTLE(
+        logger_, *clock_, 1000, "[TrafficLight Debug] Lane %ld: Yellow ended. Resetting state.",
+        lane_id_);
+    }
+    yellow_transition_state_ = YellowState::kNotYellow;
+  }
 }
 
 bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(

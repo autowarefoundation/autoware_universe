@@ -142,6 +142,25 @@ protected:
   {
     module_->setPlannerData(planner_data);
   }
+
+  void verifyTransition(
+    const autoware_perception_msgs::msg::TrafficLightGroup & first_signal,
+    const autoware_perception_msgs::msg::TrafficLightGroup & second_signal,
+    YellowState expected_state, bool expected_stop)
+  {
+    setTrafficSignal(first_signal);
+    module_->isStopSignal();
+
+    setTrafficSignal(second_signal);
+    bool stop = module_->isStopSignal();
+
+    EXPECT_EQ(getYellowTransitionState(), expected_state);
+    if (expected_stop) {
+      EXPECT_TRUE(stop);
+    } else {
+      EXPECT_FALSE(stop);
+    }
+  }
 };
 
 TEST_F(TrafficLightModuleTest, TransitionToYellowFromGreen)
@@ -152,29 +171,15 @@ TEST_F(TrafficLightModuleTest, TransitionToYellowFromGreen)
   autoware_perception_msgs::msg::TrafficLightGroup green_signal;
   green_signal.elements.push_back(
     createElement(Element::GREEN, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(green_signal);
-
-  // Call isStopSignal to update internal state (prev_looking_tl_state_)
-  module_->isStopSignal();
-
-  // Verify initial state
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kNotYellow);
 
   // 2. Transition to Yellow
   autoware_perception_msgs::msg::TrafficLightGroup yellow_signal;
   yellow_signal.elements.push_back(
     createElement(Element::AMBER, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(yellow_signal);
-
-  // Call isStopSignal
-  bool stop = module_->isStopSignal();
-
-  // Verify state transition
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromGreen);
 
   // Should PASS (return false for stop signal) because it's a turn lane with static arrow and came
   // from Green
-  EXPECT_FALSE(stop);
+  verifyTransition(green_signal, yellow_signal, YellowState::kFromGreen, false);
 }
 
 TEST_F(TrafficLightModuleTest, TransitionToYellowFromRed)
@@ -184,24 +189,14 @@ TEST_F(TrafficLightModuleTest, TransitionToYellowFromRed)
   // 1. Set Red state (or Red Arrow)
   autoware_perception_msgs::msg::TrafficLightGroup red_signal;
   red_signal.elements.push_back(createElement(Element::RED, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(red_signal);
-
-  module_->isStopSignal();
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kNotYellow);
 
   // 2. Transition to Yellow
   autoware_perception_msgs::msg::TrafficLightGroup yellow_signal;
   yellow_signal.elements.push_back(
     createElement(Element::AMBER, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(yellow_signal);
-
-  bool stop = module_->isStopSignal();
-
-  // Verify state transition
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromNonGreen);
 
   // Should STOP (return true for stop signal) because it did NOT come from Green
-  EXPECT_TRUE(stop);
+  verifyTransition(red_signal, yellow_signal, YellowState::kFromNonGreen, true);
 }
 
 TEST_F(TrafficLightModuleTest, StateResetWhenYellowEnds)
@@ -267,21 +262,13 @@ TEST_F(TrafficLightModuleTest, NotTurnLane)
   autoware_perception_msgs::msg::TrafficLightGroup green_signal;
   green_signal.elements.push_back(
     createElement(Element::GREEN, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(green_signal);
-  module_->isStopSignal();
 
   autoware_perception_msgs::msg::TrafficLightGroup yellow_signal;
   yellow_signal.elements.push_back(
     createElement(Element::AMBER, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(yellow_signal);
 
-  bool stop = module_->isStopSignal();
-
-  // State is tracked
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromGreen);
-
-  // But should STOP because it is not a turn lane
-  EXPECT_TRUE(stop);
+  // State is tracked (kFromGreen) but should STOP because it is not a turn lane
+  verifyTransition(green_signal, yellow_signal, YellowState::kFromGreen, true);
 }
 
 TEST_F(TrafficLightModuleTest, NoStaticArrow)
@@ -316,21 +303,13 @@ TEST_F(TrafficLightModuleTest, NoStaticArrow)
   autoware_perception_msgs::msg::TrafficLightGroup green_signal;
   green_signal.elements.push_back(
     createElement(Element::GREEN, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(green_signal);
-  module_->isStopSignal();
 
   autoware_perception_msgs::msg::TrafficLightGroup yellow_signal;
   yellow_signal.elements.push_back(
     createElement(Element::AMBER, Element::CIRCLE, Element::SOLID_ON));
-  setTrafficSignal(yellow_signal);
 
-  bool stop = module_->isStopSignal();
-
-  // State is tracked
-  EXPECT_EQ(getYellowTransitionState(), YellowState::kFromGreen);
-
-  // But should STOP because there is no static arrow
-  EXPECT_TRUE(stop);
+  // State is tracked (kFromGreen) but should STOP because there is no static arrow
+  verifyTransition(green_signal, yellow_signal, YellowState::kFromGreen, true);
 }
 
 }  // namespace autoware::behavior_velocity_planner

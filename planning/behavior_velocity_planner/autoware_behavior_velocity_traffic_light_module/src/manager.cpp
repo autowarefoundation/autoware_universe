@@ -123,32 +123,8 @@ void TrafficLightModuleManager::launchNewModules(
     const std::string turn_direction = lane.attributeOr("turn_direction", std::string(""));
     const bool is_turn_lane = (turn_direction == "left" || turn_direction == "right");
 
-    bool has_static_arrow = false;
-    const auto reg_elem = traffic_light_reg_elem.first;
-    for (const auto & light : reg_elem->trafficLights()) {
-      const auto & attributes = light.attributes();
-      if (attributes.find("subtype") != attributes.end()) {
-        const std::string subtype = attributes.at("subtype").value();
-        if (subtype.find("arrow") != std::string::npos) {
-          has_static_arrow = true;
-          break;
-        }
-      }
-    }
-    if (!has_static_arrow) {
-      for (const auto & light_bulb_ls : reg_elem->lightBulbs()) {
-        for (const auto & node : light_bulb_ls) {
-          const auto & attributes = node.attributes();
-          if (attributes.find("arrow") != attributes.end()) {
-            has_static_arrow = true;
-            break;
-          }
-        }
-        if (has_static_arrow) {
-          break;
-        }
-      }
-    }
+    const bool has_static_arrow = hasStaticArrow(traffic_light_reg_elem.first);
+
     const auto lane_id = traffic_light_reg_elem.second.id();
     auto existing_module = this->getRegisteredAssociatedModule(lane_id);
     if (!existing_module) {
@@ -237,6 +213,31 @@ bool TrafficLightModuleManager::hasSameTrafficLight(
       }
     }
   }
+  return false;
+}
+
+bool TrafficLightModuleManager::hasStaticArrow(
+  const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem) const
+{
+  for (const auto & light : reg_elem->trafficLights()) {
+    const auto & attributes = light.attributes();
+    if (attributes.find("subtype") != attributes.end()) {
+      const std::string subtype = attributes.at("subtype").value();
+      if (subtype.find("arrow") != std::string::npos) {
+        return true;
+      }
+    }
+  }
+
+  for (const auto & light_bulb_ls : reg_elem->lightBulbs()) {
+    for (const auto & node : light_bulb_ls) {
+      const auto & attributes = node.attributes();
+      if (attributes.find("arrow") != attributes.end()) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
