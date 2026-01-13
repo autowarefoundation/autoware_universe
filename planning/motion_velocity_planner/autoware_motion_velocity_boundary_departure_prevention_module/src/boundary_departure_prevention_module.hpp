@@ -183,7 +183,7 @@ private:
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
-  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_ptr_;
+  std::unique_ptr<UncrossableBoundaryDepartureChecker> boundary_departure_checker_ptr_;
   std::unique_ptr<diagnostic_updater::Updater> updater_ptr_;
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
