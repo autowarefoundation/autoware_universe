@@ -350,10 +350,10 @@ protected:
     }
 
     // Check: Row step consistency
-    size_t expected_row_step =
-      static_cast<size_t>(cloud->width) * static_cast<size_t>(cloud->point_step);
+    std::uint64_t expected_row_step =
+      static_cast<std::uint64_t>(cloud->width) * static_cast<std::uint64_t>(cloud->point_step);
 
-    if (expected_row_step != static_cast<size_t>(cloud->row_step)) {
+    if (expected_row_step != static_cast<std::uint64_t>(cloud->row_step)) {
       RCLCPP_WARN_THROTTLE(
         logger, clock, throttle_duration_ms,
         "Invalid PointCloud: row_step mismatch. "
@@ -367,7 +367,8 @@ protected:
     }
 
     // Check: Data buffer size consistency
-    size_t expected_data_size = static_cast<size_t>(cloud->height) * expected_row_step;
+    std::uint64_t expected_data_size =
+      static_cast<std::uint64_t>(cloud->height) * expected_row_step;
 
     if (expected_data_size != cloud->data.size()) {
       RCLCPP_WARN_THROTTLE(
