@@ -84,6 +84,21 @@
           "default": 0.3,
           "description": "Threshold for keeping the stopping state [m/s]"
         },
+        "turn_indicator_keep_offset": {
+          "type": "number",
+          "default": -1.25,
+          "description": "Offset to add to the KEEP turn indicator logit for bias adjustment"
+        },
+        "turn_indicator_hold_duration": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Duration to hold the turn indicator command before allowing changes (seconds)"
+        },
+        "shift_x": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to shift the ego center position by half the wheel base"
+        },
         "debug_params": {
           "type": "object",
           "properties": {
@@ -111,6 +126,8 @@
         "temperature",
         "velocity_smoothing_window",
         "stopping_threshold",
+        "turn_indicator_keep_offset",
+        "turn_indicator_hold_duration",
         "debug_params"
       ]
     }

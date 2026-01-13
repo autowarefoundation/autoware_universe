@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
-    onnx_model_path: $(env HOME)/autoware_data/diffusion_planner/v2.0/diffusion_planner.onnx
-    args_path: $(env HOME)/autoware_data/diffusion_planner/v2.0/diffusion_planner.param.json
+    onnx_model_path: $(env HOME)/autoware_data/diffusion_planner/v3.0/diffusion_planner.onnx
+    args_path: $(env HOME)/autoware_data/diffusion_planner/v3.0/diffusion_planner.param.json
     planning_frequency_hz: 10.0
     ignore_neighbors: false
     ignore_unknown_neighbors: true
@@ -12,6 +12,9 @@
     temperature: [0.0]
     velocity_smoothing_window: 8
     stopping_threshold: 0.3
+    turn_indicator_keep_offset: -1.25
+    turn_indicator_hold_duration: 1.0
+    shift_x: false
     debug_params:
       publish_debug_route: true
       publish_debug_map: false

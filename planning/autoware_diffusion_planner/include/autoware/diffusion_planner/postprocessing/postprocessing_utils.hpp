@@ -53,7 +53,7 @@ std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
  * @brief Creates PredictedObjects message from parsed agent poses.
  *
  * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
- * @param ego_centric_agent_data The agent data in ego-centric coordinates.
+ * @param ego_centric_histories The agent histories in ego-centric coordinates.
  * @param stamp The ROS time stamp for the message.
  * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to use.
@@ -61,7 +61,7 @@ std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
  */
 PredictedObjects create_predicted_objects(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
+  const std::vector<AgentHistory> & ego_centric_histories, const rclcpp::Time & stamp,
   const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
 
 /**
@@ -81,16 +81,6 @@ Trajectory create_ego_trajectory(
   const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
   const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold);
-
-/**
- * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
- *
- * @param turn_indicator_logit The turn indicator logit from the model output.
- * @param stamp The ROS time stamp for the message.
- * @return A TurnIndicatorsCommand message with the predicted turn indicators.
- */
-TurnIndicatorsCommand create_turn_indicators_command(
-  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp);
 
 /**
  * @brief Counts valid elements in a tensor with shape (B, len, dim2, dim3).
