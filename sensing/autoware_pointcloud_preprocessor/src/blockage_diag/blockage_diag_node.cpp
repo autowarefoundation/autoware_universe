@@ -14,6 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag_node.hpp"
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -526,36 +528,15 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
-void BlockageDiagComponent::validate_pointcloud_fields(
-  const sensor_msgs::msg::PointCloud2 & input) const
-{
-  std::vector<std::string> required_fields = {"channel", "azimuth", "distance"};
-
-  for (const auto & field : input.fields) {
-    auto it = std::find(required_fields.begin(), required_fields.end(), field.name);
-    bool is_field_found = (it != required_fields.end());
-    if (is_field_found) {
-      required_fields.erase(it);
-    }
-  }
-
-  bool has_all_required_fields = required_fields.empty();
-  if (has_all_required_fields) {
-    return;
-  }
-
-  std::string error_msg = "PointCloud2 missing required fields:";
-  for (const auto & missing_field : required_fields) {
-    error_msg += " " + missing_field;
-  }
-  RCLCPP_ERROR(get_logger(), "%s", error_msg.c_str());
-  throw std::runtime_error(error_msg);
-}
-
 void BlockageDiagComponent::detect_blockage(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
-  validate_pointcloud_fields(*input);
+  try {
+    validate_pointcloud_fields(*input);
+  } catch (const std::runtime_error & e) {
+    RCLCPP_ERROR(get_logger(), "%s", e.what());
+    return;
+  }
 
   cv::Mat depth_image_16u = make_normalized_depth_image(*input);
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
