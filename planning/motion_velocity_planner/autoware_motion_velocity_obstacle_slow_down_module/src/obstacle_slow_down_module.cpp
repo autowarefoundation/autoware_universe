@@ -201,6 +201,10 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "obstacle_slow_down");
 
+  // debug publisher
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/obstacle_slow_down/trajectory", 1);
+
   // time keeper
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(processing_time_detail_pub_);
 }
