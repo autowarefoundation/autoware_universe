@@ -73,6 +73,9 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
+  turn_indicator_manager_.set_hold_duration(
+    rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
+  turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
@@ -130,6 +133,11 @@ void DiffusionPlanner::set_up_params()
   params_.velocity_smoothing_window =
     this->declare_parameter<int64_t>("velocity_smoothing_window", 8);
   params_.stopping_threshold = this->declare_parameter<double>("stopping_threshold", 0.3);
+  params_.turn_indicator_keep_offset =
+    this->declare_parameter<float>("turn_indicator_keep_offset", -1.25f);
+  params_.turn_indicator_hold_duration =
+    this->declare_parameter<double>("turn_indicator_hold_duration", 0.0);
+  params_.shift_x = this->declare_parameter<bool>("shift_x", false);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -157,7 +165,15 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(
       parameters, "velocity_smoothing_window", temp_params.velocity_smoothing_window);
     update_param<double>(parameters, "stopping_threshold", temp_params.stopping_threshold);
+    update_param<float>(
+      parameters, "turn_indicator_keep_offset", temp_params.turn_indicator_keep_offset);
+    update_param<double>(
+      parameters, "turn_indicator_hold_duration", temp_params.turn_indicator_hold_duration);
+    update_param<bool>(parameters, "shift_x", temp_params.shift_x);
     params_ = temp_params;
+    turn_indicator_manager_.set_hold_duration(
+      rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
+    turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
   }
 
   {
@@ -412,13 +428,19 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
       "no traffic signal received. traffic light info will not be updated");
   }
 
+  Odometry kinematic_state = *ego_kinematic_state;
+  if (params_.shift_x) {
+    kinematic_state.pose.pose =
+      utils::shift_x(kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0);
+  }
+
   // Get transforms
-  const geometry_msgs::msg::Pose & pose_base_link = ego_kinematic_state->pose.pose;
+  const geometry_msgs::msg::Pose & pose_base_link = kinematic_state.pose.pose;
   const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4f(pose_base_link);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
 
   // Update ego history
-  ego_history_.push_back(pose_base_link);
+  ego_history_.push_back(kinematic_state);
   if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
     ego_history_.pop_front();
   }
@@ -430,23 +452,20 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
   }
 
   // Update neighbor agent data
-  if (!agent_data_) {
-    agent_data_ =
-      AgentData(*objects, NEIGHBOR_SHAPE[1], NEIGHBOR_SHAPE[2], params_.ignore_unknown_neighbors);
-  } else {
-    agent_data_->update_histories(*objects, params_.ignore_unknown_neighbors);
-  }
-  auto ego_centric_neighbor_agent_data = agent_data_.value();
-  ego_centric_neighbor_agent_data.apply_transform(map_to_ego_transform);
-  ego_centric_neighbor_agent_data.trim_to_k_closest_agents();
+  agent_data_.update_histories(*objects, params_.ignore_unknown_neighbors);
+  const auto processed_neighbor_histories =
+    agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
 
   // Update traffic light map
   const auto & traffic_light_msg_timeout_s = params_.traffic_light_group_msg_timeout_seconds;
   preprocess::process_traffic_signals(
     traffic_signals, traffic_light_id_map_, this->now(), traffic_light_msg_timeout_s);
 
+  // Create frame context
+  const rclcpp::Time frame_time(ego_kinematic_state->header.stamp);
   const FrameContext frame_context{
-    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, ego_centric_neighbor_agent_data};
+    *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
+    frame_time};
 
   return frame_context;
 }
@@ -467,12 +486,16 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     }
   }
 
-  const geometry_msgs::msg::Pose & pose_base_link = frame_context.ego_kinematic_state.pose.pose;
-  const Eigen::Matrix4d & ego_to_map_transform = frame_context.ego_to_map_transform;
+  const geometry_msgs::msg::Pose & pose_center =
+    params_.shift_x
+      ? utils::shift_x(
+          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+      : frame_context.ego_kinematic_state.pose.pose;
+  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4f(pose_center);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
-  const auto center_x = static_cast<float>(pose_base_link.position.x);
-  const auto center_y = static_cast<float>(pose_base_link.position.y);
-  const auto center_z = static_cast<float>(pose_base_link.position.z);
+  const auto & center_x = static_cast<float>(pose_center.position.x);
+  const auto & center_y = static_cast<float>(pose_center.position.y);
+  const auto & center_z = static_cast<float>(pose_center.position.z);
 
   // Ego history
   {
@@ -489,8 +512,9 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
   }
   // Agent data on ego reference frame
   {
-    input_data_map["neighbor_agents_past"] =
-      replicate_for_batch(frame_context.ego_centric_neighbor_agent_data.as_vector());
+    const auto neighbor_agents_past = flatten_histories_to_vector(
+      frame_context.ego_centric_neighbor_histories, MAX_NUM_NEIGHBORS, INPUT_T + 1);
+    input_data_map["neighbor_agents_past"] = replicate_for_batch(neighbor_agents_past);
   }
   // Static objects
   // TODO(Daniel): add static objects
@@ -603,14 +627,15 @@ std::vector<float> DiffusionPlanner::replicate_for_batch(
 }
 
 void DiffusionPlanner::publish_debug_markers(
-  const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform) const
+  const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform,
+  const rclcpp::Time & timestamp) const
 {
   if (debug_params_.publish_debug_route) {
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto route_markers = utils::create_lane_marker(
       ego_to_map_transform, input_data_map.at("route_lanes"),
-      std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), this->now(),
-      lifetime, {0.8, 0.8, 0.8, 0.8}, "map", true);
+      std::vector<int64_t>(ROUTE_LANES_SHAPE.begin(), ROUTE_LANES_SHAPE.end()), timestamp, lifetime,
+      {0.8, 0.8, 0.8, 0.8}, "map", true);
     pub_route_marker_->publish(route_markers);
   }
 
@@ -618,14 +643,15 @@ void DiffusionPlanner::publish_debug_markers(
     auto lifetime = rclcpp::Duration::from_seconds(0.2);
     auto lane_markers = utils::create_lane_marker(
       ego_to_map_transform, input_data_map.at("lanes"),
-      std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), this->now(), lifetime,
+      std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), timestamp, lifetime,
       {0.1, 0.1, 0.7, 0.8}, "map", true);
     pub_lane_marker_->publish(lane_markers);
   }
 }
 
 void DiffusionPlanner::publish_predictions(
-  const std::vector<float> & predictions, const FrameContext & frame_context) const
+  const std::vector<float> & predictions, const FrameContext & frame_context,
+  const rclcpp::Time & timestamp) const
 {
   CandidateTrajectories candidate_trajectories;
 
@@ -637,9 +663,15 @@ void DiffusionPlanner::publish_predictions(
   const auto agent_poses = postprocess::parse_predictions(predictions);
 
   for (int i = 0; i < params_.batch_size; i++) {
-    const Trajectory trajectory = postprocess::create_ego_trajectory(
-      agent_poses, this->now(), frame_context.ego_to_map_transform, i,
+    Trajectory trajectory = postprocess::create_ego_trajectory(
+      agent_poses, timestamp, frame_context.ego_to_map_transform, i,
       params_.velocity_smoothing_window, enable_force_stop, params_.stopping_threshold);
+    if (params_.shift_x) {
+      // center to base_link
+      for (auto & point : trajectory.points) {
+        point.pose = utils::shift_x(point.pose, -vehicle_info_.wheel_base_m / 2.0);
+      }
+    }
     if (i == 0) {
       pub_trajectory_->publish(trajectory);
     }
@@ -669,7 +701,7 @@ void DiffusionPlanner::publish_predictions(
     // Use batch 0 for neighbor predictions
     constexpr int64_t batch_idx = 0;
     auto predicted_objects = postprocess::create_predicted_objects(
-      agent_poses, frame_context.ego_centric_neighbor_agent_data, this->now(),
+      agent_poses, frame_context.ego_centric_neighbor_histories, timestamp,
       frame_context.ego_to_map_transform, batch_idx);
     pub_objects_->publish(predicted_objects);
   }
@@ -892,13 +924,14 @@ void DiffusionPlanner::on_timer()
 
   diagnostics_inference_->clear();
 
+  const rclcpp::Time current_time(get_clock()->now());
   if (!is_map_loaded_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
     diagnostics_inference_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, "Map data not loaded");
-    diagnostics_inference_->publish(this->now());
+    diagnostics_inference_->publish(current_time);
     return;
   }
 
@@ -910,13 +943,14 @@ void DiffusionPlanner::on_timer()
       "No input data available for inference");
     diagnostics_inference_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, "No input data available for inference");
-    diagnostics_inference_->publish(this->now());
+    diagnostics_inference_->publish(current_time);
     return;
   }
 
+  const rclcpp::Time frame_time(frame_context->frame_time);
   InputDataMap input_data_map = create_input_data(*frame_context);
 
-  publish_debug_markers(input_data_map, frame_context->ego_to_map_transform);
+  publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);
 
   // Calculate and record metrics for diagnostics using the proper logic
   const int64_t batch_idx = 0;
@@ -951,20 +985,23 @@ void DiffusionPlanner::on_timer()
       "Input data contains invalid values");
     diagnostics_inference_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, "Input data contains invalid values");
-    diagnostics_inference_->publish(this->now());
+    diagnostics_inference_->publish(current_time);
     return;
   }
   const auto predictions = do_inference_trt(input_data_map);
-  publish_predictions(predictions, *frame_context);
+  publish_predictions(predictions, *frame_context, frame_time);
 
   // Publish turn indicators
   const auto turn_indicator_logit = get_turn_indicator_logit();
-  const auto turn_indicators_cmd =
-    postprocess::create_turn_indicators_command(turn_indicator_logit, this->now());
-  pub_turn_indicators_->publish(turn_indicators_cmd);
+  const int64_t prev_report = turn_indicators_history_.empty()
+                                ? TurnIndicatorsReport::DISABLE
+                                : turn_indicators_history_.back().report;
+  const auto turn_indicator_command =
+    turn_indicator_manager_.evaluate(turn_indicator_logit, frame_time, prev_report);
+  pub_turn_indicators_->publish(turn_indicator_command);
 
   // Publish diagnostics
-  diagnostics_inference_->publish(this->now());
+  diagnostics_inference_->publish(frame_time);
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)

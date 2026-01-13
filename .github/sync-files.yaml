@@ -17,8 +17,6 @@
     - source: .github/workflows/github-release.yaml
     - source: .github/workflows/pre-commit.yaml
     - source: .github/workflows/pre-commit-optional.yaml
-    - source: .github/workflows/pre-commit-optional-autoupdate.yaml
-    - source: .github/workflows/pre-commit-autoupdate.yaml
     - source: .github/workflows/semantic-pull-request.yaml
     - source: .github/workflows/spell-check-differential.yaml
       pre-commands: |

@@ -15,18 +15,14 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
-#include "autoware/point_types/types.hpp"
-#include "autoware/pointcloud_preprocessor/filter.hpp"
-
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
@@ -70,9 +66,6 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
   void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
-
-  mutable std::mutex mutex_;
-
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
@@ -262,7 +255,6 @@ private:
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 
 public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);
 
   /**

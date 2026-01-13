@@ -52,27 +52,27 @@ If the above conditions are met, the ego vehicle will cruise behind the moving o
 The role of the cruise planning is keeping a safe distance with dynamic vehicle objects with smoothed velocity transition.
 This includes not only cruising a front vehicle, but also reacting a cut-in and cut-out vehicle.
 
-The safe distance is calculated dynamically based on the Responsibility-Sensitive Safety (RSS) by the following equation.
+The module calculates the minimum safe braking distance dynamically by using the following equation:
 
 $$
-d_{rss} = v_{ego} t_{idling} + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}} + l_{margin},
+d_{braking} = v_{ego} t_{idling} + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}} + l_{margin},
 $$
 
-assuming that $d_{rss}$ is the calculated safe distance, $t_{idling}$ is the idling time for the ego to detect the front vehicle's deceleration, $v_{ego}$ is the ego's current velocity, $v_{obstacle}$ is the front obstacle's current velocity, $a_{ego}$ is the ego's acceleration, $a_{obstacle}$ is the obstacle's acceleration, and $l_{margin}$ is the safety margin.
+assuming that $d_{braking}$ is the calculated safe distance, $t_{idling}$ is the idling time for the ego to detect the front vehicle's deceleration, $v_{ego}$ is the ego's current velocity, $v_{obstacle}$ is the front obstacle's current velocity, $a_{ego}$ is the ego's acceleration, $a_{obstacle}$ is the obstacle's acceleration, and $l_{margin}$ is the safety margin.
 These values are parameterized as follows. Other common values such as ego's minimum acceleration is defined in `common.param.yaml`.
 
 | Parameter                                  | Type   | Description                                                                   |
 | ------------------------------------------ | ------ | ----------------------------------------------------------------------------- |
 | `cruise_planning.idling_time`              | double | idling time for the ego to detect the front vehicle starting deceleration [s] |
-| `cruise_planning.min_ego_accel_for_rss`    | double | ego's acceleration for RSS [m/ss]                                             |
-| `cruise_planning.min_object_accel_for_rss` | double | front obstacle's acceleration for RSS [m/ss]                                  |
-| `cruise_planning.safe_distance_margin`     | double | safety margin for RSS [m]                                                     |
+| `cruise_planning.min_ego_accel_for_rss`    | double | ego's acceleration for minimum safe braking distance [m/ss]                   |
+| `cruise_planning.min_object_accel_for_rss` | double | front obstacle's acceleration for minimum safe braking distance [m/ss]        |
+| `cruise_planning.safe_distance_margin`     | double | safety margin for minimum safe braking distance [m]                           |
 
 The detailed formulation is as follows.
 
 $$
 \begin{align}
-d_{error} & = d - d_{rss} \\
+d_{error} & = d - d_{braking} \\
 d_{normalized} & = lpf(d_{error} / d_{obstacle}) \\
 d_{quad, normalized} & = sign(d_{normalized}) *d_{normalized}*d_{normalized} \\
 v_{pid} & = pid(d_{quad, normalized}) \\
@@ -81,14 +81,14 @@ v_{target} & = max(v_{ego} + v_{add}, v_{min, cruise})
 \end{align}
 $$
 
-| Variable          | Description                             |
-| ----------------- | --------------------------------------- |
-| `d`               | actual distance to obstacle             |
-| `d_{rss}`         | ideal distance to obstacle based on RSS |
-| `v_{min, cruise}` | `min_cruise_target_vel`                 |
-| `w_{acc}`         | `output_ratio_during_accel`             |
-| `lpf(val)`        | apply low-pass filter to `val`          |
-| `pid(val)`        | apply pid to `val`                      |
+| Variable          | Description                                                       |
+| ----------------- | ----------------------------------------------------------------- |
+| `d`               | actual distance to obstacle                                       |
+| `d_{braking}`     | ideal distance to obstacle based on minimum safe braking distance |
+| `v_{min, cruise}` | `min_cruise_target_vel`                                           |
+| `w_{acc}`         | `output_ratio_during_accel`                                       |
+| `lpf(val)`        | apply low-pass filter to `val`                                    |
+| `pid(val)`        | apply pid to `val`                                                |
 
 #### Algorithm selection for cruise planner
 

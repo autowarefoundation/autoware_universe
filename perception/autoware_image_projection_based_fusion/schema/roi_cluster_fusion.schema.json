@@ -48,18 +48,76 @@
           "maximum": 2.0
         },
         "iou_threshold": {
-          "type": "number",
-          "description": "An IoU score threshold. Note that the total IoU score is the sum of the IoU scores that are set to true in use_iou, use_iou_x and use_iou_y.",
-          "default": 0.65,
-          "minimum": 0.0,
-          "maximum": 1.0
-        },
-        "unknown_iou_threshold": {
-          "type": "number",
-          "description": "A threshold value of IoU score for objects labeled UNKNOWN.",
-          "default": 0.1,
-          "minimum": 0.0,
-          "maximum": 1.0
+          "type": "object",
+          "description": "IoU score thresholds for each object class.",
+          "properties": {
+            "UNKNOWN": {
+              "type": "number",
+              "description": "IoU threshold for UNKNOWN objects.",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "CAR": {
+              "type": "number",
+              "description": "IoU threshold for CAR objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "TRUCK": {
+              "type": "number",
+              "description": "IoU threshold for TRUCK objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "BUS": {
+              "type": "number",
+              "description": "IoU threshold for BUS objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "TRAILER": {
+              "type": "number",
+              "description": "IoU threshold for TRAILER objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "MOTORCYCLE": {
+              "type": "number",
+              "description": "IoU threshold for MOTORCYCLE objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "BICYCLE": {
+              "type": "number",
+              "description": "IoU threshold for BICYCLE objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "PEDESTRIAN": {
+              "type": "number",
+              "description": "IoU threshold for PEDESTRIAN objects.",
+              "default": 0.65,
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          },
+          "required": [
+            "UNKNOWN",
+            "CAR",
+            "TRUCK",
+            "BUS",
+            "TRAILER",
+            "MOTORCYCLE",
+            "BICYCLE",
+            "PEDESTRIAN"
+          ]
         },
         "remove_unknown": {
           "type": "boolean",
@@ -76,7 +134,6 @@
         "only_allow_inside_cluster",
         "roi_scale_factor",
         "iou_threshold",
-        "unknown_iou_threshold",
         "remove_unknown"
       ]
     }
