@@ -74,7 +74,6 @@ private:
   rclcpp::Clock::SharedPtr clock_{nullptr};
   // TODO(Maxime): move to the module interface
   rclcpp::Publisher<universe_utils::ProcessingTimeDetail>::SharedPtr timekeeper_publisher_;
-  rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_trajectory_publisher_;
   std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
   std::optional<diagnostic_updater::Updater> diagnostic_updater_ = std::nullopt;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
@@ -86,11 +85,6 @@ private:
 
   /// @brief update whether we are currently inserting a stop that breaks the deceleration limit
   void update_unfeasible_stop_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  /// @brief publish a debug trajectory with the calculated slowdowns added to trajectory input used
-  /// by the module
-  void publish_debug_trajectory(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-    const VelocityPlanningResult & planning_result);
   /// @brief populate the planning factors based on the module's planning result
   void add_planning_factors(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
