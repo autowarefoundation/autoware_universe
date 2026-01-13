@@ -21,7 +21,7 @@ namespace autoware::pointcloud_preprocessor
 {
 
 /**
- * @brief Validate that the PointCloud2 message has required fields (for testing).
+ * @brief Validate that the PointCloud2 message has required fields for blockage diagnosis.
  *
  * @param input The input point cloud.
  * @throws std::runtime_error if any required field is missing.
