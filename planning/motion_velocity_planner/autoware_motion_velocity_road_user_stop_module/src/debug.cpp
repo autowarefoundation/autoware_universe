@@ -78,9 +78,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   if (!debug_data_.trajectory_polygons.empty()) {
     autoware_utils_debug::ScopedTimeTrack st_debug_marker(
       "create_debug_marker_array/trajectory_polygons", *time_keeper_);
-    int traj_poly_id = 0;
     Marker traj_poly_marker = createDefaultMarker(
-      "map", clock_->now(), "trajectory_polygons", traj_poly_id++, Marker::LINE_LIST,
+      "map", clock_->now(), "trajectory_polygons", 0, Marker::LINE_LIST,
       autoware::universe_utils::createMarkerScale(0.1, 0, 0),
       autoware::universe_utils::createMarkerColor(1.0, 1.0, 0.0, 0.5));  // Yellow color
 
@@ -94,9 +93,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   if (!debug_data_.trajectory_polygons_no_margin.empty()) {
     autoware_utils_debug::ScopedTimeTrack st_debug_marker(
       "create_debug_marker_array/trajectory_polygons_no_margin", *time_keeper_);
-    int traj_poly_id = 0;
     Marker traj_poly_marker = createDefaultMarker(
-      "map", clock_->now(), "trajectory_polygons_no_margin", traj_poly_id++, Marker::LINE_LIST,
+      "map", clock_->now(), "trajectory_polygons_no_margin", 0, Marker::LINE_LIST,
       autoware::universe_utils::createMarkerScale(0.1, 0, 0),
       autoware::universe_utils::createMarkerColor(1.0, 0.5, 0.0, 0.5));  // Orange color
 
@@ -111,9 +109,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   if (!debug_data_.object_polygons.empty()) {
     autoware_utils_debug::ScopedTimeTrack st_debug_marker(
       "create_debug_marker_array/object_polygons", *time_keeper_);
-    int obj_poly_id = 0;
     Marker obj_poly_marker = createDefaultMarker(
-      "map", clock_->now(), "object_polygons", obj_poly_id++, Marker::LINE_LIST,
+      "map", clock_->now(), "object_polygons", 0, Marker::LINE_LIST,
       autoware::universe_utils::createMarkerScale(0.15, 0, 0),
       autoware::universe_utils::createMarkerColor(0.8, 0.0, 0.8, 0.9));
 
@@ -128,9 +125,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   if (!debug_data_.polygons_for_vru.empty()) {
     autoware_utils_debug::ScopedTimeTrack st_debug_marker(
       "create_debug_marker_array/polygons_for_vru", *time_keeper_);
-    int vru_poly_id = 0;
     Marker vru_poly_marker = createDefaultMarker(
-      "map", clock_->now(), "polygons_for_vru", vru_poly_id++, Marker::LINE_LIST,
+      "map", clock_->now(), "polygons_for_vru", 0, Marker::LINE_LIST,
       autoware::universe_utils::createMarkerScale(0.15, 0, 0),
       autoware::universe_utils::createMarkerColor(0.5, 1.0, 0.5, 0.6));
 
@@ -145,9 +141,8 @@ MarkerArray RoadUserStopModule::create_debug_marker_array() const
   if (!debug_data_.polygons_for_opposing_traffic.empty()) {
     autoware_utils_debug::ScopedTimeTrack st_debug_marker(
       "create_debug_marker_array/polygons_for_opposing_traffic", *time_keeper_);
-    int opposing_poly_id = 0;
     Marker opposing_poly_marker = createDefaultMarker(
-      "map", clock_->now(), "polygons_for_opposing_traffic", opposing_poly_id++, Marker::LINE_LIST,
+      "map", clock_->now(), "polygons_for_opposing_traffic", 0, Marker::LINE_LIST,
       autoware::universe_utils::createMarkerScale(0.15, 0, 0),
       autoware::universe_utils::createMarkerColor(1.0, 0.5, 0.5, 0.6));
 
