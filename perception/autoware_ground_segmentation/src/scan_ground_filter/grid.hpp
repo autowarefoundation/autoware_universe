@@ -314,20 +314,69 @@ private:
       azimuth_grids_per_radial_.resize(radial_grid_num);
       azimuth_interval_per_radial_.resize(radial_grid_num);
 
-      // For each radial grid, determine the appropriate azimuth angle based on radius
-      for (size_t i = 0; i < radial_grid_num; ++i) {
-        const float cell_radius = grid_radial_boundaries_[i];
+      // Pre-compute cached values for each radius range to avoid redundant calculations
+      // Cache structure: radius_threshold -> {angle_rad, azimuth_grid_num, azimuth_interval}
+      struct CachedAngleConfig
+      {
+        float angle_rad;
+        int azimuth_grid_num;
+        float azimuth_interval;
+      };
+      std::vector<std::pair<float, CachedAngleConfig>> angle_cache;
 
-        // Find the appropriate angle_rad from radial_divider_angle_map using binary search
-        const float angle_rad = getRadialDividerAngleRad(cell_radius);
+      constexpr float two_pi = 2.0f * M_PIf;
+      if (!radial_divider_angle_map_.empty()) {
+        // Pre-compute cache for each entry in the map
+        for (const auto & entry : radial_divider_angle_map_) {
+          const float angle_rad = entry.angle_rad;
+          const int azimuth_grid_num = static_cast<int>(std::ceil(two_pi / angle_rad));
+          const float azimuth_interval = two_pi / static_cast<float>(azimuth_grid_num);
+          angle_cache.emplace_back(
+            entry.radius, CachedAngleConfig{angle_rad, azimuth_grid_num, azimuth_interval});
+        }
+        // Add entry for radius beyond the last threshold (uses last angle)
+        if (angle_cache.size() > 0) {
+          const auto & last_config = angle_cache.back().second;
+          angle_cache.emplace_back(
+            grid_radial_limit_ + 1.0f,
+            CachedAngleConfig{last_config.angle_rad, last_config.azimuth_grid_num,
+                              last_config.azimuth_interval});
+        }
+      }
 
-        // Calculate number of azimuth grids based on angle_rad
-        constexpr float two_pi = 2.0f * M_PIf;
-        const int azimuth_grid_num = static_cast<int>(std::ceil(two_pi / angle_rad));
-        const float azimuth_interval = two_pi / static_cast<float>(azimuth_grid_num);
+      // For each radial grid, use cached values based on radius range
+      // Since both radial grids and cache are sorted, we can do a single pass
+      if (angle_cache.empty()) {
+        // Fallback: compute for each grid if cache is empty
+        for (size_t i = 0; i < radial_grid_num; ++i) {
+          const float cell_radius = grid_radial_boundaries_[i];
+          const float angle_rad = getRadialDividerAngleRad(cell_radius);
+          const int azimuth_grid_num = static_cast<int>(std::ceil(two_pi / angle_rad));
+          const float azimuth_interval = two_pi / static_cast<float>(azimuth_grid_num);
+          azimuth_grids_per_radial_[i] = azimuth_grid_num;
+          azimuth_interval_per_radial_[i] = azimuth_interval;
+        }
+      } else {
+        // Use cached values: iterate through radial grids and cache simultaneously
+        // The logic matches getRadialDividerAngleRad: use last entry where entry.radius <= radius
+        size_t cache_idx = 0;
+        for (size_t i = 0; i < radial_grid_num; ++i) {
+          const float cell_radius = grid_radial_boundaries_[i];
 
-        azimuth_grids_per_radial_[i] = azimuth_grid_num;
-        azimuth_interval_per_radial_[i] = azimuth_interval;
+          // Advance cache index to find the last entry where threshold <= cell_radius
+          // Stop at second-to-last entry (last is sentinel for values >= last threshold)
+          while (
+            cache_idx < angle_cache.size() - 2 &&
+            cell_radius >= angle_cache[cache_idx + 1].first) {
+            ++cache_idx;
+          }
+
+          // Use the cached config for current cache index
+          // This gives us the last entry where entry.radius <= cell_radius
+          const auto & config = angle_cache[cache_idx].second;
+          azimuth_grids_per_radial_[i] = config.azimuth_grid_num;
+          azimuth_interval_per_radial_[i] = config.azimuth_interval;
+        }
       }
     }
 

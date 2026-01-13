@@ -226,7 +226,7 @@ private:
    * @param[in] radius Radial distance in meters
    * @return Radial divider angle in radians
    */
-  float getRadialDividerAngleRad(const float radius) const;
+  // float getRadialDividerAngleRad(const float radius) const;
 
   bool recursiveSearch(const int check_idx, const int search_cnt, std::vector<int> & idx) const;
   bool recursiveSearch(

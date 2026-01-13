@@ -26,33 +26,33 @@
 namespace autoware::ground_segmentation
 {
 
-float GridGroundFilter::getRadialDividerAngleRad(const float radius) const
-{
-  // Find the appropriate angle based on radius using binary search
-  // The map is sorted by radius in ascending order
-  // We find the last entry where entry.radius <= radius
-  if (param_.radial_divider_angle_map.empty()) {
-    throw std::runtime_error("radial_divider_angle_map is empty");
-  }
+// float GridGroundFilter::getRadialDividerAngleRad(const float radius) const
+// {
+//   // Find the appropriate angle based on radius using binary search
+//   // The map is sorted by radius in ascending order
+//   // We find the last entry where entry.radius <= radius
+//   if (param_.radial_divider_angle_map.empty()) {
+//     throw std::runtime_error("radial_divider_angle_map is empty");
+//   }
 
-  // Use binary search to find the first entry where entry.radius > radius
-  const auto it = std::upper_bound(
-    param_.radial_divider_angle_map.begin(), param_.radial_divider_angle_map.end(), radius,
-    [](const float r, const RadialDividerAngleEntry & entry) { return r < entry.radius; });
+//   // Use binary search to find the first entry where entry.radius > radius
+//   const auto it = std::upper_bound(
+//     param_.radial_divider_angle_map.begin(), param_.radial_divider_angle_map.end(), radius,
+//     [](const float r, const RadialDividerAngleEntry & entry) { return r < entry.radius; });
 
-  // If it points to the beginning, use the first entry
-  if (it == param_.radial_divider_angle_map.begin()) {
-    return param_.radial_divider_angle_map[0].angle_rad;
-  }
+//   // If it points to the beginning, use the first entry
+//   if (it == param_.radial_divider_angle_map.begin()) {
+//     return param_.radial_divider_angle_map[0].angle_rad;
+//   }
 
-  // If it points to the end, use the last entry
-  if (it == param_.radial_divider_angle_map.end()) {
-    return param_.radial_divider_angle_map.back().angle_rad;
-  }
+//   // If it points to the end, use the last entry
+//   if (it == param_.radial_divider_angle_map.end()) {
+//     return param_.radial_divider_angle_map.back().angle_rad;
+//   }
 
-  // Use the previous entry (last entry where entry.radius <= radius)
-  return (it - 1)->angle_rad;
-}
+//   // Use the previous entry (last entry where entry.radius <= radius)
+//   return (it - 1)->angle_rad;
+// }
 // assign the pointcloud data to the grid
 void GridGroundFilter::convert()
 {
