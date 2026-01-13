@@ -178,7 +178,7 @@ The Collision Assessment function evaluates potential collisions with target obj
 
 The module follows these steps to determine safety:
 
-- Step 1: Predict Position. The module calculates the exact position (pose) of a target object at a specific time, usually by looking at its predicted path.
+- Step 1: Predict Position. The module estimates the position (pose) of a target object at a specific time based on its predicted path.
 - Step 2: Check for Overlap. The module checks if the ego vehicle and the target object occupy the same space at that time. If they overlap, the path is marked unsafe.
 - Step 3: Identify Leading Vehicle. The module uses the distance along the path (arc length) to determine which vehicle is in front.
 
