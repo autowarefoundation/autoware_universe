@@ -267,8 +267,7 @@ void TrafficLightModule::updateYellowState(const bool is_yellow_now)
 
         if (prev_had_green_circle) {
           RCLCPP_DEBUG_THROTTLE(
-            logger_, *clock_, 1000,
-            "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
+            logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
           yellow_transition_state_ = YellowState::kFromGreen;
         } else {
           RCLCPP_DEBUG_THROTTLE(
