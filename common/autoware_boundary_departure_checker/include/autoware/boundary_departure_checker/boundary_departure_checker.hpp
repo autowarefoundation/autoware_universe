@@ -105,7 +105,6 @@ private:
   Param param_;
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
-  std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
 
   bool willLeaveLane(
     const lanelet::ConstLanelets & candidate_lanelets,
