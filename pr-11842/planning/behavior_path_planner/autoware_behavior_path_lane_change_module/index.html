@@ -24146,8 +24146,8 @@ More details on parked vehicle detection can be found in <a href="../autoware_be
 </ul>
 <p><img alt="delay lane change 5" src="images/delay_lane_change_5.drawio.svg"></p>
 <h4 id="collision-check">Collision Check<a class="headerlink" href="#collision-check" title="Permanent link">#</a></h4>
-<p>To ensure the safety of the lane change candidate path an RSS check is performed against the surrounding predicted objects.
-More details on the collision check implementation can be found in <a href="../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check/">safety check utils explanation</a></p>
+<p>The lane change module performs a safe braking distance check against all predicted surrounding objects to ensure the lane-changing path is safe.</p>
+<p>More details on the collision check implementation can be found in <a href="../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check/">safety check utils explanation</a></p>
 <h5 id="collision-check-in-prepare-phase">Collision Check In Prepare Phase<a class="headerlink" href="#collision-check-in-prepare-phase" title="Permanent link">#</a></h5>
 <p>The collision check can be applied to the lane changing section only or to the entire candidate path by enabling the flag <code>enable_collision_check_at_prepare_phase</code>. Enabling this flag ensures that the ego vehicle secures enough inter-vehicle distance ahead of target lane rear vehicle before attempting a lane change. The following image illustrates the differences between the <code>false</code> and <code>true</code> cases.</p>
 <p><img alt="enable collision check at prepare phase" src="images/lane_change-enable_collision_check_at_prepare_phase.png"></p>
@@ -24871,7 +24871,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>collision_check.yaw_diff_threshold</code></td>
 <td>[rad]</td>
 <td>double</td>
-<td>Maximum yaw difference between predicted ego pose and predicted object pose when executing rss-based collision checking</td>
+<td>Maximum yaw difference between predicted ego pose and predicted object pose when executing collision assessment</td>
 <td>3.1416</td>
 </tr>
 <tr>
@@ -24941,7 +24941,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>safety_check.prepare.longitudinal_velocity_delta_time</code></td>
 <td>[m]</td>
 <td>double</td>
-<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
+<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points</td>
 <td>0.0</td>
 </tr>
 <tr>
@@ -25011,7 +25011,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>safety_check.execution.longitudinal_velocity_delta_time</code></td>
 <td>[m]</td>
 <td>double</td>
-<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
+<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points</td>
 <td>0.8</td>
 </tr>
 <tr>
@@ -25081,7 +25081,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>safety_check.parked.longitudinal_velocity_delta_time</code></td>
 <td>[m]</td>
 <td>double</td>
-<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
+<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points</td>
 <td>0.8</td>
 </tr>
 <tr>
@@ -25151,7 +25151,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>safety_check.cancel.longitudinal_velocity_delta_time</code></td>
 <td>[m]</td>
 <td>double</td>
-<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
+<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points</td>
 <td>0.6</td>
 </tr>
 <tr>
@@ -25221,7 +25221,7 @@ When lane change is canceled, the approved path is reset. After the reset, the e
 <td align="left"><code>safety_check.stuck.longitudinal_velocity_delta_time</code></td>
 <td>[m]</td>
 <td>double</td>
-<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points (not RSS distance)</td>
+<td>The time multiplier that is used to compute the actual gap between vehicle at each predicted points</td>
 <td>0.8</td>
 </tr>
 <tr>

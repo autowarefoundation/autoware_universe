@@ -23940,6 +23940,27 @@ diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 <td>N/A</td>
 </tr>
 <tr>
+<td>turn_indicator_keep_offset</td>
+<td>float</td>
+<td>Offset to add to the KEEP turn indicator logit for bias adjustment</td>
+<td>-1.25</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>turn_indicator_hold_duration</td>
+<td>float</td>
+<td>Duration to hold the turn indicator command before allowing changes (seconds)</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>shift_x</td>
+<td>boolean</td>
+<td>Whether to shift the ego center position by half the wheel base</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>debug_params.publish_debug_map</td>
 <td>boolean</td>
 <td>Publish debug map markers</td>
@@ -24100,6 +24121,12 @@ The model version is defined either by the directory name provided to the node o
 <td><strong>2.0</strong></td>
 <td>2025/11/26</td>
 <td>- Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added <code>Polygon</code> and <code>LineString</code> as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased <code>NUM_SEGMENTS_IN_LANE</code> from 70 to 140.</td>
+<td>NG</td>
+</tr>
+<tr>
+<td><strong>3.0</strong></td>
+<td>2026/01/09</td>
+<td>- Added <code>TURN_INDICATOR_OUTPUT_KEEP</code> to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.</td>
 <td>OK</td>
 </tr>
 </tbody>

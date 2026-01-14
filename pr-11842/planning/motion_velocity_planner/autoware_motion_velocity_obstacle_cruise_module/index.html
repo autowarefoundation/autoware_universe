@@ -23677,11 +23677,11 @@
 <h3 id="cruise-planning">Cruise Planning<a class="headerlink" href="#cruise-planning" title="Permanent link">#</a></h3>
 <p>The role of the cruise planning is keeping a safe distance with dynamic vehicle objects with smoothed velocity transition.
 This includes not only cruising a front vehicle, but also reacting a cut-in and cut-out vehicle.</p>
-<p>The safe distance is calculated dynamically based on the Responsibility-Sensitive Safety (RSS) by the following equation.</p>
+<p>The module calculates the minimum safe braking distance dynamically by using the following equation:</p>
 <div class="arithmatex">\[
-d_{rss} = v_{ego} t_{idling} + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}} + l_{margin},
+d_{braking} = v_{ego} t_{idling} + \frac{v_{ego}^2}{2 a_{ego}} - \frac{v_{obstacle}^2}{2 a_{obstacle}} + l_{margin},
 \]</div>
-<p>assuming that <span class="arithmatex">\(d_{rss}\)</span> is the calculated safe distance, <span class="arithmatex">\(t_{idling}\)</span> is the idling time for the ego to detect the front vehicle's deceleration, <span class="arithmatex">\(v_{ego}\)</span> is the ego's current velocity, <span class="arithmatex">\(v_{obstacle}\)</span> is the front obstacle's current velocity, <span class="arithmatex">\(a_{ego}\)</span> is the ego's acceleration, <span class="arithmatex">\(a_{obstacle}\)</span> is the obstacle's acceleration, and <span class="arithmatex">\(l_{margin}\)</span> is the safety margin.
+<p>assuming that <span class="arithmatex">\(d_{braking}\)</span> is the calculated safe distance, <span class="arithmatex">\(t_{idling}\)</span> is the idling time for the ego to detect the front vehicle's deceleration, <span class="arithmatex">\(v_{ego}\)</span> is the ego's current velocity, <span class="arithmatex">\(v_{obstacle}\)</span> is the front obstacle's current velocity, <span class="arithmatex">\(a_{ego}\)</span> is the ego's acceleration, <span class="arithmatex">\(a_{obstacle}\)</span> is the obstacle's acceleration, and <span class="arithmatex">\(l_{margin}\)</span> is the safety margin.
 These values are parameterized as follows. Other common values such as ego's minimum acceleration is defined in <code>common.param.yaml</code>.</p>
 <table>
 <thead>
@@ -23700,24 +23700,24 @@ These values are parameterized as follows. Other common values such as ego's min
 <tr>
 <td><code>cruise_planning.min_ego_accel_for_rss</code></td>
 <td>double</td>
-<td>ego's acceleration for RSS [m/ss]</td>
+<td>ego's acceleration for minimum safe braking distance [m/ss]</td>
 </tr>
 <tr>
 <td><code>cruise_planning.min_object_accel_for_rss</code></td>
 <td>double</td>
-<td>front obstacle's acceleration for RSS [m/ss]</td>
+<td>front obstacle's acceleration for minimum safe braking distance [m/ss]</td>
 </tr>
 <tr>
 <td><code>cruise_planning.safe_distance_margin</code></td>
 <td>double</td>
-<td>safety margin for RSS [m]</td>
+<td>safety margin for minimum safe braking distance [m]</td>
 </tr>
 </tbody>
 </table>
 <p>The detailed formulation is as follows.</p>
 <div class="arithmatex">\[
 \begin{align}
-d_{error} &amp; = d - d_{rss} \\
+d_{error} &amp; = d - d_{braking} \\
 d_{normalized} &amp; = lpf(d_{error} / d_{obstacle}) \\
 d_{quad, normalized} &amp; = sign(d_{normalized}) *d_{normalized}*d_{normalized} \\
 v_{pid} &amp; = pid(d_{quad, normalized}) \\
@@ -23738,8 +23738,8 @@ v_{target} &amp; = max(v_{ego} + v_{add}, v_{min, cruise})
 <td>actual distance to obstacle</td>
 </tr>
 <tr>
-<td><code>d_{rss}</code></td>
-<td>ideal distance to obstacle based on RSS</td>
+<td><code>d_{braking}</code></td>
+<td>ideal distance to obstacle based on minimum safe braking distance</td>
 </tr>
 <tr>
 <td><code>v_{min, cruise}</code></td>

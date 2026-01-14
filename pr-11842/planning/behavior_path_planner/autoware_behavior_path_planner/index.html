@@ -24128,13 +24128,8 @@
 <li>Path Execution: While the ego vehicle is moving along an approved path. If the module determines the situation is unsafe, it will either cancel the current action or switch to a different module.</li>
 </ol>
 <h3 id="the-safety-check-process">The Safety Check Process<a class="headerlink" href="#the-safety-check-process" title="Permanent link">#</a></h3>
-<p>The module follows these steps to determine safety:</p>
-<ul>
-<li>Step 1: Predict Position. The module estimates the position (pose) of a target object at a specific time based on its predicted path.</li>
-<li>Step 2: Check for Overlap. The module checks if the ego vehicle and the target object occupy the same space at that time. If they overlap, the path is marked unsafe.</li>
-<li>Step 3: Identify Leading Vehicle. The module uses the distance along the path (arc length) to determine which vehicle is in front.</li>
-</ul>
-<p>Assumptions: This process assumes that the system has accurate data for the position, velocity, and shape of all objects. It also assumes that the heading (yaw angle) of an object always points toward its next predicted path point.</p>
+<p>Every module checks for potential collisions with all dynamic objects to ensure the generated path is safe.</p>
+<p>For more information on the implementation, see the <a href="../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check/">safety check utils explanation</a></p>
 <h3 id="minimum-safe-braking-distance-logic">Minimum Safe Braking Distance Logic<a class="headerlink" href="#minimum-safe-braking-distance-logic" title="Permanent link">#</a></h3>
 <p>A critical part of the safety check uses a safe braking distance algorithm. This algorithm calculates the required space based on:</p>
 <ul>
