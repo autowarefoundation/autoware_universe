@@ -925,7 +925,7 @@ void DiffusionPlanner::on_timer()
   diagnostics_inference_->clear();
 
   const rclcpp::Time current_time(get_clock()->now());
-  if (!is_map_loaded_) {
+  if (!lane_segment_context_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
@@ -1016,8 +1016,6 @@ void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 
   // Create LaneSegmentContext with the static data
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
-
-  is_map_loaded_ = true;
 }
 
 }  // namespace autoware::diffusion_planner
