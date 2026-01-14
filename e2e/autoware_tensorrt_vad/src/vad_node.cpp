@@ -302,7 +302,8 @@ bool VadNode::initialize_vad_model()
   try {
     // load configs
     VadConfig vad_config = load_vad_config();
-    auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] = load_trt_common_configs();
+    auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] =
+      load_trt_common_configs();
 
     // Initialize VAD interface and model
     auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
@@ -318,8 +319,7 @@ bool VadNode::initialize_vad_model()
       "VAD model and interface initialized successfully");
     return true;
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Error during VAD model initialization: %s", e.what());
+    RCLCPP_ERROR(this->get_logger(), "Error during VAD model initialization: %s", e.what());
     return false;
   }
 }
