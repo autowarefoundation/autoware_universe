@@ -156,6 +156,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator>
       concatenate_cloud_modifier{*concatenate_cloud_result.concatenate_cloud_ptr, output_frame_};
   }
+  bool is_concatenated_cloud_dense = true;
 
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
   // process
@@ -192,6 +193,7 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
       pcl::concatenatePointCloud(
         *concatenate_cloud_result.concatenate_cloud_ptr, *transformed_delay_compensated_cloud_ptr,
         *concatenate_cloud_result.concatenate_cloud_ptr);
+      is_concatenated_cloud_dense = is_concatenated_cloud_dense && cloud->is_dense;
     }
 
     // update concatenation info
@@ -230,6 +232,19 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     }
   }
   concatenate_cloud_result.concatenate_cloud_ptr->header.stamp = oldest_stamp;
+  concatenate_cloud_result.concatenate_cloud_ptr->is_dense = is_concatenated_cloud_dense;
+
+  // concatenated cloud is no longer structured so recalculate the height, width, and row_step
+  concatenate_cloud_result.concatenate_cloud_ptr->height = 1;
+  {
+    const auto & data_size = concatenate_cloud_result.concatenate_cloud_ptr->data.size();
+    const auto & point_step = concatenate_cloud_result.concatenate_cloud_ptr->point_step;
+    if (data_size % point_step != 0) {
+      throw std::runtime_error("PointCloud2 data size is not divisible by point_step");
+    }
+    concatenate_cloud_result.concatenate_cloud_ptr->row_step = data_size;
+    concatenate_cloud_result.concatenate_cloud_ptr->width = data_size / point_step;
+  }
 
   if (const auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(collector_info)) {
     const auto reference_timestamp_min = advanced_info->timestamp - advanced_info->noise_window;
