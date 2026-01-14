@@ -216,11 +216,11 @@ private:
     try {
       nets_[head_name]->bindings["img_metas.0[shift]"]->load(vad_input_data.shift, stream_);
       nets_[head_name]->bindings["img_metas.0[lidar2img]"]->load(
-          vad_input_data.vad_base2img, stream_);
+        vad_input_data.vad_base2img, stream_);
       nets_[head_name]->bindings["img_metas.0[can_bus]"]->load(vad_input_data.can_bus, stream_);
 
       if (head_name == "head") {
-          nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
+        nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
       }
     } catch (const std::exception & e) {
       logger_->error("Exception during input loading: " + std::string(e.what()));
@@ -249,10 +249,24 @@ private:
   std::shared_ptr<Tensor> save_prev_bev(const std::string & head_name)
   {
     auto bev_embed = nets_[head_name]->bindings["out.bev_embed"];
-    auto prev_bev = std::make_shared<Tensor>("prev_bev", bev_embed->dim, bev_embed->dtype, logger_);
-    cudaMemcpyAsync(
-      prev_bev->ptr, bev_embed->ptr, bev_embed->nbytes(), cudaMemcpyDeviceToDevice, stream_);
-    return prev_bev;
+
+    // Reuse existing prev_bev if dimensions match
+    if (
+      saved_prev_bev_ && saved_prev_bev_->dim.nbDims == bev_embed->dim.nbDims &&
+      saved_prev_bev_->volume == bev_embed->volume && saved_prev_bev_->dtype == bev_embed->dtype) {
+      // Reuse existing memory
+      cudaMemcpyAsync(
+        saved_prev_bev_->ptr, bev_embed->ptr, bev_embed->nbytes(), cudaMemcpyDeviceToDevice,
+        stream_);
+      return saved_prev_bev_;
+    } else {
+      // First frame or dimension changed - allocate new
+      auto prev_bev =
+        std::make_shared<Tensor>("prev_bev", bev_embed->dim, bev_embed->dtype, logger_);
+      cudaMemcpyAsync(
+        prev_bev->ptr, bev_embed->ptr, bev_embed->nbytes(), cudaMemcpyDeviceToDevice, stream_);
+      return prev_bev;
+    }
   }
 
   bool release_network(const std::string & network_name)
@@ -279,7 +293,8 @@ private:
     return false;
   }
 
-  bool load_head() {
+  bool load_head()
+  {
     auto head_engine = std::find_if(
       vad_config_.nets_config.begin(), vad_config_.nets_config.end(),
       [](const NetConfig & engine) { return engine.name == "head"; });
