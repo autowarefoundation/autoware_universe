@@ -176,13 +176,9 @@ The Collision Assessment function evaluates potential collisions with target obj
 
 ### The Safety Check Process
 
-The module follows these steps to determine safety:
+Every module checks for potential collisions with all dynamic objects to ensure the generated path is safe.
 
-- Step 1: Predict Position. The module estimates the position (pose) of a target object at a specific time based on its predicted path.
-- Step 2: Check for Overlap. The module checks if the ego vehicle and the target object occupy the same space at that time. If they overlap, the path is marked unsafe.
-- Step 3: Identify Leading Vehicle. The module uses the distance along the path (arc length) to determine which vehicle is in front.
-
-Assumptions: This process assumes that the system has accurate data for the position, velocity, and shape of all objects. It also assumes that the heading (yaw angle) of an object always points toward its next predicted path point.
+For more information on the implementation, see the [safety check utils explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
 
 ### Minimum Safe Braking Distance Logic
 
