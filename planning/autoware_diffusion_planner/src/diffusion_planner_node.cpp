@@ -1006,15 +1006,8 @@ void DiffusionPlanner::on_timer()
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 {
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr =
-    autoware::experimental::lanelet2_utils::remove_const(
-      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
-
-  auto routing_graph_and_traffic_rules =
-    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
-      lanelet_map_ptr);
-
-  // Create LaneSegmentContext with the static data
+  std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr =
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
 }
 

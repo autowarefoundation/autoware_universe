@@ -54,21 +54,13 @@ protected:
     map_bin_msg_ = autoware::test_utils::make_map_bin_msg(test_map_path, 1.0);
 
     // Convert HADMapBin to lanelet map
-    lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
-      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(map_bin_msg_));
-
-    auto routing_graph_and_traffic_rules =
-      autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
-        lanelet_map_ptr_);
+    lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(map_bin_msg_);
   }
 
-  void TearDown() override
-  {
-    lanelet_map_ptr_.reset();
-  }
+  void TearDown() override { lanelet_map_ptr_.reset(); }
 
   LaneletMapBin map_bin_msg_;
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
+  std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
 TEST_F(LaneletIntegrationTest, ConvertToLaneSegmentsBasic)
