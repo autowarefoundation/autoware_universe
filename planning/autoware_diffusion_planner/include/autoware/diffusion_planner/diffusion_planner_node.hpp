@@ -174,8 +174,7 @@ struct DiffusionPlannerDebugParams
  * @brief
  * - agent_data_: Optional input data for inference.
  * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
- * - Lanelet map and routing members: route_ptr_, routing_graph_ptr_,
- * traffic_rules_ptr_, lane_segment_context_, is_map_loaded_.
+ * - Lanelet map and routing members: route_ptr_, lane_segment_context_.
  * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
  * - vehicle_info_: Vehicle-specific parameters.
@@ -312,10 +311,7 @@ private:
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;
-  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
-  std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
   std::unique_ptr<preprocess::LaneSegmentContext> lane_segment_context_;
-  bool is_map_loaded_{false};
 
   // Node elements
   rclcpp::TimerBase::SharedPtr timer_;
