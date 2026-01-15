@@ -221,7 +221,7 @@ TensorrtInference::InferenceResult TensorrtInference::infer(
   const size_t lane_speed_tensor_num_elements = batch_size * num_elements(LANES_SPEED_LIMIT_SHAPE);
   std::vector<uint8_t> speed_bool_array(lane_speed_tensor_num_elements);
   for (size_t i = 0; i < lane_speed_tensor_num_elements; ++i) {
-    speed_bool_array[i] = (lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
+    speed_bool_array[i] = lanes_speed_limit[i] > std::numeric_limits<float>::epsilon();
   }
 
   CHECK_CUDA_ERROR(cudaMemcpy(
@@ -261,7 +261,7 @@ TensorrtInference::InferenceResult TensorrtInference::infer(
   std::vector<uint8_t> route_has_speed_bool_array(route_lanes_has_speed_limit_tensor_num_elements);
   for (size_t i = 0; i < route_lanes_has_speed_limit_tensor_num_elements; ++i) {
     route_has_speed_bool_array[i] =
-      (route_lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
+      route_lanes_speed_limit[i] > std::numeric_limits<float>::epsilon();
   }
 
   CHECK_CUDA_ERROR(cudaMemcpy(
