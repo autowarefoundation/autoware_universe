@@ -127,8 +127,11 @@ struct AvoidanceParameters
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
 
-  // enable yield maneuver.
+  // enable yield maneuver during shifting.
   bool enable_yield_maneuver_during_shifting{false};
+
+  // enable signalling during yield maneuver.
+  bool enable_signalling_during_yield{false};
 
   // use hatched road markings for avoidance
   bool use_hatched_road_markings{false};
