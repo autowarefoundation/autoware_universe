@@ -18,6 +18,7 @@
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/conversion/ego.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/marker_utils.hpp"
@@ -51,11 +52,6 @@
 
 namespace autoware::diffusion_planner
 {
-using autoware::tensorrt_common::NetworkIO;
-using autoware::tensorrt_common::ProfileDims;
-using autoware::tensorrt_common::Profiler;
-using autoware::tensorrt_common::TrtCommon;
-
 DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 : Node("diffusion_planner", options), generator_uuid_(autoware_utils_uuid::generate_uuid())
 {
@@ -79,9 +75,15 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
-  init_pointers();
-  load_engine(params_.model_path);
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
+  diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
+  diagnostics_inference_->update_level_and_message(
+    diagnostic_msgs::msg::DiagnosticStatus::WARN, "Loading model weights");
+  diagnostics_inference_->publish(get_clock()->now());
+  tensorrt_inference_ = std::make_unique<TensorrtInference>(
+    params_.model_path, params_.plugins_path, params_.batch_size);
+  diagnostics_inference_->update_level_and_message(
+    diagnostic_msgs::msg::DiagnosticStatus::OK, "Model weights loaded");
+  diagnostics_inference_->publish(get_clock()->now());
 
   if (params_.build_only) {
     RCLCPP_INFO(get_logger(), "Build only mode enabled. Exiting after loading model.");
@@ -101,16 +103,10 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&DiffusionPlanner::on_parameter, this, std::placeholders::_1));
-
-  diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
 }
 
 DiffusionPlanner::~DiffusionPlanner()
 {
-  // Clean up CUDA resources
-  if (stream_) {
-    cudaStreamDestroy(stream_);
-  }
 }
 
 void DiffusionPlanner::set_up_params()
@@ -152,6 +148,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
   using autoware_utils::update_param;
   {
     DiffusionPlannerParams temp_params = params_;
+    const auto previous_model_path = params_.model_path;
+    const auto previous_batch_size = params_.batch_size;
+    update_param<std::string>(parameters, "onnx_model_path", temp_params.model_path);
     update_param<bool>(
       parameters, "ignore_unknown_neighbors", temp_params.ignore_unknown_neighbors);
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
@@ -170,10 +169,23 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "turn_indicator_hold_duration", temp_params.turn_indicator_hold_duration);
     update_param<bool>(parameters, "shift_x", temp_params.shift_x);
+    const bool model_path_changed = temp_params.model_path != previous_model_path;
+    const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     params_ = temp_params;
     turn_indicator_manager_.set_hold_duration(
       rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
     turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
+
+    if ((model_path_changed || batch_size_changed) && tensorrt_inference_) {
+      diagnostics_inference_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, "Loading model weights");
+      diagnostics_inference_->publish(get_clock()->now());
+      tensorrt_inference_ = std::make_unique<TensorrtInference>(
+        params_.model_path, params_.plugins_path, params_.batch_size);
+      diagnostics_inference_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::OK, "Model weights loaded");
+      diagnostics_inference_->publish(get_clock()->now());
+    }
   }
 
   {
@@ -190,207 +202,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
   result.reason = "success";
   return result;
 }
-
-void DiffusionPlanner::init_pointers()
-{
-  const int batch_size = params_.batch_size;
-
-  // Calculate tensor sizes with batch support
-  const size_t sampled_trajectories_size =
-    batch_size * std::accumulate(
-                   SAMPLED_TRAJECTORIES_SHAPE.begin() + 1, SAMPLED_TRAJECTORIES_SHAPE.end(), 1L,
-                   std::multiplies<>());
-  const size_t ego_history_size =
-    batch_size * std::accumulate(
-                   EGO_HISTORY_SHAPE.begin() + 1, EGO_HISTORY_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t ego_current_state_size =
-    batch_size *
-    std::accumulate(
-      EGO_CURRENT_STATE_SHAPE.begin() + 1, EGO_CURRENT_STATE_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t neighbor_agents_past_size =
-    batch_size *
-    std::accumulate(NEIGHBOR_SHAPE.begin() + 1, NEIGHBOR_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t static_objects_size =
-    batch_size *
-    std::accumulate(
-      STATIC_OBJECTS_SHAPE.begin() + 1, STATIC_OBJECTS_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t lanes_size =
-    batch_size *
-    std::accumulate(LANES_SHAPE.begin() + 1, LANES_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t lanes_has_speed_limit_size =
-    batch_size * std::accumulate(
-                   LANES_HAS_SPEED_LIMIT_SHAPE.begin() + 1, LANES_HAS_SPEED_LIMIT_SHAPE.end(), 1L,
-                   std::multiplies<>());
-  const size_t lanes_speed_limit_size =
-    batch_size *
-    std::accumulate(
-      LANES_SPEED_LIMIT_SHAPE.begin() + 1, LANES_SPEED_LIMIT_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t route_lanes_size =
-    batch_size * std::accumulate(
-                   ROUTE_LANES_SHAPE.begin() + 1, ROUTE_LANES_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t route_lanes_has_speed_limit_size =
-    batch_size * std::accumulate(
-                   ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE.begin() + 1,
-                   ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t route_lanes_speed_limit_size =
-    batch_size * std::accumulate(
-                   ROUTE_LANES_SPEED_LIMIT_SHAPE.begin() + 1, ROUTE_LANES_SPEED_LIMIT_SHAPE.end(),
-                   1L, std::multiplies<>());
-  const size_t polygons_size =
-    batch_size *
-    std::accumulate(POLYGONS_SHAPE.begin() + 1, POLYGONS_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t line_strings_size =
-    batch_size *
-    std::accumulate(
-      LINE_STRINGS_SHAPE.begin() + 1, LINE_STRINGS_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t goal_pose_size =
-    batch_size *
-    std::accumulate(GOAL_POSE_SHAPE.begin() + 1, GOAL_POSE_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t ego_shape_size =
-    batch_size *
-    std::accumulate(EGO_SHAPE_SHAPE.begin() + 1, EGO_SHAPE_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t turn_indicators_size =
-    batch_size *
-    std::accumulate(
-      TURN_INDICATORS_SHAPE.begin() + 1, TURN_INDICATORS_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t output_size =
-    batch_size *
-    std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1L, std::multiplies<>());
-  const size_t turn_indicator_logit_size =
-    batch_size * std::accumulate(
-                   TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1L,
-                   std::multiplies<>());
-
-  sampled_trajectories_d_ = autoware::cuda_utils::make_unique<float[]>(sampled_trajectories_size);
-  ego_history_d_ = autoware::cuda_utils::make_unique<float[]>(ego_history_size);
-  ego_current_state_d_ = autoware::cuda_utils::make_unique<float[]>(ego_current_state_size);
-  neighbor_agents_past_d_ = autoware::cuda_utils::make_unique<float[]>(neighbor_agents_past_size);
-  static_objects_d_ = autoware::cuda_utils::make_unique<float[]>(static_objects_size);
-  lanes_d_ = autoware::cuda_utils::make_unique<float[]>(lanes_size);
-  lanes_has_speed_limit_d_ = autoware::cuda_utils::make_unique<bool[]>(lanes_has_speed_limit_size);
-  lanes_speed_limit_d_ = autoware::cuda_utils::make_unique<float[]>(lanes_speed_limit_size);
-  route_lanes_d_ = autoware::cuda_utils::make_unique<float[]>(route_lanes_size);
-  route_lanes_has_speed_limit_d_ =
-    autoware::cuda_utils::make_unique<bool[]>(route_lanes_has_speed_limit_size);
-  route_lanes_speed_limit_d_ =
-    autoware::cuda_utils::make_unique<float[]>(route_lanes_speed_limit_size);
-  polygons_d_ = autoware::cuda_utils::make_unique<float[]>(polygons_size);
-  line_strings_d_ = autoware::cuda_utils::make_unique<float[]>(line_strings_size);
-  goal_pose_d_ = autoware::cuda_utils::make_unique<float[]>(goal_pose_size);
-  ego_shape_d_ = autoware::cuda_utils::make_unique<float[]>(ego_shape_size);
-  turn_indicators_d_ = autoware::cuda_utils::make_unique<float[]>(turn_indicators_size);
-
-  // Output
-  output_d_ = autoware::cuda_utils::make_unique<float[]>(output_size);
-  turn_indicator_logit_d_ = autoware::cuda_utils::make_unique<float[]>(turn_indicator_logit_size);
-}
-
-void DiffusionPlanner::load_engine(const std::string & model_path)
-{
-  const int batch_size = params_.batch_size;
-
-  // Convert std::array to nvinfer1::Dims with dynamic batch dimension
-  auto to_dynamic_dims = [batch_size](auto const & arr) {
-    nvinfer1::Dims dims;
-    dims.nbDims = static_cast<int>(arr.size());
-    // TensorRT requires the batch dimension to be explicitly set to 1 when batch_size == 1
-    dims.d[0] = (batch_size == 1 ? 1 : -1);
-    for (size_t i = 1; i < arr.size(); ++i) {
-      dims.d[i] = static_cast<int>(arr[i]);
-    }
-    return dims;
-  };
-
-  auto make_dynamic_dims = [batch_size](const std::string & name, const nvinfer1::Dims & dims) {
-    nvinfer1::Dims min_dims = dims, opt_dims = dims, max_dims = dims;
-    min_dims.d[0] = 1;
-    opt_dims.d[0] = batch_size;
-    max_dims.d[0] = batch_size;
-    return ProfileDims{name, min_dims, opt_dims, max_dims};
-  };
-
-  std::string precision = "fp32";  // Default precision
-
-  // Create engine path with batch size suffix to avoid conflicts
-  std::filesystem::path engine_path(model_path);
-  std::string engine_file_path =
-    (engine_path.parent_path() /
-     (engine_path.stem().string() + "_batch" + std::to_string(batch_size) + ".engine"))
-      .string();
-
-  auto trt_config = tensorrt_common::TrtCommonConfig(model_path, precision, engine_file_path);
-  trt_common_ = std::make_unique<TrtConvCalib>(trt_config);
-
-  std::vector<ProfileDims> profile_dims;
-
-  {
-    profile_dims.emplace_back(
-      make_dynamic_dims("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("static_objects", to_dynamic_dims(STATIC_OBJECTS_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims("lanes", to_dynamic_dims(LANES_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("lanes_speed_limit", to_dynamic_dims(LANES_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("lanes_has_speed_limit", to_dynamic_dims(LANES_HAS_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims("route_lanes", to_dynamic_dims(ROUTE_LANES_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims("polygons", to_dynamic_dims(POLYGONS_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("line_strings", to_dynamic_dims(LINE_STRINGS_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims(
-      "route_lanes_has_speed_limit", to_dynamic_dims(ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("route_lanes_speed_limit", to_dynamic_dims(ROUTE_LANES_SPEED_LIMIT_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims("goal_pose", to_dynamic_dims(GOAL_POSE_SHAPE)));
-    profile_dims.emplace_back(make_dynamic_dims("ego_shape", to_dynamic_dims(EGO_SHAPE_SHAPE)));
-    profile_dims.emplace_back(
-      make_dynamic_dims("turn_indicators", to_dynamic_dims(TURN_INDICATORS_SHAPE)));
-  }
-
-  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
-  {  // Inputs with dynamic batch dimension
-    network_io.emplace_back("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE));
-    network_io.emplace_back("ego_agent_past", to_dynamic_dims(EGO_HISTORY_SHAPE));
-    network_io.emplace_back("ego_current_state", to_dynamic_dims(EGO_CURRENT_STATE_SHAPE));
-    network_io.emplace_back("neighbor_agents_past", to_dynamic_dims(NEIGHBOR_SHAPE));
-    network_io.emplace_back("static_objects", to_dynamic_dims(STATIC_OBJECTS_SHAPE));
-    network_io.emplace_back("lanes", to_dynamic_dims(LANES_SHAPE));
-    network_io.emplace_back("lanes_has_speed_limit", to_dynamic_dims(LANES_HAS_SPEED_LIMIT_SHAPE));
-    network_io.emplace_back("lanes_speed_limit", to_dynamic_dims(LANES_SPEED_LIMIT_SHAPE));
-    network_io.emplace_back("route_lanes", to_dynamic_dims(ROUTE_LANES_SHAPE));
-    network_io.emplace_back("polygons", to_dynamic_dims(POLYGONS_SHAPE));
-    network_io.emplace_back("line_strings", to_dynamic_dims(LINE_STRINGS_SHAPE));
-    network_io.emplace_back(
-      "route_lanes_has_speed_limit", to_dynamic_dims(ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE));
-    network_io.emplace_back(
-      "route_lanes_speed_limit", to_dynamic_dims(ROUTE_LANES_SPEED_LIMIT_SHAPE));
-    network_io.emplace_back("goal_pose", to_dynamic_dims(GOAL_POSE_SHAPE));
-    network_io.emplace_back("ego_shape", to_dynamic_dims(EGO_SHAPE_SHAPE));
-    network_io.emplace_back("turn_indicators", to_dynamic_dims(TURN_INDICATORS_SHAPE));
-
-    // Output with dynamic batch dimension
-    network_io.emplace_back("prediction", to_dynamic_dims(OUTPUT_SHAPE));
-    network_io.emplace_back("turn_indicator_logit", to_dynamic_dims(TURN_INDICATOR_LOGIT_SHAPE));
-  }
-  auto network_io_ptr = std::make_unique<std::vector<NetworkIO>>(network_io);
-  auto profile_dims_ptr = std::make_unique<std::vector<ProfileDims>>(profile_dims);
-
-  network_trt_ptr_ = std::make_unique<TrtCommon>(
-    trt_config, std::make_shared<Profiler>(), std::vector<std::string>{params_.plugins_path});
-
-  if (!network_trt_ptr_->setup(std::move(profile_dims_ptr), std::move(network_io_ptr))) {
-    throw std::runtime_error("Failed to setup TRT engine." + params_.plugins_path);
-  }
-
-  // For dynamic batch size, we don't set input shapes here - they will be set at inference time
-}
-
 std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -707,216 +518,6 @@ void DiffusionPlanner::publish_predictions(
   }
 }
 
-std::vector<float> DiffusionPlanner::do_inference_trt(const InputDataMap & input_data_map)
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  const auto sampled_trajectories = input_data_map.at("sampled_trajectories");
-  const auto ego_history = input_data_map.at("ego_agent_past");
-  const auto ego_current_state = input_data_map.at("ego_current_state");
-  const auto neighbor_agents_past = input_data_map.at("neighbor_agents_past");
-  const auto static_objects = input_data_map.at("static_objects");
-  const auto lanes = input_data_map.at("lanes");
-  const auto lanes_speed_limit = input_data_map.at("lanes_speed_limit");
-  const auto route_lanes = input_data_map.at("route_lanes");
-  const auto route_lanes_speed_limit = input_data_map.at("route_lanes_speed_limit");
-  const auto polygons = input_data_map.at("polygons");
-  const auto line_strings = input_data_map.at("line_strings");
-  const auto goal_pose = input_data_map.at("goal_pose");
-  const auto ego_shape = input_data_map.at("ego_shape");
-  const auto turn_indicators = input_data_map.at("turn_indicators");
-
-  // Allocate bool array for lane speed limits
-  // Note: Using std::vector<uint8_t> instead of std::vector<bool> to ensure contiguous memory
-  // layout
-  const int batch_size = params_.batch_size;
-  size_t lane_speed_tensor_num_elements =
-    batch_size *
-    std::accumulate(
-      LANES_SPEED_LIMIT_SHAPE.begin() + 1, LANES_SPEED_LIMIT_SHAPE.end(), 1, std::multiplies<>());
-  std::vector<uint8_t> speed_bool_array(lane_speed_tensor_num_elements);
-
-  for (size_t i = 0; i < lane_speed_tensor_num_elements; ++i) {
-    speed_bool_array[i] = (lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
-  }
-
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    sampled_trajectories_d_.get(), sampled_trajectories.data(),
-    sampled_trajectories.size() * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    ego_history_d_.get(), ego_history.data(), ego_history.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    ego_current_state_d_.get(), ego_current_state.data(), ego_current_state.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    neighbor_agents_past_d_.get(), neighbor_agents_past.data(),
-    neighbor_agents_past.size() * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    static_objects_d_.get(), static_objects.data(), static_objects.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(
-    cudaMemcpy(lanes_d_.get(), lanes.data(), lanes.size() * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    lanes_speed_limit_d_.get(), lanes_speed_limit.data(), lanes_speed_limit.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    route_lanes_d_.get(), route_lanes.data(), route_lanes.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    polygons_d_.get(), polygons.data(), polygons.size() * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    line_strings_d_.get(), line_strings.data(), line_strings.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  // Copy uint8_t array to bool array on device
-  // Note: sizeof(bool) might be implementation-specific, but CUDA typically uses 1 byte for bool
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    lanes_has_speed_limit_d_.get(), speed_bool_array.data(),
-    lane_speed_tensor_num_elements * sizeof(uint8_t), cudaMemcpyHostToDevice));
-
-  // Allocate bool array for route lanes speed limits
-  size_t route_lanes_has_speed_limit_tensor_num_elements =
-    batch_size * std::accumulate(
-                   ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE.begin() + 1,
-                   ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE.end(), 1, std::multiplies<>());
-  std::vector<uint8_t> route_has_speed_bool_array(route_lanes_has_speed_limit_tensor_num_elements);
-  for (size_t i = 0; i < route_lanes_has_speed_limit_tensor_num_elements; ++i) {
-    route_has_speed_bool_array[i] =
-      (route_lanes_speed_limit[i] > std::numeric_limits<float>::epsilon()) ? 1 : 0;
-  }
-
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    route_lanes_speed_limit_d_.get(), route_lanes_speed_limit.data(),
-    route_lanes_speed_limit.size() * sizeof(float), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    route_lanes_has_speed_limit_d_.get(), route_has_speed_bool_array.data(),
-    route_lanes_has_speed_limit_tensor_num_elements * sizeof(uint8_t), cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    goal_pose_d_.get(), goal_pose.data(), goal_pose.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    ego_shape_d_.get(), ego_shape.data(), ego_shape.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    turn_indicators_d_.get(), turn_indicators.data(), turn_indicators.size() * sizeof(float),
-    cudaMemcpyHostToDevice));
-
-  // Set input shapes for current batch size
-  auto to_dims_with_batch = [batch_size](auto const & arr) {
-    nvinfer1::Dims dims;
-    dims.nbDims = static_cast<int>(arr.size());
-    dims.d[0] = batch_size;
-    for (size_t i = 1; i < arr.size(); ++i) {
-      dims.d[i] = static_cast<int>(arr[i]);
-    }
-    return dims;
-  };
-
-  bool set_input_shapes = true;
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "sampled_trajectories", to_dims_with_batch(SAMPLED_TRAJECTORIES_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("ego_agent_past", to_dims_with_batch(EGO_HISTORY_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "ego_current_state", to_dims_with_batch(EGO_CURRENT_STATE_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("neighbor_agents_past", to_dims_with_batch(NEIGHBOR_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("static_objects", to_dims_with_batch(STATIC_OBJECTS_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape("lanes", to_dims_with_batch(LANES_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "lanes_has_speed_limit", to_dims_with_batch(LANES_HAS_SPEED_LIMIT_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "lanes_speed_limit", to_dims_with_batch(LANES_SPEED_LIMIT_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("route_lanes", to_dims_with_batch(ROUTE_LANES_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("polygons", to_dims_with_batch(POLYGONS_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("line_strings", to_dims_with_batch(LINE_STRINGS_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "route_lanes_speed_limit", to_dims_with_batch(ROUTE_LANES_SPEED_LIMIT_SHAPE));
-  set_input_shapes &= network_trt_ptr_->setInputShape(
-    "route_lanes_has_speed_limit", to_dims_with_batch(ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("goal_pose", to_dims_with_batch(GOAL_POSE_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("ego_shape", to_dims_with_batch(EGO_SHAPE_SHAPE));
-  set_input_shapes &=
-    network_trt_ptr_->setInputShape("turn_indicators", to_dims_with_batch(TURN_INDICATORS_SHAPE));
-
-  if (!set_input_shapes) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("diffusion_planner"), "Failed to set input shapes for inference.");
-    return {};
-  }
-
-  network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
-  network_trt_ptr_->setTensorAddress("ego_agent_past", ego_history_d_.get());
-  network_trt_ptr_->setTensorAddress("ego_current_state", ego_current_state_d_.get());
-  network_trt_ptr_->setTensorAddress("neighbor_agents_past", neighbor_agents_past_d_.get());
-  network_trt_ptr_->setTensorAddress("static_objects", static_objects_d_.get());
-  network_trt_ptr_->setTensorAddress("lanes", lanes_d_.get());
-  network_trt_ptr_->setTensorAddress("lanes_has_speed_limit", lanes_has_speed_limit_d_.get());
-  network_trt_ptr_->setTensorAddress("lanes_speed_limit", lanes_speed_limit_d_.get());
-  network_trt_ptr_->setTensorAddress("route_lanes", route_lanes_d_.get());
-  network_trt_ptr_->setTensorAddress("route_lanes_speed_limit", route_lanes_speed_limit_d_.get());
-  network_trt_ptr_->setTensorAddress(
-    "route_lanes_has_speed_limit", route_lanes_has_speed_limit_d_.get());
-  network_trt_ptr_->setTensorAddress("polygons", polygons_d_.get());
-  network_trt_ptr_->setTensorAddress("line_strings", line_strings_d_.get());
-  network_trt_ptr_->setTensorAddress("goal_pose", goal_pose_d_.get());
-  network_trt_ptr_->setTensorAddress("ego_shape", ego_shape_d_.get());
-  network_trt_ptr_->setTensorAddress("turn_indicators", turn_indicators_d_.get());
-
-  // Output
-  network_trt_ptr_->setTensorAddress("prediction", output_d_.get());
-  network_trt_ptr_->setTensorAddress("turn_indicator_logit", turn_indicator_logit_d_.get());
-
-  auto status = network_trt_ptr_->enqueueV3(stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-  if (!status) {
-    RCLCPP_ERROR(rclcpp::get_logger("diffusion_planner"), "Failed to enqueue and do inference.");
-  }
-
-  // Compute total number of elements in the output
-  size_t output_num_elements =
-    batch_size *
-    std::accumulate(OUTPUT_SHAPE.begin() + 1, OUTPUT_SHAPE.end(), 1UL, std::multiplies<>());
-
-  // Allocate host vector
-  std::vector<float> output_host(output_num_elements);
-
-  // Copy data from device to host
-  cudaMemcpy(
-    output_host.data(),  // destination (host)
-    output_d_.get(),     // source (device)
-    output_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
-  return output_host;
-}
-
-std::vector<float> DiffusionPlanner::get_turn_indicator_logit() const
-{
-  const int batch_size = params_.batch_size;
-
-  // Compute total number of elements in the turn indicator logit
-  const size_t turn_indicator_num_elements =
-    batch_size * std::accumulate(
-                   TURN_INDICATOR_LOGIT_SHAPE.begin() + 1, TURN_INDICATOR_LOGIT_SHAPE.end(), 1UL,
-                   std::multiplies<>());
-
-  // Allocate host vector
-  std::vector<float> logit_host(turn_indicator_num_elements);
-
-  // Copy data from device to host
-  cudaMemcpy(
-    logit_host.data(),              // destination (host)
-    turn_indicator_logit_d_.get(),  // source (device)
-    turn_indicator_num_elements * sizeof(float), cudaMemcpyDeviceToHost);
-
-  return logit_host;
-}
-
 void DiffusionPlanner::on_timer()
 {
   // Timer callback function
@@ -988,11 +589,23 @@ void DiffusionPlanner::on_timer()
     diagnostics_inference_->publish(current_time);
     return;
   }
-  const auto predictions = do_inference_trt(input_data_map);
+
+  // Run inference
+  const auto inference_result = tensorrt_inference_->infer(input_data_map);
+  if (!inference_result.outputs) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
+      "Inference failed: " << inference_result.error_msg);
+    diagnostics_inference_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, inference_result.error_msg);
+    diagnostics_inference_->publish(frame_time);
+    return;
+  }
+  const auto & [predictions, turn_indicator_logit] = inference_result.outputs.value();
+
   publish_predictions(predictions, *frame_context, frame_time);
 
   // Publish turn indicators
-  const auto turn_indicator_logit = get_turn_indicator_logit();
   const int64_t prev_report = turn_indicators_history_.empty()
                                 ? TurnIndicatorsReport::DISABLE
                                 : turn_indicators_history_.back().report;
