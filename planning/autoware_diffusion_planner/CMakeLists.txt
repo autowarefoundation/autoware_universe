@@ -81,6 +81,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/utils/utils.cpp
     src/utils/marker_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp
+    src/inference/tensorrt_inference.cpp
   )
 
   target_include_directories(autoware_diffusion_planner_component PUBLIC
