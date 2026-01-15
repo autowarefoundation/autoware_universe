@@ -96,7 +96,30 @@ struct DrivableAreaExpansionParameters
     double stopped_obj_vel_th{};
   } object_exclusion;
 
-  std::vector<std::string> avoid_linestring_types{};
+  /// @brief Represent the type and optional subtype of a linestring
+  struct LinestringType
+  {
+    std::string type;
+    std::optional<std::string> subtype;
+
+    /// @brief creates a LinestringType from a string in format "type.subtype"
+    explicit LinestringType(const std::string_view s)
+    {
+      type = s.substr(0, s.find('.'));
+      const auto has_subtype = s.size() > type.size() + 1;
+      if (has_subtype) {
+        subtype = s.substr(type.size() + 1UL);
+      }
+    }
+
+    /// @brief return true if the given type and subtype matches this linestring type
+    [[nodiscard]] bool matches(const std::string & type_str, const std::string & subtype_str) const
+    {
+      return type == type_str && (!subtype.has_value() || *subtype == subtype_str);
+    }
+  };
+
+  std::vector<LinestringType> avoid_linestring_types;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
 
   DrivableAreaExpansionParameters() = default;
@@ -128,8 +151,11 @@ struct DrivableAreaExpansionParameters
     object_exclusion.rear_offset = node.declare_parameter<double>(OBJECTS_SAFE_MARGIN_REAR);
     object_exclusion.left_offset = node.declare_parameter<double>(OBJECTS_SAFE_MARGIN_LEFT);
     object_exclusion.right_offset = node.declare_parameter<double>(OBJECTS_SAFE_MARGIN_RIGHT);
-    avoid_linestring_types =
+    const auto raw_linestring_types =
       node.declare_parameter<std::vector<std::string>>(AVOID_LINESTRING_TYPES_PARAM);
+    for (const auto & raw_ls_type : raw_linestring_types) {
+      avoid_linestring_types.emplace_back(raw_ls_type);
+    }
     avoid_linestring_dist = node.declare_parameter<double>(AVOID_LINESTRING_DIST_PARAM);
     min_bound_interval = node.declare_parameter<double>(MIN_BOUND_INTERVAL);
     print_runtime = node.declare_parameter<bool>(PRINT_RUNTIME_PARAM);
