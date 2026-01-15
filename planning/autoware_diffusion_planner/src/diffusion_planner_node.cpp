@@ -925,7 +925,7 @@ void DiffusionPlanner::on_timer()
   diagnostics_inference_->clear();
 
   const rclcpp::Time current_time(get_clock()->now());
-  if (!is_map_loaded_) {
+  if (!lane_segment_context_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
@@ -1006,22 +1006,9 @@ void DiffusionPlanner::on_timer()
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 {
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr =
-    autoware::experimental::lanelet2_utils::remove_const(
-      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
-
-  auto routing_graph_and_traffic_rules =
-    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
-      lanelet_map_ptr);
-
-  routing_graph_ptr_ =
-    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
-  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
-
-  // Create LaneSegmentContext with the static data
+  std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr =
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
-
-  is_map_loaded_ = true;
 }
 
 }  // namespace autoware::diffusion_planner
