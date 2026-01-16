@@ -14,7 +14,16 @@
 
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__VOXEL_GRID_OUTLIER_FILTER_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__OUTLIER_FILTER__VOXEL_GRID_OUTLIER_FILTER_NODE_HPP_
-
+// cSpell:ignore loadu, Warray
+/*
+  // When getCentroidIndexAt processes the Vector3i returned by getGridCoordinates,
+  // Eigen’s vectorization may attempt to load the 12-byte Vector3i into a 16-byte __m128i register
+  // (e.g., via _mm_loadu_si128), triggering the compiler’s -Warray-bounds warning.
+  // The -Werror=array-bounds flag escalates this warning to an error.
+  // disable SIMD by defining EIGEN_DONT_VECTORIZE
+  // error occurs in voxel_grid_outlier_filter_node.cpp line 61-62
+*/
+#define EIGEN_DONT_VECTORIZE
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <pcl/filters/voxel_grid.h>

@@ -131,8 +131,8 @@ void TrajectorySafetyFilter::map_callback(const LaneletMapBin::ConstSharedPtr ms
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
 void TrajectorySafetyFilter::load_metric(const std::string & name)

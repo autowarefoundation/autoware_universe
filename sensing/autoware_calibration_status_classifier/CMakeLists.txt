@@ -147,6 +147,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_ros REQUIRED)
+    ament_auto_find_test_dependencies()
+
     find_package(OpenCV REQUIRED)
     find_package(ZLIB REQUIRED)
 
@@ -160,6 +164,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_preprocessing
       OpenCV
@@ -180,6 +185,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_model_inference
       OpenCV
@@ -200,6 +206,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_calibration_status_classifier
       OpenCV

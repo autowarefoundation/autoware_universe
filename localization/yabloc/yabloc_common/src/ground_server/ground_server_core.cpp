@@ -17,7 +17,7 @@
 #include "yabloc_common/ground_server/util.hpp"
 
 #include <Eigen/Eigenvalues>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <yabloc_common/color.hpp>
 #include <yabloc_common/pub_sub.hpp>
 
@@ -109,8 +109,8 @@ void GroundServer::on_pose_stamped(const PoseStamped & msg)
 
 void GroundServer::on_map(const LaneletMapBin & msg)
 {
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(msg, lanelet_map);
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(msg));
 
   // These should be loaded from rosparam
   const std::set<std::string> ground_labels = {

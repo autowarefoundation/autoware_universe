@@ -61,6 +61,12 @@ LivoxTagFilterNode::LivoxTagFilterNode(const rclcpp::NodeOptions & node_options)
 
 void LivoxTagFilterNode::onPointCloud(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
 {
+  // check for empty point cloud
+  if (msg->data.empty() || msg->width == 0 || msg->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    return;
+  }
+
   pcl::PointCloud<LivoxPoint> points;
   pcl::fromROSMsg(*msg, points);
 
