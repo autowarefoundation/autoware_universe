@@ -453,6 +453,8 @@ double calcStopDistance(const Trajectory & current_trajectory, const int origin)
 void extendTrajectoryInYawDirection(
   const double yaw, const double interval, const bool is_forward_shift, MPCTrajectory & traj)
 {
+  if (traj.empty()) return;
+
   // set terminal yaw
   traj.yaw.back() = yaw;
 
@@ -461,9 +463,11 @@ void extendTrajectoryInYawDirection(
   auto extended_pose = autoware_traj.points.back().pose;
 
   constexpr double extend_dist = 10.0;
-  constexpr double extend_vel = 10.0;
+  const double extend_vel = traj.vx.back();
   const double x_offset = is_forward_shift ? interval : -interval;
-  const double dt = interval / extend_vel;
+  constexpr double min_vel_threshold = 0.1;
+  const double dt =
+    (std::fabs(extend_vel) < min_vel_threshold) ? 1.0e-4 : interval / std::fabs(extend_vel);
   const size_t num_extended_point = static_cast<size_t>(extend_dist / interval);
   for (size_t i = 0; i < num_extended_point; ++i) {
     extended_pose = autoware_utils::calc_offset_pose(extended_pose, x_offset, 0.0, 0.0);

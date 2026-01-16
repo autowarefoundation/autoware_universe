@@ -86,8 +86,8 @@ PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions
     input.latency_multiplier = latency_multiplier;
 
     // generic callback
-    const auto callback = [this, index](
-                            const std::shared_ptr<rclcpp::SerializedMessage> & serialized_msg) {
+    const auto callback = [this,
+                           index](std::shared_ptr<const rclcpp::SerializedMessage> serialized_msg) {
       auto & input = this->input_sequence_[index];
       if (input.topic_type == "autoware_internal_debug_msgs/msg/Float64Stamped") {
         static const rclcpp::Serialization<autoware_internal_debug_msgs::msg::Float64Stamped>

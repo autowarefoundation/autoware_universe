@@ -14,6 +14,8 @@
 
 #include "autoware/external_cmd_selector/external_cmd_selector_node.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -111,7 +113,7 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
   srv_select_external_command_ = create_service<CommandSourceSelect>(
     "~/service/select_external_command",
     std::bind(&ExternalCmdSelector::on_select_external_command, this, _1, _2),
-    rmw_qos_profile_services_default, callback_group_services_);
+    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), callback_group_services_);
 
   // Initialize mode
   auto convert_selector_mode = [](const std::string & mode_text) {

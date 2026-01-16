@@ -1222,4 +1222,37 @@ bool is_lanelet_in_lanelet_collections(
     lanelet_collections.begin(), lanelet_collections.end(),
     [&](const auto & lane) { return lane.id() == lanelet.id(); });
 }
+
+void trim_preferred_after_alternative(
+  lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes)
+{
+  // Build lookup set
+  std::unordered_set<lanelet::Id> preferred_ids;
+  for (const auto & l : preferred_lanes) {
+    preferred_ids.insert(l.id());
+  }
+
+  auto is_preferred = [&](const lanelet::ConstLanelet & ll) {
+    return preferred_ids.count(ll.id()) == 1;
+  };
+
+  auto is_alternative = [&](const lanelet::ConstLanelet & ll) {
+    return preferred_ids.count(ll.id()) == 0;
+  };
+
+  auto first_alt_it = ranges::find_if(base_lanes, is_alternative);
+  if (first_alt_it == base_lanes.end()) {
+    return;
+  }
+
+  auto first_pref_after_alt_it =
+    ranges::find_if(ranges::make_subrange(std::next(first_alt_it), base_lanes.end()), is_preferred);
+
+  if (first_pref_after_alt_it == base_lanes.end()) {
+    return;
+  }
+
+  base_lanes.erase(first_pref_after_alt_it, base_lanes.end());
+}
+
 }  // namespace autoware::behavior_path_planner::utils::lane_change
