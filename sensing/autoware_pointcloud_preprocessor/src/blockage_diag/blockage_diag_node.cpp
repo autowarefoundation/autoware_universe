@@ -108,7 +108,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   // Subscriber setup
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS(),
-    std::bind(&BlockageDiagComponent::detect_blockage, this, std::placeholders::_1));
+    std::bind(&BlockageDiagComponent::update_diagnostics, this, std::placeholders::_1));
 
   // Diagnostic updater setup
   updater_.setHardwareID("blockage_diag");
@@ -556,7 +556,7 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   return time_series_blockage_result;
 }
 
-void BlockageDiagComponent::detect_blockage(
+void BlockageDiagComponent::update_diagnostics(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
 {
   try {
@@ -568,10 +568,12 @@ void BlockageDiagComponent::detect_blockage(
 
   cv::Mat depth_image_16u = make_normalized_depth_image(*input);
 
+  // Blockage detection
   cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
   const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
   publish_blockage_debug_info(debug_info);
 
+  // Dust detection
   if (enable_dust_diag_) {
     cv::Mat single_frame_dust_mask = compute_dust_diagnostics(depth_image_16u);
     publish_dust_debug_info(debug_info, single_frame_dust_mask);

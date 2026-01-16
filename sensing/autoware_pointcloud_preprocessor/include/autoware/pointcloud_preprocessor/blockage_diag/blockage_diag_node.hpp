@@ -65,7 +65,7 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
+  void update_diagnostics(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
