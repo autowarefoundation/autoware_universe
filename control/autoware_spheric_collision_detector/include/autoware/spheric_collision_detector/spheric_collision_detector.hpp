@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
-#define SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
+#ifndef AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
+#define AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
 
 #include "autoware/spheric_collision_detector/sphere3.hpp"
+
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -32,11 +32,11 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <chrono>
+#include <fstream>
 #include <map>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <chrono>
 
 namespace spheric_collision_detector
 {
@@ -62,13 +62,13 @@ struct Input
 };
 
 struct Output
-{ 
+{
   std::map<std::string, double> processing_time_map;
   bool will_collide;
   autoware_planning_msgs::msg::Trajectory resampled_trajectory;
   std::vector<LinearRing2d> vehicle_footprints;
   std::vector<std::shared_ptr<sphere3::Sphere3>> vehicle_passing_areas;
-  long int collision_elapsed_time;
+  int64_t collision_elapsed_time;
   std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
   std::vector<LinearRing2d> obstacle_areas;
 };
@@ -97,18 +97,17 @@ private:
     const autoware_planning_msgs::msg::Trajectory & trajectory, const double length);
 
   static std::vector<LinearRing2d> createVehicleFootprints(
-    const autoware_planning_msgs::msg::Trajectory & trajectory, 
+    const autoware_planning_msgs::msg::Trajectory & trajectory,
     const LinearRing2d & local_vehicle_footprint);
 
   static std::vector<std::shared_ptr<sphere3::Sphere3>> createVehiclePassingAreas(
-    const std::vector<LinearRing2d> & vehicle_footprints, 
-    const double vehicle_height,
+    const std::vector<LinearRing2d> & vehicle_footprints, const double vehicle_height,
     const double sphere_radius);
 
-    static bool checkCollision(
-      const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres, 
-      const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
+  static bool checkCollision(
+    const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
+    const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres);
 };
 }  // namespace spheric_collision_detector
 
-#endif  // SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
+#endif  // AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
