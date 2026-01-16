@@ -158,23 +158,48 @@ The following information are used to calculate metrics:
 
 Evaluate the safety of `T(0)` with respect to obstacles.
 
-Metrics are calculated and publish only when the node receives a trajectory.
+Metrics are calculated and published only when the node receives a trajectory and perception results.
 
 The following information are used to calculate metrics:
 
 - the trajectory `T(0)`.
 - the set of objects in the environment.
 
+By default, metrics are published for each object individually using the object's UUID as the identifier,
+along with the worst value across all objects. You can set `obstacle.worst_only` to `true` to publish only the worst value.
+
 #### Implemented metrics
 
-- **`obstacle_distance`**: Statistics of the distance between each object and the closest trajectory point.
-  - Sub-metrics to publish: `/mean`, `/min`, `/max`.
-  - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
+- **`obstacle_distance`**: Distance from the object's center point to the ego's future trajectory (closest point).
+  - Parameters: None.
+  - Sub-metrics to publish (per object): `/{object_uuid}` or `/worst` (worst value across all objects).
+  - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
-- **`obstacle_ttc`**: Statistics of the time-to-collision (TTC) of objects and ego. Predicted path of objects and ego trajectory are considered.
-  - Parameters: `obstacle.dist_thr_m` (distance margin to consider a collision occurs between object footprints and ego trajectory footprints).
-  - Sub-metrics to publish: `/mean`, `/min`, `/max`.
-  - Sub-metrics to output: The same as above but take the published data as data point instead of each trajectory point.
+- **`obstacle_ttc`**: Time To Collision (TTC) with the target object. Considers predicted paths of objects and ego trajectory.
+  - TTC is calculated for objects that will actually collide with ego (overlap at the same time).
+  - Parameters:
+    - `obstacle.collision_thr_m`: distance margin to consider a collision occurs between object footprints and ego trajectory footprints.
+    - `obstacle.use_ego_traj_vel`: if true, use planned trajectory velocity; otherwise use current ego velocity.
+    - `obstacle.stop_velocity_mps`: velocity threshold to consider the object or ego as static.
+    - `obstacle.min_time_interval_s`: minimum time interval for ego trajectory resampling.
+    - `obstacle.min_spatial_interval_m`: minimum spatial interval for ego trajectory resampling.
+  - Sub-metrics to publish (per object): `/{object_uuid}` or `/worst` (worst value across all objects).
+  - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
+
+- **`obstacle_pet`**: Post Encroachment Time (PET) with the target object.
+  - PET is the time difference between the target object leaving the overlap region and ego entering it.
+  - Only calculated for objects whose future trajectory overlaps with ego's but do not collide at the same time.
+  - An object cannot have both TTC and PET simultaneously (if TTC exists, PET is zero).
+  - Parameters: Same as `obstacle_ttc`.
+  - Sub-metrics to publish (per object): `/{object_uuid}` or `/worst` (worst value across all objects).
+  - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
+
+- **`obstacle_drac`**: Deceleration Rate to Avoid Collision (DRAC) with the target object.
+  - The minimum deceleration required to avoid collision with the target object.
+  - Published alongside TTC for potential collision targets.
+  - Parameters: Same as `obstacle_ttc`.
+  - Sub-metrics to publish (per object): `/{object_uuid}` or `/worst` (worst value across all objects).
+  - Sub-metrics to output: `/mean`, `/min`, `/max` for the published data.
 
 ### Modified Goal Metrics
 
