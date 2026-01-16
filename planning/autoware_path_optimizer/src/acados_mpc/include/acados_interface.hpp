@@ -14,9 +14,13 @@ extern "C" {
 #include "c_generated_code/acados_solver_curvilinear_bicycle_model_spatial.h"
 }
 
-#define NX CURVILINEAR_BICYCLE_MODEL_SPATIAL_NX
-#define NP CURVILINEAR_BICYCLE_MODEL_SPATIAL_NP
-#define NU CURVILINEAR_BICYCLE_MODEL_SPATIAL_NU
+constexpr size_t NX = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NX;
+constexpr size_t NP = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NP;
+constexpr size_t NU = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NU;
+// Number of nonlinear path constraints h(x,u,p) per stage (fixed at codegen time).
+constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
+ // Number of soft constraints on h (slacks) per stage.
+ constexpr size_t NSH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NSH;
 constexpr size_t N = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
 
 struct AcadosSolution
@@ -48,6 +52,21 @@ public:
   void setWarmStart(std::array<double, NX> x0, std::array<double, NU> u0);
   // Set the initial state constraint (lbx/ubx) at stage 0
   void setInitialState(std::array<double, NX> x0);
+  // Set MPT-style inequality bounds for h constraints at a single stage: lh <= h(x,p) <= uh.
+  // No-op if NH == 0 in the generated solver.
+  void setInequalityBounds(int stage, std::array<double, NH> lh, std::array<double, NH> uh);
+  // Apply per-stage beta (yaw difference) and bounds to the solver:
+  // - Writes cos(beta)/sin(beta) into the correct trailing entries of p (if NH>0)
+  // - Calls setInequalityBounds(stage, lh, uh)
+  // No-op if NH == 0 in the generated solver.
+  void applyCircleConstraintsToParams(
+    int stage, std::array<double, NP> & params, const std::array<double, NH> & beta,
+    const std::array<double, NH> & lh, const std::array<double, NH> & uh);
+
+  // Set linear slack penalties for soft h-constraints at a stage:
+  // cost += zl^T s_l + zu^T s_u
+  // No-op if NSH == 0 in the generated solver.
+  void setSoftConstraintLinearWeight(int stage, double w);
   // Set solver options at runtime: max_iter and tolerance (KKT tol)
   void setSolverOptions(int max_iter, double tol);
 

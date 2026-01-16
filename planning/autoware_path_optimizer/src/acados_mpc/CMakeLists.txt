@@ -87,6 +87,10 @@ set(GENERATED_MPT_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_model/curvilinear_bicycle_model_spatial_expl_vde_adj.c
     ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_model/curvilinear_bicycle_model_spatial_expl_vde_forw.c
     ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_model/curvilinear_bicycle_model_spatial_model.h
+    # Nonlinear path constraints (h): present when NH>0
+    ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_constraints/curvilinear_bicycle_model_spatial_constr_h_fun.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_constraints/curvilinear_bicycle_model_spatial_constr_h_fun_jac_uxt_zt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code/curvilinear_bicycle_model_spatial_constraints/curvilinear_bicycle_model_spatial_constraints.h
 )
 set_source_files_properties(${GENERATED_MPT_FILES} PROPERTIES GENERATED TRUE)
 

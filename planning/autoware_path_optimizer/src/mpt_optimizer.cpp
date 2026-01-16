@@ -193,6 +193,16 @@ MPTOptimizer::MPTParam::MPTParam(
   }
 
   use_acados = node->declare_parameter<bool>("mpt.use_acados");
+  // Enable/disable the new MPT-style circle road-bound constraints in acados.
+  // Default false so we can A/B test behavior safely.
+  use_acados_circle_constraints =
+    node->declare_parameter<bool>("mpt.use_acados_circle_constraints", false);
+  acados_circle_constraints_homotopy =
+    node->declare_parameter<double>("mpt.acados_circle_constraints_homotopy", 1.0);
+  acados_circle_constraints_stage_ramp =
+    node->declare_parameter<bool>("mpt.acados_circle_constraints_stage_ramp", true);
+  acados_circle_constraints_soft_weight =
+    node->declare_parameter<double>("mpt.acados_circle_constraints_soft_weight", 1.0);
 
   // kinematics
   max_steer_rad = vehicle_info.max_steer_angle_rad;
@@ -308,6 +318,14 @@ void MPTOptimizer::MPTParam::onParam(const std::vector<rclcpp::Parameter> & para
   update_param<double>(parameters, "mpt.common.delta_arc_length", delta_arc_length);
 
   update_param<bool>(parameters, "mpt.use_acados", use_acados);
+  update_param<bool>(
+    parameters, "mpt.use_acados_circle_constraints", use_acados_circle_constraints);
+  update_param<double>(
+    parameters, "mpt.acados_circle_constraints_homotopy", acados_circle_constraints_homotopy);
+  update_param<bool>(
+    parameters, "mpt.acados_circle_constraints_stage_ramp", acados_circle_constraints_stage_ramp);
+  update_param<double>(
+    parameters, "mpt.acados_circle_constraints_soft_weight", acados_circle_constraints_soft_weight);
 
   // kinematics
   update_param<double>(
@@ -511,7 +529,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   AcadosSolution acados_result;
 
   if (mpt_param_.use_acados) {
-    acados_result = runAcadosMPT(ref_points_spline, p.ego_pose, vehicle_info_);
+    acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose);
 
     // Convert Acados solution to trajectory points
     acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
@@ -717,7 +735,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   [[maybe_unused]] const double e_y_ego, [[maybe_unused]] const double e_psi_ego,
   const std::vector<double> & knots_in, const std::vector<double> & x_coeffs_flat_in,
   const std::vector<double> & y_coeffs_flat_in, const std::vector<double> & curvatures_in,
-  const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
   std::array<double, NX> & x0) const
 {
   // Make copies so we can modify them
@@ -726,19 +743,14 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   std::vector<double> y_coeffs_flat = y_coeffs_flat_in;
   std::vector<double> curvatures = curvatures_in;
 
-  RCLCPP_ERROR(
-    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu body_points_curvilinear=%zu",
-    knots.size(), x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size(),
-    body_points_curvilinear.size());
-
-  // body points curvilinear -> vector of doubles (s values then eY values)
-  std::vector<double> body_points_curvilinear_vec;
-  for (const auto & pt : body_points_curvilinear) body_points_curvilinear_vec.push_back(pt.x);
-  for (const auto & pt : body_points_curvilinear) body_points_curvilinear_vec.push_back(pt.y);
+  RCLCPP_DEBUG(
+    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu", knots.size(),
+    x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size());
 
 
   // Build parameters vector similar to Python
   std::array<double, NP> parameters;
+  parameters.fill(0.0);
   double s_interp = 0.0;
   size_t idx = 0;
 
@@ -797,28 +809,120 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   parameters[idx++] = alpha * L;
   parameters[idx++] = (1 - alpha) * L;
 
-  // set x0: initial state vector
-  idx = 0;
-  x0[idx++] = e_y_ego;
-  x0[idx++] = e_psi_ego;
-  // idx = 2;
-  for (const auto & body_point_curvilinear : body_points_curvilinear_vec) {
-    x0[idx++] = body_point_curvilinear;
+#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
+  // Ensure the circle-constraint tail of p is filled deterministically.
+  // Layout: [... base ... | cos_beta[0..NH-1] | sin_beta[0..NH-1] | lon_offset[0..NH-1]]
+  constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
+  const size_t cos_beta_offset = NP - 3 * NH;
+  const size_t sin_beta_offset = NP - 2 * NH;
+  const size_t lon_offset_offset = NP - 1 * NH;
+  for (size_t i = 0; i < NH; ++i) {
+    parameters[cos_beta_offset + i] = 1.0;
+    parameters[sin_beta_offset + i] = 0.0;
+    parameters[lon_offset_offset + i] =
+      (i < vehicle_circle_longitudinal_offsets_.size()) ? vehicle_circle_longitudinal_offsets_.at(i) : 0.0;
   }
+#endif
+
+  // set x0: initial state vector (NX == 2)
+  x0[0] = e_y_ego;
+  x0[1] = e_psi_ego;
 
   return parameters;
 }
 
-void MPTOptimizer::setParametersToSolver(const std::array<double, NP> & parameters)
+void MPTOptimizer::setParametersToSolver(
+  const std::array<double, NP> & parameters, const std::vector<ReferencePoint> & ref_points,
+  const double s0)
 {
+#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH == 0
+  (void)ref_points;
+#endif
+  (void)s0;
   for (size_t stage = 0; stage < (int)N; ++stage) {
     std::array<double, NP> params_copy = parameters;
     double s_interp = 0.0;
     const double sref = mpt_param_.num_points * mpt_param_.delta_arc_length;
     if (sref > 0.0) {
-      s_interp = sref * ((double)stage / (double)N);
+      // Evaluate splines starting from ego arc-length on this spline.
+      // If anchored at 0.0, curvature further ahead is ignored and steering collapses to ~0.
+      s_interp = s0 + sref * (static_cast<double>(stage) / static_cast<double>(N));
     }
     params_copy[0] = s_interp;
+
+#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
+    // Slowly introduce ref_points[*].beta and bounds_on_constraints to the acados interface:
+    // - Build per-stage arrays and hand them to AcadosInterface, which writes cos/sin(beta) into p and sets lh/uh.
+    constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
+    std::array<double, NH> beta_arr{};
+    std::array<double, NH> lh{};
+    std::array<double, NH> uh{};
+    beta_arr.fill(0.0);
+    lh.fill(-1.0e9);
+    uh.fill(1.0e9);
+
+    double gamma_val = 0.0;
+    double homotopy_val = 0.0;
+    double ramp_val = 0.0;
+
+    // If disabled, leave beta=0 and lh/uh wide so constraints are effectively off.
+    if (mpt_param_.use_acados_circle_constraints) {
+      auto clamp01 = [](double x) { return std::max(0.0, std::min(1.0, x)); };
+      homotopy_val = clamp01(mpt_param_.acados_circle_constraints_homotopy);
+      ramp_val = mpt_param_.acados_circle_constraints_stage_ramp ?
+        ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0) :
+        1.0;
+      gamma_val = homotopy_val * clamp01(ramp_val);
+
+      const size_t ref_idx = std::min(stage, ref_points.size() > 0 ? ref_points.size() - 1 : 0UL);
+      for (size_t l_idx = 0; l_idx < NH; ++l_idx) {
+        // beta
+        if (ref_points.at(ref_idx).beta.size() > l_idx) {
+          beta_arr[l_idx] = ref_points.at(ref_idx).beta.at(l_idx);
+        }
+
+        // bounds (directly from bounds_on_constraints, with the same offset logic as extractBounds())
+        if (
+          ref_points.at(ref_idx).bounds_on_constraints.size() > l_idx &&
+          vehicle_circle_radiuses_.size() > l_idx
+        ) {
+          const double bounds_offset =
+            vehicle_info_.vehicle_width_m / 2.0 - vehicle_circle_radiuses_.at(l_idx);
+          const double lh_tight =
+            ref_points.at(ref_idx).bounds_on_constraints.at(l_idx).lower_bound - bounds_offset;
+          const double uh_tight =
+            ref_points.at(ref_idx).bounds_on_constraints.at(l_idx).upper_bound + bounds_offset;
+
+          // With soft constraints enabled in acados (slacks), keep tight bounds and
+          // scale the slack penalty via gamma. This avoids "capping" eY while remaining feasible.
+          lh[l_idx] = lh_tight;
+          uh[l_idx] = uh_tight;
+
+          // Debug: show what bounds we are actually feeding to acados.
+          // This helps diagnose unexpected "caps" (e.g. uh_tight ~= 0.2m).
+          if ((stage == 0 || stage == N / 4 || stage == N / 2) && l_idx == 0) {
+            RCLCPP_INFO(
+              logger_,
+              "acados circle-constraints: stage=%zu ref_idx=%zu gamma=%.3f (homotopy=%.3f ramp=%.3f) "
+              "tight=[%.3f, %.3f] interp=[%.3f, %.3f] beta=%.3f",
+              stage, ref_idx, gamma_val, homotopy_val, ramp_val, lh_tight, uh_tight, lh[l_idx], uh[l_idx],
+              beta_arr[l_idx]);
+          }
+        }
+      }
+    }
+
+    acados_interface_.applyCircleConstraintsToParams(
+      static_cast<int>(stage), params_copy, beta_arr, lh, uh);
+
+#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NSH > 0
+    // Soft constraints: ramp the slack penalty from 0..w across horizon using gamma.
+    // gamma=0 => no penalty (effectively permissive), gamma=1 => full penalty.
+    acados_interface_.setSoftConstraintLinearWeight(
+      static_cast<int>(stage), gamma_val * mpt_param_.acados_circle_constraints_soft_weight);
+#endif
+#endif
+
     acados_interface_.setParameters(stage, params_copy);
   }
 }
@@ -848,8 +952,6 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
   // The Acados state vector contains:
   // x[0] = eY (lateral error)
   // x[1] = eψ (yaw/heading error)
-  // x[2:2+num_body_points] = s_body_points (not used for main trajectory)
-  // x[2+num_body_points:] = eY_body_points (not used for main trajectory)
 
   // The control vector contains:
   // u[0] = delta (steering angle)
@@ -901,50 +1003,15 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
 }
 
 AcadosSolution MPTOptimizer::runAcadosMPT(
+  const std::vector<ReferencePoint> & ref_points,
   autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
-  const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+  const geometry_msgs::msg::Pose & ego_pose)
 {
   // Get spline coefficients for x and y
   const auto & knots = ref_points_spline.getSplineKnots();
   const auto & x_coeffs = ref_points_spline.getSplineCoefficientsX();
   const auto & y_coeffs = ref_points_spline.getSplineCoefficientsY();
   const auto & curvatures = ref_points_spline.getSplineInterpolatedCurvatures();
-
-  const double half_width =
-    (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) /
-    2.0;
-
-  // max_longitudinal_offset_m already includes front_overhang_m + wheel_base_m
-  // min_longitudinal_offset_m is already -rear_overhang_m
-  // So front = max_longitudinal_offset_m (distance from center to front)
-  // And rear = -min_longitudinal_offset_m (distance from center to rear, positive value)
-  const double front = vehicle_info.max_longitudinal_offset_m;
-  const double rear = vehicle_info.min_longitudinal_offset_m;
-
-  const size_t num_body_points = 6;
-
-  // Use actual ego pose (not projected) to transform body points to global frame
-  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_global_frame = {
-    getCorner(ego_pose, front, half_width),   // front-left
-    getCorner(ego_pose, front, -half_width),  // front-right
-    getCorner(ego_pose, front + 0.50 * (rear - front), -half_width),
-    getCorner(ego_pose, -rear, -half_width),  // rear-right
-    getCorner(ego_pose, -rear, half_width),   // rear-left
-    getCorner(ego_pose, rear + 0.50 * (front - rear), half_width),
-  };
-
-  std::array<geometry_msgs::msg::Point, num_body_points> corner_points_curvilinear;
-  std::transform(
-    boundary_points_global_frame.begin(), boundary_points_global_frame.end(),
-    corner_points_curvilinear.begin(), [&ref_points_spline](const geometry_msgs::msg::Point & p) {
-      const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
-      geometry_msgs::msg::Point projected;
-      projected.x = s;
-      projected.y = e_y;  // Don't clip - let optimizer see true errors
-      projected.z = 0.0;
-      return projected;
-    });
 
   const auto [s_ego, e_y_ego] =
     ref_points_spline.projectPointOntoSpline(ego_pose.position.x, ego_pose.position.y);
@@ -958,11 +1025,6 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   std::vector<double> x_coeffs_vec(x_coeffs.begin(), x_coeffs.end());
   std::vector<double> y_coeffs_vec(y_coeffs.begin(), y_coeffs.end());
   std::vector<double> curvatures_vec(curvatures.begin(), curvatures.end());
-
-  std::vector<geometry_msgs::msg::Point> body_points_vec(
-    boundary_points_global_frame.begin(), boundary_points_global_frame.end());
-  std::vector<geometry_msgs::msg::Point> body_points_curvilinear_vec(
-    corner_points_curvilinear.begin(), corner_points_curvilinear.end());
 
   size_t n_segments = (int)knots.size() - 1;
 
@@ -1000,10 +1062,9 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   // x0[1] = e_psi_ego;
 
   std::array<double, NP> parameters = buildParameters(
-    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec,
-    body_points_curvilinear_vec, x0);
+    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, x0);
 
-  setParametersToSolver(parameters);
+  setParametersToSolver(parameters, ref_points, s_ego);
 
   AcadosSolution acados_solution = acados_interface_.getControl(x0);
 

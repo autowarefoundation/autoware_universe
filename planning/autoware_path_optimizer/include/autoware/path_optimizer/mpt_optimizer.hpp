@@ -261,6 +261,17 @@ private:
     int num_points;
 
     bool use_acados;
+    // Toggle MPT-style acados road-bound circle constraints (lh/uh on h(x,p)).
+    // When false, we still widen lh/uh to effectively disable generated constraints.
+    bool use_acados_circle_constraints;
+    // Homotopy strength for acados circle constraints in [0,1].
+    // 0 -> fully permissive (constraints widened), 1 -> fully enforced.
+    double acados_circle_constraints_homotopy;
+    // If true, apply a per-stage ramp gamma(stage) from 0..1 across the horizon.
+    // Effective gamma = acados_circle_constraints_homotopy * ramp(stage).
+    bool acados_circle_constraints_stage_ramp;
+    // Linear slack penalty for soft circle constraints in acados (higher -> closer to hard).
+    double acados_circle_constraints_soft_weight;
 
     // kinematics
     double optimization_center_offset;
@@ -423,12 +434,12 @@ private:
   std::array<double, NP> buildParameters(
     const double e_y_ego, const double e_psi_ego, const std::vector<double> & knots,
     const std::vector<double> & x_coeffs_flat, const std::vector<double> & y_coeffs_flat,
-    const std::vector<double> & curvatures,
-    const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
-    std::array<double, NX> & x0) const;
+    const std::vector<double> & curvatures, std::array<double, NX> & x0) const;
 
   // Set parameters on the AcadosInterface for all stages
-  void setParametersToSolver(const std::array<double, NP> & parameters);
+  void setParametersToSolver(
+    const std::array<double, NP> & parameters, const std::vector<ReferencePoint> & ref_points,
+    const double s0);
 
   // Convert Acados solution to trajectory points
   std::optional<std::vector<TrajectoryPoint>> convertAcadosSolutionToTrajectory(
@@ -436,9 +447,9 @@ private:
 
   // Add new method to publish spline coefficients and curvatures
   AcadosSolution runAcadosMPT(
+    const std::vector<ReferencePoint> & ref_points,
     autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
-    const geometry_msgs::msg::Pose & ego_pose,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+    const geometry_msgs::msg::Pose & ego_pose);
 
   void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
   void publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const;

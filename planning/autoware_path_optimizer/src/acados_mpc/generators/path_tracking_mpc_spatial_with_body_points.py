@@ -40,11 +40,11 @@ from utils.clothoid_spline import ClothoidSpline
 
 
 class PathTrackingMPCSpatialWithBodyPoints:
-    def __init__(self, Tf, N, n_points, num_body_points, build=True, generate=True):
+    def __init__(self, Tf, N, n_points, n_circles=0, build=True, generate=True):
         self.Tf = Tf
         self.N = N
         self.n_points = n_points
-        self.num_body_points = num_body_points
+        self.n_circles = n_circles
 
         self.constraint, self.model, self.acados_solver = self.acados_settings(build, generate)
 
@@ -53,9 +53,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp = AcadosOcp()
 
         # export model
-        model, constraint = bicycle_model_spatial_with_body_points(
-            self.n_points, self.num_body_points
-        )
+        model, constraint = bicycle_model_spatial_with_body_points(self.n_points, self.n_circles)
 
         # define acados ODE
         model_ac = AcadosModel()
@@ -65,11 +63,13 @@ class PathTrackingMPCSpatialWithBodyPoints:
         model_ac.xdot = model.xdot
         model_ac.u = model.u
         model_ac.p = model.p
+        if hasattr(model, "con_h_expr"):
+            model_ac.con_h_expr = model.con_h_expr
         model_ac.name = model.name
         ocp.model = model_ac
 
         # Set solver options to skip heavy CasADi simplifications that might hang
-        ocp.code_export_directory = "c_generated_code"
+        ocp.code_gen_opts.code_export_directory = "c_generated_code"
 
         # dimensions
         nx = model.x.rows()
@@ -81,7 +81,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp.solver_options.N_horizon = self.N
 
         # set cost
-        Q = np.diag([1e-2, 1e-1] + [0.0] * self.num_body_points + [0.0] * self.num_body_points)
+        Q = np.diag([1e-2, 1e-1])
 
         R = np.eye(nu)
         R[0, 0] = 2e-1
@@ -108,32 +108,11 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp.cost.Vx_e = Vx_e
 
         # set initial references
-        ocp.cost.yref = np.array(
-            [
-                0,
-                0,
-            ]
-            + [0.0] * self.num_body_points
-            + [0.0] * self.num_body_points
-            + [0.0]
-        )
-        ocp.cost.yref_e = np.array(
-            [0, 0] + [0.0] * self.num_body_points + [0.0] * self.num_body_points
-        )
+        ocp.cost.yref = np.array([0.0, 0.0, 0.0])
+        ocp.cost.yref_e = np.array([0.0, 0.0])
 
         # setting constraints
-        idxbx_eY = [0]  # main eY
-        idxbx_eY += list(range(2 + self.num_body_points, 2 + 2 * self.num_body_points))
-        idxbx_ePsi = [1]
-
-        ocp.constraints.idxbx = np.array(np.concatenate((idxbx_eY, idxbx_ePsi)))
-
-        ocp.constraints.lbx = np.array(
-            np.concatenate(([model.eY_min] * len(idxbx_eY), [model.ePsi_min] * len(idxbx_ePsi)))
-        )
-        ocp.constraints.ubx = np.array(
-            np.concatenate(([model.eY_max] * len(idxbx_eY), [model.ePsi_max] * len(idxbx_ePsi)))
-        )
+        # No global box constraints on states; only fix x0 at stage 0.
 
         ocp.constraints.lbu = np.array(
             [
@@ -149,6 +128,23 @@ class PathTrackingMPCSpatialWithBodyPoints:
 
         # set initial condition
         ocp.constraints.x0 = np.zeros(nx)
+
+
+        # MPT-style rotated footprint hard constraints (one per circle): lh <= h(x,p) <= uh
+        if self.n_circles > 0:
+            ocp.constraints.lh = np.zeros(self.n_circles)
+            ocp.constraints.uh = np.zeros(self.n_circles)
+            # Soft constraints via slack variables on h:
+            # lh - s_l <= h(x,p) <= uh + s_u, with s_l >= 0, s_u >= 0
+            # and cost: zl^T s_l + zu^T s_u (quadratic terms set to 0 here).
+            ocp.constraints.idxsh = np.arange(self.n_circles)
+            ocp.constraints.lsh = np.zeros(self.n_circles)
+            ocp.constraints.ush = np.zeros(self.n_circles)
+            ocp.cost.zl = np.ones(self.n_circles)
+            ocp.cost.zu = np.ones(self.n_circles)
+            # NOTE: acados_template expects Zl/Zu as 1D arrays (diagonal entries).
+            ocp.cost.Zl = np.zeros(self.n_circles)
+            ocp.cost.Zu = np.zeros(self.n_circles)
         ocp.parameter_values = np.zeros(model.p.shape[0])
 
         # set QP solver and integration
@@ -287,11 +283,11 @@ def main():
 
     N = 100
     Sf = 100
-    num_body_points = 6
+    n_circles = 6
 
     # Set build=False and generate=True to only generate the C code
     # without trying to compile the solver inside the Python process.
-    _ = PathTrackingMPCSpatialWithBodyPoints(Sf, N, N, num_body_points, build=False, generate=True)
+    _ = PathTrackingMPCSpatialWithBodyPoints(Sf, N, N, n_circles=n_circles, build=False, generate=True)
 
 
 if __name__ == "__main__":

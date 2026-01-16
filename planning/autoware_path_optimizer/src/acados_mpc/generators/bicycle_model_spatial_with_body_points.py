@@ -1,8 +1,11 @@
-from casadi import *
+import types
+
+from casadi import SX, atan, atan2, cos, jacobian, tan, vertcat
+
 from utils.symbolic_cubic_spline import SymbolicCubicSpline
 
 
-def bicycle_model_spatial_with_body_points(n_points, num_body_points):
+def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
     # define structs
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()
@@ -14,14 +17,9 @@ def bicycle_model_spatial_with_body_points(n_points, num_body_points):
     eY = SX.sym("eY")
     eψ = SX.sym("eψ")
 
-    s_body_points = SX.sym("s_body_points", num_body_points)
-    eY_body_points = SX.sym("eY_body_points", num_body_points)
-
     x = vertcat(
         eY,
         eψ,
-        s_body_points,
-        eY_body_points,
     )
 
     # x_body_points = SX.sym("x_body_points", num_body_points)
@@ -51,17 +49,19 @@ def bicycle_model_spatial_with_body_points(n_points, num_body_points):
         y_ref_s_symbolic_curvature_cubic_spline.get_parameters(),
         kappa_ref_s_symbolic_curvature_cubic_spline.get_parameters(),
     )
-    # p = vertcat(p, x_body_points, y_body_points)
     p = vertcat(p, lf, lr)
 
-    # import pdb; pdb.set_trace()
-    print("n_points: ", n_points)
-    print("len s_sym: ", s_sym)
-    print("len x_ref_s: ", x_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
-    print("len y_ref_s: ", y_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
-    print("len kappa_ref_s: ", kappa_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
-    # print("len x_body_points: ", x_body_points.shape)
-    # print("len y_body_points: ", y_body_points.shape)
+    # Parameters for MPT-style rotated footprint constraints (one per circle)
+    # We pass cos(beta) and sin(beta) (beta is yaw difference at lon offset) and lon_offset.
+    if n_circles > 0:
+        cos_beta = SX.sym("cos_beta", n_circles)
+        sin_beta = SX.sym("sin_beta", n_circles)
+        lon_offset = SX.sym("lon_offset", n_circles)
+        p = vertcat(p, cos_beta, sin_beta, lon_offset)
+    else:
+        cos_beta = None
+        sin_beta = None
+        lon_offset = None
 
     # controls
     delta = SX.sym("delta")
@@ -71,14 +71,9 @@ def bicycle_model_spatial_with_body_points(n_points, num_body_points):
     eYdot = SX.sym("eYdot")
     eψdot = SX.sym("eψdot")
 
-    sdot_body_points = SX.sym("sdot_body_points", num_body_points)
-    eYdot_body_points = SX.sym("eYdot_body_points", num_body_points)
-
     xdot = vertcat(
         eYdot,
         eψdot,
-        sdot_body_points,
-        eYdot_body_points,
     )
 
     beta = atan(lr * tan(delta) / (lf + lr))
@@ -89,48 +84,31 @@ def bicycle_model_spatial_with_body_points(n_points, num_body_points):
     deY_ds = tan(eψ + beta) * (1 - kappa_ref_s * eY)
     deψ_ds = kappa * (1 - kappa_ref_s * eY) / cos(eψ) - kappa_ref_s
 
-    ds_body_points_ds = []
-    deY_body_points_ds = []
-
-    for i in range(num_body_points):
-        # s_i = s_body_points[i]
-        # eY_i = eY_body_points[i]
-
-        # x_centre = x_ref_s + eY * (-sin(psi_ref_s))
-        # y_centre = y_ref_s + eY * (cos(psi_ref_s))
-        # psi = psi_ref_s + eψ
-
-        # x_body = x_body_points[i]
-        # y_body = y_body_points[i]
-
-        # dx = x_body - x_centre
-        # dy = y_body - y_centre
-
-        # evaluate curvature spline at body point s position
-        # x_ref_body_s_i = substitute(x_ref_s, s_sym, s_i)
-        # y_ref_body_s_i = substitute(y_ref_s, s_sym, s_i)
-        # psi_ref_body_s_i = substitute(psi_ref_s, s_sym, s_i)
-        # kappa_ref_s_i = substitute(kappa_ref_s, s_sym, s_i)
-
-        # dynamics for body point s position
-        ds_i_ds = 1  # -(kappa*(dx*sin(psi_ref_s-psi_ref_body_s_i) - dy*cos(psi_ref_s-psi_ref_body_s_i)) + cos(beta + psi-psi_ref_body_s_i))*(kappa_ref_s*eY - 1)/((kappa_ref_s_i*eY_i - 1)*cos(beta + eψ))
-        ds_body_points_ds.append(ds_i_ds)
-        # dynamics for body point eY position
-        deY_i_ds = deY_ds  # (kappa*(dx*cos(psi_ref_s-psi_ref_body_s_i) + dy*sin(psi_ref_s-psi_ref_body_s_i)) + sin(beta + psi-psi_ref_body_s_i))*(1-kappa_ref_s*eY)/cos(beta + eψ)
-        deY_body_points_ds.append(deY_i_ds)
-
     f_expl = vertcat(
         deY_ds,
         deψ_ds,
-        *ds_body_points_ds,
-        *deY_body_points_ds,
     )
+
+    # MPT-style hard inequality per circle:
+    # In MPT (OSQP) hard constraints are implemented as:
+    #   lb_i - C_vec <= C_mat * x <= ub_i - C_vec, where C_vec = lon_i*sin(beta_i)
+    # which is equivalent to:
+    #   lb_i <= C_mat * x + C_vec <= ub_i
+    #
+    # Therefore our h(x,p) should be:
+    #   h_i = cos(beta_i)*(eY + lon_i*eψ) + lon_i*sin(beta_i)
+    # and bounds are simply lh=lb_i, uh=ub_i.
+    # Bounds (lb/ub) are provided per-stage via lh/uh.
+    if n_circles > 0:
+        h_expr = []
+        for i in range(n_circles):
+            h_expr.append(cos_beta[i] * (eY + lon_offset[i] * eψ) + lon_offset[i] * sin_beta[i])
+        model.con_h_expr = vertcat(*h_expr)
 
     # Model bounds
     model.eY_min = -1.5  # width of the track [m]
     model.eY_max = 1.5  # width of the track [m]
-    model.ePsi_min = -0.1  # maximum steering angle [rad]
-    model.ePsi_max = 0.1  # maximum steering angle [rad]
+    # NOTE: Don't over-bound yaw error (eψ) with a tight box constraint; rely on cost + input bounds.
 
     # input bounds
     model.delta_min = -0.7  # minimum steering angle [rad]
