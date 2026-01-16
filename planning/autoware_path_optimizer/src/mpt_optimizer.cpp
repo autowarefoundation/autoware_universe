@@ -747,7 +747,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
     logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu", knots.size(),
     x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size());
 
-
   // Build parameters vector similar to Python
   std::array<double, NP> parameters;
   parameters.fill(0.0);
@@ -819,8 +818,9 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   for (size_t i = 0; i < NH; ++i) {
     parameters[cos_beta_offset + i] = 1.0;
     parameters[sin_beta_offset + i] = 0.0;
-    parameters[lon_offset_offset + i] =
-      (i < vehicle_circle_longitudinal_offsets_.size()) ? vehicle_circle_longitudinal_offsets_.at(i) : 0.0;
+    parameters[lon_offset_offset + i] = (i < vehicle_circle_longitudinal_offsets_.size())
+                                          ? vehicle_circle_longitudinal_offsets_.at(i)
+                                          : 0.0;
   }
 #endif
 
@@ -852,7 +852,8 @@ void MPTOptimizer::setParametersToSolver(
 
 #if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
     // Slowly introduce ref_points[*].beta and bounds_on_constraints to the acados interface:
-    // - Build per-stage arrays and hand them to AcadosInterface, which writes cos/sin(beta) into p and sets lh/uh.
+    // - Build per-stage arrays and hand them to AcadosInterface, which writes cos/sin(beta) into p
+    // and sets lh/uh.
     constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
     std::array<double, NH> beta_arr{};
     std::array<double, NH> lh{};
@@ -869,9 +870,9 @@ void MPTOptimizer::setParametersToSolver(
     if (mpt_param_.use_acados_circle_constraints) {
       auto clamp01 = [](double x) { return std::max(0.0, std::min(1.0, x)); };
       homotopy_val = clamp01(mpt_param_.acados_circle_constraints_homotopy);
-      ramp_val = mpt_param_.acados_circle_constraints_stage_ramp ?
-        ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0) :
-        1.0;
+      ramp_val = mpt_param_.acados_circle_constraints_stage_ramp
+                   ? ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0)
+                   : 1.0;
       gamma_val = homotopy_val * clamp01(ramp_val);
 
       const size_t ref_idx = std::min(stage, ref_points.size() > 0 ? ref_points.size() - 1 : 0UL);
@@ -881,11 +882,11 @@ void MPTOptimizer::setParametersToSolver(
           beta_arr[l_idx] = ref_points.at(ref_idx).beta.at(l_idx);
         }
 
-        // bounds (directly from bounds_on_constraints, with the same offset logic as extractBounds())
+        // bounds (directly from bounds_on_constraints, with the same offset logic as
+        // extractBounds())
         if (
           ref_points.at(ref_idx).bounds_on_constraints.size() > l_idx &&
-          vehicle_circle_radiuses_.size() > l_idx
-        ) {
+          vehicle_circle_radiuses_.size() > l_idx) {
           const double bounds_offset =
             vehicle_info_.vehicle_width_m / 2.0 - vehicle_circle_radiuses_.at(l_idx);
           const double lh_tight =
@@ -903,10 +904,11 @@ void MPTOptimizer::setParametersToSolver(
           if ((stage == 0 || stage == N / 4 || stage == N / 2) && l_idx == 0) {
             RCLCPP_INFO(
               logger_,
-              "acados circle-constraints: stage=%zu ref_idx=%zu gamma=%.3f (homotopy=%.3f ramp=%.3f) "
+              "acados circle-constraints: stage=%zu ref_idx=%zu gamma=%.3f (homotopy=%.3f "
+              "ramp=%.3f) "
               "tight=[%.3f, %.3f] interp=[%.3f, %.3f] beta=%.3f",
-              stage, ref_idx, gamma_val, homotopy_val, ramp_val, lh_tight, uh_tight, lh[l_idx], uh[l_idx],
-              beta_arr[l_idx]);
+              stage, ref_idx, gamma_val, homotopy_val, ramp_val, lh_tight, uh_tight, lh[l_idx],
+              uh[l_idx], beta_arr[l_idx]);
           }
         }
       }
@@ -1061,8 +1063,8 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   // x0[0] = e_y_ego;
   // x0[1] = e_psi_ego;
 
-  std::array<double, NP> parameters = buildParameters(
-    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, x0);
+  std::array<double, NP> parameters =
+    buildParameters(e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, x0);
 
   setParametersToSolver(parameters, ref_points, s_ego);
 

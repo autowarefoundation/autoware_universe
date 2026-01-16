@@ -94,7 +94,8 @@ void AcadosInterface::setInitialState(std::array<double, NX> x0)
   // Do not seed the full trajectory in ocp_nlp_out here; Python only sets lbx/ubx at stage 0.
 }
 
-void AcadosInterface::setInequalityBounds(int stage, std::array<double, NH> lh, std::array<double, NH> uh)
+void AcadosInterface::setInequalityBounds(
+  int stage, std::array<double, NH> lh, std::array<double, NH> uh)
 {
 #if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
   ocp_nlp_constraints_model_set(
@@ -113,7 +114,8 @@ void AcadosInterface::applyCircleConstraintsToParams(
   const std::array<double, NH> & lh, const std::array<double, NH> & uh)
 {
 #if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
-  // Layout at the end of p (see generator): [... base ... | cos_beta[0..NH-1] | sin_beta[0..NH-1] | lon_offset[0..NH-1]]
+  // Layout at the end of p (see generator): [... base ... | cos_beta[0..NH-1] | sin_beta[0..NH-1] |
+  // lon_offset[0..NH-1]]
   const size_t cos_beta_offset = NP - 3 * NH;
   const size_t sin_beta_offset = NP - 2 * NH;
   for (size_t i = 0; i < NH; ++i) {

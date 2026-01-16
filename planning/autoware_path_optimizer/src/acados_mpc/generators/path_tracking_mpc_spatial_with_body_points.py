@@ -129,7 +129,6 @@ class PathTrackingMPCSpatialWithBodyPoints:
         # set initial condition
         ocp.constraints.x0 = np.zeros(nx)
 
-
         # MPT-style rotated footprint hard constraints (one per circle): lh <= h(x,p) <= uh
         if self.n_circles > 0:
             ocp.constraints.lh = np.zeros(self.n_circles)
@@ -287,7 +286,9 @@ def main():
 
     # Set build=False and generate=True to only generate the C code
     # without trying to compile the solver inside the Python process.
-    _ = PathTrackingMPCSpatialWithBodyPoints(Sf, N, N, n_circles=n_circles, build=False, generate=True)
+    _ = PathTrackingMPCSpatialWithBodyPoints(
+        Sf, N, N, n_circles=n_circles, build=False, generate=True
+    )
 
 
 if __name__ == "__main__":

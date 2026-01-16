@@ -19,8 +19,8 @@ constexpr size_t NP = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NP;
 constexpr size_t NU = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NU;
 // Number of nonlinear path constraints h(x,u,p) per stage (fixed at codegen time).
 constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
- // Number of soft constraints on h (slacks) per stage.
- constexpr size_t NSH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NSH;
+// Number of soft constraints on h (slacks) per stage.
+constexpr size_t NSH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NSH;
 constexpr size_t N = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
 
 struct AcadosSolution

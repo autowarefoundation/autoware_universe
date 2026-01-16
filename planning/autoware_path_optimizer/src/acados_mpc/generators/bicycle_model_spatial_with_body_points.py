@@ -1,7 +1,12 @@
 import types
 
-from casadi import SX, atan, atan2, cos, jacobian, tan, vertcat
-
+from casadi import SX
+from casadi import atan
+from casadi import atan2
+from casadi import cos
+from casadi import jacobian
+from casadi import tan
+from casadi import vertcat
 from utils.symbolic_cubic_spline import SymbolicCubicSpline
 
 
