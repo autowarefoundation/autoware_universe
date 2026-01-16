@@ -18,16 +18,14 @@
 
 #include <tf2/utils.hpp>
 
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tier4_vehicle_msgs/msg/actuation_command_stamped.hpp"
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <utility>
-
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-
-#include <memory>
 
 namespace autoware::simulator::simple_planning_simulator
 {

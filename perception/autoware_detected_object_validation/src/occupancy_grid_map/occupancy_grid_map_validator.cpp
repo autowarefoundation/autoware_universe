@@ -20,12 +20,12 @@
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <boost/optional.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
+#include <boost/optional.hpp>
 
 namespace autoware::detected_object_validation
 {

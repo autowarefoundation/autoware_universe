@@ -15,6 +15,7 @@
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/optional.hpp>
 
@@ -23,8 +24,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <tf2_eigen/tf2_eigen.hpp>
 
 namespace
 {

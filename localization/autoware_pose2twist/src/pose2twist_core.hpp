@@ -20,7 +20,6 @@
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::pose2twist

@@ -21,16 +21,14 @@
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <rclcpp/duration.hpp>
 #include <tf2/utils.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
-#include <memory>
-
-#include <tf2_eigen/tf2_eigen.hpp>
-
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 

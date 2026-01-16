@@ -19,7 +19,6 @@
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
-
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>

@@ -17,24 +17,22 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <rclcpp/rclcpp.hpp>
-
-#include <tf2_eigen/tf2_eigen.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "autoware_perception_msgs/msg/shape.hpp"
 #include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 #include <image_geometry/pinhole_camera_model.h>
 #include <pcl/point_cloud.h>

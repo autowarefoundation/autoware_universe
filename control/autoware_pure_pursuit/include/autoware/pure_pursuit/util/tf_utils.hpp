@@ -17,9 +17,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <boost/optional.hpp>  // To be replaced by std::optional in C++17
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <boost/optional.hpp>  // To be replaced by std::optional in C++17
 
 #include <tf2_ros/transform_listener.h>
 

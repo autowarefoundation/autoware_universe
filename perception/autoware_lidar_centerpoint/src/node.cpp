@@ -23,11 +23,11 @@
 #include <Eigen/Geometry>
 #include <pcl_ros/transforms.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::lidar_centerpoint
 {

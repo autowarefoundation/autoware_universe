@@ -17,16 +17,14 @@
 #include "tf2_ros/transform_broadcaster.h"
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#include <gtest/gtest.h>
-
-#include <memory>
-#include <vector>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <gtest/gtest.h>
 #include <yaml-cpp/yaml.h>
+
+#include <memory>
+#include <vector>
 
 void convertPCL2PointCloud2(
   const pcl::PointCloud<pcl::PointXYZI> & pcl_cloud, sensor_msgs::msg::PointCloud2 & cloud)

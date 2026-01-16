@@ -18,11 +18,11 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
-#include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <limits>
 #include <memory>
+#include <string>
 
 namespace autoware::surround_obstacle_checker
 {

@@ -27,7 +27,6 @@
 
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 #include <std_msgs/msg/header.hpp>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <tf2_ros/buffer.h>

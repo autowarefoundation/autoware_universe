@@ -15,11 +15,12 @@
 #ifndef AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__POINTPAINTING_FUSION__POINTCLOUD_DENSIFICATION_HPP_
 #define AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__POINTPAINTING_FUSION__POINTCLOUD_DENSIFICATION_HPP_
 
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
+#include <autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp>
+
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
-#include <autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <list>
 #include <string>

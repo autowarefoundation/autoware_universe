@@ -47,9 +47,8 @@
 
 #include <grid_map_ros/grid_map_ros.hpp>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <string>
 

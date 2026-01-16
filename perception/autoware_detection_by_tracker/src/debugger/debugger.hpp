@@ -28,7 +28,6 @@
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <tf2_ros/buffer.h>

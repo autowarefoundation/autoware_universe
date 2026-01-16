@@ -22,7 +22,6 @@
 #include <tf2/utils.hpp>
 
 #include "autoware_perception_msgs/msg/object_classification.hpp"
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <memory>
