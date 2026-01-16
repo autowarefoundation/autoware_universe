@@ -49,6 +49,9 @@ TrafficLightModule::TrafficLightModule(
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterfaceWithRTC(lane_id, logger, clock, time_keeper, planning_factor_interface),
+  yellow_transition_state_(YellowState::kNotYellow),
+  looking_tl_state_{},
+  traffic_signal_stamp_(std::nullopt),
   lane_id_(lane_id),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
@@ -61,7 +64,6 @@ TrafficLightModule::TrafficLightModule(
 {
   planner_param_ = planner_param;
   prev_looking_tl_state_.traffic_light_group_id = 0;
-  yellow_transition_state_ = YellowState::kNotYellow;
 }
 
 bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
