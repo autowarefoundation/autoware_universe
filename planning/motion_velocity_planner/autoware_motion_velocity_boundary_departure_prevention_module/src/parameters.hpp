@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "type_alias.hpp"
+#include "data_structs.hpp"
 
 #include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
@@ -39,14 +39,12 @@ struct Output
 {
   std::unordered_map<std::string, double> processing_time_map;
   AbnormalitiesData abnormalities_data;
-  ClosestProjectionsToBound closest_projections_to_bound;
   std::vector<std::tuple<Pose, Pose, double>> slowdown_intervals;
 
   trajectory::Trajectory<TrajectoryPoint> aw_ref_traj;
   trajectory::Trajectory<TrajectoryPoint> aw_ego_traj;
 
   DepartureIntervals departure_intervals;
-  Side<DeparturePoints> departure_points;
   CriticalDeparturePoints critical_departure_points;
 
   std::pair<int8_t, std::string> diag_status{DiagStatus::OK, "none"};

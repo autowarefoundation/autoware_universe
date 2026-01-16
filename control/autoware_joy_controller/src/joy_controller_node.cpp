@@ -18,6 +18,7 @@
 #include "autoware/joy_controller/joy_converter/p65_joy_converter.hpp"
 #include "autoware/joy_controller/joy_converter/xbox_joy_converter.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
 #include <tier4_api_utils/tier4_api_utils.hpp>
 
 #include <algorithm>
@@ -512,7 +513,7 @@ AutowareJoyControllerNode::AutowareJoyControllerNode(const rclcpp::NodeOptions &
 
   // Service Client
   client_emergency_stop_ = this->create_client<tier4_external_api_msgs::srv::SetEmergency>(
-    "service/emergency_stop", rmw_qos_profile_services_default, callback_group_services_);
+    "service/emergency_stop", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), callback_group_services_);
   while (!client_emergency_stop_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(get_logger(), "Interrupted while waiting for service.");
