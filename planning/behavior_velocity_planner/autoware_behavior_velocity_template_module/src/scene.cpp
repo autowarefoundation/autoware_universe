@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,15 @@
 
 #include "scene.hpp"
 
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
 
 TemplateModule::TemplateModule(
-  const int64_t module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+  const lanelet::Id module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
@@ -45,7 +42,11 @@ autoware::motion_utils::VirtualWalls TemplateModule::createVirtualWalls()
   return vw;
 }
 
-bool TemplateModule::modifyPathVelocity([[maybe_unused]] PathWithLaneId * path)
+bool TemplateModule::modifyPathVelocity(
+  [[maybe_unused]] experimental::Trajectory & path,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & left_bound,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & right_bound,
+  [[maybe_unused]] const PlannerData & planner_data)
 {
   RCLCPP_INFO_ONCE(logger_, "Template Module is executing!");
   return false;

@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,22 +15,21 @@
 #ifndef SCENE_HPP_
 #define SCENE_HPP_
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
 #include <vector>
+
 namespace autoware::behavior_velocity_planner
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
-class TemplateModule : public SceneModuleInterface
+class TemplateModule : public experimental::SceneModuleInterface
 {
 public:
   TemplateModule(
-    const int64_t module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+    const lanelet::Id module_id, const rclcpp::Logger & logger,
+    const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
@@ -44,7 +43,10 @@ public:
    * @param path A pointer to the path containing points to be modified.
    * @return [bool] wether the path velocity was modified or not.
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    experimental::Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   /**
    * @brief Create a visualization of debug markers.
