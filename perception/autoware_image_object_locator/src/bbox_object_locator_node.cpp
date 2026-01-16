@@ -20,16 +20,9 @@
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
 #include <algorithm>
 #include <memory>

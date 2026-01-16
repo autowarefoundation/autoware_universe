@@ -20,11 +20,7 @@
 #include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <limits>

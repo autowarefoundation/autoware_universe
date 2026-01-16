@@ -21,11 +21,7 @@
 #include "autoware/lidar_transfusion/ros_utils.hpp"
 #include "autoware/lidar_transfusion/transfusion_config.hpp"
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <autoware/point_types/types.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>

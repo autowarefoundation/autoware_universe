@@ -17,11 +17,7 @@
 #include <memory>
 #include <string>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 #include <geometry_msgs/msg/vector3_stamped.hpp>
 
 #include <algorithm>

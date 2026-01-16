@@ -32,11 +32,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 #include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
 #include "autoware/dummy_perception_publisher/object_info.hpp"
