@@ -109,8 +109,6 @@ public:
 
   void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
-
-
 private:
   bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
