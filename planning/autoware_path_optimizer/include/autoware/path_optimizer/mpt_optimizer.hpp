@@ -424,7 +424,6 @@ private:
     const double e_y_ego, const double e_psi_ego, const std::vector<double> & knots,
     const std::vector<double> & x_coeffs_flat, const std::vector<double> & y_coeffs_flat,
     const std::vector<double> & curvatures,
-    const std::vector<geometry_msgs::msg::Point> & body_points,
     const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
     std::array<double, NX> & x0) const;
 

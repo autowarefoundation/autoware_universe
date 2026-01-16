@@ -717,7 +717,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   [[maybe_unused]] const double e_y_ego, [[maybe_unused]] const double e_psi_ego,
   const std::vector<double> & knots_in, const std::vector<double> & x_coeffs_flat_in,
   const std::vector<double> & y_coeffs_flat_in, const std::vector<double> & curvatures_in,
-  const std::vector<geometry_msgs::msg::Point> & body_points,
   const std::vector<geometry_msgs::msg::Point> & body_points_curvilinear,
   std::array<double, NX> & x0) const
 {
@@ -728,26 +727,15 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   std::vector<double> curvatures = curvatures_in;
 
   RCLCPP_ERROR(
-    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu body_points=%zu",
+    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu body_points_curvilinear=%zu",
     knots.size(), x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size(),
-    body_points.size());
-
-  if (body_points.size() != body_points_curvilinear.size()) {
-    RCLCPP_ERROR(
-      logger_, "body points length mismatch: body_points=%zu body_points_curvilinear=%zu",
-      body_points.size(), body_points_curvilinear.size());
-    assert(body_points.size() == body_points_curvilinear.size() && "body points mismatch");
-  }
+    body_points_curvilinear.size());
 
   // body points curvilinear -> vector of doubles (s values then eY values)
   std::vector<double> body_points_curvilinear_vec;
   for (const auto & pt : body_points_curvilinear) body_points_curvilinear_vec.push_back(pt.x);
   for (const auto & pt : body_points_curvilinear) body_points_curvilinear_vec.push_back(pt.y);
 
-  // body points global
-  std::vector<double> body_points_xy;
-  for (const auto & pt : body_points) body_points_xy.push_back(pt.x);
-  for (const auto & pt : body_points) body_points_xy.push_back(pt.y);
 
   // Build parameters vector similar to Python
   std::array<double, NP> parameters;
@@ -1012,7 +1000,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   // x0[1] = e_psi_ego;
 
   std::array<double, NP> parameters = buildParameters(
-    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, body_points_vec,
+    e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec,
     body_points_curvilinear_vec, x0);
 
   setParametersToSolver(parameters);
