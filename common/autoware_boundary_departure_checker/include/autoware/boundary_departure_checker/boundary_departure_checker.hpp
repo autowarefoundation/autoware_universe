@@ -70,11 +70,6 @@ public:
   Output update(const Input & input);
 
   void setParam(const Param & param) { param_ = param; }
-  BoundaryDepartureChecker(
-    lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info,
-    const Param & param = Param{},
-    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
-      std::make_shared<autoware_utils_debug::TimeKeeper>());
 
   bool checkPathWillLeaveLane(
     const lanelet::ConstLanelets & lanelets, const PathWithLaneId & path) const;
@@ -106,144 +101,10 @@ public:
   static bool isOutOfLane(
     const lanelet::ConstLanelets & candidate_lanelets, const LinearRing2d & vehicle_footprint);
 
-  // ==== abnormalities ===
-  /**
-   * @brief Build an R-tree of uncrossable boundaries (e.g., road_border) from a lanelet map.
-   *
-   * Filters the map's line strings by type and constructs a spatial index used to detect boundary
-   * violations.
-   *
-   * @param lanelet_map_ptr Shared pointer to the lanelet map.
-   * @return Constructed R-tree or an error message if map or parameters are invalid.
-   */
-  tl::expected<UncrossableBoundRTree, std::string> build_uncrossable_boundaries_tree(
-    const lanelet::LaneletMapPtr & lanelet_map_ptr);
-
-  /**
-   * @brief Generate data structure with embedded abnormality information based on the
-   * predicted trajectory and current ego state.
-   *
-   * This function creates extended ego footprints for various abnormality types (e.g.,
-   * localization, steering) and computes their corresponding closest boundary projections and
-   * segments.
-   *
-   * @param predicted_traj         Ego's predicted trajectory (from MPC or trajectory follower).
-   * @param aw_raw_traj            Raw Autoware trajectory to extract underlying path information.
-   * @param curr_pose_with_cov     Ego pose with covariance for uncertainty margin calculation.
-   * @param current_steering       Current steering angle report.
-   * @return AbnormalitiesData containing footprints, their left/right sides, and projections to
-   * boundaries. Returns an error message string on failure.
-   */
-  tl::expected<AbnormalitiesData, std::string> get_abnormalities_data(
-    const TrajectoryPoints & predicted_traj,
-    const trajectory::Trajectory<TrajectoryPoint> & aw_raw_traj,
-    const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
-    const SteeringReport & current_steering);
-
-  /**
-   * @brief Queries a spatial index (R-tree) to find nearby uncrossable lane boundaries and filters
-   * them.
-   *
-   * @param ego_ref_segment The reference side of the ego vehicle (e.g., the left side) used as the
-   * query origin.
-   * @param ego_opposite_ref_segment The opposite side of the ego vehicle (e.g., the right side),
-   * used to filter out boundaries on the wrong side.
-   * @param ego_z_position The current vertical (Z-axis) position of the ego vehicle, used to filter
-   * boundaries by height.
-   * @param unique_id A set of segment IDs that have already been processed, used to avoid adding
-   * duplicate boundaries.
-   * @return A vector of `SegmentWithIdx` containing the filtered boundary segments that are deemed
-   * relevant and close to the reference side.
-   */
-  std::vector<SegmentWithIdx> find_closest_boundary_segments(
-    const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
-    const double ego_z_position,
-    const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id);
-
-  /**
-   * @brief A helper function to find closest boundaries and update the provided result containers.
-   *
-   * @param ego_ref_segment Reference ego side segment, passed to `find_closest_boundary_segments`.
-   * @param ego_opposite_ref_segment Opposite ego side segment, passed to
-   * `find_closest_boundary_segments`.
-   * @param ego_z_position The ego vehicle's Z-position, passed to `find_closest_boundary_segments`.
-   * @param[in, out] unique_ids A set of unique segment IDs. Newly found IDs will be inserted into
-   * this set.
-   * @param[out] output_segments The vector where newly found, relevant segments will be appended.
-   */
-  void update_closest_boundary_segments(
-    const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
-    const double ego_z_position,
-    std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_ids,
-    std::vector<SegmentWithIdx> & output_segments);
-
-  /**
-   * @brief Collects all relevant uncrossable boundary segments along a predicted trajectory.
-   *
-   * @param ego_sides_from_footprints A container of the vehicle's left and right side segments for
-   * each point along the trajectory.
-   * @param trimmed_pred_trajectory The predicted trajectory of the ego vehicle, used to get the
-   * Z-position at each step.
-   * @return A `BoundarySideWithIdx` struct containing two vectors: one for all unique, relevant
-   * boundaries found to the left of the trajectory, and one for the right.
-   */
-  BoundarySideWithIdx get_boundary_segments(
-    const EgoSides & ego_sides_from_footprints, const TrajectoryPoints & trimmed_pred_trajectory);
-
-  /**
-   * @brief Select the closest projections to road boundaries for a specific side.
-   *
-   * Evaluates multiple abnormality-aware projections (e.g., NORMAL, LOCALIZATION) for each
-   * trajectory index, and selects the best candidate based on lateral distance and classification
-   * logic (CRITICAL/NEAR).
-   *
-   * @param projections_to_bound Abnormality-aware projections to boundaries.
-   * @param side_key             Side to process (left or right).
-   * @return Vector of closest projections with departure classification, or an error message on
-   * failure.
-   */
-  tl::expected<std::vector<ClosestProjectionToBound>, std::string>
-  get_closest_projections_to_boundaries_side(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
-    const double max_braking_dist, const SideKey side_key);
-
-  /**
-   * @brief Select the closest projections to boundaries for both sides based on all abnormality
-   * types.
-   *
-   * Invokes `get_closest_projections_to_boundaries_side` for each side and updates the departure
-   * type based on braking feasibility (APPROACHING_DEPARTURE) using trajectory spacing and braking
-   * model.
-   *
-   * @param projections_to_bound Abnormality-wise projections to boundaries.
-   * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
-   * string.
-   */
-  tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
-    const double curr_acc);
-
-  /**
-   * @brief Generate filtered departure points for both left and right sides.
-   *
-   * Converts closest projections into structured `DeparturePoint`s for each side,
-   * filtering based on hysteresis and distance, and grouping results using side keys.
-   *
-   * @param projections_to_bound Closest projections to road boundaries for each side.
-   * @param pred_traj_idx_to_ref_traj_lon_dist mapping from an index of the predicted trajectory to
-   * the corresponding arc length on the reference trajectory
-   * @return Side-keyed container of filtered departure points.
-   */
-  Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound,
-    const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
-  // === Abnormalities
-
 private:
   Param param_;
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
-  std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
 
   bool willLeaveLane(
     const lanelet::ConstLanelets & candidate_lanelets,
@@ -261,9 +122,6 @@ private:
   autoware_utils_geometry::Polygon2d toPolygon2D(const lanelet::BasicPolygon2d & poly) const;
 
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-
-  Footprint get_ego_footprints(
-    const AbnormalityType abnormality_type, const FootprintMargin uncertainty_fp_margin);
 };
 }  // namespace autoware::boundary_departure_checker
 

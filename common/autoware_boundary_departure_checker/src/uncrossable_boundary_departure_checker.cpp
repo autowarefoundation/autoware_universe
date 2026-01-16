@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
+#include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
+
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
 #include <autoware_utils_math/normalization.hpp>
@@ -114,7 +116,7 @@ bool is_segment_within_ego_height(
 
 namespace autoware::boundary_departure_checker
 {
-BoundaryDepartureChecker::BoundaryDepartureChecker(
+UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info, const Param & param,
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
 : param_(param),
@@ -132,21 +134,16 @@ BoundaryDepartureChecker::BoundaryDepartureChecker(
     std::make_unique<UncrossableBoundRTree>(*try_uncrossable_boundaries_rtree);
 }
 
-tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnormalities_data(
-  const TrajectoryPoints & predicted_traj,
-  const trajectory::Trajectory<TrajectoryPoint> & aw_raw_traj,
+tl::expected<AbnormalitiesData, std::string>
+UncrossableBoundaryDepartureChecker::get_abnormalities_data(
+  const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
-  const SteeringReport & current_steering)
+  const SteeringReport & current_steering, const double curr_vel, const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (predicted_traj.empty()) {
     return tl::make_unexpected("Ego predicted trajectory is empty");
-  }
-
-  const auto underlying_bases = aw_raw_traj.get_underlying_bases();
-  if (underlying_bases.size() < 4) {
-    return tl::make_unexpected("trajectory too short");
   }
 
   const auto trimmed_pred_traj =
@@ -182,10 +179,30 @@ tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnor
       trimmed_pred_traj, abnormalities_data.boundary_segments,
       abnormalities_data.footprints_sides[abnormality_type]);
   }
+
+  auto closest_projections_to_bound = get_closest_projections_to_boundaries(
+    abnormalities_data.projections_to_bound, curr_vel, curr_acc);
+
+  if (!closest_projections_to_bound) {
+    return tl::make_unexpected(closest_projections_to_bound.error());
+  }
+
+  abnormalities_data.closest_projections_to_bound = std::move(*closest_projections_to_bound);
+
+  std::vector<double> pred_traj_idx_to_ref_traj_lon_dist;
+  pred_traj_idx_to_ref_traj_lon_dist.reserve(predicted_traj.size());
+  for (const auto & p : predicted_traj) {
+    pred_traj_idx_to_ref_traj_lon_dist.push_back(
+      motion_utils::calcSignedArcLength(trajectory_points, 0UL, p.pose.position));
+  }
+
+  abnormalities_data.departure_points = get_departure_points(
+    abnormalities_data.closest_projections_to_bound, pred_traj_idx_to_ref_traj_lon_dist);
+
   return abnormalities_data;
 }
 
-std::vector<SegmentWithIdx> BoundaryDepartureChecker::find_closest_boundary_segments(
+std::vector<SegmentWithIdx> UncrossableBoundaryDepartureChecker::find_closest_boundary_segments(
   const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
   const double ego_z_position,
   const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id)
@@ -225,7 +242,7 @@ std::vector<SegmentWithIdx> BoundaryDepartureChecker::find_closest_boundary_segm
   return new_segments;
 }
 
-void BoundaryDepartureChecker::update_closest_boundary_segments(
+void UncrossableBoundaryDepartureChecker::update_closest_boundary_segments(
   const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
   const double ego_z_position,
   std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_ids,
@@ -240,7 +257,7 @@ void BoundaryDepartureChecker::update_closest_boundary_segments(
   }
 }
 
-BoundarySideWithIdx BoundaryDepartureChecker::get_boundary_segments(
+BoundarySideWithIdx UncrossableBoundaryDepartureChecker::get_boundary_segments(
   const EgoSides & ego_sides_from_footprints, const TrajectoryPoints & trimmed_pred_trajectory)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -262,7 +279,7 @@ BoundarySideWithIdx BoundaryDepartureChecker::get_boundary_segments(
 }
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
-BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
+UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
   const double max_braking_dist, const SideKey side_key)
 {
@@ -377,7 +394,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 }
 
 tl::expected<ClosestProjectionsToBound, std::string>
-BoundaryDepartureChecker::get_closest_projections_to_boundaries(
+UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
@@ -422,7 +439,7 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
   return min_to_bound;
 }
 
-Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
+Side<DeparturePoints> UncrossableBoundaryDepartureChecker::get_departure_points(
   const ClosestProjectionsToBound & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist)
 {
@@ -440,7 +457,7 @@ Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
 }
 
 tl::expected<UncrossableBoundRTree, std::string>
-BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
+UncrossableBoundaryDepartureChecker::build_uncrossable_boundaries_tree(
   const lanelet::LaneletMapPtr & lanelet_map_ptr)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -451,36 +468,5 @@ BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
 
   return utils::build_uncrossable_boundaries_rtree(
     *lanelet_map_ptr, param_.boundary_types_to_detect);
-}
-
-SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
-  const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
-  const double max_search_length, const std::vector<std::string> & boundary_types_to_detect) const
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-
-  const auto has_types =
-    [](const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types) {
-      constexpr auto no_type = "";
-      const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
-      return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
-    };
-
-  SegmentRtree uncrossable_segments_in_range;
-  LineString2d line;
-  const auto ego_p = Point2d{ego_point.x, ego_point.y};
-  for (const auto & ls : lanelet_map.lineStringLayer) {
-    if (has_types(ls, boundary_types_to_detect)) {
-      line.clear();
-      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
-      for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
-        const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
-        if (boost::geometry::distance(segment, ego_p) < max_search_length) {
-          uncrossable_segments_in_range.insert(segment);
-        }
-      }
-    }
-  }
-  return uncrossable_segments_in_range;
 }
 }  // namespace autoware::boundary_departure_checker

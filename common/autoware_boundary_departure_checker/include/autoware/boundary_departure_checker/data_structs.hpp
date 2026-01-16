@@ -271,20 +271,6 @@ struct CriticalDeparturePoint : DeparturePoint
 
 using CriticalDeparturePoints = std::vector<CriticalDeparturePoint>;
 
-struct DepartureInterval
-{
-  TrajectoryPoint start;
-  TrajectoryPoint end;
-  SideKey side_key;
-  double start_dist_on_traj;
-  double end_dist_on_traj;
-
-  bool start_at_traj_front{false};
-
-  DeparturePoints candidates;
-};
-using DepartureIntervals = std::vector<DepartureInterval>;
-
 using Footprint = LinearRing2d;
 using Footprints = std::vector<Footprint>;
 
@@ -294,6 +280,8 @@ struct AbnormalitiesData
   Abnormalities<Footprints> footprints;
   BoundarySideWithIdx boundary_segments;
   Abnormalities<ProjectionsToBound> projections_to_bound;
+  ClosestProjectionsToBound closest_projections_to_bound;
+  Side<DeparturePoints> departure_points;
 };
 }  // namespace autoware::boundary_departure_checker
 
