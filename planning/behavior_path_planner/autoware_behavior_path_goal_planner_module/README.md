@@ -403,9 +403,9 @@ Perform safety checks on moving objects. If the object is determined to be dange
 - path decision is not made and approval is not granted.
 - After approval, the ego vehicle stops under deceleration and jerk constraints.
 
-This module has two methods of safety check, as follows.
+This module has two methods of safety check to choose, as follows.
 
-- `RSS`: a method commonly used across behavior path planner modules. For further information, see [Safety Check Utils explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md).
+- Minimum safe braking distance: a method commonly used across behavior path planner modules. For further information, see [Safety Check Utils explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md).
 
 - `integral_predicted_polygon`: a more safety-oriented method. This method is implemented because speeds during pull over are lower than during driving, and fewer objects travel along the edge of the lane. (It is sometimes too reactive and may be less available.) This method integrates the footprints of egos and objects at a given time and checks for collisions between them.
 
@@ -436,9 +436,9 @@ In addition, the safety check has a time hysteresis, and if the path is judged "
 | keep_unsafe_time                     | [s]   | double | safety check Hysteresis time. if the path is judged "safe" for the time it is finally treated as "safe". | 3.0                          |
 | check_all_predicted_path             | -     | bool   | Flag to check all predicted paths                                                                        | true                         |
 | publish_debug_marker                 | -     | bool   | Flag to publish debug markers                                                                            | false                        |
-| `collision_check_yaw_diff_threshold` | [rad] | double | Maximum yaw difference between ego and object when executing rss-based collision checking                | 3.1416                       |
+| `collision_check_yaw_diff_threshold` | [rad] | double | Maximum yaw difference between ego and object when executing collision check                             | 3.1416                       |
 
-#### Parameters for `RSS` safety check
+#### Parameters for minimum safety braking distance safety check method
 
 | Name                                | Unit | Type   | Description                             | Default value |
 | :---------------------------------- | :--- | :----- | :-------------------------------------- | :------------ |
@@ -448,7 +448,7 @@ In addition, the safety check has a time hysteresis, and if the path is judged "
 | longitudinal_distance_min_threshold | [m]  | double | Minimum longitudinal distance threshold | 3.0           |
 | longitudinal_velocity_delta_time    | [s]  | double | Delta time for longitudinal velocity    | 0.8           |
 
-#### Parameters for integral_predicted_polygon safety check
+#### Parameters for integral_predicted_polygon safety check method
 
 | Name            | Unit | Type   | Description                            | Default value |
 | :-------------- | :--- | :----- | :------------------------------------- | :------------ |
