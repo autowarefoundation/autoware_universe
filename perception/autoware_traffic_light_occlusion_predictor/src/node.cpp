@@ -74,7 +74,7 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
   const std::vector<std::string> topics{
     "~/input/car/traffic_signals", "~/input/rois", "~/input/camera_info", "~/input/cloud"};
   const std::vector<rclcpp::QoS> qos(topics.size(), rclcpp::SensorDataQoS());
-  synchronizer_ = std::make_shared<SynchronizerType>(
+  synchronizer_car_ = std::make_shared<SynchronizerType>(
     this, topics, qos,
     std::bind(
       &TrafficLightOcclusionPredictorNode::syncCallback, this, _1, _2, _3, _4,

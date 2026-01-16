@@ -128,7 +128,7 @@ private:
     sensor_msgs::msg::CameraInfo, sensor_msgs::msg::PointCloud2>
     SynchronizerType;
 
-  std::shared_ptr<SynchronizerType> synchronizer_;
+  std::shared_ptr<SynchronizerType> synchronizer_car_;
   std::shared_ptr<SynchronizerType> synchronizer_ped_;
 
   /**
