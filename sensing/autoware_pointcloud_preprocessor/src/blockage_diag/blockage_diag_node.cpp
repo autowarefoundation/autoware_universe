@@ -410,8 +410,11 @@ void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockag
   }
 }
 
-cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & no_return_mask)
+cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
 {
+  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
+  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
+
   auto dimensions = get_mask_dimensions();
   assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
@@ -535,17 +538,8 @@ void BlockageDiagComponent::publish_blockage_debug_info(const DebugInfo & debug_
   }
 }
 
-void BlockageDiagComponent::detect_blockage(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & depth_image_16u)
 {
-  try {
-    validate_pointcloud_fields(*input);
-  } catch (const std::runtime_error & e) {
-    RCLCPP_ERROR(get_logger(), "%s", e.what());
-    return;
-  }
-
-  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
@@ -559,12 +553,27 @@ void BlockageDiagComponent::detect_blockage(
   update_ground_blockage_info(ground_blockage_mask);
   update_sky_blockage_info(sky_blockage_mask);
 
-  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
+  return time_series_blockage_result;
+}
 
+void BlockageDiagComponent::detect_blockage(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+{
+  try {
+    validate_pointcloud_fields(*input);
+  } catch (const std::runtime_error & e) {
+    RCLCPP_ERROR(get_logger(), "%s", e.what());
+    return;
+  }
+
+  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
+
+  cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
+  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
   publish_blockage_debug_info(debug_info);
 
   if (enable_dust_diag_) {
-    cv::Mat single_frame_dust_mask = compute_dust_diagnostics(no_return_mask);
+    cv::Mat single_frame_dust_mask = compute_dust_diagnostics(depth_image_16u);
     publish_dust_debug_info(debug_info, single_frame_dust_mask);
   }
 }

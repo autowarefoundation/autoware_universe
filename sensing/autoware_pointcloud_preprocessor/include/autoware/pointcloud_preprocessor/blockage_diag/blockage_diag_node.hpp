@@ -188,12 +188,18 @@ private:
   void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
 
   /**
+   * @brief Compute blockage diagnostics and update the internal blockage info.
+   *
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
+   */
+  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
+
+  /**
    * @brief Compute dust diagnostics and update the internal dust info.
    *
-   * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
-   * @param debug_info The debug info to publish if enabled.
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
    */
-  cv::Mat compute_dust_diagnostics(const cv::Mat & no_return_mask);
+  cv::Mat compute_dust_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
    * @brief Publish the debug info of blockage diagnostics if enabled.
