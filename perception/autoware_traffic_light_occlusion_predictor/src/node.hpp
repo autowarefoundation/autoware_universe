@@ -53,7 +53,6 @@ private:
     int max_occlusion_ratio;
   };
 
-private:
   /**
    * @brief receive the lanelet2 map
    *
@@ -96,7 +95,6 @@ private:
   std::shared_ptr<SynchronizerType> synchronizer_ped_;
 
   std::array<bool, 2> subscribed_;
-  std::vector<int> occlusion_ratios_;
   tier4_perception_msgs::msg::TrafficLightArray out_msg_;
 };
 }  // namespace autoware::traffic_light
