@@ -193,14 +193,22 @@ private:
    * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
    * @param debug_info The debug info to publish if enabled.
    */
-  void compute_dust_diagnostics(const cv::Mat & no_return_mask, const DebugInfo & debug_info);
+  cv::Mat compute_dust_diagnostics(const cv::Mat & no_return_mask);
 
   /**
-   * @brief Publish the debug info if enabled.
+   * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
    */
-  void publish_debug_info(const DebugInfo & debug_info) const;
+  void publish_blockage_debug_info(const DebugInfo & debug_info) const;
+
+  /**
+   * @brief Publish the debug info of dust diagnostics if enabled.
+   *
+   * @param debug_info The debug info to publish.
+   */
+  void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
+
 
   Updater updater_{this};
 
