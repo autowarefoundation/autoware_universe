@@ -18,6 +18,7 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/node.hpp>
 
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -103,12 +104,15 @@ struct DrivableAreaExpansionParameters
     std::optional<std::string> subtype;
 
     /// @brief creates a LinestringType from a string in format "type.subtype"
-    explicit LinestringType(const std::string_view s)
+    explicit LinestringType(const std::string & s)
     {
-      type = s.substr(0, s.find('.'));
-      const auto has_subtype = s.size() > type.size() + 1;
-      if (has_subtype) {
-        subtype = s.substr(type.size() + 1UL);
+      static const std::regex pattern(R"(^([^.]+)(?:\.(.*))?$)");
+      std::smatch matches;
+      if (std::regex_match(s, matches, pattern)) {
+        type = matches[1].str();
+        if (matches[2].matched) {
+          subtype = matches[2].str();
+        }
       }
     }
 
