@@ -280,7 +280,7 @@ void TrafficLightModule::updateYellowState(const bool is_yellow_now)
         RCLCPP_DEBUG_THROTTLE(
           logger_, *clock_, 1000,
           "[TrafficLight Debug]   -> Previous TL state unavailable; "
-          "treating Yellow transition origin as unknown.");
+          "treating Yellow transition as unsafe; defaulting to stop behavior.");
         // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is
         // applied.
       }

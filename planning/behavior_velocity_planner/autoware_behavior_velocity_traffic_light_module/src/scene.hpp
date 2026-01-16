@@ -109,12 +109,7 @@ public:
 
   void updateStopLine(const lanelet::ConstLineString3d & stop_line);
 
-  // Store how the current yellow sequence started
-  YellowState yellow_transition_state_;
 
-  bool isStopSignal();
-  TrafficSignal looking_tl_state_;
-  std::optional<Time> traffic_signal_stamp_;
 
 private:
   bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
@@ -130,6 +125,14 @@ private:
   bool isTrafficSignalTimedOut() const;
 
   void updateTrafficSignal();
+
+  bool isStopSignal();
+
+  // Store how the current yellow sequence started
+  YellowState yellow_transition_state_;
+
+  TrafficSignal looking_tl_state_;
+  std::optional<Time> traffic_signal_stamp_;
 
   bool isTrafficSignalYellow() const;
 
