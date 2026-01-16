@@ -321,7 +321,6 @@ private:
   // intermediate data
   std::vector<EgoTrajectoryPoint> ego_trajectory_points_;
   std::vector<ObstacleTrajectoryPoint> obstacle_trajectory_points_;
-  size_t ego_first_stop_index_ = -1;
   double ego_max_reachable_distance_ = 0.0;
 
   // output data
