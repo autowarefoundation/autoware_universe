@@ -17,6 +17,7 @@
   <buildtool_export_depend>cudnn_cmake_module</buildtool_export_depend>
   <buildtool_export_depend>tensorrt_cmake_module</buildtool_export_depend>
 
+  <depend>ament_index_cpp</depend>
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_kalman_filter</depend>
