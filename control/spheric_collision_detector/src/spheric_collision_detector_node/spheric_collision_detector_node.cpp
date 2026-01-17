@@ -26,6 +26,7 @@
 
 namespace
 {  
+{  
 template <class T>
 bool update_param(
   const std::vector<rclcpp::Parameter> & params, const std::string & name, T & value)
@@ -50,6 +51,7 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
 : Node("spheric_collision_detector_node", node_options), updater_(this)
 {
 
+
   using std::placeholders::_1;
 
   // Node Parameter
@@ -62,6 +64,7 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&SphericCollisionDetectorNode::paramCallback, this, _1));
     
+    
   // Core
   spheric_collision_detector_ = std::make_unique<SphericCollisionDetector>(*this);
   spheric_collision_detector_->setParam(param_);
@@ -70,6 +73,9 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   self_pose_listener_ = std::make_shared<tier4_autoware_utils::SelfPoseListener>(this);
   transform_listener_ = std::make_shared<tier4_autoware_utils::TransformListener>(this);
 
+  sub_object_recognition_ = create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
+    "input/object_recognition", rclcpp::QoS{1},
+    std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
   sub_object_recognition_ = create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
     "input/object_recognition", rclcpp::QoS{1},
     std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
@@ -131,6 +137,7 @@ bool SphericCollisionDetectorNode::isDataReady()
   }
 
    if (!object_recognition_) {
+   if (!object_recognition_) {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for object_recognition msg...");
@@ -146,6 +153,7 @@ bool SphericCollisionDetectorNode::isDataReady()
 
   if (!current_twist_) {
     RCLCPP_INFO_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000 /* ms */, 
       this->get_logger(), *this->get_clock(), 5000 /* ms */, 
       "scd: waiting for current_twist msg...");
     return false;
@@ -179,12 +187,15 @@ void SphericCollisionDetectorNode::onTimer()
       object_recognition_transform_ = tf_buffer_.lookupTransform(
         "map", header.frame_id, header.stamp,
         rclcpp::Duration::from_seconds(0.01));
+        "map", header.frame_id, header.stamp,
+        rclcpp::Duration::from_seconds(0.01));
     } catch (tf2::TransformException & ex) {
       RCLCPP_INFO(
         this->get_logger(), "scd: Could not transform map to %s: %s", header.frame_id.c_str(),
         ex.what());
       return;
     }
+  } 
   } 
 
   if (!isDataReady()) {
@@ -201,6 +212,7 @@ void SphericCollisionDetectorNode::onTimer()
   input_.current_twist = current_twist_;
   input_.object_recognition_transform = object_recognition_transform_;
   output_.will_collide = false;
+  
   
   output_ = spheric_collision_detector_->update(input_);
 
@@ -298,8 +310,8 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
 
   // Vehicle passing areas
   {
-    const auto color_ok = createMarkerColor(1.0, 1.0, 0.0, 0.999);
-    const auto color_will_collide = createMarkerColor(1.0, 0.0, 0.0, 0.5);
+    const auto color_ok = createMarkerColor(1.0, 1.0, 0.0, 0.5);
+    const auto color_will_collide = createMarkerColor(1.0, 0.0, 0.0, 0.3);
 
     auto color = color_ok;
     if (output_.will_collide) {
@@ -307,14 +319,18 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
     }
 
     auto marker = createDefaultMarker(
-      "map", this->now(), "scd_vehicle_passing_areas", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+      "map", this->now(), "scd_ego_passing_area", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
       createMarkerScale(0.05, 0.05, 0.05), color);
 
-    for (const auto & vehicle_passing_area : output_.vehicle_passing_areas) {
-       for(size_t i = 0; i < vehicle_passing_area->vPts_.size() - 1; i++){
-        const auto p1 = vehicle_passing_area->vPts_.at(i);
-        marker.points.push_back(toMsg(Eigen::Vector3d(p1.x(), p1.y(), p1.z())));
-      }
+    for (const auto & ego_passing_area : output_.vehicle_passing_areas) {
+        const auto c = ego_passing_area->center_;
+        const auto dm = 2.0 * ego_passing_area->radius_;
+
+        marker.scale.x = dm;
+        marker.scale.y = dm;
+        marker.scale.z = dm; 
+
+        marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
     }
 
     marker_array.markers.push_back(marker);
@@ -322,16 +338,20 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
 
   {
     auto marker = createDefaultMarker(
-        "map", this->now(), "scd_obstacle_spheres", 0,
-        visualization_msgs::msg::Marker::SPHERE_LIST, createMarkerScale(0.03, 0.03, 0.03),
-        createMarkerColor(1.0, 1.0, 0.5, 0.999));
+         "map", this->now(), "scd_obstacle_spheres", 0,
+         visualization_msgs::msg::Marker::SPHERE_LIST, createMarkerScale(0.03, 0.03, 0.03),
+         createMarkerColor(1.0, 1.0, 0.0, 0.5));
 
     for(const auto & obstacle:output_.obstacles){
       for (const auto & obstacle_sphere : obstacle){
-        for(size_t i = 0; i < obstacle_sphere->vPts_.size() - 1; ++i){
-          const auto p1 = obstacle_sphere->vPts_.at(i);
-          marker.points.push_back(toMsg(Eigen::Vector3d(p1.x(), p1.y(), p1.z())));
-        }
+        const auto c = obstacle_sphere->center_;
+        const auto dm = 2.0 * obstacle_sphere->radius_;
+
+        marker.scale.x = dm;
+        marker.scale.y = dm;
+        marker.scale.z = dm; 
+
+        marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
       }
     }
 

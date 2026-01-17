@@ -31,10 +31,7 @@ namespace sphere3
             double radius_;
             int tag_;
 
-            std::vector<Eigen::Vector3d> vPts_;
             Sphere3(Eigen::Vector3d center, double radius, int tag);
-            void computeSphereCoords(std::vector<Eigen::Vector3d> &pts);
-
     };
 } //namespace sphere3
 
