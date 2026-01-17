@@ -14,10 +14,11 @@
 
 #include "spheric_collision_detector/spheric_collision_detector_node.hpp"
 
-#include <tier4_autoware_utils/geometry/geometry.hpp>
-#include <tier4_autoware_utils/math/unit_conversion.hpp>
-#include <tier4_autoware_utils/ros/marker_helper.hpp>
-#include <vehicle_info_util/vehicle_info_util.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
 #include <string>
@@ -70,25 +71,25 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   spheric_collision_detector_->setParam(param_);
 
   // Subscriber
-  self_pose_listener_ = std::make_shared<tier4_autoware_utils::SelfPoseListener>(this);
-  transform_listener_ = std::make_shared<tier4_autoware_utils::TransformListener>(this);
+  self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
-  sub_object_recognition_ = create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
+  sub_object_recognition_ = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
     "input/object_recognition", rclcpp::QoS{1},
     std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
   sub_object_recognition_ = create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
     "input/object_recognition", rclcpp::QoS{1},
     std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
 
-  sub_predicted_trajectory_ = create_subscription<autoware_auto_planning_msgs::msg::Trajectory>(
+  sub_predicted_trajectory_ = create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/predicted_trajectory", 1,
     std::bind(&SphericCollisionDetectorNode::onPredictedTrajectory, this, _1));
   sub_odom_ = create_subscription<nav_msgs::msg::Odometry>(
     "input/odometry", 1, std::bind(&SphericCollisionDetectorNode::onOdom, this, _1));
 
   // Publisher
-  debug_publisher_ = std::make_shared<tier4_autoware_utils::DebugPublisher>(this, "debug/marker");
-  time_publisher_ = std::make_shared<tier4_autoware_utils::ProcessingTimePublisher>(this);
+  debug_publisher_ = std::make_shared<autoware_utils::DebugPublisher>(this, "debug/marker");
+  time_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(this);
 
   // Diagnostic Updater
   updater_.setHardwareID("spheric_collision_detector");
@@ -97,20 +98,20 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
     "spheric_collision_detector", this, &SphericCollisionDetectorNode::checkLaneDeparture);
 
   // Wait for first self pose
-  self_pose_listener_->waitForFirstPose();
+  self_pose_listener_->wait_for_first_pose();
 
   // Timer
   initTimer(1.0 / node_param_.update_rate);
 }
 
 void SphericCollisionDetectorNode::onObjectRecognition(
-  const autoware_auto_perception_msgs::msg::DetectedObjects::SharedPtr msg)
+  const autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg)
 {
   object_recognition_ = msg;
 }
 
 void SphericCollisionDetectorNode::onPredictedTrajectory(
-  const autoware_auto_planning_msgs::msg::Trajectory::SharedPtr msg)
+  const autoware_planning_msgs::msg::Trajectory::SharedPtr msg)
 {
   predicted_trajectory_ = msg;
 }
@@ -179,7 +180,7 @@ bool SphericCollisionDetectorNode::isDataTimeout()
 
 void SphericCollisionDetectorNode::onTimer()
 {
-  current_pose_ = self_pose_listener_->getCurrentPose();
+  current_pose_ = self_pose_listener_->get_current_pose();
   
   if (object_recognition_) {
     const auto & header = object_recognition_->header;
@@ -270,19 +271,19 @@ void SphericCollisionDetectorNode::checkLaneDeparture(
 
 visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerArray() const
 {
-  using tier4_autoware_utils::createDefaultMarker;
-  using tier4_autoware_utils::createMarkerColor;
-  using tier4_autoware_utils::createMarkerScale;
+  using autoware_utils::create_default_marker;
+  using autoware_utils::create_marker_color;
+  using autoware_utils::create_marker_scale;
 
   visualization_msgs::msg::MarkerArray marker_array;
 
   if (output_.resampled_trajectory.points.size() >= 2) {
     // Line of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "scd_resampled_trajectory_line", 0,
-        visualization_msgs::msg::Marker::LINE_STRIP, createMarkerScale(0.05, 0, 0),
-        createMarkerColor(1.0, 1.0, 1.0, 0.999));
+        visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.05, 0, 0),
+        create_marker_color(1.0, 1.0, 1.0, 0.999));
 
       for (const auto & p : output_.resampled_trajectory.points) {
         marker.points.push_back(p.pose.position);
@@ -294,10 +295,10 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
 
     // Points of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "scd_resampled_trajectory_points", 0,
-        visualization_msgs::msg::Marker::SPHERE_LIST, createMarkerScale(0.1, 0.1, 0.1),
-        createMarkerColor(0.0, 0.0, 0.0, 0.999));
+        visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.1, 0.1, 0.1),
+        create_marker_color(0.0, 0.0, 0.0, 0.999));
 
       for (const auto & p : output_.resampled_trajectory.points) {
         marker.points.push_back(p.pose.position);
@@ -310,17 +311,17 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
 
   // Vehicle passing areas
   {
-    const auto color_ok = createMarkerColor(1.0, 1.0, 0.0, 0.5);
-    const auto color_will_collide = createMarkerColor(1.0, 0.0, 0.0, 0.3);
+    const auto color_ok = create_marker_color(1.0, 1.0, 0.0, 0.5);
+    const auto color_will_collide = create_marker_color(1.0, 0.0, 0.0, 0.3);
 
     auto color = color_ok;
     if (output_.will_collide) {
       color = color_will_collide;
     }
 
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", this->now(), "scd_ego_passing_area", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
-      createMarkerScale(0.05, 0.05, 0.05), color);
+      create_marker_scale(0.05, 0.05, 0.05), color);
 
     for (const auto & ego_passing_area : output_.vehicle_passing_areas) {
         const auto c = ego_passing_area->center_;
@@ -337,10 +338,10 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
   }
 
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
          "map", this->now(), "scd_obstacle_spheres", 0,
-         visualization_msgs::msg::Marker::SPHERE_LIST, createMarkerScale(0.03, 0.03, 0.03),
-         createMarkerColor(1.0, 1.0, 0.0, 0.5));
+         visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.03, 0.03, 0.03),
+         create_marker_color(1.0, 1.0, 0.0, 0.5));
 
     for(const auto & obstacle:output_.obstacles){
       for (const auto & obstacle_sphere : obstacle){

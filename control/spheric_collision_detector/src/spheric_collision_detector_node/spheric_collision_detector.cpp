@@ -14,17 +14,16 @@
 
 #include "spheric_collision_detector/spheric_collision_detector.hpp"
 
-#include <tier4_autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_autoware_utils/geometry/geometry.hpp>
-#include <tier4_autoware_utils/math/normalization.hpp>
-#include <tier4_autoware_utils/math/unit_conversion.hpp>
-#include <tier4_autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -53,12 +52,12 @@ double calcBrakingDistance(
 }
 
 std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSpheres(
-        const autoware_auto_perception_msgs::msg::DetectedObjects & object_recognition,
+        const autoware_perception_msgs::msg::DetectedObjects & object_recognition,
         const geometry_msgs::msg::TransformStamped & transform,
-        std::vector<tier4_autoware_utils::LinearRing2d> & object_area){
+        std::vector<autoware_utils::LinearRing2d> & object_area){
 
-    using tier4_autoware_utils::LinearRing2d;
-    using tier4_autoware_utils::Point2d;
+    using autoware_utils::LinearRing2d;
+    using autoware_utils::Point2d;
 
     std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
     
@@ -69,7 +68,7 @@ std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSphere
 
       const auto pz = map_pose.position.z;
 
-      tier4_autoware_utils::LinearRing2d local_obj_footprint;
+      autoware_utils::LinearRing2d local_obj_footprint;
 
       const auto dim_x = obj.shape.dimensions.x;// Length
       const auto dim_y = obj.shape.dimensions.y; // Width
@@ -87,9 +86,9 @@ std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSphere
       local_obj_footprint.push_back(Point2d{x_rear * 0.5,0.0});
       local_obj_footprint.push_back(Point2d{x_rear,0.0});
             
-      tier4_autoware_utils::LinearRing2d current_object_area = 
-          tier4_autoware_utils::transformVector<tier4_autoware_utils::LinearRing2d>(
-          local_obj_footprint, tier4_autoware_utils::pose2transform(map_pose));
+      autoware_utils::LinearRing2d current_object_area = 
+          autoware_utils::transform_vector<autoware_utils::LinearRing2d>(
+          local_obj_footprint, autoware_utils::pose2transform(map_pose));
       object_area.push_back(current_object_area);
 
       for (const auto & area : current_object_area) {
@@ -128,7 +127,7 @@ const double x_rear, const double y_left, const double y_right)
 namespace spheric_collision_detector
 {
 SphericCollisionDetector::SphericCollisionDetector(rclcpp::Node & node)
-: vehicle_info_(vehicle_info_util::VehicleInfoUtil(node).getVehicleInfo())
+: vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo())
 {
   const double lon_margin = 0.0;
   const double lat_margin = 0.0;
@@ -141,10 +140,10 @@ SphericCollisionDetector::SphericCollisionDetector(rclcpp::Node & node)
 
   ego_sphere_radius_ = computeLargestDistFootprint(x_front, x_center, x_rear, y_left, y_right);
   const double tuck_in_margin = abs(y_left - y_right) * 0.5;
-  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
-  vehicle_footprint_.push_back(Point2d{x_center, y_right + tuck_in_margin});
-  vehicle_footprint_.push_back(Point2d{x_rear + tuck_in_margin, y_left - tuck_in_margin});
-  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
+  vehicle_footprint_.push_back(autoware_utils::Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
+  vehicle_footprint_.push_back(autoware_utils::Point2d{x_center, y_right + tuck_in_margin});
+  vehicle_footprint_.push_back(autoware_utils::Point2d{x_rear + tuck_in_margin, y_left - tuck_in_margin});
+  vehicle_footprint_.push_back(autoware_utils::Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
 }
 
 Output SphericCollisionDetector::update(const Input & input)
@@ -168,14 +167,14 @@ Output SphericCollisionDetector::update(const Input & input)
   output.vehicle_passing_areas = createVehiclePassingAreas(output.vehicle_footprints, 
     vehicle_pose_z, ego_sphere_radius_);
 
-  std::vector<tier4_autoware_utils::LinearRing2d> obstacle_areas;
+  std::vector<autoware_utils::LinearRing2d> obstacle_areas;
   const auto obstacles = createObstacleSpheres(*input.object_recognition, 
     input.object_recognition_transform, obstacle_areas);
   output.obstacles = obstacles;
   output.obstacle_areas = obstacle_areas;
 
   output.will_collide = false;
-  tier4_autoware_utils::StopWatch<std::chrono::nanoseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::nanoseconds> stop_watch;
 
   // collision check
   for(const auto & obstacle: obstacles){
@@ -195,10 +194,10 @@ Output SphericCollisionDetector::update(const Input & input)
   return output;
 }
 
-autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::resampleTrajectory(
-  const autoware_auto_planning_msgs::msg::Trajectory & trajectory, const double sphere_radius)
+autoware_planning_msgs::msg::Trajectory SphericCollisionDetector::resampleTrajectory(
+  const autoware_planning_msgs::msg::Trajectory & trajectory, const double sphere_radius)
 {
-  autoware_auto_planning_msgs::msg::Trajectory resampled;
+  autoware_planning_msgs::msg::Trajectory resampled;
   resampled.header = trajectory.header;
 
   const double dist = 2.0*sphere_radius;
@@ -206,8 +205,8 @@ autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::resampleT
   for (size_t i = 1; i < trajectory.points.size() - 1; ++i) {
     const auto & point = trajectory.points.at(i);
 
-    const auto p1 = tier4_autoware_utils::fromMsg(resampled.points.back().pose.position).to_2d();
-    const auto p2 = tier4_autoware_utils::fromMsg(point.pose.position).to_2d();
+    const auto p1 = autoware_utils::from_msg(resampled.points.back().pose.position).to_2d();
+    const auto p2 = autoware_utils::from_msg(point.pose.position).to_2d();
 
     if (boost::geometry::distance(p1, p2) > dist) {
       resampled.points.push_back(point);
@@ -218,10 +217,10 @@ autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::resampleT
   return resampled;
 }
 
-autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::cutTrajectory(
-  const autoware_auto_planning_msgs::msg::Trajectory & trajectory, const double length)
+autoware_planning_msgs::msg::Trajectory SphericCollisionDetector::cutTrajectory(
+  const autoware_planning_msgs::msg::Trajectory & trajectory, const double length)
 {
-  autoware_auto_planning_msgs::msg::Trajectory cut;
+  autoware_planning_msgs::msg::Trajectory cut;
   cut.header = trajectory.header;
 
   double total_length = 0.0;
@@ -229,8 +228,8 @@ autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::cutTrajec
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
     const auto & point = trajectory.points.at(i);
 
-    const auto p1 = tier4_autoware_utils::fromMsg(cut.points.back().pose.position);
-    const auto p2 = tier4_autoware_utils::fromMsg(point.pose.position);
+    const auto p1 = autoware_utils::from_msg(cut.points.back().pose.position);
+    const auto p2 = autoware_utils::from_msg(point.pose.position);
     const auto points_distance = boost::geometry::distance(p1.to_2d(), p2.to_2d());
 
     const auto remain_distance = length - total_length;
@@ -244,7 +243,7 @@ autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::cutTrajec
     if (remain_distance <= points_distance) {
       const Eigen::Vector3d p_interpolated = p1 + remain_distance * (p2 - p1).normalized();
 
-      autoware_auto_planning_msgs::msg::TrajectoryPoint p;
+      autoware_planning_msgs::msg::TrajectoryPoint p;
       p.pose.position.x = p_interpolated.x();
       p.pose.position.y = p_interpolated.y();
       p.pose.position.z = p_interpolated.z();
@@ -262,15 +261,15 @@ autoware_auto_planning_msgs::msg::Trajectory SphericCollisionDetector::cutTrajec
 }
 
 std::vector<LinearRing2d> SphericCollisionDetector::createVehicleFootprints(
-  const autoware_auto_planning_msgs::msg::Trajectory & trajectory,
+  const autoware_planning_msgs::msg::Trajectory & trajectory,
   const LinearRing2d & local_vehicle_footprint)
 {
   // Create vehicle footprint on each TrajectoryPoint
   std::vector<LinearRing2d> vehicle_footprints;
   for (const auto & p : trajectory.points) {
     vehicle_footprints.push_back(
-      tier4_autoware_utils::transformVector<tier4_autoware_utils::LinearRing2d>(
-        local_vehicle_footprint, tier4_autoware_utils::pose2transform(p.pose)));
+      autoware_utils::transform_vector<autoware_utils::LinearRing2d>(
+        local_vehicle_footprint, autoware_utils::pose2transform(p.pose)));
   }
 
   return vehicle_footprints;
