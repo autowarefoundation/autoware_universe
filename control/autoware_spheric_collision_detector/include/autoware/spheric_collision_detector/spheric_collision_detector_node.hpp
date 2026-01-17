@@ -15,7 +15,7 @@
 #ifndef SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
 #define SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_NODE_HPP_
 
-#include "spheric_collision_detector/spheric_collision_detector.hpp"
+#include "autoware/spheric_collision_detector/spheric_collision_detector.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -114,7 +114,7 @@ private:
   // Diagnostic Updater
   diagnostic_updater::Updater updater_;
 
-  void checkLaneDeparture(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void checkCollisionStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Visualization
   visualization_msgs::msg::MarkerArray createMarkerArray() const;

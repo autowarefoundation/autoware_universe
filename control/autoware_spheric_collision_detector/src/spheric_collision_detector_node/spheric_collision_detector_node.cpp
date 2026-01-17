@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "spheric_collision_detector/spheric_collision_detector_node.hpp"
+#include "autoware/spheric_collision_detector/spheric_collision_detector_node.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -26,7 +26,6 @@
 #include <vector>
 
 namespace
-{  
 {  
 template <class T>
 bool update_param(
@@ -52,7 +51,6 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
 : Node("spheric_collision_detector_node", node_options), updater_(this)
 {
 
-
   using std::placeholders::_1;
 
   // Node Parameter
@@ -65,7 +63,6 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&SphericCollisionDetectorNode::paramCallback, this, _1));
     
-    
   // Core
   spheric_collision_detector_ = std::make_unique<SphericCollisionDetector>(*this);
   spheric_collision_detector_->setParam(param_);
@@ -74,12 +71,10 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);
   transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
-  sub_object_recognition_ = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-    "input/object_recognition", rclcpp::QoS{1},
-    std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
-  sub_object_recognition_ = create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
-    "input/object_recognition", rclcpp::QoS{1},
-    std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
+  sub_object_recognition_ =
+    create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
+      "input/object_recognition", rclcpp::QoS{1},
+      std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
 
   sub_predicted_trajectory_ = create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/predicted_trajectory", 1,
@@ -95,7 +90,7 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   updater_.setHardwareID("spheric_collision_detector");
 
   updater_.add(
-    "spheric_collision_detector", this, &SphericCollisionDetectorNode::checkLaneDeparture);
+    "spheric_collision_detector", this, &SphericCollisionDetectorNode::checkCollisionStatus);
 
   // Wait for first self pose
   self_pose_listener_->wait_for_first_pose();
@@ -138,7 +133,6 @@ bool SphericCollisionDetectorNode::isDataReady()
   }
 
    if (!object_recognition_) {
-   if (!object_recognition_) {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for object_recognition msg...");
@@ -154,7 +148,6 @@ bool SphericCollisionDetectorNode::isDataReady()
 
   if (!current_twist_) {
     RCLCPP_INFO_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000 /* ms */, 
       this->get_logger(), *this->get_clock(), 5000 /* ms */, 
       "scd: waiting for current_twist msg...");
     return false;
@@ -180,14 +173,12 @@ bool SphericCollisionDetectorNode::isDataTimeout()
 
 void SphericCollisionDetectorNode::onTimer()
 {
-  current_pose_ = self_pose_listener_->get_current_pose();
-  
+  current_pose_ = self_pose_listener_->getCurrentPose();
+
   if (object_recognition_) {
     const auto & header = object_recognition_->header;
     try {
       object_recognition_transform_ = tf_buffer_.lookupTransform(
-        "map", header.frame_id, header.stamp,
-        rclcpp::Duration::from_seconds(0.01));
         "map", header.frame_id, header.stamp,
         rclcpp::Duration::from_seconds(0.01));
     } catch (tf2::TransformException & ex) {
@@ -196,7 +187,6 @@ void SphericCollisionDetectorNode::onTimer()
         ex.what());
       return;
     }
-  } 
   } 
 
   if (!isDataReady()) {
@@ -213,7 +203,6 @@ void SphericCollisionDetectorNode::onTimer()
   input_.current_twist = current_twist_;
   input_.object_recognition_transform = object_recognition_transform_;
   output_.will_collide = false;
-  
   
   output_ = spheric_collision_detector_->update(input_);
 
@@ -255,7 +244,7 @@ rcl_interfaces::msg::SetParametersResult SphericCollisionDetectorNode::paramCall
   return result;
 }
 
-void SphericCollisionDetectorNode::checkLaneDeparture(
+void SphericCollisionDetectorNode::checkCollisionStatus(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   int8_t level = diagnostic_msgs::msg::DiagnosticStatus::OK;
@@ -338,10 +327,9 @@ visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerA
   }
 
   {
-    auto marker = create_default_marker(
-         "map", this->now(), "scd_obstacle_spheres", 0,
-         visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.03, 0.03, 0.03),
-         create_marker_color(1.0, 1.0, 0.0, 0.5));
+    auto marker = createDefaultMarker(
+      "map", this->now(), "scd_obstacle_spheres", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+      createMarkerScale(0.03, 0.03, 0.03), createMarkerColor(1.0, 1.0, 0.0, 0.5));
 
     for(const auto & obstacle:output_.obstacles){
       for (const auto & obstacle_sphere : obstacle){

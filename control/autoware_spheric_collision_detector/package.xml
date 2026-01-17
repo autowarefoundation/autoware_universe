@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>spheric_collision_detector</name>
+  <name>autoware_spheric_collision_detector</name>
   <version>0.1.0</version>
   <description>The spheric_collision_detector package</description>
   <license>Apache License 2.0</license>
@@ -11,8 +11,8 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
   
-  <depend>autoware_auto_planning_msgs</depend>
-  <depend>autoware_auto_perception_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_perception_msgs</depend>
   <depend>boost</depend>
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>

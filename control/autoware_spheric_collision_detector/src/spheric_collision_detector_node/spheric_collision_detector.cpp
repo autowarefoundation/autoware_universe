@@ -12,18 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "spheric_collision_detector/spheric_collision_detector.hpp"
-
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
+#include "autoware/spheric_collision_detector/spheric_collision_detector.hpp"
 
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
-
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <tier4_autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <tier4_autoware_utils/geometry/geometry.hpp>
+#include <tier4_autoware_utils/math/normalization.hpp>
+#include <tier4_autoware_utils/math/unit_conversion.hpp>
+#include <tier4_autoware_utils/system/stop_watch.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -52,50 +49,30 @@ double calcBrakingDistance(
 }
 
 std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSpheres(
-        const autoware_perception_msgs::msg::DetectedObjects & object_recognition,
-        const geometry_msgs::msg::TransformStamped & transform,
-        std::vector<autoware_utils::LinearRing2d> & object_area){
+  const autoware_auto_perception_msgs::msg::DetectedObjects & object_recognition,
+  const geometry_msgs::msg::TransformStamped & transform,
+  std::vector<tier4_autoware_utils::LinearRing2d> & object_area)
+{
+  using tier4_autoware_utils::LinearRing2d;
+  using tier4_autoware_utils::Point2d;
 
-    using autoware_utils::LinearRing2d;
-    using autoware_utils::Point2d;
+  std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
 
-    std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
-    
-    for(const auto & obj : object_recognition.objects){
-      std::vector<std::shared_ptr<sphere3::Sphere3>> obstacle_spheres;
-      geometry_msgs::msg::Pose map_pose;
-      tf2::doTransform(obj.kinematics.pose_with_covariance.pose, map_pose, transform);
+  for (const auto & obj : object_recognition.objects) {
+    std::vector<std::shared_ptr<sphere3::Sphere3>> obstacle_spheres;
+    geometry_msgs::msg::Pose map_pose;
+    tf2::doTransform(obj.kinematics.pose_with_covariance.pose, map_pose, transform);
 
-      const auto pz = map_pose.position.z;
+    const auto pz = map_pose.position.z;
 
-      autoware_utils::LinearRing2d local_obj_footprint;
+    tier4_autoware_utils::LinearRing2d local_obj_footprint;
 
-      const auto dim_x = obj.shape.dimensions.x;// Length
-      const auto dim_y = obj.shape.dimensions.y; // Width
-      auto object_type = obj.classification.front().label;
+    const auto dim_x = obj.shape.dimensions.x;  // Length
+    const auto dim_y = obj.shape.dimensions.y;  // Width
+    auto object_type = obj.classification.front().label;
 
-      const auto sphere_radius = dim_y * 0.5;
-      const double lon_margin = 0.35; //to tuck spheres about the bounding boxes
-      
-      const auto x_front = lon_margin * dim_x;
-      const auto x_rear = -x_front;
-
-      local_obj_footprint.push_back(Point2d{x_front,0.0});
-      local_obj_footprint.push_back(Point2d{x_front * 0.5,0.0});
-      local_obj_footprint.push_back(Point2d{0.0,0.0});
-      local_obj_footprint.push_back(Point2d{x_rear * 0.5,0.0});
-      local_obj_footprint.push_back(Point2d{x_rear,0.0});
-            
-      autoware_utils::LinearRing2d current_object_area = 
-          autoware_utils::transform_vector<autoware_utils::LinearRing2d>(
-          local_obj_footprint, autoware_utils::pose2transform(map_pose));
-      object_area.push_back(current_object_area);
-
-      for (const auto & area : current_object_area) {
-        const auto obstacle_sphere = std::make_shared<sphere3::Sphere3>(
-          Eigen::Vector3d(area.x(),area.y(),pz), sphere_radius, object_type);
-        obstacle_spheres.push_back(obstacle_sphere);
-      }
+    const auto sphere_radius = dim_y * 0.5;
+    const double lon_margin = 0.35;  // to tuck spheres about the bounding boxes
 
       obstacles.push_back(obstacle_spheres);
     }
@@ -140,10 +117,10 @@ SphericCollisionDetector::SphericCollisionDetector(rclcpp::Node & node)
 
   ego_sphere_radius_ = computeLargestDistFootprint(x_front, x_center, x_rear, y_left, y_right);
   const double tuck_in_margin = abs(y_left - y_right) * 0.5;
-  vehicle_footprint_.push_back(autoware_utils::Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
-  vehicle_footprint_.push_back(autoware_utils::Point2d{x_center, y_right + tuck_in_margin});
-  vehicle_footprint_.push_back(autoware_utils::Point2d{x_rear + tuck_in_margin, y_left - tuck_in_margin});
-  vehicle_footprint_.push_back(autoware_utils::Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin });
+  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin});
+  vehicle_footprint_.push_back(Point2d{x_center, y_right + tuck_in_margin});
+  vehicle_footprint_.push_back(Point2d{x_rear + tuck_in_margin, y_left - tuck_in_margin});
+  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin});
 }
 
 Output SphericCollisionDetector::update(const Input & input)
@@ -167,9 +144,9 @@ Output SphericCollisionDetector::update(const Input & input)
   output.vehicle_passing_areas = createVehiclePassingAreas(output.vehicle_footprints, 
     vehicle_pose_z, ego_sphere_radius_);
 
-  std::vector<autoware_utils::LinearRing2d> obstacle_areas;
-  const auto obstacles = createObstacleSpheres(*input.object_recognition, 
-    input.object_recognition_transform, obstacle_areas);
+  std::vector<tier4_autoware_utils::LinearRing2d> obstacle_areas;
+  const auto obstacles = createObstacleSpheres(
+    *input.object_recognition, input.object_recognition_transform, obstacle_areas);
   output.obstacles = obstacles;
   output.obstacle_areas = obstacle_areas;
 

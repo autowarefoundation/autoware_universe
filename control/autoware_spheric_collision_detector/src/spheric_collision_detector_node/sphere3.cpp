@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "spheric_collision_detector/sphere3.hpp"
+#include "autoware/spheric_collision_detector/sphere3.hpp"
 
 namespace sphere3
 {

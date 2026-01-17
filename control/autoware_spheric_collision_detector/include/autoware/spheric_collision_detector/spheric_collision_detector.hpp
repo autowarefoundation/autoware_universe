@@ -15,7 +15,7 @@
 #ifndef SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
 #define SPHERIC_COLLISION_DETECTOR__SPHERIC_COLLISION_DETECTOR_HPP_
 
-#include "spheric_collision_detector/sphere3.hpp"
+#include "autoware/spheric_collision_detector/sphere3.hpp"
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
