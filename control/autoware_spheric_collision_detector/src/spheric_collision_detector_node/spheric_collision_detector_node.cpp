@@ -18,32 +18,13 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-namespace
-{  
-template <class T>
-bool update_param(
-  const std::vector<rclcpp::Parameter> & params, const std::string & name, T & value)
-{
-  const auto itr = std::find_if(
-    params.cbegin(), params.cend(),
-    [&name](const rclcpp::Parameter & p) { return p.get_name() == name; });
-
-  // Not found
-  if (itr == params.cend()) {
-    return false;
-  }
-
-  value = itr->template get_value<T>();
-  return true;
-}
-}  // namespace
 
 namespace spheric_collision_detector
 {
@@ -206,6 +187,9 @@ void SphericCollisionDetectorNode::onTimer()
   
   output_ = spheric_collision_detector_->update(input_);
 
+  if (output_.will_collide) {
+    RCLCPP_INFO(this->get_logger(), "scd: collision-time: %3ld", output_.collision_elapsed_time);
+  }
   // Force an immediate update as the state of the node has changed
   updater_.force_update();
 
@@ -221,6 +205,7 @@ rcl_interfaces::msg::SetParametersResult SphericCollisionDetectorNode::paramCall
   result.reason = "success";
 
   try {
+    using autoware_utils::update_param;
     // Node Parameter
     {
       auto & p = node_param_;
@@ -260,95 +245,107 @@ void SphericCollisionDetectorNode::checkCollisionStatus(
 
 visualization_msgs::msg::MarkerArray SphericCollisionDetectorNode::createMarkerArray() const
 {
-  using autoware_utils::create_default_marker;
-  using autoware_utils::create_marker_color;
-  using autoware_utils::create_marker_scale;
-
   visualization_msgs::msg::MarkerArray marker_array;
 
-  if (output_.resampled_trajectory.points.size() >= 2) {
-    // Line of resampled_trajectory
-    {
-      auto marker = create_default_marker(
-        "map", this->now(), "scd_resampled_trajectory_line", 0,
-        visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.05, 0, 0),
-        create_marker_color(1.0, 1.0, 1.0, 0.999));
-
-      for (const auto & p : output_.resampled_trajectory.points) {
-        marker.points.push_back(p.pose.position);
-        marker.colors.push_back(marker.color);
-      }
-
-      marker_array.markers.push_back(marker);
-    }
-
-    // Points of resampled_trajectory
-    {
-      auto marker = create_default_marker(
-        "map", this->now(), "scd_resampled_trajectory_points", 0,
-        visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.1, 0.1, 0.1),
-        create_marker_color(0.0, 0.0, 0.0, 0.999));
-
-      for (const auto & p : output_.resampled_trajectory.points) {
-        marker.points.push_back(p.pose.position);
-        marker.colors.push_back(marker.color);
-      }
-
-      marker_array.markers.push_back(marker);
-    }
-  }
-
-  // Vehicle passing areas
-  {
-    const auto color_ok = create_marker_color(1.0, 1.0, 0.0, 0.5);
-    const auto color_will_collide = create_marker_color(1.0, 0.0, 0.0, 0.3);
-
-    auto color = color_ok;
-    if (output_.will_collide) {
-      color = color_will_collide;
-    }
-
-    auto marker = create_default_marker(
-      "map", this->now(), "scd_ego_passing_area", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
-      create_marker_scale(0.05, 0.05, 0.05), color);
-
-    for (const auto & ego_passing_area : output_.vehicle_passing_areas) {
-        const auto c = ego_passing_area->center_;
-        const auto dm = 2.0 * ego_passing_area->radius_;
-
-        marker.scale.x = dm;
-        marker.scale.y = dm;
-        marker.scale.z = dm; 
-
-        marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
-    }
-
-    marker_array.markers.push_back(marker);
-  }
-
-  {
-    auto marker = createDefaultMarker(
-      "map", this->now(), "scd_obstacle_spheres", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
-      createMarkerScale(0.03, 0.03, 0.03), createMarkerColor(1.0, 1.0, 0.0, 0.5));
-
-    for(const auto & obstacle:output_.obstacles){
-      for (const auto & obstacle_sphere : obstacle){
-        const auto c = obstacle_sphere->center_;
-        const auto dm = 2.0 * obstacle_sphere->radius_;
-
-        marker.scale.x = dm;
-        marker.scale.y = dm;
-        marker.scale.z = dm; 
-
-        marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
-      }
-    }
-
-    marker_array.markers.push_back(marker);
-  }
+  addResampledTrajectoryMarkers(marker_array);
+  addVehiclePassingAreaMarkers(marker_array);
+  addObstacleMarkers(marker_array);
 
   return marker_array;
 }
+
+void SphericCollisionDetectorNode::addResampledTrajectoryMarkers(
+  visualization_msgs::msg::MarkerArray & marker_array) const
+{
+  if (output_.resampled_trajectory.points.size() < 2) {
+    return;  // early return avoids nesting
+  }
+
+  // Line
+  auto line_marker = autoware_utils::create_default_marker(
+    "map", this->now(), "scd_resampled_trajectory_line", 0,
+    visualization_msgs::msg::Marker::LINE_STRIP, autoware_utils::create_marker_scale(0.05, 0, 0),
+    autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.999));
+
+  for (const auto & p : output_.resampled_trajectory.points) {
+    line_marker.points.push_back(p.pose.position);
+    line_marker.colors.push_back(line_marker.color);
+  }
+
+  marker_array.markers.push_back(line_marker);
+
+  // Points
+  auto point_marker = autoware_utils::create_default_marker(
+    "map", this->now(), "scd_resampled_trajectory_points", 0,
+    visualization_msgs::msg::Marker::SPHERE_LIST,
+    autoware_utils::create_marker_scale(0.1, 0.1, 0.1),
+    autoware_utils::create_marker_color(0.0, 0.0, 0.0, 0.999));
+
+  for (const auto & p : output_.resampled_trajectory.points) {
+    point_marker.points.push_back(p.pose.position);
+    point_marker.colors.push_back(point_marker.color);
+  }
+
+  marker_array.markers.push_back(point_marker);
+}
+
+void SphericCollisionDetectorNode::addVehiclePassingAreaMarkers(
+  visualization_msgs::msg::MarkerArray & marker_array) const
+{
+  if (output_.vehicle_passing_areas.empty()) {
+    return;
+  }
+
+  const auto color_ok = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 0.5);
+  const auto color_will_collide = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.3);
+  const auto color = output_.will_collide ? color_will_collide : color_ok;
+
+  auto marker = autoware_utils::create_default_marker(
+    "map", this->now(), "scd_ego_passing_area", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+    autoware_utils::create_marker_scale(0.05, 0.05, 0.05), color);
+
+  for (const auto & area : output_.vehicle_passing_areas) {
+    const auto & c = area->center_;
+    const auto dm = 2.0 * area->radius_;
+
+    marker.scale.x = dm;
+    marker.scale.y = dm;
+    marker.scale.z = dm;
+
+    marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
+  }
+
+  marker_array.markers.push_back(marker);
+}
+
+void SphericCollisionDetectorNode::addObstacleMarkers(
+  visualization_msgs::msg::MarkerArray & marker_array) const
+{
+  if (output_.obstacles.empty()) {
+    return;
+  }
+
+  auto marker = autoware_utils::create_default_marker(
+    "map", this->now(), "scd_obstacle_spheres", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+    autoware_utils::create_marker_scale(0.03, 0.03, 0.03),
+    autoware_utils::create_marker_color(1.0, 1.0, 0.0, 0.5));
+
+  for (const auto & obstacle : output_.obstacles) {
+    for (const auto & sphere : obstacle) {
+      const auto & c = sphere->center_;
+      const auto dm = 2.0 * sphere->radius_;
+
+      marker.scale.x = dm;
+      marker.scale.y = dm;
+      marker.scale.z = dm;
+
+      marker.points.push_back(toMsg(Eigen::Vector3d(c.x(), c.y(), c.z())));
+    }
+  }
+
+  marker_array.markers.push_back(marker);
+}
+
 }  // namespace spheric_collision_detector
 
 #include <rclcpp_components/register_node_macro.hpp>

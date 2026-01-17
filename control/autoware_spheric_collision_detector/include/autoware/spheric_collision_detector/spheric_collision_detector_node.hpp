@@ -118,6 +118,10 @@ private:
 
   // Visualization
   visualization_msgs::msg::MarkerArray createMarkerArray() const;
+
+  void addResampledTrajectoryMarkers(visualization_msgs::msg::MarkerArray & marker_array) const;
+  void addVehiclePassingAreaMarkers(visualization_msgs::msg::MarkerArray & marker_array) const;
+  void addObstacleMarkers(visualization_msgs::msg::MarkerArray & marker_array) const;
 };
 }  // namespace spheric_collision_detector
 

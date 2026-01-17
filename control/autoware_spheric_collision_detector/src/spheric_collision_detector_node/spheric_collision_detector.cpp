@@ -14,13 +14,11 @@
 
 #include "autoware/spheric_collision_detector/spheric_collision_detector.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <tier4_autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <tier4_autoware_utils/geometry/geometry.hpp>
-#include <tier4_autoware_utils/math/normalization.hpp>
-#include <tier4_autoware_utils/math/unit_conversion.hpp>
-#include <tier4_autoware_utils/system/stop_watch.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -39,7 +37,7 @@
 
 namespace
 {
- 
+
 double calcBrakingDistance(
   const double abs_velocity, const double max_deceleration, const double delay_time)
 {
@@ -49,12 +47,12 @@ double calcBrakingDistance(
 }
 
 std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSpheres(
-  const autoware_auto_perception_msgs::msg::DetectedObjects & object_recognition,
+  const autoware_perception_msgs::msg::DetectedObjects & object_recognition,
   const geometry_msgs::msg::TransformStamped & transform,
-  std::vector<tier4_autoware_utils::LinearRing2d> & object_area)
+  std::vector<autoware_utils::LinearRing2d> & object_area)
 {
-  using tier4_autoware_utils::LinearRing2d;
-  using tier4_autoware_utils::Point2d;
+  using autoware_utils::LinearRing2d;
+  using autoware_utils::Point2d;
 
   std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> obstacles;
 
@@ -65,7 +63,7 @@ std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSphere
 
     const auto pz = map_pose.position.z;
 
-    tier4_autoware_utils::LinearRing2d local_obj_footprint;
+    autoware_utils::LinearRing2d local_obj_footprint;
 
     const auto dim_x = obj.shape.dimensions.x;  // Length
     const auto dim_y = obj.shape.dimensions.y;  // Width
@@ -74,29 +72,49 @@ std::vector<std::vector<std::shared_ptr<sphere3::Sphere3>>> createObstacleSphere
     const auto sphere_radius = dim_y * 0.5;
     const double lon_margin = 0.35;  // to tuck spheres about the bounding boxes
 
-      obstacles.push_back(obstacle_spheres);
+    const auto x_front = lon_margin * dim_x;
+    const auto x_rear = -x_front;
+
+    local_obj_footprint.push_back(Point2d{x_front, 0.0});
+    local_obj_footprint.push_back(Point2d{x_front * 0.5, 0.0});
+    local_obj_footprint.push_back(Point2d{0.0, 0.0});
+    local_obj_footprint.push_back(Point2d{x_rear * 0.5, 0.0});
+    local_obj_footprint.push_back(Point2d{x_rear, 0.0});
+
+    autoware_utils::LinearRing2d current_object_area =
+      autoware_utils::transform_vector<autoware_utils::LinearRing2d>(
+        local_obj_footprint, autoware_utils::pose2transform(map_pose));
+    object_area.push_back(current_object_area);
+
+    for (const auto & area : current_object_area) {
+      const auto obstacle_sphere = std::make_shared<sphere3::Sphere3>(
+        Eigen::Vector3d(area.x(), area.y(), pz), sphere_radius, object_type);
+      obstacle_spheres.push_back(obstacle_sphere);
     }
 
-    return obstacles;
+    obstacles.push_back(obstacle_spheres);
+  }
+
+  return obstacles;
 }
 
-double computeLargestDistFootprint(const double x_front, const double x_center, 
-const double x_rear, const double y_left, const double y_right)
+double computeLargestDistFootprint(
+  const spheric_collision_detector::FootprintCoords & footprint_coords_)
 {
-    double dist; 
-   
-    double d1 = abs(x_front - x_center);
-    double d2 = abs(x_center - x_rear);
-    double d3 = abs(y_left - y_right);
+  double dist;
 
-    if(d1 > d2 && d1 > d3) 
-        dist = d1;
-    else if(d2 > d1 && d2 > d3) 
-        dist = d2;
-    else 
-        dist = d3;
+  double d1 = abs(footprint_coords_.x_front - footprint_coords_.x_center);
+  double d2 = abs(footprint_coords_.x_center - footprint_coords_.x_rear);
+  double d3 = abs(footprint_coords_.y_left - footprint_coords_.y_right);
 
-    return dist * 0.5;
+  if (d1 > d2 && d1 > d3)
+    dist = d1;
+  else if (d2 > d1 && d2 > d3)
+    dist = d2;
+  else
+    dist = d3;
+
+  return dist * 0.5;
 }
 
 }  // namespace
@@ -109,18 +127,29 @@ SphericCollisionDetector::SphericCollisionDetector(rclcpp::Node & node)
   const double lon_margin = 0.0;
   const double lat_margin = 0.0;
 
-  const double x_front = vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m + lon_margin;
-  const double x_center = vehicle_info_.wheel_base_m / 2.0;
-  const double x_rear = -(vehicle_info_.rear_overhang_m + lon_margin);
-  const double y_left = vehicle_info_.wheel_tread_m / 2.0 + vehicle_info_.left_overhang_m + lat_margin;
-  const double y_right = -(vehicle_info_.wheel_tread_m / 2.0 + vehicle_info_.right_overhang_m + lat_margin);
+  footprint_coords_.x_front =
+    vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m + lon_margin;
+  footprint_coords_.x_center = vehicle_info_.wheel_base_m / 2.0;
+  footprint_coords_.x_rear = -(vehicle_info_.rear_overhang_m + lon_margin);
+  footprint_coords_.y_left =
+    vehicle_info_.wheel_tread_m / 2.0 + vehicle_info_.left_overhang_m + lat_margin;
+  footprint_coords_.y_right =
+    -(vehicle_info_.wheel_tread_m / 2.0 + vehicle_info_.right_overhang_m + lat_margin);
 
-  ego_sphere_radius_ = computeLargestDistFootprint(x_front, x_center, x_rear, y_left, y_right);
-  const double tuck_in_margin = abs(y_left - y_right) * 0.5;
-  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin});
-  vehicle_footprint_.push_back(Point2d{x_center, y_right + tuck_in_margin});
-  vehicle_footprint_.push_back(Point2d{x_rear + tuck_in_margin, y_left - tuck_in_margin});
-  vehicle_footprint_.push_back(Point2d{x_front - tuck_in_margin, y_left - tuck_in_margin});
+  ego_sphere_radius_ = computeLargestDistFootprint(footprint_coords_);
+  const double tuck_in_margin = abs(footprint_coords_.y_left - footprint_coords_.y_right) * 0.5;
+  vehicle_footprint_.push_back(
+    autoware_utils::Point2d{
+      footprint_coords_.x_front - tuck_in_margin, footprint_coords_.y_left - tuck_in_margin});
+  vehicle_footprint_.push_back(
+    autoware_utils::Point2d{
+      footprint_coords_.x_center, footprint_coords_.y_right + tuck_in_margin});
+  vehicle_footprint_.push_back(
+    autoware_utils::Point2d{
+      footprint_coords_.x_rear + tuck_in_margin, footprint_coords_.y_left - tuck_in_margin});
+  vehicle_footprint_.push_back(
+    autoware_utils::Point2d{
+      footprint_coords_.x_front - tuck_in_margin, footprint_coords_.y_left - tuck_in_margin});
 }
 
 Output SphericCollisionDetector::update(const Input & input)
@@ -141,33 +170,32 @@ Output SphericCollisionDetector::update(const Input & input)
     createVehicleFootprints(output.resampled_trajectory, vehicle_footprint_);
 
   auto vehicle_pose_z = input.current_pose->pose.position.z;
-  output.vehicle_passing_areas = createVehiclePassingAreas(output.vehicle_footprints, 
-    vehicle_pose_z, ego_sphere_radius_);
+  output.vehicle_passing_areas =
+    createVehiclePassingAreas(output.vehicle_footprints, vehicle_pose_z, ego_sphere_radius_);
 
-  std::vector<tier4_autoware_utils::LinearRing2d> obstacle_areas;
+  std::vector<autoware_utils::LinearRing2d> obstacle_areas;
   const auto obstacles = createObstacleSpheres(
     *input.object_recognition, input.object_recognition_transform, obstacle_areas);
   output.obstacles = obstacles;
   output.obstacle_areas = obstacle_areas;
 
   output.will_collide = false;
-  autoware_utils::StopWatch<std::chrono::nanoseconds> stop_watch;
 
   // collision check
-  for(const auto & obstacle: obstacles){
+  for (const auto & obstacle : obstacles) {
     auto cc_start_time = std::chrono::steady_clock::now();
     output.will_collide = checkCollision(output.vehicle_passing_areas, obstacle);
     auto cc_end_time = std::chrono::steady_clock::now();
 
-    auto cc_elapsed_time = 
+    auto cc_elapsed_time =
       std::chrono::duration_cast<std::chrono::nanoseconds>(cc_end_time - cc_start_time);
     output.collision_elapsed_time = cc_elapsed_time.count();
 
-    if(output.will_collide){
-        return output;
+    if (output.will_collide) {
+      return output;
     }
   }
- 
+
   return output;
 }
 
@@ -177,7 +205,7 @@ autoware_planning_msgs::msg::Trajectory SphericCollisionDetector::resampleTrajec
   autoware_planning_msgs::msg::Trajectory resampled;
   resampled.header = trajectory.header;
 
-  const double dist = 2.0*sphere_radius;
+  const double dist = 2.0 * sphere_radius;
   resampled.points.push_back(trajectory.points.front());
   for (size_t i = 1; i < trajectory.points.size() - 1; ++i) {
     const auto & point = trajectory.points.at(i);
@@ -250,22 +278,22 @@ std::vector<LinearRing2d> SphericCollisionDetector::createVehicleFootprints(
   }
 
   return vehicle_footprints;
-} 
+}
 
 std::vector<std::shared_ptr<sphere3::Sphere3>> SphericCollisionDetector::createVehiclePassingAreas(
-  const std::vector<LinearRing2d> & vehicle_footprints, const double vehicle_pose_z, 
+  const std::vector<LinearRing2d> & vehicle_footprints, const double vehicle_pose_z,
   const double sphere_radius)
 {
   const auto z = vehicle_pose_z + sphere_radius;
   // Create a sphere from vehicle footprints
   std::vector<std::shared_ptr<sphere3::Sphere3>> areas;
-   for (const auto & vehicle_footprint : vehicle_footprints) {
+  for (const auto & vehicle_footprint : vehicle_footprints) {
     for (size_t i = 0; i < vehicle_footprint.size() - 1; ++i) {
       const auto x = vehicle_footprint.at(i).x();
       const auto y = vehicle_footprint.at(i).y();
 
-      const auto sphere = std::make_shared<sphere3::Sphere3>(
-        Eigen::Vector3d(x,y,z), sphere_radius, -1);
+      const auto sphere =
+        std::make_shared<sphere3::Sphere3>(Eigen::Vector3d(x, y, z), sphere_radius, -1);
 
       areas.push_back(sphere);
     }
@@ -275,24 +303,25 @@ std::vector<std::shared_ptr<sphere3::Sphere3>> SphericCollisionDetector::createV
 }
 
 bool SphericCollisionDetector::checkCollision(
-        const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
-        const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres){
+  const std::vector<std::shared_ptr<sphere3::Sphere3>> & ego_spheres,
+  const std::vector<std::shared_ptr<sphere3::Sphere3>> & obstacle_spheres)
+{
+  for (const auto & obstacle_sphere : obstacle_spheres) {
+    for (const auto & ego_sphere : ego_spheres) {
+      double dx = ego_sphere->center_.x() - obstacle_sphere->center_.x();
+      double dy = ego_sphere->center_.y() - obstacle_sphere->center_.y();
+      double dz = ego_sphere->center_.z() - obstacle_sphere->center_.z();
 
-      for (const auto & obstacle_sphere:obstacle_spheres){
-        for(const auto & ego_sphere:ego_spheres){
-          double center_dist = sqrt(
-                  pow(ego_sphere->center_.x() - obstacle_sphere->center_.x(),2) + 
-                  pow(ego_sphere->center_.y() - obstacle_sphere->center_.y(),2) + 
-                  pow(ego_sphere->center_.z() - obstacle_sphere->center_.z(),2)); 
+      double center_dist = dx * dx + dy * dy + dz * dz;
+      double sum_radii = ego_sphere->radius_ + obstacle_sphere->radius_;
 
-          double sum_radii = ego_sphere->radius_ + obstacle_sphere->radius_;
-
-          if(center_dist <= sum_radii){
-              return true;           
-          }
-        }
+      if (center_dist <= sum_radii * sum_radii) {
+        return true;
       }
+    }
+  }
 
-   return false;
+  return false;
 }
+
 }  // namespace spheric_collision_detector

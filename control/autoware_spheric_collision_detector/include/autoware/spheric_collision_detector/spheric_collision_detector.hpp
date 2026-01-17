@@ -51,6 +51,15 @@ struct Param
   double max_deceleration;
 };
 
+struct FootprintCoords
+{
+  double x_front;
+  double x_center;
+  double x_rear;
+  double y_left;
+  double y_right;
+};
+
 struct Input
 {
   geometry_msgs::msg::PoseStamped::ConstSharedPtr current_pose;
@@ -83,6 +92,7 @@ public:
 
 private:
   Param param_;
+  FootprintCoords footprint_coords_;
   double ego_sphere_radius_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   LinearRing2d vehicle_footprint_;
