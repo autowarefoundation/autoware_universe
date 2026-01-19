@@ -17,6 +17,7 @@
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
+  <depend>autoware_qos_utils</depend>
   <depend>autoware_utils</depend>
   <depend>grid_map_cv</depend>
   <depend>grid_map_pcl</depend>

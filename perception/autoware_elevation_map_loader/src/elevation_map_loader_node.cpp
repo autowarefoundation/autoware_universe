@@ -21,6 +21,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/qos_utils/qos_compatibility.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_cv/InpaintFilter.hpp>
@@ -107,7 +108,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
           std::bind(&ElevationMapLoaderNode::onPointCloudMapMetaData, this, _1));
       group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       pcd_loader_client_ = create_client<autoware_map_msgs::srv::GetSelectedPointCloudMap>(
-        "service/get_selected_pointcloud_map", rmw_qos_profile_services_default, group_);
+        "service/get_selected_pointcloud_map", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), group_);
 
       while (!pcd_loader_client_->wait_for_service(std::chrono::seconds(1)) && rclcpp::ok()) {
         RCLCPP_DEBUG_THROTTLE(
