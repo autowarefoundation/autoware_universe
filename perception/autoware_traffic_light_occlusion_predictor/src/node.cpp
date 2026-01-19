@@ -44,7 +44,8 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
   const rclcpp::NodeOptions & node_options)
 : Node("traffic_light_occlusion_predictor_node", node_options),
   tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  subscribed_{}
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -94,7 +95,7 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
       tier4_perception_msgs::msg::TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT),
     config_.max_image_cloud_delay, config_.max_wait_t);
 
-  subscribed_.resize(2, false);
+  subscribed_.fill(false);
 }
 
 void TrafficLightOcclusionPredictorNode::mapCallback(
@@ -181,7 +182,7 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
     pub_msg->header = in_signal_msg->header;
     signal_pub_->publish(std::move(pub_msg));
     out_msg_.signals.clear();
-    std::fill(subscribed_.begin(), subscribed_.end(), false);
+    subscribed_.fill(false);
   }
 }
 }  // namespace autoware::traffic_light
