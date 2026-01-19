@@ -401,15 +401,6 @@ void VadNode::load_classification_config(const ClassificationConfig & params)
   }
 }
 
-void VadNode::load_map_configuration(VadConfig & config)
-{
-  load_classification_config(
-    {this->get_parameter("model_params.map_class_names").as_string_array(),
-     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
-     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
-     "load_map_configuration"});
-}
-
 void VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
