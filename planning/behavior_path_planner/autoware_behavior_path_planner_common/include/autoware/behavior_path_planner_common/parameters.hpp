@@ -61,6 +61,7 @@ struct BehaviorPathPlannerParameters
   double turn_signal_roundabout_search_distance;
   double turn_signal_roundabout_angle_threshold_deg;
   int turn_signal_roundabout_backward_depth;
+  double turn_signal_path_backward_length;
 
   bool enable_akima_spline_first;
   bool enable_cog_on_centerline;
