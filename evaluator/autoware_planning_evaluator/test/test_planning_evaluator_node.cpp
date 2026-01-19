@@ -517,7 +517,7 @@ TEST_F(EvalTest, TestFrechet)
 
 TEST_F(EvalTest, TestObstacleDistance)
 {
-  setTargetMetric(planning_diagnostics::Metric::obstacle_distance, "/min");
+  setTargetMetric(planning_diagnostics::Metric::obstacle_distance, "/worst");
   Objects objs;
   autoware_perception_msgs::msg::PredictedObject obj;
   obj.kinematics.initial_pose_with_covariance.pose.position.x = 4.0;
@@ -525,6 +525,7 @@ TEST_F(EvalTest, TestObstacleDistance)
   objs.objects.push_back(obj);
   publishObjects(objs);
 
+  publishEgoPose(0.0, 0.0, 0.0, 1.0, 0.0);
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
   EXPECT_LE(publishTrajectoryAndGetMetric(t), 3.0);  // considering the vehicle and object shape, <
                                                      // the distance is smaller than 4-1=3
@@ -535,8 +536,8 @@ TEST_F(EvalTest, TestObstacleDistance)
 
 TEST_F(EvalTest, TestObstacleTTC)
 {
-  setTargetMetric(planning_diagnostics::Metric::obstacle_ttc);
-  publishEgoPose(0.001, 0.0, 0.0, 1.0, 0.0);  // start nearly from the second traj point
+  setTargetMetric(planning_diagnostics::Metric::obstacle_ttc, "/worst");
+  publishEgoPose(0.01, 0.0, 0.0, 1.0, 0.0);  // start nearly from the second traj point
   Objects objs;
   autoware_perception_msgs::msg::PredictedObject obj;
   obj.kinematics.initial_pose_with_covariance.pose.position.x = 5.0;
@@ -548,10 +549,181 @@ TEST_F(EvalTest, TestObstacleTTC)
   for (TrajectoryPoint & p : t.points) {
     p.longitudinal_velocity_mps = 1.0;
   }
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 5.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 4.99, epsilon);  // from 0.01 to 5.0 at 1 m/s
 
   t.points[2].pose.position.x = 4.0;
-  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 4.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 3.99, epsilon);  // from 0.01 to 4.0 at 1 m/s
+}
+
+TEST_F(EvalTest, TestObstaclePET)
+{
+  // Create a scenario where ego vehicle approaches an intersection at (x,y)=(20,0)m from (0,0) at 5
+  // m/s An obstacle (0.5m width, 2.0m length) is crossing the intersection from (20,-10) to (20,0)
+  // at 10 m/s Ego vehicle dimensions
+  const double ego_width = vehicle_info_.vehicle_width_m;
+  const double ego_baselink_to_front = vehicle_info_.max_longitudinal_offset_m;
+  const double ego_velocity = 5.0;
+  const double ego_distance_to_intersection = 20.0;
+  // Obstacle dimensions
+  const double obj_width = 3.0;
+  const double obj_length = 3.0;
+  const double obj_velocity = 10.0;
+  const double obj_distance_to_intersection = 10.0;
+
+  // object to leave
+  const double object_leave_distance =
+    obj_distance_to_intersection + ego_width / 2.0 + obj_length / 2.0;
+  const double t_obstacle_leave = object_leave_distance / obj_velocity;
+
+  const double ego_arrive_distance =
+    ego_distance_to_intersection - ego_baselink_to_front - obj_width / 2.0;
+  const double t_ego_arrive = ego_arrive_distance / ego_velocity;
+
+  // Expected PET = t_ego_arrive - t_obstacle_leave
+  const double expected_pet = t_ego_arrive - t_obstacle_leave;
+
+  // Create an obstacle that crosses ego's path from left to right
+  Objects objs;
+  autoware_perception_msgs::msg::PredictedObject obj;
+  obj.kinematics.initial_pose_with_covariance.pose.position.x = ego_distance_to_intersection;
+  obj.kinematics.initial_pose_with_covariance.pose.position.y = -obj_distance_to_intersection;
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, M_PI_2);
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.x = q.x();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.y = q.y();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.z = q.z();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.w = q.w();
+
+  // Set obstacle shape
+  obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  obj.shape.dimensions.x = obj_length;
+  obj.shape.dimensions.y = obj_width;
+  obj.shape.dimensions.z = 1.0;
+
+  obj.kinematics.initial_twist_with_covariance.twist.linear.x = 0.0;
+  obj.kinematics.initial_twist_with_covariance.twist.linear.y = obj_velocity;
+
+  // Add predicted path for the obstacle
+  autoware_perception_msgs::msg::PredictedPath path;
+  for (double y = -obj_distance_to_intersection; y <= obj_distance_to_intersection; y += 0.5) {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = ego_distance_to_intersection;
+    pose.position.y = y;
+    pose.position.z = 0.0;
+    pose.orientation = obj.kinematics.initial_pose_with_covariance.pose.orientation;
+    path.path.push_back(pose);
+  }
+  path.confidence = 1.0;
+  obj.kinematics.predicted_paths.push_back(path);
+
+  objs.objects.push_back(obj);
+
+  // Create ego trajectory with dense sampling (0.1m spacing for better PET accuracy)
+  Trajectory t;
+  t.header.frame_id = "map";
+  tf2::Quaternion q_ego;
+  q_ego.setRPY(0.0, 0.0, 0.0);                                              // heading along x-axis
+  for (double x = 0.0; x <= ego_distance_to_intersection + 10; x += 0.1) {  // Dense 0.2m spacing
+    TrajectoryPoint p;
+    p.pose.position.x = x;
+    p.pose.position.y = 0.0;
+    p.pose.orientation.x = q_ego.x();
+    p.pose.orientation.y = q_ego.y();
+    p.pose.orientation.z = q_ego.z();
+    p.pose.orientation.w = q_ego.w();
+    p.longitudinal_velocity_mps = ego_velocity;
+    t.points.push_back(p);
+  }
+  setTargetMetric(planning_diagnostics::Metric::obstacle_pet, "/worst");
+  publishEgoPose(0.0, 0.0, 0.0, ego_velocity, 0.0);
+  publishObjects(objs);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), expected_pet, 0.05);
+}
+
+TEST_F(EvalTest, TestObstacleDRAC)
+{
+  // Scenario: Both ego and obstacle moving in same direction, ego needs to decelerate to avoid
+  // collision Initial setup
+  const double ego_velocity = 10.0;
+  const double obj_velocity = 5.0;
+  const double ego_initial_x = 0.0;
+  const double obj_initial_x = 20.0;
+
+  // ego/obj dimensions
+  const double ego_baselink_to_front = vehicle_info_.max_longitudinal_offset_m;
+  const double obj_length = 1.0;
+  const double obj_width = 1.0;
+
+  const double initial_gap =
+    obj_initial_x - obj_length / 2.0 - ego_initial_x - ego_baselink_to_front;
+  const double t_collision = initial_gap / (ego_velocity - obj_velocity);
+
+  // At collision, ego baselink would be at:
+  const double ego_baselink_at_collision = ego_initial_x + ego_velocity * t_collision;
+  const double ego_travel_distance = ego_baselink_at_collision - ego_initial_x;
+
+  const double expected_drac = std::abs(
+    (obj_velocity * obj_velocity - ego_velocity * ego_velocity) / (2.0 * ego_travel_distance));
+
+  // Create a moving obstacle (same direction as ego, but slower)
+  Objects objs;
+  autoware_perception_msgs::msg::PredictedObject obj;
+  obj.kinematics.initial_pose_with_covariance.pose.position.x = obj_initial_x;
+  obj.kinematics.initial_pose_with_covariance.pose.position.y = 0.0;
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, 0.0);  // Same direction as ego
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.x = q.x();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.y = q.y();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.z = q.z();
+  obj.kinematics.initial_pose_with_covariance.pose.orientation.w = q.w();
+
+  obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  obj.shape.dimensions.x = obj_length;
+  obj.shape.dimensions.y = obj_width;
+  obj.shape.dimensions.z = 1.0;
+
+  obj.kinematics.initial_twist_with_covariance.twist.linear.x = obj_velocity;
+  obj.kinematics.initial_twist_with_covariance.twist.linear.y = 0.0;
+
+  // Add predicted path for the moving obstacle
+  autoware_perception_msgs::msg::PredictedPath path;
+  const double path_duration = t_collision + 5.0;
+  const double path_distance = obj_velocity * path_duration;
+  for (double dist = 0.0; dist <= path_distance; dist += 0.5) {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = obj_initial_x + dist;
+    pose.position.y = 0.0;
+    pose.position.z = 0.0;
+    pose.orientation = obj.kinematics.initial_pose_with_covariance.pose.orientation;
+    path.path.push_back(pose);
+  }
+  path.confidence = 1.0;
+  obj.kinematics.predicted_paths.push_back(path);
+
+  objs.objects.push_back(obj);
+
+  // Create ego trajectory with dense sampling
+  Trajectory t;
+  t.header.frame_id = "map";
+  tf2::Quaternion q_ego;
+  q_ego.setRPY(0.0, 0.0, 0.0);  // heading along x-axis
+  const double trajectory_length = ego_baselink_at_collision + 10.0;
+  for (double x = ego_initial_x; x <= trajectory_length; x += 0.1) {
+    TrajectoryPoint p;
+    p.pose.position.x = x;
+    p.pose.position.y = 0.0;
+    p.pose.orientation.x = q_ego.x();
+    p.pose.orientation.y = q_ego.y();
+    p.pose.orientation.z = q_ego.z();
+    p.pose.orientation.w = q_ego.w();
+    p.longitudinal_velocity_mps = ego_velocity;
+    t.points.push_back(p);
+  }
+
+  setTargetMetric(planning_diagnostics::Metric::obstacle_drac, "/worst");
+  publishEgoPose(ego_initial_x, 0.0, 0.0, ego_velocity, 0.0);
+  publishObjects(objs);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), expected_drac, 0.1);
 }
 
 TEST_F(EvalTest, TestModifiedGoalLongitudinalDeviation)
