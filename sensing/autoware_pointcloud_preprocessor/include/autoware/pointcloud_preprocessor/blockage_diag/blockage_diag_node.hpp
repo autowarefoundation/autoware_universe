@@ -215,7 +215,6 @@ private:
    */
   void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
 
-
   Updater updater_{this};
 
   // Debug parameters
