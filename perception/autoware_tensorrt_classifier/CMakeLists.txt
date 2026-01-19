@@ -10,12 +10,11 @@ autoware_package()
 add_compile_options(-Wno-deprecated-declarations)
 
 find_package(CUDA)
-find_package(CUDNN)
 find_package(TENSORRT)
 find_package(OpenCV REQUIRED)
 
-if(NOT (${CUDA_FOUND} AND ${CUDNN_FOUND} AND ${TENSORRT_FOUND}))
-  message(WARNING "cuda, cudnn, tensorrt libraries are not found")
+if(NOT (${CUDA_FOUND} AND ${TENSORRT_FOUND}))
+  message(WARNING "cuda, tensorrt libraries are not found")
   return()
 endif()
 
@@ -64,8 +63,6 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_dependencies(CUDA)
-ament_export_dependencies(cudnn_cmake_module)
-ament_export_dependencies(CUDNN)
 ament_export_dependencies(tensorrt_cmake_module)
 ament_export_dependencies(TENSORRT)
 
