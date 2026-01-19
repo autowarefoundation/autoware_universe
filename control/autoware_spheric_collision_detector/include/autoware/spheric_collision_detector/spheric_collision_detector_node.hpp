@@ -17,9 +17,6 @@
 
 #include "autoware/spheric_collision_detector/spheric_collision_detector.hpp"
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
-#include <rclcpp/rclcpp.hpp>
-
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/processing_time_publisher.hpp>
@@ -79,6 +76,7 @@ private:
   //void onObstaclePointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void onPredictedTrajectory(const autoware_planning_msgs::msg::Trajectory::SharedPtr msg);
   void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg);
+  void onObjectRecognition(const autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg);
   void onObjectRecognition(const autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg);
 
   // Publisher

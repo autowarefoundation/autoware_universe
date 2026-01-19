@@ -52,10 +52,9 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);
   transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
-  sub_object_recognition_ =
-    create_subscription<autoware_auto_perception_msgs::msg::DetectedObjects>(
-      "input/object_recognition", rclcpp::QoS{1},
-      std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
+  sub_object_recognition_ = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
+    "input/object_recognition", rclcpp::QoS{1},
+    std::bind(&SphericCollisionDetectorNode::onObjectRecognition, this, _1));
 
   sub_predicted_trajectory_ = create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/predicted_trajectory", 1,

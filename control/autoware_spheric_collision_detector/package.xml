@@ -12,8 +12,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
-  
-  <depend>autoware_planning_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>boost</depend>
   <depend>diagnostic_updater</depend>
