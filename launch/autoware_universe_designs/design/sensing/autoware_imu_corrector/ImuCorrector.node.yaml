@@ -1,0 +1,51 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ImuCorrector.node
+
+launch:
+  package: autoware_imu_corrector
+  plugin: autoware::imu_corrector::ImuCorrector
+  executable: imu_corrector_node
+  node_output: screen
+  use_container: false
+
+# interfaces
+inputs:
+  - name: imu_raw
+    message_type: sensor_msgs/msg/Imu
+    remap_target: 'input'
+  - name: gyro_bias
+    message_type: geometry_msgs/msg/Vector3Stamped
+    remap_target: 'gyro_bias_input'
+  - name: gyro_scale
+    message_type: geometry_msgs/msg/Vector3Stamped
+    remap_target: 'gyro_scale_input'
+
+outputs:
+  - name: imu_data
+    message_type: sensor_msgs/msg/Imu
+    remap_target: 'output'
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/imu_corrector.param.yaml
+  - name: param_scale_file
+    default: config/gyro_scale_estimator.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: correct
+    trigger_conditions:
+      - and:
+          - on_input: imu_raw
+          - once: gyro_bias
+          - once: gyro_scale
+    outcomes:
+      - to_output: imu_data

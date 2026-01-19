@@ -1,0 +1,40 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DetectedObjectSorter.node
+
+launch:
+  package: autoware_object_sorter
+  plugin: autoware::object_sorter::DetectedObjectSorterNode
+  executable: detected_object_sorter_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    schema: schema/object_sorter.schema.json
+    default: config/detected_object_sorter.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: objects

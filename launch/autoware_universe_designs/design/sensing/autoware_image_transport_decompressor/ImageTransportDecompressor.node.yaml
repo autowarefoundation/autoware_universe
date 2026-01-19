@@ -1,0 +1,39 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ImageTransportDecompressor.node
+
+launch:
+  package: autoware_image_transport_decompressor
+  plugin: autoware::image_preprocessor::ImageTransportDecompressor
+  executable: image_transport_decompressor_node
+  node_output: screen
+  use_container: false
+
+# interfaces
+inputs:
+  - name: compressed_image
+    message_type: sensor_msgs/msg/CompressedImage
+
+outputs:
+  - name: raw_image
+    message_type: sensor_msgs/msg/Image
+    qos:
+      reliability: best_effort
+      durability: transient_local
+
+# parameters
+parameter_files: []
+
+parameters:
+  - name: encoding
+    description: rgb8, bgr8, default(same as input)
+    default: default
+
+# processes
+processes:
+  - name: decompress
+    trigger_conditions:
+      - on_input: compressed_image
+    outcomes:
+      - to_output: raw_image

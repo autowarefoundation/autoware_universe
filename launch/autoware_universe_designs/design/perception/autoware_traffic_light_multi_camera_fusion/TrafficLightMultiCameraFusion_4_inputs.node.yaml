@@ -1,0 +1,52 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightMultiCameraFusion_4_inputs.node
+
+base: TrafficLightMultiCameraFusion.node
+
+# interfaces
+override:
+  inputs:
+  - name: camera3/camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera3/classification/traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+  - name: camera3/detection/rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+  - name: camera4/camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: camera4/classification/traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+  - name: camera4/detection/rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+
+  parameters:
+  - name: camera_namespaces
+    type: array
+    default: "['camera1', 'camera2', 'camera3', 'camera4']"
+    description: List of camera namespaces to be used for fusion.
+
+# processes
+  processes:
+  - name: process
+    trigger_conditions:
+    - or:
+      - and:
+        - on_input: camera1/camera_info
+        - on_input: camera1/classification/traffic_signals
+        - on_input: camera1/detection/rois
+      - and:
+        - on_input: camera2/camera_info
+        - on_input: camera2/classification/traffic_signals
+        - on_input: camera2/detection/rois
+      - and:
+        - on_input: camera3/camera_info
+        - on_input: camera3/classification/traffic_signals
+        - on_input: camera3/detection/rois
+      - and:
+        - on_input: camera4/camera_info
+        - on_input: camera4/classification/traffic_signals
+        - on_input: camera4/detection/rois
+    outcomes:
+    - to_output: traffic_signals

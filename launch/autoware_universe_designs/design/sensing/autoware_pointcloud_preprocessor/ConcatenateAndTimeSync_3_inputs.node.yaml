@@ -1,0 +1,25 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ConcatenateAndTimeSync_3_inputs.node
+
+base: ConcatenateAndTimeSync.node
+
+override:
+  inputs:
+    - name: input3
+      message_type: sensor_msgs/msg/PointCloud2
+  parameters:
+    - name: input_topics
+      type: array
+      default: "[${input input1}, ${input input2}, ${input input3}]"
+  processes:
+  - name: update
+    trigger_conditions:
+      - on_input: input1
+      - on_input: input2
+      - on_input: input3
+    outcomes:
+      - to_trigger: concatenate
+
+

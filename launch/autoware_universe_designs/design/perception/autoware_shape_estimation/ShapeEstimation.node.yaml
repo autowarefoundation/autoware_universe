@@ -1,0 +1,45 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ShapeEstimation.node
+
+launch:
+  package: autoware_shape_estimation
+  plugin: autoware::shape_estimation::ShapeEstimationNode
+  executable: shape_estimation_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: objects
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input"
+
+outputs:
+  - name: objects
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "objects"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: config_file
+    default: config/shape_estimation.param.yaml
+
+parameters:
+  - name: model_path
+    type: directory
+    default: $(var data_path)/shape_estimation/pointnet.onnx
+
+# processes
+processes:
+  - name: estimate
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: objects

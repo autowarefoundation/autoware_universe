@@ -1,0 +1,45 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: LidarApolloInstanceSegmentation.node
+
+launch:
+  package: autoware_lidar_apollo_instance_segmentation
+  plugin: autoware::lidar_apollo_instance_segmentation::LidarInstanceSegmentationNode
+  executable: lidar_apollo_instance_segmentation_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: "input/pointcloud"
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+
+outputs:
+  - name: labeled_clusters
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "output/labeled_clusters"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/vls-128.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - and:
+          - on_input: pointcloud
+    outcomes:
+      - to_output: labeled_clusters

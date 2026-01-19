@@ -1,0 +1,41 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightCategoryMerger.node
+
+launch:
+  package: autoware_traffic_light_category_merger
+  plugin: autoware::traffic_light::TrafficLightCategoryMergerNode
+  executable: traffic_light_category_merger_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: car_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: "input/car_signals"
+  - name: pedestrian_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: "input/pedestrian_signals" 
+
+outputs:
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: "output/traffic_signals"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files: []
+parameters: []
+
+# processes
+processes:
+  - name: merge
+    trigger_conditions:
+      - and:
+          - on_input: car_signals
+          - on_input: pedestrian_signals
+    outcomes:
+      - to_output: traffic_signals

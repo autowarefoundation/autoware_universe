@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_universe_designs</name>
+  <version>0.47.0</version>
+  <description>The autoware_universe_designs package</description>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_system_designer</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

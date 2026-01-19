@@ -1,0 +1,54 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ObjectAssociationMerger.node
+
+launch:
+  package: autoware_object_merger
+  plugin: autoware::object_merger::ObjectAssociationMergerNode
+  executable: object_association_merger_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: object0
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "input/object0"
+  - name: object1
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "input/object1"
+outputs:
+  - name: merged_object
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "output/object"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: data_association_matrix_path
+    default: config/data_association_matrix.param.yaml
+  - name: distance_threshold_list_path
+    default: config/overlapped_judge.param.yaml
+  - name: object_association_merger_param_path
+    default: config/object_association_merger.param.yaml
+
+parameters: 
+  - name: priority_mode
+    type: int
+    default: 2
+    description: "The priority mode for the object association merger. 0: Object0, 1: Object1, 2: Confidence"
+
+# processes
+processes:
+  - name: merger
+    trigger_conditions:
+      - and:
+          - on_input: object0
+          - on_input: object1
+    outcomes:
+      - to_output: merged_object

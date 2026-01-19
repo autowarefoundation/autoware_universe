@@ -1,0 +1,57 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: LaserscanBasedOccupancyGridMap.node
+
+launch:
+  package: autoware_probabilistic_occupancy_grid_map
+  plugin: autoware::occupancy_grid_map::LaserscanBasedOccupancyGridMapNode
+  executable: laserscan_based_occupancy_grid_map_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interface
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: obstacle_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: raw_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+
+outputs:
+  - name: occupancy_grid_map
+    message_type: nav_msgs/msg/OccupancyGrid
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/laserscan_based_occupancy_grid_map.param.yaml
+    schema: schema/laserscan_based_occupancy_grid_map.schema.json
+  - name: updater_param_file
+    default: config/binary_bayes_filter_updater.param.yaml
+    schema: schema/binary_bayes_filter_updater.schema.json
+
+parameters:
+  - name: updater_type
+    type: string
+    default: binary_bayes_filter
+    description: The type of updater to use for the occupancy grid map.
+  - name: use_multithread
+    type: boolean
+    default: false
+    description: Whether to use multithreaded processing.
+# processes
+processes:
+  - name: update
+    trigger_conditions:
+      - and:
+          - on_input: obstacle_pointcloud
+          - on_input: raw_pointcloud
+    outcomes:
+      - to_output: occupancy_grid_map

@@ -1,0 +1,63 @@
+autoware_system_design_format: v0.1.0
+
+name: TrafficLightRecognitionWholeImage.module
+
+instances:
+  - name: camera1
+    entity: TrafficLightRecognitionDetectorWholeImage.module
+  - name: camera2
+    entity: TrafficLightRecognitionDetectorWholeImage.module
+
+  - name: multi_camera_fusion
+    entity: TrafficLightMultiCameraFusion.node
+  - name: traffic_light_arbiter
+    entity: TrafficLightArbiter.node
+  - name: traffic_light_crosswalk_estimator
+    entity: CrosswalkTrafficLightEstimator.node
+
+external_interfaces:
+  input:
+    - name: vector_map
+    - name: route
+    - name: camera1/image
+    - name: camera1/camera_info
+    - name: camera2/image
+    - name: camera2/camera_info
+    - name: external_traffic_signals
+  output:
+    - name: traffic_signals
+
+connections:
+  - from: input.route
+    to: camera*.input.route
+  - from: input.vector_map
+    to: camera*.input.vector_map
+  - from: input.camera*/image
+    to: camera*.input.image
+  - from: input.camera*/camera_info
+    to: camera*.input.camera_info
+
+  - from: input.vector_map
+    to: multi_camera_fusion.input.vector_map
+  - from: input.camera*/camera_info
+    to: multi_camera_fusion.input.camera*/camera_info
+  - from: camera*.output.classification/traffic_signals
+    to: multi_camera_fusion.input.camera*/classification/traffic_signals
+  - from: camera*.output.detection/rois
+    to: multi_camera_fusion.input.camera*/detection/rois
+
+  - from: input.vector_map
+    to: traffic_light_arbiter.input.vector_map
+  - from: multi_camera_fusion.output.traffic_signals
+    to: traffic_light_arbiter.input.perception_traffic_signals
+  - from: input.external_traffic_signals
+    to: traffic_light_arbiter.input.external_traffic_signals
+
+  - from: input.vector_map
+    to: traffic_light_crosswalk_estimator.input.vector_map
+  - from: input.route
+    to: traffic_light_crosswalk_estimator.input.route
+  - from: traffic_light_arbiter.output.traffic_signals
+    to: traffic_light_crosswalk_estimator.input.traffic_signals
+  - from: traffic_light_crosswalk_estimator.output.traffic_signals
+    to: output.traffic_signals

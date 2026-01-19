@@ -1,0 +1,28 @@
+autoware_system_design_format: v0.1.0
+
+name: GlobalParameterLoader.node
+
+launch:
+  package: autoware_global_parameter_loader
+  ros2_launch_file: global_params.launch.py
+
+# interface
+inputs: []
+outputs: []
+
+# parameters
+parameter_files: []
+parameters:
+  - name: use_sim_time
+    type: bool
+    default: false
+  - name: vehicle_model
+    type: string
+    default: sample_vehicle
+
+# processes
+processes:
+  - name: run
+    trigger_conditions: []
+    outcomes: []
+

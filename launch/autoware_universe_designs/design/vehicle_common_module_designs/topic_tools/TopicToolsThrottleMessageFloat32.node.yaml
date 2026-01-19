@@ -1,0 +1,33 @@
+autoware_system_design_format: v0.1.0
+
+name: TopicToolsThrottleMessageFloat32.node
+
+launch: 
+  package: topic_tools
+  executable: throttle
+  node_output: screen
+  args: messages ${input input_topic} ${parameter rate} ${output output_topic}
+
+# interfaces
+inputs:
+  - name: input_topic
+    message_type: std_msgs/msg/Float32
+
+outputs:
+  - name: output_topic
+    message_type: std_msgs/msg/Float32
+
+# parameters
+parameters: 
+  - name: rate
+    type: double
+    default: 10.0
+parameter_files: []
+
+# processes
+processes: 
+  - name: throttle_message
+    trigger_conditions:
+      - periodic: $(var rate)
+    outcomes:
+      - to_output_topic: output_topic

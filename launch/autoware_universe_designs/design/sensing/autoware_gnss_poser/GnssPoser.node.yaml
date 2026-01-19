@@ -1,0 +1,59 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: GnssPoser.node
+
+launch:
+  package: autoware_gnss_poser
+  plugin: autoware::gnss_poser::GNSSPoser
+  executable: gnss_poser
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: fix
+    message_type: sensor_msgs/msg/NavSatFix
+    remap_target: 'fix'
+  - name: autoware_orientation
+    message_type: autoware_sensing_msgs/msg/GnssInsOrientationStamped
+    remap_target: 'autoware_orientation'
+
+outputs:
+  - name: gnss_pose
+    message_type: geometry_msgs/msg/PoseStamped
+    remap_target: 'gnss_pose'
+    qos:
+      reliability: reliable
+      durability: volatile
+  - name: gnss_pose_cov
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: 'gnss_pose_cov'
+    qos:
+      reliability: reliable
+      durability: volatile
+  - name: gnss_fixed
+    message_type: autoware_internal_debug_msgs/msg/BoolStamped
+    remap_target: 'gnss_fixed'
+    qos:
+      reliability: reliable
+      durability: volatile
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/gnss_poser.param.yaml
+
+parameters:
+  - name: use_gnss_ins_orientation
+    default: true
+
+# processes
+processes:
+  - name: process_gnss_data
+    trigger_conditions:
+      - and:
+          - on_input: fix
+    outcomes:
+      - to_output: gnss_pose
+      - to_output: gnss_pose_cov
+      - to_output: gnss_fixed

@@ -1,0 +1,38 @@
+autoware_system_design_format: v0.1.0
+
+name: RadarObjectsAdapter.node
+
+launch:
+  package: autoware_radar_objects_adapter
+  plugin: autoware::RadarObjectsAdapter
+  executable: radar_objects_adapter_node
+
+# interfaces
+inputs: 
+  - name: objects
+    message_type: autoware_sensing_msgs/msg/RadarObjects
+  - name: radar_info
+    message_type: autoware_sensing_msgs/msg/RadarInfo
+
+outputs:
+  - name: detections
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: tracks
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/radar_objects_adapter.param.yaml
+    schema: schema/radar_objects_adapter.schema.json
+  
+parameters: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: objects
+    outcomes:
+      - to_output: detections
+      - to_output: tracks

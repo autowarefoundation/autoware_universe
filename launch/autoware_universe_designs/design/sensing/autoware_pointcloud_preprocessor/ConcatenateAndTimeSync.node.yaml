@@ -1,0 +1,61 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ConcatenateAndTimeSync.node
+
+launch:
+  package: autoware_pointcloud_preprocessor
+  plugin: autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent
+  executable: concatenate_and_time_sync_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: twist
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: input1
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: input2
+    message_type: sensor_msgs/msg/PointCloud2
+outputs:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: output
+  - name: output_info
+    message_type: autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo
+    remap_target: output_info
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/concatenate_and_time_sync_node.param.yaml
+
+parameters:
+  - name: input_frame
+    type: string
+    default: base_link
+  - name: output_frame
+    type: string
+    default: base_link
+  - name: input_topics
+    type: array
+    default: "[${input input1}, ${input input2}]"
+
+# processes
+processes:
+  - name: update
+    trigger_conditions:
+      - on_input: input1
+      - on_input: input2
+    outcomes:
+      - to_trigger: concatenate
+  - name: concatenate
+    trigger_conditions:
+      - on_trigger: update
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: output

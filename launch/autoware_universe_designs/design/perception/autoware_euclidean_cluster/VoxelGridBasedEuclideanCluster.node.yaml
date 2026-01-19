@@ -1,0 +1,44 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: VoxelGridBasedEuclideanCluster.node
+
+launch:
+  package: autoware_euclidean_cluster
+  plugin: autoware::euclidean_cluster::VoxelGridBasedEuclideanClusterNode
+  executable: voxel_grid_based_euclidean_cluster_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: input_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: "input"
+
+outputs:
+  - name: output_clusters
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "output"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# paremeters
+parameter_files:
+  - name: voxel_grid_based_euclidean_param_path
+    default: config/voxel_grid_based_euclidean_cluster.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: cluster
+    trigger_conditions:
+      - on_input: input_pointcloud
+    outcomes:
+      - to_output: output_clusters

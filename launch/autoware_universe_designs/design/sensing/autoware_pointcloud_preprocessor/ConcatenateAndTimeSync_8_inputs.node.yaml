@@ -1,0 +1,39 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ConcatenateAndTimeSync_8_inputs.node
+
+base: ConcatenateAndTimeSync.node
+
+override:
+  inputs:
+    - name: input3
+      message_type: sensor_msgs/msg/PointCloud2
+    - name: input4
+      message_type: sensor_msgs/msg/PointCloud2
+    - name: input5
+      message_type: sensor_msgs/msg/PointCloud2
+    - name: input6
+      message_type: sensor_msgs/msg/PointCloud2
+    - name: input7
+      message_type: sensor_msgs/msg/PointCloud2
+    - name: input8
+      message_type: sensor_msgs/msg/PointCloud2
+  parameters:
+    - name: input_topics
+      type: array
+      default: "[${input input1}, ${input input2}, ${input input3}, ${input input4}, ${input input5}, ${input input6}, ${input input7}, ${input input8}]"
+  processes:
+  - name: update
+    trigger_conditions:
+      - on_input: input1
+      - on_input: input2
+      - on_input: input3
+      - on_input: input4
+      - on_input: input5
+      - on_input: input6
+      - on_input: input7
+      - on_input: input8
+    outcomes:
+      - to_trigger: concatenate
+

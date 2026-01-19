@@ -1,0 +1,23 @@
+autoware_system_design_format: v0.1.0
+
+name: TrafficLightRecognitionMerge_4_inputs.module
+
+base: TrafficLightRecognitionMerge.module
+
+override:
+  instances:
+  - name: occlusion_predictor3
+    entity: TrafficLightOcclusionPredictor.node
+  - name: occlusion_predictor4
+    entity: TrafficLightOcclusionPredictor.node
+
+  external_interfaces:
+    input:
+    - name: camera3/camera_info
+    - name: camera3_traffic_signals_car
+    - name: camera3_traffic_signals_pedestrian
+    - name: camera3_rois
+    - name: camera4/camera_info
+    - name: camera4_traffic_signals_car
+    - name: camera4_traffic_signals_pedestrian
+    - name: camera4_rois

@@ -1,0 +1,74 @@
+autoware_system_design_format: v0.1.0
+
+name: ObjectDetectionLidar.module
+
+instances:
+  # compare map filter
+  - name: pointcloud_map_filter
+    entity: PointcloudMapFilter.module
+  # detectors
+  - name: clustering
+    entity: LidarClustering.module
+  - name: detection_by_tracker
+    entity: DetectionByTracker.node
+  # merger
+  - name: object_association_merger_alpha
+    entity: ObjectAssociationMerger.node
+  - name: object_association_merger_beta
+    entity: ObjectAssociationMerger.node
+  # filter
+  - name: object_lanelet_filter
+    entity: ObjectLaneletFilter.node
+
+external_interfaces:
+  input:
+    - name: pointcloud_map
+    - name: vector_map
+    - name: service_pointcloud_map_diff
+    - name: kinematic_state
+    - name: obstacle_pointcloud
+    - name: lidar_ml_objects
+    - name: tracked_objects
+  output:
+    - name: filtered_obstacle_pointcloud
+    - name: detected_objects
+
+connections:
+  # compare map filter
+  - from: input.obstacle_pointcloud
+    to: pointcloud_map_filter.input.pointcloud
+  - from: input.pointcloud_map
+    to: pointcloud_map_filter.input.pointcloud_map
+  - from: input.service_pointcloud_map_diff
+    to: pointcloud_map_filter.input.service_pointcloud_map_diff
+  - from: input.kinematic_state
+    to: pointcloud_map_filter.input.kinematic_state
+  - from: pointcloud_map_filter.output.filtered_pointcloud
+    to: output.filtered_obstacle_pointcloud
+
+  # clustering
+  - from: pointcloud_map_filter.output.filtered_pointcloud
+    to: clustering.input.pointcloud
+
+  # detection by tracker
+  - from: input.tracked_objects
+    to: detection_by_tracker.input.tracked_objects
+  - from: clustering.output.cluster_objects
+    to: detection_by_tracker.input.initial_objects
+
+  # merger
+  - from: input.lidar_ml_objects
+    to: object_association_merger_alpha.input.object0
+  - from: clustering.output.detected_objects
+    to: object_association_merger_alpha.input.object1
+  - from: object_association_merger_alpha.output.merged_object
+    to: object_association_merger_beta.input.object0
+  - from: detection_by_tracker.output.objects
+    to: object_association_merger_beta.input.object1
+  # filter
+  - from: object_association_merger_beta.output.merged_object
+    to: object_lanelet_filter.input.object
+  - from: input.vector_map
+    to: object_lanelet_filter.input.vector_map
+  - from: object_lanelet_filter.output.object
+    to: output.detected_objects

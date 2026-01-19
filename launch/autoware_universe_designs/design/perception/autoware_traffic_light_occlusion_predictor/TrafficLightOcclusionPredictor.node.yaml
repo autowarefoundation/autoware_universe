@@ -1,0 +1,62 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightOcclusionPredictor.node
+
+launch:
+  package: autoware_traffic_light_occlusion_predictor
+  plugin: autoware::traffic_light::TrafficLightOcclusionPredictorNode
+  executable: traffic_light_occlusion_predictor_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: car/traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+  - name: pedestrian/traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+  - name: rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: cloud
+    message_type: sensor_msgs/msg/PointCloud2
+
+outputs:
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightArray
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/traffic_light_occlusion_predictor.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: predict_car
+    trigger_conditions:
+      - and:
+        - on_input: car/traffic_signals
+        - on_input: rois
+        - on_input: camera_info
+        - on_input: cloud
+    outcomes:
+      - to_output: traffic_signals
+  - name: predict_pedestrian
+    trigger_conditions:
+      - and:
+        - on_input: pedestrian/traffic_signals
+        - on_input: rois
+        - on_input: camera_info
+        - on_input: cloud
+    outcomes:
+      - to_output: traffic_signals

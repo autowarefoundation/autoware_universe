@@ -1,0 +1,24 @@
+autoware_system_design_format: v0.1.0
+
+name: ObstacleSegmentation.module
+
+instances:
+  - name: crop_box_filter
+    entity: CropBoxFilter.node
+  - name: common_ground_filter
+    entity: ScanGroundFilter.node
+
+external_interfaces:
+  input:
+    # lidar
+    - name: concatenated_pointcloud
+  output:
+    - name: pointcloud
+
+connections:
+  - from: input.concatenated_pointcloud
+    to: crop_box_filter.input.input
+  - from: crop_box_filter.output.output
+    to: common_ground_filter.input.pointcloud
+  - from: common_ground_filter.output.pointcloud
+    to: output.pointcloud

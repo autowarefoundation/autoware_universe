@@ -1,0 +1,55 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightMapBasedDetector.node
+
+launch:
+  package: autoware_traffic_light_map_based_detector
+  plugin: autoware::traffic_light::MapBasedDetector
+  executable: traffic_light_map_based_detector_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+
+outputs:
+  - name: rough_rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: "~/output/rois"
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: expected_rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: "~/expect/rois"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/traffic_light_map_based_detector.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: process
+    trigger_conditions:
+      - and:
+        - once: vector_map
+        - on_input: route
+        - on_input: camera_info
+    outcomes:
+      - to_output: rough_rois
+      - to_output: expected_rois

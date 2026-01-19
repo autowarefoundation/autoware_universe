@@ -1,0 +1,52 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TensorrtYolox.node
+
+launch:
+  package: autoware_tensorrt_yolox
+  plugin: autoware::tensorrt_yolox::TrtYoloXNode
+  executable: autoware_tensorrt_yolox_node_exe
+  node_output: screen
+
+# interface
+inputs:
+  - name: image
+    message_type: sensor_msgs/msg/Image
+    remap_target: "~/in/image"
+
+outputs:
+  - name: objects
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "~/out/objects"
+  - name: mask
+    message_type: sensor_msgs/msg/Image
+    remap_target: "~/out/mask"
+
+# parameters
+parameter_files:
+  - name: yolox_param_path
+    default: config/yolox_s_plus_opt.param.yaml
+
+parameters:
+  - name: model_path
+    type: directory
+    value: $(var data_path)/tensorrt_yolox/yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx
+  - name: label_path
+    type: directory
+    value: $(var data_path)/tensorrt_yolox/label.txt
+  - name: color_map_path
+    type: directory
+    value: $(var data_path)/tensorrt_yolox/semseg_color_map.csv
+  - name: build_only
+    type: bool
+    value: false
+
+# processes
+processes:
+  - name: run
+    trigger_conditions:
+      - on_input: image
+    outcomes:
+      - to_output: objects
+      - to_output: mask

@@ -1,0 +1,58 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: LidarTransfusion.node
+
+launch:
+  package: autoware_lidar_transfusion
+  plugin: autoware::lidar_transfusion::LidarTransfusionNode
+  executable: lidar_transfusion_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: common_param_path
+    default: config/transfusion_common.param.yaml
+    schema: schema/transfusion_common.schema.json
+  - name: model_param_path
+    default: config/transfusion.param.yaml
+    schema: schema/transfusion.schema.json
+    allow_substs: true
+  - name: ml_package_param_path
+    default: config/transfusion_ml_package.param.yaml
+    schema: schema/transfusion_ml_package.schema.json
+    allow_substs: true
+  - name: class_remapper_param_path
+    default: config/detection_class_remapper.param.yaml
+    schema: schema/detection_class_remapper.schema.json
+
+parameters:
+  - name: build_only
+    type: bool
+    default: false
+    description: If true, the node will only build the model and exit.
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - or:
+          - on_input: pointcloud
+    outcomes:
+      - to_output: objects

@@ -1,0 +1,166 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: MultiObjectTracker.node
+
+launch:
+  package: autoware_multi_object_tracker
+  plugin: autoware::multi_object_tracker::MultiObjectTracker
+  executable: multi_object_tracker_node
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: detection01/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection02/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection03/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection04/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection05/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection06/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection07/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection08/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection09/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection10/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection11/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+  - name: detection12/objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: "output/objects"
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: merged_objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "output/merged_objects"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: tracker_setting_path
+    default: config/multi_object_tracker_node.param.yaml
+  - name: data_association_matrix_path
+    default: config/data_association_matrix.param.yaml
+  - name: input_channels_path
+    default: config/input_channels.param.yaml
+
+parameters:
+  - name: input/detection01/channel
+    type: string
+    default: none
+  - name: input/detection01/objects
+    type: string
+    default: ${input detection01/objects}
+  - name: input/detection02/channel
+    type: string
+    default: none
+  - name: input/detection02/objects
+    type: string
+    default: ${input detection02/objects}
+  - name: input/detection03/channel
+    type: string
+    default: none
+  - name: input/detection03/objects
+    type: string
+    default: ${input detection03/objects}
+  - name: input/detection04/channel
+    type: string
+    default: none
+  - name: input/detection04/objects
+    type: string
+    default: ${input detection04/objects}
+  - name: input/detection05/channel
+    type: string
+    default: none
+  - name: input/detection05/objects
+    type: string
+    default: ${input detection05/objects}
+  - name: input/detection06/channel
+    type: string
+    default: none
+  - name: input/detection06/objects
+    type: string
+    default: ${input detection06/objects}
+  - name: input/detection07/channel
+    type: string
+    default: none
+  - name: input/detection07/objects
+    type: string
+    default: ${input detection07/objects}
+  - name: input/detection08/channel
+    type: string
+    default: none
+  - name: input/detection08/objects
+    type: string
+    default: ${input detection08/objects}
+  - name: input/detection09/channel
+    type: string
+    default: none
+  - name: input/detection09/objects
+    type: string
+    default: ${input detection09/objects}
+  - name: input/detection10/channel
+    type: string
+    default: none
+  - name: input/detection10/objects
+    type: string
+    default: ${input detection10/objects}
+  - name: input/detection11/channel
+    type: string
+    default: none
+  - name: input/detection11/objects
+    type: string
+    default: ${input detection11/objects}
+  - name: input/detection12/channel
+    type: string
+    default: none
+  - name: input/detection12/objects
+    type: string
+    default: ${input detection12/objects}
+  - name: publish_merged_objects
+    type: boolean
+    default: false
+
+# processes
+processes:
+  - name: update
+    trigger_conditions:
+      - on_input: detection01/objects
+      - or:
+          - on_input: detection01/objects
+          - on_input: detection02/objects
+          - on_input: detection03/objects
+          - on_input: detection04/objects
+          - on_input: detection05/objects
+          - on_input: detection06/objects
+          - on_input: detection07/objects
+          - on_input: detection08/objects
+          - on_input: detection09/objects
+          - on_input: detection10/objects
+          - on_input: detection11/objects
+          - on_input: detection12/objects
+    outcomes:
+      - to_trigger: track
+  - name: track
+    trigger_conditions:
+      - on_trigger: update
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: objects
+      - to_output: merged_objects

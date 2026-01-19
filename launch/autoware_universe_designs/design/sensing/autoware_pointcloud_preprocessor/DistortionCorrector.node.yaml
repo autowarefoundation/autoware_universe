@@ -1,0 +1,50 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DistortionCorrector.node
+
+launch:
+  package: autoware_pointcloud_preprocessor
+  plugin: autoware::pointcloud_preprocessor::DistortionCorrectorComponent
+  executable: crop_box_filter_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: twist
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+  - name: imu
+    message_type: sensor_msgs/msg/Imu
+
+outputs:
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+
+# parameters
+parameter_files:
+  - name: param_file
+    default: config/distortion_corrector_node.param.yaml
+
+parameters:
+  - name: input_frame
+    type: string
+    default: base_link
+  - name: output_frame
+    type: string
+    default: base_link
+
+# processes
+processes:
+  - name: undistort
+    trigger_conditions:
+      -and: 
+        - on_input: pointcloud
+        - or: 
+          - on_input: twist
+          - on_input: imu
+    outcomes:
+      - to_output: pointcloud

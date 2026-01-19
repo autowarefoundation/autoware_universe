@@ -1,0 +1,36 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: Pose2Twist.node
+
+launch:
+  package: autoware_pose2twist
+  plugin: autoware::pose2twist::Pose2Twist
+  executable: autoware_pose2twist_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: pose
+    message_type: geometry_msgs::msg::PoseStamped
+
+outputs:
+  - name: twist
+    message_type: geometry_msgs/msg/TwistStamped
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files: []
+
+parameters: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - and:
+          - on_input: pose
+    outcomes:
+      - to_output: twist

@@ -1,0 +1,50 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: CrosswalkTrafficLightEstimator.node
+
+launch:
+  package: autoware_crosswalk_traffic_light_estimator
+  plugin: autoware::crosswalk_traffic_light_estimator::CrosswalkTrafficLightEstimatorNode
+  executable: crosswalk_traffic_light_estimator_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    remap_target: "~/input/classified/traffic_signals"
+
+outputs:
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/crosswalk_traffic_light_estimator.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: dummy_process
+    trigger_conditions:
+      - and:
+          - once: vector_map
+          - on_input: route
+          - on_input: traffic_signals
+    outcomes:
+      - to_output: traffic_signals

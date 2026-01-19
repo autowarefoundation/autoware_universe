@@ -1,0 +1,50 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: SimpleTrackedObjectMerger.node
+
+launch:
+  package: autoware_simple_object_merger
+  plugin: autoware::simple_object_merger::SimpleTrackedObjectMergerNode
+  executable: simple_tracked_object_merger_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: object1
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object2
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+
+outputs:
+  - name: merged_object
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: "~/output/objects"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: parameters
+    default: config/simple_tracked_object_merger.param.yaml
+
+parameters: 
+  - name: input_topics
+    type: array
+    default: "[${input object1}, ${input object2}]"
+
+# processes
+processes:
+  - name: merger
+    trigger_conditions:
+      - and:
+          - on_input: object1
+          - on_input: object2
+    outcomes:
+      - to_output: merged_object

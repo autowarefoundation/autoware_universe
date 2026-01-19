@@ -1,0 +1,19 @@
+autoware_system_design_format: v0.1.0
+
+name: ObjectTrackingSingleChannel.module
+
+instances:
+  - name: multi_object_tracker
+    entity: MultiObjectTracker.node
+
+external_interfaces:
+  input:
+    - name: detected_objects
+  output:
+    - name: objects
+
+connections:
+  - from: input.detected_objects
+    to: multi_object_tracker.input.detection01/objects
+  - from: multi_object_tracker.output.objects
+    to: output.objects

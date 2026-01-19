@@ -1,0 +1,92 @@
+autoware_system_design_format: v0.1.0
+
+name: Tier4ControlWrapper.node
+
+launch:
+  package: tier4_control_launch
+  ros2_launch_file: control.launch.xml
+
+inputs:
+  - name: mission_planning/route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: emergency_control_cmd
+    message_type: autoware_control_msgs/msg/EmergencyControlCmd
+
+outputs:
+  - name: command/control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: command/gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: command/hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: command/turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+
+# parameters
+parameter_files: []
+
+parameters:
+  - name: lateral_controller_mode
+    default: mpc
+  - name: longitudinal_controller_mode
+    default: pid
+  - name: use_individual_control_param
+    default: false
+  - name: use_aeb_autoware_state_check
+    default: true
+  - name: vehicle_model
+    default: sample_vehicle
+  - name: input_objects_topic_name
+    default: /perception/object_recognition/objects
+  - name: input_pointcloud_topic_name
+    default: /perception/obstacle_segmentation/pointcloud
+  - name: check_external_emergency_heartbeat
+    default: false
+  - name: launch_obstacle_collision_checker
+    default: false
+
+  - name: vehicle_param_file
+    default: $(find-pkg-share sample_vehicle_description)/config/vehicle_info.param.yaml
+  - name: nearest_search_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/common/nearest_search.param.yaml
+  - name: trajectory_follower_node_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/trajectory_follower/trajectory_follower_node.param.yaml
+  - name: lat_controller_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/trajectory_follower/lateral/mpc.param.yaml
+  - name: lon_controller_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/trajectory_follower/longitudinal/pid.param.yaml
+  - name: vehicle_cmd_gate_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml
+  - name: lane_departure_checker_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/lane_departure_checker/lane_departure_checker.param.yaml
+  - name: control_validator_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/control_validator/control_validator.param.yaml
+  - name: operation_mode_transition_manager_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/operation_mode_transition_manager/operation_mode_transition_manager.param.yaml
+  - name: shift_decider_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/shift_decider/shift_decider.param.yaml
+  - name: obstacle_collision_checker_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/obstacle_collision_checker/obstacle_collision_checker.param.yaml
+  - name: external_cmd_selector_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/external_cmd_selector/external_cmd_selector.param.yaml
+  - name: aeb_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/autoware_autonomous_emergency_braking/autonomous_emergency_braking.param.yaml
+  - name: predicted_path_checker_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/predicted_path_checker/predicted_path_checker.param.yaml
+  - name: collision_detector_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/autoware_collision_detector/collision_detector.param.yaml
+  - name: control_command_gate_param_path
+    default: $(find-pkg-share autoware_launch)/config/control/control_command_gate/control_command_gate.param.yaml
+
+# processes
+processes:
+  - name: vehicle_control
+    trigger_conditions:
+      - and:
+          - on_input: mission_planning/route
+    outcomes:
+      - to_output: command/control_cmd

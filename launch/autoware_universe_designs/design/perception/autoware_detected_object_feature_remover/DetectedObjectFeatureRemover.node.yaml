@@ -1,0 +1,37 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DetectedObjectFeatureRemover.node
+
+launch:
+  package: autoware_detected_object_feature_remover
+  plugin: autoware::detected_object_feature_remover::DetectedObjectFeatureRemoverNode
+  executable: detected_object_feature_remover_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: input
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "~/input"
+
+outputs:
+  - name: output
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "~/output"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files: []
+
+parameters: []
+
+# processes
+processes:
+  - name: convert
+    trigger_conditions:
+      - on_input: input
+    outcomes:
+      - to_output: output

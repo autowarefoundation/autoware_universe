@@ -1,0 +1,122 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: RoiPointCloudFusion.node
+
+launch:
+  package: autoware_image_projection_based_fusion
+  plugin: autoware::image_projection_based_fusion::RoiPointCloudFusionNode
+  executable: roi_pointcloud_fusion_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: "input"
+  - name: concatenation_info
+    message_type: autoware_sensing_msgs/msg/ConcatenatedPointCloudInfo
+    remap_target: "input/concatenation_info"
+  - name: rois0
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois0"
+  - name: camera_info0
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info0"
+  - name: rois1
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois1"
+  - name: camera_info1
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info1"
+  - name: rois2
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois2"
+  - name: camera_info2
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info2"
+  - name: rois3
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois3"
+  - name: camera_info3
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info3"
+  - name: rois4
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois4"
+  - name: camera_info4
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info4"
+  - name: rois5
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois5"
+  - name: camera_info5
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info5"
+  - name: rois6
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois6"
+  - name: camera_info6
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info6"
+  - name: rois7
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "input/rois7"
+  - name: camera_info7
+    message_type: sensor_msgs/msg/CameraInfo
+    remap_target: "input/camera_info7"
+
+outputs:
+  - name: clusters
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    remap_target: "output"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: sync_param_path
+    default: config/fusion_common.param.yaml
+    schema: schema/fusion_common.schema.json
+  - name: param_path
+    default: config/roi_cluster_fusion.param.yaml
+    schema: schema/roi_cluster_fusion.schema.json
+
+parameters:
+  - name: rois_number
+    type: int
+    default: 8
+    description: The number of cameras(rois)
+
+# processes
+processes:
+  - name: cluster
+    trigger_conditions:
+      - and:
+          - on_input: pointcloud
+          - or:
+              - on_input: rois0
+              - on_input: rois1
+              - on_input: rois2
+              - on_input: rois3
+              - on_input: rois4
+              - on_input: rois5
+              - on_input: rois6
+              - on_input: rois7
+          - and:
+              - once: camera_info0
+              - once: camera_info1
+              - once: camera_info2
+              - once: camera_info3
+              - once: camera_info4
+              - once: camera_info5
+              - once: camera_info6
+              - once: camera_info7
+    outcomes:
+      - to_output: clusters

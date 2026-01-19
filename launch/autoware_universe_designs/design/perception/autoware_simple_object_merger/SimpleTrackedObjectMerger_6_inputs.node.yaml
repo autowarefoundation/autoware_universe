@@ -1,0 +1,42 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: SimpleTrackedObjectMerger_6_inputs.node
+
+base: SimpleTrackedObjectMerger.node
+
+# interfaces
+override:
+  inputs:
+  - name: object1
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object2
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object3
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object4
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object5
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: object6
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+
+  parameters:
+  - name: input_topics
+    type: array
+    default: "[${input object1}, ${input object2}, ${input object3}, ${input object4},
+      ${input object5}, ${input object6}]"
+
+# processes
+  processes:
+  - name: merger
+    trigger_conditions:
+    - and:
+      - on_input: object1
+      - on_input: object2
+      - on_input: object3
+      - on_input: object4
+      - on_input: object5
+      - on_input: object6
+    outcomes:
+    - to_output: merged_object

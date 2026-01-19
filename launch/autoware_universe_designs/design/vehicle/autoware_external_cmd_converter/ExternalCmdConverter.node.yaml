@@ -1,0 +1,56 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: ExternalCmdConverter.node
+
+launch:
+  package: autoware_external_cmd_converter
+  plugin: autoware::external_cmd_converter::ExternalCmdConverterNode
+  executable: external_cmd_converter_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: pedals_cmd
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+  - name: steering_cmd
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+  - name: current_gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+
+outputs:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+
+# parameters
+parameter_files:
+  - name: parameters
+    default: config/external_cmd_converter.param.yaml
+
+parameters:
+  - name: csv_path_accel_map
+    type: string
+    default: config/accel_map.csv
+  - name: csv_path_brake_map
+    type: string
+    default: config/brake_map.csv
+
+# processes
+processes:
+  - name: convert_commands
+    trigger_conditions:
+      - and:
+          - on_input: pedals_cmd
+          - on_input: heartbeat
+          - on_input: steering_cmd
+          - on_input: odometry
+          - on_input: gear_cmd
+          - on_input: current_gate_mode
+    outcomes:
+      - to_output: control_cmd

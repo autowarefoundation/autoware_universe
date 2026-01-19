@@ -1,0 +1,92 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: AccelBrakeMapCalibrator.node
+
+launch:
+  package: autoware_accel_brake_map_calibrator
+  plugin: autoware::accel_brake_map_calibrator::AccelBrakeMapCalibrator
+  executable: accel_brake_map_calibrator
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: steer
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: actuation_status
+    message_type: tier4_vehicle_msgs/msg/ActuationStatusStamped
+  - name: actuation_cmd
+    message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
+  - name: velocity
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
+  - name: update_map_dir
+    message_type: tier4_vehicle_msgs/srv/UpdateAccelBrakeMap
+
+outputs:
+  - name: calibration_status
+    message_type: tier4_external_api_msgs/msg/CalibrationStatus
+  - name: update_suggest
+    message_type: std_msgs/msg/Bool
+  - name: original_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: update_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: data_average_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: data_std_dev_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: data_count_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: data_count_self_pose_occ_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occ_index
+    message_type: visualization_msgs/msg/MarkerArray
+  - name: original_raw_map
+    message_type: std_msgs/msg/Float32MultiArray
+  - name: update_raw_map
+    message_type: std_msgs/msg/Float32MultiArray
+  - name: debug_values
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
+  - name: current_map_error
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+  - name: updated_map_error
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+  - name: map_error_ratio
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+  - name: offset_covariance
+    message_type: std_msgs/msg/Float32MultiArray
+
+  # node: in terms of system, output of this node are files to be stored in the filesystem and addressed by csv_calibrated_map_dir
+  # csv_calibrated_map_dir/accel_map.csv
+  # csv_calibrated_map_dir/brake_map.csv
+
+# parameters
+parameter_files:
+  - name: accel_brake_map_calib_param
+    default: config/accel_brake_map_calibrator.param.yaml
+
+parameters:
+  - name: csv_default_map_dir
+    type: string
+    default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/
+  - name: csv_calibrated_map_dir
+    type: string
+    default: config/
+  - name: output_log_file
+    type: string
+    default: config/log.csv
+  - name: pedal_accel_graph_output
+    type: bool
+    default: false
+  - name: progress_file_output
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: dummy_process
+    trigger_conditions:
+      - and:
+          - on_input: actuation_cmd
+    outcomes:
+      - to_output: calibration_status

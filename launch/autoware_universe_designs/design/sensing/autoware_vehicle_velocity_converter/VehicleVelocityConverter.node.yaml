@@ -1,0 +1,41 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: VehicleVelocityConverter.node
+
+launch:
+  package: autoware_vehicle_velocity_converter
+  plugin: autoware::vehicle_velocity_converter::VehicleVelocityConverter
+  executable: autoware_vehicle_velocity_converter_node
+  node_output: screen
+  use_container: false
+
+# interfaces
+inputs:
+  - name: velocity_status
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
+    remap_target: 'velocity_status'
+
+outputs:
+  - name: twist_with_covariance
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+    remap_target: 'twist_with_covariance'
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: config_file
+    default: config/vehicle_velocity_converter.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: convert_velocity_report
+    trigger_conditions:
+      - and:
+          - on_input: velocity_status
+    outcomes:
+      - to_output: twist_with_covariance

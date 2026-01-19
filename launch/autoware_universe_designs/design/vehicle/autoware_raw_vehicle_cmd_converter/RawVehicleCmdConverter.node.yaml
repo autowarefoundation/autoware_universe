@@ -1,0 +1,57 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: RawVehicleCmdConverter.node
+
+launch:
+  package: autoware_raw_vehicle_cmd_converter
+  plugin: autoware::raw_vehicle_cmd_converter::RawVehicleCmdConverterNode
+  executable: raw_vehicle_cmd_converter_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: accel
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: actuation_status
+    message_type: tier4_vehicle_msgs/msg/ActuationStatusStamped
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: control_horizon
+    message_type: autoware_control_msgs/msg/ControlHorizon
+
+outputs:
+  - name: actuation_cmd
+    message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
+  - name: steering_status
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: control_component_latency
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+  - name: compensated_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: steer_pid
+    message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
+
+# parameters
+parameter_files:
+  - name: config_file
+    default: config/raw_vehicle_cmd_converter.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: convert_commands
+    trigger_conditions:
+      - and:
+          - on_input: control_cmd
+          - on_input: odometry
+    outcomes:
+      - to_output: actuation_cmd
+      - to_output: control_component_latency

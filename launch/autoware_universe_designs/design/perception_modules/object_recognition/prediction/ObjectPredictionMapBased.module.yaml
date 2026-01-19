@@ -1,0 +1,25 @@
+autoware_system_design_format: v0.1.0
+
+name: ObjectPredictionMapBased.module
+
+instances:
+  - name: map_based_prediction
+    entity: MapBasedPrediction.node
+
+external_interfaces:
+  input:
+    - name: vector_map
+    - name: traffic_lights
+    - name: tracked_objects
+  output:
+    - name: objects
+
+connections:
+  - from: input.vector_map
+    to: map_based_prediction.input.vector_map_topic
+  - from: input.tracked_objects
+    to: map_based_prediction.input.objects
+  - from: input.traffic_lights
+    to: map_based_prediction.input.traffic_signals_topic
+  - from: map_based_prediction.output.objects
+    to: output.objects

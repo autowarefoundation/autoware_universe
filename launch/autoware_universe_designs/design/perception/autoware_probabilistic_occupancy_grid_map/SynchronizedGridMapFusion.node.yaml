@@ -1,0 +1,70 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: SynchronizedGridMapFusion.node
+
+launch:
+  package: autoware_probabilistic_occupancy_grid_map
+  plugin: autoware::occupancy_grid_map::GridMapFusionNode
+  executable: synchronized_grid_map_fusion_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interface
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: occupancy_grid_map_1
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occupancy_grid_map_2
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occupancy_grid_map_3
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occupancy_grid_map_4
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occupancy_grid_map_5
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: occupancy_grid_map_6
+    message_type: nav_msgs/msg/OccupancyGrid
+outputs:
+  - name: occupancy_grid_map
+    message_type: nav_msgs/msg/OccupancyGrid
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: multi_lidar_fusion_config_file
+    default: config/multi_lidar_pointcloud_based_occupancy_grid_map.param.yaml
+    schema: schema/multi_lidar_pointcloud_based_occupancy_grid_map.schema.json
+  - name: updater_param_file
+    default: config/binary_bayes_filter_updater.param.yaml
+    schema: schema/binary_bayes_filter_updater.schema.json
+
+parameters:
+  - name: updater_type
+    type: string
+    default: binary_bayes_filter
+    description: The type of updater to use for the occupancy grid map.
+
+# processes
+processes:
+  - name: update
+    trigger_conditions:
+      - on_input: occupancy_grid_map_1
+      - on_input: occupancy_grid_map_2
+      - on_input: occupancy_grid_map_3
+      - on_input: occupancy_grid_map_4
+      - on_input: occupancy_grid_map_5
+      - on_input: occupancy_grid_map_6
+    outcomes:
+      - to_trigger: publish
+  - name: publish
+    trigger_conditions:
+      - on_trigger: update
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: occupancy_grid_map

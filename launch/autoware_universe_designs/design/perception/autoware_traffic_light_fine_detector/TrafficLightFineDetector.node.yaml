@@ -1,0 +1,60 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightFineDetector.node
+
+launch:
+  package: autoware_traffic_light_fine_detector
+  plugin: autoware::traffic_light::TrafficLightFineDetectorNode
+  executable: traffic_light_fine_detector_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: image
+    message_type: sensor_msgs/msg/Image
+    remap_target: "~/input/image"
+  - name: rough_rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: "~/input/rois"
+  - name: expect_rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: "~/expect/rois"
+
+outputs:
+  - name: rois
+    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: "~/output/rois"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/traffic_light_fine_detector.param.yaml
+
+parameters:
+  - name: model_path
+    type: string
+    default: $(var data_path)/traffic_light_fine_detector/tlr_car_ped_yolox_s_batch_6.onnx
+    description: Path to the ONNX model file
+  - name: label_path
+    type: string
+    default: $(var data_path)/traffic_light_fine_detector/tlr_labels.txt
+    description: Path to the label file
+  - name: build_only
+    type: bool
+    default: false
+    description: If true, the node will only build the model and exit.
+
+# processes
+processes:
+  - name: detection
+    trigger_conditions:
+      - and:
+        - on_input: image
+        - on_input: rough_rois
+        - on_input: expect_rois
+    outcomes:
+      - to_output: rois

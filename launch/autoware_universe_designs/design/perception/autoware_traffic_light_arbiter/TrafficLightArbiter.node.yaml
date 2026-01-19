@@ -1,0 +1,46 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightArbiter.node
+
+launch:
+  package: autoware_traffic_light_arbiter
+  plugin: autoware::traffic_light::TrafficLightArbiter
+  executable: traffic_light_arbiter_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: "~/sub/vector_map"
+  - name: perception_traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    remap_target: "~/sub/perception_traffic_signals"
+  - name: external_traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightGroup
+    remap_target: "~/sub/external_traffic_signals"
+outputs:
+  - name: traffic_signals
+    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    remap_target: "~/pub/traffic_signals"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/traffic_light_arbiter.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: arbitrate
+    trigger_conditions:
+      - and:
+          - on_input: perception_traffic_signals
+          - on_input: external_traffic_signals
+    outcomes:
+      - to_output: traffic_signals

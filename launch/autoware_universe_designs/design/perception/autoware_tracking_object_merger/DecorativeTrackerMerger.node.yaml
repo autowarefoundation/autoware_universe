@@ -1,0 +1,51 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DecorativeTrackerMerger.node
+
+launch:
+  package: autoware_tracking_object_merger
+  plugin: autoware::tracking_object_merger::DecorativeTrackerMergerNode
+  executable: decorative_tracker_merger_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: main_object
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: "input/main_object"
+  - name: sub_object
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: "input/sub_object"
+
+outputs:
+  - name: merged_object
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    remap_target: "output/object"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: data_association_matrix_path
+    default: config/data_association_matrix.param.yaml
+  - name: merge_options_path
+    default: config/decorative_tracker_merger_policy.param.yaml
+  - name: node_param_file_path
+    default: config/decorative_tracker_merger.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: merger
+    trigger_conditions:
+      - and:
+          - on_input: main_object
+          - on_input: sub_object
+    outcomes:
+      - to_output: merged_object

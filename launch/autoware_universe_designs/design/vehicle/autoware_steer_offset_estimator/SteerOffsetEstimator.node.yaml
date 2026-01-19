@@ -1,0 +1,49 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: SteerOffsetEstimator.node
+
+launch:
+  package: autoware_steer_offset_estimator
+  plugin: autoware::steer_offset_estimator::SteerOffsetEstimatorNode
+  executable: steer_offset_estimator_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: twist
+    message_type: geometry_msgs/msg/TwistStamped
+  - name: steer
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+
+outputs:
+  - name: steering_offset
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+  - name: steering_offset_covariance
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+  - name: steering_offset_error
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
+
+# parameters
+parameter_files:
+  - name: config_file
+    default: config/steer_offset_estimator.param.yaml
+  - name: initial_steer_offset_param_path
+    default: config/steer_offset.param.yaml
+
+parameters:
+  - name: initial_steer_offset_param_name
+    type: string
+    default: steer_offset
+
+# processes
+processes:
+  - name: estimate_steer_offset
+    trigger_conditions:
+      - and:
+          - on_input: twist
+          - on_input: steer
+    outcomes:
+      - to_output: steering_offset
+      - to_output: steering_offset_covariance
+      - to_output: steering_offset_error

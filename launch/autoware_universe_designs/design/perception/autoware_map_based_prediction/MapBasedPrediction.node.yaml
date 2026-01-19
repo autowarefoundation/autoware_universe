@@ -1,0 +1,57 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: MapBasedPrediction.node
+
+launch:
+  package: autoware_map_based_prediction
+  plugin: autoware::map_based_prediction::MapBasedPredictionNode
+  executable: map_based_prediction
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: vector_map_topic
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: "/vector_map"
+  - name: objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: traffic_signals_topic
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+    remap_target: "/traffic_signals"
+
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: param_path
+    default: config/map_based_prediction.param.yaml
+    schema: schema/map_based_prediction.schema.json
+
+parameters: []
+
+# processes
+processes:
+  - name: update
+    trigger_conditions:
+      - and:
+          - on_input: objects
+          - once: vector_map_topic
+    outcomes:
+      - to_trigger: predict
+  - name: predict
+    trigger_conditions:
+      - on_trigger: update
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: objects

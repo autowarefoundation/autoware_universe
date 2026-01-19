@@ -1,0 +1,52 @@
+autoware_system_design_format: v0.1.0
+
+name: LidarClusteringCameraFusion.module
+
+instances:
+  - name: euclidean_cluster
+    entity: VoxelGridBasedEuclideanCluster.node
+  - name: shape_estimation
+    entity: ShapeEstimation.node
+  - name: camera_lidar_fusion
+    entity: CameraLidarFusion.module
+
+external_interfaces:
+  input:
+    - name: pointcloud
+    - name: rois0
+    - name: rois1
+    - name: rois2
+    - name: rois3
+    - name: rois4
+    - name: rois5
+    - name: rois6
+    - name: rois7
+    - name: camera_info0
+    - name: camera_info1
+    - name: camera_info2
+    - name: camera_info3
+    - name: camera_info4
+    - name: camera_info5
+    - name: camera_info6
+    - name: camera_info7
+  output:
+    - name: detected_objects
+    - name: cluster_objects
+
+connections:
+  - from: input.pointcloud
+    to: euclidean_cluster.input.input_pointcloud
+
+  - from: euclidean_cluster.output.output_clusters
+    to: shape_estimation.input.objects
+  - from: shape_estimation.output.objects
+    to: output.cluster_objects
+
+  - from: euclidean_cluster.output.output_clusters
+    to: camera_lidar_fusion.input.euclidean_clusters
+  - from: input.rois*
+    to: camera_lidar_fusion.input.rois*
+  - from: input.camera_info*
+    to: camera_lidar_fusion.input.camera_info*
+  - from: camera_lidar_fusion.output.objects
+    to: output.detected_objects

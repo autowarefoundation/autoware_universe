@@ -1,0 +1,81 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: LidarCenterpoint.node
+
+launch:
+  package: autoware_lidar_centerpoint
+  plugin: autoware::lidar_centerpoint::LidarCenterPointNode
+  executable: autoware_lidar_centerpoint_node
+  node_output: screen
+  use_container: false
+  container_name: pointcloud_container
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: pointcloud/cuda
+    message_type: negotiated_interfaces/msg/NegotiatedTopicsInfo
+
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: common_param_path
+    default: config/centerpoint_common.param.yaml
+    schema: schema/centerpoint_common.schema.json
+  - name: model_param_path
+    default: config/centerpoint.param.yaml
+    schema: schema/centerpoint.schema.json
+    allow_substs: true
+  - name: ml_package_param_path
+    default: config/centerpoint_ml_package.param.yaml
+    schema: schema/centerpoint_ml_package.schema.json
+    allow_substs: true
+  - name: class_remapper_param_path
+    default: config/detection_class_remapper.param.yaml
+    schema: schema/detection_class_remapper.schema.json
+
+parameters:
+  - name: build_only
+    type: bool
+    default: false
+    description: If true, the node will only build the model and exit.
+  - name: logger_name
+    type: str
+    default: lidar_centerpoint
+    description: The name of the logger for this node.
+  - name: encoder_onnx_path
+    type: str
+    default: $(var data_path)/centerpoint/pts_voxel_encoder_centerpoint.onnx
+    description: The path to the encoder ONNX model.
+  - name: encoder_engine_path
+    type: str
+    default: $(var data_path)/centerpoint/pts_voxel_encoder_centerpoint.engine
+    description: The path to the encoder engine file.
+  - name: head_onnx_path
+    type: str
+    default: $(var data_path)/centerpoint/pts_backbone_neck_head_centerpoint.onnx
+    description: The path to the head ONNX model.
+  - name: head_engine_path
+    type: str
+    default: $(var data_path)/centerpoint/pts_backbone_neck_head_centerpoint.engine
+    description: The path to the head engine file.
+
+# processes
+processes:
+  - name: detect
+    trigger_conditions:
+      - or:
+          - on_input: pointcloud
+    outcomes:
+      - to_output: objects

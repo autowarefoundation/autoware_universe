@@ -1,0 +1,46 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DetectionByTracker.node
+
+launch:
+  package: autoware_detection_by_tracker
+  plugin: autoware::detection_by_tracker::DetectionByTracker
+  executable: detection_by_tracker_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: tracked_objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: initial_objects
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+
+outputs:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: "~/output"
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: detection_by_tracker_param_path
+    default: config/detection_by_tracker.param.yaml
+    schema: config/detection_by_tracker.param.schema.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: merger
+    trigger_conditions:
+      - and:
+          - on_input: tracked_objects
+          - on_input: initial_objects
+    outcomes:
+      - to_output: objects
