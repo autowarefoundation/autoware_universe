@@ -101,7 +101,6 @@ private:
     VadConfig & config, const utils::ModelParams & model_params);
   void load_object_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
-  void load_image_normalization(VadConfig & config);
   void load_network_configurations(VadConfig & config);
   void initialize_vad_model();
   void create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);
