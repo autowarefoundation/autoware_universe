@@ -145,10 +145,11 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     // for (size_t i = 0; i < pointcloud->points.size(); ++i) {
     // const auto & point = pointcloud->points.at(i);
 
+    const Eigen::Vector3i grid_coord = voxel_grid_.getGridCoordinates(point.x, point.y, point.z);
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
-    const int voxel_index =
-      voxel_grid_.getCentroidIndexAt(voxel_grid_.getGridCoordinates(point.x, point.y, point.z));
+    const int voxel_index = voxel_grid_.getCentroidIndexAt(grid_coord);
 #pragma GCC diagnostic pop
 
     auto voxel_to_cluster_map_it = voxel_to_cluster_map.find(voxel_index);
