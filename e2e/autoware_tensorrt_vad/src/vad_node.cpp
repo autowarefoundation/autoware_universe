@@ -439,27 +439,6 @@ void VadNode::load_object_configuration_with_model_params(
      "load_object_configuration_with_model_params"});
 }
 
-void VadNode::load_image_normalization(VadConfig & config)
-{
-  const auto image_mean =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
-  const auto image_std =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
-
-  const std::size_t mean_entries =
-    std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
-  const std::size_t std_entries =
-    std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
-
-  for (std::size_t i = 0; i < mean_entries; ++i) {
-    config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
-  }
-
-  for (std::size_t i = 0; i < std_entries; ++i) {
-    config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
-  }
-}
-
 void VadNode::load_network_configurations(VadConfig & config)
 {
   config.nets_config.clear();
