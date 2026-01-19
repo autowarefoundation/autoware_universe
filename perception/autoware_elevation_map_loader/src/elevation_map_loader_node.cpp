@@ -408,8 +408,8 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
         bg::strategy::buffer::point_square point_strategy;
         bg::strategy::buffer::side_straight side_strategy;
         bg::buffer(
-          working_polygon, out, distance_strategy, side_strategy, join_strategy,
-          end_strategy, point_strategy);
+          working_polygon, out, distance_strategy, side_strategy, join_strategy, end_strategy,
+          point_strategy);
         if (!out.empty()) {
           working_polygon = out.front();
         }
