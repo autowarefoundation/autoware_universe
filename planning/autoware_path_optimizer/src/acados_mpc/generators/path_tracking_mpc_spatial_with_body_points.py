@@ -69,7 +69,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp.model = model_ac
 
         # Set solver options to skip heavy CasADi simplifications that might hang
-        ocp.code_gen_opts.code_export_directory = "c_generated_code"
+        ocp.code_export_directory = "c_generated_code"
 
         # dimensions
         nx = model.x.rows()
