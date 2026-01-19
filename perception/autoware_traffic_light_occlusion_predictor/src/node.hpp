@@ -40,6 +40,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <array>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -105,7 +106,7 @@ private:
   std::shared_ptr<SynchronizerType> synchronizer_;
   std::shared_ptr<SynchronizerType> synchronizer_ped_;
 
-  std::vector<bool> subscribed_;
+  std::array<bool, 2> subscribed_;
   std::vector<int> occlusion_ratios_;
   tier4_perception_msgs::msg::TrafficLightArray out_msg_;
 };
