@@ -22,29 +22,18 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
-#if __has_include(<image_geometry/pinhole_camera_model.hpp>)
-#include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
-#else
-#include <image_geometry/pinhole_camera_model.h>  // for ROS 2 Humble or older
-#endif
-
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/time_synchronizer.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <array>
+#include <cstdint>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -64,7 +53,6 @@ private:
     int max_occlusion_ratio;
   };
 
-private:
   /**
    * @brief receive the lanelet2 map
    *
@@ -107,7 +95,6 @@ private:
   std::shared_ptr<SynchronizerType> synchronizer_ped_;
 
   std::array<bool, 2> subscribed_;
-  std::vector<int> occlusion_ratios_;
   tier4_perception_msgs::msg::TrafficLightArray out_msg_;
 };
 }  // namespace autoware::traffic_light

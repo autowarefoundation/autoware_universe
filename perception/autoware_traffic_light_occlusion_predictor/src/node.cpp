@@ -12,26 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define EIGEN_MPL2_ONLY
-
 #include "node.hpp"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <autoware/lanelet2_utils/conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_lanelet2_extension/visualization/visualization.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <tf2/LinearMath/Matrix3x3.hpp>
-#include <tf2/LinearMath/Transform.hpp>
+#include "occlusion_predictor.hpp"
 
-#include <lanelet2_core/Exceptions.h>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_array.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
+
 #include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_projection/UTM.h>
-#include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
