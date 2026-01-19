@@ -96,7 +96,6 @@ private:
   void load_detection_range(VadConfig & config);
   void load_classification_config(const ClassificationConfig & params);
   void load_map_configuration(VadConfig & config);
-  void load_object_configuration(VadConfig & config);
   void load_map_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
   void load_object_configuration_with_model_params(
