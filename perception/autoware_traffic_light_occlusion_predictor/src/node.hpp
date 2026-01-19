@@ -47,21 +47,51 @@ private:
   {
     double azimuth_occlusion_resolution_deg;
     double elevation_occlusion_resolution_deg;
+
+    /// Maximum distance of point cloud points considered valid [m]
     double max_valid_pt_dist;
+
+    /// Maximum allowed timestamp difference between image and point cloud [s]
     double max_image_cloud_delay;
+
+    /// Maximum wait time for synchronized messages [s]
     double max_wait_t;
+
+    /// Occlusion ratio threshold above which a signal is treated as UNKNOWN
     int max_occlusion_ratio;
   };
 
   /**
-   * @brief receive the lanelet2 map
+   * @brief Callback for receiving the Lanelet2 vector map
    *
-   * @param input_msg
+   * @details
+   * Extracts all traffic light geometries from the map and computes their
+   * 3D center positions. These positions are later used as reference points
+   * for occlusion estimation.
+   *
+   * @param input_msg Lanelet2 map message
    */
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
+
   /**
-   * @brief subscribers
+   * @brief Synchronized callback for traffic light occlusion estimation
    *
+   * @details
+   * This callback is invoked separately for car and pedestrian traffic lights.
+   * It performs the following steps:
+   *  - Filters ROIs by traffic light type
+   *  - Computes occlusion ratios using point cloud projection
+   *  - Overrides occluded traffic light signals to UNKNOWN
+   *  - Aggregates results across traffic light types
+   *
+   * Publishing occurs only after both car and pedestrian traffic lights
+   * have been processed.
+   *
+   * @param in_signal_msg Traffic light signal array
+   * @param in_roi_msg Traffic light ROI array
+   * @param in_cam_info_msg Camera intrinsic parameters
+   * @param in_cloud_msg LiDAR point cloud
+   * @param uint8_t Traffic light category (car or pedestrian)
    */
   void syncCallback(
     const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr in_signal_msg,
@@ -71,21 +101,28 @@ private:
     const uint8_t traffic_light_type);
 
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
-  /**
-   * @brief publishers
-   *
-   */
+
+  /// Publisher for occlusion-filtered traffic light signals
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr signal_pub_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-  std::map<lanelet::Id, tf2::Vector3> traffic_light_position_map_;
-  Config config_;
+
   /**
-   * @brief main class for calculating the occlusion probability
+   * @brief Map of traffic light IDs to their 3D center positions
    *
+   * Used during occlusion estimation to associate ROIs with map-based
+   * traffic light geometry.
+   */
+  std::map<lanelet::Id, tf2::Vector3> traffic_light_position_map_;
+
+  Config config_;
+
+  /**
+   * @brief Occlusion predictor using point cloud projection
    */
   std::shared_ptr<CloudOcclusionPredictor> cloud_occlusion_predictor_;
+
   typedef perception_utils::PrimeSynchronizer<
     tier4_perception_msgs::msg::TrafficLightArray, tier4_perception_msgs::msg::TrafficLightRoiArray,
     sensor_msgs::msg::CameraInfo, sensor_msgs::msg::PointCloud2>
@@ -94,7 +131,16 @@ private:
   std::shared_ptr<SynchronizerType> synchronizer_;
   std::shared_ptr<SynchronizerType> synchronizer_ped_;
 
+  /**
+   * @brief Flags indicating whether each traffic light type has been processed
+   *
+   * Used to determine when aggregated publishing is possible.
+   */
   std::array<bool, 2> subscribed_;
+
+  /**
+   * @brief Aggregated output message containing all traffic light signals
+   */
   tier4_perception_msgs::msg::TrafficLightArray out_msg_;
 };
 }  // namespace autoware::traffic_light
