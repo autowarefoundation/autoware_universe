@@ -14,6 +14,7 @@
 
 #include "manager.hpp"
 
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -120,8 +121,8 @@ void TrafficLightModuleManager::launchNewModules(
     }
 
     const auto & lane = traffic_light_reg_elem.second;
-    const std::string turn_direction = lane.attributeOr("turn_direction", std::string(""));
-    const bool is_turn_lane = (turn_direction == "left" || turn_direction == "right");
+    const bool is_turn_lane = autoware::experimental::lanelet2_utils::is_left_direction(lane) ||
+                              autoware::experimental::lanelet2_utils::is_right_direction(lane);
 
     const bool has_static_arrow = hasStaticArrow(traffic_light_reg_elem.first);
 
