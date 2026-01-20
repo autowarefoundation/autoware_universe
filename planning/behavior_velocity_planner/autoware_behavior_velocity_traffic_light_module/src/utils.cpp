@@ -15,6 +15,7 @@
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 
@@ -179,27 +180,30 @@ bool isTrafficSignalRedStop(
     return false;
   }
 
-  const std::string turn_direction = lanelet.attributeOr("turn_direction", "else");
-  if (turn_direction == "else") {
+  // If there is no turn_direction attribute (neither straight, left, nor right), it treats logic as
+  // "else" (stop for red).
+  if (!autoware::experimental::lanelet2_utils::is_intersection_lanelet(lanelet)) {
     return true;
   }
+
   if (
-    turn_direction == "right" &&
+    autoware::experimental::lanelet2_utils::is_right_direction(lanelet) &&
     hasTrafficLightShape(
       elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
     return false;
   }
   if (
-    turn_direction == "left" &&
+    autoware::experimental::lanelet2_utils::is_left_direction(lanelet) &&
     hasTrafficLightShape(
       elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
     return false;
   }
   if (
-    turn_direction == "straight" &&
+    autoware::experimental::lanelet2_utils::is_straight_direction(lanelet) &&
     hasTrafficLightShape(elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
     return false;
   }
   return true;
 }
+
 }  // namespace autoware::behavior_velocity_planner

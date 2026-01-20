@@ -95,13 +95,10 @@ private:
   // Helper methods for load_vad_config
   void load_detection_range(VadConfig & config);
   void load_classification_config(const ClassificationConfig & params);
-  void load_map_configuration(VadConfig & config);
-  void load_object_configuration(VadConfig & config);
   void load_map_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
   void load_object_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
-  void load_image_normalization(VadConfig & config);
   void load_network_configurations(VadConfig & config);
   void initialize_vad_model();
   void create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);

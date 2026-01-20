@@ -7,6 +7,7 @@
       yellow_lamp_period: 2.75
       yellow_light_stop_velocity: 1.0 # Velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns yellow, regardless of the pass_judge decision.
       enable_pass_judge: true
+      enable_arrow_aware_yellow_passing: false
       enable_rtc: false # If set to true, the scene modules require approval from the rtc (request to cooperate) function. If set to false, the modules can be executed without requiring rtc approval
 
       restart_suppression:
