@@ -225,12 +225,12 @@ void SideShiftModule::updateData()
 
   // Restore velocity information after resampling
   // resamplePathWithSpline may not preserve velocities correctly, so we interpolate from original
-  for (size_t i = 0; i < reference_path_.points.size(); ++i) {
-    const auto & pos = reference_path_.points.at(i).point.pose.position;
+  for (auto & point : reference_path_.points) {
+    const auto & pos = point.point.pose.position;
     const size_t nearest_idx =
       autoware::motion_utils::findNearestIndex(centerline_path.points, pos);
     if (nearest_idx < centerline_path.points.size()) {
-      reference_path_.points.at(i).point.longitudinal_velocity_mps =
+      point.point.longitudinal_velocity_mps =
         centerline_path.points.at(nearest_idx).point.longitudinal_velocity_mps;
     }
   }
