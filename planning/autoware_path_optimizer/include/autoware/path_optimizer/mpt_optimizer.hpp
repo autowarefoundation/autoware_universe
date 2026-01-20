@@ -432,9 +432,9 @@ private:
 
   // Helper method to build parameters for Acados solver
   std::array<double, NP> buildParameters(
-    const double e_y_ego, const double e_psi_ego, const std::vector<double> & knots,
+    const std::vector<double> & knots,
     const std::vector<double> & x_coeffs_flat, const std::vector<double> & y_coeffs_flat,
-    const std::vector<double> & curvatures, std::array<double, NX> & x0) const;
+    const std::vector<double> & curvatures) const;
 
   // Set parameters on the AcadosInterface for all stages
   void setParametersToSolver(

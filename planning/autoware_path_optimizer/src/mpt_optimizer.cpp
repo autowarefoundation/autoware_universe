@@ -732,10 +732,8 @@ geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, d
 // Build parameter vector and initial state x0 from the request. If a parameter-size mismatch
 // is detected, this will set skipSolve=true and populate the response with empty results.
 std::array<double, NP> MPTOptimizer::buildParameters(
-  [[maybe_unused]] const double e_y_ego, [[maybe_unused]] const double e_psi_ego,
   const std::vector<double> & knots, const std::vector<double> & x_coeffs_flat,
-  const std::vector<double> & y_coeffs_flat, const std::vector<double> & curvatures,
-  std::array<double, NX> & x0) const
+  const std::vector<double> & y_coeffs_flat, const std::vector<double> & curvatures) const
 {
   RCLCPP_DEBUG(
     logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu", knots.size(),
@@ -806,10 +804,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
                                           ? vehicle_circle_longitudinal_offsets_.at(i)
                                           : 0.0;
   }
-
-  // set x0: initial state vector (NX == 2)
-  x0[0] = e_y_ego;
-  x0[1] = e_psi_ego;
 
   return parameters;
 }
@@ -1028,11 +1022,11 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   }
 
   std::array<double, NX> x0;
-  // x0[0] = e_y_ego;
-  // x0[1] = e_psi_ego;
+  x0[0] = e_y_ego;
+  x0[1] = e_psi_ego;
 
   std::array<double, NP> parameters =
-    buildParameters(e_y_ego, e_psi_ego, knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec, x0);
+    buildParameters(knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec);
 
   setParametersToSolver(parameters, ref_points, s_ego);
 
