@@ -20,11 +20,10 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <rclcpp/duration.hpp>
+#include <tf2/utils.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
-
-#include <tf2/utils.h>
 
 #include <memory>
 
@@ -150,7 +149,7 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
         const auto & ego_pos = planner_data_->current_odometry->pose.position;
         const double dist =
-          autoware::motion_utils::calcSignedArcLength(input_path.points, ego_pos, 0L);
+          autoware::motion_utils::calcSignedArcLength(input_path.points, 0L, ego_pos);
         const auto pose_opt =
           autoware::motion_utils::calcLongitudinalOffsetPose(input_path.points, 0L, dist);
         if (pose_opt.has_value()) {

@@ -2,6 +2,38 @@
 Changelog for package autoware_pose_estimator_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Map and Localization Component) (`#11787 <https://github.com/autowarefoundation/autoware_universe/issues/11787>`_)
+  * localization component toBinMsg replacement
+  * map component fromBinMsg replacement
+  * localization component fromBinMsg replacement
+  * remove unused dep from localization/autoware_pose_estimator_arbiter
+  ---------
+* chore(yabloc_image_processing, autoware_pose_estimator_arbiter): resolve cmake targets (`#11795 <https://github.com/autowarefoundation/autoware_universe/issues/11795>`_)
+  * resolve sophus
+  * resolve magic_enum
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Taeseung Sohn
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore: update maintainer (`#11373 <https://github.com/autowarefoundation/autoware_universe/issues/11373>`_)
+  * chore: update maintainer
+  remove Ryu Yamamoto
+  * chore: update maintainer
+  remove Kento Yabuuchi
+  * chore: update maintainer
+  remove Shintaro Sakoda
+  ---------
+* Contributors: Motz, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

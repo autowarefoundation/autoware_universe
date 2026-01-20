@@ -100,6 +100,7 @@ struct DynamicObject
 
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
+  bool trust_extension;
   double area;
 };
 
@@ -117,6 +118,7 @@ DynamicObjectList toDynamicObjectList(
   const autoware_perception_msgs::msg::DetectedObjects & det_objects, const uint channel_index = 0);
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object);
+autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicObject & dyn_object);
 
 double getArea(const autoware_perception_msgs::msg::Shape & shape);
 

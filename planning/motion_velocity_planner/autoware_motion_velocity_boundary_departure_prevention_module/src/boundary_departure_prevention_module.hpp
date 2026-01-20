@@ -41,6 +41,7 @@ public:
     const TrajectoryPoints & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; };
+  std::string get_short_module_name() const override { return "boundary_departure_prevention"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     return RequiredSubscriptionInfo{};
@@ -132,6 +133,21 @@ private:
    */
   bool is_critical_departure_persist();
 
+  /**
+   * @brief Generates and publishes visualization markers for virtual walls and debugging.
+   */
+  void publish_visualization_markers();
+
+  /**
+   * @brief Helper function for virtual walls
+   */
+  void publish_virtual_walls(const rclcpp::Time & current_time);
+
+  /**
+   * @brief Helper function for debug markers
+   */
+  void publish_debug_markers(const rclcpp::Time & current_time);
+
   rclcpp::Clock::SharedPtr clock_ptr_;
 
   std::string module_name_;
@@ -167,7 +183,7 @@ private:
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
-  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_ptr_;
+  std::unique_ptr<UncrossableBoundaryDepartureChecker> boundary_departure_checker_ptr_;
   std::unique_ptr<diagnostic_updater::Updater> updater_ptr_;
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;

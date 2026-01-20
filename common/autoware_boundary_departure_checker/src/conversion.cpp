@@ -37,14 +37,19 @@ Segment2d to_segment_2d(
   return {to_point_2d(ll_pt1), to_point_2d(ll_pt2)};
 }
 
+Segment2d to_segment_2d(const Segment3d & segment)
+{
+  return {to_point_2d(segment.first), to_point_2d(segment.second)};
+}
+
 Point to_geom_pt(const Point2d & point, const double z)
 {
-  return autoware_utils::to_msg(point.to_3d(z));
+  return autoware_utils_geometry::to_msg(point.to_3d(z));
 }
 
 Polygon2d to_polygon_2d(const lanelet::BasicPolygon2d & poly)
 {
-  autoware_utils::Polygon2d polygon;
+  autoware_utils_geometry::Polygon2d polygon;
   auto & outer = polygon.outer();
 
   outer.reserve(poly.size());

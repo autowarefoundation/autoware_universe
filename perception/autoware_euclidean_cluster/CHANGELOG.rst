@@ -2,6 +2,42 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(autoware_euclidean_cluster): add empty point cloud guards (`#11744 <https://github.com/autowarefoundation/autoware_universe/issues/11744>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add empty data guards in euclidean_cluster_node.cpp
+  - Add early return in voxel_grid_based_euclidean_cluster_node.cpp
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_euclidean_cluster): created the schema file, updated the readme file and deleted the default parameter in node files code (`#10085 <https://github.com/autowarefoundation/autoware_universe/issues/10085>`_)
+  * feat(autoware_euclidean_cluster): Created the schema file, updated the readme file and deleted the default paramter in node files code
+  * style(pre-commit): autofix
+  * Update euclidean_cluster.schema.json
+  done spell check error thank you
+  * Update euclidean_cluster_node.cpp
+  Updated missing type
+  * fix(autoware_euclidean_cluster): remove unexpected properties
+  * fix: undo unnecessary modification
+  * remove unused parameters
+  * fix: schema error
+  * style(pre-commit): autofix
+  * fix: build error
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Vishal Chauhan
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 

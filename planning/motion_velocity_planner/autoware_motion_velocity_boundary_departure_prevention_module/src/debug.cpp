@@ -234,11 +234,10 @@ Marker create_departure_interval_marker(
 }
 
 MarkerArray create_debug_marker_array(
-  const Output & output, const Trajectory & ego_traj, const rclcpp::Clock::SharedPtr & clock_ptr,
+  const Output & output, const Trajectory & ego_traj, const rclcpp::Time & curr_time,
   const double base_link_z, const NodeParam & node_param)
 {
   const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
-  const auto curr_time = clock_ptr->now();
   const auto color = color::green();
   const auto m_scale = create_marker_scale(0.05, 0, 0);
 
@@ -283,13 +282,14 @@ MarkerArray create_debug_marker_array(
     const auto side_key_str = get_side_key_str(side_key);
 
     marker_array.markers.push_back(create_departure_points_marker(
-      output.departure_points[side_key], curr_time, side_key_str, base_link_z));
+      output.abnormalities_data.departure_points[side_key], curr_time, side_key_str, base_link_z));
     marker_array.markers.push_back(create_projections_to_bound_marker(
-      output.closest_projections_to_bound[side_key], marker, "closest", side_key_str, base_link_z));
+      output.abnormalities_data.closest_projections_to_bound[side_key], marker, "closest",
+      side_key_str, base_link_z));
     autoware_utils::append_marker_array(
       create_projections_type_wall_marker(
-        output.closest_projections_to_bound[side_key], ego_traj, curr_time, side_key_str,
-        base_link_z),
+        output.abnormalities_data.closest_projections_to_bound[side_key], ego_traj, curr_time,
+        side_key_str, base_link_z),
       &marker_array);
   }
   autoware_utils::append_marker_array(

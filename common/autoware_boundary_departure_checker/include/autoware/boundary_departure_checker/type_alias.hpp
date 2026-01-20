@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <autoware/trajectory/trajectory_point.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/pose_deviation.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -40,14 +40,15 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
 
-using autoware_utils::Box2d;
-using autoware_utils::LinearRing2d;
-using autoware_utils::LineString2d;
-using autoware_utils::MultiPoint2d;
-using autoware_utils::MultiPolygon2d;
-using autoware_utils::Point2d;  // NOLINT
-using autoware_utils::Polygon2d;
-using autoware_utils::Segment2d;
+using autoware_utils_geometry::Box2d;
+using autoware_utils_geometry::LinearRing2d;
+using autoware_utils_geometry::LineString2d;
+using autoware_utils_geometry::MultiPoint2d;
+using autoware_utils_geometry::MultiPolygon2d;
+using autoware_utils_geometry::Point2d;  // NOLINT
+using autoware_utils_geometry::Polygon2d;
+using autoware_utils_geometry::Segment2d;
+using autoware_utils_geometry::Segment3d;
 
 using autoware::vehicle_info_utils::VehicleInfo;  // NOLINT
 

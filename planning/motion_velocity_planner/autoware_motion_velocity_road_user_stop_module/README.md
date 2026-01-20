@@ -100,6 +100,15 @@ This module is activated if the launch parameter `launch_road_user_stop_module` 
 | lost_object_retention_duration | [s]  | double | Duration to keep tracking objects after they are lost or exit the detection area                         | 2.0           |
 | polygon_expansion_length       | [m]  | double | Distance to expand object polygon outward from centroid when object was previously inside detection area | 0.5           |
 
+### Stopped Object Tracking Parameters
+
+| Name                                | Unit  | Type   | Description                                                          | Default value |
+| :---------------------------------- | :---- | :----- | :------------------------------------------------------------------- | :------------ |
+| stopped_velocity_threshold          | [m/s] | double | Velocity threshold to consider object as stopped                     | 0.5           |
+| stopped_position_tolerance          | [m]   | double | Distance threshold for stopped position movement                     | 0.3           |
+| ego_reached_wall_distance_threshold | [m]   | double | Distance threshold to consider ego reached virtual wall              | 0.5           |
+| stopped_duration_after_ego_arrival  | [s]   | double | Duration threshold for stopped object after ego reaches virtual wall | 3.0           |
+
 ## Limitations
 
 - If object tracking is lost for an extended period or object classification is misidentified, the module may not function properly and may fail to stop as expected

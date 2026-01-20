@@ -249,7 +249,7 @@ This ordering is beneficial when the priority is to minimize the backward distan
 
 ### 2. Collision detection with dynamic obstacles
 
-- **Applying RSS in Dynamic Collision Detection**: Collision detection is based on the RSS (Responsibility-Sensitive Safety) model to evaluate if a safe distance is maintained. See [safety check feature explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
+- Using Safe Braking Distances for Collision Assessment: The module uses a safe braking distance model to determine if the ego vehicle is maintaining enough space from other dynamic objects. See [safety check feature explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
 
 - **Collision check performed range**: Safety checks for collisions with dynamic objects are conducted within the defined boundaries between the start and end points of each maneuver, ensuring the ego vehicle does not impede or hinder the progress of dynamic objects that come from behind it.
 
@@ -446,18 +446,18 @@ Parameters under `target_filtering` are related to filtering target objects for 
 
 Parameters under `safety_check_params` define the configuration for safety check.
 
-| Name                                           | Unit | Type   | Description                                                                               | Default value |
-| :--------------------------------------------- | :--- | :----- | :---------------------------------------------------------------------------------------- | :------------ |
-| enable_safety_check                            | -    | bool   | Flag to enable safety check                                                               | true          |
-| check_all_predicted_path                       | -    | bool   | Flag to check all predicted paths                                                         | true          |
-| publish_debug_marker                           | -    | bool   | Flag to publish debug markers                                                             | false         |
-| rss_params.rear_vehicle_reaction_time          | [s]  | double | Reaction time for rear vehicles                                                           | 2.0           |
-| rss_params.rear_vehicle_safety_time_margin     | [s]  | double | Safety time margin for rear vehicles                                                      | 1.0           |
-| rss_params.lateral_distance_max_threshold      | [m]  | double | Maximum lateral distance threshold                                                        | 2.0           |
-| rss_params.longitudinal_distance_min_threshold | [m]  | double | Minimum longitudinal distance threshold                                                   | 3.0           |
-| rss_params.longitudinal_velocity_delta_time    | [s]  | double | Delta time for longitudinal velocity                                                      | 0.8           |
-| hysteresis_factor_expand_rate                  | -    | double | Rate to expand/shrink the hysteresis factor                                               | 1.0           |
-| collision_check_yaw_diff_threshold             | -    | double | Maximum yaw difference between ego and object when executing rss-based collision checking | 1.578         |
+| Name                                           | Unit | Type   | Description                                                                       | Default value |
+| :--------------------------------------------- | :--- | :----- | :-------------------------------------------------------------------------------- | :------------ |
+| enable_safety_check                            | -    | bool   | Flag to enable safety check                                                       | true          |
+| check_all_predicted_path                       | -    | bool   | Flag to check all predicted paths                                                 | true          |
+| publish_debug_marker                           | -    | bool   | Flag to publish debug markers                                                     | false         |
+| rss_params.rear_vehicle_reaction_time          | [s]  | double | Reaction time for rear vehicles                                                   | 2.0           |
+| rss_params.rear_vehicle_safety_time_margin     | [s]  | double | Safety time margin for rear vehicles                                              | 1.0           |
+| rss_params.lateral_distance_max_threshold      | [m]  | double | Maximum lateral distance threshold                                                | 2.0           |
+| rss_params.longitudinal_distance_min_threshold | [m]  | double | Minimum longitudinal distance threshold                                           | 3.0           |
+| rss_params.longitudinal_velocity_delta_time    | [s]  | double | Delta time for longitudinal velocity                                              | 0.8           |
+| hysteresis_factor_expand_rate                  | -    | double | Rate to expand/shrink the hysteresis factor                                       | 1.0           |
+| collision_check_yaw_diff_threshold             | -    | double | Maximum yaw difference between ego and object when executing collision assessment | 1.578         |
 
 ## **Path Generation**
 
@@ -514,6 +514,54 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 Generate smooth paths using clothoid curves that provide continuous curvature transitions. The clothoid path consists of three segments: entry clothoid, circular arc, and exit clothoid, ensuring smooth steering transitions.
 
+![clothoid_pull_out](./images/clothoid_pullout.drawio.svg)
+
+#### Path Generation Flow
+
+The path is generated with following flow.
+
+1. **Parameter Setting and Initialization**
+
+2. **Get lane information**
+   - Get road lane (target lane) and shoulder lane (start lane) information.
+
+3. **Start and Target Path Generation**
+   - Generate the centerline path of the target lane.
+   - Generated the straight path of the shoulder lane.
+
+4. **Circular Arc Path Generation (red dotted line in the following figure)**
+   - Generate circular arc path using the same method as geometric pull out.
+   - Calculate composite arc path with two arc segments (entry and exit arcs).
+   - This process is repeated with gradually increasing maximum steering angles from the parameter list `clothoid_max_steer_angles_deg` (e.g., [5.0, 10.0, 20.0] degrees) until a valid path is found.
+
+5. **Clothoid Approximation**
+   - Convert the circular arc segments to clothoid curves.
+   - Generate three-segment clothoid path: entry clothoid → circular arc → exit clothoid for each arc path (**black dotted line in the following figure**).
+   - Apply rigid transform to align the start and goal points of the approximated clothoid path with the original arc path (**black line in the following figure**).
+
+6. **Lane Departure Check and Path Validation**
+
+7. **Collision Check**
+
+![clothoid_pullout_path_generation_flow](./images/clothoid_flow.drawio.svg)
+
+The following diagram illustrates the process flow for generating clothoid paths:
+
+```mermaid
+flowchart TD
+    A[Start: Parameter Setting and Initialization] --> B[Get Lane Information]
+    B --> C[Start and Target Path Generation]
+    C --> D[Select a candidate max steer angle]
+    D --> E[Generate Circular Arc Path]
+    E --> F[Clothoid Approximation]
+    F --> G[Lane Departure Check and Path Validation]
+    G --> H[Collision Check]
+    H --> I[Is the path valid?]
+    I -->|No| D
+    I -->|Yes| J[End: Return Path]
+    D -->|No More Candidate| K[Path Generation Failure]
+```
+
 #### parameters for clothoid pull out
 
 | Name                                       | Unit    | Type   | Description                                                       | Default value     |
@@ -524,6 +572,12 @@ Generate smooth paths using clothoid curves that provide continuous curvature tr
 | clothoid_max_steer_angle_rate_deg_per_sec  | [deg/s] | double | maximum steer angle rate                                          | 10.0              |
 | clothoid_collision_check_distance_from_end | [m]     | double | collision check distance from end for clothoid planner            | 0.0               |
 | check_clothoid_path_lane_departure         | [-]     | bool   | flag whether to check if clothoid path footprints are out of lane | true              |
+
+#### Limitation
+
+- **Violation of the max curvature**: During the rigid transformation of the approximated clothoid path to align with the original circular arc path, the scaling factor may cause the maximum steering angle constraint to be violated. When the scale factor is smaller than 1.0, the curvature of the transformed clothoid path may exceed the maximum curvature corresponding to the specified maximum steering angle.
+
+- **Yaw Angle Deviation at Path Endpoints**: The rigid transformation process introduces yaw angle deviations at the start and end points of the clothoid path. As shown in the figure above, note that the yaw angles at the start and end points differ between the original circular arc path (red dotted line) and the transformed clothoid path (black solid line).
 
 ## **backward pull out start point search**
 

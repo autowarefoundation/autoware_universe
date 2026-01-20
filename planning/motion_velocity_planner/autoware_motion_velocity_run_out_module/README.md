@@ -44,6 +44,8 @@ we prepare the following sets of geometries based on the parameters defined for 
 - segments to strictly cut predicted paths (`cut_predicted_paths.strict_polygon_types`, `cut_predicted_paths.strict_linestring_types`, and `cut_predicted_paths.strict_lanelet_subtypes`).
   - strict cutting means that the cut is always applied, regardless of any preserved distance or duration.
 
+Polygon subtypes can also be considered if the parameter value is in the format `"type.subtype"`.
+
 The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.
 
 ![map_filtering_data](./docs/map_filtering_data.png)
@@ -160,6 +162,7 @@ The decision table can be visualized on the debug markers with the `decisions` n
 Finally, for each object, we calculate how the velocity profile will be modified based on the decision made:
 
 - `stop`: insert a `0` velocity ahead of the predicted collision point by the distance set in the `stop.distance_buffer` parameter.
+  - to prevent the stop pose from jumping, the previous stop pose is reused if its arc length position is before the newly calculated stop pose and the arc length difference between them is smaller than the `stop.reuse_margin` parameter.
 - `slowdown`: insert a $V_{slow}$ velocity between the collision point and the point ahead of collision point by the distance set in the `slowdown.distance_buffer` parameter.
   - $V_{slow}$ is calculated as the maximum between the safe velocity and the comfortable velocity.
     - safe velocity: velocity required to be able to stop over the `distance_buffer` assuming a deceleration as set by the

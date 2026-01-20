@@ -65,27 +65,18 @@ void smooth_trajectory_with_elastic_band(
 bool validate_point(const TrajectoryPoint & point);
 
 /**
- * @brief Interpolates the given trajectory points based on trajectory length.
+ * @brief Copies orientations from input trajectory to output trajectory points.
+ * @param input_trajectory The reference input trajectory points.
+ * @param output_trajectory The output trajectory points to be updated.
+ * @param max_distance_m Maximum position deviation allowed for nearest neighbor matching.
+ * @param max_yaw_rad Maximum yaw deviation allowed for nearest neighbor matching.
  *
- * @param traj_points The trajectory points to be interpolated.
- * @param params The parameters for trajectory interpolation.
+ * For each output point, finds the nearest input point within the distance and yaw constraints
+ * and copies its orientation. If no match is found, the output orientation is preserved.
  */
-void apply_spline(TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params);
-
-/**
- * @brief Interpolates the given trajectory points based on the current odometry and acceleration.
- *
- * @param traj_points The trajectory points to be interpolated.
- * @param current_odometry The current odometry data.
- * @param current_acceleration The current acceleration data.
- * @param params The parameters for trajectory interpolation.
- * @param smoother The smoother to be used for filtering the trajectory.
- */
-void interpolate_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const AccelWithCovarianceStamped & current_acceleration, const TrajectoryOptimizerParams & params,
-  const std::shared_ptr<JerkFilteredSmoother> & jerk_filtered_smoother,
-  const std::shared_ptr<EBPathSmoother> & eb_path_smoother_ptr);
+void copy_trajectory_orientation(
+  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory,
+  const double max_distance_m, const double max_yaw_rad);
 
 /**
  * @brief Gets the logger for the trajectory optimizer.
@@ -95,78 +86,24 @@ void interpolate_trajectory(
 rclcpp::Logger get_logger();
 
 /**
- * @brief Removes invalid points from the input trajectory.
+ * @brief Compute time difference between consecutive trajectory points
  *
- * @param input_trajectory The trajectory points to be cleaned.
+ * @param current Current trajectory point
+ * @param next Next trajectory point
+ * @return Time difference [s]
  */
-void remove_invalid_points(std::vector<TrajectoryPoint> & input_trajectory);
+double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next);
 
 /**
- * @brief Filters the velocity of the input trajectory based on the initial motion and parameters.
+ * @brief Recalculates longitudinal acceleration from velocity differences.
  *
- * @param input_trajectory The trajectory points to be filtered.
- * @param initial_motion_speed The initial speed and acceleration for motion.
- * @param params The parameters for trajectory interpolation.
- * @param smoother The smoother to be used for filtering the trajectory.
- * @param current_odometry The current odometry data.
+ * @param trajectory The trajectory points with velocities to recalculate accelerations from.
+ * @param use_constant_dt If true, use constant_dt; if false, use time_from_start spacing.
+ * @param constant_dt Constant time step in seconds (used only if use_constant_dt is true).
  */
-void filter_velocity(
-  TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  const TrajectoryOptimizerParams & params, const std::shared_ptr<JerkFilteredSmoother> & smoother,
-  const Odometry & current_odometry);
-
-/**
- * @brief Clamps the velocities of the input trajectory points to the specified minimum values.
- *
- * @param input_trajectory_array The trajectory points to be clamped.
- * @param min_velocity The minimum velocity to be clamped.
- * @param min_acceleration The minimum acceleration to be clamped.
- */
-void clamp_velocities(
-  std::vector<TrajectoryPoint> & input_trajectory_array, float min_velocity,
-  float min_acceleration);
-
-/**
- * @brief Sets the maximum velocity for the input trajectory points.
- *
- * @param input_trajectory_array The trajectory points to be updated.
- * @param max_velocity The maximum velocity to be set.
- */
-void set_max_velocity(
-  std::vector<TrajectoryPoint> & input_trajectory_array, const float max_velocity);
-
-void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const TrajectoryOptimizerParams & params);
-
-/**
- * @brief Removes points from the input trajectory that are too close to each other.
- *
- * @param input_trajectory_array The trajectory points to be cleaned.
- * @param min_dist The minimum distance between points.
- */
-void remove_close_proximity_points(
-  std::vector<TrajectoryPoint> & input_trajectory_array, const double min_dist = 1E-2);
-
-/**
- * @brief Adds the ego state to the trajectory points.
- *
- * @param traj_points The trajectory points to be updated.
- * @param current_odometry The current odometry data.
- * @param params The parameters for trajectory interpolation.
- */
-void add_ego_state_to_trajectory(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry,
-  const TrajectoryOptimizerParams & params);
-
-/**
- * @brief Expands the trajectory points with the ego history points.
- *
- * @param traj_points The trajectory points to be expanded.
- * @param ego_history_points The ego history points to be added.
- */
-void expand_trajectory_with_ego_history(
-  TrajectoryPoints & traj_points, const TrajectoryPoints & ego_history_points,
-  const Odometry & current_odometry, const TrajectoryOptimizerParams & params);
+void recalculate_longitudinal_acceleration(
+  TrajectoryPoints & trajectory, const bool use_constant_dt = false,
+  const double constant_dt = 0.1);
 
 };  // namespace autoware::trajectory_optimizer::utils
 

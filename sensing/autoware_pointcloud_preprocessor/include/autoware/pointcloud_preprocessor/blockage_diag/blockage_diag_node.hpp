@@ -15,22 +15,17 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
-#include "autoware/point_types/types.hpp"
-#include "autoware/pointcloud_preprocessor/filter.hpp"
-
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
-
-#include <pcl/PCLPointCloud2.h>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
@@ -45,16 +40,12 @@
 
 namespace autoware::pointcloud_preprocessor
 {
-using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
-using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
-class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
+class BlockageDiagComponent : public rclcpp::Node
 {
-protected:
-  void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
+private:
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
@@ -73,7 +64,8 @@ protected:
     ground_dust_ratio_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
-private:
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
@@ -125,7 +117,7 @@ private:
    * @param input The input point cloud.
    * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
    */
-  cv::Mat make_normalized_depth_image(const PCLCloudXYZIRCAEDT & input) const;
+  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
@@ -263,7 +255,6 @@ private:
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 
 public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);
 };
 

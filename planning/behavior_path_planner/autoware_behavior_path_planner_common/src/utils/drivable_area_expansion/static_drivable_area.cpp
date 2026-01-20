@@ -400,7 +400,8 @@ std::vector<geometry_msgs::msg::Point> convertToGeometryPoints(
 
 // NOTE: See the PR's figure. https://github.com/autowarefoundation/autoware_universe/pull/2880
 std::vector<PolygonPoint> concatenateTwoPolygons(
-  const std::vector<PolygonPoint> & front_polygon, const std::vector<PolygonPoint> & back_polygon)
+  const std::vector<PolygonPoint> & front_polygon, const std::vector<PolygonPoint> & back_polygon,
+  const std::vector<Point> & bound)
 {
   const auto make_unique_polygon = [&](const auto & polygon) {
     std::vector<PolygonPoint> unique_polygon;
@@ -459,7 +460,7 @@ std::vector<PolygonPoint> concatenateTwoPolygons(
         continue;
       }
 
-      const auto intersect_point = PolygonPoint{*intersection, 0, 0.0, 0.0};
+      const auto intersect_point = transformBoundFrenetCoordinate(bound, *intersection);
       const double dist_to_intersection =
         autoware_utils::calc_distance2d(get_out_poly().at(curr_idx).point, *intersection);
       if (dist_to_intersection < min_dist_to_intersection) {
@@ -486,7 +487,7 @@ std::vector<PolygonPoint> concatenateTwoPolygons(
 }
 
 std::vector<std::vector<PolygonPoint>> concatenatePolygons(
-  const std::vector<std::vector<PolygonPoint>> & polygons)
+  const std::vector<std::vector<PolygonPoint>> & polygons, const std::vector<Point> & bound)
 {
   auto unique_polygons = polygons;
 
@@ -504,9 +505,9 @@ std::vector<std::vector<PolygonPoint>> concatenatePolygons(
 
           const auto concatenated_polygon = [&]() {
             if (p2.front().is_after(p1.front())) {
-              return concatenateTwoPolygons(p1, p2);
+              return concatenateTwoPolygons(p1, p2, bound);
             }
-            return concatenateTwoPolygons(p2, p1);
+            return concatenateTwoPolygons(p2, p1, bound);
           }();
 
           // NOTE: remove i's element first since is larger than j.
@@ -618,6 +619,19 @@ std::vector<Point> updateBoundary(
     const size_t removed_start_idx =
       0 < front_offset ? start_poly.bound_seg_idx + 1 : start_poly.bound_seg_idx;
     const size_t removed_end_idx = end_poly.bound_seg_idx;
+
+    // Validate indices before erasing
+    if (
+      removed_start_idx >= updated_bound.size() || removed_end_idx >= updated_bound.size() ||
+      removed_start_idx > removed_end_idx) {
+      auto clock{rclcpp::Clock{RCL_ROS_TIME}};
+      RCLCPP_WARN_STREAM_THROTTLE(
+        rclcpp::get_logger("behavior_path_planner").get_child("utils"), clock, 5000,
+        "Invalid erase indices: start_idx=" << removed_start_idx << ", end_idx=" << removed_end_idx
+                                            << ", vector_size=" << updated_bound.size()
+                                            << ". Skipping this polygon.");
+      continue;
+    }
 
     updated_bound.erase(
       updated_bound.begin() + removed_start_idx, updated_bound.begin() + removed_end_idx + 1);
@@ -1061,12 +1075,14 @@ void extractObstaclesFromDrivableArea(
 
   for (const bool is_object_right : {true, false}) {
     const auto & polygons = is_object_right ? right_polygons : left_polygons;
+    auto & bound = is_object_right ? path.right_bound : path.left_bound;
+
     if (polygons.empty()) {
       continue;
     }
 
     // concatenate polygons if they are longitudinal overlapped.
-    auto unique_polygons = drivable_area_processing::concatenatePolygons(polygons);
+    auto unique_polygons = drivable_area_processing::concatenatePolygons(polygons, bound);
 
     // sort bounds longitudinally
     std::sort(
@@ -1076,7 +1092,6 @@ void extractObstaclesFromDrivableArea(
       });
 
     // update boundary
-    auto & bound = is_object_right ? path.right_bound : path.left_bound;
     bound = drivable_area_processing::updateBoundary(bound, unique_polygons);
   }
 }

@@ -2,6 +2,15 @@
 Changelog for package autoware_scenario_simulator_v2_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+
+0.48.0 (2025-11-18)
+-------------------
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_scenario_simulator_v2_adapter): support converting all diagnostics to UserDefinedValue (`#11033 <https://github.com/autowarefoundation/autoware_universe/issues/11033>`_)

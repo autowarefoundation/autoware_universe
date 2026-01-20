@@ -25,6 +25,8 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.utilities import make_namespace_absolute
+from launch_ros.utilities import prefix_namespace
 import yaml
 
 
@@ -37,21 +39,31 @@ def create_topic_monitor_name(row):
     return "topic_state_monitor_{}: {}".format(row["args"]["node_name_suffix"], diag_name)
 
 
-def create_topic_monitor_node(row):
+def create_topic_monitor_node(row, target_container):
     tf_mode = "" if "topic_type" in row["args"] else "_tf"
     package = FindPackageShare("autoware_topic_state_monitor")
-    include = PathJoinSubstitution([package, f"launch/topic_state_monitor{tf_mode}.launch.xml"])
+    include = PathJoinSubstitution(
+        [package, f"launch/load_topic_state_monitor{tf_mode}.launch.xml"]
+    )
     diag_name = create_diagnostic_name(row)
-    arguments = [("diag_name", diag_name)] + [(k, str(v)) for k, v in row["args"].items()]
+    arguments = [("diag_name", diag_name), ("target_container", target_container)] + [
+        (k, str(v)) for k, v in row["args"].items()
+    ]
     return IncludeLaunchDescription(include, launch_arguments=arguments)
 
 
 def launch_setup(context, *args, **kwargs):
+    # create container name based on current ros namespace
+    target_namespace = context.launch_configurations.get("ros_namespace", None)
+    target_container = make_namespace_absolute(
+        prefix_namespace(target_namespace, "component_state_monitor/container")
+    )
+
     # create topic monitors
     mode = LaunchConfiguration("mode").perform(context)
     rows = yaml.safe_load(Path(LaunchConfiguration("file").perform(context)).read_text())
     rows = [row for row in rows if mode in row["mode"]]
-    topic_monitor_nodes = [create_topic_monitor_node(row) for row in rows]
+    topic_monitor_nodes = [create_topic_monitor_node(row, target_container) for row in rows]
     topic_monitor_names = [create_topic_monitor_name(row) for row in rows]
     topic_monitor_param = defaultdict(lambda: defaultdict(list))
     for row in rows:

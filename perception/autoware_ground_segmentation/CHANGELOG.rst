@@ -2,6 +2,37 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(ground_segmentation): remove grid_mode_switch_radius param (`#11773 <https://github.com/autowarefoundation/autoware_universe/issues/11773>`_)
+  * remove grid mode switch radius
+  * fix: spelling check
+  * chore: typo
+  * style(pre-commit): autofix
+  * fix c-style
+  * chore: remove unused variable
+  * remove unused origin_z
+  * remove virtual_lidar_z
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_ground_segmentation): add empty point cloud guards (`#11749 <https://github.com/autowarefoundation/autoware_universe/issues/11749>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add guard in ray_ground_filter
+  - Add guard in ransac_ground_filter
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo, badai nguyen
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* Contributors: Ryohsuke Mitsudome, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_ground_segmentation): change point follow logic (`#294 <https://github.com/autowarefoundation/autoware_universe/issues/294>`_) (`#10879 <https://github.com/autowarefoundation/autoware_universe/issues/10879>`_)
