@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/map_utils.hpp"
 
+#include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
 
 #include <lanelet2_core/Attribute.h>
