@@ -38,6 +38,16 @@
 #include <unordered_map>
 #include <vector>
 
+namespace
+{
+[[gnu::noinline]]
+bool intersects_ring_linestring(
+  const autoware_utils_geometry::LinearRing2d & ring, const lanelet::BasicLineString2d & line)
+{
+  return boost::geometry::intersects(ring, line);
+}
+}  // namespace
+
 namespace autoware::behavior_path_planner
 {
 namespace
@@ -1586,7 +1596,7 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
       const auto footprint = autoware_utils::transform_vector(
         planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, linestring)) {
+      if (intersects_ring_linestring(footprint, linestring)) {
         return true;
       }
     }
