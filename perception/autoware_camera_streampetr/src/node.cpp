@@ -18,9 +18,8 @@
 
 #include <Eigen/Dense>
 #include <image_transport/image_transport.hpp>
-
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/convert.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/convert.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -84,8 +83,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   const double circle_nms_dist_threshold =
     declare_parameter<double>("post_process_params.circle_nms_dist_threshold");
   const double iou_threshold = declare_parameter<double>("post_process_params.iou_nms_threshold");
-  const double confidence_threshold =
-    declare_parameter<double>("post_process_params.confidence_threshold");
+  const std::vector<double> confidence_thresholds =
+    declare_parameter<std::vector<double>>("post_process_params.confidence_threshold");
   const std::vector<std::string> class_names =
     declare_parameter<std::vector<std::string>>("model_params.class_names");
   const int32_t num_proposals = declare_parameter<int32_t>("model_params.num_proposals");
@@ -102,7 +101,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     search_distance_2d,
     circle_nms_dist_threshold,
     iou_threshold,
-    confidence_threshold,
+    confidence_thresholds,
     class_names,
     num_proposals,
     yaw_norm_thresholds,
@@ -169,8 +168,7 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
-    declare_parameter<bool>("is_distorted_image"),
-    declare_parameter<double>("downsample_factor", 1.0));
+    declare_parameter<bool>("is_distorted_image"));
 
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;

@@ -30,6 +30,7 @@
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
@@ -466,7 +467,7 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
 
   double length = 0.0;
   for (const auto & lane : current_lanes) {
-    const auto current_lane_length = lanelet::utils::getLaneletLength2d(lane);
+    const auto current_lane_length = lanelet::geometry::length2d(lane);
 
     length += current_lane_length;
 
@@ -619,7 +620,8 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
     lanelet::utils::getArcCoordinates(current_lanes, context_->data->current_kinematics->pose.pose);
 
   const auto ego_to_furthest_point =
-    lanelet::utils::getLaneletLength2d(half_lanes) - ego_coordinate_on_arc.length;
+    lanelet::geometry::length2d(lanelet::LaneletSequence(half_lanes)) -
+    ego_coordinate_on_arc.length;
 
   opt_pointcloud_object.value().relative_distance =
     opt_pointcloud_object.value().absolute_distance - ego_to_furthest_point -

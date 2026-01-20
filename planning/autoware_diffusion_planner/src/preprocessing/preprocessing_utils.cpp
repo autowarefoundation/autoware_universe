@@ -63,7 +63,7 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
 
   for (auto & [key, value] : input_data_map) {
     // Skip normalization for ego_shape and sampled_trajectories
-    if (key == "ego_shape" || key == "sampled_trajectories") {
+    if (key == "ego_shape" || key == "sampled_trajectories" || key == "turn_indicators") {
       continue;
     }
 
@@ -78,7 +78,7 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
 }
 
 std::vector<float> create_ego_agent_past(
-  const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
+  const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform)
 {
   const size_t features_per_timestep = 4;  // x, y, cos, sin
@@ -87,10 +87,10 @@ std::vector<float> create_ego_agent_past(
   std::vector<float> ego_agent_past(total_size, 0.0f);
 
   const size_t start_idx =
-    (odometry_msgs.size() >= num_timesteps) ? odometry_msgs.size() - num_timesteps : 0;
+    (odom_msgs.size() >= num_timesteps) ? odom_msgs.size() - num_timesteps : 0;
 
-  for (size_t i = start_idx; i < odometry_msgs.size(); ++i) {
-    const auto & historical_pose = odometry_msgs[i].pose.pose;
+  for (size_t i = start_idx; i < odom_msgs.size(); ++i) {
+    const auto & historical_pose = odom_msgs[i].pose.pose;
 
     // Convert pose to 4x4 matrix
     const Eigen::Matrix4d pose_map_4x4 = utils::pose_to_matrix4f(historical_pose);

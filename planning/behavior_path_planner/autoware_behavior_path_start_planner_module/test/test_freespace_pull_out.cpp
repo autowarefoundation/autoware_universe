@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -57,9 +58,6 @@ protected:
     node_ =
       rclcpp::Node::make_shared("freespace_pull_out", StartPlannerTestHelper::make_node_options());
 
-    planner_data_ = std::make_shared<PlannerData>();
-    planner_data_->init_parameters(*node_);
-
     initialize_freespace_pull_out_planner();
   }
 
@@ -68,46 +66,57 @@ protected:
   // Member variables
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<FreespacePullOut> freespace_pull_out_;
-  std::shared_ptr<PlannerData> planner_data_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
 private:
   void initialize_freespace_pull_out_planner()
   {
     auto parameters = StartPlannerParameters::init(*node_);
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*node_).getVehicleInfo();
+
     freespace_pull_out_ = std::make_shared<FreespacePullOut>(*node_, parameters);
   }
 };
 
 TEST_F(TestFreespacePullOut, DISABLED_GenerateValidFreespacePullOutPath)
 {
-  const auto start_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(299.796).y(303.529).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(-0.748629).w(
-          0.662990));
+  // Test data files to be tested
+  const std::vector<std::string> yaml_files = {
+    "route_data2.yaml", "route_data3.yaml", "route_data4.yaml"};
 
-  const auto goal_pose =
-    geometry_msgs::build<geometry_msgs::msg::Pose>()
-      .position(geometry_msgs::build<geometry_msgs::msg::Point>().x(280.721).y(301.025).z(100.000))
-      .orientation(
-        geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.991718).w(
-          0.128435));
-
-  StartPlannerTestHelper::set_odometry(planner_data_, start_pose);
-  StartPlannerTestHelper::set_route(planner_data_, 508, 720);
-  StartPlannerTestHelper::set_costmap(planner_data_, start_pose, 0.3, 70.0, 70.0);
-
-  // Plan the pull out path
+  auto planner_data = std::make_shared<PlannerData>();
+  planner_data->init_parameters(*node_);
   PlannerDebugData debug_data;
-  auto result = call_plan(start_pose, goal_pose, planner_data_, debug_data);
 
-  // Assert that a valid Freespace pull out path is generated
-  ASSERT_TRUE(result.has_value()) << "Freespace pull out path generation failed.";
-  // EXPECT_EQ(result->partial_paths.size(), 2UL)
-  //   << "Freespace pull out path does not have the expected number of partial paths.";
-  EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
-    << "Freespace pull out path planning did not succeed.";
+  for (const auto & yaml_file : yaml_files) {
+    std::cout << "Testing with YAML file: " + yaml_file << std::endl;
+
+    const auto route = StartPlannerTestHelper::set_route_from_yaml(planner_data, yaml_file);
+    const auto start_pose = route.start_pose;
+    const auto goal_pose = route.goal_pose;
+    StartPlannerTestHelper::set_odometry(planner_data, start_pose);
+    StartPlannerTestHelper::set_costmap(planner_data, start_pose, 0.3, 70.0, 70.0);
+
+    // Plan the pull out path
+    auto result = call_plan(start_pose, goal_pose, planner_data, debug_data);
+
+    // Assert that a valid Freespace pull out path is generated
+    ASSERT_TRUE(result.has_value()) << "Freespace pull out path generation failed.";
+    // EXPECT_EQ(result->partial_paths.size(), 2UL)
+    //   << "Freespace pull out path does not have the expected number of partial paths.";
+    EXPECT_EQ(debug_data.conditions_evaluation.back(), "success")
+      << "Freespace pull out path planning did not succeed.";
+
+#ifdef EXPORT_TEST_PLOT_FIGURE
+    // Plot and save the generated path for visualization
+    // Generate filename based on YAML file name
+    std::string yaml_basename = yaml_file.substr(0, yaml_file.find_last_of('.'));
+    std::string plot_filename = yaml_basename + ".png";
+    StartPlannerTestHelper::plot_and_save_path(
+      result, route, start_pose, goal_pose, planner_data, vehicle_info_, PlannerType::FREESPACE,
+      plot_filename);
+#endif
+  }
 }
 
 }  // namespace autoware::behavior_path_planner

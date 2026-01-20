@@ -15,6 +15,7 @@
 #include "autoware/costmap_generator/costmap_generator.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -53,8 +54,8 @@ public:
     const auto lanelet2_path = autoware::test_utils::get_absolute_path_to_lanelet_map(
       "autoware_test_utils", "overlap_map.osm");
     const auto map_bin_msg = autoware::test_utils::make_map_bin_msg(lanelet2_path, 5.0);
-    lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::utils::conversion::fromBinMsg(map_bin_msg, lanelet_map_);
+    lanelet_map_ = lanelet_map_ = autoware::experimental::lanelet2_utils::remove_const(
+      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(map_bin_msg));
   }
 
   [[nodiscard]] double get_grid_length_x() { return costmap_generator_->costmap_.getLength()[0]; }

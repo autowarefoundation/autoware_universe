@@ -4,8 +4,8 @@
   <arg name="input_virtual_traffic_light_topic_name" default="/awapi/tmp/virtual_traffic_light_states"/>
   <arg name="input_vector_map_topic_name" default="/map/vector_map"/>
   <arg name="input_pointcloud_map_topic_name" default="/map/pointcloud_map"/>
-  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
-  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_objects_topic_name"/>
+  <arg name="input_pointcloud_topic_name"/>
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
 
@@ -108,79 +108,79 @@
   <arg name="behavior_velocity_planner_launch_modules" default="["/>
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::CrosswalkModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin, '&quot;)"
     if="$(var launch_crosswalk_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::WalkwayModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::WalkwayModulePlugin, '&quot;)"
     if="$(var launch_walkway_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::TrafficLightModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin, '&quot;)"
     if="$(var launch_traffic_light_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::IntersectionModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin, '&quot;)"
     if="$(var launch_intersection_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::RoundaboutModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::RoundaboutModulePlugin, '&quot;)"
     if="$(var launch_roundabout_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::MergeFromPrivateModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::MergeFromPrivateModulePlugin, '&quot;)"
     if="$(var launch_merge_from_private_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::BlindSpotModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin, '&quot;)"
     if="$(var launch_blind_spot_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::DetectionAreaModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin, '&quot;)"
     if="$(var launch_detection_area_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::VirtualTrafficLightModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::VirtualTrafficLightModulePlugin, '&quot;)"
     if="$(var launch_virtual_traffic_light_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::NoStoppingAreaModulePlugin, '&quot;)"
     if="$(var launch_no_stopping_area_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::StopLineModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::StopLineModulePlugin, '&quot;)"
     if="$(var launch_stop_line_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::OcclusionSpotModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::OcclusionSpotModulePlugin, '&quot;)"
     if="$(var launch_occlusion_spot_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::SpeedBumpModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::SpeedBumpModulePlugin, '&quot;)"
     if="$(var launch_speed_bump_module)"
   />
   <let
     name="behavior_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::NoDrivableLaneModulePlugin, '&quot;)"
+    value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + 'autoware::behavior_velocity_planner::experimental::NoDrivableLaneModulePlugin, '&quot;)"
     if="$(var launch_no_drivable_lane_module)"
   />
   <let name="behavior_velocity_planner_launch_modules" value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + '$(var launch_module_list_end)'&quot;)"/>
 
   <node_container pkg="rclcpp_components" exec="$(var container_type)" name="behavior_planning_container" namespace="" args="" output="both">
     <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
-    <composable_node pkg="autoware_behavior_velocity_planner" plugin="autoware::behavior_velocity_planner::BehaviorVelocityPlannerNode" name="behavior_velocity_planner" namespace="">
+    <composable_node pkg="autoware_behavior_velocity_planner" plugin="autoware::behavior_velocity_planner::experimental::BehaviorVelocityPlannerNode" name="behavior_velocity_planner" namespace="">
       <remap from="~/input/path_with_lane_id" to="path_with_lane_id"/>
       <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
       <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>

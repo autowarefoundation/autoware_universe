@@ -6,6 +6,7 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/scene_module_interface_with_rtc.cpp
+  src/experimental/scene_module_interface_with_rtc.cpp
 )
 
 ament_auto_package(INSTALL_TO_SHARE)

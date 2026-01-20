@@ -140,6 +140,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     const std::string ns = base_ns + "pull_over.";
     p.pull_over_minimum_request_length =
       node->declare_parameter<double>(ns + "minimum_request_length");
+    p.approximate_pull_over_distance =
+      node->declare_parameter<double>(ns + "approximate_pull_over_distance");
     p.pull_over_prepare_length = node->declare_parameter<double>(ns + "pull_over_prepare_length");
     p.pull_over_velocity = node->declare_parameter<double>(ns + "pull_over_velocity");
     p.pull_over_minimum_velocity =
@@ -276,6 +278,10 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "pull_over_angle_threshold");
     p.bezier_parking.after_shift_straight_distance =
       node->declare_parameter<double>(ns + "after_shift_straight_distance");
+    p.bezier_parking.lateral_acceleration_threshold =
+      node->declare_parameter<double>(ns + "lateral_acceleration_threshold");
+    p.bezier_parking.lateral_acceleration_filtering_duration =
+      node->declare_parameter<double>(ns + "lateral_acceleration_filtering_duration");
   }
 
   // stop condition

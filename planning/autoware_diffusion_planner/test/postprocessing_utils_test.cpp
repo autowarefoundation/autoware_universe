@@ -18,6 +18,8 @@
 
 #include <Eigen/Dense>
 
+#include <geometry_msgs/msg/point.hpp>
+
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -44,25 +46,18 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   rclcpp::Time stamp(123, 0);
 
   auto expected_points = prediction_shape[2];
-
-  auto traj = postprocess::create_trajectory(data, stamp, transform, 0, 0);
+  const int64_t velocity_smoothing_window = 8;
+  const bool enable_force_stop = false;
+  const double stopping_threshold = 0.0;
+  const auto agent_poses = postprocess::parse_predictions(data, transform);
+  geometry_msgs::msg::Point base_position;
+  base_position.x = 0.0;
+  base_position.y = 0.0;
+  base_position.z = 0.0;
+  auto traj = postprocess::create_ego_trajectory(
+    agent_poses, stamp, base_position, 0, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
   ASSERT_EQ(traj.points.size(), expected_points);
-}
-
-TEST(PostprocessingUtilsTest, ToCandidateTrajectoriesMsgPopulatesFields)
-{
-  using UUID = unique_identifier_msgs::msg::UUID;
-  Trajectory traj;
-  traj.header.frame_id = "map";
-  traj.points.resize(2);
-  UUID uuid;
-  std::fill(uuid.uuid.begin(), uuid.uuid.end(), 42);
-
-  auto msg = postprocess::to_candidate_trajectories_msg(traj, uuid, "test_generator");
-  ASSERT_EQ(msg.candidate_trajectories.size(), 1);
-  ASSERT_EQ(msg.generator_info.size(), 1);
-  EXPECT_EQ(msg.candidate_trajectories[0].header.frame_id, "map");
-  EXPECT_EQ(msg.generator_info[0].generator_name.data, "test_generator");
 }
 
 }  // namespace autoware::diffusion_planner::test

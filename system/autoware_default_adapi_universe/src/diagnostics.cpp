@@ -14,6 +14,8 @@
 
 #include "diagnostics.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <memory>
 #include <unordered_map>
 
@@ -37,7 +39,7 @@ DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("di
 
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   cli_reset_ = create_client<InternalReset>(
-    "/diagnostics_graph/reset", rmw_qos_profile_services_default, group_cli_);
+    "/diagnostics_graph/reset", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), group_cli_);
   srv_reset_ = create_service<ExternalReset>(
     "/api/system/diagnostics/reset", std::bind(&DiagnosticsNode::on_reset, this, _1, _2));
 

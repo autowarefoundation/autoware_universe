@@ -2,6 +2,36 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_vehicle_info_utils): refactor footprint generation (`#11696 <https://github.com/autowarefoundation/autoware_universe/issues/11696>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
+  * delete bdp time publish
+  * delete dynamic_obstacle_stop time publish
+  * delete obstacle_cruise time publish
+  * delete obstacle_slow_down time publish
+  * delete obstacle_velocity_limiter time publish
+  * delete out of lane time publish
+  * delete run out time publish
+  * add short module name function
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yuki TAKAGI
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(out_of_lane): add Zulfaqar Azmi as maintainer (`#11553 <https://github.com/autowarefoundation/autoware_universe/issues/11553>`_)
+* fix(out_of_lane): improve logic to ignore some lanelets (`#11542 <https://github.com/autowarefoundation/autoware_universe/issues/11542>`_)
+* fix(out_of_lane): ensure the calculated stop pose is feasible (`#11442 <https://github.com/autowarefoundation/autoware_universe/issues/11442>`_)
+* fix(out_of_lane): ignore collisions inside the trajectory lanelets (`#11407 <https://github.com/autowarefoundation/autoware_universe/issues/11407>`_)
+* fix(out_of_lane): properly apply the objects.extra_width parameter (`#11358 <https://github.com/autowarefoundation/autoware_universe/issues/11358>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

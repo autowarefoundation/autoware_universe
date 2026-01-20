@@ -118,7 +118,7 @@ typename ObjsMsgType::SharedPtr SimpleObjectMergerBase<ObjsMsgType>::getTransfor
   typename ObjsMsgType::ConstSharedPtr objects, const std::string & target_frame_id,
   geometry_msgs::msg::TransformStamped::ConstSharedPtr transform)
 {
-  typename ObjsMsgType::SharedPtr output_objects = std::const_pointer_cast<ObjsMsgType>(objects);
+  typename ObjsMsgType::SharedPtr output_objects = std::make_shared<ObjsMsgType>(*objects);
 
   if (objects->header.frame_id == target_frame_id) {
     return output_objects;
@@ -175,19 +175,6 @@ rcl_interfaces::msg::SetParametersResult SimpleObjectMergerBase<ObjsMsgType>::on
   result.successful = true;
   result.reason = "success";
   return result;
-}
-
-template <class ObjsMsgType>
-bool SimpleObjectMergerBase<ObjsMsgType>::isDataReady()
-{
-  for (size_t i = 0; i < input_topic_size_; i++) {
-    if (!objects_data_.at(i)) {
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for object msg...");
-      return false;
-    }
-  }
-
-  return true;
 }
 
 template <class ObjsMsgType>

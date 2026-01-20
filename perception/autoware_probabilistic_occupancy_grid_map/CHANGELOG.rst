@@ -2,6 +2,27 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): prevent local_map leak in occupancy grid map updateOrigin (`#11765 <https://github.com/autowarefoundation/autoware_universe/issues/11765>`_)
+  * fix(occupancy_grid_map): avoid local_map leak in updateOrigin
+  * style(pre-commit): autofix
+  * Fix local map resize type and format copyMapRegion
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Hongliang Liu, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_probabilistic_occupancy_grid_map): skip frame when TF is unavailable to avoid crash (`#11281 <https://github.com/autowarefoundation/autoware_universe/issues/11281>`_)
+* Contributors: Ryohsuke Mitsudome, multimeters
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * style(pre-commit): update to clang-format-20 (`#11088 <https://github.com/autowarefoundation/autoware_universe/issues/11088>`_)

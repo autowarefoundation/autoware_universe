@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_tensorrt_classifier</name>
-  <version>0.47.0</version>
+  <version>0.49.0</version>
   <description>tensorrt classifier wrapper</description>
 
   <author email="dan.umeda@tier4.jp">Dan Umeda</author>
@@ -13,10 +13,8 @@
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
-  <buildtool_depend>cudnn_cmake_module</buildtool_depend>
   <buildtool_depend>tensorrt_cmake_module</buildtool_depend>
 
-  <buildtool_export_depend>cudnn_cmake_module</buildtool_export_depend>
   <buildtool_export_depend>tensorrt_cmake_module</buildtool_export_depend>
 
   <build_depend>autoware_cmake</build_depend>

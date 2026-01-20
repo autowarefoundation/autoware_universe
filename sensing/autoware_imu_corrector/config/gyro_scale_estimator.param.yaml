@@ -38,5 +38,6 @@
       drift_bias: 0.0
 
     on_off_correction:
-      correct_for_bias: false
+      correct_for_static_bias: true
+      correct_for_dynamic_bias: false
       correct_for_scale: false

@@ -259,7 +259,6 @@ struct DecisionHistory
 {
   std::deque<Decision> decisions;
   std::deque<double> times;
-  std::optional<geometry_msgs::msg::Point> latest_stop;
 
   /// @brief remove outdated history, keeping at most one item above the max_history_duration
   void remove_outdated(const rclcpp::Time & now, const double max_history_duration)

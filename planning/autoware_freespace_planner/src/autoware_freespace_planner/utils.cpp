@@ -168,8 +168,11 @@ Trajectory create_stop_trajectory(const Trajectory & trajectory)
 bool is_stopped(
   const std::deque<Odometry::ConstSharedPtr> & odom_buffer, const double th_stopped_velocity_mps)
 {
+  const double th_stopped_velocity_sq = th_stopped_velocity_mps * th_stopped_velocity_mps;
   for (const auto & odom : odom_buffer) {
-    if (std::abs(odom->twist.twist.linear.x) > th_stopped_velocity_mps) {
+    const auto & lin = odom->twist.twist.linear;
+    const double velocity_sq = lin.x * lin.x + lin.y * lin.y + lin.z * lin.z;
+    if (velocity_sq > th_stopped_velocity_sq) {
       return false;
     }
   }
