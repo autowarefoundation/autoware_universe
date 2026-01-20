@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstddef>
-
 #include <array>
+#include <cstddef>
 #include <string>
 
 // Undefine MAX_ITER to avoid conflict between OSQP and acados/hpipm

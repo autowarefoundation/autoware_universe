@@ -737,7 +737,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   const std::vector<double> & y_coeffs_flat, const std::vector<double> & curvatures,
   std::array<double, NX> & x0) const
 {
-
   RCLCPP_DEBUG(
     logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu", knots.size(),
     x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size());
@@ -823,7 +822,8 @@ void MPTOptimizer::setParametersToSolver(
 
   for (size_t stage = 0; stage < (int)N; ++stage) {
     std::array<double, NP> params_copy = parameters;
-    double s_interp = (sref > 0.0) ? s0 + sref * (static_cast<double>(stage) / static_cast<double>(N)) : 0.0;
+    double s_interp =
+      (sref > 0.0) ? s0 + sref * (static_cast<double>(stage) / static_cast<double>(N)) : 0.0;
     params_copy[0] = s_interp;
 
     // Slowly introduce ref_points[*].beta and bounds_on_constraints to the acados interface:
@@ -844,8 +844,7 @@ void MPTOptimizer::setParametersToSolver(
 
       // Soft constraints: ramp the slack penalty from 0..w across horizon using gamma.
       // gamma=0 => no penalty (effectively permissive), gamma=1 => full penalty.
-      acados_interface_.setSoftConstraintLinearWeight(
-        static_cast<int>(stage), 0.0);
+      acados_interface_.setSoftConstraintLinearWeight(static_cast<int>(stage), 0.0);
 
       acados_interface_.setParameters(stage, params_copy);
 
@@ -877,11 +876,13 @@ void MPTOptimizer::setParametersToSolver(
         uh[l_idx] = uh_tight;
       }
     }
-    
-    const double homotopy_val = std::max(0.0, std::min(1.0, mpt_param_.acados_circle_constraints_homotopy));
-    const double ramp_val = mpt_param_.acados_circle_constraints_stage_ramp
-                 ? ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0)
-                 : 1.0;
+
+    const double homotopy_val =
+      std::max(0.0, std::min(1.0, mpt_param_.acados_circle_constraints_homotopy));
+    const double ramp_val =
+      mpt_param_.acados_circle_constraints_stage_ramp
+        ? ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0)
+        : 1.0;
     const double gamma_val = homotopy_val * std::max(0.0, std::min(1.0, ramp_val));
 
     acados_interface_.applyCircleConstraintsToParams(
@@ -925,7 +926,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionT
   // The control vector contains:
   // u[0] = delta (steering angle)
 
-  const size_t& N_ref = ref_points.size();
+  const size_t & N_ref = ref_points.size();
 
   std::vector<TrajectoryPoint> traj_points;
   traj_points.reserve(N_ref);

@@ -169,6 +169,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
 
         return constraint, model, acados_solver
 
+
 def main():
 
     N = 100
