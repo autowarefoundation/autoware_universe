@@ -73,6 +73,14 @@ private:
    */
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
 
+  enum class TrafficLightIndex : std::uint8_t { Car = 0, Pedestrian = 1, Max };
+  static constexpr size_t NUM_TL_TYPES = static_cast<size_t>(TrafficLightIndex::Max);
+
+  static constexpr size_t to_index(TrafficLightIndex traffic_light_type)
+  {
+    return static_cast<size_t>(traffic_light_type);
+  }
+
   /**
    * @brief Synchronized callback for traffic light occlusion estimation
    *
@@ -91,14 +99,14 @@ private:
    * @param in_roi_msg Traffic light ROI array
    * @param in_cam_info_msg Camera intrinsic parameters
    * @param in_cloud_msg LiDAR point cloud
-   * @param uint8_t Traffic light category (car or pedestrian)
+   * @param traffic_light_type Traffic light category (car or pedestrian)
    */
   void syncCallback(
     const tier4_perception_msgs::msg::TrafficLightArray::ConstSharedPtr in_signal_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr in_roi_msg,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr in_cam_info_msg,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr in_cloud_msg,
-    const uint8_t traffic_light_type);
+    const TrafficLightIndex traffic_light_type);
 
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
 
@@ -136,7 +144,7 @@ private:
    *
    * Used to determine when aggregated publishing is possible.
    */
-  std::array<bool, 2> subscribed_;
+  std::array<bool, NUM_TL_TYPES> subscribed_;
 
   /**
    * @brief Aggregated output message containing all traffic light signals

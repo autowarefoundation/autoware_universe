@@ -71,6 +71,13 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
     this, config_.max_valid_pt_dist, config_.azimuth_occlusion_resolution_deg,
     config_.elevation_occlusion_resolution_deg);
 
+  static_assert(
+    static_cast<std::uint8_t>(TrafficLightIndex::Car) ==
+    tier4_perception_msgs::msg::TrafficLightRoi::CAR_TRAFFIC_LIGHT);
+  static_assert(
+    static_cast<std::uint8_t>(TrafficLightIndex::Pedestrian) ==
+    tier4_perception_msgs::msg::TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT);
+
   const std::vector<std::string> topics{
     "~/input/car/traffic_signals", "~/input/rois", "~/input/camera_info", "~/input/cloud"};
   const std::vector<rclcpp::QoS> qos(topics.size(), rclcpp::SensorDataQoS());
@@ -78,7 +85,7 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
     this, topics, qos,
     std::bind(
       &TrafficLightOcclusionPredictorNode::syncCallback, this, _1, _2, _3, _4,
-      tier4_perception_msgs::msg::TrafficLightRoi::CAR_TRAFFIC_LIGHT),
+      TrafficLightIndex::Car),
     config_.max_image_cloud_delay, config_.max_wait_t);
 
   const std::vector<std::string> topics_ped{
@@ -88,7 +95,7 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
     this, topics_ped, qos_ped,
     std::bind(
       &TrafficLightOcclusionPredictorNode::syncCallback, this, _1, _2, _3, _4,
-      tier4_perception_msgs::msg::TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT),
+      TrafficLightIndex::Pedestrian),
     config_.max_image_cloud_delay, config_.max_wait_t);
 
   subscribed_.fill(false);
@@ -123,7 +130,7 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
   const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr in_roi_msg,
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr in_cam_info_msg,
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr in_cloud_msg,
-  const uint8_t traffic_light_type)
+  const TrafficLightIndex traffic_light_type)
 {
   std::vector<int> occlusion_ratios;
   if (in_cloud_msg == nullptr || in_cam_info_msg == nullptr || in_roi_msg == nullptr) {
@@ -138,7 +145,9 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
         not_detected_roi++;
         continue;
       }
-      if (in_roi_msg->rois.at(i).traffic_light_type == traffic_light_type) {
+      if (
+        static_cast<std::uint8_t>(traffic_light_type) ==
+        in_roi_msg->rois.at(i).traffic_light_type) {
         selected_roi_msg.rois.push_back(in_roi_msg->rois.at(i));
       }
     }
@@ -156,7 +165,7 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
     }
   }
 
-  size_t predicted_num = out_msg_.signals.size();
+  const size_t predicted_num = out_msg_.signals.size();
 
   for (size_t i = 0; i < occlusion_ratios.size(); i++) {
     out_msg_.signals.push_back(in_signal_msg->signals.at(i));
@@ -171,7 +180,7 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
     out_msg_.signals.push_back(in_signal_msg->signals[i]);
   }
 
-  subscribed_.at(traffic_light_type) = true;
+  subscribed_.at(to_index(traffic_light_type)) = true;
 
   if (std::all_of(subscribed_.begin(), subscribed_.end(), [](bool v) { return v; })) {
     auto pub_msg = std::make_unique<tier4_perception_msgs::msg::TrafficLightArray>(out_msg_);
