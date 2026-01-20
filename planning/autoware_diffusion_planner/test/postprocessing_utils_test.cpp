@@ -18,6 +18,8 @@
 
 #include <Eigen/Dense>
 
+#include <geometry_msgs/msg/point.hpp>
+
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -48,8 +50,10 @@ TEST(PostprocessingUtilsTest, CreateTrajectoryAndMultipleTrajectories)
   const bool enable_force_stop = false;
   const double stopping_threshold = 0.0;
   const auto agent_poses = postprocess::parse_predictions(data, transform);
+  geometry_msgs::msg::Point base_position;
   auto traj = postprocess::create_ego_trajectory(
-    agent_poses, stamp, 0, velocity_smoothing_window, enable_force_stop, stopping_threshold);
+    agent_poses, stamp, base_position, 0, velocity_smoothing_window, enable_force_stop,
+    stopping_threshold);
   ASSERT_EQ(traj.points.size(), expected_points);
 }
 

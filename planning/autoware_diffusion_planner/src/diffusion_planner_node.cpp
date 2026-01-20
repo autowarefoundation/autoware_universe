@@ -476,8 +476,8 @@ void DiffusionPlanner::publish_predictions(
 
   for (int i = 0; i < params_.batch_size; i++) {
     Trajectory trajectory = postprocess::create_ego_trajectory(
-      agent_poses, timestamp, i, params_.velocity_smoothing_window, enable_force_stop,
-      params_.stopping_threshold);
+      agent_poses, timestamp, frame_context.ego_kinematic_state.pose.pose.position, i,
+      params_.velocity_smoothing_window, enable_force_stop, params_.stopping_threshold);
     if (params_.shift_x) {
       // center to base_link
       for (auto & point : trajectory.points) {

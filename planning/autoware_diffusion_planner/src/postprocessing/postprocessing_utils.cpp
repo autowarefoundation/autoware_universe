@@ -140,9 +140,9 @@ PredictedObjects create_predicted_objects(
     // Extract poses for this neighbor (neighbor_id + 1 because 0 is ego)
     const auto & neighbor_poses = agent_poses[batch_index][neighbor_id + 1];
 
-    const double base_x = neighbor_poses.front()(0, 3);
-    const double base_y = neighbor_poses.front()(1, 3);
-    const double base_z = neighbor_poses.front()(2, 3);
+    const double base_x = ego_centric_histories.at(neighbor_id).get_latest_state().position.x;
+    const double base_y = ego_centric_histories.at(neighbor_id).get_latest_state().position.y;
+    const double base_z = ego_centric_histories.at(neighbor_id).get_latest_state().position.z;
     constexpr int64_t velocity_smoothing_window = 1;
     constexpr bool enable_force_stop = false;  // Don't force stop for neighbors
     constexpr double stopping_threshold = 0.0;
@@ -183,8 +183,9 @@ PredictedObjects create_predicted_objects(
 
 Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const rclcpp::Time & stamp, const int64_t batch_index, const int64_t velocity_smoothing_window,
-  const bool enable_force_stop, const double stopping_threshold)
+  const rclcpp::Time & stamp, const geometry_msgs::msg::Point & base_position,
+  const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold)
 {
   const int64_t ego_index = 0;
 
@@ -198,9 +199,9 @@ Trajectory create_ego_trajectory(
   // Extract ego poses (ego_index = 0)
   const auto & ego_poses = agent_poses[batch_index][ego_index];
 
-  const double base_x = ego_poses.front()(0, 3);
-  const double base_y = ego_poses.front()(1, 3);
-  const double base_z = ego_poses.front()(2, 3);
+  const double base_x = base_position.x;
+  const double base_y = base_position.y;
+  const double base_z = base_position.z;
 
   return get_trajectory_from_poses(
     ego_poses, base_x, base_y, base_z, stamp, velocity_smoothing_window, enable_force_stop,

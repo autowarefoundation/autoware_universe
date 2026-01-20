@@ -25,6 +25,7 @@
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <cassert>
 #include <string>
@@ -69,6 +70,7 @@ PredictedObjects create_predicted_objects(
  *
  * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
  * @param stamp The ROS time stamp for the message.
+ * @param base_position The current ego position in map coordinates.
  * @param batch_index The batch index to extract.
  * @param velocity_smoothing_window The window size for velocity smoothing.
  * @param enable_force_stop Whether to enable force stop logic.
@@ -77,8 +79,9 @@ PredictedObjects create_predicted_objects(
  */
 Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const rclcpp::Time & stamp, const int64_t batch_index, const int64_t velocity_smoothing_window,
-  const bool enable_force_stop, const double stopping_threshold);
+  const rclcpp::Time & stamp, const geometry_msgs::msg::Point & base_position,
+  const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
+  const double stopping_threshold);
 
 /**
  * @brief Counts valid elements in a tensor with shape (B, len, dim2, dim3).
