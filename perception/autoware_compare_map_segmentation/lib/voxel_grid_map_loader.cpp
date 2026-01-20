@@ -97,7 +97,11 @@ bool VoxelGridMapLoader::is_close_to_neighbor_voxels(
   const pcl::PointXYZ & point, const double distance_threshold, VoxelGridPointXYZ & voxel,
   pcl::search::Search<pcl::PointXYZ>::Ptr tree)
 {
-  const int index = voxel.getCentroidIndexAt(voxel.getGridCoordinates(point.x, point.y, point.z));
+  const Eigen::Vector3i grid_coordinates = voxel.getGridCoordinates(point.x, point.y, point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int index = voxel.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
   if (index != -1) {
     return true;
   }
@@ -281,8 +285,13 @@ bool VoxelGridMapLoader::is_in_voxel(
   const double distance_threshold, const FilteredPointCloudPtr & map,
   VoxelGridPointXYZ & voxel) const
 {
-  int voxel_index =
-    voxel.getCentroidIndexAt(voxel.getGridCoordinates(src_point.x, src_point.y, src_point.z));
+  const Eigen::Vector3i grid_coordinates =
+    voxel.getGridCoordinates(src_point.x, src_point.y, src_point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int voxel_index = voxel.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
+
   if (voxel_index != -1) {  // not empty voxel
     const double dist_x = map->points.at(voxel_index).x - target_point.x;
     const double dist_y = map->points.at(voxel_index).y - target_point.y;
