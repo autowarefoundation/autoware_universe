@@ -108,7 +108,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   // Subscriber setup
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS(),
-    std::bind(&BlockageDiagComponent::detect_blockage, this, std::placeholders::_1));
+    std::bind(&BlockageDiagComponent::update_diagnostics, this, std::placeholders::_1));
 
   // Diagnostic updater setup
   updater_.setHardwareID("blockage_diag");
@@ -410,9 +410,11 @@ void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockag
   }
 }
 
-void BlockageDiagComponent::compute_dust_diagnostics(
-  const cv::Mat & no_return_mask, const DebugInfo & debug_info)
+cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
 {
+  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
+  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
+
   auto dimensions = get_mask_dimensions();
   assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
@@ -435,12 +437,8 @@ void BlockageDiagComponent::compute_dust_diagnostics(
   cv::Mat single_dust_img(dimensions, CV_8UC1, cv::Scalar(0));
   cv::vconcat(sky_blank, single_dust_ground_img, single_dust_img);
 
-  autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
   ground_dust_ratio_ = static_cast<float>(cv::countNonZero(single_dust_ground_img)) /
                        (single_dust_ground_img.cols * single_dust_ground_img.rows);
-  ground_dust_ratio_msg.data = ground_dust_ratio_;
-  ground_dust_ratio_msg.stamp = now();
-  ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
 
   if (ground_dust_ratio_ > dust_ratio_threshold_) {
     if (dust_frame_count_ < 2 * dust_count_threshold_) {
@@ -450,7 +448,19 @@ void BlockageDiagComponent::compute_dust_diagnostics(
     dust_frame_count_ = 0;
   }
 
+  return single_dust_img;
+}
+
+void BlockageDiagComponent::publish_dust_debug_info(
+  const DebugInfo & debug_info, const cv::Mat & single_dust_img)
+{
+  autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
+  ground_dust_ratio_msg.data = ground_dust_ratio_;
+  ground_dust_ratio_msg.stamp = now();
+  ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
+
   if (publish_debug_image_) {
+    auto dimensions = get_mask_dimensions();
     cv::Mat binarized_dust_mask_(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
@@ -500,7 +510,7 @@ void BlockageDiagComponent::compute_dust_diagnostics(
   }
 }
 
-void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) const
+void BlockageDiagComponent::publish_blockage_debug_info(const DebugInfo & debug_info) const
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
   ground_blockage_ratio_msg.data = ground_blockage_ratio_;
@@ -528,17 +538,8 @@ void BlockageDiagComponent::publish_debug_info(const DebugInfo & debug_info) con
   }
 }
 
-void BlockageDiagComponent::detect_blockage(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & depth_image_16u)
 {
-  try {
-    validate_pointcloud_fields(*input);
-  } catch (const std::runtime_error & e) {
-    RCLCPP_ERROR(get_logger(), "%s", e.what());
-    return;
-  }
-
-  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
@@ -552,13 +553,31 @@ void BlockageDiagComponent::detect_blockage(
   update_ground_blockage_info(ground_blockage_mask);
   update_sky_blockage_info(sky_blockage_mask);
 
-  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
+  return time_series_blockage_result;
+}
 
-  if (enable_dust_diag_) {
-    compute_dust_diagnostics(no_return_mask, debug_info);
+void BlockageDiagComponent::update_diagnostics(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+{
+  try {
+    validate_pointcloud_fields(*input);
+  } catch (const std::runtime_error & e) {
+    RCLCPP_ERROR(get_logger(), "%s", e.what());
+    return;
   }
 
-  publish_debug_info(debug_info);
+  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
+
+  // Blockage detection
+  cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
+  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
+  publish_blockage_debug_info(debug_info);
+
+  // Dust detection
+  if (enable_dust_diag_) {
+    cv::Mat single_frame_dust_mask = compute_dust_diagnostics(depth_image_16u);
+    publish_dust_debug_info(debug_info, single_frame_dust_mask);
+  }
 }
 }  // namespace autoware::pointcloud_preprocessor
 
