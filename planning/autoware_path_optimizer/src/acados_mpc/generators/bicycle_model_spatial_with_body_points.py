@@ -83,7 +83,6 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
 
     beta = atan(lr * tan(delta) / (lf + lr))
     kappa = cos(beta) * tan(delta) / (lf + lr)
-    psi_ref_s = atan2(jacobian(y_ref_s, s_sym), jacobian(x_ref_s, s_sym))
 
     # dynamics
     deY_ds = tan(eψ + beta) * (1 - kappa_ref_s * eY)

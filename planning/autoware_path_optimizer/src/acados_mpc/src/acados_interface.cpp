@@ -1,7 +1,5 @@
 #include "acados_interface.hpp"
 
-#include "c_generated_code/acados_solver_curvilinear_bicycle_model_spatial.h"
-
 #include <algorithm>
 #include <cmath>
 #include <cstring>
