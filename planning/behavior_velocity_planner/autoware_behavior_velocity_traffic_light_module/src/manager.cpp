@@ -14,10 +14,10 @@
 
 #include "manager.hpp"
 
-#include <autoware/lanelet2_utils/intersection.hpp>
 #include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <tf2/utils.hpp>

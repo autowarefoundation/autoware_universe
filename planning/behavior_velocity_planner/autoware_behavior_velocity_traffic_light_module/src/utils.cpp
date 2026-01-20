@@ -14,9 +14,8 @@
 
 #include "utils.hpp"
 
-#include <autoware/lanelet2_utils/intersection.hpp>
-
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/intersection.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 
