@@ -255,17 +255,12 @@ void TrafficLightModule::updateYellowState(const bool is_yellow_now)
     if (yellow_transition_state_ == YellowState::kNotYellow) {
       // This is the first frame of yellow. Determine how it started.
       if (!prev_looking_tl_state_.elements.empty()) {
-        bool prev_had_green_circle = false;
-
-        for (const auto & element : prev_looking_tl_state_.elements) {
-          // Check for Green Circle
-          if (
-            element.shape == TrafficSignalElement::CIRCLE &&
-            element.color == TrafficSignalElement::GREEN) {
-            prev_had_green_circle = true;
-            break;
-          }
-        }
+        const bool prev_had_green_circle = std::any_of(
+          prev_looking_tl_state_.elements.begin(), prev_looking_tl_state_.elements.end(),
+          [](const auto & element) {
+            return element.shape == TrafficSignalElement::CIRCLE &&
+                   element.color == TrafficSignalElement::GREEN;
+          });
 
         if (prev_had_green_circle) {
           RCLCPP_DEBUG_THROTTLE(
