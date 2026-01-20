@@ -471,11 +471,12 @@ void DiffusionPlanner::publish_predictions(
     frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
 
   // Parse predictions once: [batch][agent][timestep] -> pose
-  const auto agent_poses = postprocess::parse_predictions(predictions);
+  const auto agent_poses =
+    postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
 
   for (int i = 0; i < params_.batch_size; i++) {
     Trajectory trajectory = postprocess::create_ego_trajectory(
-      agent_poses, timestamp, frame_context.ego_to_map_transform, i,
+      agent_poses, timestamp, frame_context.ego_kinematic_state.pose.pose.position, i,
       params_.velocity_smoothing_window, enable_force_stop, params_.stopping_threshold);
     if (params_.shift_x) {
       // center to base_link
@@ -512,8 +513,7 @@ void DiffusionPlanner::publish_predictions(
     // Use batch 0 for neighbor predictions
     constexpr int64_t batch_idx = 0;
     auto predicted_objects = postprocess::create_predicted_objects(
-      agent_poses, frame_context.ego_centric_neighbor_histories, timestamp,
-      frame_context.ego_to_map_transform, batch_idx);
+      agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
     pub_objects_->publish(predicted_objects);
   }
 }
