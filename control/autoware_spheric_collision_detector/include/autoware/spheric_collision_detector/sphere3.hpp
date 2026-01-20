@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
-#define SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
+#ifndef AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
+#define AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>
@@ -25,14 +25,15 @@
 
 namespace sphere3
 {
-    class Sphere3{
-        public:
-            Eigen::Vector3d center_;
-            double radius_;
-            int tag_;
+class Sphere3
+{
+public:
+  Eigen::Vector3d center_;
+  double radius_;
+  int tag_;
 
-            Sphere3(Eigen::Vector3d center, double radius, int tag);
-    };
-} //namespace sphere3
+  Sphere3(Eigen::Vector3d center, double radius, int tag);
+};
+}  // namespace sphere3
 
-#endif  // SPHERIC_COLLISION_DETECTOR_SPHERE3_HPP_
+#endif  // AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_

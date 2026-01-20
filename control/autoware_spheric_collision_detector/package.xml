@@ -30,6 +30,8 @@
   <depend>tier4_perception_msgs</depend>
   <depend>vehicle_info_util</depend>
 
+  <exec_depend>autoware_vehicle_info_utils</exec_depend>
+
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>

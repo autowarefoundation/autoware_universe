@@ -48,27 +48,28 @@ We set the radius of each sphere to half the vehicle's width.
 ### Check collision
 
 To perform a collision check we execute the following steps:
+
 - We loop through each distinct sphere pair, $(s_{i}, s_{j})$ of the ego-vehicle and the obstacle, where $1 \leq i \leq m$, $1 \leq j \leq n$. $m$ and $n$ denote the number of spheres of the obstacle and the ego-vehicle respectively.
 - At each iteration, the Euclidean distance, $\varepsilon_{ij}$, between the centers of the spheres, $c_i(x,y,z)$ and $c_j(x,y,z)$, is calculated.
 - We then compare $\varepsilon_{ij}$ with the sum of the radii of the respective spheres, $ \sum r_i r_j$. If this distance is less, the diagnostic status is set to ERROR as a collision is imminent; otherwise, we repeat \textit{step 2} for the next pair of spheres. The diagnostic status is set to OK if no collision is detected.
 
 #### INPUT(S)
 
-| Name                                           | Type                                                 | Description                                                                                                            |
-| ---------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `input/odometry`                               | `nav_msgs::msg::Odometry`                            | Current Position, orientation, and velocity of the ego-vehicle.                                                        |
-| `input/trajectory`                             | `autoware_auto_planning_msgs::msg::Trajectory`       | Predicted trajectory (sequence of poses of the ego-vehicle over time with corresponding velocities and accelerations)  |
-| `input/object_recognition`                     | `autoware_auto_perception_msgs::msg::DetectedObjects`| Length, width, and height of objects surrounding the ego-vehicle                                                       |
+| Name                       | Type                                                  | Description                                                                                                           |
+| -------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `input/odometry`           | `nav_msgs::msg::Odometry`                             | Current Position, orientation, and velocity of the ego-vehicle.                                                       |
+| `input/trajectory`         | `autoware_auto_planning_msgs::msg::Trajectory`        | Predicted trajectory (sequence of poses of the ego-vehicle over time with corresponding velocities and accelerations) |
+| `input/object_recognition` | `autoware_auto_perception_msgs::msg::DetectedObjects` | Length, width, and height of objects surrounding the ego-vehicle                                                      |
 
 ### OUTPUT(S)
 
-| Name             | Type                                   | Description              |
-| ---------------- | -------------------------------------- | ------------------------ |
-|   `debug/marker` | `visualization_msgs::msg::MarkerArray` | Marker for visualization |
+| Name           | Type                                   | Description              |
+| -------------- | -------------------------------------- | ------------------------ |
+| `debug/marker` | `visualization_msgs::msg::MarkerArray` | Marker for visualization |
 
 ### PARAMETERS
 
-| Name                | Type     | Description                                                 | Default value |
-| :------------------ | :------- | :---------------------------------------------------------- | :------------ |
-| `delay_time`        | `double` | Delay time of the ego-vehicle [s]                           | 0.3           |
-| `max_deceleration`  | `double` | Max deceleration of the ego-vehicle when stopping [m/s^2]   | 2.0           |
+| Name               | Type     | Description                                               | Default value |
+| :----------------- | :------- | :-------------------------------------------------------- | :------------ |
+| `delay_time`       | `double` | Delay time of the ego-vehicle [s]                         | 0.3           |
+| `max_deceleration` | `double` | Max deceleration of the ego-vehicle when stopping [m/s^2] | 2.0           |
