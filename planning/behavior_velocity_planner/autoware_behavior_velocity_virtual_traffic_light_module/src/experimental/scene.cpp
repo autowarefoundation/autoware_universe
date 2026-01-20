@@ -18,6 +18,7 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
 #include <tier4_v2x_msgs/msg/key_value.hpp>
