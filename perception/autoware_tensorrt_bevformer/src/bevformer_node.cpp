@@ -412,7 +412,7 @@ void TRTBEVFormerNode::calculateSensor2LidarTransformsFromTF(
 
     // Get ego2global at camera timestamp
     Eigen::Quaterniond ego2global_rot_cam;
-    Eigen::Translation3d ego2global_trans_cam;
+    Eigen::Translation3d ego2global_trans_cam = Eigen::Translation3d::Identity();
     bool got_camera_transform = false;
     try {
       if (tf_buffer_->canTransform(
