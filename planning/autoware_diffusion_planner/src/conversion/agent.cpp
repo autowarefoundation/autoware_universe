@@ -69,8 +69,7 @@ AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timest
 // Return the state attribute as an array.
 [[nodiscard]] std::array<float, AGENT_STATE_DIM> AgentState::as_array() const noexcept
 {
-  const double cos_yaw = pose(0, 0);
-  const double sin_yaw = pose(1, 0);
+  const auto [cos_yaw, sin_yaw] = utils::rotation_matrix_to_cos_sin(pose.block<3, 3>(0, 0));
   const auto & linear_vel = original_info.kinematics.twist_with_covariance.twist.linear;
   const double velocity_norm = std::hypot(linear_vel.x, linear_vel.y);
   const double velocity_x = velocity_norm * cos_yaw;
