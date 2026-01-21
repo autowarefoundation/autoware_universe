@@ -49,19 +49,19 @@ void normalize_input_data(
   InputDataMap & input_data_map, const NormalizationMap & normalization_map);
 
 /**
- * @brief Creates ego agent past trajectory data from odometry messages.
+ * @brief Creates ego agent past trajectory data from pose messages.
  *
- * This function processes a sequence of odometry messages to create ego vehicle's
+ * This function processes a sequence of pose messages to create ego vehicle's
  * past trajectory data in the ego reference frame. Each timestep contains
  * x, y position and heading information as cos(yaw) and sin(yaw).
  *
- * @param[in] odometry_msgs        Deque of odometry messages
+ * @param[in] odom_msgs        Deque of odometry messages
  * @param[in] num_timesteps       Number of timesteps to process
  * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
  * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
  */
 std::vector<float> create_ego_agent_past(
-  const std::deque<nav_msgs::msg::Odometry> & odometry_msgs, size_t num_timesteps,
+  const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform);
 
 /**

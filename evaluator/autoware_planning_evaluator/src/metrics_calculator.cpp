@@ -17,14 +17,13 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/planning_evaluator/metrics/deviation_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/metrics_utils.hpp"
-#include "autoware/planning_evaluator/metrics/obstacle_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/stability_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 namespace planning_diagnostics
 {
 std::optional<Accumulator<double>> MetricsCalculator::calculate(
-  const Metric metric, const Trajectory & traj, const double vehicle_length_m) const
+  const Metric metric, const Trajectory & traj) const
 {
   // Functions to calculate trajectory metrics
   switch (metric) {
@@ -35,7 +34,7 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
     case Metric::relative_angle:
       return metrics::calcTrajectoryRelativeAngle(traj, parameters.trajectory.min_point_dist_m);
     case Metric::resampled_relative_angle:
-      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_length_m);
+      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_info_.vehicle_length_m);
     case Metric::length:
       return metrics::calcTrajectoryLength(traj);
     case Metric::duration:
@@ -73,10 +72,6 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
         metrics::utils::get_lookahead_trajectory(
           traj, ego_pose_, parameters.trajectory.lookahead.max_dist_m,
           parameters.trajectory.lookahead.max_time_s));
-    case Metric::obstacle_distance:
-      return metrics::calcDistanceToObstacle(dynamic_objects_, traj);
-    case Metric::obstacle_ttc:
-      return metrics::calcTimeToCollision(dynamic_objects_, traj, parameters.obstacle.dist_thr_m);
     default:
       return {};
   }
@@ -98,6 +93,11 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
   }
 }
 
+void MetricsCalculator::setVehicleInfo(const VehicleInfo & vehicle_info)
+{
+  vehicle_info_ = vehicle_info;
+}
+
 void MetricsCalculator::setReferenceTrajectory(const Trajectory & traj)
 {
   reference_trajectory_ = traj;
@@ -106,11 +106,6 @@ void MetricsCalculator::setReferenceTrajectory(const Trajectory & traj)
 void MetricsCalculator::setPreviousTrajectory(const Trajectory & traj)
 {
   previous_trajectory_ = traj;
-}
-
-void MetricsCalculator::setPredictedObjects(const PredictedObjects & objects)
-{
-  dynamic_objects_ = objects;
 }
 
 void MetricsCalculator::setEgoPose(const nav_msgs::msg::Odometry & ego_odometry)

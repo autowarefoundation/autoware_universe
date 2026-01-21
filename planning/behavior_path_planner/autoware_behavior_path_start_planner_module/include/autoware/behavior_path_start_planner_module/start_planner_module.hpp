@@ -31,12 +31,12 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
-#include <tf2/utils.h>
 
 #include <atomic>
 #include <deque>
@@ -71,13 +71,14 @@ struct PullOutStatus
              // false at next cycle after backward driving is complete)
   Pose pull_out_start_pose{};
   bool prev_is_safe_dynamic_objects{false};
+  std::shared_ptr<PathWithLaneId> prev_approved_path{nullptr};
   std::shared_ptr<PathWithLaneId> prev_stop_path_after_approval{nullptr};
-  PoseWithDetailOpt stop_pose{std::nullopt};
   //! record the first time when ego started forward-driving (maybe after backward driving
   //! completion) in AUTONOMOUS operation mode
   std::optional<rclcpp::Time> first_engaged_and_driving_forward_time{std::nullopt};
   // record if the ego has departed from the start point
   bool has_departed{false};
+  bool is_safety_check_override_by_rtc{false};  // true if rtc is force activated
 
   PullOutStatus() = default;
 };
@@ -344,6 +345,7 @@ ego pose.
 
   void incrementPathIndex();
   PathWithLaneId getCurrentPath() const;
+  PathWithLaneId getCurrentOutputPath();
   void planWithPriority(
     const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
     const Pose & goal_pose, const std::vector<std::string> & priority_list,
@@ -369,6 +371,7 @@ ego pose.
     const PredictedObjects & filtered_objects, const TargetObjectsOnLane & target_objects_on_lane,
     const std::vector<PoseWithVelocityStamped> & ego_predicted_path) const;
   bool isSafePath() const;
+  void check_force_approval();
   void setDrivableAreaInfo(BehaviorModuleOutput & output) const;
 
   // check if the goal is located behind the ego in the same route segment.

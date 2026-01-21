@@ -86,8 +86,8 @@ PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions
     input.latency_multiplier = latency_multiplier;
 
     // generic callback
-    const auto callback = [this, index](
-                            const std::shared_ptr<rclcpp::SerializedMessage> & serialized_msg) {
+    const auto callback = [this,
+                           index](std::shared_ptr<const rclcpp::SerializedMessage> serialized_msg) {
       auto & input = this->input_sequence_[index];
       if (input.topic_type == "autoware_internal_debug_msgs/msg/Float64Stamped") {
         static const rclcpp::Serialization<autoware_internal_debug_msgs::msg::Float64Stamped>
@@ -205,10 +205,12 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
       debug_ss << " + " << step_it->name << "=skipped";
     }
   }
-  RCLCPP_DEBUG(
-    get_logger(), "Total latency calculation (cumulative time-ordered): %s = %2.2fms",
-    debug_ss.str().c_str(), total_latency_ms_);
-
+  {
+    const std::string & str = debug_ss.str();
+    RCLCPP_DEBUG(
+      get_logger(), "Total latency calculation (cumulative time-ordered): %s = %2.2fms",
+      str.c_str(), total_latency_ms_);
+  }
   std::stringstream ss;
   ss << "offsets added to the total: [ ";
   for (const auto offset : latency_offsets_) {
@@ -216,9 +218,11 @@ void PipelineLatencyMonitorNode::calculate_total_latency()
     total_latency_ms_ += offset;
   }
   ss << "]";
-
-  RCLCPP_DEBUG(
-    get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, ss.str().c_str());
+  {
+    const std::string & str = ss.str();
+    RCLCPP_DEBUG(
+      get_logger(), "Total latency with offsets: %.2f ms (%s)", total_latency_ms_, str.c_str());
+  }
 }
 
 void PipelineLatencyMonitorNode::publish_total_latency()
@@ -267,7 +271,7 @@ void PipelineLatencyMonitorNode::check_total_latency(
       diagnostic_msgs::msg::DiagnosticStatus::OK,
       "Some latency inputs not yet received: " + uninitialized_inputs);
   } else if (total_latency_ms_ > latency_threshold_ms_) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Total latency exceeds threshold");
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Total latency exceeds threshold");
   } else {
     stat.summary(
       diagnostic_msgs::msg::DiagnosticStatus::OK, "Total latency within acceptable range");

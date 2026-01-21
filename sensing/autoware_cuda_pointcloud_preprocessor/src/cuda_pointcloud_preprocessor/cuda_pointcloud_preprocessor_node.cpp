@@ -314,24 +314,24 @@ void CudaPointcloudPreprocessorNode::pointcloudCallback(
  *
  * @param input_pointcloud_msg The input PointCloud2 message, which must include a "time_stamp"
  * field.
- * @return std::pair<double, std::uint32_t>
- *   - first: The absolute timestamp of the first point (in seconds).
+ * @return std::pair<std::uint64_t, std::uint32_t>
+ *   - first: The absolute timestamp of the first point (in nanoseconds).
  *   - second: The relative timestamp of the first point (in nanoseconds).
  */
-std::pair<double, std::uint32_t> CudaPointcloudPreprocessorNode::getFirstPointTimeInfo(
+std::pair<std::uint64_t, std::uint32_t> CudaPointcloudPreprocessorNode::getFirstPointTimeInfo(
   const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg)
 {
   sensor_msgs::PointCloud2ConstIterator<std::uint32_t> iter_stamp(
     input_pointcloud_msg, "time_stamp");
   auto num_points = input_pointcloud_msg.width * input_pointcloud_msg.height;
   std::uint32_t first_point_rel_stamp = num_points > 0 ? *iter_stamp : 0;
-  double first_point_stamp = input_pointcloud_msg.header.stamp.sec +
-                             input_pointcloud_msg.header.stamp.nanosec * 1e-9 +
-                             first_point_rel_stamp * 1e-9;
+  std::uint64_t first_point_stamp = input_pointcloud_msg.header.stamp.sec * 1e9 +
+                                    input_pointcloud_msg.header.stamp.nanosec +
+                                    first_point_rel_stamp;
   return {first_point_stamp, first_point_rel_stamp};
 }
 
-void CudaPointcloudPreprocessorNode::updateTwistQueue(double first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateTwistQueue(std::uint64_t first_point_stamp)
 {
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
@@ -343,14 +343,15 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(double first_point_stamp)
   // and remove all older messages.
   auto it = std::lower_bound(
     twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
-    [](const auto & twist, const double stamp) {
-      return rclcpp::Time(twist.header.stamp).seconds() < stamp;
+    [](const auto & twist, const std::uint64_t stamp) {
+      // To prevent potential precision loss, use nanoseconds
+      return rclcpp::Time(twist.header.stamp).nanoseconds() < stamp;
     });
 
   twist_queue_.erase(twist_queue_.begin(), it);
 }
 
-void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
+void CudaPointcloudPreprocessorNode::updateImuQueue(std::uint64_t first_point_stamp)
 {
   if (!imu_sub_) return;
 
@@ -363,8 +364,9 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
   // and remove all older messages.
   auto it = std::lower_bound(
     angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
-    [](const auto & angular_velocity, const double stamp) {
-      return rclcpp::Time(angular_velocity.header.stamp).seconds() < stamp;
+    [](const auto & angular_velocity, const std::uint64_t stamp) {
+      //  To prevent potential precision loss, use nanoseconds
+      return rclcpp::Time(angular_velocity.header.stamp).nanoseconds() < stamp;
     });
 
   angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);

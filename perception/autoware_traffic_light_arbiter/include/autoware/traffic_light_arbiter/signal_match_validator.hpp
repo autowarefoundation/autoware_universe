@@ -29,6 +29,13 @@
 
 namespace autoware::traffic_light
 {
+
+enum class SourcePriority {
+  CONFIDENCE,  // Use confidence-based selection
+  EXTERNAL,    // Prioritize external signals
+  PERCEPTION   // Prioritize perception signals
+};
+
 /**
  * @class SignalMatchValidator
  * @brief Validates and compares traffic signal data from different sources.
@@ -77,17 +84,18 @@ public:
   void setPedestrianSignals(const std::vector<TrafficLightConstPtr> & pedestrian_signals);
 
   /**
-   * @brief Sets the priority flag for using external signal data over perception data.
+   * @brief Sets the source priority for signal selection.
    *
-   * When set to true, this flag indicates that in cases of discrepancy between
-   * perception and external signal data, the external data should be prioritized.
+   * This method sets the priority mode for selecting between perception and external signals.
+   * Options are CONFIDENCE (use confidence-based selection), EXTERNAL (prioritize external),
+   * or PERCEPTION (prioritize perception signals).
    *
-   * @param external_priority The priority flag for external signal data.
+   * @param source_priority The priority mode for signal selection.
    */
-  void setExternalPriority(const bool external_priority);
+  void setSourcePriority(const SourcePriority source_priority);
 
 private:
-  bool external_priority_;
+  SourcePriority source_priority_;
   std::unordered_set<lanelet::Id> map_pedestrian_signal_regulatory_elements_set_;
 
   /**

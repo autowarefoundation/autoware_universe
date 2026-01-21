@@ -6,18 +6,441 @@
     "object_sorter": {
       "type": "object",
       "properties": {
-        "velocity_threshold": {
-          "type": "number",
-          "description": "Velocity threshold (in m/s) used to split objects.",
-          "default": 3.0
+        "range_calc_frame_id": {
+          "type": "string",
+          "description": "Target frame of the calculations.",
+          "default": "base_link"
         },
-        "range_threshold": {
-          "type": "number",
-          "description": "Range threshold (in m) used to split objects.",
-          "default": 30.0
+        "range_calc_offset": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "An offset value for the x-axis in the target frame when calculating the range [m].",
+              "default": 0.0
+            },
+            "y": {
+              "type": "number",
+              "description": "An offset value for the y-axis in the target frame when calculating the range [m].",
+              "default": 0.0
+            }
+          }
+        },
+        "sort_target": {
+          "type": "object",
+          "properties": {
+            "UNKNOWN": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'UNKNOWN' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "CAR": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'CAR' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "TRUCK": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'TRUCK' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "BUS": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'BUS' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "TRAILER": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'TRAILER' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "MOTORCYCLE": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'MOTORCYCLE' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "BICYCLE": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'BICYCLE' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            },
+            "PEDESTRIAN": {
+              "type": "object",
+              "properties": {
+                "publish": {
+                  "type": "boolean",
+                  "description": "If true, objects with the 'PEDESTRIAN' label will be published.",
+                  "default": true
+                },
+                "min_velocity_threshold": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for retaining objects [m/s].",
+                  "default": 0.0,
+                  "minimum": 0.0
+                },
+                "range_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "max_distance": {
+                      "type": "number",
+                      "description": "Maximum distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_distance": {
+                      "type": "number",
+                      "description": "Minimum distance threshold for retaining objects [m].",
+                      "default": 30.0
+                    },
+                    "max_x": {
+                      "type": "number",
+                      "description": "Maximum x-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_x": {
+                      "type": "number",
+                      "description": "Minimum x-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    },
+                    "max_y": {
+                      "type": "number",
+                      "description": "Maximum y-axis distance threshold for retaining objects [m].",
+                      "default": 100.0
+                    },
+                    "min_y": {
+                      "type": "number",
+                      "description": "Minimum y-axis distance threshold for retaining objects [m].",
+                      "default": -100.0
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       },
-      "required": ["velocity_threshold", "range_threshold"],
+      "required": ["range_calc_frame_id", "range_calc_offset", "sort_target"],
       "additionalProperties": false
     }
   },

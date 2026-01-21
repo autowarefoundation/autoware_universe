@@ -6,93 +6,439 @@
     "trajectory_optimizer_node": {
       "type": "object",
       "properties": {
-        "nearest_dist_threshold_m": {
-          "type": "number",
-          "default": 1.5,
-          "minimum": 0,
-          "description": "Constraint used to search for the nearest trajectory pose to the ego vehicle [m]"
-        },
-        "nearest_yaw_threshold_rad": {
-          "type": "number",
-          "default": 1.0,
-          "minimum": 0,
-          "description": "Constraint used to search for the nearest trajectory pose to the ego vehicle [rad]"
-        },
-        "target_pull_out_speed_mps": {
-          "type": "number",
-          "default": 1.0,
-          "minimum": 0,
-          "description": "To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory speed value [m/s]"
-        },
-        "target_pull_out_acc_mps2": {
-          "type": "number",
-          "default": 1.0,
-          "minimum": 0,
-          "description": "To assure the ego can start moving from a stopped position, this parameter sets a minimum trajectory acceleration value [m/s^2]"
-        },
-        "max_speed_mps": {
-          "type": "number",
-          "default": 8.33,
-          "minimum": 0,
-          "description": "The maximum allowable velocity for the trajectory [m/s]"
-        },
-        "max_lateral_accel_mps2": {
-          "type": "number",
-          "default": 1.5,
-          "minimum": 0,
-          "description": "Maximum lateral acceleration [m/s^2]"
-        },
-        "spline_interpolation_resolution_m": {
-          "type": "number",
-          "default": 0.5,
-          "exclusiveMinimum": 0,
-          "description": "Interpolation resolution for Akima spline [m]"
-        },
-        "backward_trajectory_extension_m": {
-          "type": "number",
-          "default": 5.0,
-          "minimum": 0,
-          "description": "How long should the ego trajectory extend backward. This backward trajectory is built using the ego's previous poses [m]"
+        "plugin_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+            "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer",
+            "autoware::trajectory_optimizer::plugin::TrajectoryExtender",
+            "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
+          ],
+          "description": "List of plugin class names to load in execution order. Plugins will be loaded dynamically at startup and executed in the order specified."
         },
         "use_akima_spline_interpolation": {
           "type": "boolean",
-          "default": true,
-          "description": "To use akima spline interpolation to smooth the trajectories"
+          "default": false,
+          "description": "Enable Akima spline interpolation for trajectory smoothing"
         },
-        "smooth_trajectories": {
-          "type": "boolean",
-          "default": true,
-          "description": "Flag to indicate if the Elastic Band smoother should be applied on the input trajectories"
-        },
-        "limit_speed": {
-          "type": "boolean",
-          "default": true,
-          "description": "Flag to indicate if a max_speed_mps speed limit should be applied to the trajectories"
-        },
-        "limit_lateral_acceleration": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable lateral acceleration limiting"
-        },
-        "set_engage_speed": {
+        "use_eb_smoother": {
           "type": "boolean",
           "default": false,
-          "description": "Set engage speed for trajectory points"
+          "description": "Enable Elastic Band smoother for trajectory smoothing"
         },
-        "fix_invalid_points": {
+        "use_qp_smoother": {
           "type": "boolean",
           "default": true,
-          "description": "If the module should remove repeated or invalid points, or points that go against the general trajectory direction"
+          "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
         },
-        "smooth_velocities": {
+        "use_trajectory_point_fixer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove repeated or invalid points, or points that go against the general trajectory direction"
+        },
+        "use_trajectory_extender": {
           "type": "boolean",
           "default": false,
-          "description": "Apply velocity smoothing to the input trajectories"
+          "description": "Enable trajectory extender to extend trajectory backward using ego pose history"
         },
-        "extend_trajectory_backward": {
+        "use_velocity_optimizer": {
           "type": "boolean",
           "default": true,
-          "description": "Flag used to indicate if the ego's trajectory should be extended backward"
+          "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
+        },
+        "use_kinematic_feasibility_enforcer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable kinematic feasibility enforcer plugin (Ackermann + yaw rate constraints)"
+        },
+        "use_mpt_optimizer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds"
+        },
+        "trajectory_point_fixer": {
+          "type": "object",
+          "properties": {
+            "resample_close_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable resampling of close proximity points"
+            },
+            "min_dist_to_remove_m": {
+              "type": "number",
+              "default": 0.01,
+              "minimum": 0,
+              "description": "Minimum distance threshold for removing close proximity points [m]"
+            },
+            "min_dist_to_resample_m": {
+              "type": "number",
+              "default": 0.05,
+              "minimum": 0,
+              "description": "Minimum distance threshold for merging close proximity points [m]"
+            }
+          },
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_resample_m"]
+        },
+        "trajectory_kinematic_feasibility": {
+          "type": "object",
+          "properties": {
+            "max_yaw_rate_rad_s": {
+              "type": "number",
+              "default": 0.7,
+              "minimum": 0.1,
+              "maximum": 2.0,
+              "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            }
+          },
+          "required": ["max_yaw_rate_rad_s"]
+        },
+        "trajectory_mpt_optimizer": {
+          "type": "object",
+          "properties": {
+            "corridor_width_m": {
+              "type": "number",
+              "default": 3.5,
+              "minimum": 2.0,
+              "maximum": 10.0,
+              "description": "Base corridor width for adaptive bounds generation [m]. Defines the lateral distance from trajectory centerline to left/right bounds."
+            },
+            "enable_adaptive_width": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable adaptive corridor width based on curvature and velocity. When true, corridor widens in curves and at low speeds."
+            },
+            "curvature_width_factor": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Factor for curvature-based corridor widening [m/rad]. Higher values provide more space in curves."
+            },
+            "velocity_width_factor": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Factor for velocity-based corridor widening [m]. Higher values provide more maneuvering room at low speeds."
+            },
+            "min_clearance_m": {
+              "type": "number",
+              "default": 0.5,
+              "minimum": 0.0,
+              "maximum": 2.0,
+              "description": "Minimum clearance from vehicle edges to corridor bounds [m]. Ensures minimum safe distance."
+            },
+            "reset_previous_data_each_iteration": {
+              "type": "boolean",
+              "default": true,
+              "description": "Reset MPT's previous optimization data each cycle. Should be true for diffusion planner (new trajectories each cycle), false for incremental planners."
+            },
+            "enable_debug_info": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable debug visualization markers for bounds and reference trajectory."
+            },
+            "output_delta_arc_length_m": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0.1,
+              "maximum": 5.0,
+              "description": "Spacing between trajectory points in MPT optimization [m]. Smaller values provide finer resolution but increase computation."
+            },
+            "output_backward_traj_length_m": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0.0,
+              "maximum": 20.0,
+              "description": "Length of trajectory extension backward from ego pose [m]."
+            },
+            "ego_nearest_dist_threshold_m": {
+              "type": "number",
+              "default": 3.0,
+              "minimum": 0.5,
+              "maximum": 10.0,
+              "description": "Distance threshold for finding nearest trajectory point to ego [m]."
+            },
+            "ego_nearest_yaw_threshold_deg": {
+              "type": "number",
+              "default": 45.0,
+              "minimum": 10.0,
+              "maximum": 90.0,
+              "description": "Yaw threshold for finding nearest trajectory point to ego [degrees]."
+            },
+            "acceleration_moving_average_window": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Moving average window size for acceleration smoothing. Larger values produce smoother acceleration but increase lag. Window of 1 = no smoothing."
+            }
+          },
+          "required": [
+            "corridor_width_m",
+            "enable_adaptive_width",
+            "curvature_width_factor",
+            "velocity_width_factor",
+            "min_clearance_m",
+            "reset_previous_data_each_iteration",
+            "enable_debug_info",
+            "output_delta_arc_length_m",
+            "output_backward_traj_length_m",
+            "ego_nearest_dist_threshold_m",
+            "ego_nearest_yaw_threshold_deg",
+            "acceleration_moving_average_window"
+          ]
+        },
+        "trajectory_extender": {
+          "type": "object",
+          "properties": {
+            "nearest_dist_threshold_m": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 0,
+              "description": "Distance threshold for trajectory matching [m]"
+            },
+            "nearest_yaw_threshold_deg": {
+              "type": "number",
+              "default": 60.0,
+              "minimum": 0,
+              "description": "Yaw threshold for trajectory matching [deg]"
+            },
+            "backward_trajectory_extension_m": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Length to extend trajectory backward using ego history [m]"
+            }
+          },
+          "required": [
+            "nearest_dist_threshold_m",
+            "nearest_yaw_threshold_deg",
+            "backward_trajectory_extension_m"
+          ]
+        },
+        "trajectory_spline_smoother": {
+          "type": "object",
+          "properties": {
+            "interpolation_resolution_m": {
+              "type": "number",
+              "default": 0.5,
+              "exclusiveMinimum": 0,
+              "description": "Interpolation resolution for Akima spline [m]"
+            },
+            "max_distance_discrepancy_m": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Maximum position deviation allowed for orientation copying [m]"
+            },
+            "preserve_input_trajectory_orientation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Copy orientations from input trajectory to spline output"
+            }
+          },
+          "required": [
+            "interpolation_resolution_m",
+            "max_distance_discrepancy_m",
+            "preserve_input_trajectory_orientation"
+          ]
+        },
+        "trajectory_qp_smoother": {
+          "type": "object",
+          "properties": {
+            "weight_smoothness": {
+              "type": "number",
+              "default": 10.0,
+              "minimum": 0,
+              "description": "Weight for path curvature minimization (geometric smoothness) [dimensionless]"
+            },
+            "weight_fidelity": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Weight for path fidelity (staying close to original path) [dimensionless]"
+            },
+            "time_step_s": {
+              "type": "number",
+              "default": 0.1,
+              "exclusiveMinimum": 0,
+              "description": "Fixed time step for velocity/acceleration calculations [s]"
+            },
+            "osqp_eps_abs": {
+              "type": "number",
+              "default": 1.0e-4,
+              "exclusiveMinimum": 0,
+              "description": "OSQP absolute convergence tolerance"
+            },
+            "osqp_eps_rel": {
+              "type": "number",
+              "default": 1.0e-4,
+              "exclusiveMinimum": 0,
+              "description": "OSQP relative convergence tolerance"
+            },
+            "osqp_max_iter": {
+              "type": "integer",
+              "default": 100,
+              "minimum": 1,
+              "description": "OSQP maximum solver iterations"
+            },
+            "osqp_verbose": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable OSQP verbose solver output"
+            },
+            "preserve_input_trajectory_orientation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Copy orientations from input trajectory to smoothed output"
+            },
+            "max_distance_for_orientation_m": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Max distance for nearest neighbor matching when copying orientations [m]"
+            },
+            "use_velocity_based_fidelity": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable velocity-dependent fidelity weighting (lower fidelity at low speeds)"
+            },
+            "velocity_threshold_mps": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0,
+              "description": "Velocity threshold at sigmoid midpoint for velocity-based fidelity [m/s]"
+            },
+            "sigmoid_sharpness": {
+              "type": "number",
+              "default": 50.0,
+              "minimum": 1,
+              "description": "Sigmoid steepness for velocity-based fidelity transition (higher = sharper)"
+            },
+            "min_fidelity_weight": {
+              "type": "number",
+              "default": 0.01,
+              "minimum": 0,
+              "description": "Minimum fidelity weight at very low speeds [dimensionless]"
+            },
+            "max_fidelity_weight": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Maximum fidelity weight at high speeds [dimensionless]"
+            },
+            "num_constrained_points_start": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Number of points from the start of the trajectory to constrain as hard constraints (preserves initial state)"
+            },
+            "num_constrained_points_end": {
+              "type": "integer",
+              "default": 3,
+              "minimum": 0,
+              "description": "Number of points from the end of the trajectory to constrain as hard constraints"
+            }
+          },
+          "required": [
+            "weight_smoothness",
+            "weight_fidelity",
+            "time_step_s",
+            "osqp_eps_abs",
+            "osqp_eps_rel",
+            "osqp_max_iter",
+            "osqp_verbose",
+            "preserve_input_trajectory_orientation",
+            "max_distance_for_orientation_m",
+            "use_velocity_based_fidelity",
+            "velocity_threshold_mps",
+            "sigmoid_sharpness",
+            "min_fidelity_weight",
+            "max_fidelity_weight",
+            "num_constrained_points_start",
+            "num_constrained_points_end"
+          ]
+        },
+        "trajectory_velocity_optimizer": {
+          "type": "object",
+          "properties": {
+            "nearest_dist_threshold_m": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 0,
+              "description": "Distance threshold for trajectory matching [m]"
+            },
+            "nearest_yaw_threshold_deg": {
+              "type": "number",
+              "default": 60.0,
+              "minimum": 0,
+              "description": "Yaw threshold for trajectory matching [deg]"
+            },
+            "target_pull_out_speed_mps": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Target speed during pull-out maneuver [m/s]"
+            },
+            "target_pull_out_acc_mps2": {
+              "type": "number",
+              "default": 1.0,
+              "minimum": 0,
+              "description": "Target acceleration during pull-out maneuver [m/s²]"
+            },
+            "max_speed_mps": {
+              "type": "number",
+              "default": 8.33,
+              "minimum": 0,
+              "description": "Maximum allowed speed [m/s]"
+            },
+            "max_lateral_accel_mps2": {
+              "type": "number",
+              "default": 1.5,
+              "minimum": 0,
+              "description": "Maximum lateral acceleration [m/s²]"
+            },
+            "set_engage_speed": {
+              "type": "boolean",
+              "default": false,
+              "description": "Set minimum speed during engage"
+            },
+            "limit_speed": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable speed limiting"
+            },
+            "limit_lateral_acceleration": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable lateral acceleration limiting"
+            },
+            "smooth_velocities": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable jerk-filtered velocity smoothing"
+            }
+          },
+          "required": [
+            "nearest_dist_threshold_m",
+            "nearest_yaw_threshold_deg",
+            "target_pull_out_speed_mps",
+            "target_pull_out_acc_mps2",
+            "max_speed_mps",
+            "max_lateral_accel_mps2",
+            "set_engage_speed",
+            "limit_speed",
+            "limit_lateral_acceleration",
+            "smooth_velocities"
+          ]
         },
         "jerk_filter_params": {
           "type": "object",
@@ -237,22 +583,14 @@
         }
       },
       "required": [
-        "nearest_dist_threshold_m",
-        "nearest_yaw_threshold_rad",
-        "target_pull_out_speed_mps",
-        "target_pull_out_acc_mps2",
-        "max_speed_mps",
-        "max_lateral_accel_mps2",
-        "spline_interpolation_resolution_m",
-        "backward_trajectory_extension_m",
         "use_akima_spline_interpolation",
-        "smooth_trajectories",
-        "limit_speed",
-        "limit_lateral_acceleration",
-        "set_engage_speed",
-        "fix_invalid_points",
-        "smooth_velocities",
-        "extend_trajectory_backward"
+        "use_eb_smoother",
+        "use_qp_smoother",
+        "use_trajectory_point_fixer",
+        "use_trajectory_extender",
+        "use_velocity_optimizer",
+        "use_kinematic_feasibility_enforcer",
+        "use_mpt_optimizer"
       ]
     }
   },

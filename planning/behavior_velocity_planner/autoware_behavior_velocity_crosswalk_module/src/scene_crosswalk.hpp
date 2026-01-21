@@ -328,12 +328,12 @@ public:
       }
 
       // update object state
+      objects.at(uuid).classification = classification;
       objects.at(uuid).transitState(
         now, position, vel, is_ego_yielding, collision_point, planner_param, crosswalk_polygon,
         is_object_away_from_path, ego_crosswalk_passage_direction);
       objects.at(uuid).collision_point = collision_point;
       objects.at(uuid).position = position;
-      objects.at(uuid).classification = classification;
       objects.at(uuid).last_detection_time = now;
     }
     void finalize(const rclcpp::Time & now, const PlannerParam & planner_param)
@@ -519,6 +519,15 @@ private:
       stop_watch_.toc("total_processing_time", false));
   }
 
+  void set_previous_stop_pose(const std::optional<StopPoseWithObjectUuids> & current_stop_pose)
+  {
+    if (!current_stop_pose) {
+      previous_stop_pose_.reset();
+      return;
+    }
+    previous_stop_pose_ = current_stop_pose;
+  }
+
   const int64_t module_id_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr
@@ -552,6 +561,8 @@ private:
   // occluded space time buffer
   std::optional<rclcpp::Time> current_initial_occlusion_time_;
   std::optional<rclcpp::Time> most_recent_occlusion_time_;
+
+  std::optional<StopPoseWithObjectUuids> previous_stop_pose_;
 
   struct
   {

@@ -55,6 +55,7 @@
       # pull over
       pull_over:
         minimum_request_length: 0.0
+        approximate_pull_over_distance: 20.0
         pull_over_prepare_length: 100.0
         pull_over_velocity: 3.0
         pull_over_minimum_velocity: 1.38
@@ -136,6 +137,8 @@
         bezier_parking:
           pull_over_angle_threshold: 0.5
           after_shift_straight_distance: 1.5
+          lateral_acceleration_threshold: 1.0
+          lateral_acceleration_filtering_duration: 0.5
 
       stop_condition:
         maximum_deceleration_for_stop: 1.0

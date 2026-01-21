@@ -2,6 +2,28 @@
 Changelog for package autoware_radar_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: tf2 uses hpp headers in rolling (and is backported) (`#11620 <https://github.com/autowarefoundation/autoware_universe/issues/11620>`_)
+* feat(autoware_lanelet2_utils): porting functions from lanelet2_extension to autoware_lanelet2_utils package (replacing usage) in perception component  (`#11387 <https://github.com/autowarefoundation/autoware_universe/issues/11387>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Tim Clephas
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(autoware_radar_object_tracker): change package name in config file (`#10988 <https://github.com/autowarefoundation/autoware_universe/issues/10988>`_)

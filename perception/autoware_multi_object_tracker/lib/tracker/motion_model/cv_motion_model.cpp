@@ -21,17 +21,16 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
-
-#include <tf2/utils.h>
+#include <autoware_utils_geometry/msg/covariance.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <tf2/utils.hpp>
 
 namespace autoware::multi_object_tracker
 {
 // cspell: ignore CV
 // Constant Velocity (CV) motion model
-using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 CVMotionModel::CVMotionModel() : logger_(rclcpp::get_logger("CVMotionModel"))
 {

@@ -2,6 +2,33 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(operation_mode_transition_manager): fix debug value update (`#11664 <https://github.com/autowarefoundation/autoware_universe/issues/11664>`_)
+  * fix debug value update
+  * fix format
+  * cppcheck
+  ---------
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(operation_mode_transition_manager): modify the autonomous mode condition (`#11603 <https://github.com/autowarefoundation/autoware_universe/issues/11603>`_)
+  * fix(operation_mode_transition_manager): modify the autonomous mode condition
+  * fix: passing clang-format
+  * fix: passing clang-format 2
+  * fix: add getcurrentmode function
+* docs: add document of mode transition debug topic (`#11278 <https://github.com/autowarefoundation/autoware_universe/issues/11278>`_)
+  * docs: add document of mode transition debug topic
+  * fix
+  ---------
+* Contributors: Issei Tezuka, Ryohsuke Mitsudome, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat: change planning output topic name to /planning/trajectory (`#11135 <https://github.com/autowarefoundation/autoware_universe/issues/11135>`_)

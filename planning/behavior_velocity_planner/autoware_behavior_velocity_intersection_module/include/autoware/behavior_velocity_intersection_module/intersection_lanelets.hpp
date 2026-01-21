@@ -41,8 +41,7 @@ public:
    */
   void update(
     const bool is_prioritized, const InterpolatedPathInfo & interpolated_path_info,
-    const autoware_utils::LinearRing2d & footprint, const double vehicle_length,
-    lanelet::routing::RoutingGraphPtr routing_graph_ptr);
+    const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
   const lanelet::ConstLanelets & attention() const
   {
@@ -90,14 +89,6 @@ public:
   const std::optional<lanelet::CompoundPolygon3d> & first_attention_area() const
   {
     return first_attention_area_;
-  }
-  const std::optional<lanelet::ConstLanelet> & second_attention_lane() const
-  {
-    return second_attention_lane_;
-  }
-  const std::optional<lanelet::CompoundPolygon3d> & second_attention_area() const
-  {
-    return second_attention_area_;
   }
 
   /**
@@ -157,14 +148,6 @@ public:
    */
   std::optional<lanelet::ConstLanelet> first_attention_lane_{std::nullopt};
   std::optional<lanelet::CompoundPolygon3d> first_attention_area_{std::nullopt};
-
-  /**
-   * the second attention lanelet which ego path points intersect next to the
-   * first_attention_lanelet
-   */
-  bool second_attention_lane_empty_{false};
-  std::optional<lanelet::ConstLanelet> second_attention_lane_{std::nullopt};
-  std::optional<lanelet::CompoundPolygon3d> second_attention_area_{std::nullopt};
 
   /**
    * flag if the intersection is prioritized by the traffic light

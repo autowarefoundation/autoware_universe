@@ -24,6 +24,8 @@
   <arg name="use_multi_channel_tracker_merger"/>
   <arg name="use_validator" description="use obstacle_pointcloud based validator"/>
   <arg name="use_short_range_detection"/>
+  <arg name="use_camera_vru_detector"/>
+  <arg name="publish_merged_objects"/>
 
   <!-- External interface -->
   <arg name="lidar_detection_model_type" default="centerpoint"/>
@@ -44,8 +46,13 @@
   <arg name="input/radar/far_objects" default="/perception/object_recognition/detection/radar/far_objects"/>
   <arg name="input/radar/objects" default="/perception/object_recognition/detection/radar/objects"/>
   <arg name="input/radar/tracked_objects" default="/sensing/radar/tracked_objects"/>
+  <arg name="input/camera_only/objects" default="/perception/object_recognition/detection/camera_only/objects"/>
+  <arg name="input/camera_only/channel" default="camera_streampetr"/>
+  <arg name="input/camera_vru/channel" default="camera_vru"/>
+  <arg name="input/camera_vru/objects" default="/perception/object_recognition/detection/camera_vru/objects"/>
 
   <arg name="output/objects" default="$(var ns)/objects"/>
+  <arg name="output/merged_objects" default="$(var ns)/merged_objects"/>
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
@@ -122,6 +129,13 @@
     <let name="input/detection06/channel" value="$(var input/radar/channel)"/>
     <let name="input/detection06/objects" value="$(var input/radar/far_objects)"/>
 
+    <let name="input/detection07/channel" value="$(var input/camera_vru/channel)"/>
+    <let name="input/detection07/channel" value="none" unless="$(var use_camera_vru_detector)"/>
+    <let name="input/detection07/objects" value="$(var input/camera_vru/objects)"/>
+
+    <let name="input/detection08/channel" value="$(var input/camera_only/channel)"/>
+    <let name="input/detection08/objects" value="$(var input/camera_only/objects)"/>
+
     <!-- camera lidar -->
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
       <!-- radar far object is not used -->
@@ -134,6 +148,8 @@
       <let name="input/detection03/channel" value="none"/>
       <!-- irregular object detector is not used -->
       <let name="input/detection04/channel" value="none"/>
+      <!-- camera vru is not used -->
+      <let name="input/detection07/channel" value="none"/>
     </group>
 
     <!-- lidar -->
@@ -144,6 +160,8 @@
       <let name="input/detection04/channel" value="none"/>
       <!-- radar far object is not used -->
       <let name="input/detection06/channel" value="none"/>
+      <!-- camera vru is not used -->
+      <let name="input/detection07/channel" value="none"/>
     </group>
 
     <!-- radar -->
@@ -158,6 +176,8 @@
       <let name="input/detection05/channel" value="none"/>
       <!-- normal radar object to be used-->
       <let name="input/detection05/objects" value="$(var input/radar/objects)"/>
+      <!-- camera vru is not used -->
+      <let name="input/detection07/channel" value="none"/>
     </group>
 
     <!-- Multi object tracking -->
@@ -174,10 +194,14 @@
       <arg name="input/detection05/channel" value="$(var input/detection05/channel)"/>
       <arg name="input/detection06/objects" value="$(var input/detection06/objects)"/>
       <arg name="input/detection06/channel" value="$(var input/detection06/channel)"/>
+      <arg name="input/detection07/objects" value="$(var input/detection07/objects)"/>
+      <arg name="input/detection07/channel" value="$(var input/detection07/channel)"/>
       <arg name="output/objects" value="$(var output/objects)"/>
+      <arg name="output/merged_objects" value="$(var output/merged_objects)"/>
       <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_multi_object_tracker_data_association_matrix_param_path)"/>
       <arg name="input_channels_path" value="$(var object_recognition_tracking_multi_object_tracker_input_channels_param_path)"/>
       <arg name="tracker_setting_path" value="$(var object_recognition_tracking_multi_object_tracker_node_param_path)"/>
+      <arg name="publish_merged_objects" value="$(var publish_merged_objects)"/>
     </include>
   </group>
 </launch>

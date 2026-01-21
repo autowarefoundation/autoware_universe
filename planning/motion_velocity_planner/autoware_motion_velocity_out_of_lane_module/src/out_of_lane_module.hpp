@@ -45,6 +45,7 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  std::string get_short_module_name() const override { return "out_of_lane"; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
     RequiredSubscriptionInfo required_subscription_info;

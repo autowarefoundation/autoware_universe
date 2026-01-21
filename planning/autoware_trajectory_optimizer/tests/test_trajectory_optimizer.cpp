@@ -12,79 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
-#include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
-#include <limits>
-
-using autoware::trajectory_optimizer::TrajectoryOptimizerParams;
-using autoware::trajectory_optimizer::utils::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using geometry_msgs::msg::AccelWithCovarianceStamped;
-using nav_msgs::msg::Odometry;
 
 class TrajectoryOptimizerUtilsTest : public ::testing::Test
 {
-protected:
-  TrajectoryPoints create_sample_trajectory(double resolution = 1.0, double offset = 0.0)
-  {
-    TrajectoryPoints points;
-    for (int i = 0; i < 10; ++i) {
-      TrajectoryPoint point;
-      point.pose.position.x = i * resolution + offset;
-      point.pose.position.y = i * resolution + offset;
-      point.longitudinal_velocity_mps = 1.0;
-      point.acceleration_mps2 = 0.1;
-      points.push_back(point);
-    }
-    return points;
-  }
 };
-
-TEST_F(TrajectoryOptimizerUtilsTest, RemoveInvalidPoints)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  const auto points_size = points.size();
-  autoware::trajectory_optimizer::utils::remove_invalid_points(points);
-  ASSERT_EQ(points.size(), points_size);
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, RemoveCloseProximityPoints)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  const auto points_size = points.size();
-
-  autoware::trajectory_optimizer::utils::remove_close_proximity_points(points, 1E-2);
-  ASSERT_EQ(points.size(), points_size);
-
-  autoware::trajectory_optimizer::utils::remove_close_proximity_points(
-    points, std::numeric_limits<double>::max());
-  ASSERT_EQ(points.size(), 1);
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, ClampVelocities)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  autoware::trajectory_optimizer::utils::clamp_velocities(points, 2.0f, 0.5f);
-  for (const auto & point : points) {
-    ASSERT_GE(point.longitudinal_velocity_mps, 2.0f);
-    ASSERT_GE(point.acceleration_mps2, 0.5f);
-  }
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, SetMaxVelocity)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  autoware::trajectory_optimizer::utils::set_max_velocity(points, 2.0f);
-  for (const auto & point : points) {
-    ASSERT_LE(point.longitudinal_velocity_mps, 2.0f);
-  }
-}
 
 TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
 {
@@ -103,41 +41,6 @@ TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
   TrajectoryPoint invalid_point;
   invalid_point.pose.position.x = std::nan("");
   ASSERT_FALSE(autoware::trajectory_optimizer::utils::validate_point(invalid_point));
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, ApplySpline)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  TrajectoryOptimizerParams params;
-  params.spline_interpolation_resolution_m = 0.1;
-  autoware::trajectory_optimizer::utils::apply_spline(points, params);
-  ASSERT_GE(points.size(), 2);
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, AddEgoStateToTrajectory)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  Odometry current_odometry;
-  current_odometry.pose.pose.position.x = 1.0;
-  current_odometry.pose.pose.position.y = 1.0;
-  TrajectoryOptimizerParams params;
-  autoware::trajectory_optimizer::utils::add_ego_state_to_trajectory(
-    points, current_odometry, params);
-  ASSERT_FALSE(points.empty());
-}
-
-TEST_F(TrajectoryOptimizerUtilsTest, ExpandTrajectoryWithEgoHistory)
-{
-  TrajectoryPoints points = create_sample_trajectory();
-  TrajectoryPoints ego_history_points = create_sample_trajectory(1.0, -10.0);
-  Odometry current_odometry;
-  TrajectoryOptimizerParams params;
-  params.backward_trajectory_extension_m = 15.0;
-  current_odometry.pose.pose.position.x = points.front().pose.position.x;
-  current_odometry.pose.pose.position.y = points.front().pose.position.y;
-  autoware::trajectory_optimizer::utils::expand_trajectory_with_ego_history(
-    points, ego_history_points, current_odometry, params);
-  ASSERT_GE(points.size(), 20);
 }
 
 int main(int argc, char ** argv)

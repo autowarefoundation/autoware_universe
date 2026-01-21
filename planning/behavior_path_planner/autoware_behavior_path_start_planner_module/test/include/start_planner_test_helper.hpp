@@ -18,13 +18,13 @@
 #include <autoware/pyplot/pyplot.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
-#include <tf2/utils.h>
 
 #include <memory>
 #include <set>
@@ -52,7 +52,9 @@ public:
 
   // Path plotting functions
   static void plot_and_save_path(
-    const std::vector<autoware_internal_planning_msgs::msg::PathWithLaneId> & partial_paths,
+    const std::optional<PullOutPath> & result,
+    const autoware_planning_msgs::msg::LaneletRoute & route,
+    const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose,
     const std::shared_ptr<PlannerData> & planner_data,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PlannerType planner_type,
     const std::string & filename);
