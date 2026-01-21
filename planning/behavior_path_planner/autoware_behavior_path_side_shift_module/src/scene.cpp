@@ -229,10 +229,9 @@ void SideShiftModule::updateData()
     const auto & pos = point.point.pose.position;
     const size_t nearest_idx =
       autoware::motion_utils::findNearestIndex(centerline_path.points, pos);
-    if (nearest_idx < centerline_path.points.size()) {
-      point.point.longitudinal_velocity_mps =
-        centerline_path.points.at(nearest_idx).point.longitudinal_velocity_mps;
-    }
+    const bool valid_idx = nearest_idx < centerline_path.points.size();
+    point.point.longitudinal_velocity_mps =
+      valid_idx ? centerline_path.points.at(nearest_idx).point.longitudinal_velocity_mps : 0.0;
   }
 
   path_shifter_.setPath(reference_path_);
@@ -303,10 +302,12 @@ void SideShiftModule::replaceShiftLine()
 
 BehaviorModuleOutput SideShiftModule::plan()
 {
-  // Replace shift line
-  if (
-    lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
-                                       (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
+  // Replace shift line if conditions are met
+  const bool can_replace_shift =
+    lateral_offset_change_request_ && (shift_status_ == SideShiftStatus::BEFORE_SHIFT ||
+                                       shift_status_ == SideShiftStatus::AFTER_SHIFT);
+
+  if (can_replace_shift) {
     replaceShiftLine();
   } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
     RCLCPP_DEBUG(getLogger(), "ego is shifting");
@@ -314,17 +315,17 @@ BehaviorModuleOutput SideShiftModule::plan()
     RCLCPP_DEBUG(getLogger(), "change is not requested");
   }
 
-  // Refine path
+  // Generate shifted path
   ShiftedPath shifted_path;
-  if (!path_shifter_.generate(&shifted_path)) {
+  const bool generate_success = path_shifter_.generate(&shifted_path);
+
+  // Handle generation failure
+  if (!generate_success) {
     RCLCPP_ERROR(getLogger(), "SideShift: failed to generate shifted path. Reusing previous path");
-    if (!prev_output_.path.points.empty()) {
-      shifted_path = prev_output_;
-    } else {
-      return getPreviousModuleOutput();
-    }
+    shifted_path = prev_output_.path.points.empty() ? ShiftedPath{} : prev_output_;
   }
 
+  // Handle empty path
   if (shifted_path.path.points.empty()) {
     RCLCPP_ERROR(getLogger(), "Generated shift_path has no points");
     return getPreviousModuleOutput();
@@ -648,68 +649,23 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
         point_in_adjacent = true;
       } else {
         // Point is outside all valid lanes - use conservative limits
-        // Still allow returning to the lane
-        const auto left_bound = lane.leftBound2d();
-        const auto right_bound = lane.rightBound2d();
-        const double dist_to_left = lanelet::geometry::distance2d(left_bound, target_point);
-        const double dist_to_right = lanelet::geometry::distance2d(right_bound, target_point);
-
-        // Determine which side the point is on
-        if (dist_to_left < dist_to_right) {
-          // Point is on the left side - only allow shift back to the right
-          safe_left_limit = 0.0;
-          // Allow shifting right to return to lane (stored as positive value)
-          const double return_distance = dist_to_left + vehicle_half_width + margin;
-          safe_right_limit = std::min(safe_right_limit, return_distance);
-        } else {
-          // Point is on the right side - only allow shift back to the left
-          safe_right_limit = 0.0;
-          // Allow shifting left to return to lane
-          const double return_distance = dist_to_right + vehicle_half_width + margin;
-          safe_left_limit = std::min(safe_left_limit, return_distance);
-        }
-        found_valid_limit = true;
+        LaneLimitInfo limits{safe_left_limit, safe_right_limit, found_valid_limit};
+        updateLaneLimitsForOutsidePoint(lane, target_point, vehicle_half_width, margin, limits);
+        safe_left_limit = limits.safe_left_limit;
+        safe_right_limit = limits.safe_right_limit;
+        found_valid_limit = limits.found_valid_limit;
         continue;
       }
     }
 
     // Calculate available space based on the lane the point is in
-    const auto left_bound = current_check_lane.leftBound2d();
-    const auto right_bound = current_check_lane.rightBound2d();
-
-    const double dist_to_left = lanelet::geometry::distance2d(left_bound, target_point);
-    const double dist_to_right = lanelet::geometry::distance2d(right_bound, target_point);
-
-    // Add a small extra buffer (e.g. 5cm) to account for vehicle corner deviation on curves
-    const double extra_buffer = 0.05;
-
-    // Calculate maximum left shift (positive value)
-    double current_max_left = dist_to_left - vehicle_half_width - margin - extra_buffer;
-    if (allow_left && !point_in_adjacent) {
-      // Can shift into left adjacent lane
-      const double dist_to_far_left =
-        lanelet::geometry::distance2d(left_lane_val.leftBound2d(), target_point);
-      current_max_left = dist_to_far_left - vehicle_half_width - margin - extra_buffer;
-    }
-
-    // Calculate maximum right shift (negative value)
-    // The available space to the right is dist_to_right - vehicle_half_width - margin
-    // As a negative shift value, this becomes -(available_space)
-    double available_right = dist_to_right - vehicle_half_width - margin - extra_buffer;
-    double current_max_right = available_right;  // Keep as positive, will be negated later
-    if (allow_right && !point_in_adjacent) {
-      // Can shift into right adjacent lane
-      const double dist_to_far_right =
-        lanelet::geometry::distance2d(right_lane_val.rightBound2d(), target_point);
-      available_right = dist_to_far_right - vehicle_half_width - margin - extra_buffer;
-      current_max_right = available_right;  // Keep as positive
-    }
-
-    // Update limits: left limit is minimum of positive values, right limit is also minimum (most
-    // restrictive)
-    safe_left_limit = std::min(safe_left_limit, std::max(0.0, current_max_left));
-    safe_right_limit = std::min(safe_right_limit, std::max(0.0, current_max_right));
-    found_valid_limit = true;
+    LaneLimitInfo limits{safe_left_limit, safe_right_limit, found_valid_limit};
+    updateLaneLimitsForInsidePoint(
+      current_check_lane, target_point, allow_left, allow_right, point_in_adjacent, left_lane_val,
+      right_lane_val, vehicle_half_width, margin, limits);
+    safe_left_limit = limits.safe_left_limit;
+    safe_right_limit = limits.safe_right_limit;
+    found_valid_limit = limits.found_valid_limit;
   }
 
   if (!found_valid_limit) {
@@ -718,28 +674,82 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
     return 0.0;
   }
 
-  // Clamp the requested offset to the safe limits
-  // Both limits are now positive values representing available space
-  double result = 0.0;
-  if (requested_offset > 0.0) {
-    // Left shift: clamp to safe_left_limit (positive value)
-    result = std::min(requested_offset, safe_left_limit);
-    // If the limit is 0, it means we cannot shift left at all
-    if (result < 1e-3) {
-      result = 0.0;
-    }
-  } else if (requested_offset < 0.0) {
-    // Right shift: clamp to negative of safe_right_limit
-    result = std::max(requested_offset, -safe_right_limit);
-    // If the limit is 0, it means we cannot shift right at all
-    if (result > -1e-3) {
-      result = 0.0;
-    }
+  return clampOffsetToLimits(requested_offset, safe_left_limit, safe_right_limit);
+}
+
+void SideShiftModule::updateLaneLimitsForOutsidePoint(
+  const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
+  double vehicle_half_width, double margin, LaneLimitInfo & limits) const
+{
+  const auto left_bound = lane.leftBound2d();
+  const auto right_bound = lane.rightBound2d();
+  const double dist_to_left = lanelet::geometry::distance2d(left_bound, target_point);
+  const double dist_to_right = lanelet::geometry::distance2d(right_bound, target_point);
+
+  if (dist_to_left < dist_to_right) {
+    // Point is on the left side - only allow shift back to the right
+    limits.safe_left_limit = 0.0;
+    const double return_distance = dist_to_left + vehicle_half_width + margin;
+    limits.safe_right_limit = std::min(limits.safe_right_limit, return_distance);
   } else {
-    result = 0.0;
+    // Point is on the right side - only allow shift back to the left
+    limits.safe_right_limit = 0.0;
+    const double return_distance = dist_to_right + vehicle_half_width + margin;
+    limits.safe_left_limit = std::min(limits.safe_left_limit, return_distance);
+  }
+  limits.found_valid_limit = true;
+}
+
+void SideShiftModule::updateLaneLimitsForInsidePoint(
+  const lanelet::ConstLanelet & current_check_lane, const lanelet::BasicPoint2d & target_point,
+  bool allow_left, bool allow_right, bool point_in_adjacent,
+  const lanelet::ConstLanelet & left_lane_val, const lanelet::ConstLanelet & right_lane_val,
+  double vehicle_half_width, double margin, LaneLimitInfo & limits) const
+{
+  const auto left_bound = current_check_lane.leftBound2d();
+  const auto right_bound = current_check_lane.rightBound2d();
+
+  const double dist_to_left = lanelet::geometry::distance2d(left_bound, target_point);
+  const double dist_to_right = lanelet::geometry::distance2d(right_bound, target_point);
+
+  const double extra_buffer = 0.05;
+
+  // Calculate maximum left shift (positive value)
+  double current_max_left = dist_to_left - vehicle_half_width - margin - extra_buffer;
+  if (allow_left && !point_in_adjacent) {
+    const double dist_to_far_left =
+      lanelet::geometry::distance2d(left_lane_val.leftBound2d(), target_point);
+    current_max_left = dist_to_far_left - vehicle_half_width - margin - extra_buffer;
   }
 
-  return result;
+  // Calculate maximum right shift
+  double current_max_right = dist_to_right - vehicle_half_width - margin - extra_buffer;
+  if (allow_right && !point_in_adjacent) {
+    const double dist_to_far_right =
+      lanelet::geometry::distance2d(right_lane_val.rightBound2d(), target_point);
+    current_max_right = dist_to_far_right - vehicle_half_width - margin - extra_buffer;
+  }
+
+  limits.safe_left_limit = std::min(limits.safe_left_limit, std::max(0.0, current_max_left));
+  limits.safe_right_limit = std::min(limits.safe_right_limit, std::max(0.0, current_max_right));
+  limits.found_valid_limit = true;
+}
+
+double SideShiftModule::clampOffsetToLimits(
+  double requested_offset, double safe_left_limit, double safe_right_limit) const
+{
+  constexpr double tolerance = 1e-3;
+
+  if (requested_offset > 0.0) {
+    // Left shift: clamp to safe_left_limit
+    const double result = std::min(requested_offset, safe_left_limit);
+    return (result < tolerance) ? 0.0 : result;
+  } else if (requested_offset < 0.0) {
+    // Right shift: clamp to negative of safe_right_limit
+    const double result = std::max(requested_offset, -safe_right_limit);
+    return (result > -tolerance) ? 0.0 : result;
+  }
+  return 0.0;
 }
 
 void SideShiftModule::setDebugMarkersVisualization() const
