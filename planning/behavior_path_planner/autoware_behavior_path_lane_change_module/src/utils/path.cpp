@@ -458,12 +458,12 @@ LaneChangePath get_candidate_path(
   }
 
   return utils::lane_change::construct_candidate_path(
-    lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
+    common_data_ptr, lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
 }
 
 LaneChangePath construct_candidate_path(
-  const LaneChangeInfo & lane_change_info, const PathWithLaneId & prepare_segment,
-  const PathWithLaneId & target_lane_reference_path,
+  const CommonDataPtr & common_data_ptr, const LaneChangeInfo & lane_change_info,
+  const PathWithLaneId & prepare_segment, const PathWithLaneId & target_lane_reference_path,
   const std::vector<std::vector<int64_t>> & sorted_lane_ids)
 {
   const auto & shift_line = lane_change_info.shift_line;
@@ -511,6 +511,11 @@ LaneChangePath construct_candidate_path(
     err_msg << "Excessive yaw difference " << yaw_diff_opt.value() << " which exceeds the "
             << yaw_diff_th << " radian threshold.";
     throw std::logic_error(err_msg.str());
+  }
+
+  if (is_intersecting_no_lane_change_lines(
+        common_data_ptr->no_lane_change_lines, shifted_path.path.points)) {
+    throw std::logic_error("Path intersects no lane change lines.");
   }
 
   LaneChangePath candidate_path;
@@ -711,6 +716,11 @@ std::optional<LaneChangePath> get_candidate_path(
       "Excessive yaw difference {yaw_diff:2.2f}[deg]. The threshold is {th_yaw_diff:2.2f}[deg].",
       fmt::arg("yaw_diff", yaw_diff_deg), fmt::arg("th_yaw_diff", th_yaw_diff_deg));
     throw std::logic_error(err_msg);
+  }
+
+  if (is_intersecting_no_lane_change_lines(
+        common_data_ptr->no_lane_change_lines, shifted_path.path.points)) {
+    throw std::logic_error("Path intersects no lane change lines.");
   }
 
   LaneChangeInfo info;

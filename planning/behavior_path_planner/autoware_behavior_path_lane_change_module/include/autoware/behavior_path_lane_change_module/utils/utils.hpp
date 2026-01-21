@@ -501,5 +501,12 @@ bool is_lanelet_in_lanelet_collections(
  */
 void trim_preferred_after_alternative(
   lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes);
+
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction);
+
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const std::vector<PathPointWithLaneId> & lane_change_path);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_

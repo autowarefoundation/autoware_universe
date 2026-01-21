@@ -1257,4 +1257,63 @@ void trim_preferred_after_alternative(
   base_lanes.erase(first_pref_after_alt_it, base_lanes.end());
 }
 
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction)
+{
+  std::vector<lanelet::ConstLineString3d> no_lane_change_lines;
+  no_lane_change_lines.reserve(target_lanes.size());
+
+  for (const auto & ll : target_lanes) {
+    const auto & ls = (direction == Direction::LEFT) ? ll.leftBound() : ll.rightBound();
+
+    // 1. Check if the physical line is solid
+    const bool is_solid =
+      (ls.attributeOr(lanelet::AttributeName::Subtype, "") == lanelet::AttributeValueString::Solid);
+
+    // 2. Check for explicit lane_change permission tags
+    const std::string lane_change_val = ls.attributeOr("lane_change", "");
+
+    const bool explicit_no = (lane_change_val == "no");
+    const bool explicit_yes = (lane_change_val == "yes");
+
+    if ((is_solid && !explicit_yes) || explicit_no) {
+      no_lane_change_lines.push_back(ls);
+    }
+  }
+
+  return no_lane_change_lines;
+}
+
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const std::vector<PathPointWithLaneId> & lane_change_path)
+{
+  using ranges::views::sliding;
+
+  // Create a sliding view over the path
+  auto path_segments = lane_change_path | ranges::views::sliding(2);
+
+  return ranges::any_of(path_segments, [&](const auto & p_seg) {
+    // FIX 1: Use iterators for the path segment
+    auto p_it = p_seg.begin();
+    const auto & path_p1 = p_it->point.pose.position;
+    const auto & path_p2 = (++p_it)->point.pose.position;
+
+    const auto is_intersecting = [&](const auto & l_seg) {
+      auto l_it = l_seg.begin();
+      const auto & p1 = *l_it;
+      const auto & p2 = *++l_it;
+
+      const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(p1);
+      const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(p2);
+
+      return autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value();
+    };
+
+    return ranges::any_of(no_lane_change_lines, [&](const auto & ls) {
+      return ranges::any_of(ls | ranges::views::sliding(2), is_intersecting);
+    });
+  });
+}
+
 }  // namespace autoware::behavior_path_planner::utils::lane_change
