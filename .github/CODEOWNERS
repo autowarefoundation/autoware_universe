@@ -87,7 +87,7 @@ perception/autoware_image_object_locator/** dai.nguyen@tier4.jp lei.gu@tier4.jp 
 perception/autoware_image_projection_based_fusion/** dai.nguyen@tier4.jp kotaro.uetake@tier4.jp masaki.baba.2@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_lidar_apollo_instance_segmentation/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_lidar_centerpoint/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kokseang.tan@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp
-perception/autoware_lidar_frnet/** amadeusz.szymko.2@tier4.jp
+perception/autoware_lidar_frnet/** amadeusz.szymko.2@tier4.jp manato.hirabayashi@tier4.jp
 perception/autoware_lidar_transfusion/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kokseang.tan@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp
 perception/autoware_map_based_prediction/** kotaro.uetake@tier4.jp kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp taekjin.lee@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_multi_object_tracker/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
