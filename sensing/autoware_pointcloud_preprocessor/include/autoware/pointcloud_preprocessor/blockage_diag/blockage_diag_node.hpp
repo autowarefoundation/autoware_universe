@@ -178,7 +178,7 @@ private:
   Updater updater_{this};
 
   // PointCloud2 to depth image converter
-  std::unique_ptr<PointCloud2ToDepthImage> depth_image_converter_;
+  std::unique_ptr<pointcloud2_to_depth_image::PointCloud2ToDepthImage> depth_image_converter_;
 
   // Debug parameters
   bool publish_debug_image_;

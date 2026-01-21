@@ -80,9 +80,14 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     }
 
     // Initialize PointCloud2ToDepthImage converter
-    depth_image_converter_ = std::make_unique<PointCloud2ToDepthImage>(
-      angle_range_deg_[0], angle_range_deg_[1], horizontal_resolution_,
-      vertical_bins, is_channel_order_top2down, max_distance_range);
+    pointcloud2_to_depth_image::ConverterConfig depth_image_config;
+    depth_image_config.horizontal.angle_range_min_deg = angle_range_deg_[0];
+    depth_image_config.horizontal.angle_range_max_deg = angle_range_deg_[1];
+    depth_image_config.horizontal.horizontal_resolution = horizontal_resolution_;
+    depth_image_config.vertical.vertical_bins = vertical_bins;
+    depth_image_config.vertical.is_channel_order_top2down = is_channel_order_top2down;
+    depth_image_config.max_distance_range = max_distance_range;
+    depth_image_converter_ = std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
   }
   dust_mask_buffer.set_capacity(dust_buffering_frames_);
   no_return_mask_buffer.set_capacity(blockage_buffering_frames_);

@@ -25,6 +25,29 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+namespace pointcloud2_to_depth_image
+{
+
+struct HorizontalConfig
+{
+  double angle_range_min_deg;
+  double angle_range_max_deg;
+  double horizontal_resolution;
+};
+
+struct VerticalConfig
+{
+  int vertical_bins;
+  bool is_channel_order_top2down;
+};
+
+struct ConverterConfig
+{
+  HorizontalConfig horizontal;
+  VerticalConfig vertical;
+  double max_distance_range;
+};
+
 /**
  * @brief Class to convert PointCloud2 to normalized depth image.
  *
@@ -37,16 +60,9 @@ public:
   /**
    * @brief Construct a new PointCloud2ToDepthImage object.
    *
-   * @param angle_range_min_deg The angle range min in degrees.
-   * @param angle_range_max_deg The angle range max in degrees.
-   * @param horizontal_resolution The horizontal resolution in degrees.
-   * @param vertical_bins The number of vertical bins.
-   * @param is_channel_order_top2down Whether the channel order is top-down.
-   * @param max_distance_range The maximum distance range in meters.
+   * @param config The configuration for the depth image conversion.
    */
-  PointCloud2ToDepthImage(
-    double angle_range_min_deg, double angle_range_max_deg, double horizontal_resolution, int vertical_bins,
-    bool is_channel_order_top2down, double max_distance_range);
+  explicit PointCloud2ToDepthImage(const ConverterConfig & config);
 
   /**
    * @brief Make a downsampled depth image from the input point cloud, normalized to 0-65535.
@@ -84,13 +100,10 @@ private:
    */
   std::optional<int> get_vertical_bin(uint16_t channel) const;
 
-  double angle_range_min_deg_;
-  double angle_range_max_deg_;
-  double horizontal_resolution_;
-  int vertical_bins_;
-  bool is_channel_order_top2down_;
-  double max_distance_range_;
+  ConverterConfig config_;
 };
+
+}  // namespace pointcloud2_to_depth_image
 
 }  // namespace autoware::pointcloud_preprocessor
 

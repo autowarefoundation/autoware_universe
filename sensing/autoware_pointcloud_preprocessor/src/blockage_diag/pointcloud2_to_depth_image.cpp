@@ -26,24 +26,19 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+namespace pointcloud2_to_depth_image
+{
+
 // PointCloud2ToDepthImage class implementation
-PointCloud2ToDepthImage::PointCloud2ToDepthImage(
-  double angle_range_min_deg, double angle_range_max_deg, double horizontal_resolution, int vertical_bins,
-  bool is_channel_order_top2down, double max_distance_range)
-  : angle_range_min_deg_(angle_range_min_deg),
-  angle_range_max_deg_(angle_range_max_deg),
-  horizontal_resolution_(horizontal_resolution),
-  vertical_bins_(vertical_bins),
-  is_channel_order_top2down_(is_channel_order_top2down),
-  max_distance_range_(max_distance_range)
+PointCloud2ToDepthImage::PointCloud2ToDepthImage(const ConverterConfig & config)
+  : config_(config)
 {
 }
 
 std::optional<int> PointCloud2ToDepthImage::get_horizontal_bin(double azimuth_deg) const
 {
-  double min_deg = angle_range_min_deg_;
-  double max_deg = angle_range_max_deg_;
-
+  double min_deg = config_.horizontal.angle_range_min_deg;
+  double max_deg = config_.horizontal.angle_range_max_deg;
   bool fov_wraps_around = (min_deg > max_deg);
   if (fov_wraps_around) {
     azimuth_deg += 360.0;
@@ -55,32 +50,32 @@ std::optional<int> PointCloud2ToDepthImage::get_horizontal_bin(double azimuth_de
     return std::nullopt;
   }
 
-  return {static_cast<int>((azimuth_deg - min_deg) / horizontal_resolution_)};
+  return {static_cast<int>((azimuth_deg - min_deg) / config_.horizontal.horizontal_resolution)};
 }
 
 std::optional<int> PointCloud2ToDepthImage::get_vertical_bin(uint16_t channel) const
 {
-  if (channel >= vertical_bins_) {
+  if (channel >= config_.vertical.vertical_bins) {
     return std::nullopt;
   }
 
-  if (is_channel_order_top2down_) {
+  if (config_.vertical.is_channel_order_top2down) {
     return {channel};
   }
 
-  return {vertical_bins_ - channel - 1};
+  return {config_.vertical.vertical_bins - channel - 1};
 }
 
 cv::Mat PointCloud2ToDepthImage::make_normalized_depth_image(
   const sensor_msgs::msg::PointCloud2 & input) const
 {
   // Calculate dimensions
-  auto horizontal_bins = get_horizontal_bin(angle_range_max_deg_);
+  auto horizontal_bins = get_horizontal_bin(config_.horizontal.angle_range_max_deg);
   if (!horizontal_bins) {
     throw std::logic_error("Horizontal bin is not valid");
   }
 
-  cv::Size dimensions(*horizontal_bins, vertical_bins_);
+  cv::Size dimensions(*horizontal_bins, config_.vertical.vertical_bins);
   cv::Mat depth_image(dimensions, CV_16UC1, cv::Scalar(0));
 
   sensor_msgs::PointCloud2ConstIterator<uint16_t> iter_channel(input, "channel");
@@ -104,11 +99,13 @@ cv::Mat PointCloud2ToDepthImage::make_normalized_depth_image(
     }
 
     // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
+    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / config_.max_distance_range, 1.0));
     depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
   }
 
   return depth_image;
 }
+
+}  // namespace pointcloud2_to_depth_image
 
 }  // namespace autoware::pointcloud_preprocessor
