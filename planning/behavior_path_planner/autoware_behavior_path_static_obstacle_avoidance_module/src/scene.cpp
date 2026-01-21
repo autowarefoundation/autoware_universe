@@ -29,6 +29,8 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
+#include <boost/geometry/algorithms/correct.hpp>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -37,16 +39,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-namespace
-{
-[[gnu::noinline]]
-bool intersects_ring_linestring(
-  const autoware_utils_geometry::LinearRing2d & ring, const lanelet::BasicLineString2d & line)
-{
-  return boost::geometry::intersects(ring, line);
-}
-}  // namespace
 
 namespace autoware::behavior_path_planner
 {
@@ -1591,12 +1583,17 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
       linestring.emplace_back(p.x, p.y);
     });
 
+    const auto footprint_ring = planner_data_->parameters.vehicle_info.createFootprint();
+
     for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
       const auto transform =
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
-      const auto footprint = autoware_utils::transform_vector(
-        planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (intersects_ring_linestring(footprint, linestring)) {
+
+      autoware_utils_geometry::Polygon2d footprint_polygon;
+      footprint_polygon.outer() = autoware_utils::transform_vector(footprint_ring, transform);
+      boost::geometry::correct(footprint_polygon);
+
+      if (boost::geometry::intersects(footprint_polygon, linestring)) {
         return true;
       }
     }
