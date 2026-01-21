@@ -35,11 +35,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // Horizontal FoV, expects two values: [min, max]
     angle_range_deg_ = declare_parameter<std::vector<double>>("angle_range");
     // Whether the channel order is top-down (true) or bottom-up (false)
-    is_channel_order_top2down_ = declare_parameter<bool>("is_channel_order_top2down");
+    bool is_channel_order_top2down = declare_parameter<bool>("is_channel_order_top2down");
 
     // Blockage mask format configuration
     // The number of vertical bins in the mask. Has to equal the number of channels of the LiDAR.
-    vertical_bins_ = declare_parameter<int>("vertical_bins");
+    int vertical_bins = declare_parameter<int>("vertical_bins");
     // The angular resolution of the mask, in degrees.
     horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
 
@@ -64,26 +64,28 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // Depth map configuration
     // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this
     // value.
-    max_distance_range_ = declare_parameter<double>("max_distance_range");
+    double max_distance_range = declare_parameter<double>("max_distance_range");
 
     // Ground segmentation configuration
     // The ring ID that coincides with the horizon. Regions below are treated as ground,
     // regions above are treated as sky.
     horizontal_ring_id_ = declare_parameter<int>("horizontal_ring_id");
+
+    // Validate parameters
+    if (vertical_bins <= horizontal_ring_id_) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "The horizontal_ring_id should be smaller than vertical_bins. Skip blockage diag!");
+      return;
+    }
+
+    // Initialize PointCloud2ToDepthImage converter
+    depth_image_converter_ = std::make_unique<PointCloud2ToDepthImage>(
+      angle_range_deg_, horizontal_resolution_, vertical_bins, is_channel_order_top2down,
+      max_distance_range);
   }
   dust_mask_buffer.set_capacity(dust_buffering_frames_);
   no_return_mask_buffer.set_capacity(blockage_buffering_frames_);
-  if (vertical_bins_ <= horizontal_ring_id_) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "The horizontal_ring_id should be smaller than vertical_bins. Skip blockage diag!");
-    return;
-  }
-
-  // Initialize PointCloud2ToDepthImage converter
-  depth_image_converter_ = std::make_unique<PointCloud2ToDepthImage>(
-    angle_range_deg_, horizontal_resolution_, vertical_bins_, is_channel_order_top2down_,
-    max_distance_range_);
 
   // Publishers setup
   if (publish_debug_image_) {

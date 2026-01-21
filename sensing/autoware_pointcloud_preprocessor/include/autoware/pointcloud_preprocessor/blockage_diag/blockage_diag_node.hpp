@@ -183,16 +183,11 @@ private:
   // Debug parameters
   bool publish_debug_image_;
 
-  // LiDAR parameters
-  double max_distance_range_{200.0};
-
   // Mask size parameters
-  int vertical_bins_;
   std::vector<double> angle_range_deg_;
   double horizontal_resolution_{0.4};
 
   // Ground/sky segmentation parameters
-  bool is_channel_order_top2down_;
   int horizontal_ring_id_;
 
   // Blockage detection parameters
