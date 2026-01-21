@@ -117,6 +117,19 @@ bool is_segment_within_ego_height(
 
 namespace autoware::boundary_departure_checker
 {
+
+namespace
+{
+bool has_critical_departure(const std::vector<ClosestProjectionToBound> & closest_projections)
+{
+  const auto is_critical_departure_type = [](const auto & pt) {
+    return pt.departure_type == DepartureType::CRITICAL_DEPARTURE;
+  };
+  return std::any_of(
+    closest_projections.rbegin(), closest_projections.rend(), is_critical_departure_type);
+}
+}  // namespace
+
 UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   rclcpp::Node & node, lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info,
   const Param & param, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
@@ -191,18 +204,22 @@ void UncrossableBoundaryDepartureChecker::update_critical_departure_points(
   std::sort(critical_departure_points_.begin(), critical_departure_points_.end());
 }
 
+bool is_critical_departure(const ClosestProjectionsToBound & closest_projections_to_bound)
+{
+  const auto check_side_for_critical_departure = [&](const auto side_key) {
+    const auto & closest_projections = closest_projections_to_bound[side_key];
+    return has_critical_departure(closest_projections);
+  };
+
+  return std::any_of(g_side_keys.begin(), g_side_keys.end(), check_side_for_critical_departure);
+}
+
 bool UncrossableBoundaryDepartureChecker::is_continuous_critical_departure(
   const ClosestProjectionsToBound & closest_projections_to_bound)
 {
-  const auto is_critical_departure_found =
-    std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const auto side_key) {
-      const auto & closest_projections = closest_projections_to_bound[side_key];
-      return std::any_of(
-        closest_projections.rbegin(), closest_projections.rend(),
-        [](const auto & pt) { return pt.departure_type == DepartureType::CRITICAL_DEPARTURE; });
-    });
+  const auto is_critical_departure_detected = is_critical_departure(closest_projections_to_bound);
 
-  if (!is_critical_departure_found) {
+  if (!is_critical_departure_detected) {
     last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
     return false;
   }
@@ -214,18 +231,10 @@ bool UncrossableBoundaryDepartureChecker::is_continuous_critical_departure(
 bool UncrossableBoundaryDepartureChecker::is_critical_departure_persist(
   const ClosestProjectionsToBound & closest_projections_to_bound)
 {
-  const auto is_critical_departure_found =
-    std::any_of(
-      g_side_keys.begin(), g_side_keys.end(),
-      [&](const auto side_key) {
-        const auto & closest_projections = closest_projections_to_bound[side_key];
-        return std::any_of(
-          closest_projections.rbegin(), closest_projections.rend(),
-          [](const auto & pt) { return pt.departure_type == DepartureType::CRITICAL_DEPARTURE; });
-      }) &&
-    !critical_departure_points_.empty();
+  const auto is_critical_departure_detected =
+    is_critical_departure(closest_projections_to_bound) && !critical_departure_points_.empty();
 
-  if (is_critical_departure_found) {
+  if (is_critical_departure_detected) {
     last_found_critical_dpt_time_ = clock_ptr_->now().seconds();
     return true;
   }
@@ -341,6 +350,8 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   update_critical_departure_points(
     trajectory_points, ego_dist_on_traj_m, abnormalities_data.departure_points,
     abnormalities_data.closest_projections_to_bound);
+
+  abnormalities_data.critical_departure_points = critical_departure_points_;
 
   return abnormalities_data;
 }

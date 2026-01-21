@@ -41,11 +41,6 @@ public:
 
   void set_param(const Param & param) { param_ = param; }
 
-  const CriticalDeparturePoints & get_critical_departure_points() const
-  {
-    return critical_departure_points_;
-  }
-
   // To be used from the motion_velocity_planner
   void update_critical_departure_points(
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,

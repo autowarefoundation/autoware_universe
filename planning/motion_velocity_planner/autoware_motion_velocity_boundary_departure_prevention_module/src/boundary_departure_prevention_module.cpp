@@ -370,11 +370,10 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   }
 
   if (!result_opt) {
-    RCLCPP_INFO(logger_, "%s", result_opt.error().c_str());
+    RCLCPP_DEBUG(logger_, "%s", result_opt.error().c_str());
     return {};
   }
 
-  RCLCPP_INFO(logger_, "result successful.");
   return *result_opt;
 }
 
@@ -694,8 +693,7 @@ std::pair<int8_t, std::string> BoundaryDeparturePreventionModule::get_diagnostic
       return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <= braking_dist;
     };
 
-    const auto critical_departure_points =
-      boundary_departure_checker_ptr_->get_critical_departure_points();
+    const auto critical_departure_points = output_.abnormalities_data.critical_departure_points;
 
     if (ranges::any_of(critical_departure_points, is_within_braking_dist)) {
       return DepartureType::CRITICAL_DEPARTURE;
@@ -760,8 +758,7 @@ void BoundaryDeparturePreventionModule::publish_virtual_walls(const rclcpp::Time
   }
 
   for (const auto & [idx, critical_pt] :
-       boundary_departure_checker_ptr_->get_critical_departure_points() |
-         ranges::views::enumerate) {
+       output_.abnormalities_data.critical_departure_points | ranges::views::enumerate) {
     const auto markers_end = autoware::motion_utils::createStopVirtualWallMarker(
       critical_pt.pose_on_current_ref_traj, "boundary_departure_critical", current_time,
       static_cast<int32_t>(idx + output_.departure_intervals.size() + 1), 0.0);

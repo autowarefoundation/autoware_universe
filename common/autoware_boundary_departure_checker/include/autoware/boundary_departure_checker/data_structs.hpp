@@ -282,6 +282,7 @@ struct AbnormalitiesData
   Abnormalities<ProjectionsToBound> projections_to_bound;
   ClosestProjectionsToBound closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
+  CriticalDeparturePoints critical_departure_points;
 };
 }  // namespace autoware::boundary_departure_checker
 
