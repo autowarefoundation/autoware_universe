@@ -268,9 +268,8 @@ cv::Mat BlockageDiagComponent::make_normalized_depth_image(
 
 cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == image_16u.size());
   assert(image_16u.type() == CV_16UC1);
+  auto dimensions = image_16u.size();
 
   cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
   // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
@@ -280,9 +279,8 @@ cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
 
 cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == depth_image.size());
   assert(depth_image.type() == CV_8UC1);
+  auto dimensions = depth_image.size();
 
   cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
   cv::inRange(depth_image, 0, 1, no_return_mask);
@@ -292,9 +290,8 @@ cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) 
 
 cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
+  auto dimensions = no_return_mask.size();
 
   int kernel_size = 2 * blockage_kernel_ + 1;
   int kernel_center = blockage_kernel_;
@@ -316,9 +313,8 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
     return blockage_mask.clone();
   }
 
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == blockage_mask.size());
   assert(blockage_mask.type() == CV_8UC1);
+  auto dimensions = blockage_mask.size();
 
   cv::Mat time_series_blockage_result(dimensions, CV_8UC1, cv::Scalar(0));
   cv::Mat time_series_blockage_mask(dimensions, CV_8UC1, cv::Scalar(0));
@@ -346,9 +342,8 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
 std::pair<cv::Mat, cv::Mat> BlockageDiagComponent::segment_into_ground_and_sky(
   const cv::Mat & mask) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == mask.size());
   assert(mask.type() == CV_8UC1);
+  auto dimensions = mask.size();
 
   cv::Mat sky_mask;
   mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id_)).copyTo(sky_mask);
@@ -415,9 +410,8 @@ cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & depth_im
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
 
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
+  auto dimensions = no_return_mask.size();
 
   auto [single_dust_ground_img, sky_blank] = segment_into_ground_and_sky(no_return_mask);
 
@@ -460,7 +454,7 @@ void BlockageDiagComponent::publish_dust_debug_info(
   ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
 
   if (publish_debug_image_) {
-    auto dimensions = get_mask_dimensions();
+    auto dimensions = single_dust_img.size();
     cv::Mat binarized_dust_mask_(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
