@@ -185,19 +185,43 @@ bool SideShiftModule::canTransitSuccessState()
   return false;
 }
 
-void SideShiftModule::updateData()
+void SideShiftModule::processLateralOffsetRequest()
 {
-  if (
-    planner_data_->lateral_offset != nullptr &&
-    planner_data_->lateral_offset->stamp != latest_lateral_offset_stamp_) {
-    if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
-      lateral_offset_change_request_ = true;
-      requested_lateral_offset_ = planner_data_->lateral_offset->lateral_offset;
-      latest_lateral_offset_stamp_ = planner_data_->lateral_offset->stamp;
-    }
+  const bool has_new_offset = planner_data_->lateral_offset != nullptr &&
+                              planner_data_->lateral_offset->stamp != latest_lateral_offset_stamp_;
+
+  if (!has_new_offset) {
+    return;
   }
 
-  if (getCurrentStatus() != ModuleStatus::RUNNING && getCurrentStatus() != ModuleStatus::IDLE) {
+  if (!isReadyForNextRequest(parameters_->shift_request_time_limit)) {
+    return;
+  }
+
+  lateral_offset_change_request_ = true;
+  requested_lateral_offset_ = planner_data_->lateral_offset->lateral_offset;
+  latest_lateral_offset_stamp_ = planner_data_->lateral_offset->stamp;
+}
+
+void SideShiftModule::restoreVelocityFromOriginal(
+  PathWithLaneId & resampled_path, const PathWithLaneId & original_path) const
+{
+  for (auto & point : resampled_path.points) {
+    const auto & pos = point.point.pose.position;
+    const size_t nearest_idx = autoware::motion_utils::findNearestIndex(original_path.points, pos);
+    const bool valid_idx = nearest_idx < original_path.points.size();
+    point.point.longitudinal_velocity_mps =
+      valid_idx ? original_path.points.at(nearest_idx).point.longitudinal_velocity_mps : 0.0;
+  }
+}
+
+void SideShiftModule::updateData()
+{
+  processLateralOffsetRequest();
+
+  const bool is_active =
+    getCurrentStatus() == ModuleStatus::RUNNING || getCurrentStatus() == ModuleStatus::IDLE;
+  if (!is_active) {
     return;
   }
 
@@ -224,15 +248,7 @@ void SideShiftModule::updateData()
   reference_path_ = utils::resamplePathWithSpline(centerline_path, resample_interval);
 
   // Restore velocity information after resampling
-  // resamplePathWithSpline may not preserve velocities correctly, so we interpolate from original
-  for (auto & point : reference_path_.points) {
-    const auto & pos = point.point.pose.position;
-    const size_t nearest_idx =
-      autoware::motion_utils::findNearestIndex(centerline_path.points, pos);
-    const bool valid_idx = nearest_idx < centerline_path.points.size();
-    point.point.longitudinal_velocity_mps =
-      valid_idx ? centerline_path.points.at(nearest_idx).point.longitudinal_velocity_mps : 0.0;
-  }
+  restoreVelocityFromOriginal(reference_path_, centerline_path);
 
   path_shifter_.setPath(reference_path_);
 
@@ -309,25 +325,20 @@ BehaviorModuleOutput SideShiftModule::plan()
 
   if (can_replace_shift) {
     replaceShiftLine();
-  } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
-    RCLCPP_DEBUG(getLogger(), "ego is shifting");
-  } else {
-    RCLCPP_DEBUG(getLogger(), "change is not requested");
   }
 
   // Generate shifted path
   ShiftedPath shifted_path;
   const bool generate_success = path_shifter_.generate(&shifted_path);
 
-  // Handle generation failure
-  if (!generate_success) {
+  // Handle generation failure by reusing previous output if available
+  if (!generate_success && !prev_output_.path.points.empty()) {
     RCLCPP_ERROR(getLogger(), "SideShift: failed to generate shifted path. Reusing previous path");
-    shifted_path = prev_output_.path.points.empty() ? ShiftedPath{} : prev_output_;
+    shifted_path = prev_output_;
   }
 
   // Handle empty path
   if (shifted_path.path.points.empty()) {
-    RCLCPP_ERROR(getLogger(), "Generated shift_path has no points");
     return getPreviousModuleOutput();
   }
 
@@ -594,10 +605,7 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
   const size_t start_idx = utils::getIdxByArclength(reference_path_, nearest_idx, dist_to_start);
   const size_t end_idx = utils::getIdxByArclength(reference_path_, nearest_idx, check_distance);
 
-  double safe_left_limit = 100.0;
-  double safe_right_limit =
-    100.0;  // Initialize with large positive value, will be negated for right shifts
-  bool found_valid_limit = false;
+  LaneLimitInfo limits;
 
   // Check range: from shift start point to end of check distance
   for (size_t i = start_idx; i < std::min(end_idx, reference_path_.points.size()); ++i) {
@@ -610,71 +618,71 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
     }
 
     const lanelet::BasicPoint2d target_point(pose.position.x, pose.position.y);
+    const auto adj_info = getAdjacentLaneInfo(lane);
 
-    // For mode 2, check if adjacent lanes in the same direction exist
-    bool allow_left = false;
-    bool allow_right = false;
-    lanelet::ConstLanelet left_lane_val;
-    lanelet::ConstLanelet right_lane_val;
-    bool has_left = false;
-    bool has_right = false;
-
-    if (parameters_->drivable_area_check_mode == 2) {
-      // Get adjacent lanes (same direction only)
-      const auto l = route_handler->getLeftLanelet(lane, true, false);
-      const auto r = route_handler->getRightLanelet(lane, true, false);
-      if (l) {
-        allow_left = true;
-        has_left = true;
-        left_lane_val = *l;
-      }
-      if (r) {
-        allow_right = true;
-        has_right = true;
-        right_lane_val = *r;
-      }
-    }
-
-    // Determine which lane the reference point is in
+    // Determine which lane the reference point is in and update limits
     lanelet::ConstLanelet current_check_lane = lane;
     bool point_in_adjacent = false;
 
-    if (!lanelet::geometry::inside(lane, target_point)) {
-      // Check if point is in adjacent lanes
-      if (has_left && lanelet::geometry::inside(left_lane_val, target_point)) {
-        current_check_lane = left_lane_val;
-        point_in_adjacent = true;
-      } else if (has_right && lanelet::geometry::inside(right_lane_val, target_point)) {
-        current_check_lane = right_lane_val;
-        point_in_adjacent = true;
-      } else {
-        // Point is outside all valid lanes - use conservative limits
-        LaneLimitInfo limits{safe_left_limit, safe_right_limit, found_valid_limit};
-        updateLaneLimitsForOutsidePoint(lane, target_point, vehicle_half_width, margin, limits);
-        safe_left_limit = limits.safe_left_limit;
-        safe_right_limit = limits.safe_right_limit;
-        found_valid_limit = limits.found_valid_limit;
-        continue;
-      }
+    const bool in_current_lane = lanelet::geometry::inside(lane, target_point);
+    const bool in_left_lane =
+      adj_info.has_left && lanelet::geometry::inside(adj_info.left_lane, target_point);
+    const bool in_right_lane =
+      adj_info.has_right && lanelet::geometry::inside(adj_info.right_lane, target_point);
+
+    if (!in_current_lane && in_left_lane) {
+      current_check_lane = adj_info.left_lane;
+      point_in_adjacent = true;
+    } else if (!in_current_lane && in_right_lane) {
+      current_check_lane = adj_info.right_lane;
+      point_in_adjacent = true;
+    } else if (!in_current_lane) {
+      // Point is outside all valid lanes - use conservative limits
+      updateLaneLimitsForOutsidePoint(lane, target_point, vehicle_half_width, margin, limits);
+      continue;
     }
 
     // Calculate available space based on the lane the point is in
-    LaneLimitInfo limits{safe_left_limit, safe_right_limit, found_valid_limit};
     updateLaneLimitsForInsidePoint(
-      current_check_lane, target_point, allow_left, allow_right, point_in_adjacent, left_lane_val,
-      right_lane_val, vehicle_half_width, margin, limits);
-    safe_left_limit = limits.safe_left_limit;
-    safe_right_limit = limits.safe_right_limit;
-    found_valid_limit = limits.found_valid_limit;
+      current_check_lane, target_point, adj_info.allow_left, adj_info.allow_right,
+      point_in_adjacent, adj_info.left_lane, adj_info.right_lane, vehicle_half_width, margin,
+      limits);
   }
 
-  if (!found_valid_limit) {
+  if (!limits.found_valid_limit) {
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 1000, "SideShift: No valid lane found for limit check. Returning 0.0");
     return 0.0;
   }
 
-  return clampOffsetToLimits(requested_offset, safe_left_limit, safe_right_limit);
+  return clampOffsetToLimits(requested_offset, limits.safe_left_limit, limits.safe_right_limit);
+}
+
+SideShiftModule::AdjacentLaneInfo SideShiftModule::getAdjacentLaneInfo(
+  const lanelet::ConstLanelet & lane) const
+{
+  AdjacentLaneInfo info;
+
+  if (parameters_->drivable_area_check_mode != 2) {
+    return info;
+  }
+
+  const auto & route_handler = planner_data_->route_handler;
+  const auto left_opt = route_handler->getLeftLanelet(lane, true, false);
+  const auto right_opt = route_handler->getRightLanelet(lane, true, false);
+
+  if (left_opt) {
+    info.allow_left = true;
+    info.has_left = true;
+    info.left_lane = *left_opt;
+  }
+  if (right_opt) {
+    info.allow_right = true;
+    info.has_right = true;
+    info.right_lane = *right_opt;
+  }
+
+  return info;
 }
 
 void SideShiftModule::updateLaneLimitsForOutsidePoint(

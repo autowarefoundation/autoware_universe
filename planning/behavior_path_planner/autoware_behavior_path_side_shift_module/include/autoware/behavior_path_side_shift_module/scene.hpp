@@ -95,6 +95,18 @@ private:
     bool found_valid_limit{false};
   };
 
+  struct AdjacentLaneInfo
+  {
+    bool allow_left{false};
+    bool allow_right{false};
+    bool has_left{false};
+    bool has_right{false};
+    lanelet::ConstLanelet left_lane;
+    lanelet::ConstLanelet right_lane;
+  };
+
+  AdjacentLaneInfo getAdjacentLaneInfo(const lanelet::ConstLanelet & lane) const;
+
   void updateLaneLimitsForOutsidePoint(
     const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
     double vehicle_half_width, double margin, LaneLimitInfo & limits) const;
@@ -107,6 +119,11 @@ private:
 
   double clampOffsetToLimits(
     double requested_offset, double safe_left_limit, double safe_right_limit) const;
+
+  void processLateralOffsetRequest();
+
+  void restoreVelocityFromOriginal(
+    PathWithLaneId & resampled_path, const PathWithLaneId & original_path) const;
 
   // const methods
   void publishPath(const PathWithLaneId & path) const;
