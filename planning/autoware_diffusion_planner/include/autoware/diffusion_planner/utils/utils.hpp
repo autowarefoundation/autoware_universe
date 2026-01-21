@@ -50,7 +50,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
  * @param pose The pose containing position and orientation information.
  * @return A 4x4 transformation matrix representing the pose.
  */
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose);
 
 /**
  * @brief Extracts yaw angle from rotation matrix and converts to cos/sin representation.
