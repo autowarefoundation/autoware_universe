@@ -509,7 +509,7 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
       continue;
     }
 
-    lanelet::BasicPolygons2d polygons2d;
+    autoware_utils_geometry::MultiPolygon2d polygons2d;
     boost::geometry::difference(
       lanelet::utils::to2D(original), combine_lanelet.polygon2d().basicPolygon(), polygons2d);
 
@@ -518,7 +518,7 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
     }
 
     lanelet::BasicPolygon3d polygon3d;
-    for (const auto & p : polygons2d.front()) {
+    for (const auto & p : polygons2d.front().outer()) {
       polygon3d.push_back(lanelet::BasicPoint3d(p.x(), p.y(), original.front().z()));
     }
 
