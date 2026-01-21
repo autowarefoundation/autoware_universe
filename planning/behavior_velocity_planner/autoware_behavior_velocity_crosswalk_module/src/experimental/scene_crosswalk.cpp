@@ -892,34 +892,16 @@ std::pair<double, double> CrosswalkModule::clampAttentionRangeByNeighborCrosswal
 }
 
 std::optional<double> CrosswalkModule::findEgoPassageDirectionAlongPath(
-  const Trajectory & ego_path) const
+  const Trajectory & sparse_resample_path) const
 {
-  // Sample trajectory sparsely at 4.0m intervals
-  constexpr double resample_interval = 4.0;
-  const auto sparse_resample_path = autoware::motion_utils::resampleTrajectory(
-    ego_path, resample_interval, false, true, true, false);
-
-  std::vector<TrajectoryPoint> discrete_points;
-  const double total_length = sparse_resample_path.length();
-  for (double s = 0.0; s <= total_length; s += resample_interval) {
-    discrete_points.push_back(sparse_resample_path.compute(s).point);
-  }
-  if (
-    discrete_points.empty() ||
-    total_length - (total_length / resample_interval) * resample_interval > 0.01) {
-    discrete_points.push_back(sparse_resample_path.compute(total_length).point);
-  }
-
-  auto findIntersectPoint =
-    [&](const lanelet::ConstLineString3d line) -> std::optional<geometry_msgs::msg::Point> {
+  auto findIntersectPoint = [&](const lanelet::ConstLineString3d line) -> std::optional<geometry_msgs::msg::Point> {
     const auto line_2d = lanelet::utils::to2D(line);
-    const auto intersect_s_values =
-      autoware::experimental::trajectory::crossed(sparse_resample_path, line_2d.basicLineString());
-
+    const auto intersect_s_values = autoware::experimental::trajectory::crossed(sparse_resample_path, line_2d.basicLineString());
+    
     if (intersect_s_values.empty()) {
       return std::nullopt;
     }
-
+    
     const auto intersect_pose = sparse_resample_path.compute(intersect_s_values.front()).point.pose;
     return intersect_pose.position;
   };
@@ -973,22 +955,6 @@ std::optional<CollisionPoint> CrosswalkModule::getCollisionPoint(
   const PlannerData & planner_data)
 {
   stop_watch_.tic(__func__);
-
-  // Sample trajectory sparsely at 4.0m intervals
-  constexpr double resample_interval = 4.0;
-  const auto sparse_resample_path = autoware::motion_utils::resampleTrajectory(
-    ego_path, resample_interval, false, true, true, false);
-
-  std::vector<TrajectoryPoint> discrete_points;
-  const double total_length = sparse_resample_path.length();
-  for (double s = 0.0; s <= total_length; s += resample_interval) {
-    discrete_points.push_back(sparse_resample_path.compute(s).point);
-  }
-  if (
-    discrete_points.empty() ||
-    total_length - (total_length / resample_interval) * resample_interval > 0.01) {
-    discrete_points.push_back(sparse_resample_path.compute(total_length).point);
-  }
 
   const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
 
@@ -1046,12 +1012,11 @@ std::optional<CollisionPoint> CrosswalkModule::getCollisionPoint(
       const auto intersection_center_point = create_point(
         boost_intersection_center_point.x(), boost_intersection_center_point.y(), ego_pos.z);
 
-      const auto dist_ego2cp = autoware::experimental::trajectory::find_nearest_index(
-        sparse_resample_path, intersection_center_point);
-      const auto ego_s =
-        autoware::experimental::trajectory::find_nearest_index(sparse_resample_path, ego_pos);
+      const auto dist_ego2cp =
+        autoware::experimental::trajectory::find_nearest_index(ego_path, intersection_center_point);
+      const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
       const double relative_dist_ego2cp = dist_ego2cp - ego_s;
-
+      
       constexpr double eps = 1e-3;
       const auto dist_obj2cp =
         calcArcLength(obj_path.path) < eps
@@ -1242,31 +1207,16 @@ void CrosswalkModule::applySlowDownByOcclusion(
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
-  const Trajectory & ego_path, const std::pair<double, double> & crosswalk_attention_range,
+  const Trajectory & sparse_resample_path,
+  const std::pair<double, double> & crosswalk_attention_range,
   const PlannerData & planner_data) const
 {
   const auto & ego_pos = planner_data.current_odometry->pose.position;
   const auto ego_polygon = createVehiclePolygon(planner_data.vehicle_info_);
-
-  constexpr double resample_interval = 4.0;
-  const auto sparse_resample_path = autoware::motion_utils::resampleTrajectory(
-    ego_path, resample_interval, false, true, true, false);
-
-  std::vector<TrajectoryPoint> discrete_points;
-  const double total_length = sparse_resample_path.length();
-  for (double s = 0.0; s <= total_length; s += resample_interval) {
-    discrete_points.push_back(sparse_resample_path.compute(s).point);
-  }
-  if (
-    discrete_points.empty() ||
-    total_length - (total_length / resample_interval) * resample_interval > 0.01) {
-    discrete_points.push_back(sparse_resample_path.compute(total_length).point);
-  }
-
-  const auto ego_s =
-    autoware::experimental::trajectory::find_nearest_index(sparse_resample_path, ego_pos);
-  const auto length_sum =
-    calcSignedArcLengthPartialSum(discrete_points, size_t(0), discrete_points.size());
+  
+  const auto discrete_points = sparse_resample_path.restore();
+  const auto ego_s = autoware::experimental::trajectory::find_nearest_index(sparse_resample_path, ego_pos);
+  const auto length_sum = calcSignedArcLengthPartialSum(discrete_points, size_t(0), discrete_points.size());
 
   Polygon2d attention_area;
   
@@ -1336,9 +1286,7 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
 
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto obj_s = autoware::experimental::trajectory::find_nearest_index(ego_path, obj_pose.position);
-
-    const auto pingin_nge_const_auto = aja.boleh_kah()
-
+    
     const auto nearest_path_pose = ego_path.compute(obj_s).point.pose;
     const auto dx = obj_pose.position.x - nearest_path_pose.position.x;
     const auto dy = obj_pose.position.y - nearest_path_pose.position.y;
@@ -1581,27 +1529,12 @@ CrosswalkModule::getNearestStopFactorAndReason(
 }
 
 void CrosswalkModule::updateObjectState(
-  const double dist_ego_to_stop, const Trajectory & ego_path,
+  const double dist_ego_to_stop, const Trajectory & sparse_resample_path,
   const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
   const PlannerData & planner_data)
 {
   const auto & p = planner_param_;
   const auto & objects_ptr = planner_data.predicted_objects;
-
-  constexpr double resample_interval = 4.0;
-  const auto sparse_resample_path = autoware::motion_utils::resampleTrajectory(
-    ego_path, resample_interval, false, true, true, false);
-
-  std::vector<TrajectoryPoint> discrete_points;
-  const double total_length = sparse_resample_path.length();
-  for (double s = 0.0; s <= total_length; s += resample_interval) {
-    discrete_points.push_back(sparse_resample_path.compute(s).point);
-  }
-  if (
-    discrete_points.empty() ||
-    total_length - (total_length / resample_interval) * resample_interval > 0.01) {
-    discrete_points.push_back(sparse_resample_path.compute(total_length).point);
-  }
 
   const auto traffic_lights_reg_elems =
     crosswalk_.regulatoryElementsAs<const lanelet::TrafficLight>();
@@ -1645,9 +1578,9 @@ void CrosswalkModule::updateObjectState(
 
     // calculate collision point and state
     const auto collision_point = getCollisionPoint(
-      ego_path, object, crosswalk_attention_range, attention_area, planner_data);
+      sparse_resample_path, object, crosswalk_attention_range, attention_area, planner_data);
     const std::optional<double> ego_crosswalk_passage_direction =
-      findEgoPassageDirectionAlongPath(ego_path);
+      findEgoPassageDirectionAlongPath(sparse_resample_path);
     object_info_manager_.update(
       obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
       is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
