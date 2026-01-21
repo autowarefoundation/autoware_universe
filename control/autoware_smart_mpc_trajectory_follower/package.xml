@@ -29,10 +29,10 @@
   <depend>autoware_vehicle_msgs</depend>
   <depend>pybind11_vendor</depend>
   <depend>python3-scipy</depend>
-  <depend>python3-torch</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
 
+  <exec_depend condition="$ROS_DISTRO == humble">python3-torch</exec_depend>
   <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
