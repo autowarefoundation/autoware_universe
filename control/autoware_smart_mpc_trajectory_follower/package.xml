@@ -32,8 +32,8 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
 
-  <exec_depend>ros2launch</exec_depend>
   <exec_depend condition="$ROS_DISTRO == humble">python3-torch</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_index_python</test_depend>
