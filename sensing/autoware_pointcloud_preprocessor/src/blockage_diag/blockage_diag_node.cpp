@@ -80,6 +80,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     return;
   }
 
+  // Initialize PointCloud2ToDepthImage converter
+  depth_image_converter_ = std::make_unique<PointCloud2ToDepthImage>(
+    angle_range_deg_, horizontal_resolution_, vertical_bins_, is_channel_order_top2down_,
+    max_distance_range_);
+
   // Publishers setup
   if (publish_debug_image_) {
     lidar_depth_map_pub_ =
@@ -183,87 +188,6 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
     msg = msg + ": LIDAR ground dust";
   }
   stat.summary(level, msg);
-}
-
-cv::Size BlockageDiagComponent::get_mask_dimensions() const
-{
-  auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
-  if (!horizontal_bins) {
-    throw std::logic_error("Horizontal bin is not valid");
-  }
-
-  return {*horizontal_bins, vertical_bins_};
-}
-
-std::optional<int> BlockageDiagComponent::get_horizontal_bin(double azimuth_deg) const
-{
-  double min_deg = angle_range_deg_[0];
-  double max_deg = angle_range_deg_[1];
-
-  bool fov_wraps_around = (min_deg > max_deg);
-  if (fov_wraps_around) {
-    azimuth_deg += 360.0;
-    max_deg += 360.0;
-  }
-
-  bool azimuth_is_in_fov = ((azimuth_deg > min_deg) && (azimuth_deg <= max_deg));
-  if (!azimuth_is_in_fov) {
-    return std::nullopt;
-  }
-
-  return {static_cast<int>((azimuth_deg - min_deg) / horizontal_resolution_)};
-}
-
-std::optional<int> BlockageDiagComponent::get_vertical_bin(uint16_t channel) const
-{
-  if (channel >= vertical_bins_) {
-    return std::nullopt;
-  }
-
-  if (is_channel_order_top2down_) {
-    return {channel};
-  }
-
-  return {vertical_bins_ - channel - 1};
-}
-
-cv::Mat BlockageDiagComponent::make_normalized_depth_image(
-  const sensor_msgs::msg::PointCloud2 & input) const
-{
-  auto dimensions = get_mask_dimensions();
-  cv::Mat depth_image(dimensions, CV_16UC1, cv::Scalar(0));
-
-  sensor_msgs::PointCloud2ConstIterator<uint16_t> iter_channel(input, "channel");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(input, "distance");
-
-  for (; iter_channel != iter_channel.end(); ++iter_channel, ++iter_azimuth, ++iter_distance) {
-    uint16_t channel = *iter_channel;
-    float azimuth = *iter_azimuth;
-    float distance = *iter_distance;
-
-    auto vertical_bin = get_vertical_bin(channel);
-    if (!vertical_bin) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "channel: %d is larger than vertical_bins: %d. Please check the parameter "
-        "'vertical_bins'.",
-        channel, vertical_bins_);
-      throw std::runtime_error("Parameter is not valid");
-    }
-
-    double azimuth_deg = azimuth * (180.0 / M_PI);
-    auto horizontal_bin = get_horizontal_bin(azimuth_deg);
-    if (!horizontal_bin) {
-      continue;
-    }
-
-    // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
-    depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
-  }
-
-  return depth_image;
 }
 
 cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
@@ -560,7 +484,7 @@ void BlockageDiagComponent::update_diagnostics(
     return;
   }
 
-  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
+  cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
   cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);

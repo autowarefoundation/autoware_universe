@@ -114,6 +114,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/distortion_corrector/distortion_corrector_node.cpp
   src/blockage_diag/blockage_diag.cpp
   src/blockage_diag/blockage_diag_node.cpp
+  src/blockage_diag/pointcloud2_to_depth_image.cpp
   src/polygon_remover/polygon_remover.cpp
   src/vector_map_filter/vector_map_inside_area_filter_node.cpp
   src/utility/geometry.cpp
