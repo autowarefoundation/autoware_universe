@@ -31,8 +31,7 @@ class PointCloud2ToDepthImageTest : public ::testing::Test
 {
 protected:
   sensor_msgs::msg::PointCloud2 create_pointcloud(
-    const std::vector<uint16_t> & channels,
-    const std::vector<float> & azimuths_deg,
+    const std::vector<uint16_t> & channels, const std::vector<float> & azimuths_deg,
     const std::vector<float> & distances)
   {
     EXPECT_EQ(channels.size(), azimuths_deg.size());
@@ -102,7 +101,7 @@ TEST_F(PointCloud2ToDepthImageTest, BasicDepthImageCreation)
   // Create a simple pointcloud with one point
   float first_index_angle = 0.1;
   float mid_distance = 50.0;
-  sensor_msgs::msg::PointCloud2 cloud =create_pointcloud({0}, {first_index_angle}, {mid_distance});
+  sensor_msgs::msg::PointCloud2 cloud = create_pointcloud({0}, {first_index_angle}, {mid_distance});
   // Expected normalized depth calculation
   uint16_t expected_normalized_depth = UINT16_MAX / 2;
 
@@ -143,7 +142,7 @@ TEST_F(PointCloud2ToDepthImageTest, ChannelOrderBottom2Top)
   std::vector<uint16_t> channels = {2};
   std::vector<float> azimuths_deg = {1.0};
   std::vector<float> distances = {50.0};
-  sensor_msgs::msg::PointCloud2 cloud =create_pointcloud(channels, azimuths_deg, distances);
+  sensor_msgs::msg::PointCloud2 cloud = create_pointcloud(channels, azimuths_deg, distances);
 
   // Conversion
   PointCloud2ToDepthImage converter(config);

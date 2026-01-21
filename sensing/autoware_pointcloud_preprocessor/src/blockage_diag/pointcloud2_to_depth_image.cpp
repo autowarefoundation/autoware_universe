@@ -30,8 +30,7 @@ namespace pointcloud2_to_depth_image
 {
 
 // PointCloud2ToDepthImage class implementation
-PointCloud2ToDepthImage::PointCloud2ToDepthImage(const ConverterConfig & config)
-  : config_(config)
+PointCloud2ToDepthImage::PointCloud2ToDepthImage(const ConverterConfig & config) : config_(config)
 {
 }
 
@@ -99,7 +98,8 @@ cv::Mat PointCloud2ToDepthImage::make_normalized_depth_image(
     }
 
     // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / config_.max_distance_range, 1.0));
+    uint16_t normalized_depth =
+      UINT16_MAX * (1.0 - std::min(distance / config_.max_distance_range, 1.0));
     depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
   }
 
