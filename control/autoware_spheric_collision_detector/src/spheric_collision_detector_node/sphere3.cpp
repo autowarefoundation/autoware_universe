@@ -16,7 +16,8 @@
 
 namespace sphere3
 {
-    Sphere3::Sphere3(Eigen::Vector3d center, double radius, int tag): center_(center), radius_(radius), tag_(tag)
-    {
-    }
+Sphere3::Sphere3(Eigen::Vector3d center, double radius, int tag)
+: center_(center), radius_(radius), tag_(tag)
+{
 }
+}  // namespace sphere3

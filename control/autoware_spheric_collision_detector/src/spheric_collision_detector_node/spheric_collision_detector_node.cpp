@@ -16,7 +16,6 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -31,7 +30,6 @@ namespace spheric_collision_detector
 SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOptions & node_options)
 : Node("spheric_collision_detector_node", node_options), updater_(this)
 {
-
   using std::placeholders::_1;
 
   // Node Parameter
@@ -43,7 +41,7 @@ SphericCollisionDetectorNode::SphericCollisionDetectorNode(const rclcpp::NodeOpt
   // Dynamic Reconfigure
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&SphericCollisionDetectorNode::paramCallback, this, _1));
-    
+
   // Core
   spheric_collision_detector_ = std::make_unique<SphericCollisionDetector>(*this);
   spheric_collision_detector_->setParam(param_);
@@ -112,7 +110,7 @@ bool SphericCollisionDetectorNode::isDataReady()
     return false;
   }
 
-   if (!object_recognition_) {
+  if (!object_recognition_) {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for object_recognition msg...");
@@ -128,7 +126,7 @@ bool SphericCollisionDetectorNode::isDataReady()
 
   if (!current_twist_) {
     RCLCPP_INFO_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000 /* ms */, 
+      this->get_logger(), *this->get_clock(), 5000 /* ms */,
       "scd: waiting for current_twist msg...");
     return false;
   }
@@ -153,21 +151,20 @@ bool SphericCollisionDetectorNode::isDataTimeout()
 
 void SphericCollisionDetectorNode::onTimer()
 {
-  current_pose_ = self_pose_listener_->getCurrentPose();
+  current_pose_ = self_pose_listener_->get_current_pose();
 
   if (object_recognition_) {
     const auto & header = object_recognition_->header;
     try {
       object_recognition_transform_ = tf_buffer_.lookupTransform(
-        "map", header.frame_id, header.stamp,
-        rclcpp::Duration::from_seconds(0.01));
+        "map", header.frame_id, header.stamp, rclcpp::Duration::from_seconds(0.01));
     } catch (tf2::TransformException & ex) {
       RCLCPP_INFO(
         this->get_logger(), "scd: Could not transform map to %s: %s", header.frame_id.c_str(),
         ex.what());
       return;
     }
-  } 
+  }
 
   if (!isDataReady()) {
     return;
@@ -183,7 +180,7 @@ void SphericCollisionDetectorNode::onTimer()
   input_.current_twist = current_twist_;
   input_.object_recognition_transform = object_recognition_transform_;
   output_.will_collide = false;
-  
+
   output_ = spheric_collision_detector_->update(input_);
 
   if (output_.will_collide) {
