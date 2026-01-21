@@ -107,6 +107,17 @@ private:
 
   AdjacentLaneInfo getAdjacentLaneInfo(const lanelet::ConstLanelet & lane) const;
 
+  struct LanePositionResult
+  {
+    lanelet::ConstLanelet check_lane;
+    bool is_in_adjacent{false};
+    bool is_outside_all{false};
+  };
+
+  LanePositionResult determineLanePosition(
+    const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
+    const AdjacentLaneInfo & adj_info) const;
+
   void updateLaneLimitsForOutsidePoint(
     const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
     double vehicle_half_width, double margin, LaneLimitInfo & limits) const;

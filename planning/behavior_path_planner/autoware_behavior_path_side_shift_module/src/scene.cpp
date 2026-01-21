@@ -620,32 +620,18 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
     const lanelet::BasicPoint2d target_point(pose.position.x, pose.position.y);
     const auto adj_info = getAdjacentLaneInfo(lane);
 
-    // Determine which lane the reference point is in and update limits
-    lanelet::ConstLanelet current_check_lane = lane;
-    bool point_in_adjacent = false;
+    // Determine which lane the reference point is in
+    const auto lane_pos = determineLanePosition(lane, target_point, adj_info);
 
-    const bool in_current_lane = lanelet::geometry::inside(lane, target_point);
-    const bool in_left_lane =
-      adj_info.has_left && lanelet::geometry::inside(adj_info.left_lane, target_point);
-    const bool in_right_lane =
-      adj_info.has_right && lanelet::geometry::inside(adj_info.right_lane, target_point);
-
-    if (!in_current_lane && in_left_lane) {
-      current_check_lane = adj_info.left_lane;
-      point_in_adjacent = true;
-    } else if (!in_current_lane && in_right_lane) {
-      current_check_lane = adj_info.right_lane;
-      point_in_adjacent = true;
-    } else if (!in_current_lane) {
-      // Point is outside all valid lanes - use conservative limits
+    if (lane_pos.is_outside_all) {
       updateLaneLimitsForOutsidePoint(lane, target_point, vehicle_half_width, margin, limits);
       continue;
     }
 
     // Calculate available space based on the lane the point is in
     updateLaneLimitsForInsidePoint(
-      current_check_lane, target_point, adj_info.allow_left, adj_info.allow_right,
-      point_in_adjacent, adj_info.left_lane, adj_info.right_lane, vehicle_half_width, margin,
+      lane_pos.check_lane, target_point, adj_info.allow_left, adj_info.allow_right,
+      lane_pos.is_in_adjacent, adj_info.left_lane, adj_info.right_lane, vehicle_half_width, margin,
       limits);
   }
 
@@ -683,6 +669,37 @@ SideShiftModule::AdjacentLaneInfo SideShiftModule::getAdjacentLaneInfo(
   }
 
   return info;
+}
+
+SideShiftModule::LanePositionResult SideShiftModule::determineLanePosition(
+  const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
+  const AdjacentLaneInfo & adj_info) const
+{
+  LanePositionResult result;
+  result.check_lane = lane;
+
+  const bool in_current_lane = lanelet::geometry::inside(lane, target_point);
+  if (in_current_lane) {
+    return result;
+  }
+
+  // Not in current lane - check adjacent lanes
+  const bool in_left_lane =
+    adj_info.has_left && lanelet::geometry::inside(adj_info.left_lane, target_point);
+  const bool in_right_lane =
+    adj_info.has_right && lanelet::geometry::inside(adj_info.right_lane, target_point);
+
+  if (in_left_lane) {
+    result.check_lane = adj_info.left_lane;
+    result.is_in_adjacent = true;
+  } else if (in_right_lane) {
+    result.check_lane = adj_info.right_lane;
+    result.is_in_adjacent = true;
+  } else {
+    result.is_outside_all = true;
+  }
+
+  return result;
 }
 
 void SideShiftModule::updateLaneLimitsForOutsidePoint(
