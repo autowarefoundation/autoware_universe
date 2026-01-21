@@ -65,7 +65,7 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
+  void update_diagnostics(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
@@ -188,19 +188,32 @@ private:
   void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
 
   /**
-   * @brief Compute dust diagnostics and update the internal dust info.
+   * @brief Compute blockage diagnostics and update the internal blockage info.
    *
-   * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
-   * @param debug_info The debug info to publish if enabled.
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
    */
-  void compute_dust_diagnostics(const cv::Mat & no_return_mask, const DebugInfo & debug_info);
+  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
-   * @brief Publish the debug info if enabled.
+   * @brief Compute dust diagnostics and update the internal dust info.
+   *
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
+   */
+  cv::Mat compute_dust_diagnostics(const cv::Mat & depth_image_16u);
+
+  /**
+   * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
    */
-  void publish_debug_info(const DebugInfo & debug_info) const;
+  void publish_blockage_debug_info(const DebugInfo & debug_info) const;
+
+  /**
+   * @brief Publish the debug info of dust diagnostics if enabled.
+   *
+   * @param debug_info The debug info to publish.
+   */
+  void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
 
   Updater updater_{this};
 
