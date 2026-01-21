@@ -22,7 +22,11 @@
 
 #include <sensor_msgs/msg/camera_info.hpp>
 
-#include <image_geometry/pinhole_camera_model.h>
+#if __has_include(<image_geometry/pinhole_camera_model.hpp>)
+#include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <image_geometry/pinhole_camera_model.h>  // for ROS 2 Humble or older
+#endif
 
 #include <memory>
 
