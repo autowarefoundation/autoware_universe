@@ -21,7 +21,6 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <optional>
-#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -38,14 +37,15 @@ public:
   /**
    * @brief Construct a new PointCloud2ToDepthImage object.
    *
-   * @param angle_range_deg The angle range [min, max] in degrees.
+   * @param angle_range_min_deg The angle range min in degrees.
+   * @param angle_range_max_deg The angle range max in degrees.
    * @param horizontal_resolution The horizontal resolution in degrees.
    * @param vertical_bins The number of vertical bins.
    * @param is_channel_order_top2down Whether the channel order is top-down.
    * @param max_distance_range The maximum distance range in meters.
    */
   PointCloud2ToDepthImage(
-    const std::vector<double> & angle_range_deg, double horizontal_resolution, int vertical_bins,
+    double angle_range_min_deg, double angle_range_max_deg, double horizontal_resolution, int vertical_bins,
     bool is_channel_order_top2down, double max_distance_range);
 
   /**
@@ -84,7 +84,8 @@ private:
    */
   std::optional<int> get_vertical_bin(uint16_t channel) const;
 
-  std::vector<double> angle_range_deg_;
+  double angle_range_min_deg_;
+  double angle_range_max_deg_;
   double horizontal_resolution_;
   int vertical_bins_;
   bool is_channel_order_top2down_;

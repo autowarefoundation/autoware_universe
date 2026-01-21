@@ -28,9 +28,10 @@ namespace autoware::pointcloud_preprocessor
 
 // PointCloud2ToDepthImage class implementation
 PointCloud2ToDepthImage::PointCloud2ToDepthImage(
-  const std::vector<double> & angle_range_deg, double horizontal_resolution, int vertical_bins,
+  double angle_range_min_deg, double angle_range_max_deg, double horizontal_resolution, int vertical_bins,
   bool is_channel_order_top2down, double max_distance_range)
-: angle_range_deg_(angle_range_deg),
+  : angle_range_min_deg_(angle_range_min_deg),
+  angle_range_max_deg_(angle_range_max_deg),
   horizontal_resolution_(horizontal_resolution),
   vertical_bins_(vertical_bins),
   is_channel_order_top2down_(is_channel_order_top2down),
@@ -40,8 +41,8 @@ PointCloud2ToDepthImage::PointCloud2ToDepthImage(
 
 std::optional<int> PointCloud2ToDepthImage::get_horizontal_bin(double azimuth_deg) const
 {
-  double min_deg = angle_range_deg_[0];
-  double max_deg = angle_range_deg_[1];
+  double min_deg = angle_range_min_deg_;
+  double max_deg = angle_range_max_deg_;
 
   bool fov_wraps_around = (min_deg > max_deg);
   if (fov_wraps_around) {
@@ -74,7 +75,7 @@ cv::Mat PointCloud2ToDepthImage::make_normalized_depth_image(
   const sensor_msgs::msg::PointCloud2 & input) const
 {
   // Calculate dimensions
-  auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
+  auto horizontal_bins = get_horizontal_bin(angle_range_max_deg_);
   if (!horizontal_bins) {
     throw std::logic_error("Horizontal bin is not valid");
   }
