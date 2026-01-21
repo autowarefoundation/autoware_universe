@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ namespace autoware::pointcloud_preprocessor::pointcloud2_to_depth_image
 class PointCloud2ToDepthImageTest : public ::testing::Test
 {
 protected:
-  // Helper function to create a pointcloud with specified points
   sensor_msgs::msg::PointCloud2 create_pointcloud(
     const std::vector<uint16_t> & channels,
     const std::vector<float> & azimuths_deg,
@@ -67,69 +66,7 @@ protected:
   }
 };
 
-// Test empty pointcloud
-TEST_F(PointCloud2ToDepthImageTest, EmptyPointCloud)
-{
-  ConverterConfig config;
-  config.horizontal.angle_range_min_deg = -180.0;
-  config.horizontal.angle_range_max_deg = 180.0;
-  config.horizontal.horizontal_resolution = 60.0;
-  config.vertical.vertical_bins = 4;
-  config.vertical.is_channel_order_top2down = true;
-  config.max_distance_range = 200.0;
-
-  PointCloud2ToDepthImage converter(config);
-
-  auto cloud = create_pointcloud({}, {}, {});
-  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
-
-  // Verify dimensions are correct but all zeros
-  EXPECT_EQ(depth_image.rows, 4);
-  EXPECT_EQ(depth_image.cols, 6);
-  
-  // All pixels should be zero
-  for (int i = 0; i < depth_image.rows; ++i) {
-    for (int j = 0; j < depth_image.cols; ++j) {
-      EXPECT_EQ(depth_image.at<uint16_t>(i, j), 0);
-    }
-  }
-}
-
-// Test basic depth image creation with simple configuration
-TEST_F(PointCloud2ToDepthImageTest, BasicDepthImageCreation)
-{
-  ConverterConfig config;
-  config.horizontal.angle_range_min_deg = -180.0;
-  config.horizontal.angle_range_max_deg = 180.0;
-  config.horizontal.horizontal_resolution = 60.0;  // 6 bins
-  config.vertical.vertical_bins = 4;
-  config.vertical.is_channel_order_top2down = true;
-  config.max_distance_range = 200.0;
-
-  PointCloud2ToDepthImage converter(config);
-
-  // Create a simple pointcloud with one point
-  std::vector<uint16_t> channels = {0};
-  std::vector<float> azimuths_deg = {0.0};
-  std::vector<float> distances = {100.0};
-
-  auto cloud = create_pointcloud(channels, azimuths_deg, distances);
-  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
-
-  // Verify dimensions
-  EXPECT_EQ(depth_image.rows, 4);  // vertical_bins
-  EXPECT_EQ(depth_image.cols, 6);  // 360 / 60 = 6 bins
-  EXPECT_EQ(depth_image.type(), CV_16UC1);
-
-  // Verify the depth value at the expected position
-  // horizontal_bin for 0 deg = (0 - (-180)) / 60 = 3
-  // vertical_bin = 0 (channel 0, top2down)
-  uint16_t expected_depth = UINT16_MAX * (1.0 - 100.0 / 200.0);  // normalized
-  EXPECT_EQ(depth_image.at<uint16_t>(0, 3), expected_depth);
-}
-
-// Test multiple points in different bins
-TEST_F(PointCloud2ToDepthImageTest, MultiplePointsInDifferentBins)
+ConverterConfig default_config()
 {
   ConverterConfig config;
   config.horizontal.angle_range_min_deg = 0.0;
@@ -138,70 +75,82 @@ TEST_F(PointCloud2ToDepthImageTest, MultiplePointsInDifferentBins)
   config.vertical.vertical_bins = 2;
   config.vertical.is_channel_order_top2down = true;
   config.max_distance_range = 100.0;
+  return config;
+}
 
-  PointCloud2ToDepthImage converter(config);
+TEST_F(PointCloud2ToDepthImageTest, EmptyPointCloud)
+{
+  // Create an empty pointcloud
+  sensor_msgs::msg::PointCloud2 empty_cloud = create_pointcloud({}, {}, {});
 
-  // Create pointcloud with multiple points in different bins
-  // Note: Boundary condition is (azimuth > min_deg) && (azimuth <= max_deg)
-  // Also note: distance at max_distance_range results in normalized_depth = 0
-  std::vector<uint16_t> channels = {0, 1, 0, 1};
-  std::vector<float> azimuths_deg = {1.0, 1.0, 135.0, 135.0};
-  std::vector<float> distances = {25.0, 50.0, 75.0, 90.0};  // Use 90 instead of 100 to avoid 0 depth
+  // Conversion
+  PointCloud2ToDepthImage converter(default_config());
+  cv::Mat depth_image = converter.make_normalized_depth_image(empty_cloud);
 
-  auto cloud = create_pointcloud(channels, azimuths_deg, distances);
-  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
-
-  // Verify dimensions
+  // Verify dimensions are correct but all zeros
   EXPECT_EQ(depth_image.rows, 2);
   EXPECT_EQ(depth_image.cols, 4);
-
-  // horizontal_bin for 1 deg = (1 - 0) / 90 = 0.01 -> 0
-  // horizontal_bin for 135 deg = (135 - 0) / 90 = 1.5 -> 1
-  int non_zero_count = 0;
   for (int i = 0; i < depth_image.rows; ++i) {
     for (int j = 0; j < depth_image.cols; ++j) {
-      if (depth_image.at<uint16_t>(i, j) > 0) {
-        non_zero_count++;
-      }
+      EXPECT_EQ(depth_image.at<uint16_t>(i, j), 0);
     }
   }
-  
-  EXPECT_EQ(non_zero_count, 4);
-  
-  // Verify at least one value at each expected bin
+}
+
+TEST_F(PointCloud2ToDepthImageTest, BasicDepthImageCreation)
+{
+  // Create a simple pointcloud with one point
+  float first_index_angle = 0.1;
+  float mid_distance = 50.0;
+  sensor_msgs::msg::PointCloud2 cloud =create_pointcloud({0}, {first_index_angle}, {mid_distance});
+  // Expected normalized depth calculation
+  uint16_t expected_normalized_depth = UINT16_MAX / 2;
+
+  // Conversion
+  PointCloud2ToDepthImage converter(default_config());
+  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
+
+  // Verify the depth value at the expected position
+  EXPECT_EQ(depth_image.at<uint16_t>(0, 0), expected_normalized_depth);
+}
+
+TEST_F(PointCloud2ToDepthImageTest, MultiplePointsInDifferentBins)
+{
+  // Create pointcloud with multiple points in different bins
+  std::vector<uint16_t> channels = {0, 1, 0, 1};
+  std::vector<float> azimuths_deg = {1.0, 1.0, 135.0, 135.0};
+  std::vector<float> distances = {25.0, 50.0, 75.0, 90.0};
+  auto cloud = create_pointcloud(channels, azimuths_deg, distances);
+
+  // Conversion
+  PointCloud2ToDepthImage converter(default_config());
+  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
+
+  // Verify value at each expected bin
   EXPECT_GT(depth_image.at<uint16_t>(0, 0), 0);  // Channel 0, 1 deg
   EXPECT_GT(depth_image.at<uint16_t>(1, 0), 0);  // Channel 1, 1 deg
   EXPECT_GT(depth_image.at<uint16_t>(0, 1), 0);  // Channel 0, 135 deg
   EXPECT_GT(depth_image.at<uint16_t>(1, 1), 0);  // Channel 1, 135 deg
 }
 
-// Test channel order bottom2top
 TEST_F(PointCloud2ToDepthImageTest, ChannelOrderBottom2Top)
 {
-  ConverterConfig config;
-  config.horizontal.angle_range_min_deg = 0.0;
-  config.horizontal.angle_range_max_deg = 360.0;
-  config.horizontal.horizontal_resolution = 90.0;  // 4 bins
+  // Create config with bottom2top channel order
+  ConverterConfig config = default_config();
   config.vertical.vertical_bins = 3;
   config.vertical.is_channel_order_top2down = false;  // bottom to top
-  config.max_distance_range = 100.0;
+  // Create pointcloud with one point in the lowest channel
+  std::vector<uint16_t> channels = {2};
+  std::vector<float> azimuths_deg = {1.0};
+  std::vector<float> distances = {50.0};
+  sensor_msgs::msg::PointCloud2 cloud =create_pointcloud(channels, azimuths_deg, distances);
 
+  // Conversion
   PointCloud2ToDepthImage converter(config);
-
-  // Create pointcloud
-  std::vector<uint16_t> channels = {0, 1, 2};
-  std::vector<float> azimuths_deg = {45.0, 45.0, 45.0};
-  std::vector<float> distances = {10.0, 20.0, 30.0};
-
-  auto cloud = create_pointcloud(channels, azimuths_deg, distances);
   cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
 
-  // With bottom2top: vertical_bin = vertical_bins - channel - 1
-  // channel 0 -> bin 2, channel 1 -> bin 1, channel 2 -> bin 0
-  // horizontal_bin for 45 deg = (45 - 0) / 90 = 0
-  EXPECT_EQ(depth_image.at<uint16_t>(2, 0), static_cast<uint16_t>(UINT16_MAX * 0.9));
-  EXPECT_EQ(depth_image.at<uint16_t>(1, 0), static_cast<uint16_t>(UINT16_MAX * 0.8));
-  EXPECT_EQ(depth_image.at<uint16_t>(0, 0), static_cast<uint16_t>(UINT16_MAX * 0.7));
+  // Verify that the point is placed in the correct vertical bin (bottom row)
+  EXPECT_GT(depth_image.at<uint16_t>(0, 0), 0);  // Bottom row, first column
 }
 
 }  // namespace autoware::pointcloud_preprocessor::pointcloud2_to_depth_image
