@@ -14,6 +14,8 @@
 
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/map_utils.hpp"
 
+#include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
+
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/strategies/strategies.hpp>
 
@@ -21,7 +23,6 @@
 #include <lanelet2_core/primitives/LineString.h>
 
 #include <algorithm>
-#include <string>
 #include <vector>
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
@@ -48,10 +49,14 @@ SegmentRtree extract_uncrossable_segments(
   return uncrossable_segments_in_range;
 }
 
-bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types)
+bool has_types(
+  const lanelet::ConstLineString3d & ls,
+  const std::vector<DrivableAreaExpansionParameters::LinestringType> & types)
 {
   constexpr auto no_type = "";
   const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
-  return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
+  const auto subtype = ls.attributeOr(lanelet::AttributeName::Subtype, no_type);
+  const auto matches_type = [&](const auto & t) { return t.matches(type, subtype); };
+  return (type != no_type && std::find_if(types.begin(), types.end(), matches_type) != types.end());
 }
 }  // namespace autoware::behavior_path_planner::drivable_area_expansion
