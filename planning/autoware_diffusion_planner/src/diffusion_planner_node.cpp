@@ -247,7 +247,7 @@ std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 
   // Get transforms
   const geometry_msgs::msg::Pose & pose_base_link = kinematic_state.pose.pose;
-  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4f(pose_base_link);
+  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_base_link);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
 
   // Update ego history
@@ -302,7 +302,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
       ? utils::shift_x(
           frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
       : frame_context.ego_kinematic_state.pose.pose;
-  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4f(pose_center);
+  const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_center);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
   const auto & center_x = static_cast<float>(pose_center.position.x);
   const auto & center_y = static_cast<float>(pose_center.position.y);
@@ -377,7 +377,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     const auto & goal_pose = route_ptr_->goal_pose;
 
     // Convert goal pose to 4x4 transformation matrix
-    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4f(goal_pose);
+    const Eigen::Matrix4d goal_pose_map_4x4 = utils::pose_to_matrix4d(goal_pose);
 
     // Transform to ego frame
     const Eigen::Matrix4d goal_pose_ego_4x4 = map_to_ego_transform * goal_pose_map_4x4;
