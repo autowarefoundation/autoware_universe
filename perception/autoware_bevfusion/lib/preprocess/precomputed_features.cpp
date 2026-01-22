@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
 #include "autoware/bevfusion/preprocess/precomputed_features.hpp"
 
 #include <Eigen/Dense>
