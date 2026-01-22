@@ -34,8 +34,8 @@ class UncrossableBoundaryDepartureChecker
 {
 public:
   UncrossableBoundaryDepartureChecker(
-    rclcpp::Node & node, lanelet::LaneletMapPtr lanelet_map_ptr,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const Param & param = Param{},
+    const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, Param param = Param{},
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils_debug::TimeKeeper>());
 
@@ -196,7 +196,7 @@ private:
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   // To be used from the motion_velocity_planner
-  CriticalDeparturePoints find_new_critical_departure_points(
+  static CriticalDeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
     const CriticalDeparturePoints & critical_departure_points,
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);

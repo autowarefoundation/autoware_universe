@@ -406,7 +406,7 @@ BoundaryDeparturePreventionModule::plan_velocities(
 
   if (!boundary_departure_checker_ptr_) {
     boundary_departure_checker_ptr_ = std::make_unique<UncrossableBoundaryDepartureChecker>(
-      *node_ptr_, ll_map_ptr, vehicle_info, node_param_.bdc_param, time_keeper_);
+      node_ptr_->get_clock(), ll_map_ptr, vehicle_info, node_param_.bdc_param, time_keeper_);
   }
 
   if (!slow_down_interpolator_ptr_) {

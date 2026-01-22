@@ -113,34 +113,34 @@ bool is_segment_within_ego_height(
     std::abs(boundary_segment.second.z() - ego_z_position));
   return height_diff < ego_height;
 }
-}  // namespace
 
-namespace autoware::boundary_departure_checker
-{
-
-namespace
-{
-bool has_critical_departure(const std::vector<ClosestProjectionToBound> & closest_projections)
+bool has_critical_departure(
+  const std::vector<autoware::boundary_departure_checker::ClosestProjectionToBound> &
+    closest_projections)
 {
   const auto is_critical_departure_type = [](const auto & pt) {
-    return pt.departure_type == DepartureType::CRITICAL_DEPARTURE;
+    return pt.departure_type ==
+           autoware::boundary_departure_checker::DepartureType::CRITICAL_DEPARTURE;
   };
   return std::any_of(
     closest_projections.rbegin(), closest_projections.rend(), is_critical_departure_type);
 }
 }  // namespace
 
+namespace autoware::boundary_departure_checker
+{
 UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
-  rclcpp::Node & node, lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info,
-  const Param & param, std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
-: param_(param),
+  const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
+  const VehicleInfo & vehicle_info, Param param,
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
+: param_(std::move(param)),
   lanelet_map_ptr_(std::move(lanelet_map_ptr)),
   vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info)),
+  last_no_critical_dpt_time_(clock_ptr->now().seconds()),
+  last_found_critical_dpt_time_(clock_ptr->now().seconds()),
+  clock_ptr_(clock_ptr),
   time_keeper_(std::move(time_keeper))
 {
-  clock_ptr_ = node.get_clock();
-  last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
-  last_found_critical_dpt_time_ = clock_ptr_->now().seconds();
   auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 
   if (!try_uncrossable_boundaries_rtree) {
