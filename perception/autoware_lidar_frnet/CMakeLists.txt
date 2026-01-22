@@ -48,27 +48,7 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# set flags for CUDNN availability
-option(CUDNN_AVAIL "CUDNN available" OFF)
-# try to find the CUDNN module
-find_library(CUDNN_LIBRARY
-NAMES libcudnn.so${__cudnn_ver_suffix} libcudnn${__cudnn_ver_suffix}.dylib ${__cudnn_lib_win_name}
-PATHS $ENV{LD_LIBRARY_PATH} ${__libpath_cudart} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
-PATH_SUFFIXES lib lib64 bin
-DOC "CUDNN library."
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
-  endif()
-  set(CUDNN_AVAIL ON)
-else()
-  message("CUDNN is NOT Available")
-  set(CUDNN_AVAIL OFF)
-endif()
-
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
@@ -113,7 +93,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
     ${CUDA_curand_LIBRARY}
-    ${CUDNN_LIBRARY}
     ${PROJECT_NAME}_cuda_lib
   )
 
