@@ -389,7 +389,8 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
           const double point_pet =
             ego_trajectory_points_[ego_first_overlap_idx - 1].time_from_start_s -
             obstacle_trajectory_point.time_from_start_s;
-          if (point_pet > 0) {  // Only consider the case where obstacle leaves before ego arrives.
+          if (point_pet >= 0) {  // Only consider the case where obstacle leaves before ego arrives
+                                 // （PET > 0） and occlusion occurs （PET = 0）
             obstacle_pet = std::min(obstacle_pet, point_pet);
           }
         }
