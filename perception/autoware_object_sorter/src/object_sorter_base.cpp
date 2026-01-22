@@ -121,11 +121,10 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   // Even when it failed to get the transform, we still can do the velocity check
   bool transform_success = false;
   try {
-    tf_input_frame_to_target_frame =
-      tf_buffer_.lookupTransform(
-        range_calc_frame_id_,        // target frame
-        input_msg->header.frame_id,  // source frame
-        input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
+    tf_input_frame_to_target_frame = tf_buffer_.lookupTransform(
+      range_calc_frame_id_,        // target frame
+      input_msg->header.frame_id,  // source frame
+      input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
 
     transform_success = true;
   } catch (tf2::TransformException & ex) {
