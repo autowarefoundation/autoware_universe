@@ -99,11 +99,7 @@ TopicStateMonitorNode::TopicStateMonitorNode(const rclcpp::NodeOptions & node_op
   // Diagnostic Updater
   updater_.setHardwareID("topic_state_monitor");
   updater_.add(node_param_.diag_name, this, &TopicStateMonitorNode::checkTopicStatus);
-
-  // Timer
-  const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
-  timer_ = rclcpp::create_timer(
-    this, get_clock(), period_ns, std::bind(&TopicStateMonitorNode::onTimer, this));
+  updater_.setPeriod(1.0 / node_param_.update_rate);
 }
 
 rcl_interfaces::msg::SetParametersResult TopicStateMonitorNode::onParameter(
@@ -125,12 +121,6 @@ rcl_interfaces::msg::SetParametersResult TopicStateMonitorNode::onParameter(
   }
 
   return result;
-}
-
-void TopicStateMonitorNode::onTimer()
-{
-  // Publish diagnostics
-  updater_.force_update();
 }
 
 void TopicStateMonitorNode::checkTopicStatus(diagnostic_updater::DiagnosticStatusWrapper & stat)
