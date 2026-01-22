@@ -40,9 +40,6 @@ target_link_libraries(${PROJECT_NAME}
 ament_auto_package(INSTALL_TO_SHARE config test_data)
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-
   find_package(ament_cmake_ros REQUIRED)
   ament_auto_find_test_dependencies()
 
