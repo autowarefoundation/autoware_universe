@@ -48,6 +48,19 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
+# set flags for spconv availability
+option(SPCONV_AVAIL "spconv available" OFF)
+# try to find spconv
+find_package(cumm)
+find_package(spconv)
+if(${cumm_FOUND} AND ${spconv_FOUND})
+  message(STATUS "spconv is available!")
+  set(SPCONV_AVAIL ON)
+else()
+  message(WARNING "spconv is NOT available")
+  set(SPCONV_AVAIL OFF)
+endif()
+
 if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
