@@ -154,6 +154,30 @@ TEST_F(PointCloud2ToDepthImageTest, ChannelOrderBottom2Top)
   EXPECT_EQ(depth_image.at<uint16_t>(0, 0), expected_normalized_depth);  // Bottom row, first column
 }
 
+TEST_F(PointCloud2ToDepthImageTest, FovWrapsAround)
+{
+  // Create config where FOV wraps around 360 degrees (e.g., 270-90 degrees)
+  ConverterConfig config = default_config();
+  config.horizontal.angle_range_min_deg = 270.0;  // min > max
+  config.horizontal.angle_range_max_deg = 90.0;
+  config.horizontal.horizontal_resolution = 90.0;  // 2 bins: [270-360) and [0-90]
+  // Create pointcloud with points in the wrapped FOV range
+  std::vector<uint16_t> channels = {0};
+  std::vector<float> azimuths_deg = {45.0};
+  std::vector<float> distances = {50.0};
+  sensor_msgs::msg::PointCloud2 cloud = create_pointcloud(channels, azimuths_deg, distances);
+  // Expected normalized depth calculation
+  uint16_t expected_normalized_depth = UINT16_MAX / 2;
+  uint16_t expected_horizontal_bin = 1;
+
+  // Conversion
+  PointCloud2ToDepthImage converter(config);
+  cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
+
+  // Verify that the point is placed in the correct horizontal bin
+  EXPECT_EQ(depth_image.at<uint16_t>(0, expected_horizontal_bin), expected_normalized_depth);
+}
+
 }  // namespace autoware::pointcloud_preprocessor::pointcloud2_to_depth_image
 
 int main(int argc, char ** argv)
