@@ -143,13 +143,15 @@ TEST_F(PointCloud2ToDepthImageTest, ChannelOrderBottom2Top)
   std::vector<float> azimuths_deg = {1.0};
   std::vector<float> distances = {50.0};
   sensor_msgs::msg::PointCloud2 cloud = create_pointcloud(channels, azimuths_deg, distances);
+  // Expected normalized depth calculation
+  uint16_t expected_normalized_depth = UINT16_MAX / 2;
 
   // Conversion
   PointCloud2ToDepthImage converter(config);
   cv::Mat depth_image = converter.make_normalized_depth_image(cloud);
 
   // Verify that the point is placed in the correct vertical bin (bottom row)
-  EXPECT_GT(depth_image.at<uint16_t>(0, 0), 0);  // Bottom row, first column
+  EXPECT_EQ(depth_image.at<uint16_t>(0, 0), expected_normalized_depth);  // Bottom row, first column
 }
 
 }  // namespace autoware::pointcloud_preprocessor::pointcloud2_to_depth_image
