@@ -95,23 +95,16 @@ void AcadosInterface::setInitialState(std::array<double, NX> x0)
 void AcadosInterface::setInequalityBounds(
   int stage, std::array<double, NH> lh, std::array<double, NH> uh)
 {
-#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
   ocp_nlp_constraints_model_set(
     nlp_config_, nlp_dims_, nlp_in_, nlp_out_, stage, "lh", const_cast<double *>(lh.data()));
   ocp_nlp_constraints_model_set(
     nlp_config_, nlp_dims_, nlp_in_, nlp_out_, stage, "uh", const_cast<double *>(uh.data()));
-#else
-  (void)stage;
-  (void)lh;
-  (void)uh;
-#endif
 }
 
 void AcadosInterface::applyCircleConstraintsToParams(
   int stage, std::array<double, NP> & params, const std::array<double, NH> & beta,
   const std::array<double, NH> & lh, const std::array<double, NH> & uh)
 {
-#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH > 0
   // Layout at the end of p (see generator): [... base ... | cos_beta[0..NH-1] | sin_beta[0..NH-1] |
   // lon_offset[0..NH-1]]
   const size_t cos_beta_offset = NP - 3 * NH;
@@ -121,18 +114,10 @@ void AcadosInterface::applyCircleConstraintsToParams(
     params[sin_beta_offset + i] = std::sin(beta[i]);
   }
   setInequalityBounds(stage, lh, uh);
-#else
-  (void)stage;
-  (void)params;
-  (void)beta;
-  (void)lh;
-  (void)uh;
-#endif
 }
 
 void AcadosInterface::setSoftConstraintLinearWeight(int stage, double w)
 {
-#if CURVILINEAR_BICYCLE_MODEL_SPATIAL_NSH > 0
   // acados uses separate slack variables for lower/upper sides (s_l, s_u), each of length NSH.
   // Linear penalties are provided via "zl" and "zu".
   std::array<double, NSH> zl{};
@@ -143,10 +128,6 @@ void AcadosInterface::setSoftConstraintLinearWeight(int stage, double w)
     nlp_config_, nlp_dims_, nlp_in_, stage, "zl", const_cast<double *>(zl.data()));
   ocp_nlp_cost_model_set(
     nlp_config_, nlp_dims_, nlp_in_, stage, "zu", const_cast<double *>(zu.data()));
-#else
-  (void)stage;
-  (void)w;
-#endif
 }
 
 std::array<std::array<double, NX>, N + 1> AcadosInterface::getStateTrajectory() const

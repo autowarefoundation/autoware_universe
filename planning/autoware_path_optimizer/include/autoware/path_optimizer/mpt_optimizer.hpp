@@ -264,14 +264,6 @@ private:
     // Toggle MPT-style acados road-bound circle constraints (lh/uh on h(x,p)).
     // When false, we still widen lh/uh to effectively disable generated constraints.
     bool use_acados_circle_constraints;
-    // Homotopy strength for acados circle constraints in [0,1].
-    // 0 -> fully permissive (constraints widened), 1 -> fully enforced.
-    double acados_circle_constraints_homotopy;
-    // If true, apply a per-stage ramp gamma(stage) from 0..1 across the horizon.
-    // Effective gamma = acados_circle_constraints_homotopy * ramp(stage).
-    bool acados_circle_constraints_stage_ramp;
-    // Linear slack penalty for soft circle constraints in acados (higher -> closer to hard).
-    double acados_circle_constraints_soft_weight;
 
     // kinematics
     double optimization_center_offset;

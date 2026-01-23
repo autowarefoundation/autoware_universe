@@ -197,12 +197,6 @@ MPTOptimizer::MPTParam::MPTParam(
   // Default false so we can A/B test behavior safely.
   use_acados_circle_constraints =
     node->declare_parameter<bool>("mpt.use_acados_circle_constraints", false);
-  acados_circle_constraints_homotopy =
-    node->declare_parameter<double>("mpt.acados_circle_constraints_homotopy", 1.0);
-  acados_circle_constraints_stage_ramp =
-    node->declare_parameter<bool>("mpt.acados_circle_constraints_stage_ramp", true);
-  acados_circle_constraints_soft_weight =
-    node->declare_parameter<double>("mpt.acados_circle_constraints_soft_weight", 1.0);
 
   // kinematics
   max_steer_rad = vehicle_info.max_steer_angle_rad;
@@ -320,12 +314,6 @@ void MPTOptimizer::MPTParam::onParam(const std::vector<rclcpp::Parameter> & para
   update_param<bool>(parameters, "mpt.use_acados", use_acados);
   update_param<bool>(
     parameters, "mpt.use_acados_circle_constraints", use_acados_circle_constraints);
-  update_param<double>(
-    parameters, "mpt.acados_circle_constraints_homotopy", acados_circle_constraints_homotopy);
-  update_param<bool>(
-    parameters, "mpt.acados_circle_constraints_stage_ramp", acados_circle_constraints_stage_ramp);
-  update_param<double>(
-    parameters, "mpt.acados_circle_constraints_soft_weight", acados_circle_constraints_soft_weight);
 
   // kinematics
   update_param<double>(
@@ -862,10 +850,6 @@ void MPTOptimizer::setParametersToSolver(
       acados_interface_.applyCircleConstraintsToParams(
         static_cast<int>(stage), params_copy, beta_arr, lh, uh);
 
-      // Soft constraints: ramp the slack penalty from 0..w across horizon using gamma.
-      // gamma=0 => no penalty (effectively permissive), gamma=1 => full penalty.
-      acados_interface_.setSoftConstraintLinearWeight(static_cast<int>(stage), 0.0);
-
       acados_interface_.setParameters(stage, params_copy);
 
       continue;
@@ -897,22 +881,10 @@ void MPTOptimizer::setParametersToSolver(
       }
     }
 
-    const double homotopy_val =
-      std::max(0.0, std::min(1.0, mpt_param_.acados_circle_constraints_homotopy));
-    const double ramp_val =
-      mpt_param_.acados_circle_constraints_stage_ramp
-        ? ((N > 1) ? (static_cast<double>(stage) / static_cast<double>(N - 1)) : 1.0)
-        : 1.0;
-    const double gamma_val = homotopy_val * std::max(0.0, std::min(1.0, ramp_val));
-
     acados_interface_.applyCircleConstraintsToParams(
       static_cast<int>(stage), params_copy, beta_arr, lh, uh);
 
-    // Soft constraints: ramp the slack penalty from 0..w across horizon using gamma.
-    // gamma=0 => no penalty (effectively permissive), gamma=1 => full penalty.
-    acados_interface_.setSoftConstraintLinearWeight(
-      static_cast<int>(stage), gamma_val * mpt_param_.acados_circle_constraints_soft_weight);
-
+    // Soft constraints use fixed weights set during MPC generation
     acados_interface_.setParameters(stage, params_copy);
   }
 }
