@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
-
 find_package(CUDA)
 
 if("$ENV{ENABLE_AGNOCAST}")

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_agnocast_wrapper)
 
 find_package(autoware_cmake REQUIRED)
-
 autoware_package()
 
 find_package(rclcpp REQUIRED)
