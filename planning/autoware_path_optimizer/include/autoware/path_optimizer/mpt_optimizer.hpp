@@ -453,6 +453,23 @@ private:
   void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
   void publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const;
 
+  void updateDebugDataAndPublishAcadosSteering(
+    const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
+    const std::vector<TrajectoryPoint> & acados_traj_points);
+
+  void publishAcadosTrajectory(
+    const std::vector<TrajectoryPoint> & acados_traj_points,
+    const std_msgs::msg::Header & header) const;
+
+  void publishAcadosStates(const AcadosSolution & acados_result) const;
+
+  void publishReferenceTrajectory(
+    const std::vector<ReferencePoint> & ref_points,
+    const std_msgs::msg::Header & header) const;
+
+  void publishReferenceSteeringAngles(
+    const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
+
   std::vector<TrajectoryPoint> extractFixedPoints(
     const std::vector<ReferencePoint> & ref_points) const;
 

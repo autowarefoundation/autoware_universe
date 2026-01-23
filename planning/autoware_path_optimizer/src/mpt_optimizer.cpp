@@ -525,104 +525,6 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
-  std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
-  AcadosSolution acados_result;
-
-  if (mpt_param_.use_acados) {
-    acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose);
-
-    // Convert Acados solution to trajectory points
-    acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
-
-    if (!acados_traj_points) {
-      RCLCPP_WARN(logger_, "Failed to convert Acados solution to trajectory");
-      return std::nullopt;
-    }
-
-    // Publish optimized steering (convert Acados controls to Eigen vector)
-    Eigen::VectorXd steering_angles(acados_result.utraj.size());
-    for (size_t i = 0; i < acados_result.utraj.size(); ++i) {
-      steering_angles(i) = acados_result.utraj[i][0];  // Extract delta (steering)
-    }
-
-    debug_data_ptr_->ref_points = ref_points;
-    prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
-    prev_optimized_traj_points_ptr_ =
-      std::make_shared<std::vector<TrajectoryPoint>>(*acados_traj_points);
-
-    std_msgs::msg::Float32MultiArray acados_steering_msg;
-    for (const auto & delta : acados_result.utraj) {
-      acados_steering_msg.data.push_back(static_cast<float>(delta[0]));
-    }
-
-    debug_acados_optimised_steering_pub_->publish(acados_steering_msg);
-
-    // Publish acados trajectory to separate topic for comparison
-    const auto acados_traj =
-      autoware::motion_utils::convertToTrajectory(*acados_traj_points, p.header);
-
-    debug_acados_mpt_traj_pub_->publish(acados_traj);
-
-    // Publish acados states
-    const auto acados_states = acados_result.xtraj;
-    const size_t N_acados = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
-    std_msgs::msg::Float32MultiArray acados_states_msg;
-    for (size_t i = 0; i < N_acados; ++i) {
-      acados_states_msg.data.push_back(static_cast<float>(acados_states[i][0]));  // eY
-      acados_states_msg.data.push_back(static_cast<float>(acados_states[i][1]));  // ePsi
-    }
-    debug_acados_optimised_states_pub_->publish(acados_states_msg);
-
-    // Publish reference trajectory for comparison
-    const auto ref_traj = autoware::motion_utils::convertToTrajectory(
-      trajectory_utils::convertToTrajectoryPoints(ref_points), p.header);
-    debug_ref_traj_pub_->publish(ref_traj);
-
-    // Publish reference trajectory steering angles (from curvature)
-    // Sample at 0.1m intervals for finer granularity
-    std_msgs::msg::Float32MultiArray ref_steering_msg;
-    constexpr double sampling_interval = 0.1;  // 0.1m sampling interval
-
-    if (ref_points_spline.getSize() > 1) {
-      // Get total arc length
-      const double total_s =
-        ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
-
-      // Sample at 0.1m intervals along the trajectory
-      size_t current_segment = 0;
-      for (double s = 0.0; s <= total_s; s += sampling_interval) {
-        // Clamp s to valid range [0, total_s]
-        const double clamped_s = std::min(s, total_s);
-
-        // Find which segment this s belongs to (optimize by starting from current segment)
-        for (size_t i = current_segment; i < ref_points_spline.getSize() - 1; ++i) {
-          const double segment_start = ref_points_spline.getAccumulatedLength(i);
-          const double segment_end = (i + 1 < ref_points_spline.getSize() - 1)
-                                       ? ref_points_spline.getAccumulatedLength(i + 1)
-                                       : total_s;
-
-          if (clamped_s >= segment_start && clamped_s <= segment_end) {
-            current_segment = i;
-            // Calculate offset within the segment
-            const double s_offset = clamped_s - segment_start;
-
-            // Get curvature at this point (function handles clamping internally)
-            const double curvature = ref_points_spline.getSplineInterpolatedCurvature(i, s_offset);
-            const double ref_steer_angle = std::atan2(vehicle_info_.wheel_base_m * curvature, 1.0);
-            ref_steering_msg.data.push_back(static_cast<float>(ref_steer_angle));
-            break;
-          }
-        }
-
-        // Stop if we've reached the end
-        if (clamped_s >= total_s - 1e-9) {
-          break;
-        }
-      }
-    }
-    debug_ref_steering_pub_->publish(ref_steering_msg);
-  }
-
   // 2. calculate B and W matrices where x = B u + W
   const auto mpt_mat = state_equation_generator_.calcMatrix(ref_points);
 
@@ -662,19 +564,42 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
-  // 8. publish trajectories for debug
+  if (!mpt_param_.use_acados) {
+    return mpt_traj_points;
+  }
+
+  // 8. run acados mpt (optional)
+  std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
+  AcadosSolution acados_result;
+
+  acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose);
+
+  // Convert Acados solution to trajectory points
+  acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
+
+  if (!acados_traj_points) {
+    RCLCPP_WARN(logger_, "Failed to convert Acados solution to trajectory");
+    return std::nullopt;
+  }
+
+  updateDebugDataAndPublishAcadosSteering(acados_result, ref_points, *acados_traj_points);
+
+  publishAcadosTrajectory(*acados_traj_points, p.header);
+
+  publishAcadosStates(acados_result);
+
+  publishReferenceTrajectory(ref_points, p.header);
+
+  publishReferenceSteeringAngles(ref_points_spline);
+
+  // 9. publish trajectories for debug
   publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
 
   debug_data_ptr_->ref_points = ref_points;
   prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
   prev_optimized_traj_points_ptr_ =
     std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
-
-  if (mpt_param_.use_acados) {
-    return acados_traj_points;
-  }
-
-  return mpt_traj_points;
+  return acados_traj_points;
 }
 
 std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajectoryPoints() const
@@ -708,6 +633,108 @@ void MPTOptimizer::publishOptimizedStates(const Eigen::VectorXd & states, const 
     msg.data.push_back(static_cast<float>(states(2 * i + 1)));  // ePsi
   }
   debug_optimised_states_pub_->publish(msg);
+}
+
+void MPTOptimizer::updateDebugDataAndPublishAcadosSteering(
+  const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
+  const std::vector<TrajectoryPoint> & acados_traj_points)
+{
+  // Publish optimized steering (convert Acados controls to Eigen vector)
+  Eigen::VectorXd steering_angles(acados_result.utraj.size());
+  for (size_t i = 0; i < acados_result.utraj.size(); ++i) {
+    steering_angles(i) = acados_result.utraj[i][0];  // Extract delta (steering)
+  }
+
+  debug_data_ptr_->ref_points = ref_points;
+  prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
+  prev_optimized_traj_points_ptr_ =
+    std::make_shared<std::vector<TrajectoryPoint>>(acados_traj_points);
+
+  std_msgs::msg::Float32MultiArray acados_steering_msg;
+  for (const auto & delta : acados_result.utraj) {
+    acados_steering_msg.data.push_back(static_cast<float>(delta[0]));
+  }
+
+  debug_acados_optimised_steering_pub_->publish(acados_steering_msg);
+}
+
+void MPTOptimizer::publishAcadosTrajectory(
+  const std::vector<TrajectoryPoint> & acados_traj_points,
+  const std_msgs::msg::Header & header) const
+{
+  // Publish acados trajectory to separate topic for comparison
+  const auto acados_traj = autoware::motion_utils::convertToTrajectory(acados_traj_points, header);
+  debug_acados_mpt_traj_pub_->publish(acados_traj);
+}
+
+void MPTOptimizer::publishAcadosStates(const AcadosSolution & acados_result) const
+{
+  // Publish acados states
+  const auto acados_states = acados_result.xtraj;
+  const size_t N_acados = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
+  std_msgs::msg::Float32MultiArray acados_states_msg;
+  for (size_t i = 0; i < N_acados; ++i) {
+    acados_states_msg.data.push_back(static_cast<float>(acados_states[i][0]));  // eY
+    acados_states_msg.data.push_back(static_cast<float>(acados_states[i][1]));  // ePsi
+  }
+  debug_acados_optimised_states_pub_->publish(acados_states_msg);
+}
+
+void MPTOptimizer::publishReferenceTrajectory(
+  const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const
+{
+  // Publish reference trajectory for comparison
+  const auto ref_traj =
+    autoware::motion_utils::convertToTrajectory(trajectory_utils::convertToTrajectoryPoints(ref_points), header);
+  debug_ref_traj_pub_->publish(ref_traj);
+}
+
+void MPTOptimizer::publishReferenceSteeringAngles(
+  const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const
+{
+  // Publish reference trajectory steering angles (from curvature)
+  // Sample at 0.1m intervals for finer granularity
+  std_msgs::msg::Float32MultiArray ref_steering_msg;
+  constexpr double sampling_interval = 0.1;  // 0.1m sampling interval
+
+  if (ref_points_spline.getSize() > 1) {
+    // Get total arc length
+    const double total_s =
+      ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
+
+    // Sample at 0.1m intervals along the trajectory
+    size_t current_segment = 0;
+    for (double s = 0.0; s <= total_s; s += sampling_interval) {
+      // Clamp s to valid range [0, total_s]
+      const double clamped_s = std::min(s, total_s);
+
+      // Find which segment this s belongs to (optimize by starting from current segment)
+      for (size_t i = current_segment; i < ref_points_spline.getSize() - 1; ++i) {
+        const double segment_start = ref_points_spline.getAccumulatedLength(i);
+        const double segment_end = (i + 1 < ref_points_spline.getSize() - 1)
+                                     ? ref_points_spline.getAccumulatedLength(i + 1)
+                                     : total_s;
+
+        if (clamped_s >= segment_start && clamped_s <= segment_end) {
+          current_segment = i;
+          // Calculate offset within the segment
+          const double s_offset = clamped_s - segment_start;
+
+          // Get curvature at this point (function handles clamping internally)
+          const double curvature = ref_points_spline.getSplineInterpolatedCurvature(i, s_offset);
+          const double ref_steer_angle = std::atan2(vehicle_info_.wheel_base_m * curvature, 1.0);
+          ref_steering_msg.data.push_back(static_cast<float>(ref_steer_angle));
+          break;
+        }
+      }
+
+      // Stop if we've reached the end
+      if (clamped_s >= total_s - 1e-9) {
+        break;
+      }
+    }
+  }
+  debug_ref_steering_pub_->publish(ref_steering_msg);
 }
 
 geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, double dx, double dy)
