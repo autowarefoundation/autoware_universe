@@ -171,9 +171,7 @@ void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) c
     msg = "WARN";
   }
 
-  if (
-    (res.ground.blockage_ratio > 0.0f) &&
-    (res.sky.blockage_ratio > 0.0f)) {
+  if ((res.ground.blockage_ratio > 0.0f) && (res.sky.blockage_ratio > 0.0f)) {
     msg = msg + ": LIDAR both blockage";
   } else if (res.ground.blockage_ratio > 0.0f) {
     msg = msg + ": LIDAR ground blockage";
