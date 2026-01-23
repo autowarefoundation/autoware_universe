@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
+
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
@@ -35,6 +37,7 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -75,49 +78,6 @@ private:
 
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
-
-  /**
-   * @brief Get the horizontal bin index of the given azimuth, if within the FoV.
-   *
-   * If the FoV wraps around, the azimuth is adjusted to be within the FoV.
-   * The bin is calculated as `(azimuth_deg - min_deg) / horizontal_resolution_` and any
-   * azimuth for which `min_deg < azimuth_deg <= max_deg` is valid.
-   *
-   * @param azimuth_deg The azimuth to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_horizontal_bin(double azimuth_deg) const;
-
-  /**
-   * @brief Get the vertical bin index of the given channel, if within the FoV.
-   *
-   * Vertical bins and channels are usually equivalent, apart from the 0-based index of bins.
-   * If `is_channel_order_top2down_` is `false`, the bin order is reversed compared to the channel
-   * order.
-   *
-   * @param channel The channel to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_vertical_bin(uint16_t channel) const;
-
-  /**
-   * @brief Get the dimensions of the mask, i.e. the number of horizontal and vertical bins.
-   *
-   * @return cv::Size The dimensions of the mask.
-   */
-  cv::Size get_mask_dimensions() const;
-
-  /**
-   * @brief Make a downsampled depth image from the input point cloud, normalized to 0-35565.
-   *
-   * The size of the output is given by `get_mask_dimensions()`.
-   * Close depth values are mapped to higher values, far depth values are mapped to lower values.
-   * The `max_distance_range_` is mapped to 0, and a LiDAR distance of 0 is mapped to UINT16_MAX.
-   *
-   * @param input The input point cloud.
-   * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
@@ -217,19 +177,17 @@ private:
 
   Updater updater_{this};
 
+  // PointCloud2 to depth image converter
+  std::unique_ptr<pointcloud2_to_depth_image::PointCloud2ToDepthImage> depth_image_converter_;
+
   // Debug parameters
   bool publish_debug_image_;
 
-  // LiDAR parameters
-  double max_distance_range_{200.0};
-
   // Mask size parameters
-  int vertical_bins_;
   std::vector<double> angle_range_deg_;
   double horizontal_resolution_{0.4};
 
   // Ground/sky segmentation parameters
-  bool is_channel_order_top2down_;
   int horizontal_ring_id_;
 
   // Blockage detection parameters

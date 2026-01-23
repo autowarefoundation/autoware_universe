@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -35,11 +36,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // Horizontal FoV, expects two values: [min, max]
     angle_range_deg_ = declare_parameter<std::vector<double>>("angle_range");
     // Whether the channel order is top-down (true) or bottom-up (false)
-    is_channel_order_top2down_ = declare_parameter<bool>("is_channel_order_top2down");
+    bool is_channel_order_top2down = declare_parameter<bool>("is_channel_order_top2down");
 
     // Blockage mask format configuration
     // The number of vertical bins in the mask. Has to equal the number of channels of the LiDAR.
-    vertical_bins_ = declare_parameter<int>("vertical_bins");
+    int vertical_bins = declare_parameter<int>("vertical_bins");
     // The angular resolution of the mask, in degrees.
     horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
 
@@ -64,21 +65,34 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // Depth map configuration
     // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this
     // value.
-    max_distance_range_ = declare_parameter<double>("max_distance_range");
+    double max_distance_range = declare_parameter<double>("max_distance_range");
 
     // Ground segmentation configuration
     // The ring ID that coincides with the horizon. Regions below are treated as ground,
     // regions above are treated as sky.
     horizontal_ring_id_ = declare_parameter<int>("horizontal_ring_id");
+
+    // Validate parameters
+    if (vertical_bins <= horizontal_ring_id_) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "The horizontal_ring_id should be smaller than vertical_bins. Skip blockage diag!");
+      return;
+    }
+
+    // Initialize PointCloud2ToDepthImage converter
+    pointcloud2_to_depth_image::ConverterConfig depth_image_config;
+    depth_image_config.horizontal.angle_range_min_deg = angle_range_deg_[0];
+    depth_image_config.horizontal.angle_range_max_deg = angle_range_deg_[1];
+    depth_image_config.horizontal.horizontal_resolution = horizontal_resolution_;
+    depth_image_config.vertical.vertical_bins = vertical_bins;
+    depth_image_config.vertical.is_channel_order_top2down = is_channel_order_top2down;
+    depth_image_config.max_distance_range = max_distance_range;
+    depth_image_converter_ =
+      std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
   }
   dust_mask_buffer.set_capacity(dust_buffering_frames_);
   no_return_mask_buffer.set_capacity(blockage_buffering_frames_);
-  if (vertical_bins_ <= horizontal_ring_id_) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "The horizontal_ring_id should be smaller than vertical_bins. Skip blockage diag!");
-    return;
-  }
 
   // Publishers setup
   if (publish_debug_image_) {
@@ -185,92 +199,10 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
   stat.summary(level, msg);
 }
 
-cv::Size BlockageDiagComponent::get_mask_dimensions() const
-{
-  auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
-  if (!horizontal_bins) {
-    throw std::logic_error("Horizontal bin is not valid");
-  }
-
-  return {*horizontal_bins, vertical_bins_};
-}
-
-std::optional<int> BlockageDiagComponent::get_horizontal_bin(double azimuth_deg) const
-{
-  double min_deg = angle_range_deg_[0];
-  double max_deg = angle_range_deg_[1];
-
-  bool fov_wraps_around = (min_deg > max_deg);
-  if (fov_wraps_around) {
-    azimuth_deg += 360.0;
-    max_deg += 360.0;
-  }
-
-  bool azimuth_is_in_fov = ((azimuth_deg > min_deg) && (azimuth_deg <= max_deg));
-  if (!azimuth_is_in_fov) {
-    return std::nullopt;
-  }
-
-  return {static_cast<int>((azimuth_deg - min_deg) / horizontal_resolution_)};
-}
-
-std::optional<int> BlockageDiagComponent::get_vertical_bin(uint16_t channel) const
-{
-  if (channel >= vertical_bins_) {
-    return std::nullopt;
-  }
-
-  if (is_channel_order_top2down_) {
-    return {channel};
-  }
-
-  return {vertical_bins_ - channel - 1};
-}
-
-cv::Mat BlockageDiagComponent::make_normalized_depth_image(
-  const sensor_msgs::msg::PointCloud2 & input) const
-{
-  auto dimensions = get_mask_dimensions();
-  cv::Mat depth_image(dimensions, CV_16UC1, cv::Scalar(0));
-
-  sensor_msgs::PointCloud2ConstIterator<uint16_t> iter_channel(input, "channel");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_distance(input, "distance");
-
-  for (; iter_channel != iter_channel.end(); ++iter_channel, ++iter_azimuth, ++iter_distance) {
-    uint16_t channel = *iter_channel;
-    float azimuth = *iter_azimuth;
-    float distance = *iter_distance;
-
-    auto vertical_bin = get_vertical_bin(channel);
-    if (!vertical_bin) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "channel: %d is larger than vertical_bins: %d. Please check the parameter "
-        "'vertical_bins'.",
-        channel, vertical_bins_);
-      throw std::runtime_error("Parameter is not valid");
-    }
-
-    double azimuth_deg = azimuth * (180.0 / M_PI);
-    auto horizontal_bin = get_horizontal_bin(azimuth_deg);
-    if (!horizontal_bin) {
-      continue;
-    }
-
-    // Max distance is mapped to 0, zero-distance is mapped to UINT16_MAX.
-    uint16_t normalized_depth = UINT16_MAX * (1.0 - std::min(distance / max_distance_range_, 1.0));
-    depth_image.at<uint16_t>(*vertical_bin, *horizontal_bin) = normalized_depth;
-  }
-
-  return depth_image;
-}
-
 cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == image_16u.size());
   assert(image_16u.type() == CV_16UC1);
+  auto dimensions = image_16u.size();
 
   cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
   // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
@@ -280,9 +212,8 @@ cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
 
 cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == depth_image.size());
   assert(depth_image.type() == CV_8UC1);
+  auto dimensions = depth_image.size();
 
   cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
   cv::inRange(depth_image, 0, 1, no_return_mask);
@@ -292,9 +223,8 @@ cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) 
 
 cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
+  auto dimensions = no_return_mask.size();
 
   int kernel_size = 2 * blockage_kernel_ + 1;
   int kernel_center = blockage_kernel_;
@@ -316,9 +246,8 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
     return blockage_mask.clone();
   }
 
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == blockage_mask.size());
   assert(blockage_mask.type() == CV_8UC1);
+  auto dimensions = blockage_mask.size();
 
   cv::Mat time_series_blockage_result(dimensions, CV_8UC1, cv::Scalar(0));
   cv::Mat time_series_blockage_mask(dimensions, CV_8UC1, cv::Scalar(0));
@@ -346,9 +275,8 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
 std::pair<cv::Mat, cv::Mat> BlockageDiagComponent::segment_into_ground_and_sky(
   const cv::Mat & mask) const
 {
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == mask.size());
   assert(mask.type() == CV_8UC1);
+  auto dimensions = mask.size();
 
   cv::Mat sky_mask;
   mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id_)).copyTo(sky_mask);
@@ -415,9 +343,8 @@ cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & depth_im
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
 
-  auto dimensions = get_mask_dimensions();
-  assert(dimensions == no_return_mask.size());
   assert(no_return_mask.type() == CV_8UC1);
+  auto dimensions = no_return_mask.size();
 
   auto [single_dust_ground_img, sky_blank] = segment_into_ground_and_sky(no_return_mask);
 
@@ -460,7 +387,7 @@ void BlockageDiagComponent::publish_dust_debug_info(
   ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
 
   if (publish_debug_image_) {
-    auto dimensions = get_mask_dimensions();
+    auto dimensions = single_dust_img.size();
     cv::Mat binarized_dust_mask_(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
@@ -566,7 +493,7 @@ void BlockageDiagComponent::update_diagnostics(
     return;
   }
 
-  cv::Mat depth_image_16u = make_normalized_depth_image(*input);
+  cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
   cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
