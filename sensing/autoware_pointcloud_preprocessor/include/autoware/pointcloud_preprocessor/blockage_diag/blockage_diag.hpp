@@ -34,16 +34,17 @@ struct BlockageDetectionConfig
   int blockage_count_threshold;
 };
 
+struct BlockageAreaResult
+{
+  float blockage_ratio = -1.0f;
+  int blockage_count = 0;
+  std::vector<float> blockage_range_deg = {0.0f, 0.0f};
+};
+
 struct BlockageDetectionResult
 {
-  float ground_blockage_ratio = -1.0f;
-  int ground_blockage_count = 0;
-  std::vector<float> ground_blockage_range_deg = {0.0f, 0.0f};
-
-  float sky_blockage_ratio = -1.0f;
-  int sky_blockage_count = 0;
-  std::vector<float> sky_blockage_range_deg = {0.0f, 0.0f};
-
+  BlockageAreaResult ground;
+  BlockageAreaResult sky;
   int blockage_frame_count = 0;
   boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
 };
