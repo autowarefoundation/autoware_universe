@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    ranked_generator_ids:
+      - "a"
+      - "b"

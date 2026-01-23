@@ -22,6 +22,7 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 

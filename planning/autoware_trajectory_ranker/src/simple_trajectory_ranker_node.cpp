@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_ranker/simple_trajectory_ranker_node.hpp"
 
+#include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -45,17 +46,20 @@ SimpleTrajectoryRanker::SimpleTrajectoryRanker(const rclcpp::NodeOptions & optio
     "~/debug/processing_time_detail_ms/trajectory_ranker", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+
+  // Parameters
+  ranked_generator_ids_ = autoware_utils_rclcpp::get_or_declare_parameter<std::vector<std::string>>(
+    *this, "ranked_generator_ids");
 }
 
 void SimpleTrajectoryRanker::trajectories_callback(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg)
 {
-  std::vector<std::string> ranked_generator_ids = {"a", "b", "c"};
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   std::unordered_map<
     std::string, std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>>
     trajectories_per_generator;
-  for (const auto & id : ranked_generator_ids) {
+  for (const auto & id : ranked_generator_ids_) {
     trajectories_per_generator[id] = {};
   }
   std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>
@@ -74,7 +78,7 @@ void SimpleTrajectoryRanker::trajectories_callback(
   autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories scored_msg;
   scored_msg.generator_info = msg->generator_info;
   scored_msg.scored_candidate_trajectories.reserve(msg->candidate_trajectories.size());
-  for (const auto & str : ranked_generator_ids) {
+  for (const auto & str : ranked_generator_ids_) {
     const auto & trajectories = trajectories_per_generator[str];
     scored_msg.scored_candidate_trajectories.insert(
       scored_msg.scored_candidate_trajectories.end(), trajectories.begin(), trajectories.end());
