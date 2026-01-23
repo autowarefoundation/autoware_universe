@@ -189,13 +189,13 @@ private:
   // Blockage detection
   BlockageDetectionConfig blockage_config_;
   BlockageDetectionResult blockage_result_;
-  BlockageDetectionVisualizeData blockage_visualize_data_;
+  DetectionVisualizeData blockage_visualize_data_;
 
   // Dust detection
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;
   DustDetectionResult dust_result_;
-  DustDetectionVisualizeData dust_visualize_data_;
+  DetectionVisualizeData dust_visualize_data_;
 
 public:
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);

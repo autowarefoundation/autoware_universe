@@ -46,11 +46,11 @@ struct BlockageDetectionResult
   BlockageAreaResult sky;
 };
 
-struct BlockageDetectionVisualizeData
+struct DetectionVisualizeData
 {
-  int blockage_frame_count = 0;
-  int blockage_buffering_interval = 0;
-  boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
+  int frame_count = 0;
+  int buffering_interval = 0;
+  boost::circular_buffer<cv::Mat> mask_buffer{1};
 };
 
 struct DustDetectionConfig
@@ -64,13 +64,6 @@ struct DustDetectionResult
 {
   float ground_dust_ratio = -1.0f;
   int dust_frame_count = 0;
-};
-
-struct DustDetectionVisualizeData
-{
-  int dust_frame_count = 0;
-  int dust_buffering_interval = 0;
-  boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 };
 
 /**
