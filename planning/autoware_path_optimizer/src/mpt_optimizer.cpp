@@ -684,8 +684,8 @@ void MPTOptimizer::publishReferenceTrajectory(
   const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const
 {
   // Publish reference trajectory for comparison
-  const auto ref_traj =
-    autoware::motion_utils::convertToTrajectory(trajectory_utils::convertToTrajectoryPoints(ref_points), header);
+  const auto ref_traj = autoware::motion_utils::convertToTrajectory(
+    trajectory_utils::convertToTrajectoryPoints(ref_points), header);
   debug_ref_traj_pub_->publish(ref_traj);
 }
 
@@ -699,8 +699,7 @@ void MPTOptimizer::publishReferenceSteeringAngles(
 
   if (ref_points_spline.getSize() > 1) {
     // Get total arc length
-    const double total_s =
-      ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
+    const double total_s = ref_points_spline.getAccumulatedLength(ref_points_spline.getSize() - 1);
 
     // Sample at 0.1m intervals along the trajectory
     size_t current_segment = 0;

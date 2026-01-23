@@ -464,8 +464,7 @@ private:
   void publishAcadosStates(const AcadosSolution & acados_result) const;
 
   void publishReferenceTrajectory(
-    const std::vector<ReferencePoint> & ref_points,
-    const std_msgs::msg::Header & header) const;
+    const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const;
 
   void publishReferenceSteeringAngles(
     const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
