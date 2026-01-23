@@ -195,11 +195,7 @@ private:
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;
   DustDetectionResult dust_result_;
-
-  // Multi-frame dust detection state
-  int dust_buffering_frame_counter_ = 0;
-  int dust_buffering_interval_ = 0;
-  boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
+  DustDetectionVisualizeData dust_visualize_data_;
 
 public:
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);

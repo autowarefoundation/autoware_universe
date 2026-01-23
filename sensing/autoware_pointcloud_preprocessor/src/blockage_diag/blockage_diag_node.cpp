@@ -50,7 +50,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     dust_config_.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
     dust_config_.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
     int dust_buffering_frames = declare_parameter<int>("dust_buffering_frames");
-    dust_buffering_interval_ = declare_parameter<int>("dust_buffering_interval");
+    dust_visualize_data_.dust_buffering_interval = declare_parameter<int>("dust_buffering_interval");
 
     // Blockage detection configuration
     blockage_config_.blockage_ratio_threshold = declare_parameter<float>("blockage_ratio_threshold");
@@ -94,7 +94,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
       std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
 
     // Set buffer sizes
-    dust_mask_buffer.set_capacity(dust_buffering_frames);
+    dust_visualize_data_.dust_mask_buffer.set_capacity(dust_buffering_frames);
   }
 
   // Publishers setup
@@ -376,22 +376,22 @@ void BlockageDiagComponent::publish_dust_debug_info(
     cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
     cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
 
-    if (dust_buffering_interval_ == 0) {
+    if (dust_visualize_data_.dust_buffering_interval == 0) {
       single_dust_img.copyTo(multi_frame_ground_dust_result);
-      dust_buffering_frame_counter_ = 0;
+      dust_visualize_data_.dust_frame_count = 0;
     } else {
       binarized_dust_mask_ = single_dust_img / 255;
-      if (dust_buffering_frame_counter_ >= dust_buffering_interval_) {
-        dust_mask_buffer.push_back(binarized_dust_mask_);
-        dust_buffering_frame_counter_ = 0;
+      if (dust_visualize_data_.dust_frame_count >= dust_visualize_data_.dust_buffering_interval) {
+        dust_visualize_data_.dust_mask_buffer.push_back(binarized_dust_mask_);
+        dust_visualize_data_.dust_frame_count = 0;
       } else {
-        dust_buffering_frame_counter_++;
+        dust_visualize_data_.dust_frame_count++;
       }
-      for (const auto & binarized_dust_mask : dust_mask_buffer) {
+      for (const auto & binarized_dust_mask : dust_visualize_data_.dust_mask_buffer) {
         multi_frame_dust_mask += binarized_dust_mask;
       }
       cv::inRange(
-        multi_frame_dust_mask, dust_mask_buffer.size() - 1, dust_mask_buffer.size(),
+        multi_frame_dust_mask, dust_visualize_data_.dust_mask_buffer.size() - 1, dust_visualize_data_.dust_mask_buffer.size(),
         multi_frame_ground_dust_result);
     }
     cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));

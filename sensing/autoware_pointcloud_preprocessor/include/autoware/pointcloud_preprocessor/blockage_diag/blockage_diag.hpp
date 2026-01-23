@@ -66,6 +66,13 @@ struct DustDetectionResult
   int dust_frame_count = 0;
 };
 
+struct DustDetectionVisualizeData
+{
+  int dust_frame_count = 0;
+  int dust_buffering_interval = 0;
+  boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
+};
+
 /**
  * @brief Validate that the PointCloud2 message has required fields for blockage diagnosis.
  *
