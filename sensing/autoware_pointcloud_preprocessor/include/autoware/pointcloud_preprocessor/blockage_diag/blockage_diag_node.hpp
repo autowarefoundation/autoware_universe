@@ -195,10 +195,6 @@ private:
   BlockageDetectionConfig blockage_config_;
   BlockageDetectionResult blockage_result_;
 
-  // Multi-frame blockage detection state
-  int blockage_frame_count_ = 0;
-  boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
-
   // Dust detection
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;

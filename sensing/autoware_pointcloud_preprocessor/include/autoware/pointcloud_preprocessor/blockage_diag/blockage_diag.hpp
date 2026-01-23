@@ -15,7 +15,12 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_HPP_
 
+#include <opencv2/core/mat.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <boost/circular_buffer.hpp>
+
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -34,9 +39,13 @@ struct BlockageDetectionResult
   float ground_blockage_ratio = -1.0f;
   int ground_blockage_count = 0;
   std::vector<float> ground_blockage_range_deg = {0.0f, 0.0f};
+
   float sky_blockage_ratio = -1.0f;
   int sky_blockage_count = 0;
   std::vector<float> sky_blockage_range_deg = {0.0f, 0.0f};
+
+  int blockage_frame_count = 0;
+  boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
 };
 
 struct DustDetectionConfig

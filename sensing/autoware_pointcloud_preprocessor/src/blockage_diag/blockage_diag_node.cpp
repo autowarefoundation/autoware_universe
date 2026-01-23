@@ -92,7 +92,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
       std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
   }
   dust_mask_buffer.set_capacity(dust_config_.dust_buffering_frames);
-  no_return_mask_buffer.set_capacity(blockage_config_.blockage_buffering_frames);
+  blockage_result_.no_return_mask_buffer.set_capacity(blockage_config_.blockage_buffering_frames);
 
   // Publishers setup
   if (publish_debug_image_) {
@@ -254,19 +254,19 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
   cv::Mat no_return_mask_binarized(dimensions, CV_8UC1, cv::Scalar(0));
 
   no_return_mask_binarized = blockage_mask / 255;
-  if (blockage_frame_count_ >= blockage_config_.blockage_buffering_interval) {
-    no_return_mask_buffer.push_back(no_return_mask_binarized);
-    blockage_frame_count_ = 0;
+  if (blockage_result_.blockage_frame_count >= blockage_config_.blockage_buffering_interval) {
+    blockage_result_.no_return_mask_buffer.push_back(no_return_mask_binarized);
+    blockage_result_.blockage_frame_count = 0;
   } else {
-    blockage_frame_count_++;
+    blockage_result_.blockage_frame_count++;
   }
 
-  for (const auto & binary_mask : no_return_mask_buffer) {
+  for (const auto & binary_mask : blockage_result_.no_return_mask_buffer) {
     time_series_blockage_mask += binary_mask;
   }
 
   cv::inRange(
-    time_series_blockage_mask, no_return_mask_buffer.size() - 1, no_return_mask_buffer.size(),
+    time_series_blockage_mask, blockage_result_.no_return_mask_buffer.size() - 1, blockage_result_.no_return_mask_buffer.size(),
     time_series_blockage_result);
 
   return time_series_blockage_result;
