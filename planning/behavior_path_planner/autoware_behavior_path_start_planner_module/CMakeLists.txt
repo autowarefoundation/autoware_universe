@@ -18,8 +18,15 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_ros REQUIRED)
+  ament_auto_find_test_dependencies()
+
+  find_package(
+    Python3
+    COMPONENTS Interpreter Development
+    REQUIRED)
+  find_package(pybind11_vendor REQUIRED)
+  find_package(pybind11 REQUIRED)
 
   # Add test helper library
   ament_auto_add_library(start_planner_test_helper SHARED
@@ -32,7 +39,6 @@ if(BUILD_TESTING)
   # Check if EXPORT_TEST_PLOT_FIGURE is set
   option(EXPORT_TEST_PLOT_FIGURE "Enable plotting in tests" OFF)
 
-  find_package(autoware_pyplot REQUIRED)
   ament_target_dependencies(start_planner_test_helper autoware_pyplot)
 
   file(GLOB_RECURSE TEST_SOURCES test/*.cpp)
@@ -42,6 +48,8 @@ if(BUILD_TESTING)
   )
   target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME}
     start_planner_test_helper
+    Python3::Python
+    pybind11::embed
   )
 
   # Pass EXPORT_TEST_PLOT_FIGURE definition to test executable
