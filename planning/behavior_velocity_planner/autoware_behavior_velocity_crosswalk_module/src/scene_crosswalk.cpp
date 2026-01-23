@@ -1317,10 +1317,10 @@ void CrosswalkModule::updateObjectState(
     }
 
     auto ignore_obj = is_red_signal_for_pedestrians;
-    if (p.consider_obj_on_crosswalk_on_red_light && is_red_signal_for_pedestrians) {
-      const auto is_object_on_crosswalk =
-        bg::intersects(autoware_utils::to_polygon2d(object), crosswalk_.polygon2d().basicPolygon());
+    const auto is_object_on_crosswalk =
+      bg::intersects(autoware_utils::to_polygon2d(object), crosswalk_.polygon2d().basicPolygon());
 
+    if (p.consider_obj_on_crosswalk_on_red_light && is_red_signal_for_pedestrians) {
       if (is_object_on_crosswalk) {
         ignore_obj = false;
         ignore_crosswalk = false;
@@ -1336,14 +1336,33 @@ void CrosswalkModule::updateObjectState(
     const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
 
     // calculate collision point and state
-    const auto collision_point =
+    auto collision_point =
       getCollisionPoint(sparse_resample_path, object, crosswalk_attention_range, attention_area);
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(sparse_resample_path);
+
+    // create a collision point if pedestrian is on crosswalk
+    if (p.stop_for_pedestrian_on_crosswalk && !collision_point) {
+      const bool is_pedestrian = !object.classification.empty() &&
+                                 object.classification.front().label ==
+                                   autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
+      if (is_pedestrian) {
+        if (is_object_on_crosswalk) {
+          const auto dist_ego2obj = calcSignedArcLength(
+            sparse_resample_path.points, planner_data_->current_odometry->pose.position, obj_pos);
+          const auto dist_obj2cp = 0.0;  // Pedestrian is already at the collision point
+
+          collision_point = createCollisionPoint(
+            obj_pos, dist_ego2obj, dist_obj2cp, planner_data_->current_velocity->twist.linear,
+            obj_vel, ego_crosswalk_passage_direction);
+        }
+      }
+    }
     object_info_manager_.update(
-      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
-      is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,
-      crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
+      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), clock_->now(), is_ego_yielding,
+      has_traffic_light, collision_point, object.classification.front().label, p,
+      crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction,
+      is_object_on_crosswalk);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
     if (collision_point) {

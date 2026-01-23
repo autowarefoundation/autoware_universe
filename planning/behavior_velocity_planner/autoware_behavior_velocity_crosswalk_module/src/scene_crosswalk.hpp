@@ -158,6 +158,7 @@ public:
     double ego_pass_later_additional_margin;
     double ego_min_assumed_speed;
     bool consider_obj_on_crosswalk_on_red_light;
+    bool stop_for_pedestrian_on_crosswalk;
     bool enable_no_stop_decision;
     double min_acc_for_no_stop_decision;
     double min_jerk_for_no_stop_decision;
@@ -213,8 +214,19 @@ public:
       const bool is_ego_yielding, const std::optional<CollisionPoint> & collision_point,
       const PlannerParam & planner_param, const lanelet::BasicPolygon2d & crosswalk_polygon,
       const bool is_object_away_from_path,
-      const std::optional<double> & ego_crosswalk_passage_direction)
+      const std::optional<double> & ego_crosswalk_passage_direction,
+      const bool is_object_on_crosswalk = false)
     {
+      // Check if pedestrian is on crosswalk and force stop regardless of velocity or other
+      // conditions
+      if (planner_param.stop_for_pedestrian_on_crosswalk) {
+        const bool is_pedestrian = classification == ObjectClassification::PEDESTRIAN;
+        if (is_pedestrian && is_object_on_crosswalk) {
+          collision_state = CollisionState::YIELD;
+          return;
+        }
+      }
+
       const bool is_object_stopped = vel < planner_param.stop_object_velocity;
 
       // Check if the object can be ignored
@@ -302,12 +314,13 @@ public:
   {
     void init() { current_uuids_.clear(); }
     void update(
-      const unique_identifier_msgs::msg::UUID & uuid, const geometry_msgs::msg::Point & position,
-      const double vel, const rclcpp::Time & now, const bool is_ego_yielding,
-      const bool has_traffic_light, const std::optional<CollisionPoint> & collision_point,
-      const uint8_t classification, const PlannerParam & planner_param,
-      const lanelet::BasicPolygon2d & crosswalk_polygon, const Polygon2d & attention_area,
-      const std::optional<double> & ego_crosswalk_passage_direction)
+      const unique_identifier_msgs::msg::UUID & uuid, const geometry_msgs::msg::Point & position, const double vel,
+      const rclcpp::Time & now, const bool is_ego_yielding, const bool has_traffic_light,
+      const std::optional<CollisionPoint> & collision_point, const uint8_t classification,
+      const PlannerParam & planner_param, const lanelet::BasicPolygon2d & crosswalk_polygon,
+      const Polygon2d & attention_area,
+      const std::optional<double> & ego_crosswalk_passage_direction,
+      const bool is_object_on_crosswalk = false)
     {
       // update current uuids
       current_uuids_.push_back(uuid);
@@ -331,7 +344,7 @@ public:
       objects.at(uuid).classification = classification;
       objects.at(uuid).transitState(
         now, position, vel, is_ego_yielding, collision_point, planner_param, crosswalk_polygon,
-        is_object_away_from_path, ego_crosswalk_passage_direction);
+        is_object_away_from_path, ego_crosswalk_passage_direction, is_object_on_crosswalk);
       objects.at(uuid).collision_point = collision_point;
       objects.at(uuid).position = position;
       objects.at(uuid).last_detection_time = now;
