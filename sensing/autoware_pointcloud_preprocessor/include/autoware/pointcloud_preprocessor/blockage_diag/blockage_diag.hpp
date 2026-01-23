@@ -29,7 +29,6 @@ struct BlockageDetectionConfig
 {
   float blockage_ratio_threshold;
   int blockage_kernel;
-  int blockage_buffering_frames;
   int blockage_buffering_interval;
   int blockage_count_threshold;
 };
@@ -54,7 +53,6 @@ struct DustDetectionConfig
 {
   float dust_ratio_threshold;
   int dust_kernel_size;
-  int dust_buffering_frames;
   int dust_buffering_interval;
   int dust_count_threshold;
 };

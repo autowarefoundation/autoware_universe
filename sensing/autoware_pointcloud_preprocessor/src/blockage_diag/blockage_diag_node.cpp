@@ -49,14 +49,14 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     dust_config_.dust_ratio_threshold = declare_parameter<float>("dust_ratio_threshold");
     dust_config_.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
     dust_config_.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
-    dust_config_.dust_buffering_frames = declare_parameter<int>("dust_buffering_frames");
+    int dust_buffering_frames = declare_parameter<int>("dust_buffering_frames");
     dust_config_.dust_buffering_interval = declare_parameter<int>("dust_buffering_interval");
 
     // Blockage detection configuration
     blockage_config_.blockage_ratio_threshold = declare_parameter<float>("blockage_ratio_threshold");
     blockage_config_.blockage_count_threshold = declare_parameter<int>("blockage_count_threshold");
     blockage_config_.blockage_kernel = declare_parameter<int>("blockage_kernel");
-    blockage_config_.blockage_buffering_frames = declare_parameter<int>("blockage_buffering_frames");
+    int blockage_buffering_frames = declare_parameter<int>("blockage_buffering_frames");
     blockage_config_.blockage_buffering_interval = declare_parameter<int>("blockage_buffering_interval");
 
     // Debug configuration
@@ -90,9 +90,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     depth_image_config.max_distance_range = max_distance_range;
     depth_image_converter_ =
       std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
+
+    // Set buffer sizes
+    dust_mask_buffer.set_capacity(dust_buffering_frames);
+    blockage_result_.no_return_mask_buffer.set_capacity(blockage_buffering_frames);
   }
-  dust_mask_buffer.set_capacity(dust_config_.dust_buffering_frames);
-  blockage_result_.no_return_mask_buffer.set_capacity(blockage_config_.blockage_buffering_frames);
 
   // Publishers setup
   if (publish_debug_image_) {
