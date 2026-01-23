@@ -393,27 +393,31 @@ void BlockageDiagComponent::publish_dust_debug_info(
         multi_frame_dust_mask, dust_visualize_data_.mask_buffer.size() - 1, dust_visualize_data_.mask_buffer.size(),
         multi_frame_ground_dust_result);
     }
+
+    // Publish single-frame dust mask image with color map
     cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
     cv::applyColorMap(single_dust_img, single_frame_ground_dust_colorized, cv::COLORMAP_JET);
-    cv::Mat multi_frame_ground_dust_colorized;
-    cv::Mat blockage_dust_merged_img(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::Mat blockage_dust_merged_mask(dimensions, CV_8UC1, cv::Scalar(0));
-    blockage_dust_merged_img.setTo(
-      cv::Vec3b(0, 0, 255), debug_info.blockage_mask_multi_frame);  // red:blockage
-    blockage_dust_merged_img.setTo(
-      cv::Vec3b(0, 255, 255), multi_frame_ground_dust_result);  // yellow:dust
     sensor_msgs::msg::Image::SharedPtr single_frame_dust_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", single_frame_ground_dust_colorized)
         .toImageMsg();
     single_frame_dust_mask_pub.publish(single_frame_dust_mask_msg);
+
+    // Publish multi-frame dust mask image with color map
+    cv::Mat multi_frame_ground_dust_colorized;
+    cv::applyColorMap(multi_frame_ground_dust_result, multi_frame_ground_dust_colorized, cv::COLORMAP_JET);
     sensor_msgs::msg::Image::SharedPtr multi_frame_dust_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", multi_frame_ground_dust_colorized)
         .toImageMsg();
     multi_frame_dust_mask_pub.publish(multi_frame_dust_mask_msg);
-    cv::Mat blockage_dust_merged_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
-    blockage_dust_merged_img.copyTo(blockage_dust_merged_colorized);
+
+    // Publish blockage and dust merged image
+    cv::Mat blockage_dust_merged_img(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
+    blockage_dust_merged_img.setTo(
+      cv::Vec3b(0, 0, 255), debug_info.blockage_mask_multi_frame);  // red:blockage
+    blockage_dust_merged_img.setTo(
+      cv::Vec3b(0, 255, 255), multi_frame_ground_dust_result);  // yellow:dust
     sensor_msgs::msg::Image::SharedPtr blockage_dust_merged_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", blockage_dust_merged_colorized)
+      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", blockage_dust_merged_img)
         .toImageMsg();
     blockage_dust_merged_msg->header = debug_info.input_header;
     blockage_dust_merged_pub.publish(blockage_dust_merged_msg);
