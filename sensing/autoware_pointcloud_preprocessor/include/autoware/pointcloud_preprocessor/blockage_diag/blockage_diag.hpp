@@ -29,7 +29,6 @@ struct BlockageDetectionConfig
 {
   float blockage_ratio_threshold;
   int blockage_kernel;
-  int blockage_buffering_interval;
   int blockage_count_threshold;
 };
 
@@ -45,7 +44,12 @@ struct BlockageDetectionResult
 {
   BlockageAreaResult ground;
   BlockageAreaResult sky;
+};
+
+struct BlockageDetectionVisualizeData
+{
   int blockage_frame_count = 0;
+  int blockage_buffering_interval = 0;
   boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
 };
 
@@ -53,7 +57,6 @@ struct DustDetectionConfig
 {
   float dust_ratio_threshold;
   int dust_kernel_size;
-  int dust_buffering_interval;
   int dust_count_threshold;
 };
 

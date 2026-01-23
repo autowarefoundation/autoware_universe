@@ -189,6 +189,7 @@ private:
   // Blockage detection
   BlockageDetectionConfig blockage_config_;
   BlockageDetectionResult blockage_result_;
+  BlockageDetectionVisualizeData blockage_visualize_data_;
 
   // Dust detection
   bool enable_dust_diag_;
@@ -197,6 +198,7 @@ private:
 
   // Multi-frame dust detection state
   int dust_buffering_frame_counter_ = 0;
+  int dust_buffering_interval_ = 0;
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 
 public:
