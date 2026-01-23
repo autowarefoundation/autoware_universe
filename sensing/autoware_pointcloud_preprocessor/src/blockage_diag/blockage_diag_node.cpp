@@ -53,11 +53,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     dust_config_.dust_buffering_interval = declare_parameter<int>("dust_buffering_interval");
 
     // Blockage detection configuration
-    blockage_ratio_threshold_ = declare_parameter<float>("blockage_ratio_threshold");
-    blockage_count_threshold_ = declare_parameter<int>("blockage_count_threshold");
-    blockage_kernel_ = declare_parameter<int>("blockage_kernel");
-    blockage_buffering_frames_ = declare_parameter<int>("blockage_buffering_frames");
-    blockage_buffering_interval_ = declare_parameter<int>("blockage_buffering_interval");
+    blockage_config_.blockage_ratio_threshold = declare_parameter<float>("blockage_ratio_threshold");
+    blockage_config_.blockage_count_threshold = declare_parameter<int>("blockage_count_threshold");
+    blockage_config_.blockage_kernel = declare_parameter<int>("blockage_kernel");
+    blockage_config_.blockage_buffering_frames = declare_parameter<int>("blockage_buffering_frames");
+    blockage_config_.blockage_buffering_interval = declare_parameter<int>("blockage_buffering_interval");
 
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
@@ -92,7 +92,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
       std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
   }
   dust_mask_buffer.set_capacity(dust_config_.dust_buffering_frames);
-  no_return_mask_buffer.set_capacity(blockage_buffering_frames_);
+  no_return_mask_buffer.set_capacity(blockage_config_.blockage_buffering_frames);
 
   // Publishers setup
   if (publish_debug_image_) {
@@ -139,38 +139,38 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
 
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
 {
-  stat.add("ground_blockage_ratio", std::to_string(ground_blockage_ratio_));
-  stat.add("ground_blockage_count", std::to_string(ground_blockage_count_));
+  stat.add("ground_blockage_ratio", std::to_string(blockage_result_.ground_blockage_ratio));
+  stat.add("ground_blockage_count", std::to_string(blockage_result_.ground_blockage_count));
   stat.add(
-    "ground_blockage_range_deg", "[" + std::to_string(ground_blockage_range_deg_[0]) + "," +
-                                   std::to_string(ground_blockage_range_deg_[1]) + "]");
-  stat.add("sky_blockage_ratio", std::to_string(sky_blockage_ratio_));
-  stat.add("sky_blockage_count", std::to_string(sky_blockage_count_));
+    "ground_blockage_range_deg", "[" + std::to_string(blockage_result_.ground_blockage_range_deg[0]) + "," +
+                                   std::to_string(blockage_result_.ground_blockage_range_deg[1]) + "]");
+  stat.add("sky_blockage_ratio", std::to_string(blockage_result_.sky_blockage_ratio));
+  stat.add("sky_blockage_count", std::to_string(blockage_result_.sky_blockage_count));
   stat.add(
-    "sky_blockage_range_deg", "[" + std::to_string(sky_blockage_range_deg_[0]) + "," +
-                                std::to_string(sky_blockage_range_deg_[1]) + "]");
+    "sky_blockage_range_deg", "[" + std::to_string(blockage_result_.sky_blockage_range_deg[0]) + "," +
+                                std::to_string(blockage_result_.sky_blockage_range_deg[1]) + "]");
   // TODO(badai-nguyen): consider sky_blockage_ratio_ for DiagnosticsStatus." [todo]
 
   auto level = DiagnosticStatus::OK;
   std::string msg = "OK";
-  if (ground_blockage_ratio_ < 0) {
+  if (blockage_result_.ground_blockage_ratio < 0) {
     level = DiagnosticStatus::STALE;
     msg = "STALE";
   } else if (
-    (ground_blockage_ratio_ > blockage_ratio_threshold_) &&
-    (ground_blockage_count_ > blockage_count_threshold_)) {
+    (blockage_result_.ground_blockage_ratio > blockage_config_.blockage_ratio_threshold) &&
+    (blockage_result_.ground_blockage_count > blockage_config_.blockage_count_threshold)) {
     level = DiagnosticStatus::ERROR;
     msg = "ERROR";
-  } else if (ground_blockage_ratio_ > 0.0f) {
+  } else if (blockage_result_.ground_blockage_ratio > 0.0f) {
     level = DiagnosticStatus::WARN;
     msg = "WARN";
   }
 
-  if ((ground_blockage_ratio_ > 0.0f) && (sky_blockage_ratio_ > 0.0f)) {
+  if ((blockage_result_.ground_blockage_ratio > 0.0f) && (blockage_result_.sky_blockage_ratio > 0.0f)) {
     msg = msg + ": LIDAR both blockage";
-  } else if (ground_blockage_ratio_ > 0.0f) {
+  } else if (blockage_result_.ground_blockage_ratio > 0.0f) {
     msg = msg + ": LIDAR ground blockage";
-  } else if (sky_blockage_ratio_ > 0.0f) {
+  } else if (blockage_result_.sky_blockage_ratio > 0.0f) {
     msg = msg + ": LIDAR sky blockage";
   }
   stat.summary(level, msg);
@@ -226,8 +226,8 @@ cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask
   assert(no_return_mask.type() == CV_8UC1);
   auto dimensions = no_return_mask.size();
 
-  int kernel_size = 2 * blockage_kernel_ + 1;
-  int kernel_center = blockage_kernel_;
+  int kernel_size = 2 * blockage_config_.blockage_kernel + 1;
+  int kernel_center = blockage_config_.blockage_kernel;
   cv::Mat kernel = cv::getStructuringElement(
     cv::MORPH_RECT, cv::Size(kernel_size, kernel_size), cv::Point(kernel_center, kernel_center));
 
@@ -242,7 +242,7 @@ cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask
 
 cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & blockage_mask)
 {
-  if (blockage_buffering_interval_ == 0) {
+  if (blockage_config_.blockage_buffering_interval == 0) {
     return blockage_mask.clone();
   }
 
@@ -254,7 +254,7 @@ cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & 
   cv::Mat no_return_mask_binarized(dimensions, CV_8UC1, cv::Scalar(0));
 
   no_return_mask_binarized = blockage_mask / 255;
-  if (blockage_frame_count_ >= blockage_buffering_interval_) {
+  if (blockage_frame_count_ >= blockage_config_.blockage_buffering_interval) {
     no_return_mask_buffer.push_back(no_return_mask_binarized);
     blockage_frame_count_ = 0;
   } else {
@@ -300,8 +300,8 @@ float BlockageDiagComponent::get_nonzero_ratio(const cv::Mat & mask)
 
 void BlockageDiagComponent::update_ground_blockage_info(const cv::Mat & ground_blockage_mask)
 {
-  if (ground_blockage_ratio_ <= blockage_ratio_threshold_) {
-    ground_blockage_count_ = 0;
+  if (blockage_result_.ground_blockage_ratio <= blockage_config_.blockage_ratio_threshold) {
+    blockage_result_.ground_blockage_count = 0;
     return;
   }
 
@@ -310,18 +310,18 @@ void BlockageDiagComponent::update_ground_blockage_info(const cv::Mat & ground_b
   double blockage_end_deg =
     (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
 
-  ground_blockage_range_deg_[0] = static_cast<float>(blockage_start_deg);
-  ground_blockage_range_deg_[1] = static_cast<float>(blockage_end_deg);
+  blockage_result_.ground_blockage_range_deg[0] = static_cast<float>(blockage_start_deg);
+  blockage_result_.ground_blockage_range_deg[1] = static_cast<float>(blockage_end_deg);
 
-  if (ground_blockage_count_ <= 2 * blockage_count_threshold_) {
-    ground_blockage_count_ += 1;
+  if (blockage_result_.ground_blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
+    blockage_result_.ground_blockage_count += 1;
   }
 }
 
 void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockage_mask)
 {
-  if (sky_blockage_ratio_ <= blockage_ratio_threshold_) {
-    sky_blockage_count_ = 0;
+  if (blockage_result_.sky_blockage_ratio <= blockage_config_.blockage_ratio_threshold) {
+    blockage_result_.sky_blockage_count = 0;
     return;
   }
 
@@ -330,11 +330,11 @@ void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockag
   double blockage_end_deg =
     (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
 
-  sky_blockage_range_deg_[0] = static_cast<float>(blockage_start_deg);
-  sky_blockage_range_deg_[1] = static_cast<float>(blockage_end_deg);
+  blockage_result_.sky_blockage_range_deg[0] = static_cast<float>(blockage_start_deg);
+  blockage_result_.sky_blockage_range_deg[1] = static_cast<float>(blockage_end_deg);
 
-  if (sky_blockage_count_ <= 2 * blockage_count_threshold_) {
-    sky_blockage_count_ += 1;
+  if (blockage_result_.sky_blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
+    blockage_result_.sky_blockage_count += 1;
   }
 }
 
@@ -440,12 +440,12 @@ void BlockageDiagComponent::publish_dust_debug_info(
 void BlockageDiagComponent::publish_blockage_debug_info(const DebugInfo & debug_info) const
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
-  ground_blockage_ratio_msg.data = ground_blockage_ratio_;
+  ground_blockage_ratio_msg.data = blockage_result_.ground_blockage_ratio;
   ground_blockage_ratio_msg.stamp = now();
   ground_blockage_ratio_pub_->publish(ground_blockage_ratio_msg);
 
   autoware_internal_debug_msgs::msg::Float32Stamped sky_blockage_ratio_msg;
-  sky_blockage_ratio_msg.data = sky_blockage_ratio_;
+  sky_blockage_ratio_msg.data = blockage_result_.sky_blockage_ratio;
   sky_blockage_ratio_msg.stamp = now();
   sky_blockage_ratio_pub_->publish(sky_blockage_ratio_msg);
 
@@ -474,8 +474,8 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
 
   auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
 
-  ground_blockage_ratio_ = get_nonzero_ratio(ground_blockage_mask);
-  sky_blockage_ratio_ = get_nonzero_ratio(sky_blockage_mask);
+  blockage_result_.ground_blockage_ratio = get_nonzero_ratio(ground_blockage_mask);
+  blockage_result_.sky_blockage_ratio = get_nonzero_ratio(sky_blockage_mask);
 
   update_ground_blockage_info(ground_blockage_mask);
   update_sky_blockage_info(sky_blockage_mask);

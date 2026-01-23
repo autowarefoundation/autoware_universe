@@ -20,6 +20,25 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+struct BlockageDetectionConfig
+{
+  float blockage_ratio_threshold;
+  int blockage_kernel;
+  int blockage_buffering_frames;
+  int blockage_buffering_interval;
+  int blockage_count_threshold;
+};
+
+struct BlockageDetectionResult
+{
+  float ground_blockage_ratio = -1.0f;
+  float sky_blockage_ratio = -1.0f;
+  int ground_blockage_count = 0;
+  int sky_blockage_count = 0;
+  std::vector<float> ground_blockage_range_deg = {0.0f, 0.0f};
+  std::vector<float> sky_blockage_range_deg = {0.0f, 0.0f};
+};
+
 struct DustDetectionConfig
 {
   float dust_ratio_threshold;

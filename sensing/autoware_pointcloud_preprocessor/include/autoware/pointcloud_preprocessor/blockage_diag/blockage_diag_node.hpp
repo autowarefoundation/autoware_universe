@@ -192,19 +192,10 @@ private:
   int horizontal_ring_id_;
 
   // Blockage detection parameters
-  float blockage_ratio_threshold_;
-  int blockage_kernel_ = 10;
-  int blockage_buffering_frames_;
-  int blockage_buffering_interval_;
-  int blockage_count_threshold_;
+  BlockageDetectionConfig blockage_config_;
 
   // Blockage detection state
-  float ground_blockage_ratio_ = -1.0f;
-  float sky_blockage_ratio_ = -1.0f;
-  int ground_blockage_count_ = 0;
-  int sky_blockage_count_ = 0;
-  std::vector<float> ground_blockage_range_deg_ = {0.0f, 0.0f};
-  std::vector<float> sky_blockage_range_deg_ = {0.0f, 0.0f};
+  BlockageDetectionResult blockage_result_;
 
   // Multi-frame blockage detection state
   int blockage_frame_count_ = 0;
