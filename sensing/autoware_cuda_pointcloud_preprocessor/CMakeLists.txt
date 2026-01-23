@@ -3,20 +3,11 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 
-# Only build on ROS 2 Humble
-if(NOT "$ENV{ROS_DISTRO}" STREQUAL "humble")
-  message(WARNING
-    "autoware_cuda_pointcloud_preprocessor is only supported on ROS 2 Humble. "
-    "Detected ROS_DISTRO='$ENV{ROS_DISTRO}'. Skipping build."
-  )
-
-  # Create an empty but valid ament package
-  ament_auto_package()
-  return()
-endif()
-
 find_package(CUDA)
-find_package(agnocastlib)
+
+if("$ENV{ENABLE_AGNOCAST}")
+  find_package(agnocastlib)
+endif()
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")
