@@ -20,6 +20,21 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+struct DustDetectionConfig
+{
+  float dust_ratio_threshold;
+  int dust_kernel_size;
+  int dust_buffering_frames;
+  int dust_buffering_interval;
+  int dust_count_threshold;
+};
+
+struct DustDetectionResult
+{
+  float ground_dust_ratio = -1.0f;
+  int dust_frame_count = 0;
+};
+
 /**
  * @brief Validate that the PointCloud2 message has required fields for blockage diagnosis.
  *

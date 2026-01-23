@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -211,18 +212,13 @@ private:
 
   // Dust detection parameters
   bool enable_dust_diag_;
-  float dust_ratio_threshold_;
-  int dust_kernel_size_;
-  int dust_buffering_frames_;
-  int dust_buffering_interval_;
-  int dust_count_threshold_;
+  DustDetectionConfig dust_config_;
 
   // Dust detection state
-  float ground_dust_ratio_ = -1.0f;
+  DustDetectionResult dust_result_;
 
   // Multi-frame dust detection state
   int dust_buffering_frame_counter_ = 0;
-  int dust_frame_count_ = 0;
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 
 public:
