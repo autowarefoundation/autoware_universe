@@ -34,6 +34,7 @@
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
 
@@ -60,6 +61,7 @@ private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     pointcloud_sub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr voxel_grid_pub_;
 
   std::vector<std::string> class_names_;
   bool has_variance_{false};

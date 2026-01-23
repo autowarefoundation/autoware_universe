@@ -46,6 +46,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
     this->declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
+  const std::size_t max_num_detections = static_cast<std::size_t>(
+    this->declare_parameter<std::int64_t>("post_process_params.max_num_detections", 1000));
   const std::string densification_world_frame_id =
     this->declare_parameter<std::string>("densification_params.world_frame_id");
   const int densification_num_past_frames =
@@ -108,7 +110,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   CenterPointConfig config(
     class_names_.size(), point_feature_size, cloud_capacity, max_voxel_size, point_cloud_range,
     voxel_size, downsample_factor, encoder_in_feature_size, score_thresholds,
-    circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_, this->logger_name_);
+    circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_, max_num_detections,
+    this->logger_name_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
   diagnostics_centerpoint_trt_ =
@@ -126,6 +129,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
       std::bind(&LidarCenterPointNode::pointCloudCallback, this, std::placeholders::_1));
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS{1});
+  voxel_grid_pub_ =
+    this->create_publisher<nav_msgs::msg::OccupancyGrid>("~/debug/voxel_grid", rclcpp::QoS{1});
 
   // initialize debug tool
   {
@@ -185,6 +190,211 @@ void LidarCenterPointNode::pointCloudCallback(
             << "which may limit the detection performance.";
     diagnostics_centerpoint_trt_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+  }
+
+  // Publish voxel grid for debug visualization
+  if (voxel_grid_pub_->get_subscription_count() > 0) {
+    std::vector<int> coordinates;
+    std::vector<float> point_counts;
+    std::vector<float> voxel_heights;
+    std::vector<float> voxel_mean_z;
+    unsigned int num_voxels = 0;
+
+    // Visualization mode selector
+    enum class VoxelVisualizationMode { OCCUPANCY, HEIGHT, FEAT_MEAN_Z };
+    const VoxelVisualizationMode viz_mode = VoxelVisualizationMode::FEAT_MEAN_Z;
+
+    bool data_available = false;
+    if (viz_mode == VoxelVisualizationMode::FEAT_MEAN_Z) {
+      data_available = detector_ptr_->getVoxelGridData(
+        coordinates, point_counts, voxel_heights, voxel_mean_z, num_voxels);
+    } else if (viz_mode == VoxelVisualizationMode::HEIGHT) {
+      data_available =
+        detector_ptr_->getVoxelGridData(coordinates, point_counts, voxel_heights, num_voxels);
+    } else {
+      data_available = detector_ptr_->getVoxelGridData(coordinates, point_counts, num_voxels);
+    }
+
+    if (data_available) {
+      // Get voxel config from detector
+      const auto & config = detector_ptr_->getConfig();
+      const float voxel_size_x = config.voxel_size_x_;
+      const float voxel_size_y = config.voxel_size_y_;
+      const float range_min_x = config.range_min_x_;
+      const float range_min_y = config.range_min_y_;
+      const float viz_min_x = -40.0f;
+      const float viz_max_x = 40.0f;
+      const float viz_min_y = -40.0f;
+      const float viz_max_y = 40.0f;
+      const float max_point_in_voxel = static_cast<float>(config.max_point_in_voxel_size_);
+
+      // Voxel coordinate system:
+      // - Voxel (0,0) left edge is at world position (range_min_x, range_min_y)
+      // - Voxel (i,j) left edge is at (range_min_x + i*voxel_size, range_min_y + j*voxel_size)
+      // - Voxel (i,j) center is at (range_min_x + (i+0.5)*voxel_size, range_min_y +
+      // (j+0.5)*voxel_size)
+
+      // Calculate which voxel index corresponds to the visualization area
+      const int grid_offset_x =
+        static_cast<int>(std::floor((viz_min_x - range_min_x) / voxel_size_x));
+      const int grid_offset_y =
+        static_cast<int>(std::floor((viz_min_y - range_min_y) / voxel_size_y));
+
+      // OccupancyGrid origin: In ROS, this is typically at the LOWER-LEFT corner of cell [0,0]
+      // which aligns with the LEFT EDGE of the voxel (not center)
+      const float grid_origin_x = range_min_x + grid_offset_x * voxel_size_x;
+      const float grid_origin_y = range_min_y + grid_offset_y * voxel_size_y;
+
+      // Debug: Calculate world position of first few voxels
+      const float voxel_155_center_x = range_min_x + (155 + 0.5f) * voxel_size_x;
+      const float voxel_155_center_y = range_min_y + (155 + 0.5f) * voxel_size_y;
+      RCLCPP_INFO_ONCE(
+        rclcpp::get_logger("lidar_centerpoint"),
+        "Voxel 155 center: (%.2f, %.2f), Grid origin: (%.2f, %.2f)", voxel_155_center_x,
+        voxel_155_center_y, grid_origin_x, grid_origin_y);
+
+      // Calculate grid dimensions
+      const int grid_width = static_cast<int>((viz_max_x - viz_min_x) / voxel_size_x);
+      const int grid_height = static_cast<int>((viz_max_y - viz_min_y) / voxel_size_y);
+
+      RCLCPP_INFO_ONCE(
+        rclcpp::get_logger("lidar_centerpoint"),
+        "Voxel grid debug - offset: (%d, %d), origin: (%.2f, %.2f), size: (%d, %d)", grid_offset_x,
+        grid_offset_y, grid_origin_x, grid_origin_y, grid_width, grid_height);
+
+      // Create occupancy grid message
+      nav_msgs::msg::OccupancyGrid grid_msg;
+      grid_msg.header = input_pointcloud_msg->header;
+
+      // Transform grid to map frame
+      const std::string target_frame = "map";
+      try {
+        // Get transform from ego frame to map frame at the pointcloud timestamp
+        geometry_msgs::msg::TransformStamped transform_stamped = tf_buffer_.lookupTransform(
+          target_frame, input_pointcloud_msg->header.frame_id, input_pointcloud_msg->header.stamp,
+          rclcpp::Duration::from_seconds(0.5));
+
+        // Transform the grid origin position from ego frame to map frame
+        geometry_msgs::msg::PoseStamped origin_ego;
+        origin_ego.header = input_pointcloud_msg->header;
+        origin_ego.pose.position.x = grid_origin_x;
+        origin_ego.pose.position.y = grid_origin_y;
+        origin_ego.pose.position.z = 0.0;
+        origin_ego.pose.orientation.w = 1.0;
+
+        geometry_msgs::msg::PoseStamped origin_map;
+        tf2::doTransform(origin_ego, origin_map, transform_stamped);
+
+        // Set header to map frame
+        grid_msg.header.frame_id = target_frame;
+
+        // Set transformed origin
+        grid_msg.info.resolution = voxel_size_x;
+        grid_msg.info.width = grid_width;
+        grid_msg.info.height = grid_height;
+        grid_msg.info.origin.position.x = origin_map.pose.position.x;
+        grid_msg.info.origin.position.y = origin_map.pose.position.y;
+        grid_msg.info.origin.position.z = origin_map.pose.position.z;
+        grid_msg.info.origin.orientation = origin_map.pose.orientation;
+      } catch (tf2::TransformException & ex) {
+        RCLCPP_WARN_THROTTLE(
+          rclcpp::get_logger("lidar_centerpoint"), *this->get_clock(), 1000,
+          "Could not transform grid to map frame: %s. Publishing in ego frame.", ex.what());
+
+        // Fallback to ego frame
+        grid_msg.info.resolution = voxel_size_x;
+        grid_msg.info.width = grid_width;
+        grid_msg.info.height = grid_height;
+        grid_msg.info.origin.position.x = grid_origin_x;
+        grid_msg.info.origin.position.y = grid_origin_y;
+        grid_msg.info.origin.position.z = 0.0;
+        grid_msg.info.origin.orientation.w = 1.0;
+      }
+
+      // Initialize grid with unknown (-1)
+      grid_msg.data.resize(grid_width * grid_height, -1);
+
+      // Fill grid with voxel data
+      int num_filled = 0;
+      int min_coord_x = 999999, max_coord_x = -999999;
+      int min_coord_y = 999999, max_coord_y = -999999;
+
+      for (unsigned int i = 0; i < num_voxels; ++i) {
+        const int coord_x = coordinates[i * 3 + 2];
+        const int coord_y = coordinates[i * 3 + 1];
+
+        // Track coordinate range
+        min_coord_x = std::min(min_coord_x, coord_x);
+        max_coord_x = std::max(max_coord_x, coord_x);
+        min_coord_y = std::min(min_coord_y, coord_y);
+        max_coord_y = std::max(max_coord_y, coord_y);
+
+        // Convert voxel coordinates directly to grid indices
+        const int grid_x = coord_x - grid_offset_x;
+        const int grid_y = coord_y - grid_offset_y;
+
+        // Check if within grid bounds
+        if (grid_x >= 0 && grid_x < grid_width && grid_y >= 0 && grid_y < grid_height) {
+          const int grid_idx = grid_y * grid_width + grid_x;
+
+          float value;
+          switch (viz_mode) {
+            case VoxelVisualizationMode::FEAT_MEAN_Z:
+              // Map mean.z to value: 1m -> 0.0, 0m -> 0.8, empty voxel -> 1.0
+              {
+                const float mean_z = voxel_mean_z[i];
+                const float max_z = 1.0f;
+                const float min_value = 0.0f;
+                const float max_value = 0.8f;
+                // Linear mapping: value = 0.8 - 0.8 * (mean_z / 1.0)
+                value = max_value - (mean_z / max_z) * (max_value - min_value);
+                value = std::max(min_value, std::min(max_value, value));
+              }
+              break;
+
+            case VoxelVisualizationMode::HEIGHT:
+              // Map height to value: 2m max -> 0.0, 0m -> 0.8
+              {
+                const float height = voxel_heights[i];
+                const float max_height = 2.0f;
+                const float min_value = 0.0f;
+                const float max_value = 0.8f;
+                value = max_value - (height / max_height) * (max_value - min_value);
+                value = std::max(min_value, std::min(max_value, value));
+              }
+              break;
+
+            case VoxelVisualizationMode::OCCUPANCY:
+            default:
+              // Map point count to occupancy value (inverted scale)
+              // 0.0 = fully filled (32 points), 0.8 = lowest filled (1 point), 1.0 = empty
+              {
+                const float normalized_count = point_counts[i] / max_point_in_voxel;
+                value = std::max(0.8f - 0.8f * normalized_count, 0.0f);
+              }
+              break;
+          }
+
+          // Convert to occupancy grid value (0-100)
+          grid_msg.data[grid_idx] = static_cast<int8_t>(value * 100);
+          num_filled++;
+        }
+      }
+
+      RCLCPP_INFO_ONCE(
+        rclcpp::get_logger("lidar_centerpoint"),
+        "Voxels: total=%u, filled_in_grid=%d, coord_x=[%d,%d], coord_y=[%d,%d]", num_voxels,
+        num_filled, min_coord_x, max_coord_x, min_coord_y, max_coord_y);
+
+      // Set empty cells (still -1) to 100 (fully empty)
+      for (auto & cell : grid_msg.data) {
+        if (cell == -1) {
+          cell = 100;
+        }
+      }
+
+      voxel_grid_pub_->publish(grid_msg);
+    }
   }
 
   std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
