@@ -140,8 +140,7 @@ private:
    * @param blockage_mask The blockage mask. The data type is `CV_8UC1`.
    * @param area_result Reference to the BlockageAreaResult to update.
    */
-  void update_blockage_info(
-    const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
+  void update_blockage_info(const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
 
   /**
    * @brief Compute blockage diagnostics and update the internal blockage info.

@@ -16,6 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_HPP_
 
 #include <opencv2/core/mat.hpp>
+
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <boost/circular_buffer.hpp>
