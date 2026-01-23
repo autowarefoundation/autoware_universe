@@ -191,21 +191,17 @@ private:
   // Ground/sky segmentation parameters
   int horizontal_ring_id_;
 
-  // Blockage detection parameters
+  // Blockage detection
   BlockageDetectionConfig blockage_config_;
-
-  // Blockage detection state
   BlockageDetectionResult blockage_result_;
 
   // Multi-frame blockage detection state
   int blockage_frame_count_ = 0;
   boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
 
-  // Dust detection parameters
+  // Dust detection
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;
-
-  // Dust detection state
   DustDetectionResult dust_result_;
 
   // Multi-frame dust detection state
