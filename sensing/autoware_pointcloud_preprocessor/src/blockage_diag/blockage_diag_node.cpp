@@ -298,43 +298,24 @@ float BlockageDiagComponent::get_nonzero_ratio(const cv::Mat & mask)
   return static_cast<float>(cv::countNonZero(mask)) / static_cast<float>(area);
 }
 
-void BlockageDiagComponent::update_ground_blockage_info(const cv::Mat & ground_blockage_mask)
+void BlockageDiagComponent::update_blockage_info(
+  const cv::Mat & blockage_mask, BlockageAreaResult & area_result)
 {
-  if (blockage_result_.ground.blockage_ratio <= blockage_config_.blockage_ratio_threshold) {
-    blockage_result_.ground.blockage_count = 0;
+  if (area_result.blockage_ratio <= blockage_config_.blockage_ratio_threshold) {
+    area_result.blockage_count = 0;
     return;
   }
 
-  cv::Rect blockage_bb = cv::boundingRect(ground_blockage_mask);
+  cv::Rect blockage_bb = cv::boundingRect(blockage_mask);
   double blockage_start_deg = blockage_bb.x * horizontal_resolution_ + angle_range_deg_[0];
   double blockage_end_deg =
     (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
 
-  blockage_result_.ground.blockage_start_deg = static_cast<float>(blockage_start_deg);
-  blockage_result_.ground.blockage_end_deg = static_cast<float>(blockage_end_deg);
+  area_result.blockage_start_deg = static_cast<float>(blockage_start_deg);
+  area_result.blockage_end_deg = static_cast<float>(blockage_end_deg);
 
-  if (blockage_result_.ground.blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
-    blockage_result_.ground.blockage_count += 1;
-  }
-}
-
-void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockage_mask)
-{
-  if (blockage_result_.sky.blockage_ratio <= blockage_config_.blockage_ratio_threshold) {
-    blockage_result_.sky.blockage_count = 0;
-    return;
-  }
-
-  cv::Rect blockage_bb = cv::boundingRect(sky_blockage_mask);
-  double blockage_start_deg = blockage_bb.x * horizontal_resolution_ + angle_range_deg_[0];
-  double blockage_end_deg =
-    (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
-
-  blockage_result_.sky.blockage_start_deg = static_cast<float>(blockage_start_deg);
-  blockage_result_.sky.blockage_end_deg = static_cast<float>(blockage_end_deg);
-
-  if (blockage_result_.sky.blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
-    blockage_result_.sky.blockage_count += 1;
+  if (area_result.blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
+    area_result.blockage_count += 1;
   }
 }
 
@@ -477,8 +458,8 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   blockage_result_.ground.blockage_ratio = get_nonzero_ratio(ground_blockage_mask);
   blockage_result_.sky.blockage_ratio = get_nonzero_ratio(sky_blockage_mask);
 
-  update_ground_blockage_info(ground_blockage_mask);
-  update_sky_blockage_info(sky_blockage_mask);
+  update_blockage_info(ground_blockage_mask, blockage_result_.ground);
+  update_blockage_info(sky_blockage_mask, blockage_result_.sky);
 
   return time_series_blockage_result;
 }

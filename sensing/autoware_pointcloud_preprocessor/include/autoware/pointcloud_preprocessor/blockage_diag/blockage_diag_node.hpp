@@ -135,18 +135,13 @@ private:
   static float get_nonzero_ratio(const cv::Mat & mask);
 
   /**
-   * @brief Update the internal ground blockage info.
+   * @brief Update the blockage info for a specific area (ground or sky).
    *
-   * @param ground_blockage_mask The ground blockage mask. The data type is `CV_8UC1`.
+   * @param blockage_mask The blockage mask. The data type is `CV_8UC1`.
+   * @param area_result Reference to the BlockageAreaResult to update.
    */
-  void update_ground_blockage_info(const cv::Mat & ground_blockage_mask);
-
-  /**
-   * @brief Update the internal sky blockage info.
-   *
-   * @param sky_blockage_mask The sky blockage mask. The data type is `CV_8UC1`.
-   */
-  void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
+  void update_blockage_info(
+    const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
 
   /**
    * @brief Compute blockage diagnostics and update the internal blockage info.
