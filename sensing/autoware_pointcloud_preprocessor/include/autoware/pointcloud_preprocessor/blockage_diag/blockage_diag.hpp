@@ -38,7 +38,8 @@ struct BlockageAreaResult
 {
   float blockage_ratio = -1.0f;
   int blockage_count = 0;
-  std::vector<float> blockage_range_deg = {0.0f, 0.0f};
+  float blockage_start_deg = 0.0f;
+  float blockage_end_deg = 0.0f;
 };
 
 struct BlockageDetectionResult

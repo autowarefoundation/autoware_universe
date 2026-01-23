@@ -142,13 +142,13 @@ void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) c
   stat.add("ground_blockage_ratio", std::to_string(blockage_result_.ground.blockage_ratio));
   stat.add("ground_blockage_count", std::to_string(blockage_result_.ground.blockage_count));
   stat.add(
-    "ground_blockage_range_deg", "[" + std::to_string(blockage_result_.ground.blockage_range_deg[0]) + "," +
-                                   std::to_string(blockage_result_.ground.blockage_range_deg[1]) + "]");
+    "ground_blockage_range_deg", "[" + std::to_string(blockage_result_.ground.blockage_start_deg) + "," +
+                                   std::to_string(blockage_result_.ground.blockage_end_deg) + "]");
   stat.add("sky_blockage_ratio", std::to_string(blockage_result_.sky.blockage_ratio));
   stat.add("sky_blockage_count", std::to_string(blockage_result_.sky.blockage_count));
   stat.add(
-    "sky_blockage_range_deg", "[" + std::to_string(blockage_result_.sky.blockage_range_deg[0]) + "," +
-                                std::to_string(blockage_result_.sky.blockage_range_deg[1]) + "]");
+    "sky_blockage_range_deg", "[" + std::to_string(blockage_result_.sky.blockage_start_deg) + "," +
+                                std::to_string(blockage_result_.sky.blockage_end_deg) + "]");
   // TODO(badai-nguyen): consider sky_blockage_ratio_ for DiagnosticsStatus." [todo]
 
   auto level = DiagnosticStatus::OK;
@@ -310,8 +310,8 @@ void BlockageDiagComponent::update_ground_blockage_info(const cv::Mat & ground_b
   double blockage_end_deg =
     (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
 
-  blockage_result_.ground.blockage_range_deg[0] = static_cast<float>(blockage_start_deg);
-  blockage_result_.ground.blockage_range_deg[1] = static_cast<float>(blockage_end_deg);
+  blockage_result_.ground.blockage_start_deg = static_cast<float>(blockage_start_deg);
+  blockage_result_.ground.blockage_end_deg = static_cast<float>(blockage_end_deg);
 
   if (blockage_result_.ground.blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
     blockage_result_.ground.blockage_count += 1;
@@ -330,8 +330,8 @@ void BlockageDiagComponent::update_sky_blockage_info(const cv::Mat & sky_blockag
   double blockage_end_deg =
     (blockage_bb.x + blockage_bb.width) * horizontal_resolution_ + angle_range_deg_[0];
 
-  blockage_result_.sky.blockage_range_deg[0] = static_cast<float>(blockage_start_deg);
-  blockage_result_.sky.blockage_range_deg[1] = static_cast<float>(blockage_end_deg);
+  blockage_result_.sky.blockage_start_deg = static_cast<float>(blockage_start_deg);
+  blockage_result_.sky.blockage_end_deg = static_cast<float>(blockage_end_deg);
 
   if (blockage_result_.sky.blockage_count <= 2 * blockage_config_.blockage_count_threshold) {
     blockage_result_.sky.blockage_count += 1;
