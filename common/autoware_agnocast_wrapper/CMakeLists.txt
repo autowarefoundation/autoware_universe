@@ -5,7 +5,10 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(rclcpp REQUIRED)
-find_package(agnocastlib REQUIRED)
+
+if("$ENV{ENABLE_AGNOCAST}")
+  find_package(agnocastlib REQUIRED)
+endif()
 
 include_directories(
   include
@@ -15,9 +18,11 @@ ament_export_include_directories(
   include
 )
 
-ament_export_dependencies(
-  agnocastlib
-)
+if("$ENV{ENABLE_AGNOCAST}")
+  ament_export_dependencies(
+    agnocastlib
+  )
+endif()
 
 install(
   FILES cmake/agnocast_wrapper_config_extras.cmake
