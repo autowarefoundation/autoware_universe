@@ -22,6 +22,8 @@
 #include <autoware_internal_planning_msgs/msg/scored_candidate_trajectories.hpp>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::trajectory_ranker
 {
@@ -42,6 +44,7 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+  std::vector<std::string> ranked_generator_ids_;
 };
 
 }  // namespace autoware::trajectory_ranker
