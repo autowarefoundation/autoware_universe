@@ -234,4 +234,45 @@ bool is_data_layout_compatible_with_point_xyzircaedt(const sensor_msgs::msg::Poi
   return is_data_layout_compatible_with_point_xyzircaedt(input.fields);
 }
 
+bool is_data_layout_compatible_with_point_xyz(
+  const std::vector<sensor_msgs::msg::PointField> & fields)
+{
+  if (fields.size() < 3) {
+    return false;
+  }
+
+  // Expected PointXYZ layout:
+  // struct { float x; float y; float z; }
+  constexpr size_t offset_x = 0;
+  constexpr size_t offset_y = sizeof(float);
+  constexpr size_t offset_z = sizeof(float) * 2;
+
+  bool same_layout = true;
+
+  const auto & field_x = fields[0];
+  same_layout &= field_x.name == "x";
+  same_layout &= field_x.offset == offset_x;
+  same_layout &= field_x.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_x.count == 1;
+
+  const auto & field_y = fields[1];
+  same_layout &= field_y.name == "y";
+  same_layout &= field_y.offset == offset_y;
+  same_layout &= field_y.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_y.count == 1;
+
+  const auto & field_z = fields[2];
+  same_layout &= field_z.name == "z";
+  same_layout &= field_z.offset == offset_z;
+  same_layout &= field_z.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_z.count == 1;
+
+  return same_layout;
+}
+
+bool is_data_layout_compatible_with_point_xyz(const sensor_msgs::msg::PointCloud2 & input)
+{
+  return is_data_layout_compatible_with_point_xyz(input.fields);
+}
+
 }  // namespace autoware::pointcloud_preprocessor::utils
