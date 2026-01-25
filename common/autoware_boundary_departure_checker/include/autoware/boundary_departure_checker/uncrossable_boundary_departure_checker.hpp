@@ -19,6 +19,7 @@
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -33,12 +34,23 @@ class UncrossableBoundaryDepartureChecker
 {
 public:
   UncrossableBoundaryDepartureChecker(
-    lanelet::LaneletMapPtr lanelet_map_ptr,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const Param & param = Param{},
+    const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, Param param = Param{},
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils_debug::TimeKeeper>());
 
   void set_param(const Param & param) { param_ = param; }
+
+  // To be used from the motion_velocity_planner
+  void update_critical_departure_points(
+    const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,
+    const Side<DeparturePoints> & new_departure_points,
+    const ClosestProjectionsToBound & closest_projections_to_bound);
+  bool is_continuous_critical_departure(
+    const ClosestProjectionsToBound & closest_projections_to_bound);
+  bool is_critical_departure_persist(
+    const ClosestProjectionsToBound & closest_projections_to_bound);
+
   // ==== abnormalities ===
   /**
    * @brief Build an R-tree of uncrossable boundaries (e.g., road_border) from a lanelet map.
@@ -178,7 +190,16 @@ private:
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
+  CriticalDeparturePoints critical_departure_points_;
+  double last_no_critical_dpt_time_{0.0};
+  double last_found_critical_dpt_time_{0.0};
+  rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
+  // To be used from the motion_velocity_planner
+  static CriticalDeparturePoints find_new_critical_departure_points(
+    const Side<DeparturePoints> & new_departure_points,
+    const CriticalDeparturePoints & critical_departure_points,
+    const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);
 };
 }  // namespace autoware::boundary_departure_checker
 
