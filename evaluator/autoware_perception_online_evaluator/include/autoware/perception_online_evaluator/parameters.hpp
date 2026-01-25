@@ -17,6 +17,7 @@
 
 #include "autoware/perception_online_evaluator/metrics/metric.hpp"
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -62,7 +63,7 @@ struct Parameters
   double objects_count_window_seconds;
   DebugMarkerParameter debug_marker_parameters;
   // parameters depend on object class
-  std::unordered_map<uint8_t, ObjectParameter> object_parameters;
+  std::unordered_map<std::uint8_t, ObjectParameter> object_parameters;
 };
 
 struct AnalyticsParameters

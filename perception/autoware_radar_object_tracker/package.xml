@@ -13,6 +13,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
+  <depend>ament_index_cpp</depend>
   <depend>autoware_kalman_filter</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_object_recognition_utils</depend>

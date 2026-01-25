@@ -36,6 +36,7 @@ Currently, this algorithm can sometimes give unnatural (not wrong) blinkers in c
 | turn_signal_roundabout_search_distance             | [m]  | double | constant search distance to decide activation of blinkers at roundabouts                                                                                                                               | 30.0          |
 | turn_signal_roundabout_angle_threshold_degree      | deg  | double | angle threshold to determined the end point of roundabout required section                                                                                                                             | 15.0          |
 | turn_signal_roundabout_backward_depth              | [-]  | int    | maximum number of lanelets to look back when determining the backward length for roundabout turn signal logic. Set to -1 for unlimited depth.                                                          | 50            |
+| turn_signal_path_backward_length                   | [m]  | double | backward length of the extended path used for turn signal detection. This determines how far behind the ego vehicle the path is extended to include the desired_start_point for distance calculations. | 100.0         |
 
 Note that the default values for `turn_signal_intersection_search_distance` and `turn_signal_search_time` is strictly followed by [Japanese Road Traffic Laws](https://www.japaneselawtranslation.go.jp/ja/laws/view/2962). So if your country does not allow to use these default values, you should change these values in configuration files.
 

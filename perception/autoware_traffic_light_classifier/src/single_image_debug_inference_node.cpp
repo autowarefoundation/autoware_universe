@@ -79,7 +79,7 @@ public:
 #if ENABLE_GPU
       classifier_ptr_ = std::make_unique<CNNClassifier>(this);
 #else
-      RCLCPP_ERROR(get_logger(), "please install CUDA, CUDNN and TensorRT to use cnn classifier");
+      RCLCPP_ERROR(get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
 #endif
     }
 

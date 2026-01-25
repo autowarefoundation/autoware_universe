@@ -17,7 +17,6 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/planning_evaluator/metrics/deviation_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/metrics_utils.hpp"
-#include "autoware/planning_evaluator/metrics/obstacle_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/stability_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
@@ -73,12 +72,6 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
         metrics::utils::get_lookahead_trajectory(
           traj, ego_pose_, parameters.trajectory.lookahead.max_dist_m,
           parameters.trajectory.lookahead.max_time_s));
-    case Metric::obstacle_distance:
-      return metrics::calcDistanceToObstacle(dynamic_objects_, traj, vehicle_info_);
-    case Metric::obstacle_ttc:
-      return metrics::calcTimeToCollision(
-        ego_odometry_, dynamic_objects_, traj, vehicle_info_, parameters.obstacle.dist_thr_m,
-        parameters.obstacle.limit_min_accel);
     default:
       return {};
   }
@@ -113,11 +106,6 @@ void MetricsCalculator::setReferenceTrajectory(const Trajectory & traj)
 void MetricsCalculator::setPreviousTrajectory(const Trajectory & traj)
 {
   previous_trajectory_ = traj;
-}
-
-void MetricsCalculator::setPredictedObjects(const PredictedObjects & objects)
-{
-  dynamic_objects_ = objects;
 }
 
 void MetricsCalculator::setEgoPose(const nav_msgs::msg::Odometry & ego_odometry)

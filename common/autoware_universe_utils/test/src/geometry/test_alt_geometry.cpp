@@ -20,7 +20,7 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/touches.hpp>
 #include <boost/geometry/io/wkt/write.hpp>
-#include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#include <boost/version.hpp>
 
 #include <gtest/gtest.h>
 
@@ -29,6 +29,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#if BOOST_VERSION < 107600  // Header removed in version 1.76.0 (Humble)
+#include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#endif
 
 constexpr double epsilon = 1e-6;
 

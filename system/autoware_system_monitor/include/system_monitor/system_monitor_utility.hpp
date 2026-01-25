@@ -21,6 +21,7 @@
 #define SYSTEM_MONITOR__SYSTEM_MONITOR_UTILITY_HPP_
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range.hpp>
 

@@ -3,7 +3,10 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
-find_package(agnocastlib)
+
+if("$ENV{ENABLE_AGNOCAST}")
+  find_package(agnocastlib)
+endif()
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")

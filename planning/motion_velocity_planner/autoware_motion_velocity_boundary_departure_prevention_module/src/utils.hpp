@@ -15,6 +15,7 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#include "data_structs.hpp"
 #include "parameters.hpp"
 #include "slow_down_interpolator.hpp"
 

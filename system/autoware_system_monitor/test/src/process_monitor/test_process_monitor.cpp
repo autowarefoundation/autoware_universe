@@ -23,6 +23,7 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>

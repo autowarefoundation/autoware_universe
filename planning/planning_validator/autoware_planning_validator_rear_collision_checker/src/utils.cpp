@@ -504,21 +504,29 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
 {
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
 
+  const autoware_utils_geometry::Polygon2d combine_lanelet_boost = [&]() {
+    autoware_utils_geometry::Polygon2d poly;
+    boost::geometry::convert(combine_lanelet.polygon2d().basicPolygon(), poly);
+    return poly;
+  }();
+
   for (auto & [original, _] : detection_areas) {
     if (original.empty()) {
       continue;
     }
 
-    lanelet::BasicPolygons2d polygons2d;
-    boost::geometry::difference(
-      lanelet::utils::to2D(original), combine_lanelet.polygon2d().basicPolygon(), polygons2d);
+    autoware_utils_geometry::Polygon2d orig_polygon_boost;
+    boost::geometry::convert(lanelet::utils::to2D(original), orig_polygon_boost);
+
+    autoware_utils_geometry::MultiPolygon2d polygons2d;
+    boost::geometry::difference(orig_polygon_boost, combine_lanelet_boost, polygons2d);
 
     if (polygons2d.empty()) {
       continue;
     }
 
     lanelet::BasicPolygon3d polygon3d;
-    for (const auto & p : polygons2d.front()) {
+    for (const auto & p : polygons2d.front().outer()) {
       polygon3d.push_back(lanelet::BasicPoint3d(p.x(), p.y(), original.front().z()));
     }
 

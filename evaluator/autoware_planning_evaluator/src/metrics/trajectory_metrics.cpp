@@ -130,11 +130,11 @@ Accumulator<double> calcTrajectoryCurvature(const Trajectory & traj)
     const auto p1 = traj.points.at(p1_id).pose.position;
 
     // Get Point2
-    const auto p2_id = utils::getIndexAfterDistance(traj, p1_id, points_distance);
+    const auto p2_id = utils::get_index_after_distance(traj, p1_id, points_distance);
     const auto p2 = traj.points.at(p2_id).pose.position;
 
     // Get Point3
-    const auto p3_id = utils::getIndexAfterDistance(traj, p2_id, points_distance);
+    const auto p3_id = utils::get_index_after_distance(traj, p2_id, points_distance);
     const auto p3 = traj.points.at(p3_id).pose.position;
 
     // no need to check for pi, since there is no point with "points_distance" from p1.

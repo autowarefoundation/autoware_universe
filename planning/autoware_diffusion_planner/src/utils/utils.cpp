@@ -74,7 +74,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;
@@ -101,6 +101,26 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
   // Using atan2 to get the yaw angle from the rotation matrix
   const float yaw = std::atan2(rotation_matrix(1, 0), rotation_matrix(0, 0));
   return {std::cos(yaw), std::sin(yaw)};
+}
+
+geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const double shift_length)
+{
+  // Rotation matrix (3x3)
+  Eigen::Matrix3d R = quaternion_to_matrix(pose.orientation);
+
+  // Shift along the x-axis in the local frame
+  Eigen::Vector3d shift_local(shift_length, 0.0, 0.0);
+
+  // Transform shift to the global frame
+  Eigen::Vector3d shift_global = R * shift_local;
+
+  // Create new pose
+  geometry_msgs::msg::Pose shifted_pose = pose;
+  shifted_pose.position.x += shift_global.x();
+  shifted_pose.position.y += shift_global.y();
+  shifted_pose.position.z += shift_global.z();
+
+  return shifted_pose;
 }
 
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)

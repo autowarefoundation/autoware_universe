@@ -241,6 +241,9 @@ void Controller::callbackTimerControl()
   // TODO(Horibe): Think specification. This comes from the old implementation.
   if (isTimeOut(lon_out, lat_out)) return;
 
+  // 4.5. update diagnostics
+  diag_updater_->force_update();
+
   // 5. publish control command
   out.lateral = lat_out.control_cmd;
   out.longitudinal = lon_out.control_cmd;

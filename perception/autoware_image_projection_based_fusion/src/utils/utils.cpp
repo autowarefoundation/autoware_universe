@@ -14,6 +14,7 @@
 
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
+#include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <sensor_msgs/distortion_models.hpp>
 
 #include <algorithm>
@@ -22,6 +23,32 @@
 
 namespace autoware::image_projection_based_fusion
 {
+
+using Label = autoware_perception_msgs::msg::ObjectClassification;
+
+float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label)
+{
+  switch (label) {
+    case Label::UNKNOWN:
+      return UNKNOWN;
+    case Label::CAR:
+      return CAR;
+    case Label::TRUCK:
+      return TRUCK;
+    case Label::BUS:
+      return BUS;
+    case Label::TRAILER:
+      return TRAILER;
+    case Label::MOTORCYCLE:
+      return MOTORCYCLE;
+    case Label::BICYCLE:
+      return BICYCLE;
+    case Label::PEDESTRIAN:
+      return PEDESTRIAN;
+    default:
+      return UNKNOWN;
+  }
+}
 bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info)
 {
   const bool is_supported_model =

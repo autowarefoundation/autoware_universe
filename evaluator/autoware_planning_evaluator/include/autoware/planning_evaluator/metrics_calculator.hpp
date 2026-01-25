@@ -19,7 +19,6 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -31,7 +30,6 @@
 namespace planning_diagnostics
 {
 using autoware::vehicle_info_utils::VehicleInfo;
-using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -54,12 +52,6 @@ public:
         double max_time_s = 3.0;
       } lookahead;
     } trajectory;
-
-    struct
-    {
-      double dist_thr_m = 0.0;
-      double limit_min_accel = -2.5;
-    } obstacle;
   } parameters;  // struct Parameters for those metrics calculated by the MetricsCalculator
 
   MetricsCalculator() = default;
@@ -93,12 +85,6 @@ public:
   void setPreviousTrajectory(const Trajectory & traj);
 
   /**
-   * @brief set the dynamic objects used to calculate obstacle metrics
-   * @param [in] traj input previous trajectory
-   */
-  void setPredictedObjects(const PredictedObjects & objects);
-
-  /**
    * @brief set the ego pose
    * @param [in] traj input previous trajectory
    */
@@ -115,7 +101,6 @@ private:
   Trajectory reference_trajectory_lookahead_;
   Trajectory previous_trajectory_;
   Trajectory previous_trajectory_lookahead_;
-  PredictedObjects dynamic_objects_;
   geometry_msgs::msg::Pose ego_pose_;
   nav_msgs::msg::Odometry ego_odometry_;
   PoseWithUuidStamped modified_goal_;

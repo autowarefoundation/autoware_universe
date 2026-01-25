@@ -118,7 +118,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   service_trigger_node_ = this->create_service<SetBool>(
     "~/service/trigger_node_srv",
     std::bind(&LidarMarkerLocalizer::service_trigger_node, this, _1, _2),
-    rclcpp::ServicesQoS().get_rmw_qos_profile(), points_callback_group);
+    AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), points_callback_group);
 
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, false);

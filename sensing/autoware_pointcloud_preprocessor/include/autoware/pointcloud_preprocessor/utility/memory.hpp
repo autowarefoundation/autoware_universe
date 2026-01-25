@@ -57,6 +57,40 @@ bool is_data_layout_compatible_with_point_xyzircaedt(
  * is to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRCAEDT */
 bool is_data_layout_compatible_with_point_xyzircaedt(const sensor_msgs::msg::PointCloud2 & input);
 
+/**
+ * @brief Check whether a PointField sequence is compatible with a PointXYZ memory layout.
+ *
+ * This function verifies that the first three fields describe a tightly packed
+ * PointXYZ prefix:
+ *   - Field 0: "x", FLOAT32, count = 1, offset = offsetof(PointXYZ, x)
+ *   - Field 1: "y", FLOAT32, count = 1, offset = offsetof(PointXYZ, y)
+ *   - Field 2: "z", FLOAT32, count = 1, offset = offsetof(PointXYZ, z)
+ *
+ * Additional fields after X, Y, and Z are permitted and are not inspected.
+ *
+ * @param fields Vector of PointField descriptors from a PointCloud2 message.
+ * @return true if the layout begins with a compatible PointXYZ prefix; false otherwise.
+ */
+bool is_data_layout_compatible_with_point_xyz(
+  const std::vector<sensor_msgs::msg::PointField> & fields);
+
+/**
+ * @brief Check whether a PointCloud2 message is compatible with a PointXYZ memory layout.
+ *
+ * This is a convenience overload that inspects the PointCloud2::fields array
+ * and applies the same rules as
+ * is_data_layout_compatible_with_point_xyz(const std::vector<PointField>&).
+ *
+ * The layout is considered compatible if the first three fields correspond to
+ * a tightly packed PointXYZ (x, y, z as FLOAT32 with correct offsets). Any
+ * additional fields are allowed.
+ *
+ * @param input PointCloud2 message to inspect.
+ * @return true if the PointCloud2 layout begins with a compatible PointXYZ prefix;
+ *         false otherwise.
+ */
+bool is_data_layout_compatible_with_point_xyz(const sensor_msgs::msg::PointCloud2 & input);
+
 }  // namespace autoware::pointcloud_preprocessor::utils
 
 #endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__UTILITY__MEMORY_HPP_

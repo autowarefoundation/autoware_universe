@@ -20,6 +20,7 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -156,6 +157,7 @@ struct PlanningValidatorData
     if (msg) {
       if (!msg->segments.empty()) {
         route_handler->setRoute(*msg);
+        last_valid_trajectory.reset();
       }
     }
   }
@@ -180,6 +182,7 @@ struct PlanningValidatorContext
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
+    vehicle_stop_checker_ = std::make_shared<autoware::motion_utils::VehicleStopChecker>(node);
     init_validation_status();
   }
 
@@ -191,6 +194,7 @@ struct PlanningValidatorContext
   std::shared_ptr<Updater> diag_updater = nullptr;
   std::shared_ptr<PlanningValidatorData> data = nullptr;
   std::shared_ptr<PlanningValidatorStatus> validation_status = nullptr;
+  std::shared_ptr<autoware::motion_utils::VehicleStopChecker> vehicle_stop_checker_ = nullptr;
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;

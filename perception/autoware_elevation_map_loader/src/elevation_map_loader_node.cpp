@@ -21,6 +21,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/qos_utils/qos_compatibility.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_cv/InpaintFilter.hpp>
@@ -107,7 +108,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
           std::bind(&ElevationMapLoaderNode::onPointCloudMapMetaData, this, _1));
       group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       pcd_loader_client_ = create_client<autoware_map_msgs::srv::GetSelectedPointCloudMap>(
-        "service/get_selected_pointcloud_map", rmw_qos_profile_services_default, group_);
+        "service/get_selected_pointcloud_map", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), group_);
 
       while (!pcd_loader_client_->wait_for_service(std::chrono::seconds(1)) && rclcpp::ok()) {
         RCLCPP_DEBUG_THROTTLE(
@@ -393,10 +394,13 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
   if (lane_filter_.use_lane_filter_) {
     for (const auto & lanelet : lane_filter_.road_lanelets_) {
       auto lane_polygon = lanelet.polygon2d().basicPolygon();
+      autoware_utils::Polygon2d working_polygon;
+      bg::assign_points(working_polygon, lane_polygon);
+      bg::correct(working_polygon);
       grid_map::Polygon polygon;
 
       if (lane_filter_.lane_margin_ > 0) {
-        lanelet::BasicPolygons2d out;
+        autoware_utils::MultiPolygon2d out;
         bg::strategy::buffer::distance_symmetric<double> distance_strategy(
           lane_filter_.lane_margin_);
         bg::strategy::buffer::join_miter join_strategy;
@@ -404,11 +408,13 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
         bg::strategy::buffer::point_square point_strategy;
         bg::strategy::buffer::side_straight side_strategy;
         bg::buffer(
-          lane_polygon, out, distance_strategy, side_strategy, join_strategy, end_strategy,
+          working_polygon, out, distance_strategy, side_strategy, join_strategy, end_strategy,
           point_strategy);
-        lane_polygon = out.front();
+        if (!out.empty()) {
+          working_polygon = out.front();
+        }
       }
-      for (const auto & p : lane_polygon) {
+      for (const auto & p : working_polygon.outer()) {
         polygon.addVertex(grid_map::Position(p[0], p[1]));
       }
       for (autoware::grid_map_utils::PolygonIterator iterator(elevation_map_, polygon);
