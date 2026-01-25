@@ -5,7 +5,9 @@ This directory contains focused unit tests for the VAD utilities.
 ## Test Files
 
 ### 1. `test_param_loader.cpp`
+
 Focused coverage for:
+
 - `utils::load_model_params()` JSON parsing
 - `utils::check_model_version()` compatibility checks
 - Error handling for missing files and missing/unsupported major_version

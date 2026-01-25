@@ -14,8 +14,8 @@
 
 #include "vad_node.hpp"
 
-#include "utils/transform_utils.hpp"
 #include "utils/classification_loader.hpp"
+#include "utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
 

@@ -31,8 +31,8 @@ TEST(ClassificationLoader, LoadsMatchingSizes)
   int32_t num_classes = 0;
 
   const utils::ClassificationConfig cfg{
-    class_names, thresholds, &target_class_names, &target_thresholds, &num_classes,
-    "unit_test_load_classification_config"};
+    class_names,        thresholds,   &target_class_names,
+    &target_thresholds, &num_classes, "unit_test_load_classification_config"};
 
   const bool ok = utils::load_classification_config(cfg);
 
@@ -55,8 +55,8 @@ TEST(ClassificationLoader, FailsOnSizeMismatch)
   int32_t num_classes = -1;
 
   const utils::ClassificationConfig cfg{
-    class_names, thresholds, &target_class_names, &target_thresholds, &num_classes,
-    "unit_test_load_classification_config_mismatch"};
+    class_names,        thresholds,   &target_class_names,
+    &target_thresholds, &num_classes, "unit_test_load_classification_config_mismatch"};
 
   const bool ok = utils::load_classification_config(cfg);
 
@@ -75,8 +75,8 @@ TEST(ClassificationLoader, HandlesNullNumClasses)
   std::map<std::string, float> target_thresholds;
 
   const utils::ClassificationConfig cfg{
-    class_names, thresholds, &target_class_names, &target_thresholds, nullptr,
-    "unit_test_load_classification_config_no_count"};
+    class_names,        thresholds, &target_class_names,
+    &target_thresholds, nullptr,    "unit_test_load_classification_config_no_count"};
 
   const bool ok = utils::load_classification_config(cfg);
 

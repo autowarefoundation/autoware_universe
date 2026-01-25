@@ -54,7 +54,8 @@ inline void check_model_version(const std::string & json_path)
     "Please use the appropriate version of VAD model and vad-carla-tiny.param.json. "
     "Refer to README.md for more details.";
 
-  // Normalize any validation failure to std::runtime_error so callers (and tests) see a single, predictable error type.
+  // Normalize any validation failure to std::runtime_error so callers (and tests) see a single,
+  // predictable error type.
   try {
     if (!j.contains("major_version")) {
       throw std::runtime_error("Missing 'major_version' key in param.json. " + error_msg);
@@ -64,8 +65,8 @@ inline void check_model_version(const std::string & json_path)
     if (major_version != constants::SUPPORTED_MAJOR_VERSION) {
       throw std::runtime_error(
         "Unsupported major_version: " + std::to_string(major_version) +
-        ". This node supports major_version " +
-        std::to_string(constants::SUPPORTED_MAJOR_VERSION) + ". " + error_msg);
+        ". This node supports major_version " + std::to_string(constants::SUPPORTED_MAJOR_VERSION) +
+        ". " + error_msg);
     }
   } catch (const std::exception & e) {
     throw std::runtime_error(e.what());
