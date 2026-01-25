@@ -15,6 +15,7 @@
 #include "vad_node.hpp"
 
 #include "utils/transform_utils.hpp"
+#include "utils/classification_loader.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -417,37 +418,9 @@ bool VadNode::load_detection_range(VadConfig & config)
   }
 }
 
-bool VadNode::load_classification_config(const ClassificationConfig & params)
-{
-  if (params.class_names.size() != params.thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(), "%s: class_names (%zu) and thresholds (%zu) size mismatch",
-      params.validation_context.c_str(), params.class_names.size(), params.thresholds.size());
-    return false;
-  }
-
-  try {
-    params.target_class_names->assign(params.class_names.begin(), params.class_names.end());
-    if (params.num_classes != nullptr) {
-      *params.num_classes = static_cast<int32_t>(params.class_names.size());
-    }
-
-    params.target_thresholds->clear();
-    for (std::size_t i = 0; i < params.class_names.size(); ++i) {
-      (*params.target_thresholds)[params.class_names[i]] = static_cast<float>(params.thresholds[i]);
-    }
-    return true;
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(
-      this->get_logger(), "%s: exception while loading classification config: %s",
-      params.validation_context.c_str(), e.what());
-    return false;
-  }
-}
-
 bool VadNode::load_map_configuration(VadConfig & config)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {this->get_parameter("model_params.map_class_names").as_string_array(),
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
@@ -457,7 +430,7 @@ bool VadNode::load_map_configuration(VadConfig & config)
 bool VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {model_params.map_classes,
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
@@ -466,7 +439,7 @@ bool VadNode::load_map_configuration_with_model_params(
 
 bool VadNode::load_object_configuration(VadConfig & config)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {this->get_parameter("model_params.object_class_names").as_string_array(),
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
@@ -476,7 +449,7 @@ bool VadNode::load_object_configuration(VadConfig & config)
 bool VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {model_params.object_classes,
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,

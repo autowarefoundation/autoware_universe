@@ -44,22 +44,31 @@ inline void check_model_version(const std::string & json_path)
   }
 
   json j;
-  file >> j;
+  try {
+    file >> j;
+  } catch (const std::exception & e) {
+    throw std::runtime_error("Failed to parse param.json: " + std::string(e.what()));
+  }
 
   const std::string error_msg =
     "Please use the appropriate version of VAD model and vad-carla-tiny.param.json. "
     "Refer to README.md for more details.";
 
-  if (!j.contains("major_version")) {
-    throw std::runtime_error("Missing 'major_version' key in param.json. " + error_msg);
-  }
+  // Normalize any validation failure to std::runtime_error so callers (and tests) see a single, predictable error type.
+  try {
+    if (!j.contains("major_version")) {
+      throw std::runtime_error("Missing 'major_version' key in param.json. " + error_msg);
+    }
 
-  const int major_version = j["major_version"].get<int>();
-  if (major_version != constants::SUPPORTED_MAJOR_VERSION) {
-    throw std::runtime_error(
-      "Unsupported major_version: " + std::to_string(major_version) +
-      ". This node supports major_version " + std::to_string(constants::SUPPORTED_MAJOR_VERSION) +
-      ". " + error_msg);
+    const int major_version = j["major_version"].get<int>();
+    if (major_version != constants::SUPPORTED_MAJOR_VERSION) {
+      throw std::runtime_error(
+        "Unsupported major_version: " + std::to_string(major_version) +
+        ". This node supports major_version " +
+        std::to_string(constants::SUPPORTED_MAJOR_VERSION) + ". " + error_msg);
+    }
+  } catch (const std::exception & e) {
+    throw std::runtime_error(e.what());
   }
 }
 

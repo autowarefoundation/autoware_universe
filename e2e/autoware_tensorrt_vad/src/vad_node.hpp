@@ -17,6 +17,7 @@
 
 #include "ros_vad_logger.hpp"
 #include "synchronization_strategy.hpp"
+#include "utils/classification_loader.hpp"
 #include "utils/model_config.hpp"
 #include "utils/param_loader.hpp"
 #include "utils/version_checker.hpp"
@@ -81,20 +82,8 @@ private:
     autoware::tensorrt_common::TrtCommonConfig>
   load_trt_common_configs();
 
-  // Helper struct to reduce function arguments and eliminate duplication
-  struct ClassificationConfig
-  {
-    std::vector<std::string> class_names;
-    std::vector<double> thresholds;
-    std::vector<std::string> * target_class_names;
-    std::map<std::string, float> * target_thresholds;
-    int32_t * num_classes;
-    std::string validation_context;
-  };
-
   // Helper methods for load_vad_config
   bool load_detection_range(VadConfig & config);
-  bool load_classification_config(const ClassificationConfig & params);
   bool load_map_configuration(VadConfig & config);
   bool load_object_configuration(VadConfig & config);
   bool load_map_configuration_with_model_params(

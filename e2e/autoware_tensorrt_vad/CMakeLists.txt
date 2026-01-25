@@ -139,6 +139,15 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
 endif()
 
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+
+  add_subdirectory(test)
+endif()
+
 ament_auto_package(
   USE_SCOPED_HEADER_INSTALL_DIR
   INSTALL_TO_SHARE
