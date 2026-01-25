@@ -45,7 +45,6 @@ struct Output
   trajectory::Trajectory<TrajectoryPoint> aw_ego_traj;
 
   DepartureIntervals departure_intervals;
-  CriticalDeparturePoints critical_departure_points;
 
   std::pair<int8_t, std::string> diag_status{DiagStatus::OK, "none"};
 };
