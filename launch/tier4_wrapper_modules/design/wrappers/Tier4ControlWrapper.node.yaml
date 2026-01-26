@@ -34,6 +34,9 @@ outputs:
 parameter_files: []
 
 parameters:
+  - name: use_sim_time
+    default: false
+
   - name: input_objects_topic_name
     default: ${input objects}
   - name: input_pointcloud_topic_name
