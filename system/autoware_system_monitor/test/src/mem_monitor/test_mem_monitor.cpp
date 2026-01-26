@@ -51,7 +51,10 @@ public:
   void changeUsageError(size_t bytes) { error_available_size_ = bytes; }
 
   void update() { updater_.force_update(); }
-  void setPeriod(const double period) { updater_.setPeriod(rclcpp::Duration::from_seconds(period)); }
+  void setPeriod(const double period)
+  {
+    updater_.setPeriod(rclcpp::Duration::from_seconds(period));
+  }
 
   const std::string removePrefix(const std::string & name)
   {

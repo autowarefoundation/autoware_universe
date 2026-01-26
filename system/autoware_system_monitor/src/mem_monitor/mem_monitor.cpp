@@ -43,7 +43,6 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
     warning_margin = 0;
   }
   warning_available_size_ = error_available_size_ + warning_margin * 1024 * 1024;
-  
 
   gethostname(hostname_, sizeof(hostname_));
   updater_.setHardwareID(hostname_);
@@ -59,7 +58,6 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   durable_qos.transient_local();
   pub_memory_status_ = this->create_publisher<tier4_external_api_msgs::msg::MemoryStatus>(
     "~/memory_status", durable_qos);
-
 }
 
 void MemMonitor::update()
@@ -161,10 +159,10 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   }
 
   /*
-  * To realize diagnostic logic, level is decided by the metric defined by (mem_available - swap_used).
-  * Considering when the metric is negative (i.e., swap_used > mem_available),
-  * `swap_used` is always added to the thresholds to avoid confusion.
-  */
+   * To realize diagnostic logic, level is decided by the metric defined by (mem_available -
+   * swap_used). Considering when the metric is negative (i.e., swap_used > mem_available),
+   * `swap_used` is always added to the thresholds to avoid confusion.
+   */
   int level;
   if (mem_available < (error_available_size_ + swap_used)) {
     level = DiagStatus::ERROR;
