@@ -145,6 +145,21 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   updater_.setPeriod(0.1);
 }
 
+enum DiagnosticLevel{OK, WARN, ERROR, STALE};
+
+struct DiagnosticAdditionalData
+{
+  std::string key;
+  std::string value;
+};
+
+struct DiagnosticOutput
+{
+  DiagnosticLevel level;
+  std::string message;
+  std::vector<DiagnosticAdditionalData> additional_data;
+};
+
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
 {
   BlockageDetectionResult res = blockage_result_;
@@ -185,28 +200,44 @@ void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) c
   stat.summary(level, msg);
 }
 
-void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat) const
+DiagnosticOutput get_dust_diagnostics_output(
+  const DustDetectionResult & dust_result,
+  const DustDetectionConfig & dust_config)
 {
-  stat.add("ground_dust_ratio", std::to_string(dust_result_.ground_dust_ratio));
-  auto level = DiagnosticStatus::OK;
-  std::string msg = "OK";
-  if (dust_result_.ground_dust_ratio < 0.0f) {
-    level = DiagnosticStatus::STALE;
-    msg = "STALE";
+  DiagnosticOutput output;
+
+  output.additional_data.push_back(
+    {"ground_dust_ratio", std::to_string(dust_result.ground_dust_ratio)});
+  
+  output.level = DiagnosticLevel::OK;
+  output.message = "OK";
+
+  if (dust_result.ground_dust_ratio < 0.0f) {
+    output.level = DiagnosticLevel::STALE;
+    output.message = "STALE";
   } else if (
-    (dust_result_.ground_dust_ratio > dust_config_.dust_ratio_threshold) &&
-    (dust_result_.dust_frame_count > dust_config_.dust_count_threshold)) {
-    level = DiagnosticStatus::ERROR;
-    msg = "ERROR";
-  } else if (dust_result_.ground_dust_ratio > 0.0f) {
-    level = DiagnosticStatus::WARN;
-    msg = "WARN";
+    (dust_result.ground_dust_ratio > dust_config.dust_ratio_threshold) &&
+    (dust_result.dust_frame_count > dust_config.dust_count_threshold)) {
+    output.level = DiagnosticLevel::ERROR;
+    output.message = "ERROR";
+  } else if (dust_result.ground_dust_ratio > 0.0f) {
+    output.level = DiagnosticLevel::WARN;
+    output.message = "WARN";
   }
 
-  if (dust_result_.ground_dust_ratio > 0.0f) {
-    msg = msg + ": LIDAR ground dust";
+  if (dust_result.ground_dust_ratio > 0.0f) {
+    output.message = output.message + ": LIDAR ground dust";
   }
-  stat.summary(level, msg);
+  return output;
+}
+
+void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat) const
+{
+  DiagnosticOutput dust_diagnostic = get_dust_diagnostics_output(dust_result_, dust_config_);
+  stat.summary(static_cast<unsigned char>(dust_diagnostic.level), dust_diagnostic.message);
+  for (const auto & data : dust_diagnostic.additional_data) {
+    stat.add(data.key, data.value);
+  }
 }
 
 cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
