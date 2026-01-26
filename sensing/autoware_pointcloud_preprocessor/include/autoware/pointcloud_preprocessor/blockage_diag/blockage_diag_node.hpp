@@ -81,26 +81,6 @@ private:
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
 
   /**
-   * @brief Quantize a 16-bit image to 8-bit.
-   *
-   * The values are scaled by `1.0 / 300` to prevent overflow.
-   *
-   * @param image_16u The input 16-bit image.
-   * @return cv::Mat The quantized 8-bit image. The data type is `CV_8UC1`.
-   */
-  cv::Mat quantize_to_8u(const cv::Mat & image_16u) const;
-
-  /**
-   * @brief Make a no-return mask from the input depth image.
-   *
-   * The mask is a binary image where 255 is no-return and 0 is return.
-   *
-   * @param depth_image The input depth image.
-   * @return cv::Mat The no-return mask. The data type is `CV_8UC1`.
-   */
-  cv::Mat make_no_return_mask(const cv::Mat & depth_image) const;
-
-  /**
    * @brief Make a binary, cleaned blockage mask from the input no-return mask.
    *
    * @param no_return_mask A mask where 255 is no-return and 0 is return.
@@ -142,13 +122,6 @@ private:
   cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
-   * @brief Compute dust diagnostics and update the internal dust info.
-   *
-   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat compute_dust_diagnostics(const cv::Mat & depth_image_16u);
-
-  /**
    * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
@@ -184,8 +157,7 @@ private:
 
   // Dust detection
   bool enable_dust_diag_;
-  DustDetectionConfig dust_config_;
-  DustDetectionResult dust_result_;
+  std::unique_ptr<DustDetector> dust_detector_;
   std::unique_ptr<MultiFrameDetectionAggregator> dust_aggregator_;
 
 public:
