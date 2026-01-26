@@ -7,7 +7,7 @@
   <arg name="use_intra_process" default="false"/>
   <arg name="use_multithread" default="false"/>
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
-  <arg name="occupancy_grid_map_method" description="options: pointcloud_based_occupancy_grid_map, laserscan_based_occupancy_grid_map, multi_lidar_pointcloud_based_occupancy_grid_map"/>
+  <arg name="occupancy_grid_map_method" description="options: pointcloud_based_occupancy_grid_map, laserscan_based_occupancy_grid_map, multi_lidar_pointcloud_based_occupancy_grid_map, synchronized_grid_map_fusion_occupancy_grid_map"/>
   <arg name="occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater" description="options: binary_bayes_filter"/>
   <arg name="occupancy_grid_map_updater_param_path"/>
@@ -61,6 +61,14 @@
       <arg name="multi_lidar_fusion_config_file" value="$(var occupancy_grid_map_param_path)"/>
       <arg name="updater_type" value="$(var occupancy_grid_map_updater)"/>
       <arg name="updater_param_file" value="$(var occupancy_grid_map_updater_param_path)"/>
+    </include>
+  </group>
+
+  <!--synchronized grid map fusion method-->
+  <group if="$(eval &quot;'$(var occupancy_grid_map_method)'=='synchronized_grid_map_fusion_occupancy_grid_map'&quot;)">
+    <include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/synchronized_occupancy_grid_map_fusion.launch.xml">
+      <arg name="output_topic" value="$(var output)"/>
+      <arg name="fusion_node_param_path" value="$(var occupancy_grid_map_param_path)"/>
     </include>
   </group>
 </launch>
