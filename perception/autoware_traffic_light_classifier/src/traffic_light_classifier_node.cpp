@@ -113,6 +113,9 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
 
   output_msg.signals.resize(input_rois_msg->rois.size());
 
+  bool detect_over_exposure = false;
+  bool detect_under_exposure = false;
+
   std::vector<cv::Mat> images;
   std::vector<size_t> exposure_out_of_range_indices;
   size_t idx_valid_roi = 0;
@@ -133,8 +136,12 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
     const sensor_msgs::msg::RegionOfInterest & roi = input_roi.roi;
     auto roi_img = cv_ptr->image(cv::Rect(roi.x_offset, roi.y_offset, roi.width, roi.height));
     const double brightness = utils::compute_brightness(roi_img);
-    if (brightness <= under_exposure_threshold_ || over_exposure_threshold_ <= brightness) {
+    if (brightness >= over_exposure_threshold_) {
       exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      detect_over_exposure = true;
+    } else if(brightness <= under_exposure_threshold_) {
+      exposure_out_of_range_indices.emplace_back(idx_valid_roi);
+      detect_under_exposure = true;
     }
     images.emplace_back(roi_img);
     idx_valid_roi++;
@@ -174,14 +181,15 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
 
   // publish diagnostics
   diagnostics_interface_ptr_->clear();
-  bool detect_out_of_range_brightness = exposure_out_of_range_indices.size() != 0;
   diagnostics_interface_ptr_->add_key_value(
-    "detect_out_of_range_exposure", detect_out_of_range_brightness);
-  if (detect_out_of_range_brightness) {
+    "detect_traffic_light_over_exposure", detect_over_exposure);
+  diagnostics_interface_ptr_->add_key_value(
+    "detect_traffic_light_under_exposure", detect_under_exposure);
+
+  if (detect_over_exposure || detect_under_exposure) {
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "Detected out-of-range exposure in ROI(s). Corresponding ROI(s) were overwritten with "
-      "UNKNOWN.");
+      "Detected out-of-range exposure in ROI. Corresponding ROI was overwritten with UNKNOWN.");
   }
   diagnostics_interface_ptr_->publish(output_msg.header.stamp);
 }
