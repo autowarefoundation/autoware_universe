@@ -409,7 +409,6 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
-  cv::Mat time_series_blockage_result = blockage_visualizer_->update(blockage_mask);
 
   auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
 
@@ -419,7 +418,7 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   update_blockage_info(ground_blockage_mask, blockage_result_.ground);
   update_blockage_info(sky_blockage_mask, blockage_result_.sky);
 
-  return time_series_blockage_result;
+  return blockage_mask;
 }
 
 void BlockageDiagComponent::update_diagnostics(
@@ -435,8 +434,9 @@ void BlockageDiagComponent::update_diagnostics(
   cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
-  cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
-  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
+  cv::Mat single_frame_blockage_mask = compute_blockage_diagnostics(depth_image_16u);
+  cv::Mat multi_frame_blockage_mask = blockage_visualizer_->update(single_frame_blockage_mask);
+  const DebugInfo debug_info = {input->header, depth_image_16u, multi_frame_blockage_mask};
   publish_blockage_debug_info(debug_info);
 
   // Dust detection
