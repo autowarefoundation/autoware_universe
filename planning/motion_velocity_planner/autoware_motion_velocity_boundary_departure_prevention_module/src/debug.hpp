@@ -15,15 +15,11 @@
 #ifndef DEBUG_HPP_
 #define DEBUG_HPP_
 
+#include "autoware/boundary_departure_checker/debug.hpp"
 #include "parameters.hpp"
 
 namespace autoware::motion_velocity_planner::experimental::debug
 {
-
-Marker create_departure_points_marker(
-  const DeparturePoints & departure_points, const rclcpp::Time & curr_time,
-  const double base_link_z);
-
 MarkerArray create_debug_marker_array(
   const Output & output, const Trajectory & ego_traj, const rclcpp::Time & curr_time,
   const double base_link_z, const NodeParam & node_param);
