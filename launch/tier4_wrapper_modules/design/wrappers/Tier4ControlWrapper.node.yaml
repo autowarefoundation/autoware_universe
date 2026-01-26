@@ -39,6 +39,8 @@ parameters:
   - name: input_pointcloud_topic_name
     default: ${input obstacle_pointcloud}
 
+  - name: trajectory_follower_mode
+    default: trajectory_follower_node
   - name: lateral_controller_mode
     default: mpc
   - name: longitudinal_controller_mode
@@ -57,6 +59,22 @@ parameters:
     default: false
   - name: launch_obstacle_collision_checker
     default: false
+  - name: launch_external_cmd_selector
+    default: true
+  - name: launch_external_cmd_converter
+    default: true
+  - name: launch_lane_departure_checker
+    default: true
+  - name: launch_control_validator
+    default: true
+  - name: launch_autonomous_emergency_braking
+    default: true
+  - name: launch_collision_detector
+    default: true
+  - name: launch_predicted_path_checker
+    default: false
+  - name: launch_control_evaluator
+    default: true
 
   - name: vehicle_param_file
     default: $(find-pkg-share sample_vehicle_description)/config/vehicle_info.param.yaml
