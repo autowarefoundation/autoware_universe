@@ -15,18 +15,16 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
-#include "autoware/point_types/types.hpp"
-#include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
@@ -39,6 +37,7 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -69,10 +68,7 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  void detect_blockage(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
-
-  mutable std::mutex mutex_;
-
+  void update_diagnostics(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
   struct DebugInfo
   {
     std_msgs::msg::Header input_header;
@@ -82,49 +78,6 @@ private:
 
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
-
-  /**
-   * @brief Get the horizontal bin index of the given azimuth, if within the FoV.
-   *
-   * If the FoV wraps around, the azimuth is adjusted to be within the FoV.
-   * The bin is calculated as `(azimuth_deg - min_deg) / horizontal_resolution_` and any
-   * azimuth for which `min_deg < azimuth_deg <= max_deg` is valid.
-   *
-   * @param azimuth_deg The azimuth to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_horizontal_bin(double azimuth_deg) const;
-
-  /**
-   * @brief Get the vertical bin index of the given channel, if within the FoV.
-   *
-   * Vertical bins and channels are usually equivalent, apart from the 0-based index of bins.
-   * If `is_channel_order_top2down_` is `false`, the bin order is reversed compared to the channel
-   * order.
-   *
-   * @param channel The channel to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_vertical_bin(uint16_t channel) const;
-
-  /**
-   * @brief Get the dimensions of the mask, i.e. the number of horizontal and vertical bins.
-   *
-   * @return cv::Size The dimensions of the mask.
-   */
-  cv::Size get_mask_dimensions() const;
-
-  /**
-   * @brief Make a downsampled depth image from the input point cloud, normalized to 0-35565.
-   *
-   * The size of the output is given by `get_mask_dimensions()`.
-   * Close depth values are mapped to higher values, far depth values are mapped to lower values.
-   * The `max_distance_range_` is mapped to 0, and a LiDAR distance of 0 is mapped to UINT16_MAX.
-   *
-   * @param input The input point cloud.
-   * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
@@ -195,35 +148,46 @@ private:
   void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
 
   /**
-   * @brief Compute dust diagnostics and update the internal dust info.
+   * @brief Compute blockage diagnostics and update the internal blockage info.
    *
-   * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
-   * @param debug_info The debug info to publish if enabled.
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
    */
-  void compute_dust_diagnostics(const cv::Mat & no_return_mask, const DebugInfo & debug_info);
+  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
-   * @brief Publish the debug info if enabled.
+   * @brief Compute dust diagnostics and update the internal dust info.
+   *
+   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
+   */
+  cv::Mat compute_dust_diagnostics(const cv::Mat & depth_image_16u);
+
+  /**
+   * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
    */
-  void publish_debug_info(const DebugInfo & debug_info) const;
+  void publish_blockage_debug_info(const DebugInfo & debug_info) const;
+
+  /**
+   * @brief Publish the debug info of dust diagnostics if enabled.
+   *
+   * @param debug_info The debug info to publish.
+   */
+  void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
 
   Updater updater_{this};
+
+  // PointCloud2 to depth image converter
+  std::unique_ptr<pointcloud2_to_depth_image::PointCloud2ToDepthImage> depth_image_converter_;
 
   // Debug parameters
   bool publish_debug_image_;
 
-  // LiDAR parameters
-  double max_distance_range_{200.0};
-
   // Mask size parameters
-  int vertical_bins_;
   std::vector<double> angle_range_deg_;
   double horizontal_resolution_{0.4};
 
   // Ground/sky segmentation parameters
-  bool is_channel_order_top2down_;
   int horizontal_ring_id_;
 
   // Blockage detection parameters
@@ -262,16 +226,7 @@ private:
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
 
 public:
-  PCL_MAKE_ALIGNED_OPERATOR_NEW
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);
-
-  /**
-   * @brief Validate that the PointCloud2 message has required fields (for testing).
-   *
-   * @param input The input point cloud.
-   * @throws std::runtime_error if any required field is missing.
-   */
-  void validate_pointcloud_fields(const sensor_msgs::msg::PointCloud2 & input) const;
 };
 
 }  // namespace autoware::pointcloud_preprocessor

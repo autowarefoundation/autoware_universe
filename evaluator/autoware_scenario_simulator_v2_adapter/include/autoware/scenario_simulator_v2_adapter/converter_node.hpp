@@ -25,8 +25,10 @@
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::scenario_simulator_v2_adapter
@@ -37,6 +39,12 @@ using tier4_metric_msgs::msg::Metric;
 using tier4_metric_msgs::msg::MetricArray;
 using tier4_simulation_msgs::msg::UserDefinedValue;
 using tier4_simulation_msgs::msg::UserDefinedValueType;
+
+struct DiagnosticAggregationMap
+{
+  std::string output_topic_name;
+  std::unordered_set<std::string> aggregation_list;
+};
 
 /**
  * @brief Node for converting Autoware's messages to UserDefinedValue
@@ -55,8 +63,11 @@ public:
   /**
    * @brief callback for DiagnosticArray msgs that can be used to handle diagnostics if needed
    * @param [in] diagnostics_msg received diagnostics message
+   * @param [in] diagnostic_aggregation_maps vector of DiagnosticAggregationMap
    */
-  void onDiagnostics(const DiagnosticArray::ConstSharedPtr diagnostics_msg);
+  void onDiagnostics(
+    const DiagnosticArray::ConstSharedPtr diagnostics_msg,
+    const std::unordered_map<std::string, DiagnosticAggregationMap> & diagnostic_aggregation_maps);
 
   UserDefinedValue createUserDefinedValue(const Metric & metric) const;
   UserDefinedValue createUserDefinedValue(const DiagnosticStatus & status) const;
@@ -64,6 +75,20 @@ public:
   rclcpp::Publisher<UserDefinedValue>::SharedPtr getPublisher(const std::string & topic);
 
 private:
+  std::unordered_map<std::string, DiagnosticAggregationMap> loadDiagnosticConfig();
+
+  // Helper functions for loadDiagnosticConfig
+  std::unordered_map<std::string, DiagnosticAggregationMap> collectDiagnosticGroupsFromParams();
+  void validateAndFilterGroups(std::unordered_map<std::string, DiagnosticAggregationMap> & groups);
+  std::unordered_map<std::string, std::string> createTopicToGroupMap(
+    const std::unordered_map<std::string, DiagnosticAggregationMap> & groups);
+
+  std::unordered_set<std::string> expandAggregationList(
+    const std::string & group_name, const std::unordered_set<std::string> & aggregation_list,
+    const std::unordered_map<std::string, DiagnosticAggregationMap> & diagnostic_aggregation_maps,
+    const std::unordered_map<std::string, std::string> & output_topic_to_group_name,
+    std::set<std::string> & visited);
+
   // ROS
   std::vector<rclcpp::Subscription<MetricArray>::SharedPtr> metrics_sub_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr diagnostics_sub_;
