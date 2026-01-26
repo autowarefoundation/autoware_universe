@@ -33,6 +33,7 @@
 
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -61,34 +62,15 @@ constexpr std::array<SideKey, 2> g_side_keys = {SideKey::LEFT, SideKey::RIGHT};
 template <typename T>
 struct Abnormalities
 {
-  T normal;
-  T longitudinal;
-  T localization;
-  T steering_stuck;
-  T steering_accelerated;
-  T steering_sudden_left;
-  T steering_sudden_right;
-  T & operator[](const AbnormalityType key)
-  {
-    if (key == AbnormalityType::NORMAL) return normal;
-    if (key == AbnormalityType::LOCALIZATION) return localization;
-    if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
-    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
-    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
-    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
-    throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
-  }
+  std::unordered_map<AbnormalityType, T> data;
+  T & operator[](const AbnormalityType key) { return data[key]; }
 
   const T & operator[](const AbnormalityType key) const
   {
-    if (key == AbnormalityType::NORMAL) return normal;
-    if (key == AbnormalityType::LOCALIZATION) return localization;
-    if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
-    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
-    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
-    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
+    const auto it = data.find(key);
+    if (it != data.end()) {
+      return it->second;
+    }
     throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
   }
 };
