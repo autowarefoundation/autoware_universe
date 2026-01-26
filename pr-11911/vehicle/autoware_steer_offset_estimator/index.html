@@ -23811,9 +23811,11 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <h3 id="algorithm-constraints">Algorithm Constraints<a class="headerlink" href="#algorithm-constraints" title="Permanent link">#</a></h3>
 <p>The algorithm only updates when:</p>
 <ul>
-<li>Vehicle velocity &gt; <code>min_velocity</code> (ensures reliable kinematic model)</li>
-<li><span class="arithmatex">\(|\delta_{measured}|\)</span> &lt; <code>max_steer</code> (avoids nonlinear tire behavior)</li>
 <li>Both pose and steering data are available</li>
+<li>Vehicle velocity &gt; <code>min_velocity</code> (ensures reliable kinematic model)</li>
+<li><span class="arithmatex">\(|\delta_{\text{measured}}|\)</span> &lt; <code>max_steer</code> (avoids nonlinear tire behavior)</li>
+<li><span class="arithmatex">\(|\dot{\delta}_{\text{measured}}|\)</span> &lt; <code>max_steer_rate</code> (avoids "zero-crossing" errors during transient maneuvers)</li>
+<li>angular velocity &lt; <code>max_ang_velocity</code> (avoids tire slip and dynamic noise)</li>
 </ul>
 <p>This Kalman Filter approach provides continuous, real-time calibration of steering offset during normal driving operations, with process noise allowing adaptation to changing conditions and measurement noise handling sensor uncertainties.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
@@ -23860,6 +23862,11 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>covariance of steering offset</td>
 </tr>
 <tr>
+<td><code>~/output/steering_offset_error</code></td>
+<td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
+<td>Difference between estimate and current value</td>
+</tr>
+<tr>
 <td><code>~/output/debug_info</code></td>
 <td><code>autoware_internal_debug_msgs::msg::StringStamped</code></td>
 <td>debug info</td>
@@ -23883,7 +23890,7 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>float</td>
 <td>steer offset is larger than tolerance</td>
 <td>1000</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>update_hz</td>
@@ -23939,35 +23946,35 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>float</td>
 <td>offset estimation is skipped if steering is above this value</td>
 <td>0.03</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>max_steer_rate</td>
 <td>float</td>
 <td>offset estimation is skipped if steering rate is above this value</td>
 <td>0.02</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>max_ang_velocity</td>
 <td>float</td>
 <td>offset estimation is skipped if angular velocity is above this value</td>
 <td>0.02</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>max_steer_buffer</td>
 <td>float</td>
 <td>duration to keep steering values in the buffer</td>
 <td>1</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 <tr>
 <td>max_pose_lag</td>
 <td>float</td>
 <td>max valid age of previous pose which can be used for twist calculation</td>
 <td>0.5</td>
-<td>N/A</td>
+<td>≥0.0</td>
 </tr>
 </tbody>
 </table></div>
