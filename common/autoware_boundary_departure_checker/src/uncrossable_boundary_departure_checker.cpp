@@ -17,9 +17,11 @@
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
+#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
@@ -30,7 +32,6 @@
 
 #include <boost/geometry.hpp>
 
-#include <fmt/format.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
@@ -112,19 +113,35 @@ bool is_segment_within_ego_height(
     std::abs(boundary_segment.second.z() - ego_z_position));
   return height_diff < ego_height;
 }
+
+bool has_critical_departure(
+  const std::vector<autoware::boundary_departure_checker::ClosestProjectionToBound> &
+    closest_projections)
+{
+  const auto is_critical_departure_type = [](const auto & pt) {
+    return pt.departure_type ==
+           autoware::boundary_departure_checker::DepartureType::CRITICAL_DEPARTURE;
+  };
+  return std::any_of(
+    closest_projections.rbegin(), closest_projections.rend(), is_critical_departure_type);
+}
 }  // namespace
 
 namespace autoware::boundary_departure_checker
 {
 UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
-  lanelet::LaneletMapPtr lanelet_map_ptr, const VehicleInfo & vehicle_info, const Param & param,
+  const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
+  const VehicleInfo & vehicle_info, Param param,
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
-: param_(param),
-  lanelet_map_ptr_(lanelet_map_ptr),
+: param_(std::move(param)),
+  lanelet_map_ptr_(std::move(lanelet_map_ptr)),
   vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info)),
+  last_no_critical_dpt_time_(clock_ptr->now().seconds()),
+  last_found_critical_dpt_time_(clock_ptr->now().seconds()),
+  clock_ptr_(clock_ptr),
   time_keeper_(std::move(time_keeper))
 {
-  auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr);
+  auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 
   if (!try_uncrossable_boundaries_rtree) {
     throw std::runtime_error(try_uncrossable_boundaries_rtree.error());
@@ -132,6 +149,134 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
 
   uncrossable_boundaries_rtree_ptr_ =
     std::make_unique<UncrossableBoundRTree>(*try_uncrossable_boundaries_rtree);
+}
+
+void UncrossableBoundaryDepartureChecker::update_critical_departure_points(
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,
+  const Side<DeparturePoints> & new_departure_points,
+  const ClosestProjectionsToBound & closest_projections_to_bound)
+{
+  if (!is_critical_departure_persist(closest_projections_to_bound)) {
+    critical_departure_points_.clear();
+  }
+
+  for (auto & crit_dpt_pt_mut : critical_departure_points_) {
+    crit_dpt_pt_mut.ego_dist_on_ref_traj = autoware::motion_utils::calcSignedArcLength(
+      raw_ref_traj, 0UL, crit_dpt_pt_mut.pose_on_current_ref_traj.position);
+
+    if (crit_dpt_pt_mut.ego_dist_on_ref_traj < offset_from_ego) {
+      crit_dpt_pt_mut.can_be_removed = true;
+      continue;
+    }
+
+    const auto updated_pose =
+      motion_utils::calcInterpolatedPose(raw_ref_traj, crit_dpt_pt_mut.ego_dist_on_ref_traj);
+    if (
+      const auto is_shifted_opt = utils::is_point_shifted(
+        crit_dpt_pt_mut.pose_on_current_ref_traj, updated_pose, param_.th_pt_shift_dist_m,
+        param_.th_pt_shift_angle_rad)) {
+      crit_dpt_pt_mut.can_be_removed = true;
+    }
+  }
+
+  auto remove_itr = std::remove_if(
+    critical_departure_points_.begin(), critical_departure_points_.end(),
+    [](const DeparturePoint & pt) { return pt.can_be_removed; });
+
+  critical_departure_points_.erase(remove_itr, critical_departure_points_.end());
+
+  if (!is_continuous_critical_departure(closest_projections_to_bound)) {
+    return;
+  }
+
+  auto new_critical_departure_point = find_new_critical_departure_points(
+    new_departure_points, critical_departure_points_, raw_ref_traj,
+    param_.th_point_merge_distance_m);
+
+  if (new_critical_departure_point.empty()) {
+    return;
+  }
+
+  std::move(
+    new_critical_departure_point.begin(), new_critical_departure_point.end(),
+    std::back_inserter(critical_departure_points_));
+
+  std::sort(critical_departure_points_.begin(), critical_departure_points_.end());
+}
+
+bool is_critical_departure(const ClosestProjectionsToBound & closest_projections_to_bound)
+{
+  const auto check_side_for_critical_departure = [&](const auto side_key) {
+    const auto & closest_projections = closest_projections_to_bound[side_key];
+    return has_critical_departure(closest_projections);
+  };
+
+  return std::any_of(g_side_keys.begin(), g_side_keys.end(), check_side_for_critical_departure);
+}
+
+bool UncrossableBoundaryDepartureChecker::is_continuous_critical_departure(
+  const ClosestProjectionsToBound & closest_projections_to_bound)
+{
+  const auto is_critical_departure_detected = is_critical_departure(closest_projections_to_bound);
+
+  if (!is_critical_departure_detected) {
+    last_no_critical_dpt_time_ = clock_ptr_->now().seconds();
+    return false;
+  }
+
+  const auto t_diff = clock_ptr_->now().seconds() - last_no_critical_dpt_time_;
+  return t_diff >= param_.critical_departure_on_time_buffer_s;
+}
+
+bool UncrossableBoundaryDepartureChecker::is_critical_departure_persist(
+  const ClosestProjectionsToBound & closest_projections_to_bound)
+{
+  const auto is_critical_departure_detected =
+    is_critical_departure(closest_projections_to_bound) && !critical_departure_points_.empty();
+
+  if (is_critical_departure_detected) {
+    last_found_critical_dpt_time_ = clock_ptr_->now().seconds();
+    return true;
+  }
+
+  const auto t_diff = clock_ptr_->now().seconds() - last_found_critical_dpt_time_;
+  return t_diff >= param_.critical_departure_off_time_buffer_s;
+}
+
+CriticalDeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure_points(
+  const Side<DeparturePoints> & new_departure_points,
+  const CriticalDeparturePoints & critical_departure_points,
+  const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m)
+{
+  CriticalDeparturePoints new_critical_departure_points;
+  for (const auto side_key : g_side_keys) {
+    for (const auto & dpt_pt : new_departure_points[side_key]) {
+      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
+        continue;
+      }
+
+      if (dpt_pt.can_be_removed) {
+        continue;
+      }
+
+      const auto is_near_curr_pts = std::any_of(
+        critical_departure_points.begin(), critical_departure_points.end(),
+        [&](const CriticalDeparturePoint & crit_pt) {
+          return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
+                 th_point_merge_distance_m;
+        });
+
+      if (is_near_curr_pts) {
+        continue;
+      }
+
+      CriticalDeparturePoint crit_pt(dpt_pt);
+      crit_pt.pose_on_current_ref_traj =
+        motion_utils::calcInterpolatedPose(raw_ref_traj, crit_pt.ego_dist_on_ref_traj);
+      new_critical_departure_points.push_back(crit_pt);
+    }
+  }
+  return new_critical_departure_points;
 }
 
 tl::expected<AbnormalitiesData, std::string>
@@ -180,14 +325,14 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
       abnormalities_data.footprints_sides[abnormality_type]);
   }
 
-  auto closest_projections_to_bound = get_closest_projections_to_boundaries(
+  auto closest_projections_to_bound_opt = get_closest_projections_to_boundaries(
     abnormalities_data.projections_to_bound, curr_vel, curr_acc);
 
-  if (!closest_projections_to_bound) {
-    return tl::make_unexpected(closest_projections_to_bound.error());
+  if (!closest_projections_to_bound_opt) {
+    return tl::make_unexpected(closest_projections_to_bound_opt.error());
   }
 
-  abnormalities_data.closest_projections_to_bound = std::move(*closest_projections_to_bound);
+  abnormalities_data.closest_projections_to_bound = std::move(*closest_projections_to_bound_opt);
 
   std::vector<double> pred_traj_idx_to_ref_traj_lon_dist;
   pred_traj_idx_to_ref_traj_lon_dist.reserve(predicted_traj.size());
@@ -198,6 +343,15 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
 
   abnormalities_data.departure_points = get_departure_points(
     abnormalities_data.closest_projections_to_bound, pred_traj_idx_to_ref_traj_lon_dist);
+
+  const auto ego_dist_on_traj_m =
+    motion_utils::calcSignedArcLength(trajectory_points, 0UL, curr_pose_with_cov.pose.position);
+
+  update_critical_departure_points(
+    trajectory_points, ego_dist_on_traj_m, abnormalities_data.departure_points,
+    abnormalities_data.closest_projections_to_bound);
+
+  abnormalities_data.critical_departure_points = critical_departure_points_;
 
   return abnormalities_data;
 }
