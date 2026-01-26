@@ -15,6 +15,10 @@ inputs:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: emergency_control_cmd
     message_type: autoware_control_msgs/msg/EmergencyControlCmd
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: obstacle_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
 
 outputs:
   - name: command/control_cmd
@@ -30,6 +34,11 @@ outputs:
 parameter_files: []
 
 parameters:
+  - name: input_objects_topic_name
+    default: ${input objects}
+  - name: input_pointcloud_topic_name
+    default: ${input obstacle_pointcloud}
+
   - name: lateral_controller_mode
     default: mpc
   - name: longitudinal_controller_mode
