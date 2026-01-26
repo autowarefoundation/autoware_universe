@@ -38,7 +38,7 @@ class TestMemMonitor : public MemMonitor
 
 public:
   TestMemMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
-  : MemMonitor(node_name, options)
+  : MemMonitor(options)
   {
   }
 
@@ -47,10 +47,11 @@ public:
     array_ = *diag_msg;
   }
 
-  void changeUsageWarn(float usage_warn) { usage_warn_ = usage_warn; }
-  void changeUsageError(float usage_error) { usage_error_ = usage_error; }
+  void changeUsageWarn(size_t bytes) { warning_available_size_ = bytes; }
+  void changeUsageError(size_t bytes) { error_available_size_ = bytes; }
 
   void update() { updater_.force_update(); }
+  void setPeriod(const double period) { updater_.setPeriod(rclcpp::Duration::from_seconds(period)); }
 
   const std::string removePrefix(const std::string & name)
   {
@@ -99,6 +100,7 @@ protected:
     monitor_ = std::make_unique<TestMemMonitor>("test_mem_monitor", node_options);
     sub_ = monitor_->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
       "/diagnostics", 1000, std::bind(&TestMemMonitor::diagCallback, monitor_.get(), _1));
+    monitor_->setPeriod(10000.0);
 
     // Remove dummy executable if exists
     if (fs::exists(free_)) {
@@ -157,7 +159,7 @@ TEST_F(MemMonitorTestSuite, usageWarnTest)
   // Verify warning
   {
     // Change warning level
-    monitor_->changeUsageWarn(0.0);
+    monitor_->changeUsageWarn(std::numeric_limits<size_t>::max());
 
     // Publish topic
     monitor_->update();
@@ -175,7 +177,7 @@ TEST_F(MemMonitorTestSuite, usageWarnTest)
   // Verify normal behavior
   {
     // Change back to normal
-    monitor_->changeUsageWarn(0.95);
+    monitor_->changeUsageWarn(0);
 
     // Publish topic
     monitor_->update();
@@ -212,7 +214,7 @@ TEST_F(MemMonitorTestSuite, usageErrorTest)
   // Verify warning
   {
     // Change warning level
-    monitor_->changeUsageError(0.0);
+    monitor_->changeUsageError(std::numeric_limits<size_t>::max());
 
     // Publish topic
     monitor_->update();
@@ -230,7 +232,7 @@ TEST_F(MemMonitorTestSuite, usageErrorTest)
   // Verify normal behavior
   {
     // Change back to normal
-    monitor_->changeUsageError(0.99);
+    monitor_->changeUsageError(0);
 
     // Publish topic
     monitor_->update();

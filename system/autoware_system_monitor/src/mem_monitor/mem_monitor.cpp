@@ -34,8 +34,17 @@ namespace bp = boost::process;
 MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
 : Node("mem_monitor", options),
   updater_(this),
-  available_size_(declare_parameter<int>("available_size", 1024) * 1024 * 1024)
+  error_available_size_(declare_parameter<int>("available_size", 1024) * 1024 * 1024),
+  warning_available_size_()
 {
+  // Define warning_available_size_
+  size_t warning_margin = declare_parameter<int>("warning_margin", 0);
+  if (warning_margin < 0) {
+    warning_margin = 0;
+  }
+  warning_available_size_ = error_available_size_ + warning_margin * 1024 * 1024;
+  
+
   gethostname(hostname_, sizeof(hostname_));
   updater_.setHardwareID(hostname_);
   updater_.add("Memory Usage", this, &MemMonitor::checkUsage);
@@ -50,6 +59,7 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   durable_qos.transient_local();
   pub_memory_status_ = this->create_publisher<tier4_external_api_msgs::msg::MemoryStatus>(
     "~/memory_status", durable_qos);
+
 }
 
 void MemMonitor::update()
@@ -99,9 +109,8 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   std::vector<std::string> list;
   float usage = 0.0f;
   size_t mem_total = 0;
-  size_t mem_shared = 0;
   size_t mem_available = 0;
-  size_t used_plus = 0;
+  size_t swap_used = 0;
 
   /*
    Output example of `free -tb`
@@ -124,15 +133,18 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     // Physical memory
     if (index == 1) {
       mem_total = std::atoll(list[1].c_str());
-      mem_shared = std::atoll(list[4].c_str());
       mem_available = std::atoll(list[6].c_str());
 
       // available divided by total is available memory including calculation for buff/cache,
       // so the subtraction of this from 1 gives real usage.
       usage = 1.0f - static_cast<double>(mem_available) / mem_total;
       stat.addf(fmt::format("{} usage", list[0]), "%.2f%%", usage * 1e+2);
+    } else if (index == 2) {
+      // Swap memory
+      swap_used = std::atoll(list[2].c_str());
     }
 
+    // Add additional information for each memory type and total
     stat.add(fmt::format("{} total", list[0]), toHumanReadable(list[1]));
     stat.add(fmt::format("{} used", list[0]), toHumanReadable(list[2]));
     stat.add(fmt::format("{} free", list[0]), toHumanReadable(list[3]));
@@ -142,24 +154,24 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       stat.add(fmt::format("{} shared", list[0]), toHumanReadable(list[4]));
       stat.add(fmt::format("{} buff/cache", list[0]), toHumanReadable(list[5]));
       stat.add(fmt::format("{} available", list[0]), toHumanReadable(list[6]));
-    } else if (index == 3) {
-      // Total:used + Mem:shared
-      used_plus = std::atoll(list[2].c_str()) + mem_shared;
-      double giga = static_cast<double>(used_plus) / (1024 * 1024 * 1024);
-      stat.add(fmt::format("{} used+", list[0]), fmt::format("{:.1f}{}", giga, "G"));
     } else {
-      /* nothing */
+      // Do nothing for swap and total
     }
     ++index;
   }
 
+  /*
+  * To realize diagnostic logic, level is decided by the metric defined by (mem_available - swap_used).
+  * Considering when the metric is negative (i.e., swap_used > mem_available),
+  * `swap_used` is always added to the thresholds to avoid confusion.
+  */
   int level;
-  if (mem_total > used_plus) {
-    level = DiagStatus::OK;
-  } else if (mem_available >= available_size_) {
+  if (mem_available < (error_available_size_ + swap_used)) {
+    level = DiagStatus::ERROR;
+  } else if (mem_available < (warning_available_size_ + swap_used)) {
     level = DiagStatus::WARN;
   } else {
-    level = DiagStatus::ERROR;
+    level = DiagStatus::OK;
   }
 
   stat.summary(level, usage_dict_.at(level));
