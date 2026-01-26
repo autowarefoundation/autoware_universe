@@ -49,7 +49,6 @@ BEVFusionTRT::BEVFusionTRT(
   for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
     CHECK_CUDA_ERROR(cudaStreamCreate(&camera_streams_[i]));
   }
-
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
 
   stop_watch_ptr_ =
