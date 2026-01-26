@@ -14,6 +14,11 @@
 
 #include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
 
+#include "autoware/boundary_departure_checker/abnormalities/abnormality_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/localization_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/longitudinal_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/normal_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/steering_generator.hpp"
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
@@ -284,6 +289,23 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const SteeringReport & current_steering, const double curr_vel, const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+  if (generators_.empty()) {
+    for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
+      if (abnormality_type == AbnormalityType::NORMAL) {
+        generators_.push_back(std::make_unique<NormalGenerator>());
+      } else if (abnormality_type == AbnormalityType::LOCALIZATION) {
+        generators_.push_back(std::make_unique<LocalizationGenerator>());
+      } else if (abnormality_type == AbnormalityType::LONGITUDINAL) {
+        generators_.push_back(std::make_unique<LongitudinalGenerator>());
+      } else if (
+        abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
+        abnormality_type == AbnormalityType::STEERING_STUCK ||
+        abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
+        abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
+        generators_.push_back(std::make_unique<SteeringGenerator>(abnormality_type));
+      }
+    }
+  }
 
   if (predicted_traj.empty()) {
     return tl::make_unexpected("Ego predicted trajectory is empty");
@@ -296,11 +318,11 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
     utils::calc_margin_from_covariance(curr_pose_with_cov, param_.footprint_extra_margin);
 
   AbnormalitiesData abnormalities_data;
-  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
+  for (const auto & generator : generators_) {
+    const auto abnormality_type = generator->get_type();
     auto & fps = abnormalities_data.footprints[abnormality_type];
-    fps = utils::create_ego_footprints(
-      abnormality_type, uncertainty_fp_margin, trimmed_pred_traj, current_steering,
-      *vehicle_info_ptr_, param_);
+    fps = generator->generate(
+      trimmed_pred_traj, current_steering, *vehicle_info_ptr_, param_, uncertainty_fp_margin);
 
     abnormalities_data.footprints_sides[abnormality_type] = utils::get_sides_from_footprints(fps);
   }
@@ -621,4 +643,6 @@ UncrossableBoundaryDepartureChecker::build_uncrossable_boundaries_tree(
   return utils::build_uncrossable_boundaries_rtree(
     *lanelet_map_ptr, param_.boundary_types_to_detect);
 }
+
+UncrossableBoundaryDepartureChecker::~UncrossableBoundaryDepartureChecker() = default;
 }  // namespace autoware::boundary_departure_checker
