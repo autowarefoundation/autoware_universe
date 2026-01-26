@@ -47,7 +47,7 @@ enum class DepartureType {
 };
 
 enum class AbnormalityType {
-  NORMAL,
+  NORMAL = 0,
   LOCALIZATION,
   LONGITUDINAL,
   STEERING_STUCK,

@@ -9,6 +9,10 @@ ament_auto_add_library(boundary_departure_checker_utils SHARED
   src/steering_abnormality_utils.cpp
   src/utils.cpp
   src/debug.cpp
+  src/abnormalities/normal_generator.cpp
+  src/abnormalities/localization_generator.cpp
+  src/abnormalities/longitudinal_generator.cpp
+  src/abnormalities/steering_generator.cpp
 )
 
 ament_auto_add_library(uncrossable_boundary_departure_checker SHARED

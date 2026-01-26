@@ -30,6 +30,9 @@
 
 namespace autoware::boundary_departure_checker
 {
+
+class AbnormalityGenerator;
+
 class UncrossableBoundaryDepartureChecker
 {
 public:
@@ -38,6 +41,7 @@ public:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, Param param = Param{},
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils_debug::TimeKeeper>());
+  ~UncrossableBoundaryDepartureChecker();
 
   void set_param(const Param & param) { param_ = param; }
 
@@ -193,6 +197,7 @@ private:
   double last_found_critical_dpt_time_{0.0};
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
+  std::vector<std::unique_ptr<AbnormalityGenerator>> generators_;
   // To be used from the motion_velocity_planner
   static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
