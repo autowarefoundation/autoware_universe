@@ -15,8 +15,8 @@
 #ifndef TYPE_ALIAS_HPP_
 #define TYPE_ALIAS_HPP_
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 #include <autoware/boundary_departure_checker/parameters.hpp>
+#include <autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -73,7 +73,6 @@ using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using BDCParam = boundary_departure_checker::Param;
 using SegmentWithIdx = boundary_departure_checker::SegmentWithIdx;
-using UncrossableBoundRTree = boundary_departure_checker::UncrossableBoundRTree;
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
 namespace bg = boost::geometry;                             // NOLINT
@@ -92,20 +91,17 @@ using autoware_utils_geometry::Point2d;          // NOLINT
 using autoware_utils_system::StopWatch;          // NOLINT
 using vehicle_info_utils::VehicleInfo;           // NOLINT
 
-using boundary_departure_checker::Abnormalities;             // NOLINT
-using boundary_departure_checker::AbnormalityType;           // NOLINT
-using boundary_departure_checker::BoundaryDepartureChecker;  // NOLINT
-using boundary_departure_checker::CriticalDeparturePoints;   // NOLINT
-using boundary_departure_checker::DepartureInterval;         // NOLINT
-using boundary_departure_checker::DepartureIntervals;        // NOLINT
-using boundary_departure_checker::DeparturePoint;            // NOLINT
-using boundary_departure_checker::DeparturePoints;           // NOLINT
-using boundary_departure_checker::DepartureType;             // NOLINT
-using boundary_departure_checker::FootprintMargin;           // NOLINT
-using boundary_departure_checker::ProjectionToBound;         // NOLINT
-using boundary_departure_checker::Side;                      // NOLINT
-using boundary_departure_checker::SideKey;                   // NOLINT
-using boundary_departure_checker::UncrossableBoundRTree;     // NOLINT
+using boundary_departure_checker::Abnormalities;                        // NOLINT
+using boundary_departure_checker::AbnormalityType;                      // NOLINT
+using boundary_departure_checker::CriticalDeparturePoints;              // NOLINT
+using boundary_departure_checker::DeparturePoint;                       // NOLINT
+using boundary_departure_checker::DeparturePoints;                      // NOLINT
+using boundary_departure_checker::DepartureType;                        // NOLINT
+using boundary_departure_checker::FootprintMargin;                      // NOLINT
+using boundary_departure_checker::ProjectionToBound;                    // NOLINT
+using boundary_departure_checker::Side;                                 // NOLINT
+using boundary_departure_checker::SideKey;                              // NOLINT
+using boundary_departure_checker::UncrossableBoundaryDepartureChecker;  // NOLINT
 
 using boundary_departure_checker::AbnormalitiesConfigs;
 using boundary_departure_checker::AbnormalitiesData;

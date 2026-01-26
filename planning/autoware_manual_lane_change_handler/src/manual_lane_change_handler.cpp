@@ -148,6 +148,13 @@ void ManualLaneChangeHandler::set_preferred_lane(
     return;
   }
 
+  const auto reroute_availability = sub_reroute_availability_.take_data();
+  if (!reroute_availability || !reroute_availability->availability) {
+    res->status.success = false;
+    res->status.message = "Not in lane driving state. Wait for the current scenario to end.";
+    return;
+  }
+
   lanelet::ConstLanelet closest_lanelet =
     get_lanelet_by_id(current_route_->segments.front().preferred_primitive.id);
   const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
