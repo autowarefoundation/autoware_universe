@@ -58,7 +58,8 @@
         "precision",
         "mean",
         "std",
-        "backlight_threshold",
+        "over_exposure_threshold",
+        "under_exposure_threshold",
         "classifier_type",
         "traffic_light_type"
       ],
