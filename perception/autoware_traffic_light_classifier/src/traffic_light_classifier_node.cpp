@@ -139,7 +139,7 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
     if (brightness >= over_exposure_threshold_) {
       exposure_out_of_range_indices.emplace_back(idx_valid_roi);
       detect_over_exposure = true;
-    } else if(brightness <= under_exposure_threshold_) {
+    } else if (brightness <= under_exposure_threshold_) {
       exposure_out_of_range_indices.emplace_back(idx_valid_roi);
       detect_under_exposure = true;
     }
