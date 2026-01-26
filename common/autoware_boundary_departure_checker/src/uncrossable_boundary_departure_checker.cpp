@@ -243,12 +243,12 @@ bool UncrossableBoundaryDepartureChecker::is_critical_departure_persist(
   return t_diff >= param_.critical_departure_off_time_buffer_s;
 }
 
-CriticalDeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure_points(
+DeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure_points(
   const Side<DeparturePoints> & new_departure_points,
-  const CriticalDeparturePoints & critical_departure_points,
+  const DeparturePoints & critical_departure_points,
   const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m)
 {
-  CriticalDeparturePoints new_critical_departure_points;
+  DeparturePoints new_critical_departure_points;
   for (const auto side_key : g_side_keys) {
     for (const auto & dpt_pt : new_departure_points[side_key]) {
       if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
@@ -261,7 +261,7 @@ CriticalDeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_d
 
       const auto is_near_curr_pts = std::any_of(
         critical_departure_points.begin(), critical_departure_points.end(),
-        [&](const CriticalDeparturePoint & crit_pt) {
+        [&](const DeparturePoint & crit_pt) {
           return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
                  th_point_merge_distance_m;
         });
@@ -270,7 +270,7 @@ CriticalDeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_d
         continue;
       }
 
-      CriticalDeparturePoint crit_pt(dpt_pt);
+      DeparturePoint crit_pt = dpt_pt;
       crit_pt.pose_on_current_ref_traj =
         motion_utils::calcInterpolatedPose(raw_ref_traj, crit_pt.ego_dist_on_ref_traj);
       new_critical_departure_points.push_back(crit_pt);

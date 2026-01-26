@@ -93,7 +93,6 @@ using vehicle_info_utils::VehicleInfo;           // NOLINT
 
 using boundary_departure_checker::Abnormalities;                        // NOLINT
 using boundary_departure_checker::AbnormalityType;                      // NOLINT
-using boundary_departure_checker::CriticalDeparturePoints;              // NOLINT
 using boundary_departure_checker::DeparturePoint;                       // NOLINT
 using boundary_departure_checker::DeparturePoints;                      // NOLINT
 using boundary_departure_checker::DepartureType;                        // NOLINT
@@ -108,7 +107,6 @@ using boundary_departure_checker::AbnormalitiesData;
 using boundary_departure_checker::AbnormalityConfig;
 using boundary_departure_checker::ClosestProjectionsToBound;
 using boundary_departure_checker::ClosestProjectionToBound;
-using boundary_departure_checker::CriticalDeparturePoint;
 using boundary_departure_checker::LocalizationConfig;
 using boundary_departure_checker::LongitudinalConfig;
 using boundary_departure_checker::NormalConfig;

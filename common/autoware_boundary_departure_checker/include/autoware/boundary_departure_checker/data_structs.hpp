@@ -210,16 +210,7 @@ struct DeparturePoint
   double velocity{0.0};
   size_t idx_from_ego_traj{};
   bool can_be_removed{false};
-
-  [[nodiscard]] bool is_nearby(const Pose & pose) const { return is_nearby(pose.position); }
-
-  [[nodiscard]] bool is_nearby(const Point & point) const { return is_nearby({point.x, point.y}); }
-
-  [[nodiscard]] bool is_nearby(const Point2d & candidate_point) const
-  {
-    const auto diff = boost::geometry::distance(point, candidate_point);
-    return diff < th_point_merge_distance_m;
-  }
+  geometry_msgs::msg::Pose pose_on_current_ref_traj;
 
   [[nodiscard]] Point to_geom_pt(const double z = 0.0) const
   {
@@ -233,26 +224,6 @@ struct DeparturePoint
 };
 using DeparturePoints = std::vector<DeparturePoint>;
 
-struct CriticalDeparturePoint : DeparturePoint
-{
-  geometry_msgs::msg::Pose pose_on_current_ref_traj;
-  CriticalDeparturePoint() = default;
-  explicit CriticalDeparturePoint(const DeparturePoint & base)
-  {
-    uuid = base.uuid;
-    departure_type = base.departure_type;
-    abnormality_type = base.abnormality_type;
-    point = base.point;
-    th_point_merge_distance_m = base.th_point_merge_distance_m;
-    lat_dist_to_bound = base.lat_dist_to_bound;
-    ego_dist_on_ref_traj = base.ego_dist_on_ref_traj;
-    velocity = base.velocity;
-    can_be_removed = base.can_be_removed;
-  }
-};
-
-using CriticalDeparturePoints = std::vector<CriticalDeparturePoint>;
-
 using Footprint = LinearRing2d;
 using Footprints = std::vector<Footprint>;
 
@@ -264,7 +235,7 @@ struct AbnormalitiesData
   Abnormalities<ProjectionsToBound> projections_to_bound;
   ClosestProjectionsToBound closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
-  CriticalDeparturePoints critical_departure_points;
+  DeparturePoints critical_departure_points;
 };
 }  // namespace autoware::boundary_departure_checker
 

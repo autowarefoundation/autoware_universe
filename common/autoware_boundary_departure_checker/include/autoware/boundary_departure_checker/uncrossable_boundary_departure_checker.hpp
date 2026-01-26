@@ -190,15 +190,15 @@ private:
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
-  CriticalDeparturePoints critical_departure_points_;
+  DeparturePoints critical_departure_points_;
   double last_no_critical_dpt_time_{0.0};
   double last_found_critical_dpt_time_{0.0};
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   // To be used from the motion_velocity_planner
-  static CriticalDeparturePoints find_new_critical_departure_points(
+  static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
-    const CriticalDeparturePoints & critical_departure_points,
+    const DeparturePoints & critical_departure_points,
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);
 };
 }  // namespace autoware::boundary_departure_checker
