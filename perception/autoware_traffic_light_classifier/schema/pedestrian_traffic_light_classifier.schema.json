@@ -40,7 +40,7 @@
         "under_exposure_threshold": {
           "type": "number",
           "description": "If the intensity get lesser than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much lesser, the node only overwrites in the under exposure situations. Therefore, If you wouldn't like to use this feature set this value to `-1.0`. The confidence of overwritten signal is set to `0.0`.",
-          "default": -0.85
+          "default": -0.83
         },
         "classifier_type": {
           "type": "integer",
