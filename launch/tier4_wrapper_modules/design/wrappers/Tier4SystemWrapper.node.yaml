@@ -1,0 +1,135 @@
+autoware_system_design_format: v0.1.0
+
+name: Tier4SystemWrapper.node
+
+launch:
+  package: tier4_system_launch
+  ros2_launch_file: system.launch.xml
+
+# interfaces
+inputs:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+
+outputs:
+  - name: diagnostics_graph/struct
+    message_type: tier4_system_msgs/msg/DiagGraphStruct
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: diagnostics_graph/status
+    message_type: tier4_system_msgs/msg/DiagGraphStatus
+  - name: diagnostics_graph/reset
+    message_type: tier4_system_msgs/srv/ResetDiagGraph
+  - name: system/command_mode/availability
+    message_type: tier4_system_msgs/msg/CommandModeAvailability
+  - name: system/operation_mode/availability
+    message_type: tier4_system_msgs/msg/OperationModeAvailability
+  - name: system/operation_mode/state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: system/operation_mode/change_operation_mode
+    message_type: autoware_system_msgs/srv/ChangeOperationMode
+  - name: system/operation_mode/change_autoware_control
+    message_type: autoware_system_msgs/srv/ChangeAutowareControl
+  - name: system/fail_safe/mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+  - name: system/emergency/hazard_status
+    message_type: autoware_system_msgs/msg/HazardStatusStamped
+
+# parameters
+parameter_files: []
+
+parameters:
+  - name: use_sim_time
+    default: false
+  - name: run_mode
+    default: online
+  - name: launch_system_monitor
+    default: true
+  - name: launch_dummy_diag_publisher
+    default: false
+  - name: sensor_model
+    default: sample_sensor_kit
+
+  - name: component_state_monitor_topic_path
+    default: $(find-pkg-share autoware_launch)/config/system/component_state_monitor/topics.yaml
+  - name: duplicated_node_checker_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/duplicated_node_checker/duplicated_node_checker.param.yaml
+  - name: processing_time_checker_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/processing_time_checker/processing_time_checker.param.yaml
+  - name: pipeline_latency_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/pipeline_latency_monitor/pipeline_latency_monitor.param.yaml
+  - name: mrm_comfortable_stop_operator_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/mrm_comfortable_stop_operator/mrm_comfortable_stop_operator.param.yaml
+  - name: mrm_emergency_stop_operator_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/mrm_emergency_stop_operator/mrm_emergency_stop_operator.param.yaml
+  - name: dummy_diag_publisher_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/diagnostics/dummy_diag_publisher.param.yaml
+  - name: system_monitor_cpu_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/cpu_monitor.param.yaml
+  - name: system_monitor_gpu_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/gpu_monitor.param.yaml
+  - name: system_monitor_hdd_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/hdd_monitor.param.yaml
+  - name: system_monitor_mem_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/mem_monitor.param.yaml
+  - name: system_monitor_net_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/net_monitor.param.yaml
+  - name: system_monitor_ntp_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/ntp_monitor.param.yaml
+  - name: system_monitor_process_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/process_monitor.param.yaml
+  - name: system_monitor_voltage_monitor_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/system_monitor/voltage_monitor.param.yaml
+
+  - name: mrm_handler_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/mrm_handler/mrm_handler.param.yaml
+  - name: diagnostic_graph_aggregator_param_path
+    default: $(find-pkg-share autoware_diagnostic_graph_aggregator)/config/default.param.yaml
+  - name: diagnostic_graph_aggregator_graph_path
+    default: $(find-pkg-share autoware_launch)/config/system/diagnostics/autoware-main.yaml
+  - name: diagnostic_graph_aggregator_graph_vars
+    default: ""
+  - name: diag_struct_topic
+    default: /diagnostics_graph/struct
+  - name: diag_status_topic
+    default: /diagnostics_graph/status
+  - name: diag_reset_srv
+    default: /diagnostics_graph/reset
+  - name: availability_converter_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/command_mode/converter.param.yaml
+  - name: command_mode_switcher_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/command_mode/switcher.param.yaml
+  - name: command_mode_decider_param_path
+    default: $(find-pkg-share autoware_launch)/config/system/command_mode/decider.param.yaml
+  - name: mrm_state_topic
+    default: /system/fail_safe/mrm_state
+  - name: change_operation_mode_srv
+    default: /system/operation_mode/change_operation_mode
+  - name: change_autoware_control_srv
+    default: /system/operation_mode/change_autoware_control
+
+  - name: launch_rqt_reconfigure
+    default: false
+  - name: launch_rqt_runtime_monitor
+    default: false
+  - name: launch_rqt_robot_monitor
+    default: false
+  - name: launch_rqt_runtime_monitor_err
+    default: false
+  - name: use_control_command_gate
+    default: false
+
+# processes
+processes:
+  - name: monitor_system
+    trigger_conditions:
+      - periodic: 10 # Hz
+    outcomes:
+      - to_output: diagnostics_graph/struct
+      - to_output: diagnostics_graph/status
+      - to_output: system/command_mode/availability
+      - to_output: system/operation_mode/availability
+      - to_output: system/operation_mode/state
+      - to_output: system/fail_safe/mrm_state
+      - to_output: system/emergency/hazard_status
