@@ -26,6 +26,7 @@
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/logger.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -55,17 +56,20 @@ public:
   ~LidarFRNet() = default;
 
   bool process(
-    const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
-    sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered,
-    const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
+    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
+    std::unordered_map<std::string, double> & proc_timing);
 
 private:
   bool preprocess(const uint32_t input_num_points);
   bool inference();
   bool postprocess(
     const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-    sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
-    sensor_msgs::msg::PointCloud2 & cloud_filtered);
+    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered);
   void initTensors();
 
   std::once_flag init_cloud_;

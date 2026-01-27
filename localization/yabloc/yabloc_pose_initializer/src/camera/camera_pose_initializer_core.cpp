@@ -16,7 +16,6 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <opencv2/highgui.hpp>
@@ -179,8 +178,8 @@ std::optional<double> CameraPoseInitializer::estimate_pose(
 
 void CameraPoseInitializer::on_map(const LaneletMapBin & msg)
 {
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(msg, lanelet_map);
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(msg));
   lane_image_ = std::make_unique<LaneImage>(lanelet_map);
 
   const_lanelets_.clear();

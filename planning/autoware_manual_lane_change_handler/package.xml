@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_manual_lane_change_handler</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>Manual lane change handler node extracted from autoware_mission_planner_universe</description>
   <maintainer email="arjun.ram@tier4.jp">Arjun Jagdish Ram</maintainer>
   <license>Apache-2.0</license>

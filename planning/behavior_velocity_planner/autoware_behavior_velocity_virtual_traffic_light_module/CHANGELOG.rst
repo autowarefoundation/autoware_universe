@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore(autoware_behavior_velocity_virtual_traffic_light_module): modify maintainers of path_generator (`#11791 <https://github.com/autowarefoundation/autoware_universe/issues/11791>`_)
+  * chore: add new maintainers to package.xml of path_generator
+  * chore: remove mantainers
+  ---------
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Masahiro Kubota, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

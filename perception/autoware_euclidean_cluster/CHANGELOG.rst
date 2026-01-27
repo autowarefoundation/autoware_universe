@@ -2,6 +2,16 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(autoware_euclidean_cluster): add empty point cloud guards (`#11744 <https://github.com/autowarefoundation/autoware_universe/issues/11744>`_)
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add empty data guards in euclidean_cluster_node.cpp
+  - Add early return in voxel_grid_based_euclidean_cluster_node.cpp
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

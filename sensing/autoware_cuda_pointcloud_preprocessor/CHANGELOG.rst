@@ -2,6 +2,18 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(cuda_pointcloud_preprocessor): cast timestamp value properly (`#11714 <https://github.com/autowarefoundation/autoware_universe/issues/11714>`_)
+  * fix(cuda_pointcloud_preprocessor): cast timestamp value properly
+  Since `twist.stamp_nsec` and `last_stamp_nsec` are defined as `std::uint32_t`,
+  subtraction may cause wrap-around and unexpected behavior if `twist.stamp_nsec < last_stamp_nsec`
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Manato Hirabayashi, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

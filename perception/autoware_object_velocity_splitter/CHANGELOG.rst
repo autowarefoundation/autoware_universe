@@ -2,6 +2,13 @@
 Changelog for package autoware_object_velocity_splitter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* feat(autoware_object_velocity_splitter): add ComposableNode support (`#11751 <https://github.com/autowarefoundation/autoware_universe/issues/11751>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 

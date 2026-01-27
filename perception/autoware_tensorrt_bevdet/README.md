@@ -46,7 +46,6 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
 - Tensorrt 10.8.0.43
 - CUDA 12.4
-- cuDNN 8.9.2
 
 ### Trained Models
 

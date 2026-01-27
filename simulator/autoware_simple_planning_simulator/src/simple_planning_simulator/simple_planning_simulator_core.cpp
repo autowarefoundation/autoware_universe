@@ -25,7 +25,6 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/utils.hpp>
@@ -529,12 +528,16 @@ void SimplePlanningSimulator::on_timer()
 
 void SimplePlanningSimulator::on_map(const LaneletMapBin::ConstSharedPtr msg)
 {
-  auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
+  auto lanelet_map_ptr = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg);
 
-  lanelet::routing::RoutingGraphPtr routing_graph_ptr;
-  lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr;
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr, &traffic_rules_ptr, &routing_graph_ptr);
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr);
+
+  lanelet::routing::RoutingGraphPtr routing_graph_ptr =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr =
+    routing_graph_and_traffic_rules.second;
 
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr);
   road_lanelets_ = lanelet::utils::query::roadLanelets(all_lanelets);

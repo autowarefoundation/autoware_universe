@@ -125,6 +125,7 @@ struct OccludedAbsenceTrafficLight
   bool collision_detected{false};
   bool temporal_stop_before_attention_required{false};
   size_t closest_idx{0};
+  size_t collision_stopline_idx{0};
   size_t occlusion_stopline_idx{0};
   size_t peeking_limit_line_idx{0};
   std::string occlusion_report;

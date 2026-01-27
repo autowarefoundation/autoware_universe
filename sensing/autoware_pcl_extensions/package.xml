@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_pcl_extensions</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>The autoware_pcl_extensions package</description>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="david.wong@tier4.jp">David Wong</maintainer>

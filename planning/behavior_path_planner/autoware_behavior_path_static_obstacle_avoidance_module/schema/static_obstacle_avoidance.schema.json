@@ -1344,9 +1344,14 @@
               "type": "boolean",
               "description": "Flag to enable yield maneuver during shifting.",
               "default": "false"
+            },
+            "enable_signalling_during_yield": {
+              "type": "boolean",
+              "description": "Flag to enable signalling during yield maneuver.",
+              "default": "false"
             }
           },
-          "required": ["enable", "enable_during_shifting"],
+          "required": ["enable", "enable_during_shifting", "enable_signalling_during_yield"],
           "additionalProperties": false
         },
         "cancel": {

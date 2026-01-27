@@ -49,7 +49,8 @@ std::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
 
   const auto & obj_pos = object.kinematics.pose_with_covariance.pose.position;
 
-  CrosswalkEdgePoints ret{p1, {}, {}, p2, {}, {}};
+  CrosswalkEdgePoints ret{p1, Eigen::Vector2d::Zero(), Eigen::Vector2d::Zero(),
+                          p2, Eigen::Vector2d::Zero(), Eigen::Vector2d::Zero()};
   auto distance_pedestrian_to_p1 = std::hypot(p1.x() - obj_pos.x, p1.y() - obj_pos.y);
   auto distance_pedestrian_to_p2 = std::hypot(p2.x() - obj_pos.x, p2.y() - obj_pos.y);
 

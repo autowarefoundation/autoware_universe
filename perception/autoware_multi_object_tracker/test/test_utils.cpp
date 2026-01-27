@@ -167,12 +167,22 @@ RosbagWriterHelper::RosbagWriterHelper(bool enabled, const std::string & storage
   std::cout << "Rosbag opened successfully." << std::endl;
   // Register topics
   const auto serialization_format = rmw_get_serialization_format();
-  writer_->create_topic(
-    {"/perception/object_recognition/detection/objects",
-     "autoware_perception_msgs/msg/DetectedObjects", serialization_format, ""});
-  writer_->create_topic(
-    {"/perception/object_recognition/tracking/objects",
-     "autoware_perception_msgs/msg/TrackedObjects", serialization_format, ""});
+
+  {
+    rosbag2_storage::TopicMetadata topic_metadata_det;
+    topic_metadata_det.name = "/perception/object_recognition/detection/objects";
+    topic_metadata_det.type = "autoware_perception_msgs/msg/DetectedObjects";
+    topic_metadata_det.serialization_format = serialization_format;
+    writer_->create_topic(topic_metadata_det);
+  }
+
+  {
+    rosbag2_storage::TopicMetadata topic_metadata_rec;
+    topic_metadata_rec.name = "/perception/object_recognition/tracking/objects";
+    topic_metadata_rec.type = "autoware_perception_msgs/msg/TrackedObjects";
+    topic_metadata_rec.serialization_format = serialization_format;
+    writer_->create_topic(topic_metadata_rec);
+  }
   std::cout << "Topics registered successfully." << std::endl;
 }
 

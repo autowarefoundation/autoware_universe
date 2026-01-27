@@ -160,7 +160,13 @@ void add_message_to_rosbag(
   writer.create_topic(tm);
 
   auto bag_message = std::make_shared<rosbag2_storage::SerializedBagMessage>();
+
+#ifdef ROS_DISTRO_HUMBLE
   auto ret = rcutils_system_time_now(&bag_message->time_stamp);
+#else
+  auto ret = rcutils_system_time_now(&bag_message->recv_timestamp);
+#endif
+
   if (ret != RCL_RET_OK) {
     RCLCPP_ERROR(rclcpp::get_logger("saveToBag"), "couldn't assign time rosbag message");
   }

@@ -37,20 +37,25 @@ Please refer to it for your parameter settings.
 
 ### Core Parameters
 
-| Name                         | Type   | Description                                                                                                                                                                                                                                    |
-| ---------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fusion_distance`            | double | If the detected object's distance to frame_id is less than the threshold, the fusion will be processed                                                                                                                                         |
-| `strict_iou_fusion_distance` | double | if the detected object's distance is less than the `strict_iou_fusion_distance`, `strict_iou_match_mode` will be used, otherwise `rough_iou_match_mode` will be used                                                                           |
-| `strict_iou_match_mode`      | string | select mode from 3 options {`iou`, `iou_x`, `iou_y`} to calculate IoU in range of [`0`, `strict_iou_fusion_distance`]. <br> &emsp;`iou`: IoU along x-axis and y-axis <br> &emsp;`iou_x`: IoU along x-axis <br> &emsp;`iou_y`: IoU along y-axis |
-| `rough_iou_match_mode`       | string | the IOU mode using in range of [`strict_iou_fusion_distance`, `fusion_distance`] if `strict_iou_fusion_distance` < `fusion_distance`                                                                                                           |
-| `use_cluster_semantic_type`  | bool   | if `false`, the labels of clusters are overwritten by `UNKNOWN` before fusion                                                                                                                                                                  |
-| `only_allow_inside_cluster`  | bool   | if `true`, the only clusters contained inside RoIs by a detector                                                                                                                                                                               |
-| `roi_scale_factor`           | double | the scale factor for offset of detector RoIs if `only_allow_inside_cluster=true`                                                                                                                                                               |
-| `iou_threshold`              | double | the IoU threshold to overwrite a label of clusters with a label of roi                                                                                                                                                                         |
-| `unknown_iou_threshold`      | double | the IoU threshold to fuse cluster with unknown label of roi                                                                                                                                                                                    |
-| `remove_unknown`             | bool   | if `true`, remove all `UNKNOWN` labeled objects from output                                                                                                                                                                                    |
-| `rois_number`                | int    | the number of input rois                                                                                                                                                                                                                       |
-| `debug_mode`                 | bool   | If `true`, subscribe and publish images for visualization.                                                                                                                                                                                     |
+{{ json_to_markdown("perception/autoware_image_projection_based_fusion/schema/roi_cluster_fusion.schema.json") }}
+
+### Example Configuration
+
+The `iou_threshold` parameter should be configured as an object with thresholds for each object class:
+
+```yaml
+iou_threshold:
+  UNKNOWN: 0.1
+  CAR: 0.65
+  TRUCK: 0.65
+  BUS: 0.65
+  TRAILER: 0.65
+  MOTORCYCLE: 0.65
+  BICYCLE: 0.65
+  PEDESTRIAN: 0.65
+```
+
+The threshold values determine the minimum IoU score required to overwrite a cluster's label with the corresponding ROI label. Different thresholds can be set for each object class to account for varying detection characteristics.
 
 ## Assumptions / Known limits
 

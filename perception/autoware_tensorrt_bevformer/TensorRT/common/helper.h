@@ -39,14 +39,11 @@
 #define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__HELPER_H_  // NOLINT
 
 #include <NvInferRuntime.h>
-#include <cudnn.h>
 
 #include <cstdio>
 #include <iostream>
 #include <stdexcept>
 #include <string>
-
-cudnnStatus_t convert_trt2cudnn_dtype(nvinfer1::DataType trt_dtype, cudnnDataType_t * cudnn_dtype);
 
 // Enumerator for status
 typedef enum {

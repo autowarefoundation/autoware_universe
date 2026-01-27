@@ -14,7 +14,7 @@
 
 #include "remaining_distance_time_calculator_node.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -84,9 +84,17 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
 
 void RemainingDistanceTimeCalculatorNode::on_map(const HADMapBin::ConstSharedPtr & msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr_);
+
+  routing_graph_ptr_ =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   road_lanes_ = lanelet::utils::query::roadLanelets(all_lanelets);
   is_graph_ready_ = true;

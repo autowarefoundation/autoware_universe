@@ -2,6 +2,14 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace the usage of remove_const (`#11727 <https://github.com/autowarefoundation/autoware_universe/issues/11727>`_)
+  replace the usage of remove_const
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -2,6 +2,13 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(launch): correct arg name for control_evaluator input object (`#11669 <https://github.com/autowarefoundation/autoware_universe/issues/11669>`_)
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Takahisa Ishikawa
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -62,7 +62,7 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
 {
   diagnostic_updater_.emplace(&node);
   module_name_ = module_name;
-  logger_ = node.get_logger();
+  logger_ = node.get_logger().get_child(module_name_);
   clock_ = node.get_clock();
 
   debug_publisher_ =
@@ -123,38 +123,6 @@ void RunOutModule::update_unfeasible_stop_status(diagnostic_updater::DiagnosticS
   }
   stat.addf("Unfeasible deceleration", "%2.2f", unfeasible_stop_deceleration_.value_or(0.0));
   unfeasible_stop_deceleration_.reset();
-}
-
-void RunOutModule::publish_debug_trajectory(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const VelocityPlanningResult & planning_result)
-{
-  autoware_planning_msgs::msg::Trajectory debug_trajectory;
-  debug_trajectory.header.frame_id = "map";
-  debug_trajectory.header.stamp = clock_->now();
-  debug_trajectory.points = trajectory;
-  for (const auto & stop_point : planning_result.stop_points) {
-    const auto length = motion_utils::calcSignedArcLength(debug_trajectory.points, 0, stop_point);
-    motion_utils::insertStopPoint(length, debug_trajectory.points);
-  }
-  for (const auto & slowdown_point : planning_result.slowdown_intervals) {
-    const auto from_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
-    const auto from_insert_idx = autoware::motion_utils::insertTargetPoint(
-      from_seg_idx, slowdown_point.from, debug_trajectory.points);
-    const auto to_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
-    const auto to_insert_idx = autoware::motion_utils::insertTargetPoint(
-      to_seg_idx, slowdown_point.to, debug_trajectory.points);
-    if (from_insert_idx && to_insert_idx) {
-      for (auto idx = *from_insert_idx; idx <= *to_insert_idx; ++idx) {
-        debug_trajectory.points[idx].longitudinal_velocity_mps = std::min(
-          debug_trajectory.points[idx].longitudinal_velocity_mps,
-          static_cast<float>(slowdown_point.velocity));
-      }
-    }
-  }
-  debug_trajectory_publisher_->publish(debug_trajectory);
 }
 
 void RunOutModule::add_planning_factors(
@@ -263,7 +231,6 @@ VelocityPlanningResult RunOutModule::plan(
         ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
         filtering_data_to_publish, params_));
   }
-  publish_debug_trajectory(smoothed_trajectory_points, result.velocity_planning_result);
   objects_of_interest_marker_interface_->publishMarkerArray();
   time_keeper_->end_track("publish_debug()");
 

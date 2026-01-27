@@ -1,16 +1,8 @@
 cmake_minimum_required(VERSION 3.17)
 project(autoware_lidar_apollo_instance_segmentation)
 
-find_package(ament_cmake REQUIRED)
-find_package(autoware_perception_msgs REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common)
-find_package(pcl_conversions REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(rclcpp_components REQUIRED)
-find_package(tf2_eigen REQUIRED)
-find_package(autoware_utils REQUIRED)
-find_package(autoware_internal_debug_msgs REQUIRED)
-find_package(tier4_perception_msgs REQUIRED)
+find_package(autoware_cmake REQUIRED)
+autoware_package()
 
 find_package(autoware_tensorrt_common)
 if(NOT ${autoware_tensorrt_common_FOUND})
@@ -25,7 +17,7 @@ if(NOT ${autoware_tensorrt_common_FOUND})
 endif()
 find_package(autoware_cuda_utils REQUIRED)
 
-add_library(${PROJECT_NAME} SHARED
+ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
   src/detector.cpp
   src/log_table.cpp
@@ -38,10 +30,6 @@ add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-  ${autoware_cuda_utils_INCLUDE_DIRS}
-  ${pcl_conversions_INCLUDE_DIRS}
-  ${autoware_utils_INCLUDE_DIRS}
-  ${autoware_perception_msgs_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}

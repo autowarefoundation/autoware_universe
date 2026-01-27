@@ -99,10 +99,19 @@ std::vector<lanelet::BasicPolygon2d> calculate_trajectory_footprints(
       arc_length +=
         autoware_utils::calc_distance2d(trajectory_point, ego_data.trajectory_points[i + 1]);
     }
-    lanelet::BasicPolygons2d cut_result;
-    boost::geometry::difference(trajectory_footprint, cut_polygon, cut_result);
-    trajectory_footprints.push_back(
-      cut_result.empty() ? lanelet::BasicPolygon2d() : cut_result.front());
+    autoware_utils::Polygon2d trajectory_footprint_bg;
+    boost::geometry::convert(trajectory_footprint, trajectory_footprint_bg);
+
+    autoware_utils::MultiPolygon2d cut_result;
+    boost::geometry::difference(trajectory_footprint_bg, cut_polygon, cut_result);
+
+    lanelet::BasicPolygon2d result;
+
+    if (!cut_result.empty()) {
+      boost::geometry::convert(cut_result.front().outer(), result);
+    }
+
+    trajectory_footprints.push_back(result);
   }
   return trajectory_footprints;
 }

@@ -21,6 +21,7 @@
     turn_signal_roundabout_angle_threshold_deg: 15.0
     turn_signal_roundabout_backward_depth: 50
     turn_signal_minimum_search_distance: 10.0
+    turn_signal_path_backward_length: 100.0
     turn_signal_search_time: 3.0
     turn_signal_shift_length_threshold: 0.3
     turn_signal_remaining_shift_length_threshold: 0.1

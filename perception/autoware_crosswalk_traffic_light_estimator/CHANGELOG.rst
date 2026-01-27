@@ -2,6 +2,17 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -2,6 +2,13 @@
 Changelog for package autoware_steer_offset_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* chore(autoware_steer_offset_estimator): add new maintainer Taiki Yamada to package.xml (`#11797 <https://github.com/autowarefoundation/autoware_universe/issues/11797>`_)
+  Add new maintainer Taiki Yamada to package.xml
+* Contributors: Ryohsuke Mitsudome, Yukinari Hisaki
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

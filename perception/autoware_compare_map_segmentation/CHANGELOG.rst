@@ -2,6 +2,27 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* fix(autoware_compare_map_segmentation): add empty point cloud guards (`#11748 <https://github.com/autowarefoundation/autoware_universe/issues/11748>`_)
+  * fix(autoware_compare_map_segmentation): add empty point cloud guards
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add guard in compare_elevation_map_filter
+  - Add guard in distance_based_compare_map_filter
+  - Add guard in voxel_distance_based_compare_map_filter
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

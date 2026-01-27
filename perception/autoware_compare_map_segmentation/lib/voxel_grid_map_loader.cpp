@@ -14,6 +14,8 @@
 
 #include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <limits>
 #include <memory>
 #include <string>
@@ -95,7 +97,11 @@ bool VoxelGridMapLoader::is_close_to_neighbor_voxels(
   const pcl::PointXYZ & point, const double distance_threshold, VoxelGridPointXYZ & voxel,
   pcl::search::Search<pcl::PointXYZ>::Ptr tree)
 {
-  const int index = voxel.getCentroidIndexAt(voxel.getGridCoordinates(point.x, point.y, point.z));
+  const Eigen::Vector3i grid_coordinates = voxel.getGridCoordinates(point.x, point.y, point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int index = voxel.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
   if (index != -1) {
     return true;
   }
@@ -279,8 +285,13 @@ bool VoxelGridMapLoader::is_in_voxel(
   const double distance_threshold, const FilteredPointCloudPtr & map,
   VoxelGridPointXYZ & voxel) const
 {
-  int voxel_index =
-    voxel.getCentroidIndexAt(voxel.getGridCoordinates(src_point.x, src_point.y, src_point.z));
+  const Eigen::Vector3i grid_coordinates =
+    voxel.getGridCoordinates(src_point.x, src_point.y, src_point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int voxel_index = voxel.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
+
   if (voxel_index != -1) {  // not empty voxel
     const double dist_x = map->points.at(voxel_index).x - target_point.x;
     const double dist_y = map->points.at(voxel_index).y - target_point.y;
@@ -362,7 +373,7 @@ VoxelGridDynamicMapLoader::VoxelGridDynamicMapLoader(
   client_callback_group_ =
     node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   map_update_client_ = node->create_client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>(
-    "map_loader_service", rmw_qos_profile_services_default, client_callback_group_);
+    "map_loader_service", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), client_callback_group_);
 
   while (!map_update_client_->wait_for_service(std::chrono::seconds(1)) && rclcpp::ok()) {
     RCLCPP_INFO(logger_, "service not available, waiting again ...");
@@ -502,30 +513,24 @@ void VoxelGridDynamicMapLoader::request_update_map(const geometry_msgs::msg::Poi
   request->area.radius = map_loader_radius_;
   request->cached_ids = getCurrentMapIDs();
 
-  auto result{map_update_client_->async_send_request(
-    request,
-    [](rclcpp::Client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>::SharedFuture) {})};
+  auto callback =
+    [this](
+      rclcpp::Client<autoware_map_msgs::srv::GetDifferentialPointCloudMap>::SharedFuture future) {
+      try {
+        auto result = future.get();
+        if (result->new_pointcloud_with_ids.empty() && result->ids_to_remove.empty()) {
+          return;
+        }
+        updateDifferentialMapCells(result->new_pointcloud_with_ids, result->ids_to_remove);
+        if (debug_) {
+          publish_downsampled_map(getCurrentDownsampledMapPc());
+        }
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR(logger_, "Failed to get differential pointcloud map: %s", e.what());
+      }
+    };
 
-  std::future_status status = result.wait_for(std::chrono::seconds(0));
-  while (status != std::future_status::ready) {
-    RCLCPP_INFO(logger_, "Waiting for response...\n");
-    if (!rclcpp::ok()) {
-      return;
-    }
-    status = result.wait_for(std::chrono::seconds(1));
-  }
-  //
-  if (status == std::future_status::ready) {
-    if (
-      result.get()->new_pointcloud_with_ids.size() == 0 &&
-      result.get()->ids_to_remove.size() == 0) {
-      return;
-    }
-    updateDifferentialMapCells(result.get()->new_pointcloud_with_ids, result.get()->ids_to_remove);
-    if (debug_) {
-      publish_downsampled_map(getCurrentDownsampledMapPc());
-    }
-  }
+  map_update_client_->async_send_request(request, callback);
 }
 
 }  // namespace autoware::compare_map_segmentation

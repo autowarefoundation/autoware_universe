@@ -790,4 +790,57 @@ std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
 
   return min_blind_side_distance;
 }
+
+std::optional<lanelet::ConstLanelet> get_neighboring_turn_lanelet(
+  const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler,
+  const lanelet::ConstLanelet & intersection_lanelet, const geometry_msgs::msg::Pose & ego_pose)
+{
+  const auto & lanelet_map_ptr = route_handler->getLaneletMapPtr();
+  const std::string turn_dir = intersection_lanelet.attributeOr("turn_direction", "else");
+
+  const auto search_linestring = (turn_dir == "right") ? intersection_lanelet.rightBound2d()
+                                                       : intersection_lanelet.leftBound2d();
+
+  auto get_dist_sq = [&ego_pose](const lanelet::BasicPoint2d & pt) {
+    const double dx = ego_pose.position.x - pt.x();
+    const double dy = ego_pose.position.y - pt.y();
+    return (dx * dx) + (dy * dy);
+  };
+
+  auto get_closest_start_point = [&get_dist_sq](const lanelet::ConstLineString2d & ls) {
+    const auto & front = ls.front().basicPoint2d();
+    const auto & back = ls.back().basicPoint2d();
+    return (get_dist_sq(front) < get_dist_sq(back)) ? front : back;
+  };
+
+  const auto & reference_pt = get_closest_start_point(search_linestring);
+
+  constexpr double search_distance = 0.1;
+  const auto offset = lanelet::BasicPoint2d(search_distance, search_distance);
+  const auto search_bbox = lanelet::BoundingBox2d(reference_pt - offset, reference_pt + offset);
+  const auto neighbor_lanelets = lanelet_map_ptr->laneletLayer.search(search_bbox);
+
+  for (const auto & lanelet : neighbor_lanelets) {
+    if (lanelet.id() == intersection_lanelet.id()) {
+      continue;
+    }
+
+    const std::string neighbor_turn_dir = lanelet.attributeOr("turn_direction", "else");
+
+    if (neighbor_turn_dir != turn_dir) {
+      continue;
+    }
+
+    const auto neighbor_boundary =
+      (turn_dir == "right") ? lanelet.leftBound2d() : lanelet.rightBound2d();
+
+    const auto & neighbor_pt = get_closest_start_point(neighbor_boundary);
+
+    if (boost::geometry::distance(neighbor_pt, reference_pt) < search_distance) {
+      return lanelet;
+    }
+  }
+
+  return std::nullopt;
+}
 }  // namespace autoware::behavior_velocity_planner
