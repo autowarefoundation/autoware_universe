@@ -60,7 +60,7 @@ public:
 
   double getEgoSpeed() const { return std::abs(data_->self_odometry->twist.twist.linear.x); }
 
-  bool isVehicleStopped() const { return getEgoSpeed() < 0.05; }
+  bool isVehicleStopped() const { return getEgoSpeed() < 0.3; }
 
   geometry_msgs::msg::Pose getEgoPose() const { return data_->self_odometry->pose.pose; }
 
