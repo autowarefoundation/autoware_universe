@@ -96,7 +96,7 @@ private:
 
   private:
     void transformToBaseLink(
-      const PointCloud2 & input, const Header & header, PointCloud2 & output);
+      const PointCloud2 & ros_input, const Header & header, PointCloud2 & output);
     rclcpp::Publisher<PointCloud2>::SharedPtr outlier_pointcloud_pub_;
     rclcpp::Publisher<PointCloud2>::SharedPtr low_confidence_pointcloud_pub_;
     rclcpp::Publisher<PointCloud2>::SharedPtr high_confidence_pointcloud_pub_;
