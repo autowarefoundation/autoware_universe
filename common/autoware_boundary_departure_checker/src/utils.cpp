@@ -59,16 +59,18 @@ DeparturePoint create_departure_point(
   const double th_point_merge_distance_m)
 {
   DeparturePoint point;
-  point.uuid = autoware_utils_uuid::to_hex_string(autoware_utils_uuid::generate_uuid());
   point.lat_dist_to_bound = projection_to_bound.lat_dist;
-  point.departure_type = projection_to_bound.departure_type;
+  point.can_be_removed =
+    !projection_to_bound.departure_type_opt || point.ego_dist_on_ref_traj <= 0.0;
+  if (point.can_be_removed) {
+    return point;
+  }
+  point.departure_type = projection_to_bound.departure_type_opt.value();
   point.point = projection_to_bound.pt_on_bound;
   point.th_point_merge_distance_m = th_point_merge_distance_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
   point.ego_dist_on_ref_traj =
     pred_traj_idx_to_ref_traj_lon_dist[projection_to_bound.ego_sides_idx];
-  point.can_be_removed =
-    (point.departure_type == DepartureType::NONE) || point.ego_dist_on_ref_traj <= 0.0;
   return point;
 }
 

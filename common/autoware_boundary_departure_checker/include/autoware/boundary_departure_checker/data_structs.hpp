@@ -122,8 +122,8 @@ struct ProjectionToBound
 
 struct ClosestProjectionToBound : ProjectionToBound
 {
-  DepartureType departure_type = DepartureType::NONE;
-  AbnormalityType abnormality_type = AbnormalityType::NORMAL;
+  std::optional<DepartureType> departure_type_opt;
+  std::optional<AbnormalityType> abnormality_type_opt;
   ClosestProjectionToBound() = default;
   explicit ClosestProjectionToBound(const ProjectionToBound & base)
   {
@@ -135,16 +135,14 @@ struct ClosestProjectionToBound : ProjectionToBound
     lon_dist_on_pred_traj = base.lon_dist_on_pred_traj;
   }
 
-  ClosestProjectionToBound(
-    const ProjectionToBound & base, const AbnormalityType abnormality_type,
-    const DepartureType departure_type)
-  : departure_type(departure_type), abnormality_type(abnormality_type)
+  [[nodiscard]] bool is_near_boundary() const
   {
-    pt_on_ego = base.pt_on_ego;
-    pt_on_bound = base.pt_on_bound;
-    nearest_bound_seg = base.nearest_bound_seg;
-    lat_dist = base.lat_dist;
-    ego_sides_idx = base.ego_sides_idx;
+    return departure_type_opt && departure_type_opt.value() == DepartureType::NEAR_BOUNDARY;
+  }
+
+  [[nodiscard]] bool is_critical_departure() const
+  {
+    return departure_type_opt && departure_type_opt.value() == DepartureType::CRITICAL_DEPARTURE;
   }
 };
 
@@ -198,7 +196,6 @@ using EgoSides = std::vector<EgoSide>;
 
 struct DeparturePoint
 {
-  std::string uuid;
   DepartureType departure_type{DepartureType::NONE};
   AbnormalityType abnormality_type{AbnormalityType::NORMAL};
   Point2d point;

@@ -119,8 +119,7 @@ bool has_critical_departure(
     closest_projections)
 {
   const auto is_critical_departure_type = [](const auto & pt) {
-    return pt.departure_type ==
-           autoware::boundary_departure_checker::DepartureType::CRITICAL_DEPARTURE;
+    return pt.is_critical_departure();
   };
   return std::any_of(
     closest_projections.rbegin(), closest_projections.rend(), is_critical_departure_type);
@@ -493,8 +492,8 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
         [](const auto pt, const auto dpt_type, const auto abnormality_type) {
           std::unique_ptr<ClosestProjectionToBound> min_pt =
             std::make_unique<ClosestProjectionToBound>(pt);
-          min_pt->departure_type = dpt_type;
-          min_pt->abnormality_type = abnormality_type;
+          min_pt->departure_type_opt = dpt_type;
+          min_pt->abnormality_type_opt = abnormality_type;
           min_pt->time_from_start = pt.time_from_start;
           return min_pt;
         };
@@ -512,19 +511,20 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
         min_pt = create_min_pt(pt, DepartureType::NEAR_BOUNDARY, abnormality_type);
       }
     }
-    if (!min_pt) {
+    if (!min_pt || !min_pt->departure_type_opt || !min_pt->abnormality_type_opt) {
       continue;
     }
 
     if (
-      !min_to_bound.empty() && min_pt->departure_type != DepartureType::CRITICAL_DEPARTURE &&
+      !min_to_bound.empty() && !min_pt->is_critical_departure() &&
       std::abs(min_to_bound.back().lon_dist_on_pred_traj - min_pt->lon_dist_on_pred_traj) < 0.5) {
       continue;
     }
 
     const auto is_exceeding_cutoff =
       [&min_pt](const auto type, const auto braking_dist, const auto cutoff_time) {
-        return min_pt->departure_type == type && min_pt->lon_dist_on_pred_traj > braking_dist &&
+        return min_pt->departure_type_opt.value() == type &&
+               min_pt->lon_dist_on_pred_traj > braking_dist &&
                min_pt->time_from_start > cutoff_time;
       };
 
@@ -535,11 +535,11 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
     if (is_exceeding_cutoff(
           DepartureType::CRITICAL_DEPARTURE, min_braking_dist, param_.th_cutoff_time_departure_s)) {
-      min_pt->departure_type = DepartureType::APPROACHING_DEPARTURE;
+      min_pt->departure_type_opt.value() = DepartureType::APPROACHING_DEPARTURE;
     }
 
     min_to_bound.push_back(*min_pt);
-    if (min_to_bound.back().departure_type == DepartureType::CRITICAL_DEPARTURE) {
+    if (min_to_bound.back().is_critical_departure()) {
       break;
     }
   }
@@ -576,7 +576,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
       continue;
     }
 
-    if (min_to_bound[side_key].back().departure_type != DepartureType::CRITICAL_DEPARTURE) {
+    if (!min_to_bound[side_key].back().is_critical_departure()) {
       continue;
     }
 
@@ -585,7 +585,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
       if (
         min_to_bound[side_key].back().lon_dist_on_pred_traj - itr->lon_dist_on_pred_traj <
         max_braking_dist) {
-        itr->departure_type = DepartureType::APPROACHING_DEPARTURE;
+        itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
       }
     }
   }

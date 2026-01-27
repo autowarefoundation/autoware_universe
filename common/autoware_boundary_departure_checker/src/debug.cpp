@@ -117,11 +117,14 @@ MarkerArray create_projections_type_wall_marker(
   };
 
   for (const auto & pt : projections_to_bound) {
-    if (pt.departure_type == DepartureType::NEAR_BOUNDARY) {
+    if (!pt.departure_type_opt) {
+      continue;
+    }
+    if (pt.is_near_boundary()) {
       marker_near_bound.points.push_back(to_geom(pt.pt_on_bound));
-    } else if (pt.departure_type == DepartureType::APPROACHING_DEPARTURE) {
+    } else if (pt.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
       marker_approaching.points.push_back(to_geom(pt.pt_on_bound));
-    } else if (pt.departure_type == DepartureType::CRITICAL_DEPARTURE) {
+    } else if (pt.is_critical_departure()) {
       marker_critical.points.push_back(to_geom(pt.pt_on_bound));
     } else {
       marker_others.points.push_back(to_geom(pt.pt_on_ego));
