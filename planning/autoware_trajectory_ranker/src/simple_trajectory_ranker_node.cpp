@@ -48,9 +48,9 @@ SimpleTrajectoryRanker::SimpleTrajectoryRanker(const rclcpp::NodeOptions & optio
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
   // Parameters
-  ranked_generator_names_ =
+  ranked_generator_name_prefixes_ =
     autoware_utils_rclcpp::get_or_declare_parameter<std::vector<std::string>>(
-      *this, "ranked_generator_names");
+      *this, "ranked_generator_name_prefixes");
 }
 
 void SimpleTrajectoryRanker::trajectories_callback(
@@ -66,9 +66,9 @@ void SimpleTrajectoryRanker::trajectories_callback(
 
   std::unordered_map<
     std::string, std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>>
-    trajectories_per_generator;
-  for (const auto & name : ranked_generator_names_) {
-    trajectories_per_generator[name] = {};
+    trajectories_per_prefix;
+  for (const auto & prefix : ranked_generator_name_prefixes_) {
+    trajectories_per_prefix[prefix] = {};
   }
   std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>
     unranked_trajectories;
@@ -77,19 +77,28 @@ void SimpleTrajectoryRanker::trajectories_callback(
     autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory scored_trajectory;
     scored_trajectory.candidate_trajectory = trajectory;
     scored_trajectory.score = 0.0;
-    if (
-      uuid_to_name.count(generator_id_str) &&
-      trajectories_per_generator.count(uuid_to_name[generator_id_str])) {
-      trajectories_per_generator[uuid_to_name[generator_id_str]].push_back(scored_trajectory);
-    } else {
+
+    bool matched = false;
+    if (uuid_to_name.count(generator_id_str)) {
+      const auto & generator_name = uuid_to_name[generator_id_str];
+      for (const auto & prefix : ranked_generator_name_prefixes_) {
+        if (generator_name.rfind(prefix, 0) == 0) {
+          trajectories_per_prefix[prefix].push_back(scored_trajectory);
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    if (!matched) {
       unranked_trajectories.push_back(scored_trajectory);
     }
   }
   autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories scored_msg;
   scored_msg.generator_info = msg->generator_info;
   scored_msg.scored_candidate_trajectories.reserve(msg->candidate_trajectories.size());
-  for (const auto & name : ranked_generator_names_) {
-    const auto & trajectories = trajectories_per_generator[name];
+  for (const auto & prefix : ranked_generator_name_prefixes_) {
+    const auto & trajectories = trajectories_per_prefix[prefix];
     scored_msg.scored_candidate_trajectories.insert(
       scored_msg.scored_candidate_trajectories.end(), trajectories.begin(), trajectories.end());
   }
