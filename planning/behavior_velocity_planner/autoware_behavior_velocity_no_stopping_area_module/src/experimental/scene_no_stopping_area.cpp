@@ -190,36 +190,35 @@ bool NoStoppingAreaModule::modifyPathVelocity(
   const double margin = planner_param_.stop_line_margin;
   const double ego_space_in_front_of_stuck_vehicle =
     margin + vi.vehicle_length_m + planner_param_.stuck_vehicle_front_margin;
-  const Polygon2d stuck_vehicle_detect_area =
+  const auto stuck_vehicle_detect_area =
     no_stopping_area::generate_ego_no_stopping_area_lane_polygon(
       path, current_pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stuck_vehicle,
       planner_param_.detection_area_length, planner_param_.path_expand_width);
   const double ego_space_in_front_of_stop_line =
     margin + planner_param_.stop_margin + vi.rear_overhang_m;
-  const Polygon2d stop_line_detect_area =
-    no_stopping_area::generate_ego_no_stopping_area_lane_polygon(
-      path, current_pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stop_line,
-      planner_param_.detection_area_length, planner_param_.path_expand_width);
+  const auto stop_line_detect_area = no_stopping_area::generate_ego_no_stopping_area_lane_polygon(
+    path, current_pose, no_stopping_area_reg_elem_, ego_space_in_front_of_stop_line,
+    planner_param_.detection_area_length, planner_param_.path_expand_width);
 
-  if (stuck_vehicle_detect_area.outer().empty() && stop_line_detect_area.outer().empty()) {
+  if (!stuck_vehicle_detect_area && !stop_line_detect_area) {
     setSafe(true);
     return true;
   }
 
-  debug_data_.stuck_vehicle_detect_area = toGeomPoly(stuck_vehicle_detect_area);
-  debug_data_.stop_line_detect_area = toGeomPoly(stop_line_detect_area);
+  debug_data_.stuck_vehicle_detect_area = toGeomPoly(*stuck_vehicle_detect_area);
+  debug_data_.stop_line_detect_area = toGeomPoly(*stop_line_detect_area);
   // Find stuck vehicle in no stopping area
   const bool is_entry_prohibited_by_stuck_vehicle =
-    check_stuck_vehicles_in_no_stopping_area(stuck_vehicle_detect_area, predicted_obj_arr_ptr);
+    check_stuck_vehicles_in_no_stopping_area(*stuck_vehicle_detect_area, predicted_obj_arr_ptr);
   // Find stop line in no stopping area
   const bool is_entry_prohibited_by_stop_line =
     no_stopping_area::check_stop_lines_in_no_stopping_area(
-      path, stop_line_detect_area, debug_data_);
+      path, *stop_line_detect_area, debug_data_);
   const bool is_entry_prohibited =
     is_entry_prohibited_by_stuck_vehicle || is_entry_prohibited_by_stop_line;
 
-  if (!no_stopping_area::is_stoppable(
-        pass_judge_, distance_to_stop_point, ego_data, logger_, *clock_)) {
+  pass_judge_.check_if_stoppable(distance_to_stop_point, ego_data, logger_, *clock_);
+  if (!pass_judge_.is_stoppable) {
     state_machine_.setState(StateMachine::State::GO);
     setSafe(true);
     return false;

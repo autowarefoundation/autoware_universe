@@ -19,6 +19,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <optional>
 #include <utility>
@@ -31,22 +32,6 @@ using PathIndexWithPoint2d = std::pair<size_t, autoware_utils::Point2d>;  // fro
 using PathIndexWithOffset = std::pair<size_t, double>;                    // front index, offset
 using Trajectory =
   experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>;
-
-struct PassJudge
-{
-  bool pass_judged = false;
-  bool is_stoppable = true;
-};
-
-struct DebugData
-{
-  double base_link2front;
-  std::vector<geometry_msgs::msg::Pose> stop_poses;
-  geometry_msgs::msg::Pose first_stop_pose;
-  std::vector<geometry_msgs::msg::Point> stuck_points;
-  geometry_msgs::msg::Polygon stuck_vehicle_detect_area;
-  geometry_msgs::msg::Polygon stop_line_detect_area;
-};
 
 // intermediate data about the ego vehicle taken from the PlannerData
 struct EgoData
@@ -66,6 +51,33 @@ struct EgoData
   double max_stop_acc{};
   double max_stop_jerk{};
   double delay_response_time{};
+};
+
+struct PassJudge
+{
+  bool pass_judged = false;
+  bool is_stoppable = true;
+
+  /**
+   * @brief Check if it's possible for ego-vehicle to stop before area consider jerk limit
+   * @param distance_to_stop_point distance to the stop point from the current ego position
+   * @param ego_data planner data with ego pose, velocity, etc
+   * @param logger ros logger
+   * @param clock ros clock
+   */
+  void check_if_stoppable(
+    const double distance_to_stop_point, const EgoData & ego_data, const rclcpp::Logger & logger,
+    rclcpp::Clock & clock);
+};
+
+struct DebugData
+{
+  double base_link2front;
+  std::vector<geometry_msgs::msg::Pose> stop_poses;
+  geometry_msgs::msg::Pose first_stop_pose;
+  std::vector<geometry_msgs::msg::Point> stuck_points;
+  geometry_msgs::msg::Polygon stuck_vehicle_detect_area;
+  geometry_msgs::msg::Polygon stop_line_detect_area;
 };
 
 /**
@@ -91,19 +103,6 @@ std::optional<autoware_utils::LineString2d> generate_stop_line(
   const double ego_width, const double stop_line_margin);
 
 /**
- * @brief Calculate if it's possible for ego-vehicle to stop before area consider jerk limit
- * @param [inout] pass_judge the pass judge decision to update
- * @param distance_to_stop_point distance to the stop point from the current ego position
- * @param ego_data planner data with ego pose, velocity, etc
- * @param logger ros logger
- * @param clock ros clock
- * @return is stoppable in front of no stopping area
- */
-bool is_stoppable(
-  PassJudge & pass_judge, const double distance_to_stop_point, const EgoData & ego_data,
-  const rclcpp::Logger & logger, rclcpp::Clock & clock);
-
-/**
  * @brief Calculate the polygon of the path from the ego-car position to the end of the
  * no stopping lanelet (+ extra distance).
  * @param path ego path
@@ -112,9 +111,9 @@ bool is_stoppable(
  * @param margin margin from the end point of the ego-no stopping area lane
  * @param max_polygon_length maximum length of the polygon
  * @param path_expand_width width to expand the path to create the polygon
- * @return generated polygon
+ * @return generated polygon (std::nullopt if failed)
  */
-Polygon2d generate_ego_no_stopping_area_lane_polygon(
+std::optional<Polygon2d> generate_ego_no_stopping_area_lane_polygon(
   const Trajectory & path, const geometry_msgs::msg::Pose & ego_pose,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem, const double margin,
   const double max_polygon_length, const double path_expand_width);

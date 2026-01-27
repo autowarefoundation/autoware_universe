@@ -28,11 +28,44 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
+#include <algorithm>
 #include <limits>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner::no_stopping_area
 {
+
+void PassJudge::check_if_stoppable(
+  const double distance_to_stop_point, const EgoData & ego_data, const rclcpp::Logger & logger,
+  rclcpp::Clock & clock)
+{
+  // compute pass_judge_line_distance
+  const double stoppable_distance = planning_utils::calcJudgeLineDistWithJerkLimit(
+    ego_data.current_velocity, ego_data.current_acceleration, ego_data.max_stop_acc,
+    ego_data.max_stop_jerk, ego_data.delay_response_time);
+  const bool distance_stoppable = stoppable_distance < distance_to_stop_point;
+  const bool slow_velocity = ego_data.current_velocity < 2.0;
+  // ego vehicle is high speed and can't stop before stop line -> GO
+  // stoppable or not is judged only once
+  RCLCPP_DEBUG(
+    logger, "stoppable_distance: %lf distance_to_stop_point: %lf", stoppable_distance,
+    distance_to_stop_point);
+
+  if (distance_stoppable || pass_judged) {
+    return;
+  }
+
+  pass_judged = true;
+  // can't stop using maximum brake consider jerk limit
+  if (!slow_velocity) {
+    // pass through
+    is_stoppable = false;
+    RCLCPP_WARN_THROTTLE(
+      logger, clock, 1000, "[NoStoppingArea] can't stop in front of no stopping area");
+  } else {
+    is_stoppable = true;
+  }
+}
 
 bool is_vehicle_type(const autoware_perception_msgs::msg::PredictedObject & object)
 {
@@ -62,8 +95,7 @@ std::optional<LineString2d> generate_stop_line(
       continue;
     }
 
-    const auto closest_collision_point =
-      *std::min_element(collision_points.begin(), collision_points.end());
+    const auto closest_collision_point = collision_points.front();
     const auto point = path.compute(closest_collision_point).point.pose.position;
     const auto yaw = path.azimuth(closest_collision_point);
     const auto & w = ego_width;
@@ -83,37 +115,7 @@ std::optional<LineString2d> generate_stop_line(
   return {};
 }
 
-bool is_stoppable(
-  PassJudge & pass_judge, const double distance_to_stop_point, const EgoData & ego_data,
-  const rclcpp::Logger & logger, rclcpp::Clock & clock)
-{
-  // compute pass_judge_line_distance
-  const double stoppable_distance = planning_utils::calcJudgeLineDistWithJerkLimit(
-    ego_data.current_velocity, ego_data.current_acceleration, ego_data.max_stop_acc,
-    ego_data.max_stop_jerk, ego_data.delay_response_time);
-  const bool distance_stoppable = stoppable_distance < distance_to_stop_point;
-  const bool slow_velocity = ego_data.current_velocity < 2.0;
-  // ego vehicle is high speed and can't stop before stop line -> GO
-  // stoppable or not is judged only once
-  RCLCPP_DEBUG(
-    logger, "stoppable_distance: %lf distance_to_stop_point: %lf", stoppable_distance,
-    distance_to_stop_point);
-  if (!distance_stoppable && !pass_judge.pass_judged) {
-    pass_judge.pass_judged = true;
-    // can't stop using maximum brake consider jerk limit
-    if (!slow_velocity) {
-      // pass through
-      pass_judge.is_stoppable = false;
-      RCLCPP_WARN_THROTTLE(
-        logger, clock, 1000, "[NoStoppingArea] can't stop in front of no stopping area");
-    } else {
-      pass_judge.is_stoppable = true;
-    }
-  }
-  return pass_judge.is_stoppable;
-}
-
-Polygon2d generate_ego_no_stopping_area_lane_polygon(
+std::optional<Polygon2d> generate_ego_no_stopping_area_lane_polygon(
   const Trajectory & path, const geometry_msgs::msg::Pose & ego_pose,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem, const double margin,
   const double max_polygon_length, const double path_expand_width)
@@ -121,12 +123,12 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   const auto ego_s =
     experimental::trajectory::find_first_nearest_index(path, ego_pose, 3.0, M_PI_4);
   if (!ego_s) {
-    return {};
+    return std::nullopt;
   }
 
   // return if area size is not intentional
   if (no_stopping_area_reg_elem.noStoppingAreas().size() != 1) {
-    return {};
+    return std::nullopt;
   }
 
   const auto no_stopping_area = no_stopping_area_reg_elem.noStoppingAreas().front();
@@ -137,12 +139,12 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
         Point2d{pos.x, pos.y}, lanelet::utils::to2D(no_stopping_area).basicPolygon());
     });
   if (ego_area_intervals.empty()) {
-    return {};
+    return std::nullopt;
   }
 
   const auto [ego_area_start_s, ego_area_end_s] = ego_area_intervals.front();
   if (ego_area_start_s - *ego_s > max_polygon_length) {
-    return {};
+    return std::nullopt;
   }
 
   constexpr auto interpolation_interval = 0.5;
