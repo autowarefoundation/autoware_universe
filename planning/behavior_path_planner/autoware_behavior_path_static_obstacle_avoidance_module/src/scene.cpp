@@ -354,7 +354,9 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
 
   // once an object filtered for boundary clipping, this module keeps the information until the end
   // of execution.
-  utils::static_obstacle_avoidance::updateClipObject(clip_objects_, data);
+  if (isExecutionReady() || isActivated()) {
+    utils::static_obstacle_avoidance::updateClipObject(clip_objects_, data);
+  }
 
   // calculate various data for each target objects.
   fillAvoidanceTargetData(data.target_objects);

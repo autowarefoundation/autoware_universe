@@ -180,6 +180,10 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     // prepare distance is not enough. unavoidable.
     if (avoidance_distance < 1e-3) {
       object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
+      if (helper_->getEgoSpeed() < 0.05) {
+        object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+        return std::make_pair(desire_shift_length, object.longitudinal);
+      }
       return std::nullopt;
     }
 
@@ -203,6 +207,10 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     if (!isBestEffort(parameters_->policy_deceleration)) {
       if (avoidance_distance < helper_->getMinAvoidanceDistance(avoiding_shift) + LON_DIST_BUFFER) {
         object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
+        if (helper_->getEgoSpeed() < 0.05) {
+          object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+          return std::make_pair(desire_shift_length, object.longitudinal);
+        }
         return std::nullopt;
       } else {
         object.info = ObjectInfo::NEED_DECELERATION;
@@ -226,6 +234,10 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     if (
       avoidance_distance <
       helper_->getMinAvoidanceDistance(feasible_shift_length) + LON_DIST_BUFFER) {
+      if (helper_->getEgoSpeed() < 0.05) {
+        object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+        return std::make_pair(desire_shift_length, object.longitudinal);
+      }
       object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
       return std::nullopt;
     }
@@ -330,7 +342,9 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     AvoidLine al_avoid;
     {
       const auto constant_distance = helper_->getFrontConstantDistance(o);
-      const auto to_shift_end = o.longitudinal - constant_distance;
+      const auto to_shift_end = o.info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE
+                                  ? o.longitudinal
+                                  : o.longitudinal - constant_distance;
       const auto path_front_to_ego = data.arclength_from_ego.at(data.ego_closest_path_index);
 
       // start point (use previous linear shift length as start shift length.)
@@ -612,35 +626,14 @@ AvoidLineArray ShiftLineGenerator::extractShiftLinesFromLine(
 
   auto & sl = shift_line_data;
 
-  const auto backward_grad = [&](const size_t i) {
-    if (i == 0) {
-      return sl.shift_line_grad.at(i);
-    }
+  // Calculate second derivative of shift line directly from sl.shift_line_grad.
+  // This detects the start and end points of shift by finding where the gradient changes.
+  std::vector<double> shift_line_second_grad(N, 0.0);
+  for (size_t i = 1; i < N; ++i) {
     const double ds = arcs.at(i) - arcs.at(i - 1);
-    if (ds < 1.0e-5) {
-      return sl.shift_line_grad.at(i);
-    }  // use theoretical value when ds is too small.
-    return (sl.shift_line.at(i) - sl.shift_line.at(i - 1)) / ds;
-  };
-
-  const auto forward_grad = [&](const size_t i) {
-    if (i == arcs.size() - 1) {
-      return sl.shift_line_grad.at(i);
+    if (ds > 1.0e-5) {
+      shift_line_second_grad.at(i) = (sl.shift_line_grad.at(i) - sl.shift_line_grad.at(i - 1)) / ds;
     }
-    const double ds = arcs.at(i + 1) - arcs.at(i);
-    if (ds < 1.0e-5) {
-      return sl.shift_line_grad.at(i);
-    }  // use theoretical value when ds is too small.
-    return (sl.shift_line.at(i + 1) - sl.shift_line.at(i)) / ds;
-  };
-
-  // calculate forward and backward gradient of the shift length.
-  // This will be used for grad-change-point check.
-  sl.forward_grad = std::vector<double>(N, 0.0);
-  sl.backward_grad = std::vector<double>(N, 0.0);
-  for (size_t i = 0; i < N - 1; ++i) {
-    sl.forward_grad.at(i) = forward_grad(i);
-    sl.backward_grad.at(i) = backward_grad(i);
   }
 
   AvoidLineArray merged_avoid_lines;
@@ -659,9 +652,9 @@ AvoidLineArray ShiftLineGenerator::extractShiftLinesFromLine(
       found_first_start = true;
     }
 
-    // find the point where the gradient of the shift is changed
-    const bool set_shift_line_flag =
-      std::abs(sl.forward_grad.at(i) - sl.backward_grad.at(i)) > CREATE_SHIFT_GRAD_THR;
+    // Find the point where the second derivative of shift gradient is significant.
+    // This indicates the start or end of a shift maneuver.
+    const bool set_shift_line_flag = std::abs(shift_line_second_grad.at(i)) > CREATE_SHIFT_GRAD_THR;
 
     if (!set_shift_line_flag) {
       continue;
@@ -678,7 +671,8 @@ AvoidLineArray ShiftLineGenerator::extractShiftLinesFromLine(
     }
   }
 
-  if (std::abs(backward_grad(N - 1)) > CREATE_SHIFT_GRAD_THR) {
+  // Check if the last point still has a gradient (shift is ongoing at the end of path).
+  if (N > 1 && std::abs(sl.shift_line_grad.at(N - 1)) > CREATE_SHIFT_GRAD_THR) {
     const auto & p = path.points.at(N - 1).point.pose;
     const auto shift = sl.shift_line.at(N - 1);
     setEndData(al, shift, p, N - 1, arcs.at(N - 1));
@@ -893,8 +887,6 @@ AvoidLineArray ShiftLineGenerator::applyMergeProcess(
     debug.total_shift = shift_line_data.shift_line;
     debug.pos_shift_grad = shift_line_data.pos_shift_line_grad;
     debug.neg_shift_grad = shift_line_data.neg_shift_line_grad;
-    debug.total_forward_grad = shift_line_data.forward_grad;
-    debug.total_backward_grad = shift_line_data.backward_grad;
     debug.step2_merged_shift_line = merged_shift_lines;
   }
 
@@ -988,9 +980,9 @@ void ShiftLineGenerator::applySmallShiftFilter(
       continue;
     }
 
-    if (!helper_->isEnoughPrepareDistance(s.start_longitudinal)) {
-      continue;
-    }
+    // if (!helper_->isEnoughPrepareDistance(s.start_longitudinal)) {
+    //   continue;
+    // }
 
     shift_lines.push_back(s);
   }
