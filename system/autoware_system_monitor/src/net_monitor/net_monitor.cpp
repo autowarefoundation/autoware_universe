@@ -17,10 +17,10 @@
  * @brief Net monitor class
  */
 
-#include "system_monitor/net_monitor/net_monitor.hpp"
+#include "net_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
-#include "system_monitor/traffic_reader/traffic_reader_common.hpp"
+#include "common/system_monitor_utility.hpp"
+#include "traffic_reader/traffic_reader_common.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -547,9 +547,9 @@ void NetMonitor::update_network_capacity(NetworkInfomation & network, int socket
 }
 
 void NetMonitor::update_network_information_by_routing_netlink(
-  NetworkInfomation & network, void * data, const rclcpp::Duration & duration)
+  NetworkInfomation & network, const void * data, const rclcpp::Duration & duration)
 {
-  auto * stats = static_cast<struct rtnl_link_stats *>(data);
+  const auto * stats = static_cast<const struct rtnl_link_stats *>(data);
 
   update_traffic(network, stats, duration);
 

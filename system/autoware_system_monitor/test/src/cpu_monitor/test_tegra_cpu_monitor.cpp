@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "system_monitor/cpu_monitor/tegra_cpu_monitor.hpp"
+#include "cpu_monitor/tegra_cpu_monitor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

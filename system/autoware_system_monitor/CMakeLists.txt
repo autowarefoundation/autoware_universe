@@ -19,12 +19,16 @@ find_path(LIBNL3_INCLUDE_DIRS
 if(NVML_FOUND)
   include_directories(
     include
+    src
+    reader
     ${LIBNL3_INCLUDE_DIRS}
     ${NVML_INCLUDE_DIRS}
   )
 else()
   include_directories(
     include
+    src
+    reader
     ${LIBNL3_INCLUDE_DIRS}
   )
 endif()
@@ -200,6 +204,7 @@ if(BUILD_TESTING)
 
   target_include_directories(test_process_monitor
     PRIVATE "include"
+    PRIVATE "src"
   )
 
   target_link_libraries(test_process_monitor process_monitor_lib ${Boost_LIBRARIES} ${LIBRARIES})
@@ -218,6 +223,7 @@ if(BUILD_TESTING)
 
   target_include_directories(test_cpu_monitor
     PRIVATE "include"
+    PRIVATE "src"
   )
 
   target_link_libraries(test_cpu_monitor cpu_monitor_lib ${Boost_LIBRARIES} ${LIBRARIES})
@@ -238,6 +244,7 @@ if(BUILD_TESTING)
 
   # target_include_directories(test_hdd_monitor
   #   PRIVATE "include"
+  #   PRIVATE "src"
   # )
 
   # target_link_libraries(test_hdd_monitor ${Boost_LIBRARIES} ${LIBRARIES}
@@ -255,6 +262,7 @@ if(BUILD_TESTING)
 
   # target_include_directories(test_mem_monitor
   #   PRIVATE "include"
+  #   PRIVATE "src"
   # )
 
   # target_link_libraries(test_mem_monitor ${Boost_LIBRARIES} ${LIBRARIES})
@@ -272,6 +280,7 @@ if(BUILD_TESTING)
 
   # target_include_directories(test_net_monitor
   #   PRIVATE "include"
+  #   PRIVATE "src"
   # )
 
   # target_link_libraries(test_net_monitor ${Boost_LIBRARIES} ${NL_LIBS} ${LIBRARIES})
@@ -288,6 +297,7 @@ if(BUILD_TESTING)
 
   # target_include_directories(test_ntp_monitor
   #   PRIVATE "include"
+  #   PRIVATE "src"
   # )
 
   # target_link_libraries(test_ntp_monitor ${Boost_LIBRARIES} ${LIBRARIES})
@@ -303,6 +313,7 @@ if(BUILD_TESTING)
 
   # target_include_directories(test_gpu_monitor
   #   PRIVATE "include"
+  #   PRIVATE "src"
   # )
 
   # target_link_libraries(test_gpu_monitor ${GPU_LIBRARY} ${LIBRARIES})
