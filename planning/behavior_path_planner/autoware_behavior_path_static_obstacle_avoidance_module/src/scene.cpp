@@ -354,9 +354,7 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
 
   // once an object filtered for boundary clipping, this module keeps the information until the end
   // of execution.
-  if (isExecutionReady() || isActivated()) {
-    utils::static_obstacle_avoidance::updateClipObject(clip_objects_, data);
-  }
+  utils::static_obstacle_avoidance::updateClipObject(clip_objects_, data);
 
   // calculate various data for each target objects.
   fillAvoidanceTargetData(data.target_objects);
@@ -1571,6 +1569,10 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
   }
 
   const auto shift_line = avoid_data_.new_shift_line.back();
+  bool is_close_distance_avoidance = shift_line.object.info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+  if (is_close_distance_avoidance) {
+    return false;
+  }
   if (is_return_shift(
         shift_line.start_shift_length, shift_line.end_shift_length,
         parameters_->lateral_small_shift_threshold)) {
