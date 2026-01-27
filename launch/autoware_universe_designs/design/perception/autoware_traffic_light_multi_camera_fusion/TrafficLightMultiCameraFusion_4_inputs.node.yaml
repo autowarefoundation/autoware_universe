@@ -10,17 +10,22 @@ override:
   inputs:
   - name: camera3/camera_info
     message_type: sensor_msgs/msg/CameraInfo
+    remap_target: camera3/camera_info
   - name: camera3/classification/traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: camera3/classification/traffic_signals
   - name: camera3/detection/rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+    remap_target: camera3/detection/rois
   - name: camera4/camera_info
     message_type: sensor_msgs/msg/CameraInfo
+    remap_target: camera4/camera_info
   - name: camera4/classification/traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
+    remap_target: camera4/classification/traffic_signals
   - name: camera4/detection/rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-
+    remap_target: camera4/detection/rois
   parameters:
   - name: camera_namespaces
     type: array
