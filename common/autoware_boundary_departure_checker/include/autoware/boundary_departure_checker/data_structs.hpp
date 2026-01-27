@@ -97,6 +97,9 @@ struct Side
 
 struct ProjectionToBound
 {
+  std::optional<DepartureType> departure_type_opt;
+  std::optional<AbnormalityType> abnormality_type_opt;
+
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
   double lon_dist_on_pred_traj{std::numeric_limits<double>::max()};
@@ -117,22 +120,6 @@ struct ProjectionToBound
     lon_offset(lon_offset),
     ego_sides_idx(idx)
   {
-  }
-};
-
-struct ClosestProjectionToBound : ProjectionToBound
-{
-  std::optional<DepartureType> departure_type_opt;
-  std::optional<AbnormalityType> abnormality_type_opt;
-  ClosestProjectionToBound() = default;
-  explicit ClosestProjectionToBound(const ProjectionToBound & base)
-  {
-    pt_on_ego = base.pt_on_ego;
-    pt_on_bound = base.pt_on_bound;
-    nearest_bound_seg = base.nearest_bound_seg;
-    lat_dist = base.lat_dist;
-    ego_sides_idx = base.ego_sides_idx;
-    lon_dist_on_pred_traj = base.lon_dist_on_pred_traj;
   }
 
   [[nodiscard]] bool is_near_boundary() const
@@ -190,7 +177,6 @@ struct IdxForRTreeSegmentHash
 using SegmentWithIdx = std::pair<Segment2d, IdxForRTreeSegment>;
 using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
 using BoundarySideWithIdx = Side<std::vector<SegmentWithIdx>>;
-using ClosestProjectionsToBound = Side<std::vector<ClosestProjectionToBound>>;
 using EgoSide = Side<Segment2d>;
 using EgoSides = std::vector<EgoSide>;
 
@@ -223,13 +209,15 @@ using DeparturePoints = std::vector<DeparturePoint>;
 using Footprint = LinearRing2d;
 using Footprints = std::vector<Footprint>;
 
+using ProjectionsToBound = std::vector<ProjectionToBound>;
+
 struct AbnormalitiesData
 {
   Abnormalities<EgoSides> footprints_sides;
   Abnormalities<Footprints> footprints;
   BoundarySideWithIdx boundary_segments;
-  Abnormalities<Side<std::vector<ProjectionToBound>>> projections_to_bound;
-  ClosestProjectionsToBound closest_projections_to_bound;
+  Abnormalities<Side<ProjectionsToBound>> projections_to_bound;
+  Side<ProjectionsToBound> closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
   DeparturePoints critical_departure_points;
 };

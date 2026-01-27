@@ -115,8 +115,7 @@ bool is_segment_within_ego_height(
 }
 
 bool has_critical_departure(
-  const std::vector<autoware::boundary_departure_checker::ClosestProjectionToBound> &
-    closest_projections)
+  const std::vector<autoware::boundary_departure_checker::ProjectionToBound> & closest_projections)
 {
   const auto is_critical_departure_type = [](const auto & pt) {
     return pt.is_critical_departure();
@@ -153,7 +152,7 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
 void UncrossableBoundaryDepartureChecker::update_critical_departure_points(
   const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,
   const Side<DeparturePoints> & new_departure_points,
-  const ClosestProjectionsToBound & closest_projections_to_bound)
+  const Side<ProjectionsToBound> & closest_projections_to_bound)
 {
   if (!is_critical_departure_persist(closest_projections_to_bound)) {
     critical_departure_points_.clear();
@@ -203,7 +202,7 @@ void UncrossableBoundaryDepartureChecker::update_critical_departure_points(
   std::sort(critical_departure_points_.begin(), critical_departure_points_.end());
 }
 
-bool is_critical_departure(const ClosestProjectionsToBound & closest_projections_to_bound)
+bool is_critical_departure(const Side<ProjectionsToBound> & closest_projections_to_bound)
 {
   const auto check_side_for_critical_departure = [&](const auto side_key) {
     const auto & closest_projections = closest_projections_to_bound[side_key];
@@ -214,7 +213,7 @@ bool is_critical_departure(const ClosestProjectionsToBound & closest_projections
 }
 
 bool UncrossableBoundaryDepartureChecker::is_continuous_critical_departure(
-  const ClosestProjectionsToBound & closest_projections_to_bound)
+  const Side<ProjectionsToBound> & closest_projections_to_bound)
 {
   const auto is_critical_departure_detected = is_critical_departure(closest_projections_to_bound);
 
@@ -228,7 +227,7 @@ bool UncrossableBoundaryDepartureChecker::is_continuous_critical_departure(
 }
 
 bool UncrossableBoundaryDepartureChecker::is_critical_departure_persist(
-  const ClosestProjectionsToBound & closest_projections_to_bound)
+  const Side<ProjectionsToBound> & closest_projections_to_bound)
 {
   const auto is_critical_departure_detected =
     is_critical_departure(closest_projections_to_bound) && !critical_departure_points_.empty();
@@ -431,9 +430,9 @@ BoundarySideWithIdx UncrossableBoundaryDepartureChecker::get_boundary_segments(
   return boundary_sides_with_idx;
 }
 
-tl::expected<std::vector<ClosestProjectionToBound>, std::string>
+tl::expected<ProjectionsToBound, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
   const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -468,7 +467,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       std::string(__func__) + ": Some abnormality type has incorrect size.");
   }
 
-  std::vector<ClosestProjectionToBound> min_to_bound;
+  ProjectionsToBound min_to_bound;
 
   const auto is_on_bound = [this](const double lat_dist, const SideKey side_key) {
     return lat_dist < param_.th_trigger.th_dist_to_boundary_m[side_key].min;
@@ -481,7 +480,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   const auto fp_size = projections_to_bound[abnormality_to_check.front()][side_key].size();
   min_to_bound.reserve(fp_size);
   for (size_t idx = 0; idx < fp_size; ++idx) {
-    std::unique_ptr<ClosestProjectionToBound> min_pt;
+    std::unique_ptr<ProjectionToBound> min_pt;
     for (const auto abnormality_type : abnormality_to_check) {
       const auto pt = projections_to_bound[abnormality_type][side_key][idx];
       if (pt.ego_sides_idx != idx) {
@@ -490,8 +489,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
       const auto create_min_pt =
         [](const auto pt, const auto dpt_type, const auto abnormality_type) {
-          std::unique_ptr<ClosestProjectionToBound> min_pt =
-            std::make_unique<ClosestProjectionToBound>(pt);
+          std::unique_ptr<ProjectionToBound> min_pt = std::make_unique<ProjectionToBound>(pt);
           min_pt->departure_type_opt = dpt_type;
           min_pt->abnormality_type_opt = abnormality_type;
           min_pt->time_from_start = pt.time_from_start;
@@ -547,10 +545,10 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   return min_to_bound;
 }
 
-tl::expected<ClosestProjectionsToBound, std::string>
+tl::expected<Side<ProjectionsToBound>, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
-  const double curr_vel, const double curr_acc)
+  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
+  const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & th_trigger = param_.th_trigger;
@@ -561,7 +559,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
     curr_vel, curr_acc, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.min,
     th_trigger.brake_delay_s);
 
-  ClosestProjectionsToBound min_to_bound;
+  Side<ProjectionsToBound> min_to_bound;
 
   for (const auto side_key : g_side_keys) {
     const auto min_to_bound_opt = get_closest_projections_to_boundaries_side(
@@ -594,7 +592,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
 }
 
 Side<DeparturePoints> UncrossableBoundaryDepartureChecker::get_departure_points(
-  const ClosestProjectionsToBound & projections_to_bound,
+  const Side<ProjectionsToBound> & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);

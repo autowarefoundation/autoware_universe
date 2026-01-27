@@ -104,8 +104,6 @@ using boundary_departure_checker::UncrossableBoundaryDepartureChecker;  // NOLIN
 using boundary_departure_checker::AbnormalitiesConfigs;
 using boundary_departure_checker::AbnormalitiesData;
 using boundary_departure_checker::AbnormalityConfig;
-using boundary_departure_checker::ClosestProjectionsToBound;
-using boundary_departure_checker::ClosestProjectionToBound;
 using boundary_departure_checker::LocalizationConfig;
 using boundary_departure_checker::LongitudinalConfig;
 using boundary_departure_checker::NormalConfig;

@@ -45,11 +45,10 @@ public:
   void update_critical_departure_points(
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,
     const Side<DeparturePoints> & new_departure_points,
-    const ClosestProjectionsToBound & closest_projections_to_bound);
+    const Side<ProjectionsToBound> & closest_projections_to_bound);
   bool is_continuous_critical_departure(
-    const ClosestProjectionsToBound & closest_projections_to_bound);
-  bool is_critical_departure_persist(
-    const ClosestProjectionsToBound & closest_projections_to_bound);
+    const Side<ProjectionsToBound> & closest_projections_to_bound);
+  bool is_critical_departure_persist(const Side<ProjectionsToBound> & closest_projections_to_bound);
 
   // ==== abnormalities ===
   /**
@@ -145,9 +144,8 @@ public:
    * @return Vector of closest projections with departure classification, or an error message on
    * failure.
    */
-  tl::expected<std::vector<ClosestProjectionToBound>, std::string>
-  get_closest_projections_to_boundaries_side(
-    const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+  tl::expected<ProjectionsToBound, std::string> get_closest_projections_to_boundaries_side(
+    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
     const double min_braking_dist, const double max_braking_dist, const SideKey side_key);
 
   /**
@@ -162,7 +160,7 @@ public:
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound,
+    const Side<ProjectionsToBound> & projections_to_bound,
     const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
@@ -178,12 +176,12 @@ public:
    * model.
    *
    * @param projections_to_bound Abnormality-wise projections to boundaries.
-   * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
-   * string.
+   * @return Side<ProjectionsToBound> structure containing selected points for both
+   * sides, or error string.
    */
-  tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
-    const double curr_vel, const double curr_acc);
+  tl::expected<Side<ProjectionsToBound>, std::string> get_closest_projections_to_boundaries(
+    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
+    const double curr_acc);
 
 private:
   Param param_;

@@ -87,9 +87,8 @@ Marker create_projections_to_bound_marker(
 }
 
 MarkerArray create_projections_type_wall_marker(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  [[maybe_unused]] const Trajectory & ego_traj, const rclcpp::Time & curr_time,
-  const std::string & side_key_str, const double base_link_z)
+  const ProjectionsToBound & projections_to_bound, [[maybe_unused]] const Trajectory & ego_traj,
+  const rclcpp::Time & curr_time, const std::string & side_key_str, const double base_link_z)
 {
   int32_t id{0};
   auto marker_near_bound = autoware_utils_visualization::create_default_marker(
