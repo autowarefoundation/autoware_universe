@@ -15,6 +15,7 @@
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 
 #include <opencv2/imgproc.hpp>
+
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <string>
@@ -55,9 +56,7 @@ cv::Mat MultiFrameDetectionVisualizer::update(const cv::Mat & mask)
     time_series_mask += binary_mask;
   }
 
-  cv::inRange(
-    time_series_mask, mask_buffer_.size() - 1,
-    mask_buffer_.size(), time_series_result);
+  cv::inRange(time_series_mask, mask_buffer_.size() - 1, mask_buffer_.size(), time_series_result);
 
   return time_series_result;
 }

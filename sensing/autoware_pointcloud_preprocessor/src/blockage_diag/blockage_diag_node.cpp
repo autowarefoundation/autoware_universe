@@ -62,9 +62,12 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     blockage_config_.blockage_kernel = declare_parameter<int>("blockage_kernel");
     // Multi-frame blockage visualization configuration
     MultiFrameDetectionVisualizeConfig blockage_visualize_config;
-    blockage_visualize_config.buffering_frames = declare_parameter<int>("blockage_buffering_frames");
-    blockage_visualize_config.buffering_interval = declare_parameter<int>("blockage_buffering_interval");
-    blockage_visualizer_ = std::make_unique<MultiFrameDetectionVisualizer>(blockage_visualize_config);
+    blockage_visualize_config.buffering_frames =
+      declare_parameter<int>("blockage_buffering_frames");
+    blockage_visualize_config.buffering_interval =
+      declare_parameter<int>("blockage_buffering_interval");
+    blockage_visualizer_ =
+      std::make_unique<MultiFrameDetectionVisualizer>(blockage_visualize_config);
 
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
