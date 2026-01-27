@@ -28,8 +28,8 @@ namespace autoware::pointcloud_preprocessor
 
 struct MultiFrameDetectionVisualizeConfig
 {
-  int buffering_frames = 1;
-  int buffering_interval = 0;
+  int buffering_frames;  // Number of frames to buffer
+  int buffering_interval;  // Interval between frames to buffer
 };
 
 /**
