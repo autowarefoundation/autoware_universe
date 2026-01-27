@@ -24,6 +24,26 @@ inputs:
   - name: velocity_status
     message_type: autoware_vehicle_msgs/msg/VelocityReport
 
+  # - name: steering_status
+  #   message_type: autoware_vehicle_msgs/msg/SteeringReport
+
+  # - name: turn_indicators_cmd
+  #   message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  # - name: hazard_lights_cmd
+  #   message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  # - name: gear_cmd
+  #   message_type: autoware_vehicle_msgs/msg/GearCommand
+
+
+  # - name: emergency_control_cmd
+  #   message_type: autoware_control_msgs/msg/EmergencyControlCmd
+  # - name: emergency_turn_indicators_cmd
+  #   message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  # - name: emergency_hazard_lights_cmd
+  #   message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  # - name: emergency_gear_cmd
+  #   message_type: autoware_vehicle_msgs/msg/GearCommand
+
 outputs:
   - name: command/control_cmd
     message_type: autoware_control_msgs/msg/Control
@@ -58,10 +78,6 @@ parameters:
     default: true
   - name: vehicle_model
     default: sample_vehicle
-  - name: input_objects_topic_name
-    default: /perception/object_recognition/objects
-  - name: input_pointcloud_topic_name
-    default: /perception/obstacle_segmentation/pointcloud
   - name: check_external_emergency_heartbeat
     default: false
   - name: launch_obstacle_collision_checker
