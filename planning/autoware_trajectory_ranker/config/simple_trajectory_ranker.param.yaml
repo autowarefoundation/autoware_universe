@@ -1,5 +1,5 @@
 /**:
   ros__parameters:
-    ranked_generator_ids:
-      - "a"
-      - "b"
+    ranked_generator_names:
+      - "DiffusionPlanner_"
+      - "MinimumRuleBasedPlanner_"

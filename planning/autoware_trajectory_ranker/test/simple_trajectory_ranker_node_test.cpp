@@ -63,41 +63,35 @@ protected:
   {
     auto pub = node->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
       "~/input/candidate_trajectories", 1);
-    autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::SharedPtr received_msg;
+    autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::SharedPtr output_msg;
     auto sub =
       node->create_subscription<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories>(
         "~/output/scored_trajectories", 1,
-        [&received_msg](
+        [&output_msg](
           const autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories::SharedPtr msg) {
-          received_msg = msg;
+          output_msg = msg;
         });
 
     pub->publish(input_msg);
 
     rclcpp::WallRate rate(10);
     int count = 0;
-    while (!received_msg && count < 100) {  // Spin for a limited time to avoid infinite loop
+    while (!output_msg && count < 100) {  // Spin for a limited time to avoid infinite loop
       rclcpp::spin_some(node);
       rate.sleep();
       count++;
     }
-    return received_msg;
+    return output_msg;
   }
 };
 }  // namespace
 
 TEST_F(SimpleTrajectoryRankerTest, BasicRankingTest)
 {
-  // Node options with ranked_generator_ids parameter {"a", "b"}
+  // Node options with ranked_generator_names parameter {"a", "b"}
   rclcpp::NodeOptions options;
-  std::vector<std::string> ranked_generator_id_strs = {"a", "b"};
-  std::vector<std::string> param_ranked_generator_ids;
-  param_ranked_generator_ids.reserve(ranked_generator_id_strs.size());
-  for (const auto & id_str : ranked_generator_id_strs) {
-    param_ranked_generator_ids.push_back(
-      autoware_utils_uuid::to_hex_string(get_uuid_from_string_id(id_str)));
-  }
-  options.append_parameter_override("ranked_generator_ids", param_ranked_generator_ids);
+  std::vector<std::string> ranked_generator_names = {"a", "b"};
+  options.append_parameter_override("ranked_generator_names", ranked_generator_names);
 
   // Instantiate the node
   auto node = std::make_shared<autoware::trajectory_ranker::SimpleTrajectoryRanker>(options);
@@ -111,57 +105,60 @@ TEST_F(SimpleTrajectoryRankerTest, BasicRankingTest)
   input_msg.candidate_trajectories.push_back(
     create_candidate_trajectory(get_uuid_from_string_id("a")));
 
-  auto received_msg = publish_and_receive(node, input_msg);
+  // Populate generator_info
+  for (const auto & name : {"a", "b", "c"}) {
+    autoware_internal_planning_msgs::msg::GeneratorInfo info;
+    info.generator_id = get_uuid_from_string_id(name);
+    info.generator_name.data = name;
+    input_msg.generator_info.push_back(info);
+  }
+
+  // Receive the scored trajectories
+  auto output_msg = publish_and_receive(node, input_msg);
 
   // Check the received message
-  ASSERT_TRUE(received_msg);
-  ASSERT_EQ(received_msg->scored_candidate_trajectories.size(), 3UL);
+  ASSERT_TRUE(output_msg);
+  ASSERT_EQ(output_msg->scored_candidate_trajectories.size(), 3UL);
 
   // Expected order: "a", "b", "c"
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("a")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("b")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("c")));
 }
 
 TEST_F(SimpleTrajectoryRankerTest, EmptyInputTest)
 {
-  // Node options with ranked_generator_ids parameter {"a", "b"}
+  // Node options with ranked_generator_names parameter {"a", "b"}
   rclcpp::NodeOptions options;
-  std::vector<std::string> ranked_generator_id_strs = {"a", "b"};
-  std::vector<std::string> param_ranked_generator_ids;
-  param_ranked_generator_ids.reserve(ranked_generator_id_strs.size());
-  for (const auto & id_str : ranked_generator_id_strs) {
-    param_ranked_generator_ids.push_back(
-      autoware_utils_uuid::to_hex_string(get_uuid_from_string_id(id_str)));
-  }
-  options.append_parameter_override("ranked_generator_ids", param_ranked_generator_ids);
+  std::vector<std::string> ranked_generator_names = {"a", "b"};
+  options.append_parameter_override("ranked_generator_names", ranked_generator_names);
 
   // Instantiate the node
   auto node = std::make_shared<autoware::trajectory_ranker::SimpleTrajectoryRanker>(options);
 
   // Publish an empty message
   autoware_internal_planning_msgs::msg::CandidateTrajectories input_msg;
-  auto received_msg = publish_and_receive(node, input_msg);
+  auto output_msg = publish_and_receive(node, input_msg);
 
   // Check the received message
-  ASSERT_TRUE(received_msg);
-  ASSERT_EQ(received_msg->scored_candidate_trajectories.size(), 0UL);
+  ASSERT_TRUE(output_msg);
+  ASSERT_EQ(output_msg->scored_candidate_trajectories.size(), 0UL);
 }
 
 TEST_F(SimpleTrajectoryRankerTest, NoRankedGeneratorsTest)
 {
-  // Node options with empty ranked_generator_ids parameter
+  // Node options with empty ranked_generator_names parameter
   rclcpp::NodeOptions options;
-  options.append_parameter_override("ranked_generator_ids", std::vector<std::string>{});
+  options.append_parameter_override("ranked_generator_names", std::vector<std::string>{});
 
   // Instantiate the node
   auto node = std::make_shared<autoware::trajectory_ranker::SimpleTrajectoryRanker>(options);
@@ -175,39 +172,41 @@ TEST_F(SimpleTrajectoryRankerTest, NoRankedGeneratorsTest)
   input_msg.candidate_trajectories.push_back(
     create_candidate_trajectory(get_uuid_from_string_id("a")));
 
-  auto received_msg = publish_and_receive(node, input_msg);
+  // Populate generator_info
+  for (const auto & name : {"a", "b", "c"}) {
+    autoware_internal_planning_msgs::msg::GeneratorInfo info;
+    info.generator_id = get_uuid_from_string_id(name);
+    info.generator_name.data = name;
+    input_msg.generator_info.push_back(info);
+  }
+
+  auto output_msg = publish_and_receive(node, input_msg);
 
   // Check the received message
-  ASSERT_TRUE(received_msg);
-  ASSERT_EQ(received_msg->scored_candidate_trajectories.size(), 3UL);
+  ASSERT_TRUE(output_msg);
+  ASSERT_EQ(output_msg->scored_candidate_trajectories.size(), 3UL);
 
   // Expected order: "c", "b", "a" (same as input)
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("c")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("b")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("a")));
 }
 
 TEST_F(SimpleTrajectoryRankerTest, AllUnrankedGeneratorsTest)
 {
-  // Node options with ranked_generator_ids parameter {"x", "y"}
+  // Node options with ranked_generator_names parameter {"x", "y"}
   rclcpp::NodeOptions options;
-  std::vector<std::string> ranked_generator_id_strs = {"x", "y"};
-  std::vector<std::string> param_ranked_generator_ids;
-  param_ranked_generator_ids.reserve(ranked_generator_id_strs.size());
-  for (const auto & id_str : ranked_generator_id_strs) {
-    param_ranked_generator_ids.push_back(
-      autoware_utils_uuid::to_hex_string(get_uuid_from_string_id(id_str)));
-  }
-  options.append_parameter_override("ranked_generator_ids", param_ranked_generator_ids);
+  std::vector<std::string> ranked_generator_names = {"x", "y"};
+  options.append_parameter_override("ranked_generator_names", ranked_generator_names);
 
   // Instantiate the node
   auto node = std::make_shared<autoware::trajectory_ranker::SimpleTrajectoryRanker>(options);
@@ -221,23 +220,31 @@ TEST_F(SimpleTrajectoryRankerTest, AllUnrankedGeneratorsTest)
   input_msg.candidate_trajectories.push_back(
     create_candidate_trajectory(get_uuid_from_string_id("a")));
 
-  auto received_msg = publish_and_receive(node, input_msg);
+  // Populate generator_info
+  for (const auto & name : {"a", "b", "c"}) {
+    autoware_internal_planning_msgs::msg::GeneratorInfo info;
+    info.generator_id = get_uuid_from_string_id(name);
+    info.generator_name.data = name;
+    input_msg.generator_info.push_back(info);
+  }
+
+  auto output_msg = publish_and_receive(node, input_msg);
 
   // Check the received message
-  ASSERT_TRUE(received_msg);
-  ASSERT_EQ(received_msg->scored_candidate_trajectories.size(), 3UL);
+  ASSERT_TRUE(output_msg);
+  ASSERT_EQ(output_msg->scored_candidate_trajectories.size(), 3UL);
 
   // Expected order: "c", "b", "a" (same as input)
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("c")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("b")));
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
-      received_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
+      output_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("a")));
 }
