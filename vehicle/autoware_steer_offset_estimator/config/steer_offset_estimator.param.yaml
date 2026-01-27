@@ -1,8 +1,15 @@
 /**:
   ros__parameters:
-    initial_covariance: 1000.0
-    steer_update_hz: 10.0
-    forgetting_factor: 0.999
-    valid_min_velocity: 5.0
-    valid_max_steer: 0.05
-    warn_steer_offset_deg: 2.5
+    update_hz: 10.0 # [Hz]
+    initial_covariance: 0.5
+    initial_offset: 0.0 # [rad]
+    process_noise_covariance: 1.0e-6
+    measurement_noise_covariance: 0.5
+    denominator_floor: 1.0e-12
+    covariance_floor: 1.0e-12
+    min_velocity: 1.0 # [m/s]
+    max_steer: 0.03 # [rad]
+    max_steer_rate: 0.02 # [rad/s]
+    max_ang_velocity: 0.02 # [rad/s]
+    max_steer_buffer: 2.0 # [s]
+    max_pose_lag: 0.5 # [s]
