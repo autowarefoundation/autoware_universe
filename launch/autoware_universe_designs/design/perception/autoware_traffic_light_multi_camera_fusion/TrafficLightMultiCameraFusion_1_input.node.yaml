@@ -1,0 +1,31 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: TrafficLightMultiCameraFusion_1_input.node
+
+base: TrafficLightMultiCameraFusion.node
+
+# interfaces
+remove:
+  inputs:
+  - name: camera2/camera_info
+  - name: camera2/classification/traffic_signals
+  - name: camera2/detection/rois
+override:
+  parameters:
+  - name: camera_namespaces
+    type: array
+    default: "['camera1']"
+    description: List of camera namespaces to be used for fusion.
+
+# processes
+  processes:
+  - name: process
+    trigger_conditions:
+    - and:
+        - on_input: camera1/camera_info
+        - on_input: camera1/classification/traffic_signals
+        - on_input: camera1/detection/rois
+
+    outcomes:
+    - to_output: traffic_signals
