@@ -1960,6 +1960,12 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
     return;
   }
 
+  if (data.stop_target_object.value().info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE) {
+    utils::static_obstacle_avoidance::insertDecelPoint(
+      getEgoPosition(), 0.0, 0.0, shifted_path.path, stop_pose_);
+    return;
+  }
+
   if (data.to_stop_line < -1.0 * parameters_->stop_buffer) {
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 3000, "ego overran avoidance dead line. do nothing.");

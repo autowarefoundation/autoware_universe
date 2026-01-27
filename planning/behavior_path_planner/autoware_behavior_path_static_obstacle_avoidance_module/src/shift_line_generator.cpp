@@ -223,7 +223,11 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
       avoidance_distance, helper_->getLateralMaxJerkLimit(), helper_->getAvoidanceEgoSpeed());
 
     if (std::abs(feasible_relative_shift_length) < parameters_->lateral_execution_threshold) {
-      object.info = ObjectInfo::LESS_THAN_EXECUTION_THRESHOLD;
+      object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
+      if (helper_->isVehicleStopped()) {
+        object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+        return std::make_pair(desire_shift_length, object.longitudinal);
+      }
       return std::nullopt;
     }
 
