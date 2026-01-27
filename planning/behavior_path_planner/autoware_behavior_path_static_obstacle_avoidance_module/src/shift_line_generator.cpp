@@ -980,9 +980,9 @@ void ShiftLineGenerator::applySmallShiftFilter(
       continue;
     }
 
-    // if (!helper_->isEnoughPrepareDistance(s.start_longitudinal)) {
-    //   continue;
-    // }
+    if (!helper_->isEnoughPrepareDistance(s.start_longitudinal)) {
+      continue;
+    }
 
     shift_lines.push_back(s);
   }
