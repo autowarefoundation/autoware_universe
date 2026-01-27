@@ -19,6 +19,10 @@ inputs:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: obstacle_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
+  - name: imu
+    message_type: sensor_msgs/msg/Imu
+  - name: velocity_status
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
 
 outputs:
   - name: command/control_cmd
