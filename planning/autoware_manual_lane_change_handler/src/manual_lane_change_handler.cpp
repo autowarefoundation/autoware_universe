@@ -213,7 +213,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     : req->lane_change_direction == SetPreferredLane::Request::RIGHT ? DIRECTION::MANUAL_RIGHT
                                                                      : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
-    std::vector<autoware_planning_msgs::msg::LaneletPrimitive> preferred_primitives;
     shift_number_ = 0;
 
     autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
