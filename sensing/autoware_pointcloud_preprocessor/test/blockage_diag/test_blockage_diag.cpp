@@ -14,6 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 
+#include <opencv2/core.hpp>
+#include <opencv2/core/mat.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
@@ -64,6 +66,51 @@ TEST(PointCloudValidationTest, ValidFieldsTest)
     sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
 
   EXPECT_NO_THROW({ validate_pointcloud_fields(cloud_with_all_fields); });
+}
+
+bool is_same_image(const cv::Mat & img1, const cv::Mat & img2)
+{
+  if (img1.size() != img2.size() || img1.type() != img2.type()) {
+    return false;
+  }
+  cv::Mat diff;
+  cv::compare(img1, img2, diff, cv::CMP_NE);
+  return cv::countNonZero(diff) == 0;
+}
+
+TEST(MultiFrameDetectionVisualizerTest, ZeroBufferingIntervalReturnSameMask)
+{
+  // Setup visualizer with zero buffering interval
+  MultiFrameDetectionVisualizeConfig config;
+  config.buffering_frames = 4;
+  config.buffering_interval = 0;
+  MultiFrameDetectionVisualizer visualizer(config);
+  cv::Mat input_mask(10, 10, CV_8UC1, cv::Scalar(255));
+
+  // Update visualizer and get result
+  cv::Mat result = visualizer.update(input_mask);
+
+  // Verify that the result matches the input mask
+  EXPECT_TRUE(is_same_image(input_mask, result));
+}
+
+TEST(MultiFrameDetectionVisualizerTest, AllPixelsConsistentTest)
+{
+  MultiFrameDetectionVisualizeConfig config;
+  config.buffering_frames = 4;
+  config.buffering_interval = 1;
+  MultiFrameDetectionVisualizer visualizer(config);
+  cv::Mat consistent_mask(10, 10, CV_8UC1, cv::Scalar(255));
+  int total_pixels = consistent_mask.rows * consistent_mask.cols;
+
+  // Update with same mask 4 times
+  visualizer.update(consistent_mask);
+  visualizer.update(consistent_mask);
+  visualizer.update(consistent_mask);
+  cv::Mat result = visualizer.update(consistent_mask);
+
+  // All pixels should be detected
+  EXPECT_EQ(cv::countNonZero(result), total_pixels);
 }
 
 int main(int argc, char ** argv)
