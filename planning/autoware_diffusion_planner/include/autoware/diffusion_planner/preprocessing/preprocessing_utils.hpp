@@ -17,7 +17,7 @@
 
 #include <Eigen/Core>
 
-#include <geometry_msgs/msg/pose.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <cassert>
 #include <deque>
@@ -55,13 +55,13 @@ void normalize_input_data(
  * past trajectory data in the ego reference frame. Each timestep contains
  * x, y position and heading information as cos(yaw) and sin(yaw).
  *
- * @param[in] pose_msgs        Deque of pose messages
+ * @param[in] odom_msgs        Deque of odometry messages
  * @param[in] num_timesteps       Number of timesteps to process
  * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
  * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
  */
 std::vector<float> create_ego_agent_past(
-  const std::deque<geometry_msgs::msg::Pose> & pose_msgs, size_t num_timesteps,
+  const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform);
 
 /**
