@@ -65,7 +65,7 @@ public:
    *
    * @param lanelet_map_ptr Shared pointer to the lanelet map.
    */
-  explicit LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
+  explicit LaneSegmentContext(const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr);
 
   /**
    * @brief Select route segment indices based on route and constraints.

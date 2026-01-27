@@ -16,6 +16,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_qos_utils</depend>
   <depend>autoware_utils</depend>
   <depend>rclcpp</depend>
   <depend>tier4_rtc_msgs</depend>

@@ -20,6 +20,7 @@
 #include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -67,6 +68,9 @@ private:
   bool hasSameTrafficLight(
     const lanelet::TrafficLightConstPtr element,
     const lanelet::TrafficLightConstPtr registered_element) const;
+
+  bool hasStaticArrow(
+    const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem) const;
 
   // Debug
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr pub_tl_state_;

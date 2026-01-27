@@ -118,13 +118,12 @@ autoware::sampler_common::transform::Spline2D preparePathSpline(
   if (smooth_path) {
     // TODO(Maxime CLEMENT): this version using Eigen::Spline is unreliable and sometimes crashes
     constexpr auto spline_dim = 3;
-    Eigen::MatrixXd control_points(path.size(), 2);
+    Eigen::MatrixXd control_points(2, path.size());
     for (auto i = 0lu; i < path.size(); ++i) {
       const auto & point = path[i];
-      control_points(i, 0) = point.pose.position.x;
-      control_points(i, 1) = point.pose.position.y;
+      control_points(0, i) = point.pose.position.x;
+      control_points(1, i) = point.pose.position.y;
     }
-    control_points.transposeInPlace();
     const auto nb_knots = path.size() + spline_dim + 3;
     Eigen::RowVectorXd knots(nb_knots);
     constexpr auto repeat_end_knots = 3lu;

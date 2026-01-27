@@ -29,6 +29,8 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
+#include <boost/geometry/algorithms/correct.hpp>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -1038,10 +1040,32 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   };
 
   auto shift_lines = path_shifter_.getShiftLines();
+  auto selected_spline_shift_path = spline_shift_path;
+  auto selected_linear_shift_path = linear_shift_path;
+  if (parameters_->enable_signalling_during_yield && avoid_data_.yield_required) {
+    if (avoid_data_.candidate_path.path.points.empty()) {
+      return getPreviousModuleOutput().turn_signal_info;
+    }
+
+    selected_spline_shift_path = avoid_data_.candidate_path;
+    selected_linear_shift_path = avoid_data_.candidate_path;
+
+    shift_lines.clear();
+    for (const auto & al : avoid_data_.safe_shift_line) {
+      shift_lines.push_back(al);
+    }
+  }
+
+  const auto & ref_points = path_shifter_.getReferencePath().points;
+  if (ref_points.empty()) {
+    return getPreviousModuleOutput().turn_signal_info;
+  }
+
+  const size_t ego_idx = planner_data_->findEgoIndex(ref_points);
 
   std::vector<ShiftLine> shift_lines_after_ego;
   for (const auto & s : shift_lines) {
-    if (s.end_idx >= planner_data_->findEgoIndex(spline_shift_path.path.points)) {
+    if (s.end_idx >= ego_idx) {
       shift_lines_after_ego.push_back(s);
     }
   }
@@ -1050,7 +1074,7 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
     return getPreviousModuleOutput().turn_signal_info;
   }
 
-  if (is_large_deviation(spline_shift_path.path)) {
+  if (is_large_deviation(selected_spline_shift_path.path)) {
     return getPreviousModuleOutput().turn_signal_info;
   }
 
@@ -1074,17 +1098,14 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
       }
 
       // different side shift
-      const auto & points = path_shifter_.getReferencePath().points;
-      const size_t idx = planner_data_->findEgoIndex(points);
-
       // output turn signal for near shift line.
-      if (calcSignedArcLength(points, idx, s1.start_idx) > 0.0) {
+      if (calcSignedArcLength(ref_points, ego_idx, s1.start_idx) > 0.0) {
         return s1;
       }
 
       // output turn signal for far shift line.
       if (
-        calcSignedArcLength(points, idx, s2.start_idx) <
+        calcSignedArcLength(ref_points, ego_idx, s2.start_idx) <
         getEgoSpeed() * parameters_->max_prepare_time) {
         return s2;
       }
@@ -1106,14 +1127,15 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   constexpr bool egos_lane_is_shifted = true;
 
   const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
-    linear_shift_path, target_shift_line, avoid_data_.current_lanelets, helper_->getEgoShift(),
-    is_driving_forward, egos_lane_is_shifted);
+    selected_linear_shift_path, target_shift_line, avoid_data_.current_lanelets,
+    helper_->getEgoShift(), is_driving_forward, egos_lane_is_shifted);
 
   update_ignore_signal(target_shift_line.id, is_ignore);
 
-  const auto current_seg_idx = planner_data_->findEgoSegmentIndex(spline_shift_path.path.points);
+  const auto current_seg_idx =
+    planner_data_->findEgoSegmentIndex(selected_spline_shift_path.path.points);
   return planner_data_->turn_signal_decider.overwrite_turn_signal(
-    spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
+    selected_spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
     planner_data_->parameters.ego_nearest_dist_threshold,
     planner_data_->parameters.ego_nearest_yaw_threshold);
 }
@@ -1295,7 +1317,11 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::planWaitingApproval()
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   BehaviorModuleOutput out = plan();
 
-  if (path_shifter_.getShiftLines().empty()) {
+  const bool is_no_shift_lines =
+    !(parameters_->enable_signalling_during_yield && avoid_data_.yield_required)
+      ? path_shifter_.getShiftLines().empty()
+      : avoid_data_.safe_shift_line.empty();
+  if (is_no_shift_lines) {
     out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
   }
 
@@ -1557,12 +1583,17 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
       linestring.emplace_back(p.x, p.y);
     });
 
+    const auto footprint_ring = planner_data_->parameters.vehicle_info.createFootprint();
+
     for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
       const auto transform =
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
-      const auto footprint = autoware_utils::transform_vector(
-        planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, linestring)) {
+
+      autoware_utils_geometry::Polygon2d footprint_polygon;
+      footprint_polygon.outer() = autoware_utils::transform_vector(footprint_ring, transform);
+      boost::geometry::correct(footprint_polygon);
+
+      if (boost::geometry::intersects(footprint_polygon, linestring)) {
         return true;
       }
     }

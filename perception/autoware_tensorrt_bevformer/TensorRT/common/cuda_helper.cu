@@ -105,21 +105,6 @@ template void memcpyPermute<float>(
 template void memcpyPermute<half>(
   half * dst, const half * src, int * src_size, int * permute, int src_dim, cudaStream_t stream);
 
-cudnnStatus_t convert_trt2cudnn_dtype(nvinfer1::DataType trt_dtype, cudnnDataType_t * cudnn_dtype)
-{
-  switch (trt_dtype) {
-    case nvinfer1::DataType::kFLOAT:
-      *cudnn_dtype = CUDNN_DATA_FLOAT;
-      break;
-    case nvinfer1::DataType::kHALF:
-      *cudnn_dtype = CUDNN_DATA_HALF;
-      break;
-    default:
-      return CUDNN_STATUS_BAD_PARAM;
-  }
-  return CUDNN_STATUS_SUCCESS;
-}
-
 template <>
 cublasStatus_t cublasGemmWrap<float>(
   cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k,

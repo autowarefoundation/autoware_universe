@@ -284,8 +284,6 @@ trajectory_follower::LateralOutput MpcLateralController::run(
   }
   m_mpc_solved_status = mpc_solved_status;  // for diagnostic updater
 
-  diag_updater_->force_update();
-
   // reset previous MPC result
   // Note: When a large deviation from the trajectory occurs, the optimization stops and
   // the vehicle will return to the path by re-planning the trajectory or external operation.

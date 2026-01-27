@@ -25,8 +25,6 @@
 #include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/vector3.hpp>
 
 #include <algorithm>
 #include <array>
@@ -62,17 +60,14 @@ struct AgentState
 
   AgentState(const TrackedObject & object, const rclcpp::Time & timestamp);
 
-  void apply_transform(const Eigen::Matrix4d & transform);
-
   [[nodiscard]] std::array<float, AGENT_STATE_DIM> as_array() const noexcept;
 
-  rclcpp::Time timestamp;
-  geometry_msgs::msg::Point position;
-  double cos_yaw{0.0};
-  double sin_yaw{0.0};
-  geometry_msgs::msg::Vector3 velocity;
-  AgentLabel label{AgentLabel::VEHICLE};
-  std::string object_id;
+  // Only the pose is mutable (by `apply_transform` in AgentHistory)
+  Eigen::Matrix4d pose{Eigen::Matrix4d::Identity()};
+
+  const rclcpp::Time timestamp;
+  const AgentLabel label{AgentLabel::VEHICLE};
+  const std::string object_id;
   const TrackedObject original_info;
 };
 
@@ -117,7 +112,7 @@ struct AgentHistory
   void apply_transform(const Eigen::Matrix4d & transform)
   {
     for (auto & state : queue_) {
-      state.apply_transform(transform);
+      state.pose = transform * state.pose;
     }
   }
 

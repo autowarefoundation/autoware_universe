@@ -10,7 +10,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <build_depend>agnocastlib</build_depend>
+  <build_depend condition="$ENABLE_AGNOCAST == 1">agnocastlib</build_depend>
   <build_depend>rclcpp</build_depend>
 
   <test_depend>ament_lint_auto</test_depend>

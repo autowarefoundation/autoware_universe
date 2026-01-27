@@ -169,16 +169,34 @@ The shifted path generation logic enables the Behavior Path Planner to dynamical
 
 ## Collision Assessment / Safety Check
 
-The purpose of the collision assessment function in the Behavior Path Planner is to evaluate the potential for collisions with target objects across all modules. It is utilized in two scenarios:
+The Collision Assessment function evaluates potential collisions with target objects across all software modules. The system uses this function in two scenarios:
 
-1. During candidate path generation, to ensure that the generated candidate path is collision-free.
-2. When the path is approved by the manager, and the ego vehicle is executing the current module. If the current situation is deemed unsafe, depending on each module's requirements, the planner will either cancel the execution or opt to execute another module.
+1. Path Generation: To ensure a new "candidate" path is safe before it is selected.
+2. Path Execution: While the ego vehicle is moving along an approved path. If the module determines the situation is unsafe, it will either cancel the current action or switch to a different module.
 
-The safety check process involves several steps. Initially, it obtains the pose of the target object at a specific time, typically through interpolation of the predicted path. It then checks for any overlap between the ego vehicle and the target object at this time. If an overlap is detected, the path is deemed unsafe. The function also identifies which vehicle is in front by using the arc length along the given path. The function operates under the assumption that accurate data on the position, velocity, and shape of both the ego vehicle (the autonomous vehicle) and any target objects are available. It also relies on the yaw angle of each point in the predicted paths of these objects, which is expected to point towards the next path point.
+### The Safety Check Process
 
-A critical part of the safety check is the calculation of the RSS (Responsibility-Sensitive Safety) distance-inspired algorithm. This algorithm considers factors such as reaction time, safety time margin, and the velocities and decelerations of both vehicles. Extended object polygons are created for both the ego and target vehicles. Notably, the rear object’s polygon is extended by the RSS distance longitudinally and by a lateral margin. The function finally checks for overlap between this extended rear object polygon and the front object polygon. Any overlap indicates a potential unsafe situation.
+Every module checks for potential collisions with all dynamic objects to ensure the generated path is safe.
 
-However, the module does have a limitation concerning the yaw angle of each point in the predicted paths of target objects, which may not always accurately point to the next point, leading to potential inaccuracies in some edge cases.
+For more information on the implementation, see the [safety check utils explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
+
+### Minimum Safe Braking Distance Logic
+
+A critical part of the safety check uses a safe braking distance algorithm. This algorithm calculates the required space based on:
+
+- The velocities and decelerations of both vehicles.
+- Reaction time and a safety time margin.
+
+To perform the check, the module creates polygons (geometric shapes) for both vehicles. The module extends the polygon of the vehicle that is behind (the rear vehicle):
+
+- Longitudinally: It extends the shape forward by the calculated safe braking distance.
+- Laterally: It extends the shape sideways by a safety margin.
+
+If this extended rear polygon overlaps with the front vehicle's polygon, the module identifies the situation as unsafe.
+
+### Known Limitations
+
+The module has one specific limitation: the yaw angle (direction) of points in an object's predicted path may not always point exactly toward the next point. In some rare "edge cases," this can lead to slight inaccuracies in the safety check.
 
 !!! note
 

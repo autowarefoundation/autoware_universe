@@ -47,7 +47,11 @@
 #include <tf2_msgs/msg/tf_message.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <cv_bridge/cv_bridge.h>
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
+#endif
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -91,13 +95,10 @@ private:
   // Helper methods for load_vad_config
   void load_detection_range(VadConfig & config);
   void load_classification_config(const ClassificationConfig & params);
-  void load_map_configuration(VadConfig & config);
-  void load_object_configuration(VadConfig & config);
   void load_map_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
   void load_object_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
-  void load_image_normalization(VadConfig & config);
   void load_network_configurations(VadConfig & config);
   void initialize_vad_model();
   void create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);

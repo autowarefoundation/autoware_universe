@@ -438,9 +438,6 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   // publish debug data
   publishDebugData(ctrl_cmd, control_data);
 
-  // diagnostic
-  diag_updater_->force_update();
-
   return output;
 }
 

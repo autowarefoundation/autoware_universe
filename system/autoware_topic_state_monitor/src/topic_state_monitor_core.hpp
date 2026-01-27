@@ -65,10 +65,6 @@ private:
   rclcpp::GenericSubscription::SharedPtr sub_topic_;
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr sub_transform_;
 
-  // Timer
-  void onTimer();
-  rclcpp::TimerBase::SharedPtr timer_;
-
   // Diagnostic Updater
   diagnostic_updater::Updater updater_;
 

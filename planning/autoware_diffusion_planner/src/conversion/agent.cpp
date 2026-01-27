@@ -15,6 +15,7 @@
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 
 #include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/diffusion_planner/utils/utils.hpp"
 
 #include <algorithm>
 #include <string>
@@ -57,46 +58,30 @@ bool is_unknown_object(const TrackedObject & object)
 }  // namespace
 
 AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timestamp)
-: timestamp(timestamp), original_info(object)
+: pose(utils::pose_to_matrix4d(object.kinematics.pose_with_covariance.pose)),
+  timestamp(timestamp),
+  label(get_model_label(object)),
+  object_id(autoware_utils_uuid::to_hex_string(object.object_id)),
+  original_info(object)
 {
-  position = object.kinematics.pose_with_covariance.pose.position;
-  const float yaw =
-    autoware_utils_geometry::get_rpy(object.kinematics.pose_with_covariance.pose.orientation).z;
-  cos_yaw = std::cos(yaw);
-  sin_yaw = std::sin(yaw);
-  velocity = object.kinematics.twist_with_covariance.twist.linear;
-  label = get_model_label(object);
-  object_id = autoware_utils_uuid::to_hex_string(object.object_id);
-}
-
-void AgentState::apply_transform(const Eigen::Matrix4d & transform)
-{
-  Eigen::Vector4d pos_vec(position.x, position.y, position.z, 1.0);
-  Eigen::Vector4d transformed_pos = transform * pos_vec;
-  position.x = transformed_pos.x();
-  position.y = transformed_pos.y();
-  position.z = transformed_pos.z();
-
-  Eigen::Vector4d dir_vec(cos_yaw, sin_yaw, 0.0, 0.0);
-  Eigen::Vector4d transformed_dir = transform * dir_vec;
-  cos_yaw = transformed_dir.x();
-  sin_yaw = transformed_dir.y();
-
-  const double velocity_norm = std::hypot(velocity.x, velocity.y);
-  velocity.x = velocity_norm * cos_yaw;
-  velocity.y = velocity_norm * sin_yaw;
 }
 
 // Return the state attribute as an array.
 [[nodiscard]] std::array<float, AGENT_STATE_DIM> AgentState::as_array() const noexcept
 {
+  const auto [cos_yaw, sin_yaw] = utils::rotation_matrix_to_cos_sin(pose.block<3, 3>(0, 0));
+  const auto & linear_vel = original_info.kinematics.twist_with_covariance.twist.linear;
+  const double velocity_norm = std::hypot(linear_vel.x, linear_vel.y);
+  const double velocity_x = velocity_norm * cos_yaw;
+  const double velocity_y = velocity_norm * sin_yaw;
+
   return {
-    static_cast<float>(position.x),
-    static_cast<float>(position.y),
-    cos_yaw,
-    sin_yaw,
-    static_cast<float>(velocity.x),
-    static_cast<float>(velocity.y),
+    static_cast<float>(pose(0, 3)),
+    static_cast<float>(pose(1, 3)),
+    static_cast<float>(cos_yaw),
+    static_cast<float>(sin_yaw),
+    static_cast<float>(velocity_x),
+    static_cast<float>(velocity_y),
     static_cast<float>(original_info.shape.dimensions.y),  // width
     static_cast<float>(original_info.shape.dimensions.x),  // length
     static_cast<float>(label == AgentLabel::VEHICLE),
@@ -145,17 +130,13 @@ std::vector<AgentHistory> AgentData::transformed_and_trimmed_histories(
     history.apply_transform(transform);
   }
 
-  geometry_msgs::msg::Point position;
-  position.x = 0.0;
-  position.y = 0.0;
-  position.z = 0.0;
-
-  std::sort(
-    histories.begin(), histories.end(),
-    [&position](const AgentHistory & a, const AgentHistory & b) {
-      return autoware_utils_geometry::calc_distance2d(position, a.get_latest_state().position) <
-             autoware_utils_geometry::calc_distance2d(position, b.get_latest_state().position);
-    });
+  std::sort(histories.begin(), histories.end(), [](const AgentHistory & a, const AgentHistory & b) {
+    const double a_dist =
+      std::hypot(a.get_latest_state().pose(0, 3), a.get_latest_state().pose(1, 3));
+    const double b_dist =
+      std::hypot(b.get_latest_state().pose(0, 3), b.get_latest_state().pose(1, 3));
+    return a_dist < b_dist;
+  });
   if (histories.size() > max_num_agent) {
     histories.erase(
       histories.begin() + static_cast<std::ptrdiff_t>(max_num_agent), histories.end());

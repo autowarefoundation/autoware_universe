@@ -8,11 +8,11 @@ repositories:
   core/autoware_adapi_msgs:
     type: git
     url: https://github.com/autowarefoundation/autoware_adapi_msgs.git
-    version: 12287684e096a02d279299a7e6cb44740fc34467
+    version: 1.9.1
   core/autoware_internal_msgs:
     type: git
     url: https://github.com/autowarefoundation/autoware_internal_msgs.git
-    version: 1.11.0
+    version: 1.12.1
   core/autoware_cmake:
     type: git
     url: https://github.com/autowarefoundation/autoware_cmake.git
@@ -24,7 +24,7 @@ repositories:
   core/autoware_lanelet2_extension:
     type: git
     url: https://github.com/autowarefoundation/autoware_lanelet2_extension.git
-    version: 0.9.0
+    version: 0.10.0
   core/autoware_core:
     type: git
     url: https://github.com/autowarefoundation/autoware_core.git
@@ -33,7 +33,7 @@ repositories:
   universe/external/tier4_autoware_msgs:
     type: git
     url: https://github.com/tier4/tier4_autoware_msgs.git
-    version: v0.41.0
+    version: v0.58.0
   # Fix the version not to merge https://github.com/MORAI-Autonomous/MORAI-ROS2_morai_msgs/pull/9
   universe/external/morai_msgs:
     type: git
@@ -71,4 +71,4 @@ repositories:
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
-    version: bevdet_vendor-ros2
+    version: 0.1.0

@@ -116,14 +116,13 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   for (const auto & unit : graph->units()) {
     const bool is_auto_tree = auto_mode_tree_.count(unit);
     const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
-    const auto root_latch = is_auto_tree ? auto_mode_root_->latch_level() : DiagnosticStatus::OK;
     const auto unit_level = unit->level();
     const auto hazard_level = get_hazard_level(unit_level, root_level);
     max_hazard_level = std::max(max_hazard_level, hazard_level);
 
     if (auto node = dynamic_cast<DiagNode *>(unit)) {
       const auto unit_latch = node->latch_level();
-      const auto hazard_latch = get_hazard_level(unit_latch, root_latch);
+      const auto hazard_latch = get_hazard_level(unit_latch, root_level);
       max_hazard_latch = std::max(max_hazard_latch, hazard_latch);
     }
 
