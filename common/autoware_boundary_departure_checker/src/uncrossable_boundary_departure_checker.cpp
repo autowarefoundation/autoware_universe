@@ -434,8 +434,8 @@ BoundarySideWithIdx UncrossableBoundaryDepartureChecker::get_boundary_segments(
 
 tl::expected<std::vector<ClosestProjectionToBound>, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
-  const double max_braking_dist, const SideKey side_key)
+  const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -549,8 +549,8 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<ClosestProjectionsToBound, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
-  const double curr_acc)
+  const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+  const double curr_vel, const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & th_trigger = param_.th_trigger;

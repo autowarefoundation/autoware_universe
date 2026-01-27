@@ -345,7 +345,7 @@ ProjectionToBound find_closest_segment(
  * @param ego_sides_from_footprints List of left/right segments derived from ego footprint polygons.
  * @return Closest projections to boundaries, separated by side.
  */
-ProjectionsToBound get_closest_boundary_segments_from_side(
+Side<std::vector<ProjectionToBound>> get_closest_boundary_segments_from_side(
   const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
   const EgoSides & ego_sides_from_footprints);
 

@@ -68,7 +68,6 @@ using boundary_departure_checker::EgoSides;
 using boundary_departure_checker::Footprint;
 using boundary_departure_checker::Footprints;
 using boundary_departure_checker::g_side_keys;
-using boundary_departure_checker::ProjectionsToBound;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using BDCParam = boundary_departure_checker::Param;

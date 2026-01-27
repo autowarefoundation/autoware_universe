@@ -147,8 +147,8 @@ public:
    */
   tl::expected<std::vector<ClosestProjectionToBound>, std::string>
   get_closest_projections_to_boundaries_side(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
-    const double max_braking_dist, const SideKey side_key);
+    const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+    const double min_braking_dist, const double max_braking_dist, const SideKey side_key);
 
   /**
    * @brief Generate filtered departure points for both left and right sides.
@@ -182,8 +182,8 @@ public:
    * string.
    */
   tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
-    const double curr_acc);
+    const Abnormalities<Side<std::vector<ProjectionToBound>>> & projections_to_bound,
+    const double curr_vel, const double curr_acc);
 
 private:
   Param param_;

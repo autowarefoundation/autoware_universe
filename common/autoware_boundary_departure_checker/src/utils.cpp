@@ -577,11 +577,11 @@ ProjectionToBound find_closest_segment(
   return ProjectionToBound(curr_fp_idx);
 }
 
-ProjectionsToBound get_closest_boundary_segments_from_side(
+Side<std::vector<ProjectionToBound>> get_closest_boundary_segments_from_side(
   const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
   const EgoSides & ego_sides_from_footprints)
 {
-  ProjectionsToBound side;
+  Side<std::vector<ProjectionToBound>> side;
   for (const auto & side_key : g_side_keys) {
     side[side_key].reserve(ego_sides_from_footprints.size());
   }

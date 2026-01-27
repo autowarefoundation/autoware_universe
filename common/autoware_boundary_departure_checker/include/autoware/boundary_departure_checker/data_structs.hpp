@@ -192,7 +192,6 @@ struct IdxForRTreeSegmentHash
 using SegmentWithIdx = std::pair<Segment2d, IdxForRTreeSegment>;
 using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
 using BoundarySideWithIdx = Side<std::vector<SegmentWithIdx>>;
-using ProjectionsToBound = Side<std::vector<ProjectionToBound>>;
 using ClosestProjectionsToBound = Side<std::vector<ClosestProjectionToBound>>;
 using EgoSide = Side<Segment2d>;
 using EgoSides = std::vector<EgoSide>;
@@ -232,7 +231,7 @@ struct AbnormalitiesData
   Abnormalities<EgoSides> footprints_sides;
   Abnormalities<Footprints> footprints;
   BoundarySideWithIdx boundary_segments;
-  Abnormalities<ProjectionsToBound> projections_to_bound;
+  Abnormalities<Side<std::vector<ProjectionToBound>>> projections_to_bound;
   ClosestProjectionsToBound closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
   DeparturePoints critical_departure_points;
