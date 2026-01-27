@@ -547,7 +547,8 @@ void OccupancyGridMapOutlierFilterComponent::Debugger::publishLowConfidence(
 }
 
 void OccupancyGridMapOutlierFilterComponent::Debugger::transformToBaseLink(
-  const PointCloud2 & pointcloud_input, [[maybe_unused]] const Header & header, PointCloud2 & output)
+  const PointCloud2 & pointcloud_input, [[maybe_unused]] const Header & header,
+  PointCloud2 & output)
 {
   transformPointcloud(pointcloud_input, *(node_.tf2_), node_.base_link_frame_, output);
 }
