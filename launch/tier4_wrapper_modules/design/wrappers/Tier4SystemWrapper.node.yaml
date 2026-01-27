@@ -10,6 +10,7 @@ launch:
 inputs:
   - name: diagnostics
     message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
 
 outputs:
   - name: diagnostics_graph/struct
