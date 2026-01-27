@@ -54,6 +54,11 @@ target_include_directories(autoware_path_optimizer
     $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados_c>
     $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/blasfeo/include>
     $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/hpipm/include>
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/acados>
+    $<INSTALL_INTERFACE:include/acados_c>
+    $<INSTALL_INTERFACE:include/blasfeo/include>
+    $<INSTALL_INTERFACE:include/hpipm/include>
 )
 
 # Link against acados helper library
@@ -79,7 +84,12 @@ endif()
 
 # Export acados libraries for downstream packages
 # We also need to export the include directories for the acados headers
+# Export base include directory and subdirectories needed for blasfeo/hpipm
 ament_export_include_directories(include)
+ament_export_include_directories(include/blasfeo/include)
+ament_export_include_directories(include/hpipm/include)
+ament_export_include_directories(include/acados)
+ament_export_include_directories(include/acados_c)
 
 ament_auto_package(
   INSTALL_TO_SHARE

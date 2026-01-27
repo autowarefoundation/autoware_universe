@@ -31,24 +31,6 @@ ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_velocity_optimizer_utils.cpp
 )
 
-# Link against autoware_path_optimizer library using full path
-target_link_libraries(autoware_trajectory_optimizer_plugins
-  ${autoware_path_optimizer_LIBRARIES}
-)
-
-# Link against autoware_path_optimizer and acados libraries
-find_package(autoware_path_optimizer REQUIRED)
-get_filename_component(AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR "${autoware_path_optimizer_DIR}/../../.." ABSOLUTE)
-target_include_directories(autoware_trajectory_optimizer_plugins PRIVATE
-  ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/include/blasfeo/include
-  ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/include/hpipm/include
-)
-target_link_directories(autoware_trajectory_optimizer_plugins PRIVATE ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/lib)
-target_link_libraries(autoware_trajectory_optimizer_plugins
-  ${autoware_path_optimizer_LIBRARIES}
-  acados hpipm blasfeo qpOASES_e
-)
-
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
@@ -57,16 +39,9 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_autoware_trajectory_optimizer
     ${TEST_SOURCES}
   )
-  target_include_directories(test_autoware_trajectory_optimizer PRIVATE
-    ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/include/blasfeo/include
-    ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/include/hpipm/include
-  )
-  target_link_directories(test_autoware_trajectory_optimizer PRIVATE ${AUTOWARE_PATH_OPTIMIZER_INSTALL_DIR}/lib)
   target_link_libraries(test_autoware_trajectory_optimizer
     autoware_trajectory_optimizer_component
     autoware_trajectory_optimizer_plugins
-    ${autoware_path_optimizer_LIBRARIES}
-    acados hpipm blasfeo qpOASES_e
   )
 endif()
 
