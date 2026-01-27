@@ -32,10 +32,6 @@ std::vector<std::string> split(const std::string & str, const char delim)
   return elems;
 }
 
-#ifdef ROS_DISTRO_GALACTIC
-using rosidl_generator_traits::to_yaml;
-#endif
-
 FaultInjectionNode::FaultInjectionNode(rclcpp::NodeOptions node_options)
 : Node("fault_injection", node_options.automatically_declare_parameters_from_overrides(true)),
   updater_(this, 0.05)

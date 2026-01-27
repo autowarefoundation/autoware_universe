@@ -22,11 +22,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::universe_utils
 {

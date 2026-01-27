@@ -19,27 +19,19 @@
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <tf2/utils.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 
 #include <string>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <visualization_msgs/msg/marker.hpp>
-
-#endif
 
 namespace autoware::motion::control::autonomous_emergency_braking::utils
 {
