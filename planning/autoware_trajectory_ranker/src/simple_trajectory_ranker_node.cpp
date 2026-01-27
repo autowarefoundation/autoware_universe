@@ -48,29 +48,39 @@ SimpleTrajectoryRanker::SimpleTrajectoryRanker(const rclcpp::NodeOptions & optio
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
   // Parameters
-  ranked_generator_ids_ = autoware_utils_rclcpp::get_or_declare_parameter<std::vector<std::string>>(
-    *this, "ranked_generator_ids");
+  ranked_generator_names_ =
+    autoware_utils_rclcpp::get_or_declare_parameter<std::vector<std::string>>(
+      *this, "ranked_generator_names");
 }
 
 void SimpleTrajectoryRanker::trajectories_callback(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  // Create map from UUID to generator name
+  std::unordered_map<std::string, std::string> uuid_to_name;
+  for (const auto & info : msg->generator_info) {
+    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
+  }
+
   std::unordered_map<
     std::string, std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>>
     trajectories_per_generator;
-  for (const auto & id : ranked_generator_ids_) {
-    trajectories_per_generator[id] = {};
+  for (const auto & name : ranked_generator_names_) {
+    trajectories_per_generator[name] = {};
   }
   std::vector<autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory>
     unranked_trajectories;
   for (const auto & trajectory : msg->candidate_trajectories) {
-    const auto generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+    const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
     autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory scored_trajectory;
     scored_trajectory.candidate_trajectory = trajectory;
     scored_trajectory.score = 0.0;
-    if (trajectories_per_generator.count(generator_id)) {
-      trajectories_per_generator[generator_id].push_back(scored_trajectory);
+    if (
+      uuid_to_name.count(generator_id_str) &&
+      trajectories_per_generator.count(uuid_to_name[generator_id_str])) {
+      trajectories_per_generator[uuid_to_name[generator_id_str]].push_back(scored_trajectory);
     } else {
       unranked_trajectories.push_back(scored_trajectory);
     }
@@ -78,8 +88,8 @@ void SimpleTrajectoryRanker::trajectories_callback(
   autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories scored_msg;
   scored_msg.generator_info = msg->generator_info;
   scored_msg.scored_candidate_trajectories.reserve(msg->candidate_trajectories.size());
-  for (const auto & str : ranked_generator_ids_) {
-    const auto & trajectories = trajectories_per_generator[str];
+  for (const auto & name : ranked_generator_names_) {
+    const auto & trajectories = trajectories_per_generator[name];
     scored_msg.scored_candidate_trajectories.insert(
       scored_msg.scored_candidate_trajectories.end(), trajectories.begin(), trajectories.end());
   }

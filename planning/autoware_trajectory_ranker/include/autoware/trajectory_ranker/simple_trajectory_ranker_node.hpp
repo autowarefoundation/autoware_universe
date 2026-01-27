@@ -44,7 +44,7 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
-  std::vector<std::string> ranked_generator_ids_;
+  std::vector<std::string> ranked_generator_names_;
 };
 
 }  // namespace autoware::trajectory_ranker
