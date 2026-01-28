@@ -13,25 +13,29 @@ The `RefinePenetrationByStaticObjects` processor is designed to refine the predi
 ```pseudocode
 ALGORITHM: RefinePenetrationByStaticObjects
 
-INPUT: (mutable)object, context, speed_threshold
+INPUT: (mutable)target, context, speed_threshold
 
 BEGIN
-  FOR EACH mode IN object.predicted_paths DO
-    hit = FIND_COLLISION(mode, context.objects, speed_threshold)
-    // Skip if the path does not collide with any object slower than the speed threshold
+  FOR EACH mode_idx, mode IN ENUMERATE(target.predicted_paths) DO
+    // Find collision with slow-moving obstacles using OBB
+    hit = FIND_COLLISION(target, mode_idx, context.objects, speed_threshold)
     IF NOT hit THEN
       CONTINUE
     END IF
 
-    // Refine penetration by adjusting the path based on the collision information
-    original_distances = [0, d1, d2, d3, ...]  // cumulative distances
-    original_positions = [p0, p1, p2, p3, ...]  // original waypoints
-    FOR EACH i, waypoint IN ENUMERATE(waypoints:=mode.path, i:=1) DO
-      new_distance = CLAMP(original_distances[i], 0, hit.distance)
-      // INTERPOLATE to find position along origin path shape
-      new_position = INTERPOLATE(original_distances, original_positions, new_distance)
-      waypoints[i].position = new_position
-      waypoints[i].orientation = AZIMUTH_BETWEEN(waypoints[i-1], waypoints[i])
+    // Compute cumulative distances along the original path
+    base_keys = CUMULATIVE_DISTANCES(mode.path)
+    // Compute expected travel distances based on target speed
+    query_keys = CUMULATIVE_TRAVEL_DISTANCES(target.speed, mode.time_step, LENGTH(mode.path))
+
+    // Clamp query distances to collision point
+    s_max = MIN(hit.distance, base_keys.LAST)
+    query_keys = [CLAMP(s, 0, s_max) FOR s IN query_keys]
+
+    // Interpolate and update waypoints
+    FOR i = 1 TO LENGTH(mode.path) - 1 DO
+      mode.path[i].position = INTERPOLATE(base_keys, original_positions, query_keys[i])
+      mode.path[i].orientation = AZIMUTH_BETWEEN(mode.path[i-1], mode.path[i])
     END FOR
   END FOR
 END

@@ -51,7 +51,8 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
 {
   const auto speed = std::abs(target.kinematics.initial_twist_with_covariance.twist.linear.x);
 
-  for (auto & mode : target.kinematics.predicted_paths) {
+  for (size_t i = 0; i < target.kinematics.predicted_paths.size(); ++i) {
+    auto & mode = target.kinematics.predicted_paths[i];
     const auto delta_t = rclcpp::Duration(mode.time_step).seconds();
 
     if (delta_t <= 0.0) {
@@ -59,14 +60,12 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
     }
 
     auto & waypoints = mode.path;
-    const auto num_waypoints = waypoints.size();
-
-    if (num_waypoints < 2) {
+    if (waypoints.size() < 2) {
       continue;
     }
 
     const auto collision =
-      find_collision(mode, target.object_id, context.as_objects()->objects, speed_threshold_);
+      find_collision(target, i, context.as_objects()->objects, speed_threshold_);
     if (!collision) {
       continue;
     }
@@ -79,7 +78,7 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
     std::vector<double> base_zs({waypoints[0].position.z});
     std::vector<double> base_keys({0.0});
     std::vector<double> query_keys({0.0});
-    for (size_t i = 1; i < num_waypoints; ++i) {
+    for (size_t i = 1; i < waypoints.size(); ++i) {
       const auto distance =
         autoware_utils_geometry::calc_distance2d(waypoints[i - 1], waypoints[i]);
       if (distance > epsilon) {
@@ -108,7 +107,7 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
     const auto query_zs = interpolator_(base_keys, base_zs, query_keys);
 
     // NOTE: waypoints[0] is the center position of the object, so we skip it
-    for (size_t i = 1; i < num_waypoints; ++i) {
+    for (size_t i = 1; i < waypoints.size(); ++i) {
       waypoints[i].position =
         autoware_utils_geometry::create_point(query_xs[i], query_ys[i], query_zs[i]);
 

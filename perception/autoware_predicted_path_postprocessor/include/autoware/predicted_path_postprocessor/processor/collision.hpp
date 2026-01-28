@@ -31,22 +31,27 @@ namespace autoware::predicted_path_postprocessor::processor
  */
 struct CollisionHit
 {
+  CollisionHit(size_t segment_index, double distance)
+  : segment_index(segment_index), distance(distance)
+  {
+  }
+
   size_t segment_index;  //!< Index of the path segment [0, path.size() - 2].
   double distance;       //!< Distance of the collision point from the start of the path segment.
 };
 
 /**
- * @brief Find first collision between predicted path and static obstacles.
+ * @brief Find first collision between predicted path and static obstacles considering OBB collision
+ * detection.
  *
- * @param path Predicted path to check for collisions.
- * @param path_uuid UUID of the predicted path.
+ * @param target Predicted object to check for collisions.
+ * @param mode_index Index of the mode to check for collisions.
  * @param obstacles Vector of predicted objects to check for collisions.
  * @param speed_threshold Speed threshold for collision detection.
  * @return std::optional<CollisionHit> Optional collision hit information.
  */
 std::optional<CollisionHit> find_collision(
-  const autoware_perception_msgs::msg::PredictedPath & path,
-  const unique_identifier_msgs::msg::UUID & path_uuid,
+  const autoware_perception_msgs::msg::PredictedObject & target, const size_t mode_index,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & obstacles,
   double speed_threshold = std::numeric_limits<double>::infinity());
 }  // namespace autoware::predicted_path_postprocessor::processor
