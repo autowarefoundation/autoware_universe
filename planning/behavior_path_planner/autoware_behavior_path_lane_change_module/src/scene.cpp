@@ -282,14 +282,14 @@ std::pair<bool, bool> NormalLaneChange::getSafePath(LaneChangePath & safe_path) 
   return {true, found_safe_path};
 }
 
-bool NormalLaneChange::isLaneChangeRequired()
+std::optional<std::string> NormalLaneChange::isLaneChangeRequired()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (
     !common_data_ptr_ || !common_data_ptr_->is_data_available() ||
     !common_data_ptr_->is_lanes_available()) {
-    return false;
+    return {"Insufficient data for lane change decision."};
   }
 
   const auto & current_lanes = common_data_ptr_->lanes_ptr->current;
@@ -300,15 +300,20 @@ bool NormalLaneChange::isLaneChangeRequired()
   const auto max_prepare_length = calculation::calc_maximum_prepare_length(common_data_ptr_);
 
   if (ego_dist_to_target_start > max_prepare_length) {
-    return false;
+    return {"Ego is far from target lane start."};
   }
 
   if (is_near_regulatory_element()) {
-    RCLCPP_DEBUG(logger_, "Ego is close to regulatory element, don't run LC module");
-    return false;
+    return {"Ego is close to regulatory element."};
   }
 
-  return true;
+  if (
+    is_near_terminal_end() && planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS) {
+    return {"Ego is in MANUAL Mode and near terminal end, don't run LC module."};
+  }
+
+  return std::nullopt;
 }
 
 bool NormalLaneChange::is_near_regulatory_element() const
