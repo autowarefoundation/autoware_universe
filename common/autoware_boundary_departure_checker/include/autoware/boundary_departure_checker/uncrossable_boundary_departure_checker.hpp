@@ -31,7 +31,7 @@
 namespace autoware::boundary_departure_checker
 {
 
-class AbnormalityGenerator;
+class FootprintGeneratorManager;
 
 class UncrossableBoundaryDepartureChecker
 {
@@ -197,7 +197,7 @@ private:
   double last_found_critical_dpt_time_{0.0};
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::vector<std::unique_ptr<AbnormalityGenerator>> generators_;
+  std::unique_ptr<FootprintGeneratorManager> manager_;
   // To be used from the motion_velocity_planner
   static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,

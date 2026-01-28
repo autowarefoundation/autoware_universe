@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_GENERATOR_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_GENERATOR_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__STEERING_FOOTPRINT_GENERATOR_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__STEERING_FOOTPRINT_GENERATOR_HPP_
 
-#include "autoware/boundary_departure_checker/abnormalities/abnormality_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/footprint_generator.hpp"
 
 namespace autoware::boundary_departure_checker
 {
-class LongitudinalGenerator : public AbnormalityGenerator
+class SteeringFootprintGenerator : public FootprintGenerator
 {
 public:
-  LongitudinalGenerator() = default;
+  explicit SteeringFootprintGenerator(const AbnormalityType type);
 
   [[nodiscard]] AbnormalityType get_type() const final;
 
@@ -30,7 +30,11 @@ public:
     const TrajectoryPoints & pred_traj, const SteeringReport & steering,
     const vehicle_info_utils::VehicleInfo & info, const Param & param,
     const FootprintMargin & uncertainty_fp_margin) override;
+
+private:
+  AbnormalityType type_;
 };
+
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_GENERATOR_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__STEERING_FOOTPRINT_GENERATOR_HPP_

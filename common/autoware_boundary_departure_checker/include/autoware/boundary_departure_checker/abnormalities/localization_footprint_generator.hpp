@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__NORMAL_GENERATOR_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__NORMAL_GENERATOR_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LOCALIZATION_FOOTPRINT_GENERATOR_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LOCALIZATION_FOOTPRINT_GENERATOR_HPP_
 
-#include "autoware/boundary_departure_checker/abnormalities/abnormality_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/footprint_generator.hpp"
 
 namespace autoware::boundary_departure_checker
 {
-class NormalGenerator : public AbnormalityGenerator
+class LocalizationFootprintGenerator : public FootprintGenerator
 {
 public:
-  NormalGenerator() = default;
+  LocalizationFootprintGenerator() = default;
 
   [[nodiscard]] AbnormalityType get_type() const final;
 
@@ -33,4 +33,4 @@ public:
 };
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__NORMAL_GENERATOR_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LOCALIZATION_FOOTPRINT_GENERATOR_HPP_
