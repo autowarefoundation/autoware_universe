@@ -783,7 +783,6 @@ std::array<double, NP> MPTOptimizer::buildParameters(
 
   // Ensure the circle-constraint tail of p is filled deterministically.
   // Layout: [... base ... | cos_beta[0..NH-1] | sin_beta[0..NH-1] | lon_offset[0..NH-1]]
-  constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
   const size_t cos_beta_offset = NP - 3 * NH;
   const size_t sin_beta_offset = NP - 2 * NH;
   const size_t lon_offset_offset = NP - 1 * NH;
@@ -813,7 +812,6 @@ void MPTOptimizer::setParametersToSolver(
     // Slowly introduce ref_points[*].beta and bounds_on_constraints to the acados interface:
     // - Build per-stage arrays and hand them to AcadosInterface, which writes cos/sin(beta) into p
     // and sets lh/uh.
-    constexpr size_t NH = CURVILINEAR_BICYCLE_MODEL_SPATIAL_NH;
     std::array<double, NH> beta_arr{};
     std::array<double, NH> lh{};
     std::array<double, NH> uh{};
