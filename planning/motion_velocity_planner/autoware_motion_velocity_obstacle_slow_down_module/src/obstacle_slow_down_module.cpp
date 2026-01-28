@@ -829,7 +829,8 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         slow_down_traj_points, planner_data->current_odometry.pose.pose,
         slow_down_traj_points.at(*slow_down_start_idx).pose,
         slow_down_traj_points.at(*slow_down_end_idx).pose, PlanningFactor::SLOW_DOWN,
-        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel);
+        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel,
+        stable_slow_down_vel);
     }
 
     // add debug virtual wall

@@ -15,10 +15,57 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_HPP_
 
+#include <opencv2/core/mat.hpp>
+
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <boost/circular_buffer.hpp>
+
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
+
+struct BlockageDetectionConfig
+{
+  float blockage_ratio_threshold;
+  int blockage_kernel;
+  int blockage_count_threshold;
+};
+
+struct BlockageAreaResult
+{
+  float blockage_ratio = -1.0f;
+  int blockage_count = 0;
+  float blockage_start_deg = 0.0f;
+  float blockage_end_deg = 0.0f;
+};
+
+struct BlockageDetectionResult
+{
+  BlockageAreaResult ground;
+  BlockageAreaResult sky;
+};
+
+struct DetectionVisualizeData
+{
+  int frame_count = 0;
+  int buffering_interval = 0;
+  boost::circular_buffer<cv::Mat> mask_buffer{1};
+};
+
+struct DustDetectionConfig
+{
+  float dust_ratio_threshold;
+  int dust_kernel_size;
+  int dust_count_threshold;
+};
+
+struct DustDetectionResult
+{
+  float ground_dust_ratio = -1.0f;
+  int dust_frame_count = 0;
+};
 
 /**
  * @brief Validate that the PointCloud2 message has required fields for blockage diagnosis.

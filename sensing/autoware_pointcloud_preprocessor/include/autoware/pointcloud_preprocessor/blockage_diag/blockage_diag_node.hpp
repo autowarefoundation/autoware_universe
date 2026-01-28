@@ -15,6 +15,9 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
+
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
@@ -35,6 +38,7 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -75,49 +79,6 @@ private:
 
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
-
-  /**
-   * @brief Get the horizontal bin index of the given azimuth, if within the FoV.
-   *
-   * If the FoV wraps around, the azimuth is adjusted to be within the FoV.
-   * The bin is calculated as `(azimuth_deg - min_deg) / horizontal_resolution_` and any
-   * azimuth for which `min_deg < azimuth_deg <= max_deg` is valid.
-   *
-   * @param azimuth_deg The azimuth to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_horizontal_bin(double azimuth_deg) const;
-
-  /**
-   * @brief Get the vertical bin index of the given channel, if within the FoV.
-   *
-   * Vertical bins and channels are usually equivalent, apart from the 0-based index of bins.
-   * If `is_channel_order_top2down_` is `false`, the bin order is reversed compared to the channel
-   * order.
-   *
-   * @param channel The channel to get the bin index for.
-   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
-   */
-  std::optional<int> get_vertical_bin(uint16_t channel) const;
-
-  /**
-   * @brief Get the dimensions of the mask, i.e. the number of horizontal and vertical bins.
-   *
-   * @return cv::Size The dimensions of the mask.
-   */
-  cv::Size get_mask_dimensions() const;
-
-  /**
-   * @brief Make a downsampled depth image from the input point cloud, normalized to 0-35565.
-   *
-   * The size of the output is given by `get_mask_dimensions()`.
-   * Close depth values are mapped to higher values, far depth values are mapped to lower values.
-   * The `max_distance_range_` is mapped to 0, and a LiDAR distance of 0 is mapped to UINT16_MAX.
-   *
-   * @param input The input point cloud.
-   * @return cv::Mat The normalized depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat make_normalized_depth_image(const sensor_msgs::msg::PointCloud2 & input) const;
 
   /**
    * @brief Quantize a 16-bit image to 8-bit.
@@ -174,18 +135,12 @@ private:
   static float get_nonzero_ratio(const cv::Mat & mask);
 
   /**
-   * @brief Update the internal ground blockage info.
+   * @brief Update the blockage info for a specific area (ground or sky).
    *
-   * @param ground_blockage_mask The ground blockage mask. The data type is `CV_8UC1`.
+   * @param blockage_mask The blockage mask. The data type is `CV_8UC1`.
+   * @param area_result Reference to the BlockageAreaResult to update.
    */
-  void update_ground_blockage_info(const cv::Mat & ground_blockage_mask);
-
-  /**
-   * @brief Update the internal sky blockage info.
-   *
-   * @param sky_blockage_mask The sky blockage mask. The data type is `CV_8UC1`.
-   */
-  void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
+  void update_blockage_info(const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
 
   /**
    * @brief Compute blockage diagnostics and update the internal blockage info.
@@ -217,55 +172,29 @@ private:
 
   Updater updater_{this};
 
+  // PointCloud2 to depth image converter
+  std::unique_ptr<pointcloud2_to_depth_image::PointCloud2ToDepthImage> depth_image_converter_;
+
   // Debug parameters
   bool publish_debug_image_;
 
-  // LiDAR parameters
-  double max_distance_range_{200.0};
-
   // Mask size parameters
-  int vertical_bins_;
   std::vector<double> angle_range_deg_;
   double horizontal_resolution_{0.4};
 
   // Ground/sky segmentation parameters
-  bool is_channel_order_top2down_;
   int horizontal_ring_id_;
 
-  // Blockage detection parameters
-  float blockage_ratio_threshold_;
-  int blockage_kernel_ = 10;
-  int blockage_buffering_frames_;
-  int blockage_buffering_interval_;
-  int blockage_count_threshold_;
+  // Blockage detection
+  BlockageDetectionConfig blockage_config_;
+  BlockageDetectionResult blockage_result_;
+  DetectionVisualizeData blockage_visualize_data_;
 
-  // Blockage detection state
-  float ground_blockage_ratio_ = -1.0f;
-  float sky_blockage_ratio_ = -1.0f;
-  int ground_blockage_count_ = 0;
-  int sky_blockage_count_ = 0;
-  std::vector<float> ground_blockage_range_deg_ = {0.0f, 0.0f};
-  std::vector<float> sky_blockage_range_deg_ = {0.0f, 0.0f};
-
-  // Multi-frame blockage detection state
-  int blockage_frame_count_ = 0;
-  boost::circular_buffer<cv::Mat> no_return_mask_buffer{1};
-
-  // Dust detection parameters
+  // Dust detection
   bool enable_dust_diag_;
-  float dust_ratio_threshold_;
-  int dust_kernel_size_;
-  int dust_buffering_frames_;
-  int dust_buffering_interval_;
-  int dust_count_threshold_;
-
-  // Dust detection state
-  float ground_dust_ratio_ = -1.0f;
-
-  // Multi-frame dust detection state
-  int dust_buffering_frame_counter_ = 0;
-  int dust_frame_count_ = 0;
-  boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
+  DustDetectionConfig dust_config_;
+  DustDetectionResult dust_result_;
+  DetectionVisualizeData dust_visualize_data_;
 
 public:
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);

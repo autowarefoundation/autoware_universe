@@ -33,6 +33,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -94,7 +95,7 @@ public:
 
   virtual bool hasFinishedAbort() const = 0;
 
-  virtual bool isLaneChangeRequired() = 0;
+  virtual std::optional<std::string> isLaneChangeRequired() = 0;
 
   virtual bool isAbortState() const = 0;
 
@@ -149,6 +150,11 @@ public:
   const lanelet::ConstLanelets & get_current_lanes() const
   {
     return common_data_ptr_->lanes_ptr->current;
+  }
+
+  const lanelet::ConstLanelets & get_target_lanes() const
+  {
+    return common_data_ptr_->lanes_ptr->target;
   }
 
   const BehaviorPathPlannerParameters & getCommonParam() const { return planner_data_->parameters; }

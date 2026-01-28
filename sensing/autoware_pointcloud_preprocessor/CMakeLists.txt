@@ -114,6 +114,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/distortion_corrector/distortion_corrector_node.cpp
   src/blockage_diag/blockage_diag.cpp
   src/blockage_diag/blockage_diag_node.cpp
+  src/blockage_diag/pointcloud2_to_depth_image.cpp
   src/polygon_remover/polygon_remover.cpp
   src/vector_map_filter/vector_map_inside_area_filter_node.cpp
   src/utility/geometry.cpp
@@ -324,6 +325,10 @@ if(BUILD_TESTING)
     test/blockage_diag/test_blockage_diag_node.cpp
   )
 
+  ament_add_gtest(test_pointcloud2_to_depth_image
+    test/blockage_diag/test_pointcloud2_to_depth_image.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
@@ -332,6 +337,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
 
   add_ros_test(
     test/test_concatenate_node_component.py
