@@ -107,7 +107,7 @@ visualization_msgs::msg::Marker TrafficLightRecognitionMarkerPublisher::getTraff
 }
 
 std::string TrafficLightRecognitionMarkerPublisher::getTrafficLightString(
-  const uint8_t tl_color, const uint8_t tl_shape)
+  const uint8_t tl_color, const uint8_t tl_shape) const
 {
   if (tl_shape == TrafficLight::LEFT_ARROW) return "LEFT_ARROW";
   if (tl_shape == TrafficLight::RIGHT_ARROW) return "RIGHT_ARROW";

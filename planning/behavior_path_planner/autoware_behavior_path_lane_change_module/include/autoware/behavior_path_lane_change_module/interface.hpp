@@ -138,7 +138,7 @@ protected:
 
   bool is_abort_approval_requested_{false};
 
-  lane_change::InterfaceDebug interface_debug_;
+  mutable lane_change::InterfaceDebug interface_debug_;
 };
 }  // namespace autoware::behavior_path_planner
 
