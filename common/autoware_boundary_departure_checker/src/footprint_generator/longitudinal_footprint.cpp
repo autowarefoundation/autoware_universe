@@ -12,22 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/abnormalities/normal_footprint_generator.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/longitudinal_footprint.hpp"
 
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 namespace autoware::boundary_departure_checker
 {
-AbnormalityType NormalFootprintGenerator::get_type() const
+AbnormalityType LongitudinalFootprintGenerator::get_type() const
 {
-  return AbnormalityType::NORMAL;
+  return AbnormalityType::LONGITUDINAL;
 }
 
-Footprints NormalFootprintGenerator::generate(
+Footprints LongitudinalFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, [[maybe_unused]] const Param & param,
+  const vehicle_info_utils::VehicleInfo & info, const Param & param,
   const FootprintMargin & uncertainty_fp_margin)
 {
+  const auto longitudinal_config_opt =
+    param.get_abnormality_config<LongitudinalConfig>(AbnormalityType::LONGITUDINAL);
+  if (longitudinal_config_opt) {
+    return utils::create_vehicle_footprints(
+      pred_traj, info, uncertainty_fp_margin, longitudinal_config_opt->get());
+  }
   return utils::create_vehicle_footprints(pred_traj, info, uncertainty_fp_margin);
 }
 }  // namespace autoware::boundary_departure_checker

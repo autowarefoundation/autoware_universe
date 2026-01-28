@@ -36,6 +36,11 @@ class FootprintGeneratorManager;
 class UncrossableBoundaryDepartureChecker
 {
 public:
+  UncrossableBoundaryDepartureChecker(const UncrossableBoundaryDepartureChecker &) = delete;
+  UncrossableBoundaryDepartureChecker(UncrossableBoundaryDepartureChecker &&) = delete;
+  UncrossableBoundaryDepartureChecker & operator=(const UncrossableBoundaryDepartureChecker &) =
+    delete;
+  UncrossableBoundaryDepartureChecker & operator=(UncrossableBoundaryDepartureChecker &&) = delete;
   UncrossableBoundaryDepartureChecker(
     const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, Param param = Param{},
@@ -168,9 +173,6 @@ public:
     const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
-  Footprint get_ego_footprints(
-    const AbnormalityType abnormality_type, const FootprintMargin uncertainty_fp_margin);
-
   /**
    * @brief Select the closest projections to boundaries for both sides based on all abnormality
    * types.
@@ -198,7 +200,6 @@ private:
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<FootprintGeneratorManager> manager_;
-  // To be used from the motion_velocity_planner
   static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
     const DeparturePoints & critical_departure_points,
