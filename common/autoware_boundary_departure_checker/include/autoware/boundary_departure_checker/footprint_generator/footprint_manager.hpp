@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_MANAGER_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_MANAGER_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_
 
-#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
 #include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
@@ -28,26 +28,26 @@
 namespace autoware::boundary_departure_checker
 {
 
-class FootprintGeneratorManager
+class FootprintManager
 {
 public:
-  explicit FootprintGeneratorManager(const std::vector<AbnormalityType> & footprint_types);
+  explicit FootprintManager(const std::vector<FootprintType> & footprint_types);
 
   [[nodiscard]] std::vector<Footprints> generate_all(
     const TrajectoryPoints & pred_traj, const SteeringReport & steering,
     const vehicle_info_utils::VehicleInfo & info, const Param & param,
     const FootprintMargin & uncertainty_fp_margin) const;
 
-  [[nodiscard]] const std::vector<AbnormalityType> & get_ordered_types() const
+  [[nodiscard]] const std::vector<FootprintType> & get_ordered_types() const
   {
     return ordered_types_;
   }
 
 private:
   std::vector<std::unique_ptr<FootprintGenerator>> generators_;
-  std::vector<AbnormalityType> ordered_types_;
+  std::vector<FootprintType> ordered_types_;
 };
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_MANAGER_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_

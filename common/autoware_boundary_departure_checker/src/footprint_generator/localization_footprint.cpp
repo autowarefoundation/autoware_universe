@@ -19,9 +19,9 @@
 namespace autoware::boundary_departure_checker
 {
 
-AbnormalityType LocalizationFootprintGenerator::get_type() const
+FootprintType LocalizationFootprintGenerator::get_type() const
 {
-  return AbnormalityType::LOCALIZATION;
+  return FootprintType::LOCALIZATION;
 }
 
 Footprints LocalizationFootprintGenerator::generate(
@@ -31,7 +31,7 @@ Footprints LocalizationFootprintGenerator::generate(
 {
   FootprintMargin margin = uncertainty_fp_margin;
   const auto loc_config_opt =
-    param.get_abnormality_config<LocalizationConfig>(AbnormalityType::LOCALIZATION);
+    param.get_abnormality_config<LocalizationConfig>(FootprintType::LOCALIZATION);
   if (loc_config_opt) {
     const auto & footprint_envelop = loc_config_opt->get().footprint_envelop;
     margin = margin + footprint_envelop;

@@ -57,11 +57,11 @@ geometry_msgs::msg::Pose update_pose_with_bicycle_model(
 }
 }  // anonymous namespace
 
-SteeringFootprintGenerator::SteeringFootprintGenerator(const AbnormalityType type) : type_(type)
+SteeringFootprintGenerator::SteeringFootprintGenerator(const FootprintType type) : type_(type)
 {
 }
 
-AbnormalityType SteeringFootprintGenerator::get_type() const
+FootprintType SteeringFootprintGenerator::get_type() const
 {
   return type_;
 }
