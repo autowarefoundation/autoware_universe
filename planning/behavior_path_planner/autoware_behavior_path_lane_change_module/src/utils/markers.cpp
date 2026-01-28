@@ -179,9 +179,20 @@ MarkerArray showExecutionInfo(
 
   MarkerArray marker_array;
 
+  // Lane info marker (top)
+  auto lane_info_text = default_text_marker();
+  lane_info_text.id = 0;
+  lane_info_text.pose = ego_pose;
+  lane_info_text.pose.position.z += 5.0;  // Higher position
+  lane_info_text.text = interface_debug_data.request_info;
+  marker_array.markers.push_back(lane_info_text);
+
+  // Execution info marker (bottom)
   auto safety_check_info_text = default_text_marker();
+  safety_check_info_text.id = 1;
   safety_check_info_text.pose = ego_pose;
-  safety_check_info_text.pose.position.z += 4.0;
+  safety_check_info_text.pose.position.z += 4.0;  // Lower position
+
   const auto lc_state = interface_debug_data.lc_state;
   const auto & failing_reason = interface_debug_data.failing_reason;
 
