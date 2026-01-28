@@ -41,7 +41,7 @@ struct SideShiftParameters
   double drivable_area_height;
   double shift_request_time_limit;
   int drivable_area_check_mode;
-  double drivable_area_margin;
+  double min_drivable_area_margin;
   bool publish_debug_marker;
 };
 
