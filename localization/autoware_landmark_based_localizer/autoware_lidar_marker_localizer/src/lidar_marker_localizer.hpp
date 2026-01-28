@@ -17,8 +17,8 @@
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware/qos_utils/qos_compatibility.hpp"
-#include <autoware_utils/ros/diagnostics_interface.hpp>
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
