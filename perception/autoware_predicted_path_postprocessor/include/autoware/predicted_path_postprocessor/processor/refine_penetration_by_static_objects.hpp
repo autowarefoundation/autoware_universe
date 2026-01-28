@@ -58,4 +58,6 @@ private:
   interpolation_fn interpolator_;  //!< Interpolation function for path refinement.
 };
 }  // namespace autoware::predicted_path_postprocessor::processor
-#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_PENETRATION_BY_STATIC_OBJECTS_HPP_
+// clang-format off
+#endif  // AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__REFINE_PENETRATION_BY_STATIC_OBJECTS_HPP_  // NOLINT
+// clang-format on
