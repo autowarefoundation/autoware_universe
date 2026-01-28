@@ -25,9 +25,6 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
         eψ,
     )
 
-    # x_body_points = SX.sym("x_body_points", num_body_points)
-    # y_body_points = SX.sym("y_body_points", num_body_points)
-
     s_sym = SX.sym("s")  # symbolic independent variable
     kappa_ref_s_symbolic_curvature_cubic_spline = SymbolicCubicSpline(n_points=n_points, u=s_sym)
     kappa_ref_s = kappa_ref_s_symbolic_curvature_cubic_spline.get_symbolic_spline()
@@ -36,8 +33,6 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
 
     print("sym shape: ", s_sym.shape)
     print("kappa_ref_s shape: ", kappa_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
-    # print("x_body_points shape: ", x_body_points.shape)
-    # print("y_body_points shape: ", y_body_points.shape)
 
     p = vertcat(
         s_sym,

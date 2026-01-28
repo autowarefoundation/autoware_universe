@@ -6,7 +6,7 @@ import casadi as ca
 class SymbolicCubicSpline:
     """Simple symbolic cubic spline class."""
 
-    def __init__(self, n_points: int, u: ca.SX.sym("u")):
+    def __init__(self, n_points: int, u):
         """Initialize spline with n_points."""
         self.n_points = n_points
         self.n_segments = n_points - 1

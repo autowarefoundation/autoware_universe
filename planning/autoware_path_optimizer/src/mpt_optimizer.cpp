@@ -765,8 +765,7 @@ std::array<double, NP> MPTOptimizer::buildParameters(
   }
 
   // 3. Compute cubic spline coefficients from curvatures
-  // Python uses: ClothoidSpline -> CubicSpline(knots, curvatures) -> coeffs (4×(N-1))
-  // We need to fit a cubic spline to (knots, curvatures) and extract the 4×(N-1) coefficients
+  // Fit a cubic spline to (knots, curvatures) and extract the 4×(N-1) coefficients
 
   autoware::interpolation::SplineInterpolation spline(knots, curvatures);
   const Eigen::VectorXd coeffs_eigen = spline.getCoefficients();
@@ -805,7 +804,7 @@ void MPTOptimizer::setParametersToSolver(
 {
   const double sref = mpt_param_.num_points * mpt_param_.delta_arc_length;
 
-  for (size_t stage = 0; stage < (int)N; ++stage) {
+  for (size_t stage = 0; stage < N; ++stage) {
     std::array<double, NP> params_copy = parameters;
     double s_interp =
       (sref > 0.0) ? s0 + sref * (static_cast<double>(stage) / static_cast<double>(N)) : 0.0;
@@ -961,7 +960,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   std::vector<double> knots_vec(knots.begin(), knots.end());
   std::vector<double> curvatures_vec(curvatures.begin(), curvatures.end());
 
-  size_t n_segments = (int)knots.size() - 1;
+  size_t n_segments = knots.size() - 1;
 
   size_t target_n_knots = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
   size_t target_segments = target_n_knots - 1;
