@@ -24,12 +24,15 @@
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_path_planner
 {
@@ -56,6 +59,7 @@ void LaneChangeInterface::processOnExit()
   module_type_->resetParameters();
   debug_marker_.markers.clear();
   post_process_safety_status_ = {};
+  interface_debug_ = {};
   resetPathCandidate();
 }
 
@@ -65,7 +69,28 @@ bool LaneChangeInterface::isExecutionRequested() const
     return true;
   }
 
-  return module_type_->isLaneChangeRequired();
+  if (auto err = module_type_->isLaneChangeRequired()) {
+    interface_debug_.request_info = err.value();
+    return false;
+  }
+
+  interface_debug_.request_info = {};
+
+  const auto & current_lanes = module_type_->get_current_lanes();
+  const auto & target_lanes = module_type_->get_target_lanes();
+
+  auto get_ids = [](const auto & lanes) {
+    std::vector<decltype(lanes[0].id())> ids;
+    ids.reserve(lanes.size());
+    for (const auto & lane : lanes) ids.push_back(lane.id());
+    return ids;
+  };
+
+  interface_debug_.request_info = fmt::format(
+    "Current lanes: {} | Target lanes: {}", fmt::join(get_ids(current_lanes), ", "),
+    fmt::join(get_ids(target_lanes), ", "));
+
+  return true;
 }
 
 bool LaneChangeInterface::isExecutionReady() const
@@ -229,6 +254,13 @@ bool LaneChangeInterface::canTransitSuccessState()
     return true;
   }
 
+  if (
+    planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS &&
+    module_type_->is_near_terminal_end()) {
+    return true;
+  }
+
   log_debug_throttled("Lane changing process is ongoing");
   return false;
 }
@@ -306,6 +338,12 @@ bool LaneChangeInterface::canTransitFailureState()
 
 std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit_failure()
 {
+  if (
+    planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS &&
+    module_type_->is_near_terminal_end()) {
+    return {LaneChangeStates::Cancel, "ManualModeNearTerminal"};
+  }
   if (module_type_->isAbortState()) {
     if (module_type_->hasFinishedAbort()) {
       return {LaneChangeStates::Cancel, "Aborted"};
