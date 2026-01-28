@@ -152,10 +152,13 @@ std::optional<PullOutPath> ShiftPullOut::plan(
       // if the start segment id after crop is not 0, then the cropping is not excessive
       if (start_segment_idx_after_crop != 0) return true;
 
-      constexpr double long_offset_eps = 1e-3;
-      const auto long_offset = autoware::motion_utils::calcSignedArcLength(
-        cropped_path.points, start_segment_idx_after_crop, start_segment_idx_after_crop + 1);
-      return std::abs(long_offset) < max_long_offset + long_offset_eps;
+      const auto long_offset_to_closest_point =
+        autoware::motion_utils::calcLongitudinalOffsetToSegment(
+          cropped_path.points, start_segment_idx_after_crop, start_pose.position);
+      const auto long_offset_to_next_point =
+        autoware::motion_utils::calcLongitudinalOffsetToSegment(
+          cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
     };
 
     if (!validate_cropped_path(cropped_path)) {

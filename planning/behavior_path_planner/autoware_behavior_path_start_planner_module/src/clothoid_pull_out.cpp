@@ -1396,10 +1396,13 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       // if the start segment id after crop is not 0, then the cropping is not excessive
       if (start_segment_idx_after_crop != 0) return true;
 
-      constexpr double long_offset_eps = 1e-3;
-      const auto long_offset = autoware::motion_utils::calcSignedArcLength(
-        cropped_path.points, start_segment_idx_after_crop, start_segment_idx_after_crop + 1);
-      return std::abs(long_offset) < max_long_offset + long_offset_eps;
+      const auto long_offset_to_closest_point =
+        autoware::motion_utils::calcLongitudinalOffsetToSegment(
+          cropped_path.points, start_segment_idx_after_crop, start_pose.position);
+      const auto long_offset_to_next_point =
+        autoware::motion_utils::calcLongitudinalOffsetToSegment(
+          cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
     };
 
     if (parameters_.check_clothoid_path_lane_departure && !validate_cropped_path(cropped_path)) {
@@ -1449,16 +1452,6 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     std::tie(pull_out_path.shift_length.start, pull_out_path.shift_length.end) =
       start_planner_utils::calc_start_and_end_shift_length(
         pull_out_lanes, pull_out_path.start_pose, pull_out_path.end_pose);
-
-    const double shift_length =
-      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.end);
-    if (shift_length < 0.5) {
-      RCLCPP_WARN(
-        rclcpp::get_logger("ClothoidPullOut"),
-        "Shift length too short %.2f m. Continuing to next candidate.", shift_length);
-      planner_debug_data.conditions_evaluation.emplace_back("shift length too small");
-      continue;
-    }
 
     RCLCPP_INFO(
       rclcpp::get_logger("clothoid_pull_out"),

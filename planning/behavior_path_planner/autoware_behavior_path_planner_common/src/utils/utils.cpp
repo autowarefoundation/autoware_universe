@@ -125,28 +125,6 @@ double l2Norm(const Vector3 vector)
   return std::sqrt(std::pow(vector.x, 2) + std::pow(vector.y, 2) + std::pow(vector.z, 2));
 }
 
-bool has_collision_between_path_footprints_and_objects(
-  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
-  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
-  const double shift_length, const double th_min_shift_length)
-{
-  const auto & pts = ego_path.points;
-  return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
-    const auto vehicle_footprint = autoware_utils::transform_vector(
-      local_vehicle_footprint, autoware_utils::pose2transform(pt.point.pose));
-    const auto & objects = dynamic_objects.objects;
-    return std::any_of(objects.cbegin(), objects.cend(), [&](const auto & obj) {
-      const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
-      if (obj_speed < th_stopped_obj_vel && shift_length < th_min_shift_length) {
-        return false;
-      }
-      const auto obj_polygon = autoware_utils::to_polygon2d(obj);
-      const double distance = boost::geometry::distance(obj_polygon, vehicle_footprint);
-      return distance < margin;
-    });
-  });
-}
-
 bool checkCollisionBetweenPathFootprintsAndObjects(
   const autoware_utils::LinearRing2d & local_vehicle_footprint, const PathWithLaneId & ego_path,
   const PredictedObjects & dynamic_objects, const double margin)
