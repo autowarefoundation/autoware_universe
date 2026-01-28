@@ -16,6 +16,8 @@
 #define AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__ROI_CLUSTER_FUSION__NODE_HPP_
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
+#include "autoware/image_projection_based_fusion/utils/size_validation.hpp"
+
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
 #include <map>
@@ -51,11 +53,28 @@ private:
   double strict_iou_fusion_distance_;
   std::string rough_iou_match_mode_{"iou_x"};
 
+  // Pedestrian size validation parameters
+  PedestrianSizeValidationParams pedestrian_size_params_;
+
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
   bool out_of_scope(const ClusterObjType & obj);
   double cal_iou_by_mode(
     const sensor_msgs::msg::RegionOfInterest & roi_1,
     const sensor_msgs::msg::RegionOfInterest & roi_2, const std::string iou_mode);
+
+  /**
+   * @brief Validate size for pedestrian class
+   * @param cluster_obj The cluster object
+   * @param cluster_roi The projected cluster ROI
+   * @param image_roi The detected image ROI
+   * @param label The object classification label
+   * @return True if the object passes size validation (or is not a pedestrian)
+   */
+  bool validateSizeForClass(
+    const autoware_perception_msgs::msg::DetectedObject & cluster_obj,
+    const sensor_msgs::msg::RegionOfInterest & cluster_roi,
+    const sensor_msgs::msg::RegionOfInterest & image_roi,
+    const uint8_t label);
 };
 
 }  // namespace autoware::image_projection_based_fusion

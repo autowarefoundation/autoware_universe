@@ -17,3 +17,18 @@
       BICYCLE : 0.65
       PEDESTRIAN : 0.65
     remove_unknown: true
+
+    # Pedestrian size validation parameters
+    pedestrian_size_validation:
+      enable: true                    # Enable pedestrian size validation
+      enable_aspect_ratio: true       # Enable 2D aspect ratio check (height/width)
+      enable_3d_size: true            # Enable 3D size validation
+      min_height: 0.8                 # Minimum height [m] (child or crouching)
+      max_height: 2.2                 # Maximum height [m] (tall adult)
+      min_width: 0.3                  # Minimum width [m] (shoulder width)
+      max_width: 1.0                  # Maximum width [m] (with bags/umbrella)
+      max_footprint_area: 1.5         # Maximum ground footprint [m²]
+      min_aspect_ratio: 1.2           # Minimum ROI height/width ratio
+      max_aspect_ratio: 5.0           # Maximum ROI height/width ratio
+      min_roi_height_pixels: 20       # Minimum ROI height [pixels]
+      min_roi_width_pixels: 10        # Minimum ROI width [pixels]

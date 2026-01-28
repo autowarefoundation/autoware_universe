@@ -64,6 +64,38 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   fusion_distance_ = declare_parameter<double>("fusion_distance");
   strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
 
+  // Pedestrian size validation parameters
+  pedestrian_size_params_.enable_size_validation =
+    declare_parameter<bool>("pedestrian_size_validation.enable", true);
+  pedestrian_size_params_.enable_aspect_ratio_validation =
+    declare_parameter<bool>("pedestrian_size_validation.enable_aspect_ratio", true);
+  pedestrian_size_params_.enable_3d_size_validation =
+    declare_parameter<bool>("pedestrian_size_validation.enable_3d_size", true);
+  pedestrian_size_params_.min_height =
+    declare_parameter<double>("pedestrian_size_validation.min_height", 0.8);
+  pedestrian_size_params_.max_height =
+    declare_parameter<double>("pedestrian_size_validation.max_height", 2.2);
+  pedestrian_size_params_.min_width =
+    declare_parameter<double>("pedestrian_size_validation.min_width", 0.3);
+  pedestrian_size_params_.max_width =
+    declare_parameter<double>("pedestrian_size_validation.max_width", 1.0);
+  pedestrian_size_params_.max_footprint_area =
+    declare_parameter<double>("pedestrian_size_validation.max_footprint_area", 1.5);
+  pedestrian_size_params_.min_aspect_ratio =
+    declare_parameter<double>("pedestrian_size_validation.min_aspect_ratio", 1.2);
+  pedestrian_size_params_.max_aspect_ratio =
+    declare_parameter<double>("pedestrian_size_validation.max_aspect_ratio", 5.0);
+  pedestrian_size_params_.min_roi_height_pixels =
+    declare_parameter<int>("pedestrian_size_validation.min_roi_height_pixels", 20);
+  pedestrian_size_params_.min_roi_width_pixels =
+    declare_parameter<int>("pedestrian_size_validation.min_roi_width_pixels", 10);
+
+  RCLCPP_INFO(
+    get_logger(), "Pedestrian size validation: %s (aspect_ratio: %s, 3d_size: %s)",
+    pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled",
+    pedestrian_size_params_.enable_aspect_ratio_validation ? "enabled" : "disabled",
+    pedestrian_size_params_.enable_3d_size_validation ? "enabled" : "disabled");
+
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
 }
@@ -214,10 +246,27 @@ void RoiClusterFusionNode::fuse_on_single_image(
       const bool is_roi_iou_over_threshold = obj_class_iou_threshold < max_iou;
 
       if (is_roi_iou_over_threshold && is_roi_existence_prob_higher) {
-        fused_object.classification = feature_obj.object.classification;
-        // Update existence_probability for fused objects
-        fused_object.existence_probability =
-          std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
+        // Get the label from the image ROI
+        const uint8_t roi_label = feature_obj.object.classification.front().label;
+
+        // Perform size validation for specific classes (especially pedestrians)
+        auto image_roi = feature_obj.feature.roi;
+        auto cluster_roi = m_cluster_roi.at(index);
+        sanitizeROI(image_roi, camera_info.width, camera_info.height);
+        sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
+
+        const bool passes_size_validation =
+          validateSizeForClass(fused_object, cluster_roi, image_roi, roi_label);
+
+        if (passes_size_validation) {
+          fused_object.classification = feature_obj.object.classification;
+          // Update existence_probability for fused objects
+          fused_object.existence_probability =
+            std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
+        } else {
+          RCLCPP_DEBUG(
+            get_logger(), "Size validation failed for label %d, skipping fusion", roi_label);
+        }
       }
     }
     if (debugger_) debug_image_rois.push_back(feature_obj.feature.roi);
@@ -311,6 +360,21 @@ void RoiClusterFusionNode::postprocess(
       }
     }
   }
+}
+
+bool RoiClusterFusionNode::validateSizeForClass(
+  const autoware_perception_msgs::msg::DetectedObject & cluster_obj,
+  const sensor_msgs::msg::RegionOfInterest & cluster_roi,
+  const sensor_msgs::msg::RegionOfInterest & image_roi,
+  const uint8_t label)
+{
+  // Currently only validate pedestrians, other classes pass through
+  if (!isPedestrianLabel(label)) {
+    return true;
+  }
+
+  // Perform pedestrian-specific size validation
+  return validatePedestrianSize(cluster_obj, cluster_roi, image_roi, pedestrian_size_params_);
 }
 
 }  // namespace autoware::image_projection_based_fusion

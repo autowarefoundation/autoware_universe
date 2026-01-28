@@ -123,6 +123,88 @@
           "type": "boolean",
           "description": "If this parameter is true, all of objects labeled UNKNOWN will be removed in post-process.",
           "default": false
+        },
+        "pedestrian_size_validation": {
+          "type": "object",
+          "description": "Pedestrian size validation parameters to reduce false positives",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enable pedestrian size validation",
+              "default": true
+            },
+            "enable_aspect_ratio": {
+              "type": "boolean",
+              "description": "Enable 2D aspect ratio validation (height/width check)",
+              "default": true
+            },
+            "enable_3d_size": {
+              "type": "boolean",
+              "description": "Enable 3D size validation using object shape dimensions",
+              "default": true
+            },
+            "min_height": {
+              "type": "number",
+              "description": "Minimum pedestrian height in meters (child or crouching)",
+              "default": 0.8,
+              "minimum": 0.3,
+              "maximum": 1.5
+            },
+            "max_height": {
+              "type": "number",
+              "description": "Maximum pedestrian height in meters (tall adult)",
+              "default": 2.2,
+              "minimum": 1.5,
+              "maximum": 3.0
+            },
+            "min_width": {
+              "type": "number",
+              "description": "Minimum pedestrian width in meters (shoulder width)",
+              "default": 0.3,
+              "minimum": 0.1,
+              "maximum": 0.5
+            },
+            "max_width": {
+              "type": "number",
+              "description": "Maximum pedestrian width in meters (with bags/umbrella)",
+              "default": 1.0,
+              "minimum": 0.5,
+              "maximum": 2.0
+            },
+            "max_footprint_area": {
+              "type": "number",
+              "description": "Maximum ground footprint area in m² (pedestrians have small footprints)",
+              "default": 1.5,
+              "minimum": 0.5,
+              "maximum": 3.0
+            },
+            "min_aspect_ratio": {
+              "type": "number",
+              "description": "Minimum 2D ROI height/width ratio (pedestrians are taller than wide)",
+              "default": 1.2,
+              "minimum": 0.5,
+              "maximum": 2.0
+            },
+            "max_aspect_ratio": {
+              "type": "number",
+              "description": "Maximum 2D ROI height/width ratio (full body visible)",
+              "default": 5.0,
+              "minimum": 2.0,
+              "maximum": 10.0
+            },
+            "min_roi_height_pixels": {
+              "type": "integer",
+              "description": "Minimum ROI height in pixels",
+              "default": 20,
+              "minimum": 5
+            },
+            "min_roi_width_pixels": {
+              "type": "integer",
+              "description": "Minimum ROI width in pixels",
+              "default": 10,
+              "minimum": 3
+            }
+          }
         }
       },
       "required": [
