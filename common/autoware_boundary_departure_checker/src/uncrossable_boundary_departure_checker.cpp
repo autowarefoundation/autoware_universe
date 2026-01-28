@@ -533,7 +533,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
     if (is_exceeding_cutoff(
           DepartureType::CRITICAL_DEPARTURE, min_braking_dist, param_.th_cutoff_time_departure_s)) {
-      min_pt->departure_type_opt.value() = DepartureType::APPROACHING_DEPARTURE;
+      min_pt->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
     }
 
     min_to_bound.push_back(*min_pt);
