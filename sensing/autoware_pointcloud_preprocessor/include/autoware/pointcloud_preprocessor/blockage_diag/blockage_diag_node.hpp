@@ -109,14 +109,6 @@ private:
   cv::Mat make_blockage_mask(const cv::Mat & no_return_mask) const;
 
   /**
-   * @brief Update the internal blockage mask buffer and return the updated mask.
-   *
-   * @param blockage_mask The current blockage mask. The data type is `CV_8UC1`.
-   * @return cv::Mat The updated aggregated blockage mask. The data type is `CV_8UC1`.
-   */
-  cv::Mat update_time_series_blockage_mask(const cv::Mat & blockage_mask);
-
-  /**
    * @brief Segments a given mask into two masks, according to the ground/sky segmentation
    * parameters.
    *
@@ -188,13 +180,13 @@ private:
   // Blockage detection
   BlockageDetectionConfig blockage_config_;
   BlockageDetectionResult blockage_result_;
-  DetectionVisualizeData blockage_visualize_data_;
+  std::unique_ptr<MultiFrameDetectionAggregator> blockage_aggregator_;
 
   // Dust detection
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;
   DustDetectionResult dust_result_;
-  DetectionVisualizeData dust_visualize_data_;
+  std::unique_ptr<MultiFrameDetectionAggregator> dust_aggregator_;
 
 public:
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);

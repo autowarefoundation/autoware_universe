@@ -26,6 +26,37 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+struct MultiFrameDetectionAggregatorConfig
+{
+  int buffering_frames;    // Number of frames to buffer
+  int buffering_interval;  // Interval between frames to buffer
+};
+
+/**
+ * @brief A class to accumulate and aggregate detection masks over multiple frames.
+ */
+class MultiFrameDetectionAggregator
+{
+public:
+  /**
+   * @brief Constructor.
+   * @param config Configuration for multi-frame detection visualization.
+   */
+  explicit MultiFrameDetectionAggregator(const MultiFrameDetectionAggregatorConfig & config);
+
+  /**
+   * @brief Update the time series mask with the current frame's mask.
+   * @param mask The current mask to add. The data type is `CV_8UC1`.
+   * @return cv::Mat The aggregated multi-frame result. The data type is `CV_8UC1`.
+   */
+  cv::Mat update(const cv::Mat & mask);
+
+private:
+  int frame_count_;
+  int buffering_interval_;
+  boost::circular_buffer<cv::Mat> mask_buffer_;
+};
+
 struct BlockageDetectionConfig
 {
   float blockage_ratio_threshold;
@@ -45,13 +76,6 @@ struct BlockageDetectionResult
 {
   BlockageAreaResult ground;
   BlockageAreaResult sky;
-};
-
-struct DetectionVisualizeData
-{
-  int frame_count = 0;
-  int buffering_interval = 0;
-  boost::circular_buffer<cv::Mat> mask_buffer{1};
 };
 
 struct DustDetectionConfig
