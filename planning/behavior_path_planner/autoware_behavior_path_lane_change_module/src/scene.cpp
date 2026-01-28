@@ -307,6 +307,12 @@ std::optional<std::string> NormalLaneChange::isLaneChangeRequired()
     return {"Ego is close to regulatory element."};
   }
 
+  if (
+    is_near_terminal_end() && planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS) {
+    return {"Ego is in MANUAL Mode and near terminal end, don't run LC module."};
+  }
+
   return std::nullopt;
 }
 
