@@ -18,9 +18,9 @@
 
 namespace autoware::boundary_departure_checker
 {
-AbnormalityType LongitudinalFootprintGenerator::get_type() const
+FootprintType LongitudinalFootprintGenerator::get_type() const
 {
-  return AbnormalityType::LONGITUDINAL;
+  return FootprintType::LONGITUDINAL;
 }
 
 Footprints LongitudinalFootprintGenerator::generate(
@@ -29,7 +29,7 @@ Footprints LongitudinalFootprintGenerator::generate(
   const FootprintMargin & uncertainty_fp_margin)
 {
   const auto longitudinal_config_opt =
-    param.get_abnormality_config<LongitudinalConfig>(AbnormalityType::LONGITUDINAL);
+    param.get_abnormality_config<LongitudinalConfig>(FootprintType::LONGITUDINAL);
   if (longitudinal_config_opt) {
     return utils::create_vehicle_footprints(
       pred_traj, info, uncertainty_fp_margin, longitudinal_config_opt->get());

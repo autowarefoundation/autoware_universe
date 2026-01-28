@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator_manager.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_manager.hpp"
 
 #include "autoware/boundary_departure_checker/footprint_generator/localization_footprint.hpp"
 #include "autoware/boundary_departure_checker/footprint_generator/longitudinal_footprint.hpp"
@@ -25,36 +25,36 @@
 namespace autoware::boundary_departure_checker
 {
 
-FootprintGeneratorManager::FootprintGeneratorManager(
-  const std::vector<AbnormalityType> & footprint_types)
+FootprintManager::FootprintManager(
+  const std::vector<FootprintType> & footprint_types)
 {
   // Always add NORMAL first
   generators_.push_back(std::make_unique<NormalFootprintGenerator>());
-  ordered_types_.push_back(AbnormalityType::NORMAL);
+  ordered_types_.push_back(FootprintType::NORMAL);
 
-  for (const auto abnormality_type : footprint_types) {
-    if (abnormality_type == AbnormalityType::NORMAL) {
+  for (const auto footprint_type : footprint_types) {
+    if (footprint_type == FootprintType::NORMAL) {
       continue;
     }
 
-    if (abnormality_type == AbnormalityType::LOCALIZATION) {
+    if (footprint_type == FootprintType::LOCALIZATION) {
       generators_.push_back(std::make_unique<LocalizationFootprintGenerator>());
-      ordered_types_.push_back(abnormality_type);
-    } else if (abnormality_type == AbnormalityType::LONGITUDINAL) {
+      ordered_types_.push_back(footprint_type);
+    } else if (footprint_type == FootprintType::LONGITUDINAL) {
       generators_.push_back(std::make_unique<LongitudinalFootprintGenerator>());
-      ordered_types_.push_back(abnormality_type);
+      ordered_types_.push_back(footprint_type);
     } else if (
-      abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
-      abnormality_type == AbnormalityType::STEERING_STUCK ||
-      abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
-      abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
-      generators_.push_back(std::make_unique<SteeringFootprintGenerator>(abnormality_type));
-      ordered_types_.push_back(abnormality_type);
+      footprint_type == FootprintType::STEERING_ACCELERATED ||
+      footprint_type == FootprintType::STEERING_STUCK ||
+      footprint_type == FootprintType::STEERING_SUDDEN_LEFT ||
+      footprint_type == FootprintType::STEERING_SUDDEN_RIGHT) {
+      generators_.push_back(std::make_unique<SteeringFootprintGenerator>(footprint_type));
+      ordered_types_.push_back(footprint_type);
     }
   }
 }
 
-std::vector<Footprints> FootprintGeneratorManager::generate_all(
+std::vector<Footprints> FootprintManager::generate_all(
   const TrajectoryPoints & pred_traj, const SteeringReport & steering,
   const vehicle_info_utils::VehicleInfo & info, const Param & param,
   const FootprintMargin & uncertainty_fp_margin) const

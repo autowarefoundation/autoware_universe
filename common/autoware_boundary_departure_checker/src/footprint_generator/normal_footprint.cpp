@@ -18,9 +18,9 @@
 
 namespace autoware::boundary_departure_checker
 {
-AbnormalityType NormalFootprintGenerator::get_type() const
+FootprintType NormalFootprintGenerator::get_type() const
 {
-  return AbnormalityType::NORMAL;
+  return FootprintType::NORMAL;
 }
 
 Footprints NormalFootprintGenerator::generate(

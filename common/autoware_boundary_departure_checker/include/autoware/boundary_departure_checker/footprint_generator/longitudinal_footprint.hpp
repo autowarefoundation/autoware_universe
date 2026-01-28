@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_FOOTPRINT_GENERATOR_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_FOOTPRINT_GENERATOR_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__LONGITUDINAL_FOOTPRINT_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__LONGITUDINAL_FOOTPRINT_HPP_
 
 #include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
 
@@ -24,7 +24,7 @@ class LongitudinalFootprintGenerator : public FootprintGenerator
 public:
   LongitudinalFootprintGenerator() = default;
 
-  [[nodiscard]] AbnormalityType get_type() const final;
+  [[nodiscard]] FootprintType get_type() const final;
 
   Footprints generate(
     const TrajectoryPoints & pred_traj, const SteeringReport & steering,
@@ -33,4 +33,4 @@ public:
 };
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__LONGITUDINAL_FOOTPRINT_GENERATOR_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__LONGITUDINAL_FOOTPRINT_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_HPP_
 
 #include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
@@ -31,7 +31,7 @@ class FootprintGenerator
 public:
   virtual ~FootprintGenerator() = default;
 
-  [[nodiscard]] virtual AbnormalityType get_type() const = 0;
+  [[nodiscard]] virtual FootprintType get_type() const = 0;
 
   virtual Footprints generate(
     const TrajectoryPoints & pred_traj, const SteeringReport & steering,
@@ -41,4 +41,4 @@ public:
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_HPP_
