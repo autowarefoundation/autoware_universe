@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/abnormalities/footprint_generator_manager.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator_manager.hpp"
 
-#include "autoware/boundary_departure_checker/abnormalities/localization_footprint_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/longitudinal_footprint_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/normal_footprint_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/steering_footprint_generator.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/localization_footprint.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/longitudinal_footprint.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/normal_footprint.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/steering_footprint.hpp"
 
 #include <memory>
 #include <vector>
@@ -25,13 +25,14 @@
 namespace autoware::boundary_departure_checker
 {
 
-FootprintGeneratorManager::FootprintGeneratorManager(const Param & param)
+FootprintGeneratorManager::FootprintGeneratorManager(
+  const std::vector<AbnormalityType> & footprint_types)
 {
   // Always add NORMAL first
   generators_.push_back(std::make_unique<NormalFootprintGenerator>());
   ordered_types_.push_back(AbnormalityType::NORMAL);
 
-  for (const auto abnormality_type : param.abnormality_types_to_compensate) {
+  for (const auto abnormality_type : footprint_types) {
     if (abnormality_type == AbnormalityType::NORMAL) {
       continue;
     }

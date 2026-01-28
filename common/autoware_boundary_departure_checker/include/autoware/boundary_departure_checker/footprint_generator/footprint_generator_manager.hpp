@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_MANAGER_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__FOOTPRINT_GENERATOR_MANAGER_HPP_
 
-#include "autoware/boundary_departure_checker/abnormalities/footprint_generator.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
 #include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
@@ -31,7 +31,7 @@ namespace autoware::boundary_departure_checker
 class FootprintGeneratorManager
 {
 public:
-  explicit FootprintGeneratorManager(const Param & param);
+  explicit FootprintGeneratorManager(const std::vector<AbnormalityType> & footprint_types);
 
   [[nodiscard]] std::vector<Footprints> generate_all(
     const TrajectoryPoints & pred_traj, const SteeringReport & steering,

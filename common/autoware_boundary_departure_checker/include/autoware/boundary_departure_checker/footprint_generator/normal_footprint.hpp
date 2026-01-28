@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__NORMAL_FOOTPRINT_GENERATOR_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__ABNORMALITIES__NORMAL_FOOTPRINT_GENERATOR_HPP_
 
-#include "autoware/boundary_departure_checker/abnormalities/footprint_generator.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
 
 namespace autoware::boundary_departure_checker
 {

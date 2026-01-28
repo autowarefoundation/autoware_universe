@@ -14,7 +14,7 @@
 
 #include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
 
-#include "autoware/boundary_departure_checker/abnormalities/footprint_generator_manager.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_generator_manager.hpp"
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
@@ -139,7 +139,7 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   last_found_critical_dpt_time_(clock_ptr->now().seconds()),
   clock_ptr_(clock_ptr),
   time_keeper_(std::move(time_keeper)),
-  manager_(std::make_unique<FootprintGeneratorManager>(param_))
+  manager_(std::make_unique<FootprintGeneratorManager>(param_.abnormality_types_to_compensate))
 {
   auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 

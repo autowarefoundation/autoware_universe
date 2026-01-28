@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/abnormalities/longitudinal_footprint_generator.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/localization_footprint.hpp"
 
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 namespace autoware::boundary_departure_checker
 {
-AbnormalityType LongitudinalFootprintGenerator::get_type() const
+
+AbnormalityType LocalizationFootprintGenerator::get_type() const
 {
-  return AbnormalityType::LONGITUDINAL;
+  return AbnormalityType::LOCALIZATION;
 }
 
-Footprints LongitudinalFootprintGenerator::generate(
+Footprints LocalizationFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
   const vehicle_info_utils::VehicleInfo & info, const Param & param,
   const FootprintMargin & uncertainty_fp_margin)
 {
-  const auto longitudinal_config_opt =
-    param.get_abnormality_config<LongitudinalConfig>(AbnormalityType::LONGITUDINAL);
-  if (longitudinal_config_opt) {
-    return utils::create_vehicle_footprints(
-      pred_traj, info, uncertainty_fp_margin, longitudinal_config_opt->get());
+  FootprintMargin margin = uncertainty_fp_margin;
+  const auto loc_config_opt =
+    param.get_abnormality_config<LocalizationConfig>(AbnormalityType::LOCALIZATION);
+  if (loc_config_opt) {
+    const auto & footprint_envelop = loc_config_opt->get().footprint_envelop;
+    margin = margin + footprint_envelop;
   }
-  return utils::create_vehicle_footprints(pred_traj, info, uncertainty_fp_margin);
+  return utils::create_vehicle_footprints(pred_traj, info, margin);
 }
+
 }  // namespace autoware::boundary_departure_checker
