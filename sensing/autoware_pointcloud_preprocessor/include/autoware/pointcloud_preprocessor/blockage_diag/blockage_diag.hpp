@@ -26,23 +26,23 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-struct MultiFrameDetectionVisualizeConfig
+struct MultiFrameDetectionAggregatorConfig
 {
   int buffering_frames;    // Number of frames to buffer
   int buffering_interval;  // Interval between frames to buffer
 };
 
 /**
- * @brief A class to accumulate and visualize detection masks over multiple frames.
+ * @brief A class to accumulate and aggregate detection masks over multiple frames.
  */
-class MultiFrameDetectionVisualizer
+class MultiFrameDetectionAggregator
 {
 public:
   /**
    * @brief Constructor.
    * @param config Configuration for multi-frame detection visualization.
    */
-  explicit MultiFrameDetectionVisualizer(const MultiFrameDetectionVisualizeConfig & config);
+  explicit MultiFrameDetectionAggregator(const MultiFrameDetectionAggregatorConfig & config);
 
   /**
    * @brief Update the time series mask with the current frame's mask.

@@ -79,36 +79,36 @@ bool is_same_image(const cv::Mat & img1, const cv::Mat & img2)
   return cv::countNonZero(diff) == 0;
 }
 
-TEST(MultiFrameDetectionVisualizerTest, ZeroBufferingIntervalReturnSameMask)
+TEST(MultiFrameDetectionAggregatorTest, ZeroBufferingIntervalReturnSameMask)
 {
-  // Setup visualizer with zero buffering interval
-  MultiFrameDetectionVisualizeConfig config;
+  // Setup aggregator with zero buffering interval
+  MultiFrameDetectionAggregatorConfig config;
   config.buffering_frames = 4;
   config.buffering_interval = 0;
-  MultiFrameDetectionVisualizer visualizer(config);
+  MultiFrameDetectionAggregator aggregator(config);
   cv::Mat input_mask(10, 10, CV_8UC1, cv::Scalar(255));
 
-  // Update visualizer and get result
-  cv::Mat result = visualizer.update(input_mask);
+  // Update aggregator and get result
+  cv::Mat result = aggregator.update(input_mask);
 
   // Verify that the result matches the input mask
   EXPECT_TRUE(is_same_image(input_mask, result));
 }
 
-TEST(MultiFrameDetectionVisualizerTest, AllPixelsConsistentTest)
+TEST(MultiFrameDetectionAggregatorTest, AllPixelsConsistentTest)
 {
-  MultiFrameDetectionVisualizeConfig config;
+  MultiFrameDetectionAggregatorConfig config;
   config.buffering_frames = 4;
   config.buffering_interval = 1;
-  MultiFrameDetectionVisualizer visualizer(config);
+  MultiFrameDetectionAggregator aggregator(config);
   cv::Mat consistent_mask(10, 10, CV_8UC1, cv::Scalar(255));
   int total_pixels = consistent_mask.rows * consistent_mask.cols;
 
   // Update with same mask 4 times
-  visualizer.update(consistent_mask);
-  visualizer.update(consistent_mask);
-  visualizer.update(consistent_mask);
-  cv::Mat result = visualizer.update(consistent_mask);
+  aggregator.update(consistent_mask);
+  aggregator.update(consistent_mask);
+  aggregator.update(consistent_mask);
+  cv::Mat result = aggregator.update(consistent_mask);
 
   // All pixels should be detected
   EXPECT_EQ(cv::countNonZero(result), total_pixels);

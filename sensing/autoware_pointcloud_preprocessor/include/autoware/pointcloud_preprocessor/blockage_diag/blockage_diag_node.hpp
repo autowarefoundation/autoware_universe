@@ -180,13 +180,13 @@ private:
   // Blockage detection
   BlockageDetectionConfig blockage_config_;
   BlockageDetectionResult blockage_result_;
-  std::unique_ptr<MultiFrameDetectionVisualizer> blockage_visualizer_;
+  std::unique_ptr<MultiFrameDetectionAggregator> blockage_aggregator_;
 
   // Dust detection
   bool enable_dust_diag_;
   DustDetectionConfig dust_config_;
   DustDetectionResult dust_result_;
-  std::unique_ptr<MultiFrameDetectionVisualizer> dust_visualizer_;
+  std::unique_ptr<MultiFrameDetectionAggregator> dust_aggregator_;
 
 public:
   explicit BlockageDiagComponent(const rclcpp::NodeOptions & options);

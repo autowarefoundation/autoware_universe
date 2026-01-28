@@ -24,14 +24,14 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-MultiFrameDetectionVisualizer::MultiFrameDetectionVisualizer(
-  const MultiFrameDetectionVisualizeConfig & config)
+MultiFrameDetectionAggregator::MultiFrameDetectionAggregator(
+  const MultiFrameDetectionAggregatorConfig & config)
 : frame_count_(0), buffering_interval_(config.buffering_interval)
 {
   mask_buffer_.set_capacity(config.buffering_frames);
 }
 
-cv::Mat MultiFrameDetectionVisualizer::update(const cv::Mat & mask)
+cv::Mat MultiFrameDetectionAggregator::update(const cv::Mat & mask)
 {
   if (buffering_interval_ == 0) {
     return mask.clone();
