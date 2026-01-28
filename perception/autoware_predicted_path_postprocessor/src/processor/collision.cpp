@@ -14,15 +14,11 @@
 
 #include "autoware/predicted_path_postprocessor/processor/collision.hpp"
 
-#include <autoware_utils_geometry/boost_geometry.hpp>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
-#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <Eigen/src/Geometry/Transform.h>
 #include <geometric_shapes/obb.h>
 
 #include <cassert>

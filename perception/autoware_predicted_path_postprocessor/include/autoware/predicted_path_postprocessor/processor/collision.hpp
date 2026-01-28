@@ -15,9 +15,7 @@
 #ifndef AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COLLISION_HPP_
 #define AUTOWARE__PREDICTED_PATH_POSTPROCESSOR__PROCESSOR__COLLISION_HPP_
 
-#include "autoware/predicted_path_postprocessor/processor/interface.hpp"
-
-#include <autoware_perception_msgs/msg/predicted_path.hpp>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <limits>
