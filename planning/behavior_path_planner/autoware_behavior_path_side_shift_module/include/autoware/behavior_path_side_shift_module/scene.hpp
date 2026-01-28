@@ -85,6 +85,57 @@ private:
 
   void replaceShiftLine();
 
+  double calcMaxLateralOffset(const double requested_offset) const;
+
+  // Helper functions for calcMaxLateralOffset to reduce complexity
+  struct LaneLimitInfo
+  {
+    double safe_left_limit{100.0};
+    double safe_right_limit{100.0};
+    bool found_valid_limit{false};
+  };
+
+  struct AdjacentLaneInfo
+  {
+    bool allow_left{false};
+    bool allow_right{false};
+    bool has_left{false};
+    bool has_right{false};
+    lanelet::ConstLanelet left_lane;
+    lanelet::ConstLanelet right_lane;
+  };
+
+  AdjacentLaneInfo getAdjacentLaneInfo(const lanelet::ConstLanelet & lane) const;
+
+  struct LanePositionResult
+  {
+    lanelet::ConstLanelet check_lane;
+    bool is_in_adjacent{false};
+    bool is_outside_all{false};
+  };
+
+  LanePositionResult determineLanePosition(
+    const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
+    const AdjacentLaneInfo & adj_info) const;
+
+  void updateLaneLimitsForOutsidePoint(
+    const lanelet::ConstLanelet & lane, const lanelet::BasicPoint2d & target_point,
+    double vehicle_half_width, double margin, LaneLimitInfo & limits) const;
+
+  void updateLaneLimitsForInsidePoint(
+    const lanelet::ConstLanelet & current_check_lane, const lanelet::BasicPoint2d & target_point,
+    bool allow_left, bool allow_right, bool point_in_adjacent,
+    const lanelet::ConstLanelet & left_lane_val, const lanelet::ConstLanelet & right_lane_val,
+    double vehicle_half_width, double margin, LaneLimitInfo & limits) const;
+
+  double clampOffsetToLimits(
+    double requested_offset, double safe_left_limit, double safe_right_limit) const;
+
+  void processLateralOffsetRequest();
+
+  void restoreVelocityFromOriginal(
+    PathWithLaneId & resampled_path, const PathWithLaneId & original_path) const;
+
   // const methods
   void publishPath(const PathWithLaneId & path) const;
 
@@ -116,8 +167,6 @@ private:
 
   ShiftedPath prev_output_;
   ShiftLine prev_shift_line_;
-
-  PathWithLaneId extendBackwardLength(const PathWithLaneId & original_path) const;
 
   mutable rclcpp::Time last_requested_shift_change_time_{clock_->now()};
 
