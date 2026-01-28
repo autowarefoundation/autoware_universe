@@ -45,11 +45,10 @@ public:
   void update_critical_departure_points(
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego,
     const Side<DeparturePoints> & new_departure_points,
-    const ClosestProjectionsToBound & closest_projections_to_bound);
+    const Side<ProjectionsToBound> & closest_projections_to_bound);
   bool is_continuous_critical_departure(
-    const ClosestProjectionsToBound & closest_projections_to_bound);
-  bool is_critical_departure_persist(
-    const ClosestProjectionsToBound & closest_projections_to_bound);
+    const Side<ProjectionsToBound> & closest_projections_to_bound);
+  bool is_critical_departure_persist(const Side<ProjectionsToBound> & closest_projections_to_bound);
 
   // ==== abnormalities ===
   /**
@@ -145,10 +144,9 @@ public:
    * @return Vector of closest projections with departure classification, or an error message on
    * failure.
    */
-  tl::expected<std::vector<ClosestProjectionToBound>, std::string>
-  get_closest_projections_to_boundaries_side(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double min_braking_dist,
-    const double max_braking_dist, const SideKey side_key);
+  tl::expected<ProjectionsToBound, std::string> get_closest_projections_to_boundaries_side(
+    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
+    const double min_braking_dist, const double max_braking_dist, const SideKey side_key);
 
   /**
    * @brief Generate filtered departure points for both left and right sides.
@@ -162,7 +160,7 @@ public:
    * @return Side-keyed container of filtered departure points.
    */
   Side<DeparturePoints> get_departure_points(
-    const ClosestProjectionsToBound & projections_to_bound,
+    const Side<ProjectionsToBound> & projections_to_bound,
     const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
@@ -178,11 +176,11 @@ public:
    * model.
    *
    * @param projections_to_bound Abnormality-wise projections to boundaries.
-   * @return ClosestProjectionsToBound structure containing selected points for both sides, or error
-   * string.
+   * @return Side<ProjectionsToBound> structure containing selected points for both
+   * sides, or error string.
    */
-  tl::expected<ClosestProjectionsToBound, std::string> get_closest_projections_to_boundaries(
-    const Abnormalities<ProjectionsToBound> & projections_to_bound, const double curr_vel,
+  tl::expected<Side<ProjectionsToBound>, std::string> get_closest_projections_to_boundaries(
+    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
     const double curr_acc);
 
 private:
@@ -190,15 +188,15 @@ private:
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::unique_ptr<UncrossableBoundRTree> uncrossable_boundaries_rtree_ptr_;
-  CriticalDeparturePoints critical_departure_points_;
+  DeparturePoints critical_departure_points_;
   double last_no_critical_dpt_time_{0.0};
   double last_found_critical_dpt_time_{0.0};
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   // To be used from the motion_velocity_planner
-  static CriticalDeparturePoints find_new_critical_departure_points(
+  static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
-    const CriticalDeparturePoints & critical_departure_points,
+    const DeparturePoints & critical_departure_points,
     const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m);
 };
 }  // namespace autoware::boundary_departure_checker

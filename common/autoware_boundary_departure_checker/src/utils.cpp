@@ -41,12 +41,11 @@
 
 namespace
 {
-using autoware::boundary_departure_checker::ClosestProjectionsToBound;
-using autoware::boundary_departure_checker::ClosestProjectionToBound;
 using autoware::boundary_departure_checker::DeparturePoint;
 using autoware::boundary_departure_checker::DeparturePoints;
 using autoware::boundary_departure_checker::DepartureType;
 using autoware::boundary_departure_checker::IdxForRTreeSegment;
+using autoware::boundary_departure_checker::ProjectionToBound;
 using autoware::boundary_departure_checker::Segment2d;
 using autoware::boundary_departure_checker::SegmentWithIdx;
 using autoware::boundary_departure_checker::VehicleInfo;
@@ -54,21 +53,23 @@ using autoware::boundary_departure_checker::utils::to_segment_2d;
 namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
-  const ClosestProjectionToBound & projection_to_bound,
+  const ProjectionToBound & projection_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m)
 {
   DeparturePoint point;
-  point.uuid = autoware_utils_uuid::to_hex_string(autoware_utils_uuid::generate_uuid());
   point.lat_dist_to_bound = projection_to_bound.lat_dist;
-  point.departure_type = projection_to_bound.departure_type;
+  point.can_be_removed =
+    !projection_to_bound.departure_type_opt || point.ego_dist_on_ref_traj <= 0.0;
+  if (point.can_be_removed) {
+    return point;
+  }
+  point.departure_type = projection_to_bound.departure_type_opt.value();
   point.point = projection_to_bound.pt_on_bound;
   point.th_point_merge_distance_m = th_point_merge_distance_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
   point.ego_dist_on_ref_traj =
     pred_traj_idx_to_ref_traj_lon_dist[projection_to_bound.ego_sides_idx];
-  point.can_be_removed =
-    (point.departure_type == DepartureType::NONE) || point.ego_dist_on_ref_traj <= 0.0;
   return point;
 }
 
@@ -495,7 +496,7 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
       point, point, lane_seg, 0.0, boost::geometry::distance(point, ego_f), ego_sides_idx};
   }
 
-  std::vector<ProjectionToBound> projections;
+  ProjectionsToBound projections;
   projections.reserve(4);
   constexpr bool swap_result = true;
   if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg, swap_result)) {
@@ -577,11 +578,11 @@ ProjectionToBound find_closest_segment(
   return ProjectionToBound(curr_fp_idx);
 }
 
-ProjectionsToBound get_closest_boundary_segments_from_side(
+Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
   const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
   const EgoSides & ego_sides_from_footprints)
 {
-  ProjectionsToBound side;
+  Side<ProjectionsToBound> side;
   for (const auto & side_key : g_side_keys) {
     side[side_key].reserve(ego_sides_from_footprints.size());
   }
@@ -638,7 +639,7 @@ DeparturePoints cluster_by_distance(const DeparturePoints & departure_points)
 }
 
 DeparturePoints get_departure_points(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const ProjectionsToBound & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m)
 {
