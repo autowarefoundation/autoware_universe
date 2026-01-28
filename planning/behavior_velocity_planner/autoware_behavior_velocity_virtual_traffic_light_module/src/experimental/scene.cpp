@@ -278,7 +278,7 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
     setModuleState<State::REQUESTING>();
     logInfoThrottle(
       5000, "no message received for instrument (ID: %ld), stop at stop line (ID: %s)",
-      map_data_.instrument_id, map_data_.stop_line_id_for_log.c_str());
+      map_data_.instrument_id.c_str(), map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtStopLine(path, end_line_s, planner_data);
     updateInfrastructureCommand();
     return true;
@@ -289,7 +289,7 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
     setModuleState<State::REQUESTING>();
     logInfoThrottle(
       5000, "no right of way for instrument (ID: %ld) is given, stop at stop line (ID: %s)",
-      map_data_.instrument_id, map_data_.stop_line_id_for_log.c_str());
+      map_data_.instrument_id.c_str(), map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtStopLine(path, end_line_s, planner_data);
     updateInfrastructureCommand();
     return true;
