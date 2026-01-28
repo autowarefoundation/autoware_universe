@@ -168,8 +168,6 @@ private:
   ShiftedPath prev_output_;
   ShiftLine prev_shift_line_;
 
-  PathWithLaneId extendBackwardLength(const PathWithLaneId & original_path) const;
-
   mutable rclcpp::Time last_requested_shift_change_time_{clock_->now()};
 
   rclcpp::Time latest_lateral_offset_stamp_;

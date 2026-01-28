@@ -514,50 +514,6 @@ BehaviorModuleOutput SideShiftModule::adjustDrivableArea(const ShiftedPath & pat
   return out;
 }
 
-PathWithLaneId SideShiftModule::extendBackwardLength(const PathWithLaneId & original_path) const
-{
-  // special for avoidance: take behind distance upt ot shift-start-point if it exist.
-  const auto longest_dist_to_shift_point = [&]() {
-    double max_dist = 0.0;
-    for (const auto & pnt : path_shifter_.getShiftLines()) {
-      max_dist = std::max(max_dist, calc_distance2d(getEgoPose(), pnt.start));
-    }
-    return max_dist;
-  }();
-
-  const auto extra_margin = 10.0;  // Since distance does not consider arclength, but just line.
-  const auto backward_length = std::max(
-    planner_data_->parameters.backward_path_length, longest_dist_to_shift_point + extra_margin);
-
-  const auto & prev_reference = getPreviousModuleOutput().path;
-  const size_t orig_ego_idx = findNearestIndex(original_path.points, getEgoPose().position);
-  const size_t prev_ego_idx = findNearestSegmentIndex(
-    prev_reference.points, get_point(original_path.points.at(orig_ego_idx)));
-
-  size_t clip_idx = 0;
-  for (size_t i = 0; i < prev_ego_idx; ++i) {
-    if (backward_length > calcSignedArcLength(prev_reference.points, clip_idx, prev_ego_idx)) {
-      break;
-    }
-    clip_idx = i;
-  }
-
-  PathWithLaneId extended_path{};
-  {
-    extended_path.points.insert(
-      extended_path.points.end(), prev_reference.points.begin() + clip_idx,
-      prev_reference.points.begin() + prev_ego_idx);
-  }
-
-  {
-    extended_path.points.insert(
-      extended_path.points.end(), original_path.points.begin() + orig_ego_idx,
-      original_path.points.end());
-  }
-
-  return extended_path;
-}
-
 /**
  * @brief Calculate the maximum allowable lateral offset based on lane boundaries.
  *
