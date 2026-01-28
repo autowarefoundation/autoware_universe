@@ -19,8 +19,8 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/universe_utils/math/normalization.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -240,9 +240,10 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 2. Fallback processing when no containing lane is found
   if (!found_containing_lane) {
     // 2.1 Find the closest lane
-    lanelet::Lanelet closest_lanelet{};
-    if (lanelet::utils::query::getClosestLanelet(candidate_lanes, pose, &closest_lanelet)) {
-      lane_ids = {closest_lanelet.id()};
+    if (
+      const auto closest_lanelet_opt =
+        autoware::experimental::lanelet2_utils::get_closest_lanelet(candidate_lanes, pose)) {
+      lane_ids = {closest_lanelet_opt.value().id()};
     } else if (!previous_lane_ids.empty()) {
       // 2.2 If closest lane is not found, inherit lane_ids from previous point
       lane_ids = previous_lane_ids;
