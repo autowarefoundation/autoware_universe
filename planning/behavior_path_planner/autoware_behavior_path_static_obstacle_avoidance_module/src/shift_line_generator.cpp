@@ -633,10 +633,10 @@ AvoidLineArray ShiftLineGenerator::extractShiftLinesFromLine(
   // Calculate second derivative of shift line directly from sl.shift_line_grad.
   // This detects the start and end points of shift by finding where the gradient changes.
   std::vector<double> shift_line_second_grad(N, 0.0);
-  for (size_t i = 1; i < N; ++i) {
-    const double ds = arcs.at(i) - arcs.at(i - 1);
+  for (size_t i = 0; i < N - 1; ++i) {
+    const double ds = arcs.at(i + 1) - arcs.at(i);
     if (ds > 1.0e-5) {
-      shift_line_second_grad.at(i) = (sl.shift_line_grad.at(i) - sl.shift_line_grad.at(i - 1)) / ds;
+      shift_line_second_grad.at(i) = (sl.shift_line_grad.at(i + 1) - sl.shift_line_grad.at(i)) / ds;
     }
   }
 
@@ -654,6 +654,7 @@ AvoidLineArray ShiftLineGenerator::extractShiftLinesFromLine(
     if (!found_first_start && std::abs(shift) > IS_ALREADY_SHIFTING_THR) {
       setStartData(al, 0.0, p, i, arcs.at(i));  // start length is overwritten later.
       found_first_start = true;
+      continue;
     }
 
     // Find the point where the second derivative of shift gradient is significant.
