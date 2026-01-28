@@ -112,22 +112,19 @@ TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenPathFootprintsAndObjec
 
   PathWithLaneId ego_path;
 
-  const double shift_length = 0.0;
-  const double th_min_shift_length = 0.0;
-
   // Condition: no path
-  EXPECT_FALSE(checkCollisionBetweenPathFootprintsAndObjects(
-    base_footprint, ego_path, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_FALSE(
+    checkCollisionBetweenPathFootprintsAndObjects(base_footprint, ego_path, objs, margin));
 
   // Condition: object in front of path
   ego_path = generateTrajectory<PathWithLaneId>(5, 1.0);
-  EXPECT_FALSE(checkCollisionBetweenPathFootprintsAndObjects(
-    base_footprint, ego_path, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_FALSE(
+    checkCollisionBetweenPathFootprintsAndObjects(base_footprint, ego_path, objs, margin));
 
   // Condition: object overlapping path
   ego_path = generateTrajectory<PathWithLaneId>(10, 1.0);
-  EXPECT_TRUE(checkCollisionBetweenPathFootprintsAndObjects(
-    base_footprint, ego_path, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_TRUE(
+    checkCollisionBetweenPathFootprintsAndObjects(base_footprint, ego_path, objs, margin));
 }
 
 TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenFootprintAndObjects)
@@ -141,12 +138,8 @@ TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenFootprintAndObjects)
   double margin = 0.2;
   PredictedObjects objs;
 
-  const double shift_length = 0.0;
-  const double th_min_shift_length = 0.0;
-
   // Condition: no object
-  EXPECT_FALSE(checkCollisionBetweenFootprintAndObjects(
-    base_footprint, ego_pose, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_FALSE(checkCollisionBetweenFootprintAndObjects(base_footprint, ego_pose, objs, margin));
 
   // Condition: no collision
   PredictedObject obj;
@@ -155,15 +148,13 @@ TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenFootprintAndObjects)
   obj.shape.dimensions.y = 2.0;
   obj.kinematics.initial_pose_with_covariance.pose = createPose(9.0, 9.0, 0.0, 0.0, 0.0, 0.0);
   objs.objects.push_back(obj);
-  EXPECT_FALSE(checkCollisionBetweenFootprintAndObjects(
-    base_footprint, ego_pose, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_FALSE(checkCollisionBetweenFootprintAndObjects(base_footprint, ego_pose, objs, margin));
 
   // Condition: collision
   obj.kinematics.initial_pose_with_covariance.pose.position.x = 1.0;
   obj.kinematics.initial_pose_with_covariance.pose.position.y = 1.0;
   objs.objects.push_back(obj);
-  EXPECT_TRUE(checkCollisionBetweenFootprintAndObjects(
-    base_footprint, ego_pose, objs, margin, shift_length, th_min_shift_length));
+  EXPECT_TRUE(checkCollisionBetweenFootprintAndObjects(base_footprint, ego_pose, objs, margin));
 }
 
 TEST_F(BehaviorPathPlanningUtilTest, calcLateralDistanceFromEgoToObject)
