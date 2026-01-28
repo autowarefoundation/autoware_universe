@@ -536,7 +536,7 @@ double SideShiftModule::calcMaxLateralOffset(const double requested_offset) cons
 
   const auto & route_handler = planner_data_->route_handler;
   const auto & p = planner_data_->parameters;
-  const double margin = parameters_->drivable_area_margin;
+  const double margin = parameters_->min_drivable_area_margin;
   const double vehicle_half_width = p.vehicle_width / 2.0;
 
   const size_t nearest_idx = planner_data_->findEgoIndex(reference_path_.points);
