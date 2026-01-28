@@ -1453,6 +1453,16 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       start_planner_utils::calc_start_and_end_shift_length(
         pull_out_lanes, pull_out_path.start_pose, pull_out_path.end_pose);
 
+    const double shift_length =
+      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.end);
+    if (shift_length < parameters_.th_rejected_shift_length) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("ClothoidPullOut"),
+        "Shift length too short %.2f m. Continuing to next candidate.", shift_length);
+      planner_debug_data.conditions_evaluation.emplace_back("shift length too small");
+      continue;
+    }
+
     RCLCPP_INFO(
       rclcpp::get_logger("clothoid_pull_out"),
       "\n===========================================\n"

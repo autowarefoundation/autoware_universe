@@ -291,6 +291,7 @@ struct StartPlannerParameters
     object_types_to_check_for_path_generation{};
   double center_line_path_interval{0.0};
   double lane_departure_check_expansion_margin{0.0};
+  double th_rejected_shift_length{0.5};
 
   // shift pull out
   bool check_shift_path_lane_departure{false};

@@ -220,6 +220,15 @@ bool checkCollisionWithExtraStoppingMargin(
   const double maximum_deceleration, const double margin, const double max_stopping_margin);
 
 /**
+ * @brief Check collision between ego path footprints and objects considering shift length.
+ * @return Has collision or not
+ */
+bool has_collision_between_shifted_path_footprints_and_objects(
+  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
+  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
+  const double shift_length, const double th_min_shift_length);
+
+/**
  * @brief Check collision between ego path footprints and objects.
  * @return Has collision or not
  */
