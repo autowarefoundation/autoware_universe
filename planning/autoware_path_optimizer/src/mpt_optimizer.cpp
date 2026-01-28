@@ -746,12 +746,10 @@ geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, d
 // Build parameter vector and initial state x0 from the request. If a parameter-size mismatch
 // is detected, this will set skipSolve=true and populate the response with empty results.
 std::array<double, NP> MPTOptimizer::buildParameters(
-  const std::vector<double> & knots, const std::vector<double> & x_coeffs_flat,
-  const std::vector<double> & y_coeffs_flat, const std::vector<double> & curvatures) const
+  const std::vector<double> & knots, const std::vector<double> & curvatures) const
 {
   RCLCPP_DEBUG(
-    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu", knots.size(),
-    x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size());
+    logger_, "sizes: knots=%zu curvatures=%zu", knots.size(), curvatures.size());
 
   // Build parameters vector similar to Python
   std::array<double, NP> parameters;
@@ -767,27 +765,7 @@ std::array<double, NP> MPTOptimizer::buildParameters(
     parameters[idx++] = v;
   }
 
-  // 3. x_coeffs_flat
-  for (double v : x_coeffs_flat) {
-    parameters[idx++] = v;
-  }
-
-  // 4. knots again
-  for (double v : knots) {
-    parameters[idx++] = v;
-  }
-
-  // 5. y_coeffs_flat
-  for (double v : y_coeffs_flat) {
-    parameters[idx++] = v;
-  }
-
-  // 6. knots again
-  for (double v : knots) {
-    parameters[idx++] = v;
-  }
-
-  // 7. Compute cubic spline coefficients from curvatures
+  // 3. Compute cubic spline coefficients from curvatures
   // Python uses: ClothoidSpline -> CubicSpline(knots, curvatures) -> coeffs (4×(N-1))
   // We need to fit a cubic spline to (knots, curvatures) and extract the 4×(N-1) coefficients
 
@@ -969,10 +947,8 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
   const geometry_msgs::msg::Pose & ego_pose)
 {
-  // Get spline coefficients for x and y
+  // Get spline coefficients for curvature only
   const auto & knots = ref_points_spline.getSplineKnots();
-  const auto & x_coeffs = ref_points_spline.getSplineCoefficientsX();
-  const auto & y_coeffs = ref_points_spline.getSplineCoefficientsY();
   const auto & curvatures = ref_points_spline.getSplineInterpolatedCurvatures();
 
   const auto [s_ego, e_y_ego] =
@@ -984,8 +960,6 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
 
   // Convert arrays to vectors for buildParameters
   std::vector<double> knots_vec(knots.begin(), knots.end());
-  std::vector<double> x_coeffs_vec(x_coeffs.begin(), x_coeffs.end());
-  std::vector<double> y_coeffs_vec(y_coeffs.begin(), y_coeffs.end());
   std::vector<double> curvatures_vec(curvatures.begin(), curvatures.end());
 
   size_t n_segments = (int)knots.size() - 1;
@@ -998,24 +972,16 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
     ref_points_spline.extendLinearlyForward(target_n_knots, mpt_param_.delta_arc_length);
 
     const auto & knots_new = ref_points_spline.getSplineKnots();
-    const auto & x_coeffs_new = ref_points_spline.getSplineCoefficientsX();
-    const auto & y_coeffs_new = ref_points_spline.getSplineCoefficientsY();
     const auto & curvatures_new = ref_points_spline.getSplineInterpolatedCurvatures();
     knots_vec.assign(knots_new.begin(), knots_new.end());
-    x_coeffs_vec.assign(x_coeffs_new.begin(), x_coeffs_new.end());
-    y_coeffs_vec.assign(y_coeffs_new.begin(), y_coeffs_new.end());
     curvatures_vec.assign(curvatures_new.begin(), curvatures_new.end());
   } else if (n_segments > target_segments) {
     ref_points_spline.resize(target_n_knots);
 
     const auto & knots_new = ref_points_spline.getSplineKnots();
-    const auto & x_coeffs_new = ref_points_spline.getSplineCoefficientsX();
-    const auto & y_coeffs_new = ref_points_spline.getSplineCoefficientsY();
     const auto & curvatures_new = ref_points_spline.getSplineInterpolatedCurvatures();
 
     knots_vec.assign(knots_new.begin(), knots_new.end());
-    x_coeffs_vec.assign(x_coeffs_new.begin(), x_coeffs_new.end());
-    y_coeffs_vec.assign(y_coeffs_new.begin(), y_coeffs_new.end());
     curvatures_vec.assign(curvatures_new.begin(), curvatures_new.end());
   }
 
@@ -1024,7 +990,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   x0[1] = e_psi_ego;
 
   std::array<double, NP> parameters =
-    buildParameters(knots_vec, x_coeffs_vec, y_coeffs_vec, curvatures_vec);
+    buildParameters(knots_vec, curvatures_vec);
 
   setParametersToSolver(parameters, ref_points, s_ego);
 

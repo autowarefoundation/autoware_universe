@@ -8,7 +8,7 @@ class ClothoidSpline:
         self.kapparef = kapparef
 
         # Resample s0 and kapparef to have only a fixed number of points
-        if num_points != None:
+        if num_points is not None:
             s0_resampled = np.linspace(s0[0], s0[-1], num_points)
             kapparef_resampled = np.interp(s0_resampled, s0, kapparef)
             s0 = s0_resampled

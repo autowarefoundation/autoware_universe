@@ -32,11 +32,10 @@ if "ACADOS_SOURCE_DIR" in os.environ:
         except Exception as e:
             print(f"DEBUG: Failed to download t_renderer: {e}")
 
-from acados_template import AcadosModel
-from acados_template import AcadosOcp
-from acados_template import AcadosOcpSolver
-from bicycle_model_spatial_with_body_points import bicycle_model_spatial_with_body_points
-from utils.clothoid_spline import ClothoidSpline
+from acados_template import AcadosModel # noqa: E402
+from acados_template import AcadosOcp # noqa: E402
+from acados_template import AcadosOcpSolver # noqa: E402
+from bicycle_model_spatial_with_body_points import bicycle_model_spatial_with_body_points # noqa: E402
 
 
 class PathTrackingMPCSpatialWithBodyPoints:

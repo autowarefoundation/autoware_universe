@@ -35,7 +35,7 @@
 
     # mpt param
     mpt:
-      use_acados: false
+      use_acados: true
       # Enable/disable the new MPT-style circle road-bound constraints in acados.
       use_acados_circle_constraints: true
 

@@ -283,7 +283,7 @@ class MPTDebugVisualizer(Node):
         self.updatePlot()
 
     def parseStates(self, msg):
-        """Parse state message: [eY_0, ePsi_0, eY_1, ePsi_1, ...]"""
+        """Parse state message: [eY_0, ePsi_0, eY_1, ePsi_1, ...]."""
         if len(msg.data) == 0 or len(msg.data) % 2 != 0:
             return [], []
 

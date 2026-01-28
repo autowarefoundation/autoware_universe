@@ -1,9 +1,6 @@
-"""
-Generic symbolic cubic spline for optimization applications.
-"""
+# Generic symbolic cubic spline for optimization applications.
 
 import casadi as ca
-import numpy as np
 
 
 class SymbolicCubicSpline:

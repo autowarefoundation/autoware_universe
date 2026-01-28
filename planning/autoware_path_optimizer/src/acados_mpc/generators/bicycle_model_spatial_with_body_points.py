@@ -2,9 +2,7 @@ import types
 
 from casadi import SX
 from casadi import atan
-from casadi import atan2
 from casadi import cos
-from casadi import jacobian
 from casadi import tan
 from casadi import vertcat
 from utils.symbolic_cubic_spline import SymbolicCubicSpline
@@ -17,7 +15,7 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
 
     model_name = "curvilinear_bicycle_model_spatial"
 
-    ## CasADi Model
+    # CasADi Model
     # set up states & controls
     eY = SX.sym("eY")
     eψ = SX.sym("eψ")
@@ -31,27 +29,18 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
     # y_body_points = SX.sym("y_body_points", num_body_points)
 
     s_sym = SX.sym("s")  # symbolic independent variable
-    x_ref_s_symbolic_curvature_cubic_spline = SymbolicCubicSpline(n_points=n_points, u=s_sym)
-    x_ref_s = x_ref_s_symbolic_curvature_cubic_spline.get_symbolic_spline()
-    y_ref_s_symbolic_curvature_cubic_spline = SymbolicCubicSpline(n_points=n_points, u=s_sym)
-    y_ref_s = y_ref_s_symbolic_curvature_cubic_spline.get_symbolic_spline()
     kappa_ref_s_symbolic_curvature_cubic_spline = SymbolicCubicSpline(n_points=n_points, u=s_sym)
     kappa_ref_s = kappa_ref_s_symbolic_curvature_cubic_spline.get_symbolic_spline()
     lf = SX.sym("lf")
     lr = SX.sym("lr")
-    L = lf + lr
 
     print("sym shape: ", s_sym.shape)
-    print("x_ref_s shape: ", x_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
-    print("y_ref_s shape: ", y_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
     print("kappa_ref_s shape: ", kappa_ref_s_symbolic_curvature_cubic_spline.get_parameters().shape)
     # print("x_body_points shape: ", x_body_points.shape)
     # print("y_body_points shape: ", y_body_points.shape)
 
     p = vertcat(
         s_sym,
-        x_ref_s_symbolic_curvature_cubic_spline.get_parameters(),
-        y_ref_s_symbolic_curvature_cubic_spline.get_parameters(),
         kappa_ref_s_symbolic_curvature_cubic_spline.get_parameters(),
     )
     p = vertcat(p, lf, lr)
