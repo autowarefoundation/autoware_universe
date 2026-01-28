@@ -748,8 +748,7 @@ geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, d
 std::array<double, NP> MPTOptimizer::buildParameters(
   const std::vector<double> & knots, const std::vector<double> & curvatures) const
 {
-  RCLCPP_DEBUG(
-    logger_, "sizes: knots=%zu curvatures=%zu", knots.size(), curvatures.size());
+  RCLCPP_DEBUG(logger_, "sizes: knots=%zu curvatures=%zu", knots.size(), curvatures.size());
 
   // Build parameters vector similar to Python
   std::array<double, NP> parameters;
@@ -989,8 +988,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
   x0[0] = e_y_ego;
   x0[1] = e_psi_ego;
 
-  std::array<double, NP> parameters =
-    buildParameters(knots_vec, curvatures_vec);
+  std::array<double, NP> parameters = buildParameters(knots_vec, curvatures_vec);
 
   setParametersToSolver(parameters, ref_points, s_ego);
 
