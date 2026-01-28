@@ -51,8 +51,8 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
 {
   const auto speed = std::abs(target.kinematics.initial_twist_with_covariance.twist.linear.x);
 
-  for (size_t i = 0; i < target.kinematics.predicted_paths.size(); ++i) {
-    auto & mode = target.kinematics.predicted_paths[i];
+  for (size_t mode_index = 0; mode_index < target.kinematics.predicted_paths.size(); ++mode_index) {
+    auto & mode = target.kinematics.predicted_paths[mode_index];
     const auto delta_t = rclcpp::Duration(mode.time_step).seconds();
 
     if (delta_t <= 0.0) {
@@ -65,7 +65,7 @@ RefinePenetrationByStaticObjects::result_type RefinePenetrationByStaticObjects::
     }
 
     const auto collision =
-      find_collision(target, i, context.as_objects()->objects, speed_threshold_);
+      find_collision(target, mode_index, context.as_objects()->objects, speed_threshold_);
     if (!collision) {
       continue;
     }
