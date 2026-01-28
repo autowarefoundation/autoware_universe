@@ -17,6 +17,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -163,6 +164,31 @@ getPathEndPointsOnCrosswalk(
   return std::make_pair(
     create_point(front_intersects.x(), front_intersects.y(), ego_pos.z),
     create_point(back_intersects.x(), back_intersects.y(), ego_pos.z));
+}
+
+/**
+ * @brief Calculate path end (= first and last) points on the crosswalk for continuous trajectory
+ * @return first and last path points on the crosswalk
+ */
+std::optional<std::pair<geometry_msgs::msg::Point, geometry_msgs::msg::Point>>
+getPathEndPointsOnCrosswalk(
+  const autoware::experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const geometry_msgs::msg::Point & ego_pos)
+{
+  const auto crossed_s_values =
+    autoware::experimental::trajectory::crossed_with_polygon(ego_path, polygon);
+
+  if (crossed_s_values.empty()) {
+    return std::nullopt;
+  }
+
+  const auto first_point = ego_path.compute(crossed_s_values.front());
+  const auto last_point = ego_path.compute(crossed_s_values.back());
+
+  return std::make_pair(
+    create_point(first_point.point.pose.position.x, first_point.point.pose.position.y, ego_pos.z),
+    create_point(last_point.point.pose.position.x, last_point.point.pose.position.y, ego_pos.z));
 }
 
 std::vector<geometry_msgs::msg::Point> getLinestringIntersects(
