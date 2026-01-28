@@ -20,10 +20,12 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
 #include <boost/geometry/algorithms/detail/intersects/interface.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/index/predicates.hpp>
@@ -113,15 +115,22 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   std::sort(initial_ids.begin(), initial_ids.end());
   lanelet::Ids overlapped_lanelets = final_ids;
   overlapped_lanelets.insert(overlapped_lanelets.end(), initial_ids.begin(), initial_ids.end());
+
+  autoware_utils_geometry::LineString2d line_string;
+  boost::geometry::convert(ls, line_string);
+
   for (const auto & candidate : candidates) {
     const auto id = candidate.id();
     // check if the id is already in the initial/final ids to avoid redoing the geometry operation
     if (
       !std::binary_search(initial_ids.begin(), initial_ids.end(), id) &&
-      !std::binary_search(final_ids.begin(), final_ids.end(), id) &&
-      !boost::geometry::disjoint(
-        ls, route_handler.getLaneletsFromId(id).polygon2d().basicPolygon())) {
-      overlapped_lanelets.push_back(id);
+      !std::binary_search(final_ids.begin(), final_ids.end(), id)) {
+      autoware_utils_geometry::Polygon2d polygon_lanelet;
+      boost::geometry::convert(
+        route_handler.getLaneletsFromId(id).polygon2d().basicPolygon(), polygon_lanelet);
+      if (!boost::geometry::disjoint(polygon_lanelet, line_string)) {
+        overlapped_lanelets.push_back(id);
+      }
     }
   }
   std::sort(overlapped_lanelets.begin(), overlapped_lanelets.end());
@@ -225,9 +234,8 @@ void calculate_objects_time_collisions(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
   const route_handler::RouteHandler & route_handler, const PlannerParam & params)
 {
-  for (const auto & object : objects) {
-    auto shape = object.shape;
-    shape.dimensions.y += params.objects_extra_width * 0.5;
+  for (auto object : objects) {
+    object.shape.dimensions.y += params.objects_extra_width * 0.5;
     for (auto path_id = 0UL; path_id < object.kinematics.predicted_paths.size(); ++path_id) {
       calculate_object_path_time_collisions(
         out_of_lane_data, path_id, object, route_handler,
@@ -282,16 +290,19 @@ OutOfLanePoint calculate_out_of_lane_point(
 {
   OutOfLanePoint p;
   std::vector<LaneletNode> candidates;
+  autoware_utils_geometry::Polygon2d poly_footprint;
+  boost::geometry::convert(footprint, poly_footprint);
   out_lanelets_rtree.query(
-    boost::geometry::index::intersects(footprint), std::back_inserter(candidates));
+    boost::geometry::index::intersects(poly_footprint), std::back_inserter(candidates));
   for (const auto & [_, idx] : candidates) {
     const auto & lanelet = out_lanelets[idx];
-    lanelet::BasicPolygons2d intersections;
-    boost::geometry::intersection(footprint, lanelet.polygon2d().basicPolygon(), intersections);
+    autoware_utils_geometry::MultiPolygon2d intersections;
+    autoware_utils_geometry::Polygon2d poly_lanelet;
+    boost::geometry::convert(lanelet.polygon2d().basicPolygon(), poly_lanelet);
+    boost::geometry::intersection(poly_footprint, poly_lanelet, intersections);
+    p.out_overlaps.reserve(intersections.size());
     for (const auto & intersection : intersections) {
-      autoware_utils::Polygon2d poly;
-      boost::geometry::convert(intersection, poly);
-      p.out_overlaps.push_back(poly);
+      p.out_overlaps.push_back(intersection);
     }
     if (!intersections.empty()) {
       p.overlapped_lanelets.push_back(lanelet);
@@ -299,6 +310,7 @@ OutOfLanePoint calculate_out_of_lane_point(
   }
   return p;
 }
+
 std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_data)
 {
   std::vector<OutOfLanePoint> out_of_lane_points;
@@ -307,7 +319,7 @@ std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_dat
     OutOfLanePoint p =
       calculate_out_of_lane_point(footprint, ego_data.out_lanelets, ego_data.out_lanelets_rtree);
     p.trajectory_index = i;
-    if (!p.overlapped_lanelets.empty()) {
+    if (!p.overlapped_lanelets.empty() && !p.out_overlaps.empty()) {
       out_of_lane_points.push_back(p);
     }
   }

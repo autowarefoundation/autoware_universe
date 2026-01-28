@@ -126,6 +126,11 @@ void CudaPointcloudPreprocessor::setRingOutlierFilterParameters(
   ring_outlier_parameters_ = ring_outlier_parameters;
 }
 
+void CudaPointcloudPreprocessor::setRingOutlierFilterActive(const bool enable_filter)
+{
+  enable_ring_outlier_filter_ = enable_filter;
+}
+
 void CudaPointcloudPreprocessor::setUndistortionType(const UndistortionType & undistortion_type)
 {
   if (undistortion_type == UndistortionType::Invalid) {
@@ -336,8 +341,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m33 = static_cast<float>(rotation_matrix.getRow(2).getZ());
 
   // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
-                                        input_pointcloud_msg.header.stamp.nanosec;
+  std::uint64_t pointcloud_stamp_nsec =
+    static_cast<std::uint64_t>(1'000'000'000) * input_pointcloud_msg.header.stamp.sec +
+    input_pointcloud_msg.header.stamp.nanosec;
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
@@ -400,12 +406,18 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   }
 
   // Ring outlier
-  ringOutlierFilterLaunch(
-    device_transformed_points, device_ring_outlier_mask, num_rings_, max_points_per_ring_,
-    ring_outlier_parameters_.distance_ratio,
-    ring_outlier_parameters_.object_length_threshold *
-      ring_outlier_parameters_.object_length_threshold,
-    threads_per_block_, blocks_per_grid, stream_);
+  if (enable_ring_outlier_filter_) {
+    ringOutlierFilterLaunch(
+      device_transformed_points, device_ring_outlier_mask, num_rings_, max_points_per_ring_,
+      ring_outlier_parameters_.distance_ratio,
+      ring_outlier_parameters_.object_length_threshold *
+        ring_outlier_parameters_.object_length_threshold,
+      threads_per_block_, blocks_per_grid, stream_);
+  } else {
+    thrust::fill(
+      thrust::device, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
+      1);
+  }
 
   combineMasksLaunch(
     device_crop_mask, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,

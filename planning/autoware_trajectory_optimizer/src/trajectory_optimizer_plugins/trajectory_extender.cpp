@@ -14,33 +14,63 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_extender.hpp"
 
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_extender_utils.hpp"
+
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #include <vector>
 
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryExtender::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] const TrajectoryOptimizerParams & params)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  const TrajectoryOptimizerData & data)
 {
-  if (params.extend_trajectory_backward) {
-    // Note: This function adds the current ego state to a history trajectory. Note that it is ok to
-    // call this function several times with the same ego state, since there is a check inside the
-    // function to avoid adding the same state multiple times.
-    utils::add_ego_state_to_trajectory(
-      past_ego_state_trajectory_.points, params.current_odometry, params);
-    utils::expand_trajectory_with_ego_history(
-      traj_points, past_ego_state_trajectory_.points, params.current_odometry, params);
+  if (!params.use_trajectory_extender) {
+    return;
   }
+  // Note: This function adds the current ego state to a history trajectory. Note that it is ok to
+  // call this function several times with the same ego state, since there is a check inside the
+  // function to avoid adding the same state multiple times.
+  trajectory_extender_utils::add_ego_state_to_trajectory(
+    past_ego_state_trajectory_.points, data.current_odometry,
+    extender_params_.nearest_dist_threshold_m,
+    autoware_utils_math::deg2rad(extender_params_.nearest_yaw_threshold_deg),
+    extender_params_.backward_trajectory_extension_m);
+  trajectory_extender_utils::expand_trajectory_with_ego_history(
+    traj_points, past_ego_state_trajectory_.points, data.current_odometry);
 }
 
 void TrajectoryExtender::set_up_params()
 {
+  auto node_ptr = get_node_ptr();
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+
+  extender_params_.nearest_dist_threshold_m =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_dist_threshold_m");
+  extender_params_.nearest_yaw_threshold_deg =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_extender.nearest_yaw_threshold_deg");
+  extender_params_.backward_trajectory_extension_m = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_extender.backward_trajectory_extension_m");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
+  using autoware_utils_rclcpp::update_param;
+
+  update_param<double>(
+    parameters, "trajectory_extender.nearest_dist_threshold_m",
+    extender_params_.nearest_dist_threshold_m);
+  update_param<double>(
+    parameters, "trajectory_extender.nearest_yaw_threshold_deg",
+    extender_params_.nearest_yaw_threshold_deg);
+  update_param<double>(
+    parameters, "trajectory_extender.backward_trajectory_extension_m",
+    extender_params_.backward_trajectory_extension_m);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";
@@ -48,3 +78,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryExtender::on_parameter(
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::trajectory_optimizer::plugin::TrajectoryExtender,
+  autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase)

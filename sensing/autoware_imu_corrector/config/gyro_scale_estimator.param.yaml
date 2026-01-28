@@ -1,0 +1,43 @@
+/**:
+  ros__parameters:
+    estimate_scale_init: 1.0
+    min_allowed_scale: 0.9
+    max_allowed_scale: 1.1
+    threshold_to_estimate_scale: 0.1
+    percentage_scale_rate_allow_correct: 0.04
+    alpha: 0.99
+    delay_gyro_ms: 170
+    samples_filter_pose_rate: 2
+    samples_filter_gyro_rate: 6
+    alpha_gyro: 0.0
+    buffer_size_gyro: 200
+    alpha_ndt_rate: 0.6
+
+    ekf_rate:
+      max_variance_p: 1e-8
+      variance_p_after: 5e-9
+      process_noise_q: 1e-14
+      process_noise_q_after: 1e-15
+      measurement_noise_r: 0.00007
+      measurement_noise_r_after: 0.00005
+      samples_to_init: 120
+      min_covariance: 1e-11
+
+    ekf_angle:
+      process_noise_q_angle: 1e-12
+      variance_p_angle: 5e-9
+      measurement_noise_r_angle: 0.00005
+      min_covariance_angle: 1e-11
+      decay_coefficient: 0.99999998
+
+    scale_imu_injection:
+      modify_imu_scale: false
+      scale_on_purpose: 1.0
+      bias_on_purpose: 0.0
+      drift_scale: 0.0
+      drift_bias: 0.0
+
+    on_off_correction:
+      correct_for_static_bias: true
+      correct_for_dynamic_bias: false
+      correct_for_scale: false

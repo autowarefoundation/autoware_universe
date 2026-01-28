@@ -32,6 +32,7 @@
         keep_condition:  # keep the stop decision if we still find any collision with the object within some time+distance range
           time: 5.0  # [s] time along the ego trajectory
           distance: 10.0  # [m] distance along the ego trajectory
+        reuse_margin: 5.0 # [m] the previous stop distance is reused if before the newly calculated one but not further than this margin
 
       ego:
         # additional margins to calculate the ego footprint used for collision detection

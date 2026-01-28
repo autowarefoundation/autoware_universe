@@ -17,6 +17,7 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -30,9 +31,11 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
+#include <lanelet2_core/utility/Utilities.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
@@ -71,8 +74,17 @@ lanelet::ConstLanelets calculate_ignored_lanelets(
 {
   lanelet::ConstLanelets ignored_lanelets;
   // ignore lanelets directly preceding a trajectory lanelet
+  constexpr auto ignore_distance = 10.0;
   for (const auto & trajectory_lanelet : trajectory_lanelets) {
-    for (const auto & ll : route_handler.getPreviousLanelets(trajectory_lanelet)) {
+    const auto succeeding_sequences = lanelet::utils::query::getSucceedingLaneletSequences(
+      route_handler.getRoutingGraphPtr(), trajectory_lanelet, ignore_distance);
+    auto ignored_sequences =
+      route_handler.getPrecedingLaneletSequence(trajectory_lanelet, ignore_distance);
+    ignored_sequences.insert(
+      ignored_sequences.end(), std::make_move_iterator(succeeding_sequences.begin()),
+      std::make_move_iterator(succeeding_sequences.end()));
+    ignored_sequences.push_back(route_handler.getNextLanelets(trajectory_lanelet));
+    for (const auto & ll : lanelet::utils::concatenate(ignored_sequences)) {
       const auto is_trajectory_lanelet = contains_lanelet(trajectory_lanelets, ll.id());
       if (!is_trajectory_lanelet) ignored_lanelets.push_back(ll);
     }
@@ -128,8 +140,9 @@ void calculate_out_lanelet_rtree(
   const auto pose_beyond = autoware_utils::calc_offset_pose(
     ego_data.trajectory_points.back().pose, params.front_offset, 0.0, 0.0, 0.0);
   trajectory_ls.emplace_back(pose_beyond.position.x, pose_beyond.position.y);
-  const auto trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
-  const auto ignored_lanelets = calculate_ignored_lanelets(trajectory_lanelets, route_handler);
+  ego_data.trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
+  const auto ignored_lanelets =
+    calculate_ignored_lanelets(ego_data.trajectory_lanelets, route_handler);
 
   const auto max_ego_footprint_offset = std::max({
     params.front_offset + params.extra_front_offset,
@@ -149,8 +162,8 @@ void calculate_out_lanelet_rtree(
     end_strategy, circle_strategy);
 
   ego_data.out_lanelets = calculate_out_lanelets(
-    route_handler.getLaneletMapPtr()->laneletLayer, trajectory_footprints, trajectory_lanelets,
-    ignored_lanelets);
+    route_handler.getLaneletMapPtr()->laneletLayer, trajectory_footprints,
+    ego_data.trajectory_lanelets, ignored_lanelets);
   ego_data.out_lanelets_rtree = calculate_out_lanelet_rtree(ego_data.out_lanelets);
 }
 }  // namespace autoware::motion_velocity_planner::out_of_lane

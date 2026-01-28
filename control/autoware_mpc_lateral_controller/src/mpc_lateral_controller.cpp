@@ -21,8 +21,9 @@
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics.hpp"
 #include "autoware/mpc_lateral_controller/vehicle_model/vehicle_model_bicycle_kinematics_no_delay.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
-#include "tf2/utils.h"
 #include "tf2_ros/create_timer_ros.h"
+
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -282,8 +283,6 @@ trajectory_follower::LateralOutput MpcLateralController::run(
     RCLCPP_ERROR(logger_, "MPC failed due to %s", mpc_solved_status.reason.c_str());
   }
   m_mpc_solved_status = mpc_solved_status;  // for diagnostic updater
-
-  diag_updater_->force_update();
 
   // reset previous MPC result
   // Note: When a large deviation from the trajectory occurs, the optimization stops and

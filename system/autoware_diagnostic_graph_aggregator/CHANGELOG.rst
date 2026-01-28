@@ -2,6 +2,39 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(diagnostic_graph_aggregator): "var" substitution support (`#11802 <https://github.com/autowarefoundation/autoware_universe/issues/11802>`_)
+  * implement vars substitution
+  * add test
+  * update launch
+  * update doc
+  * add parameter passing
+  * fix [build/include_what_you_use]
+  * format code
+  * format table
+  * unify same namespace block
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * refactor(autoware_diagnostic_graph_aggregator): use YAML map format for graph_vars parameter
+  * update path.md
+  ---------
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Autumn60, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* docs(diagnostic_graph_aggregator): add readme for latch and hysteresis (`#11174 <https://github.com/autowarefoundation/autoware_universe/issues/11174>`_)
+  * docs(diagnostic_graph_aggregator): add readme for latch and hysteresis
+  * fix latch description
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(diagnostic_graph_aggregator): diagnostic graph test interface (`#10455 <https://github.com/autowarefoundation/autoware_universe/issues/10455>`_)

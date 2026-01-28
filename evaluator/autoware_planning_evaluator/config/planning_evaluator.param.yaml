@@ -21,6 +21,8 @@
       - stability_frechet
       - obstacle_distance
       - obstacle_ttc
+      - obstacle_pet
+      - obstacle_drac
       - modified_goal_longitudinal_deviation
       - modified_goal_lateral_deviation
       - modified_goal_yaw_deviation
@@ -48,6 +50,8 @@
       - stability_frechet
       - obstacle_distance
       - obstacle_ttc
+      - obstacle_pet
+      - obstacle_drac
       - modified_goal_longitudinal_deviation
       - modified_goal_lateral_deviation
       - modified_goal_yaw_deviation
@@ -63,8 +67,14 @@
         max_dist_m: 5.0 # [m] maximum distance from ego along the trajectory to use for calculation
         max_time_s: 3.0 # [s] maximum time ahead of ego along the trajectory to use for calculation
 
-    obstacle:
-      dist_thr_m: 1.0 # [m] distance between ego and the obstacle below which a collision is considered
+    obstacle: # parameters for obstacle metrics calculation
+      worst_only: true # if true, only the worst obstacle metric value is published
+      use_ego_traj_vel: false # if true, the planned trajectory velocity is used
+      collision_thr_m: 0.0 # [m] distance threshold to consider a collision occurs between object footprints and ego trajectory footprints
+      stop_velocity_mps: 0.2777 # [m/s] velocity threshold to consider the object or ego is static, used for speed up the calculation
+
+      min_time_interval_s: 0.05 # [s] minimum time interval between two successive points to use for ego trajectory resampling to save calculation.
+      min_spatial_interval_m: 0.1 # [m] minimum spatial interval between two successive points to use for ego trajectory resampling to save calculation.
 
     stop_decision:
       topic_prefix: /planning/planning_factors/ # topic prefix for planning factors

@@ -175,7 +175,11 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedEgoPolygon)
   vehicle_info.max_longitudinal_offset_m = 4.0;
   vehicle_info.vehicle_width_m = 2.0;
   vehicle_info.rear_overhang_m = 1.0;
-  CollisionCheckDebug debug;
+  vehicle_info.front_overhang_m = 4.0;
+  vehicle_info.wheel_base_m = 0.0;
+  vehicle_info.left_overhang_m = 1.0;
+  vehicle_info.right_overhang_m = 1.0;
+  vehicle_info.wheel_tread_m = 0.0;
 
   {
     Pose ego_pose;
@@ -186,8 +190,8 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedEgoPolygon)
     const double lat_margin = 2.0;
     const bool is_stopped_object = false;
 
-    const auto polygon = createExtendedPolygon(
-      ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object, debug);
+    const auto polygon =
+      createExtendedPolygon(ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object);
 
     EXPECT_EQ(polygon.outer().size(), static_cast<unsigned int>(5));
 
@@ -214,8 +218,8 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedEgoPolygon)
     const double lat_margin = 2.0;
     const bool is_stopped_object = false;
 
-    const auto polygon = createExtendedPolygon(
-      ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object, debug);
+    const auto polygon =
+      createExtendedPolygon(ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object);
 
     EXPECT_EQ(polygon.outer().size(), static_cast<unsigned int>(5));
 
@@ -242,8 +246,8 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedEgoPolygon)
     const double lat_margin = 2.0;
     const bool is_stopped_object = false;
 
-    const auto polygon = createExtendedPolygon(
-      ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object, debug);
+    const auto polygon =
+      createExtendedPolygon(ego_pose, vehicle_info, lon_length, lat_margin, is_stopped_object);
 
     EXPECT_EQ(polygon.outer().size(), static_cast<unsigned int>(5));
 
@@ -291,12 +295,10 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedObjPolygon)
     const double lat_margin = 2.0;
     const bool is_stopped_object = false;
 
-    CollisionCheckDebug debug;
-
     PoseWithVelocityAndPolygonStamped obj_pose_with_poly(
       0.0, obj_pose, 0.0, autoware_utils::to_polygon2d(obj_pose, shape));
     const auto polygon =
-      createExtendedPolygon(obj_pose_with_poly, lon_length, lat_margin, is_stopped_object, debug);
+      createExtendedPolygon(obj_pose_with_poly, lon_length, lat_margin, is_stopped_object);
 
     EXPECT_EQ(polygon.outer().size(), static_cast<unsigned int>(5));
 

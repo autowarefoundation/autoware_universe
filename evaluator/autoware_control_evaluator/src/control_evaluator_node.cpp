@@ -351,7 +351,9 @@ void ControlEvaluatorNode::AddKinematicStateMetricMsg(
   AddMetricMsg(Metric::velocity, odom.twist.twist.linear.x);
 
   const auto & acc = accel_stamped.accel.accel.linear.x;
+  const auto lateral_acc = std::abs(accel_stamped.accel.accel.linear.y);
   AddMetricMsg(Metric::acceleration, acc);
+  AddMetricMsg(Metric::lateral_acceleration_abs, lateral_acc);
 
   const auto jerk = [&]() {
     if (!prev_acc_stamped_.has_value()) {
@@ -437,18 +439,20 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
   const Pose ego_pose = odom.pose.pose;
+  const auto & goal_pose = route_handler_.getGoalPose();
+
   const double longitudinal_deviation_value =
-    metrics::calcLongitudinalDeviation(route_handler_.getGoalPose(), ego_pose.position);
+    metrics::calcLongitudinalDeviation(goal_pose, ego_pose.position);
   const double longitudinal_deviation_value_abs = std::abs(longitudinal_deviation_value);
   const double lateral_deviation_value =
-    metrics::calcLateralDeviation(route_handler_.getGoalPose(), ego_pose.position);
+    metrics::calcLateralDeviation(goal_pose, ego_pose.position);
   const double lateral_deviation_value_abs = std::abs(lateral_deviation_value);
-  const double yaw_deviation_value =
-    metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
+  const double yaw_deviation_value = metrics::calcYawDeviation(goal_pose, ego_pose);
   const double yaw_deviation_value_abs = std::abs(yaw_deviation_value);
 
   const bool is_ego_stopped_near_goal =
-    std::abs(longitudinal_deviation_value) < 3.0 && ego_speed_ < 0.001;
+    autoware_utils::calc_distance2d(ego_pose.position, goal_pose.position) < 3.0 &&
+    ego_speed_ < 0.001;
 
   AddMetricMsg(
     Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
@@ -565,6 +569,15 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   AddMetricMsg(Metric::closest_object_distance, minimum_distance);
 }
 
+void ControlEvaluatorNode::AddVelocityDeviationMetricMsg(
+  const Trajectory & traj, const Pose & ego_pose, const Twist & twist)
+{
+  const double metric_value =
+    metrics::calcLongitudinalVelocityDeviation(traj, ego_pose, twist.linear.x);
+
+  AddMetricMsg(Metric::longitudinal_velocity_deviation, metric_value);
+}
+
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -594,6 +607,7 @@ void ControlEvaluatorNode::onTimer()
     if (traj && !traj->points.empty()) {
       AddLateralDeviationMetricMsg(*traj, ego_pose.position);
       AddYawDeviationMetricMsg(*traj, ego_pose);
+      AddVelocityDeviationMetricMsg(*traj, ego_pose, odom->twist.twist);
     }
 
     getRouteData();

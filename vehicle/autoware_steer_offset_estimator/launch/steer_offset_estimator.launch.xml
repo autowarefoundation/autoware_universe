@@ -6,21 +6,16 @@
   <!-- get wheel base from vehicle info -->
   <include file="$(find-pkg-share autoware_global_parameter_loader)/launch/global_params.launch.py"/>
 
-  <!-- ndt twist publisher -->
-  <include file="$(find-pkg-share autoware_pose2twist)/launch/pose2twist.launch.xml">
-    <arg name="input_pose_topic" value="/localization/pose_estimator/pose"/>
-    <arg name="output_twist_topic" value="estimate_twist"/>
-  </include>
-
   <!-- steer offset estimator -->
-  <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator" name="steer_offset_estimator" output="screen">
+  <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator_node" name="steer_offset_estimator" output="screen">
     <param from="$(var config_file)"/>
     <param from="$(var initial_steer_offset_param_path)"/>
     <param name="initial_steer_offset_param_name" value="$(var initial_steer_offset_param_name)"/>
-    <remap from="~/input/twist" to="estimate_twist"/>
+    <remap from="~/input/pose" to="/localization/pose_estimator/pose"/>
     <remap from="~/input/steer" to="/vehicle/status/steering_status"/>
     <remap from="~/output/steering_offset" to="~/steering_offset"/>
     <remap from="~/output/steering_offset_covariance" to="~/steering_offset_covariance"/>
     <remap from="~/output/steering_offset_error" to="~/steering_offset_error"/>
+    <remap from="~/output/debug_info" to="~/debug_info"/>
   </node>
 </launch>

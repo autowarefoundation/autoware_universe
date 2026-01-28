@@ -33,6 +33,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -94,7 +95,7 @@ public:
 
   virtual bool hasFinishedAbort() const = 0;
 
-  virtual bool isLaneChangeRequired() = 0;
+  virtual std::optional<std::string> isLaneChangeRequired() = 0;
 
   virtual bool isAbortState() const = 0;
 
@@ -151,6 +152,11 @@ public:
     return common_data_ptr_->lanes_ptr->current;
   }
 
+  const lanelet::ConstLanelets & get_target_lanes() const
+  {
+    return common_data_ptr_->lanes_ptr->target;
+  }
+
   const BehaviorPathPlannerParameters & getCommonParam() const { return planner_data_->parameters; }
 
   LaneChangeParameters getLaneChangeParam() const { return *lane_change_parameters_; }
@@ -189,6 +195,7 @@ public:
     common_data_ptr_->lc_param_ptr = lane_change_parameters_;
     common_data_ptr_->lc_type = type_;
     common_data_ptr_->direction = direction_;
+    common_data_ptr_->current_acceleration = data->self_acceleration;
   }
 
   void setTimeKeeper(const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper)
@@ -233,6 +240,8 @@ public:
   virtual TurnSignalInfo get_current_turn_signal_info() const = 0;
 
   virtual bool is_near_regulatory_element() const = 0;
+
+  virtual bool is_ego_in_current_or_target_lanes() const = 0;
 
 protected:
   virtual bool isValidPath(const PathWithLaneId & path) const = 0;

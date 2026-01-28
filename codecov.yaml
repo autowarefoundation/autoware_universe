@@ -122,12 +122,8 @@ component_management:
     - component_id: localization-tier-iv-maintained-packages
       name: Localization TIER IV Maintained Packages
       paths:
-        - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
-        - localization/autoware_localization_util/**
         - localization/autoware_pose_instability_detector/**
-        - localization/autoware_stop_filter/**
-        - localization/autoware_twist2accel/**
 
     - component_id: map-tier-iv-maintained-packages
       name: Map TIER IV Maintained Packages
@@ -199,12 +195,10 @@ component_management:
         # - planning/autoware_planning_topic_converter/**
         - planning/autoware_planning_validator/**
         # - planning/autoware_remaining_distance_time_calculator/**
-        - planning/autoware_route_handler/**
         - planning/autoware_rtc_interface/**
         - planning/autoware_scenario_selector/**
         - planning/autoware_static_centerline_generator/**
         - planning/autoware_surround_obstacle_checker/**
-        - planning/autoware_velocity_smoother/**
         ##### behavior_path_planner #####
         # - planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/**
         - planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/**
@@ -225,11 +219,7 @@ component_management:
         # - planning/behavior_velocity_planner/autoware_behavior_velocity_no_drivable_lane_module/**
         - planning/behavior_velocity_planner/autoware_behavior_velocity_no_stopping_area_module/**
         # - planning/behavior_velocity_planner/autoware_behavior_velocity_occlusion_spot_module/**
-        - planning/behavior_velocity_planner/autoware_behavior_velocity_planner/**
-        - planning/behavior_velocity_planner/autoware_behavior_velocity_planner_common/**
-        - planning/behavior_velocity_planner/autoware_behavior_velocity_run_out_module/**
         # - planning/behavior_velocity_planner/autoware_behavior_velocity_speed_bump_module/**
-        - planning/behavior_velocity_planner/autoware_behavior_velocity_stop_line_module/**
         # - planning/behavior_velocity_planner/autoware_behavior_velocity_template_module/**
         - planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/**
         - planning/behavior_velocity_planner/autoware_behavior_velocity_virtual_traffic_light_module/**

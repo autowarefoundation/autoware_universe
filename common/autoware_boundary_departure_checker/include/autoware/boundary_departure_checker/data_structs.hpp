@@ -17,16 +17,16 @@
 
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_geometry/pose_deviation.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <boost/functional/hash.hpp>
 #include <boost/geometry/geometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -194,6 +194,19 @@ struct IdxForRTreeSegment
   }
 };
 
+struct IdxForRTreeSegmentHash
+{
+  size_t operator()(const IdxForRTreeSegment & s) const noexcept
+  {
+    size_t seed = 0;
+    // Boost hash_combine is a good choice for combining hashes
+    boost::hash_combine(seed, s.linestring_id);
+    boost::hash_combine(seed, s.segment_start_idx);
+    boost::hash_combine(seed, s.segment_end_idx);
+    return seed;
+  }
+};
+
 using SegmentWithIdx = std::pair<Segment2d, IdxForRTreeSegment>;
 using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
 using BoundarySideWithIdx = Side<std::vector<SegmentWithIdx>>;
@@ -228,7 +241,7 @@ struct DeparturePoint
 
   [[nodiscard]] Point to_geom_pt(const double z = 0.0) const
   {
-    return autoware_utils::to_msg(point.to_3d(z));
+    return autoware_utils_geometry::to_msg(point.to_3d(z));
   }
 
   bool operator<(const DeparturePoint & other) const
@@ -258,20 +271,6 @@ struct CriticalDeparturePoint : DeparturePoint
 
 using CriticalDeparturePoints = std::vector<CriticalDeparturePoint>;
 
-struct DepartureInterval
-{
-  TrajectoryPoint start;
-  TrajectoryPoint end;
-  SideKey side_key;
-  double start_dist_on_traj;
-  double end_dist_on_traj;
-
-  bool start_at_traj_front{false};
-
-  DeparturePoints candidates;
-};
-using DepartureIntervals = std::vector<DepartureInterval>;
-
 using Footprint = LinearRing2d;
 using Footprints = std::vector<Footprint>;
 
@@ -281,6 +280,9 @@ struct AbnormalitiesData
   Abnormalities<Footprints> footprints;
   BoundarySideWithIdx boundary_segments;
   Abnormalities<ProjectionsToBound> projections_to_bound;
+  ClosestProjectionsToBound closest_projections_to_bound;
+  Side<DeparturePoints> departure_points;
+  CriticalDeparturePoints critical_departure_points;
 };
 }  // namespace autoware::boundary_departure_checker
 

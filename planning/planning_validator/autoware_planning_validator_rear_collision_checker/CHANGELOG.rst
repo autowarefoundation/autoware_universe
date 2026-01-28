@@ -2,6 +2,35 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.48.0 (2025-11-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lanelet2_utils): replace ported functions from autoware_lanelet2_extension (`#11593 <https://github.com/autowarefoundation/autoware_universe/issues/11593>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(rear_collision_checker): correct deviation judgment logic from current driving lane (`#11286 <https://github.com/autowarefoundation/autoware_universe/issues/11286>`_)
+  fix: correct deviation judgment logic from current driving lane
+* fix(rear_collision_checker): collision detection not triggered when no stop point before conflict area (`#11179 <https://github.com/autowarefoundation/autoware_universe/issues/11179>`_)
+  * fix: collision detection not triggered when no stop point before conflict area
+  * fix: incorrect distance calculation accuracy
+  * chore: add doxygen
+  ---------
+* feat(rear_collision_checker): add parameter to make collision detection behavior configurable (`#11151 <https://github.com/autowarefoundation/autoware_universe/issues/11151>`_)
+  * feat: add parameter to control diag output when stopping before conflict area is impossible
+  * feat: add lane-end yaw threshold for blind spot collision detection
+  * fix: base on review comment
+  * docs: README
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Satoshi OTA
+
+0.47.1 (2025-08-14)
+-------------------
+
 0.47.0 (2025-08-11)
 -------------------
 * feat(rear_collision_checker): support selecting safety metric from TTC or RSS (`#11072 <https://github.com/autowarefoundation/autoware_universe/issues/11072>`_)

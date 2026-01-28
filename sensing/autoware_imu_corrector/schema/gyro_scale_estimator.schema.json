@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for gyro scale estimator",
+  "type": "object",
+  "definitions": {
+    "gyro_scale_estimator": {
+      "type": "object",
+      "properties": {
+        "estimate_scale_init": {
+          "type": "number",
+          "description": "Initial scale estimation for scale.",
+          "default": 1.0
+        },
+        "min_allowed_scale": {
+          "type": "number",
+          "description": "Minimum allowed scale.",
+          "default": 0.9
+        },
+        "max_allowed_scale": {
+          "type": "number",
+          "description": "Maximum allowed scale.",
+          "default": 1.1
+        },
+        "threshold_to_estimate_scale": {
+          "type": "number",
+          "description": "Angular speed radians for scale estimation threshold.",
+          "default": 0.1
+        },
+        "percentage_scale_rate_allow_correct": {
+          "type": "number",
+          "description": "Scale changes above this value will trigger error.",
+          "default": 0.04
+        },
+        "alpha": {
+          "type": "number",
+          "description": "Complementary filter coefficient.",
+          "default": 0.99
+        },
+        "delay_gyro_ms": {
+          "type": "integer",
+          "description": "Gyro delay in milliseconds, tuned for vehicle, tune again if alpha_gyro or alpha_ndt_rate changes.",
+          "default": 170
+        },
+        "samples_filter_pose_rate": {
+          "type": "integer",
+          "description": "Number of samples for pose rate filter.",
+          "default": 2
+        },
+        "samples_filter_gyro_rate": {
+          "type": "integer",
+          "description": "Number of samples for gyro rate filter.",
+          "default": 6
+        },
+        "alpha_gyro": {
+          "type": "number",
+          "description": "Gyro low pass filter coefficient.",
+          "default": 0.0
+        },
+        "buffer_size_gyro": {
+          "type": "integer",
+          "description": "Size of the buffer to store gyro data.",
+          "default": 200
+        },
+        "alpha_ndt_rate": {
+          "type": "number",
+          "description": "Complementary filter coefficient for NDT rate.",
+          "default": 0.6
+        },
+        "ekf_rate": {
+          "type": "object",
+          "properties": {
+            "max_variance_p": {
+              "type": "number",
+              "description": "Initial variance.",
+              "default": 1e-8
+            },
+            "variance_p_after": {
+              "type": "number",
+              "description": "Variance after convergence.",
+              "default": 5e-9
+            },
+            "process_noise_q": {
+              "type": "number",
+              "description": "Estimated process noise.",
+              "default": 1e-14
+            },
+            "process_noise_q_after": {
+              "type": "number",
+              "description": "Process noise after convergence.",
+              "default": 1e-15
+            },
+            "measurement_noise_r": {
+              "type": "number",
+              "description": "Device measurement noise.",
+              "default": 0.00007
+            },
+            "measurement_noise_r_after": {
+              "type": "number",
+              "description": "Measurement noise after convergence.",
+              "default": 0.00005
+            },
+            "samples_to_init": {
+              "type": "integer",
+              "description": "Number of samples to update filtered scale.",
+              "default": 120
+            },
+            "min_covariance": {
+              "type": "number",
+              "description": "Minimum allowed covariance for scale estimation.",
+              "default": 1e-11
+            }
+          },
+          "required": [
+            "max_variance_p",
+            "variance_p_after",
+            "process_noise_q",
+            "process_noise_q_after",
+            "measurement_noise_r",
+            "measurement_noise_r_after",
+            "samples_to_init",
+            "min_covariance"
+          ]
+        },
+        "ekf_angle": {
+          "type": "object",
+          "properties": {
+            "process_noise_q_angle": {
+              "type": "number",
+              "description": "Process noise for angle estimation.",
+              "default": 1e-12
+            },
+            "variance_p_angle": {
+              "type": "number",
+              "description": "Initial variance for angle estimation.",
+              "default": 5e-9
+            },
+            "measurement_noise_r_angle": {
+              "type": "number",
+              "description": "Measurement noise for angle estimation.",
+              "default": 0.00005
+            },
+            "min_covariance_angle": {
+              "type": "number",
+              "description": "Minimum covariance for angle estimation.",
+              "default": 1e-11
+            },
+            "decay_coefficient": {
+              "type": "number",
+              "description": "Decay coefficient for EKF.",
+              "default": 0.99999998
+            }
+          },
+          "required": [
+            "process_noise_q_angle",
+            "variance_p_angle",
+            "measurement_noise_r_angle",
+            "min_covariance_angle",
+            "decay_coefficient"
+          ]
+        },
+        "scale_imu_injection": {
+          "type": "object",
+          "properties": {
+            "scale_on_purpose": {
+              "type": "number",
+              "description": "Scale to apply on purpose.",
+              "default": 1.0
+            },
+            "bias_on_purpose": {
+              "type": "number",
+              "description": "Bias to apply on purpose.",
+              "default": 0.0
+            },
+            "drift_scale": { "type": "number", "description": "Scale for drift.", "default": 0.0 },
+            "drift_bias": { "type": "number", "description": "Bias for drift.", "default": 0.0 }
+          },
+          "required": ["scale_on_purpose", "bias_on_purpose", "drift_scale", "drift_bias"]
+        },
+        "on_off_correction": {
+          "type": "object",
+          "properties": {
+            "correct_for_static_bias": {
+              "type": "boolean",
+              "description": "Enable/disable static bias correction.",
+              "default": true
+            },
+            "correct_for_dynamic_bias": {
+              "type": "boolean",
+              "description": "Enable/disable dynamic bias correction.",
+              "default": false
+            },
+            "correct_for_scale": {
+              "type": "boolean",
+              "description": "Enable/disable scale correction.",
+              "default": false
+            }
+          },
+          "required": ["correct_for_static_bias", "correct_for_dynamic_bias", "correct_for_scale"]
+        }
+      },
+      "required": [
+        "estimate_scale_init",
+        "min_allowed_scale",
+        "max_allowed_scale",
+        "threshold_to_estimate_scale",
+        "percentage_scale_rate_allow_correct",
+        "alpha",
+        "delay_gyro_ms",
+        "samples_filter_pose_rate",
+        "samples_filter_gyro_rate",
+        "alpha_gyro",
+        "buffer_size_gyro",
+        "alpha_ndt_rate",
+        "ekf_rate",
+        "ekf_angle",
+        "scale_imu_injection",
+        "on_off_correction"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": { "$ref": "#/definitions/gyro_scale_estimator" }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

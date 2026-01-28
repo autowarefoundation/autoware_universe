@@ -19,6 +19,7 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
 #include <diagnostic_msgs/msg/detail/diagnostic_status__struct.hpp>
@@ -53,6 +54,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     this, get_clock(), 100ms, std::bind(&PlanningEvaluatorNode::onTimer, this));
 
   // Parameters for metrics_calculator
+  metrics_calculator_.setVehicleInfo(vehicle_info_);
+  obstacle_metrics_calculator_.setVehicleInfo(vehicle_info_);
   metrics_calculator_.parameters.trajectory.min_point_dist_m =
     declare_parameter<double>("trajectory.min_point_dist_m");
   metrics_calculator_.parameters.trajectory.lookahead.max_dist_m =
@@ -61,8 +64,23 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
     declare_parameter<double>("trajectory.lookahead.max_time_s");
   metrics_calculator_.parameters.trajectory.evaluation_time_s =
     declare_parameter<double>("trajectory.evaluation_time_s");
-  metrics_calculator_.parameters.obstacle.dist_thr_m =
-    declare_parameter<double>("obstacle.dist_thr_m");
+
+  // Parameters for obstacle_metrics_calculator
+  obstacle_metrics_calculator_.parameters.worst_only =
+    declare_parameter<bool>("obstacle.worst_only");
+  obstacle_metrics_calculator_.parameters.use_ego_traj_vel =
+    declare_parameter<bool>("obstacle.use_ego_traj_vel");
+  obstacle_metrics_calculator_.parameters.collision_thr_m =
+    declare_parameter<double>("obstacle.collision_thr_m");
+  obstacle_metrics_calculator_.parameters.stop_velocity_mps =
+    declare_parameter<double>("obstacle.stop_velocity_mps");
+  obstacle_metrics_calculator_.parameters.min_time_interval_s =
+    declare_parameter<double>("obstacle.min_time_interval_s");
+  obstacle_metrics_calculator_.parameters.min_spatial_interval_m =
+    declare_parameter<double>("obstacle.min_spatial_interval_m");
+
+  obstacle_metrics_calculator_.parameters.limit_min_accel =
+    declare_parameter<double>("limit.min_acc");  // get from common.param.yaml
 
   // Parameters for metrics_accumulator
   metrics_accumulator_.planning_factor_accumulator.parameters.time_count_threshold_s =
@@ -85,11 +103,13 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   ego_frame_str_ = declare_parameter<std::string>("ego_frame");
 
   // List of metrics to publish and to output
-
   for (const std::string & metric_name :
        declare_parameter<std::vector<std::string>>("metrics_for_publish")) {
     Metric metric = str_to_metric.at(metric_name);
     metrics_for_publish_.insert(metric);
+
+    // Set obstacle metrics need flag
+    obstacle_metrics_calculator_.setMetricNeed(metric, true);
   }
 
   for (const std::string & metric_name :
@@ -269,6 +289,18 @@ void PlanningEvaluatorNode::AddKinematicStateMetricMsg(
   return;
 }
 
+void PlanningEvaluatorNode::AddObstacleMsg(
+  const Metric & metric, const Accumulator<double> & metric_stat, const std::string & object_name)
+{
+  const std::string base_name = metric_to_str.at(metric) + "/";
+  MetricMsg metric_msg;
+  {
+    metric_msg.name = base_name + object_name;
+    metric_msg.value = boost::lexical_cast<decltype(metric_msg.value)>(metric_stat.min());
+    metrics_msg_.metric_array.push_back(metric_msg);
+  }
+}
+
 void PlanningEvaluatorNode::AddMetricMsg(
   const Metric & metric, const Accumulator<double> & metric_stat)
 {
@@ -352,11 +384,11 @@ void PlanningEvaluatorNode::onTrajectory(
     return;
   }
 
-  auto start = now();
+  // Calculate planning trajectory metrics
+  const auto trajectory_start = now();
 
   for (Metric metric : metrics_for_publish_) {
-    const auto metric_stat =
-      metrics_calculator_.calculate(Metric(metric), *traj_msg, vehicle_info_.vehicle_length_m);
+    const auto metric_stat = metrics_calculator_.calculate(Metric(metric), *traj_msg);
     if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }
@@ -368,8 +400,38 @@ void PlanningEvaluatorNode::onTrajectory(
   }
 
   metrics_calculator_.setPreviousTrajectory(*traj_msg);
-  auto runtime = (now() - start).seconds();
-  RCLCPP_DEBUG(get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime * 1e3);
+  const auto runtime_trajectory = (now() - trajectory_start).seconds();
+  RCLCPP_DEBUG(
+    get_logger(), "Planning evaluation calculation time: %2.2f ms", runtime_trajectory * 1e3);
+
+  // Calculate obstacle metrics
+  const auto obstacle_start = now();
+
+  obstacle_metrics_calculator_.setTrajectory(*traj_msg);
+  obstacle_metrics_calculator_.calculateMetrics();
+
+  for (const auto & metric : obstacle_metrics_calculator_.obstacle_metric_types) {
+    std::vector<std::pair<std::string, Accumulator<double>>> metrics_pre_object =
+      obstacle_metrics_calculator_.getMetric(metric);
+    if (metrics_pre_object.empty()) {
+      continue;
+    }
+
+    for (const auto & [obj_id, metric_stat] : metrics_pre_object) {
+      AddObstacleMsg(metric, metric_stat, obj_id);
+      if (output_metrics_ && obj_id == "worst") {
+        const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
+        metrics_accumulator_.accumulate(output_metric, metric_stat);
+      }
+    }
+  }
+
+  obstacle_metrics_calculator_.clearData();
+
+  const auto runtime_obstacle = (now() - obstacle_start).seconds();
+  RCLCPP_DEBUG(
+    get_logger(), "Planning evaluation obstacle metrics calculation time: %2.2f ms",
+    runtime_obstacle * 1e3);
 }
 
 void PlanningEvaluatorNode::onModifiedGoal(
@@ -379,7 +441,11 @@ void PlanningEvaluatorNode::onModifiedGoal(
   if (!modified_goal_msg || !ego_state_ptr) {
     return;
   }
-  auto start = now();
+  const auto start = now();
+  const auto is_ego_stopped_near_goal =
+    std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
+    autoware_utils::calc_distance2d(
+      ego_state_ptr->pose.pose.position, modified_goal_msg->pose.position) < 3.0;
 
   for (Metric metric : metrics_for_publish_) {
     const auto metric_stat = metrics_calculator_.calculate(
@@ -388,14 +454,13 @@ void PlanningEvaluatorNode::onModifiedGoal(
       continue;
     }
     AddMetricMsg(metric, *metric_stat);
-    if (
-      output_metrics_ && std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
-      metric_stat->mean() < 3.0) {  // only record when ego stop close to the target in 3m
+    if (output_metrics_ && is_ego_stopped_near_goal) {  // only record when ego stop close to the
+                                                        // target in 3m
       const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
       metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }
   }
-  auto runtime = (now() - start).seconds();
+  const auto runtime = (now() - start).seconds();
   RCLCPP_DEBUG(
     get_logger(), "Planning evaluation modified goal deviation calculation time: %2.2f ms",
     runtime * 1e3);
@@ -406,6 +471,7 @@ void PlanningEvaluatorNode::onOdometry(const Odometry::ConstSharedPtr odometry_m
   if (!odometry_msg) return;
   metrics_calculator_.setEgoPose(*odometry_msg);
   metrics_accumulator_.setEgoPose(*odometry_msg);
+  obstacle_metrics_calculator_.setEgoPose(*odometry_msg);
   {
     getRouteData();
     if (route_handler_.isHandlerReady() && odometry_msg) {
@@ -432,7 +498,7 @@ void PlanningEvaluatorNode::onObjects(const PredictedObjects::ConstSharedPtr obj
   if (!objects_msg) {
     return;
   }
-  metrics_calculator_.setPredictedObjects(*objects_msg);
+  obstacle_metrics_calculator_.setPredictedObjects(*objects_msg);
 }
 
 void PlanningEvaluatorNode::onSteering(const SteeringReport::ConstSharedPtr steering_msg)

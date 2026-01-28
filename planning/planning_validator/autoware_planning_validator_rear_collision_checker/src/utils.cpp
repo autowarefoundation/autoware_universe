@@ -17,7 +17,6 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -441,7 +440,7 @@ auto check_turn_behavior(
       total_length - ego_coordinate_on_arc.length - vehicle_info.max_longitudinal_offset_m;
     const std::string turn_direction = lane.attributeOr("turn_direction", "none");
 
-    total_length += lanelet::utils::getLaneletLength2d(lane);
+    total_length += lanelet::geometry::length2d(lane);
 
     const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
 
@@ -505,21 +504,29 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
 {
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
 
+  const autoware_utils_geometry::Polygon2d combine_lanelet_boost = [&]() {
+    autoware_utils_geometry::Polygon2d poly;
+    boost::geometry::convert(combine_lanelet.polygon2d().basicPolygon(), poly);
+    return poly;
+  }();
+
   for (auto & [original, _] : detection_areas) {
     if (original.empty()) {
       continue;
     }
 
-    lanelet::BasicPolygons2d polygons2d;
-    boost::geometry::difference(
-      lanelet::utils::to2D(original), combine_lanelet.polygon2d().basicPolygon(), polygons2d);
+    autoware_utils_geometry::Polygon2d orig_polygon_boost;
+    boost::geometry::convert(lanelet::utils::to2D(original), orig_polygon_boost);
+
+    autoware_utils_geometry::MultiPolygon2d polygons2d;
+    boost::geometry::difference(orig_polygon_boost, combine_lanelet_boost, polygons2d);
 
     if (polygons2d.empty()) {
       continue;
     }
 
     lanelet::BasicPolygon3d polygon3d;
-    for (const auto & p : polygons2d.front()) {
+    for (const auto & p : polygons2d.front().outer()) {
       polygon3d.push_back(lanelet::BasicPoint3d(p.x(), p.y(), original.front().z()));
     }
 
@@ -602,7 +609,7 @@ auto get_previous_polygons_with_lane_recursively(
   }
 
   if (route_handler->getPreviousLanelets(target_lanes.front()).empty()) {
-    const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
+    const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
     const auto expand_lanelets =
       lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
     const auto polygon = lanelet::utils::getPolygonFromArcLength(
@@ -616,7 +623,7 @@ auto get_previous_polygons_with_lane_recursively(
       const auto overlap_current_lanes = std::any_of(
         current_lanes.begin(), current_lanes.end(),
         [&prev_lane](const auto & lane) { return lane.id() == prev_lane.id(); });
-      const auto total_length = lanelet::utils::getLaneletLength2d(target_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
       if (overlap_current_lanes) {
         const auto expand_lanelets =
           lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
@@ -632,7 +639,7 @@ auto get_previous_polygons_with_lane_recursively(
     pushed_lanes.insert(pushed_lanes.begin(), prev_lane);
 
     {
-      const auto total_length = lanelet::utils::getLaneletLength2d(pushed_lanes);
+      const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(pushed_lanes));
       if (total_length > s2) {
         const auto expand_lanelets =
           lanelet::utils::getExpandedLanelets(pushed_lanes, left_offset, -1.0 * right_offset);

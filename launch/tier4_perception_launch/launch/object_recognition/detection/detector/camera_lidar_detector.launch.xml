@@ -68,6 +68,10 @@
   <arg name="output/rule_detector/objects"/>
   <arg name="output/clustering/cluster_objects"/>
 
+  <arg name="camera_2d_detector/model_path"/>
+  <arg name="camera_2d_detector/label_path"/>
+  <arg name="camera_2d_detector/color_map_path"/>
+
   <!-- Internal interfaces -->
   <let name="pointpainting/input/pointcloud" value="$(var input/pointcloud)"/>
   <let name="pointpainting/output/objects" value="$(var output/ml_detector/objects)"/>
@@ -92,8 +96,8 @@
   <let name="detected_object_feature_remover/input/objects_with_feature" value="$(var shape_estimation2/output/objects)"/>
   <let name="detected_object_feature_remover/output/objects" value="$(var output/rule_detector/objects)"/>
 
-  <!-- Jetson AGX -->
-  <!-- <include file="$(find-pkg-share autoware_tensorrt_yolox)/launch/multiple_yolox.launch.xml">
+  <arg name="enable_2d_detection" default="false" description="true: when 2d detection yolox model run the same machine, false: when it run in separate machine"/>
+  <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_2d_detector.launch.xml" if="$(var enable_2d_detection)">
     <arg name="image_raw0" value="$(var input/camera0/image)"/>
     <arg name="image_raw1" value="$(var input/camera1/image)"/>
     <arg name="image_raw2" value="$(var input/camera2/image)"/>
@@ -103,7 +107,10 @@
     <arg name="image_raw6" value="$(var input/camera6/image)"/>
     <arg name="image_raw7" value="$(var input/camera7/image)"/>
     <arg name="image_number" value="$(var number_of_cameras)"/>
-  </include> -->
+    <arg name="camera_2d_detector/model_path" value="$(var camera_2d_detector/model_path)"/>
+    <arg name="camera_2d_detector/label_path" value="$(var camera_2d_detector/label_path)"/>
+    <arg name="camera_2d_detector/color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
+  </include>
 
   <!-- PointPainting -->
   <group if="$(eval &quot;'$(var lidar_detection_model_type)'=='pointpainting'&quot;)">

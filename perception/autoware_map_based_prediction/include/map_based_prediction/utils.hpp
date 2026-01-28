@@ -21,13 +21,13 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LaneletMap.h>
-#include <tf2/utils.h>
 
 #include <deque>
 #include <memory>
@@ -127,6 +127,8 @@ LaneletsData getCurrentLanelets(
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet, const double sigma_lateral_offset,
   const double sigma_yaw_angle_deg);
+double lateral_distance_to_lanelet_bounds(
+  const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Point & point);
 
 }  // namespace utils
 

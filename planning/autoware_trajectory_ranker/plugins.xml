@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<library path="autoware_trajectory_ranker_plugins">
+  <!-- Lateral Acceleration Metric -->
+  <class type="autoware::trajectory_ranker::metrics::LateralAcceleration"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates lateral acceleration (lateral G-force)
+    </description>
+  </class>
+
+  <!-- Longitudinal Jerk Metric -->
+  <class type="autoware::trajectory_ranker::metrics::LongitudinalJerk"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates longitudinal jerk (rate of acceleration change)
+    </description>
+  </class>
+
+  <!-- Time To Collision Metric -->
+  <class type="autoware::trajectory_ranker::metrics::TimeToCollision"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates time to collision with obstacles
+    </description>
+  </class>
+
+  <!-- Distance Metric -->
+  <class type="autoware::trajectory_ranker::metrics::TravelDistance"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates the travel distance along the trajectory
+    </description>
+  </class>
+
+  <!-- Lateral Deviation Metric -->
+  <class type="autoware::trajectory_ranker::metrics::LateralDeviation"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates lateral deviation from preferred lane centerline
+    </description>
+  </class>
+
+  <!-- Steering Consistency Metric -->
+  <class type="autoware::trajectory_ranker::metrics::SteeringConsistency"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates steering consistency and smoothness
+    </description>
+  </class>
+
+  <!-- Trajectory Consistency Metric -->
+  <class type="autoware::trajectory_ranker::metrics::TrajectoryConsistency"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates trajectory endpoint consistency (lateral variance in ego frame)
+    </description>
+  </class>
+</library>

@@ -15,21 +15,26 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__DIMENSIONS_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__DIMENSIONS_HPP_
 
+#include "autoware/diffusion_planner/conversion/lanelet.hpp"
+
 #include <array>
 #include <cstdint>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
-inline constexpr int64_t NUM_SEGMENTS_IN_LANE = 70;
+inline constexpr int64_t NUM_SEGMENTS_IN_LANE = 140;
 inline constexpr int64_t NUM_SEGMENTS_IN_ROUTE = 25;
+inline constexpr int64_t NUM_POLYGONS = 10;
+inline constexpr int64_t NUM_LINE_STRINGS = 10;
 inline constexpr int64_t MAX_NUM_NEIGHBORS = 32;
-inline constexpr int64_t POINTS_PER_SEGMENT = 20;  //!< Number of points in each lane segment.
+inline constexpr int64_t MAX_NUM_AGENTS = MAX_NUM_NEIGHBORS + 1;  // Including ego
+inline constexpr int64_t POINTS_PER_SEGMENT = 20;
+inline constexpr int64_t POINTS_PER_POLYGON = 40;
+inline constexpr int64_t POINTS_PER_LINE_STRING = 20;
 // Number of columns in a segment matrix
 // (X,Y,dX,dY,LeftBoundX,LeftBoundY,RightBoundX,RightBoundY,TrafficLightEncoding(Dim5),Speed Limit)
 inline constexpr int64_t TRAFFIC_LIGHT_ONE_HOT_DIM = 5;
-inline constexpr int64_t SEGMENT_POINT_DIM = 8 + TRAFFIC_LIGHT_ONE_HOT_DIM;
-inline constexpr int64_t FULL_MATRIX_ROWS = SEGMENT_POINT_DIM + 2;
 
 inline constexpr int64_t EGO_AGENT_PAST_IDX_X = 0;
 inline constexpr int64_t EGO_AGENT_PAST_IDX_Y = 1;
@@ -51,15 +56,27 @@ inline constexpr int64_t TRAFFIC_LIGHT_YELLOW = 9;
 inline constexpr int64_t TRAFFIC_LIGHT_RED = 10;
 inline constexpr int64_t TRAFFIC_LIGHT_WHITE = 11;
 inline constexpr int64_t TRAFFIC_LIGHT_NO_TRAFFIC_LIGHT = 12;
-inline constexpr int64_t SPEED_LIMIT = 13;
-inline constexpr int64_t LANE_ID = 14;
+inline constexpr int64_t LINE_TYPE_LEFT_START = 13;
+inline constexpr int64_t LINE_TYPE_RIGHT_START = LINE_TYPE_LEFT_START + LINE_TYPE_NUM;
+inline constexpr int64_t SEGMENT_POINT_DIM = LINE_TYPE_RIGHT_START + LINE_TYPE_NUM;
 
-inline constexpr int64_t INPUT_T = 20;
-inline constexpr int64_t OUTPUT_T = 80;  // Output timestamp number
-inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, MAX_NUM_NEIGHBORS + 1, OUTPUT_T, 4};
-inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, 4};
+inline constexpr int64_t INPUT_T = 30;
+inline constexpr int64_t INPUT_T_WITH_CURRENT = INPUT_T + 1;  // Including current time step
+inline constexpr int64_t OUTPUT_T = 80;                       // Output timestamp number
+inline constexpr int64_t POSE_DIM = 4;                        // x, y, cos(yaw), sin(yaw)
+inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, MAX_NUM_AGENTS, OUTPUT_T, POSE_DIM};
 
-inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, 4};
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_NONE = 0;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_DISABLE = 1;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_ENABLE_LEFT = 2;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_ENABLE_RIGHT = 3;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_KEEP = 4;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_DIM = 5;
+inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, TURN_INDICATOR_OUTPUT_DIM};
+
+inline constexpr std::array<int64_t, 4> SAMPLED_TRAJECTORIES_SHAPE = {
+  1, MAX_NUM_AGENTS, OUTPUT_T + 1, POSE_DIM};
+inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
 inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
 inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, 5, 10};
@@ -73,7 +90,11 @@ inline constexpr std::array<int64_t, 3> ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE = {
   1, NUM_SEGMENTS_IN_ROUTE, 1};
 inline constexpr std::array<int64_t, 3> ROUTE_LANES_SPEED_LIMIT_SHAPE = {
   1, NUM_SEGMENTS_IN_ROUTE, 1};
-inline constexpr std::array<int64_t, 2> GOAL_POSE_SHAPE = {1, 4};
+inline constexpr std::array<int64_t, 4> POLYGONS_SHAPE = {1, NUM_POLYGONS, POINTS_PER_POLYGON, 2};
+inline constexpr std::array<int64_t, 4> LINE_STRINGS_SHAPE = {
+  1, NUM_LINE_STRINGS, POINTS_PER_LINE_STRING, 2};
+inline constexpr std::array<int64_t, 2> GOAL_POSE_SHAPE = {1, POSE_DIM};
 inline constexpr std::array<int64_t, 2> EGO_SHAPE_SHAPE = {1, 3};
+inline constexpr std::array<int64_t, 2> TURN_INDICATORS_SHAPE = {1, INPUT_T + 1};
 }  // namespace autoware::diffusion_planner
 #endif  // AUTOWARE__DIFFUSION_PLANNER__DIMENSIONS_HPP_

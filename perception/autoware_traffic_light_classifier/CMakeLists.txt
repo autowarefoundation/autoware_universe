@@ -43,33 +43,12 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# set flags for CUDNN availability
-option(CUDNN_AVAIL "CUDNN available" OFF)
-# try to find the CUDNN module
-find_library(CUDNN_LIBRARY
-  NAMES libcudnn.so${__cudnn_ver_suffix} libcudnn${__cudnn_ver_suffix}.dylib ${__cudnn_lib_win_name}
-  PATHS $ENV{LD_LIBRARY_PATH} ${__libpath_cudart} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
-  PATH_SUFFIXES lib lib64 bin
-  DOC "CUDNN library."
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
-  endif()
-  set(CUDNN_AVAIL ON)
-
-else()
-  message(STATUS "CUDNN is NOT Available")
-  set(CUDNN_AVAIL OFF)
-endif()
-
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+if(TRT_AVAIL AND CUDA_AVAIL)
   add_definitions(-DENABLE_GPU)
 
   include_directories(
@@ -77,22 +56,22 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_INCLUDE_DIRS}
   )
 
-  ament_auto_add_library(traffic_light_classifier_nodelet SHARED
+  ament_auto_add_library(${PROJECT_NAME} SHARED
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
     src/traffic_light_classifier_node.cpp
+    src/traffic_light_classifier_process.cpp
   )
-  target_link_libraries(traffic_light_classifier_nodelet
+  target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
     ${NVINFER}
     ${NVONNXPARSER}
     ${NVINFER_PLUGIN}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-    ${CUDNN_LIBRARY}
     stdc++fs
   )
-  rclcpp_components_register_node(traffic_light_classifier_nodelet
+  rclcpp_components_register_node(${PROJECT_NAME}
     PLUGIN "autoware::traffic_light::TrafficLightClassifierNodelet"
     EXECUTABLE traffic_light_classifier_node
   )
@@ -101,6 +80,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
     src/traffic_light_classifier_node.cpp
+    src/traffic_light_classifier_process.cpp
     src/single_image_debug_inference_node.cpp
   )
   target_link_libraries(single_image_debug_inference_node
@@ -110,7 +90,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${NVINFER_PLUGIN}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-    ${CUDNN_LIBRARY}
     stdc++fs
     opencv_core
     opencv_highgui
@@ -118,11 +97,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   rclcpp_components_register_node(single_image_debug_inference_node
     PLUGIN "autoware::traffic_light::SingleImageDebugInferenceNode"
     EXECUTABLE single_image_debug_inference
-  )
-
-  ament_auto_package(INSTALL_TO_SHARE
-    launch
-    config
   )
 
 else()
@@ -135,6 +109,7 @@ else()
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/classifier/color_classifier.cpp
     src/traffic_light_classifier_node.cpp
+    src/traffic_light_classifier_process.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
@@ -145,9 +120,17 @@ else()
     EXECUTABLE traffic_light_classifier_node
   )
 
-  ament_auto_package(INSTALL_TO_SHARE
-    launch
-    config
-  )
-
 endif()
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_auto_add_gtest(test_utils
+    test/test_utils.cpp
+  )
+endif()
+
+ament_auto_package(INSTALL_TO_SHARE
+  launch
+  config
+  test/test_data
+)
