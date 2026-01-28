@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/abnormalities/localization_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/localization_footprint_generator.hpp"
 
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 namespace autoware::boundary_departure_checker
 {
 
-AbnormalityType LocalizationGenerator::get_type() const
+AbnormalityType LocalizationFootprintGenerator::get_type() const
 {
   return AbnormalityType::LOCALIZATION;
 }
 
-Footprints LocalizationGenerator::generate(
+Footprints LocalizationFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
   const vehicle_info_utils::VehicleInfo & info, const Param & param,
   const FootprintMargin & uncertainty_fp_margin)

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/abnormalities/steering_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/steering_footprint_generator.hpp"
 
 #include "autoware/universe_utils/geometry/geometry.hpp"
 
@@ -57,16 +57,16 @@ geometry_msgs::msg::Pose update_pose_with_bicycle_model(
 }
 }  // anonymous namespace
 
-SteeringGenerator::SteeringGenerator(const AbnormalityType type) : type_(type)
+SteeringFootprintGenerator::SteeringFootprintGenerator(const AbnormalityType type) : type_(type)
 {
 }
 
-AbnormalityType SteeringGenerator::get_type() const
+AbnormalityType SteeringFootprintGenerator::get_type() const
 {
   return type_;
 }
 
-Footprints SteeringGenerator::generate(
+Footprints SteeringFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
   const vehicle_info_utils::VehicleInfo & info, const Param & param,
   [[maybe_unused]] const FootprintMargin & uncertainty_fp_margin)

@@ -14,11 +14,7 @@
 
 #include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
 
-#include "autoware/boundary_departure_checker/abnormalities/abnormality_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/localization_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/longitudinal_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/normal_generator.hpp"
-#include "autoware/boundary_departure_checker/abnormalities/steering_generator.hpp"
+#include "autoware/boundary_departure_checker/abnormalities/footprint_generator_manager.hpp"
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
@@ -142,7 +138,8 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   last_no_critical_dpt_time_(clock_ptr->now().seconds()),
   last_found_critical_dpt_time_(clock_ptr->now().seconds()),
   clock_ptr_(clock_ptr),
-  time_keeper_(std::move(time_keeper))
+  time_keeper_(std::move(time_keeper)),
+  manager_(std::make_unique<FootprintGeneratorManager>(param_))
 {
   auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 
@@ -289,23 +286,6 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const SteeringReport & current_steering, const double curr_vel, const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  if (generators_.empty()) {
-    for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
-      if (abnormality_type == AbnormalityType::NORMAL) {
-        generators_.push_back(std::make_unique<NormalGenerator>());
-      } else if (abnormality_type == AbnormalityType::LOCALIZATION) {
-        generators_.push_back(std::make_unique<LocalizationGenerator>());
-      } else if (abnormality_type == AbnormalityType::LONGITUDINAL) {
-        generators_.push_back(std::make_unique<LongitudinalGenerator>());
-      } else if (
-        abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
-        abnormality_type == AbnormalityType::STEERING_STUCK ||
-        abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
-        abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
-        generators_.push_back(std::make_unique<SteeringGenerator>(abnormality_type));
-      }
-    }
-  }
 
   if (predicted_traj.empty()) {
     return tl::make_unexpected("Ego predicted trajectory is empty");
@@ -317,16 +297,24 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto uncertainty_fp_margin =
     utils::calc_margin_from_covariance(curr_pose_with_cov, param_.footprint_extra_margin);
 
-  AbnormalitiesData abnormalities_data;
-  for (const auto & generator : generators_) {
-    const auto abnormality_type = generator->get_type();
-    auto & fps = abnormalities_data.footprints[abnormality_type];
-    fps = generator->generate(
-      trimmed_pred_traj, current_steering, *vehicle_info_ptr_, param_, uncertainty_fp_margin);
+  const auto all_footprints = manager_->generate_all(
+    trimmed_pred_traj, current_steering, *vehicle_info_ptr_, param_, uncertainty_fp_margin);
+  const auto & ordered_types = manager_->get_ordered_types();
 
-    abnormalities_data.footprints_sides[abnormality_type] = utils::get_sides_from_footprints(fps);
+  if (all_footprints.empty()) {
+    return tl::make_unexpected("Failed to generate any footprints for abnormalities");
   }
 
+  AbnormalitiesData abnormalities_data;
+  for (size_t i = 0; i < all_footprints.size(); ++i) {
+    const auto & type = ordered_types[i];
+    abnormalities_data.footprints[type] = all_footprints[i];
+    abnormalities_data.footprints_sides[type] = utils::get_sides_from_footprints(all_footprints[i]);
+  }
+
+  if (predicted_traj.empty()) {
+    return tl::make_unexpected("Ego predicted trajectory is empty");
+  }
   const auto & normal_footprints = abnormalities_data.footprints_sides[AbnormalityType::NORMAL];
 
   abnormalities_data.boundary_segments =
@@ -338,11 +326,11 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
     return tl::make_unexpected("Unable to find any closest segments");
   }
 
-  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
-    auto & proj_to_bound = abnormalities_data.projections_to_bound[abnormality_type];
-    proj_to_bound = utils::get_closest_boundary_segments_from_side(
+  for (size_t i = 0; i < all_footprints.size(); ++i) {
+    const auto & type = ordered_types[i];
+    abnormalities_data.projections_to_bound[type] = utils::get_closest_boundary_segments_from_side(
       trimmed_pred_traj, abnormalities_data.boundary_segments,
-      abnormalities_data.footprints_sides[abnormality_type]);
+      abnormalities_data.footprints_sides[type]);
   }
 
   auto closest_projections_to_bound_opt = get_closest_projections_to_boundaries(
@@ -459,7 +447,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & abnormality_to_check = param_.abnormality_types_to_compensate;
+  const auto & abnormality_to_check = manager_->get_ordered_types();
 
   if (abnormality_to_check.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
