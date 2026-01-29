@@ -1,0 +1,58 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: DummyPerceptionPublisher.node
+
+launch:
+  package: autoware_dummy_perception_publisher
+  plugin: autoware::dummy_perception_publisher::DummyPerceptionPublisherNode
+  executable: autoware_dummy_perception_publisher_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+  - name: object
+    message_type: tier4_simulation_msgs/msg/DummyObject
+  - name: predicted_objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+
+outputs:
+  - name: dynamic_object
+    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: points_raw
+    message_type: sensor_msgs/msg/PointCloud2
+    qos:
+      reliability: reliable
+      durability: transient_local
+  - name: ground_truth_objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+    qos:
+      reliability: reliable
+      durability: transient_local
+
+# parameters
+parameter_files:
+  - name: dummy_perception_publisher_config_file
+    default: config/dummy_perception_publisher.param.yaml
+
+parameters: []
+
+# processes
+processes:
+  - name: publish
+    trigger_conditions:
+      - and:
+          - on_input: object
+    outcomes:
+      - to_output: dynamic_object
+      - to_output: points_raw
+      - to_output: ground_truth_objects
