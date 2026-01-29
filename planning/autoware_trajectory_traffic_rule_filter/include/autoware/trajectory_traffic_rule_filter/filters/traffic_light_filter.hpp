@@ -23,9 +23,9 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/LineString.h>
 
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -42,8 +42,9 @@ public:
     override;
 
 private:
-  lanelet::ConstLanelets get_lanelets_from_trajectory(
-    const TrajectoryPoints & trajectory_points) const;
+  /// @brief return the stop lines with red traffic lights for the given lanelet
+  [[nodiscard]] std::vector<lanelet::BasicLineString2d> get_red_stop_lines(
+    const lanelet::ConstLanelet & lanelet) const;
 
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
   std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
