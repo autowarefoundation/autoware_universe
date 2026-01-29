@@ -41,6 +41,7 @@
 namespace autoware::behavior_velocity_planner::experimental
 {
 namespace bg = boost::geometry;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
@@ -372,8 +373,7 @@ public:
       planning_factor_interface);
 
   bool modifyPathVelocity(
-    Trajectory & path,
-    const std::vector<geometry_msgs::msg::Point> & left_bound,
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
     const std::vector<geometry_msgs::msg::Point> & right_bound,
     const PlannerData & planner_data) override;
 
@@ -399,8 +399,7 @@ private:
     const PlannerData & planner_data);
 
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
-    const Trajectory & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const PlannerData & planner_data) const;
 
   std::optional<geometry_msgs::msg::Pose> calcStopPose(
@@ -410,7 +409,7 @@ private:
     const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
-    const Trajectory & ego_path, 
+    const Trajectory & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
@@ -429,7 +428,7 @@ private:
     const PlannerData & planner_data);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
-    const Trajectory & ego_path) const;
+    const Trajectory & sparse_resample_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
     const autoware_perception_msgs::msg::PredictedPath & path) const;
 
@@ -486,7 +485,7 @@ private:
     const PlannerData & planner_data) const;
 
   Polygon2d getAttentionArea(
-    const Trajectory & ego_path,
+    const Trajectory & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range,
     const PlannerData & planner_data) const;
 
