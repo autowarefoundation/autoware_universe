@@ -35,6 +35,10 @@
 
     # mpt param
     mpt:
+      use_acados: true
+      # Enable/disable the new MPT-style circle road-bound constraints in acados.
+      use_acados_circle_constraints: true
+
       option:
         # TODO(murooka) enable the following. Currently enabling the flag makes QP so heavy
         steer_limit_constraint: false
