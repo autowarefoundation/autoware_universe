@@ -13,7 +13,6 @@
     - source: .github/workflows/comment-on-pr.yaml
     - source: .github/workflows/delete-closed-pr-docs.yaml
     - source: .github/workflows/deploy-docs.yaml
-    - source: .github/workflows/github-release.yaml
     - source: .github/workflows/pre-commit.yaml
     - source: .github/workflows/pre-commit-optional.yaml
     - source: .github/workflows/semantic-pull-request.yaml
