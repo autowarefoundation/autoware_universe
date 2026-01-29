@@ -160,6 +160,15 @@ struct DiagnosticOutput
   std::vector<DiagnosticAdditionalData> additional_data;
 };
 
+void update_diagnostics_status(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, const DiagnosticOutput & output)
+{
+  stat.summary(static_cast<unsigned char>(output.level), output.message);
+  for (const auto & data : output.additional_data) {
+    stat.add(data.key, data.value);
+  }
+}
+
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
 {
   BlockageDetectionResult res = blockage_result_;
@@ -234,10 +243,7 @@ DiagnosticOutput get_dust_diagnostics_output(
 void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat) const
 {
   DiagnosticOutput dust_diagnostic = get_dust_diagnostics_output(dust_result_, dust_config_);
-  stat.summary(static_cast<unsigned char>(dust_diagnostic.level), dust_diagnostic.message);
-  for (const auto & data : dust_diagnostic.additional_data) {
-    stat.add(data.key, data.value);
-  }
+  update_diagnostics_status(stat, dust_diagnostic);
 }
 
 cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
