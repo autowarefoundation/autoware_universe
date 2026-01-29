@@ -415,13 +415,56 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     return std::vector<landmark_manager::Landmark>{};
   }
 
-  // Use parameters for initial lower/upper ring id
-  uint16_t lower_ring_id = static_cast<uint16_t>(param_.lower_ring_id_init);
-  uint16_t upper_ring_id = static_cast<uint16_t>(param_.upper_ring_id_init);
+  // Calculate actual ring ID range from points
+  // First, find the actual min/max ring IDs in the pointcloud
+  uint16_t actual_min_ring_id = std::numeric_limits<uint16_t>::max();
+  uint16_t actual_max_ring_id = 0;
   for (const auto & point : points_ptr->points) {
-    lower_ring_id = std::min(get_ring_id(point), lower_ring_id);
-    upper_ring_id = std::max(get_ring_id(point), upper_ring_id);
+    const uint16_t ring_id = get_ring_id(point);
+    actual_min_ring_id = std::min(ring_id, actual_min_ring_id);
+    actual_max_ring_id = std::max(ring_id, actual_max_ring_id);
   }
+
+  // Use parameter-defined ring range for filtering
+  const uint16_t param_lower_ring_id = static_cast<uint16_t>(param_.lower_ring_id_init);
+  const uint16_t param_upper_ring_id = static_cast<uint16_t>(param_.upper_ring_id_init);
+
+  // Determine ring range to use
+  uint16_t lower_ring_id;
+  uint16_t upper_ring_id;
+
+  // Validate parameter range
+  if (param_upper_ring_id < param_lower_ring_id) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Invalid ring range configuration: upper_ring_id_init ("
+        << param_upper_ring_id << ") < lower_ring_id_init (" << param_lower_ring_id
+        << "). Using actual pointcloud range instead.");
+    // Use actual range when parameter range is invalid
+    lower_ring_id = actual_min_ring_id;
+    upper_ring_id = actual_max_ring_id;
+  } else if (actual_min_ring_id != param_lower_ring_id || actual_max_ring_id != param_upper_ring_id) {
+    // Check if pointcloud contains rings not matching the configured filter range
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Pointcloud contains rings not matching the configured filter range. Narrowing down the range. "
+        << "Actual range: [" << actual_min_ring_id << ", " << actual_max_ring_id
+        << "], Configured range: [" << param_lower_ring_id << ", " << param_upper_ring_id << "]");
+    // Use narrowed-down range for ring filter
+    if (actual_max_ring_id < param_lower_ring_id || actual_min_ring_id > param_upper_ring_id) {
+      lower_ring_id = actual_min_ring_id;
+      upper_ring_id = actual_max_ring_id;
+    } else {
+      lower_ring_id = std::max(actual_min_ring_id, param_lower_ring_id);
+      upper_ring_id = std::min(actual_max_ring_id, param_upper_ring_id);
+    }
+  } else {
+    // Use parameter-defined range for ring filter
+    lower_ring_id = param_lower_ring_id;
+    upper_ring_id = param_upper_ring_id;
+  }
+
+  // Calculate ring number
   uint16_t ring_num = upper_ring_id - lower_ring_id + 1;
 
   std::vector<pcl::PointCloud<PointT>> ring_points(ring_num);
@@ -429,7 +472,14 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
   for (const auto & point : points_ptr->points) {
-    ring_points[get_ring_id(point) - lower_ring_id].push_back(point);
+    const uint16_t lidar_ring_id = get_ring_id(point);
+    // Filter points outside the configured ring range
+    if (lidar_ring_id < lower_ring_id || lidar_ring_id > upper_ring_id) {
+      continue;
+    }
+    // Calculate index and validate to prevent access violations
+    const uint16_t ring_index = lidar_ring_id - lower_ring_id;
+    ring_points[ring_index].push_back(point);
     min_x = std::min(min_x, point.x);
     max_x = std::max(max_x, point.x);
   }
