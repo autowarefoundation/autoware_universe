@@ -1,0 +1,208 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: SimplePlanningSimulator.node
+
+launch:
+  package: autoware_simple_planning_simulator
+  plugin: autoware::simulator::simple_planning_simulator::SimplePlanningSimulator
+  executable: autoware_simple_planning_simulator_node
+  node_output: screen
+
+# interfaces
+inputs:
+  - name: map/vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: input/vector_map
+  - name: initialpose3d
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: input/initialpose
+  - name: simulation/input/initialtwist
+    message_type: geometry_msgs/msg/TwistStamped
+    remap_target: input/initialtwist
+  - name: planning/trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: input/trajectory
+  - name: vehicle/engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: input/engage
+  - name: vehicle/command/manual_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: input/manual_ackermann_control_command
+  - name: vehicle/command/manual_gear_command
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/manual_gear_command
+  - name: control/command/control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: input/ackermann_control_command
+  - name: control/command/gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/gear_command
+  - name: control/command/turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/turn_indicators_command
+  - name: control/command/hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/hazard_lights_command
+
+outputs:
+  - name: vehicle/status/velocity_status
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
+    remap_target: output/twist
+  - name: vehicle/status/steering_status
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+    remap_target: output/steering
+  - name: vehicle/status/gear_status
+    message_type: autoware_vehicle_msgs/msg/GearReport
+    remap_target: output/gear_report
+  - name: vehicle/status/turn_indicators_status
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsReport
+    remap_target: output/turn_indicators_report
+  - name: vehicle/status/hazard_lights_status
+    message_type: autoware_vehicle_msgs/msg/HazardLightsReport
+    remap_target: output/hazard_lights_report
+  - name: vehicle/status/control_mode
+    message_type: autoware_vehicle_msgs/msg/ControlModeReport
+    remap_target: output/control_mode_report
+  - name: vehicle/status/actuation_status
+    message_type: tier4_vehicle_msgs/msg/ActuationStatusStamped
+    remap_target: output/actuation_status
+  - name: localization/kinematic_state
+    message_type: nav_msgs/msg/Odometry
+    remap_target: output/odometry
+  - name: localization/acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+    remap_target: output/acceleration
+  - name: sensing/imu/imu_data
+    message_type: sensor_msgs/msg/Imu
+    remap_target: output/imu
+  - name: api/simulator/set/pose
+    message_type: tier4_external_api_msgs/srv/InitializePose
+    remap_target: /api/simulator/set/pose
+  - name: control/control_mode_request
+    message_type: autoware_vehicle_msgs/srv/ControlModeCommand
+    remap_target: input/control_mode_request
+
+# parameters
+parameter_files:
+  - name: vehicle_info_param_file
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+  - name: vehicle_characteristics_param_file
+    default: param/vehicle_characteristics.param.yaml
+  - name: simulator_model_param_file
+    default: param/simple_planning_simulator_default.param.yaml
+
+parameters:
+  - name: simulated_frame_id
+    default: base_link
+  - name: origin_frame_id
+    default: map
+  - name: add_measurement_noise
+    default: false
+  - name: initial_engage_state
+    default: true
+  - name: enable_road_slope_simulation
+    default: true
+  - name: enable_pub_steer
+    default: true
+  - name: initialize_source
+    default: INITIAL_POSE_TOPIC
+
+  - name: timer_sampling_time_ms
+    default: 25
+
+  - name: pos_noise_stddev
+    default: 0.01
+  - name: vel_noise_stddev
+    default: 0.01
+  - name: rpy_noise_stddev
+    default: 0.0001
+  - name: steer_noise_stddev
+    default: 0.0001
+  - name: x_stddev
+    default: 0.0001
+  - name: y_stddev
+    default: 0.0001
+
+  - name: vel_lim
+    default: 50.0
+  - name: vel_rate_lim
+    default: 7.0
+  - name: steer_lim
+    default: 1.0
+  - name: steer_rate_lim
+    default: 5.0
+  - name: acc_time_delay
+    default: 0.1
+  - name: acc_time_constant
+    default: 0.1
+  - name: vel_time_delay
+    default: 0.25
+  - name: vel_time_constant
+    default: 0.5
+  - name: steer_time_delay
+    default: 0.24
+  - name: steer_time_constant
+    default: 0.27
+  - name: steer_dead_band
+    default: 0.0
+  - name: steer_bias
+    default: 0.0
+  - name: debug_acc_scaling_factor
+    default: 1.0
+  - name: debug_steer_scaling_factor
+    default: 1.0
+
+  - name: vehicle_model_type
+    default: DELAY_STEER_ACC_GEARED
+  - name: model_module_paths
+    default:
+      - ''
+  - name: model_class_names
+    default:
+      - ''
+  - name: model_param_paths
+    default:
+      - ''
+
+  - name: wheel_base
+    default: 2.79
+  - name: wheel_tread
+    default: 1.64
+  - name: wheel_radius
+    default: 0.383
+  - name: wheel_width
+    default: 0.235
+  - name: front_overhang
+    default: 1.0
+  - name: rear_overhang
+    default: 1.1
+  - name: left_overhang
+    default: 0.128
+  - name: right_overhang
+    default: 0.128
+  - name: vehicle_height
+    default: 2.5
+  - name: max_steer_angle
+    default: 0.7
+  - name: use_sim_time
+    default: false
+
+# processes
+processes:
+  - name: publish_state
+    trigger_conditions:
+      - periodic: 40
+    outcomes:
+      - to_output: vehicle/status/velocity_status
+      - to_output: vehicle/status/steering_status
+      - to_output: vehicle/status/gear_status
+      - to_output: vehicle/status/turn_indicators_status
+      - to_output: vehicle/status/hazard_lights_status
+      - to_output: vehicle/status/control_mode
+      - to_output: vehicle/status/actuation_status
+      - to_output: localization/kinematic_state
+      - to_output: localization/acceleration
+      - to_output: sensing/imu/imu_data
+      - to_output: simulation/debug/localization/pose_estimator/pose_with_covariance
+      - to_output: tf
