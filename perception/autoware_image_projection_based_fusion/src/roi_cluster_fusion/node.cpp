@@ -255,8 +255,12 @@ void RoiClusterFusionNode::fuse_on_single_image(
         sanitizeROI(image_roi, camera_info.width, camera_info.height);
         sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
 
+        // Get the cluster pointcloud for 3D size validation
+        const auto & cluster_pointcloud =
+          input_cluster_msg.feature_objects.at(index).feature.cluster;
+
         const bool passes_size_validation =
-          validateSizeForClass(fused_object, cluster_roi, image_roi, roi_label);
+          validateSizeForClass(cluster_pointcloud, cluster_roi, image_roi, roi_label);
 
         if (passes_size_validation) {
           fused_object.classification = feature_obj.object.classification;
@@ -363,7 +367,7 @@ void RoiClusterFusionNode::postprocess(
 }
 
 bool RoiClusterFusionNode::validateSizeForClass(
-  const autoware_perception_msgs::msg::DetectedObject & cluster_obj,
+  const sensor_msgs::msg::PointCloud2 & cluster,
   const sensor_msgs::msg::RegionOfInterest & cluster_roi,
   const sensor_msgs::msg::RegionOfInterest & image_roi,
   const uint8_t label)
@@ -373,8 +377,8 @@ bool RoiClusterFusionNode::validateSizeForClass(
     return true;
   }
 
-  // Perform pedestrian-specific size validation
-  return validatePedestrianSize(cluster_obj, cluster_roi, image_roi, pedestrian_size_params_);
+  // Perform pedestrian-specific size validation using cluster pointcloud
+  return validatePedestrianSize(cluster, cluster_roi, image_roi, pedestrian_size_params_);
 }
 
 }  // namespace autoware::image_projection_based_fusion

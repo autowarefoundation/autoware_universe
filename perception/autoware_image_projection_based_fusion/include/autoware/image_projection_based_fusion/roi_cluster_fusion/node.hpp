@@ -64,14 +64,14 @@ private:
 
   /**
    * @brief Validate size for pedestrian class
-   * @param cluster_obj The cluster object
+   * @param cluster PointCloud2 cluster data to extract 3D dimensions from
    * @param cluster_roi The projected cluster ROI
    * @param image_roi The detected image ROI
    * @param label The object classification label
    * @return True if the object passes size validation (or is not a pedestrian)
    */
   bool validateSizeForClass(
-    const autoware_perception_msgs::msg::DetectedObject & cluster_obj,
+    const sensor_msgs::msg::PointCloud2 & cluster,
     const sensor_msgs::msg::RegionOfInterest & cluster_roi,
     const sensor_msgs::msg::RegionOfInterest & image_roi,
     const uint8_t label);
