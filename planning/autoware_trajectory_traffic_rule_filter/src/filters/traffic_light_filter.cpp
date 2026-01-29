@@ -53,14 +53,12 @@ std::vector<lanelet::BasicLineString2d> TrafficLightFilter::get_red_stop_lines(
 {
   std::vector<lanelet::BasicLineString2d> stop_lines;
   for (const auto & element : lanelet.regulatoryElementsAs<lanelet::TrafficLight>()) {
-    for (const auto & traffic_light : element->trafficLights()) {
-      for (const auto & signal : traffic_lights_->traffic_light_groups) {
-        if (
-          signal.traffic_light_group_id == static_cast<int64_t>(traffic_light.id()) &&
-          element->stopLine().has_value() &&
-          autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
-          stop_lines.push_back(lanelet::utils::to2D(element->stopLine()->basicLineString()));
-        }
+    for (const auto & signal : traffic_lights_->traffic_light_groups) {
+      if (
+        signal.traffic_light_group_id == element->id() &&
+        element->stopLine().has_value() &&
+        autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
+        stop_lines.push_back(lanelet::utils::to2D(element->stopLine()->basicLineString()));
       }
     }
   }
