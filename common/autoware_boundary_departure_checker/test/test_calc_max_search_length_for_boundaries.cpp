@@ -39,7 +39,7 @@ Trajectory create_trajectory(const std::vector<Eigen::Vector2d> & points)
 }
 
 // reference:
-// https://github.com/autowarefoundation/sample_vehicle_launch/blob/main/sample_vehicle_description/config/vehicle_info.param.yaml
+// https://github.com/autowarefoundation/autoware_core/blob/main/description/autoware_sample_vehicle_description/config/vehicle_info.param.yaml
 constexpr double wheel_radius_m = 0.383;
 constexpr double wheel_width_m = 0.235;
 constexpr double wheel_base_m = 2.79;
