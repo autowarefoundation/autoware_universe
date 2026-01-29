@@ -58,12 +58,16 @@ inline bool isUnknown(const StateKey & state_key)
 inline bool compareStateKeyLogOdds(
   const std::pair<StateKey, double> & key1, const std::pair<StateKey, double> & key2)
 {
-  // True is key1 has lower log-odds than key2, False otherwise
+  // Ordering rule:
+  // 1. Unknown StateKey is always lower priority
+  // 2. Otherwise, smaller log-odds comes first
   const bool key1_is_unknown = isUnknown(key1.first);
   const bool key2_is_unknown = isUnknown(key2.first);
-  // If either is unknown, the unknown is of lower priority
-  if (key1_is_unknown != key2_is_unknown) {
-    return key1_is_unknown;
+  if (key1_is_unknown && !key2_is_unknown) {
+    return true;
+  }
+  if (!key1_is_unknown && key2_is_unknown) {
+    return false;
   }
   return key1.second < key2.second;
 }
