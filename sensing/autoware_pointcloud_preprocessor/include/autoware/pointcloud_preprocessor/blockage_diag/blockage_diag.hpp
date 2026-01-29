@@ -61,6 +61,17 @@ cv::Mat quantize_to_8u(const cv::Mat & image_16u);
  */
 cv::Mat make_no_return_mask(const cv::Mat & depth_image);
 
+/**
+ * @brief Segments a given mask into two masks, according to the ground/sky segmentation
+ * parameters.
+ *
+ * @param mask The input mask. The data type is `CV_8UC1`.
+ * @param horizontal_ring_id The ring ID that separates ground and sky.
+ * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is
+ * `CV_8UC1`.
+ */
+std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask, int horizontal_ring_id);
+
 struct MultiFrameDetectionAggregatorConfig
 {
   int buffering_frames;    // Number of frames to buffer
@@ -159,16 +170,6 @@ public:
   float get_ground_dust_ratio() const { return result_.ground_dust_ratio; }
 
 private:
-  /**
-   * @brief Segments a given mask into two masks, according to the ground/sky segmentation
-   * parameters.
-   *
-   * @param mask The input mask. The data type is `CV_8UC1`.
-   * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is
-   * `CV_8UC1`.
-   */
-  std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask) const;
-
   DustDetectionConfig config_;
   DustDetectionResult result_;
 };

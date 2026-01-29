@@ -89,16 +89,6 @@ private:
   cv::Mat make_blockage_mask(const cv::Mat & no_return_mask) const;
 
   /**
-   * @brief Segments a given mask into two masks, according to the ground/sky segmentation
-   * parameters.
-   *
-   * @param mask The input mask. The data type is `CV_8UC1`.
-   * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is
-   * `CV_8UC1`.
-   */
-  std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask) const;
-
-  /**
    * @brief Get the ratio of non-zero pixels in a given mask.
    *
    * @param mask The input mask. The data type is `CV_8UC1`.

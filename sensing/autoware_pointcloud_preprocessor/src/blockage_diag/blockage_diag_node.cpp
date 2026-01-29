@@ -222,22 +222,6 @@ cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask
   return blockage_mask;
 }
 
-std::pair<cv::Mat, cv::Mat> BlockageDiagComponent::segment_into_ground_and_sky(
-  const cv::Mat & mask) const
-{
-  assert(mask.type() == CV_8UC1);
-  auto dimensions = mask.size();
-
-  cv::Mat sky_mask;
-  mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id_)).copyTo(sky_mask);
-
-  cv::Mat ground_mask;
-  mask(cv::Rect(0, horizontal_ring_id_, dimensions.width, dimensions.height - horizontal_ring_id_))
-    .copyTo(ground_mask);
-
-  return {ground_mask, sky_mask};
-}
-
 float BlockageDiagComponent::get_nonzero_ratio(const cv::Mat & mask)
 {
   size_t area = mask.cols * mask.rows;
@@ -345,7 +329,7 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
 
-  auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
+  auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask, horizontal_ring_id_);
 
   blockage_result_.ground.blockage_ratio = get_nonzero_ratio(ground_blockage_mask);
   blockage_result_.sky.blockage_ratio = get_nonzero_ratio(sky_blockage_mask);
