@@ -74,7 +74,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;

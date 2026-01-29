@@ -149,8 +149,8 @@ Polygon2d createOneStepPolygon(
 bool isEndPointsConnected(
   const lanelet::ConstLanelet & left_lane, const lanelet::ConstLanelet & right_lane)
 {
-  const auto & left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
-  const auto & right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
+  const auto left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
+  const auto right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
 
   constexpr double epsilon = 1e-5;
   return (right_back_point_2d - left_back_point_2d).norm() < epsilon;

@@ -78,7 +78,7 @@ TEST_F(UtilsTest, GetTransformMatrixIdentity)
   odom.pose.pose.orientation.z = 0.0;
   odom.pose.pose.orientation.w = 1.0;
 
-  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4f(odom.pose.pose);
+  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4d(odom.pose.pose);
   const Eigen::Matrix4d map2bl = utils::inverse(bl2map);
 
   Eigen::Matrix4d I = Eigen::Matrix4d::Identity();
@@ -99,7 +99,7 @@ TEST_F(UtilsTest, GetTransformMatrixTranslation)
   odom.pose.pose.orientation.z = 0.0;
   odom.pose.pose.orientation.w = 1.0;
 
-  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4f(odom.pose.pose);
+  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4d(odom.pose.pose);
   const Eigen::Matrix4d map2bl = utils::inverse(bl2map);
 
   EXPECT_FLOAT_EQ(bl2map(0, 3), 1.0f);
@@ -126,7 +126,7 @@ TEST_F(UtilsTest, GetTransformMatrixRotation)
   odom.pose.pose.orientation.z = std::sin(angle / 2);
   odom.pose.pose.orientation.w = std::cos(angle / 2);
 
-  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4f(odom.pose.pose);
+  const Eigen::Matrix4d bl2map = utils::pose_to_matrix4d(odom.pose.pose);
   const Eigen::Matrix4d map2bl = utils::inverse(bl2map);
 
   // The rotation part should be a 90 degree rotation matrix
