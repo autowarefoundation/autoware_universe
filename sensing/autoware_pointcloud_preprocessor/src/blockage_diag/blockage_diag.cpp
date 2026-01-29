@@ -87,7 +87,8 @@ cv::Mat make_no_return_mask(const cv::Mat & depth_image)
   return no_return_mask;
 }
 
-std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask, int horizontal_ring_id)
+std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
+  const cv::Mat & mask, int horizontal_ring_id)
 {
   assert(mask.type() == CV_8UC1);
   auto dimensions = mask.size();
@@ -96,9 +97,7 @@ std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask, in
   mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id)).copyTo(sky_mask);
 
   cv::Mat ground_mask;
-  mask(cv::Rect(
-         0, horizontal_ring_id, dimensions.width,
-         dimensions.height - horizontal_ring_id))
+  mask(cv::Rect(0, horizontal_ring_id, dimensions.width, dimensions.height - horizontal_ring_id))
     .copyTo(ground_mask);
 
   return {ground_mask, sky_mask};
@@ -112,7 +111,8 @@ cv::Mat DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
   assert(no_return_mask.type() == CV_8UC1);
   auto dimensions = no_return_mask.size();
 
-  auto [single_dust_ground_img, sky_blank] = segment_into_ground_and_sky(no_return_mask, config_.horizontal_ring_id);
+  auto [single_dust_ground_img, sky_blank] =
+    segment_into_ground_and_sky(no_return_mask, config_.horizontal_ring_id);
 
   // It is normal for the sky region to be blank, therefore ignore it.
   sky_blank.setTo(cv::Scalar(0));
@@ -150,7 +150,7 @@ DiagnosticOutput DustDetector::get_dust_diagnostics_output() const
 
   output.additional_data.push_back(
     {"ground_dust_ratio", std::to_string(result_.ground_dust_ratio)});
-  
+
   output.level = DiagnosticLevel::OK;
   output.message = "OK";
 

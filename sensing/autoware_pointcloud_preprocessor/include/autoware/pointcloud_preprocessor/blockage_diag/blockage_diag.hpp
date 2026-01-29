@@ -70,7 +70,8 @@ cv::Mat make_no_return_mask(const cv::Mat & depth_image);
  * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is
  * `CV_8UC1`.
  */
-std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask, int horizontal_ring_id);
+std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
+  const cv::Mat & mask, int horizontal_ring_id);
 
 struct MultiFrameDetectionAggregatorConfig
 {

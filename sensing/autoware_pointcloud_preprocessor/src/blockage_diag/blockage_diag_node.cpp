@@ -329,7 +329,8 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
 
-  auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask, horizontal_ring_id_);
+  auto [ground_blockage_mask, sky_blockage_mask] =
+    segment_into_ground_and_sky(blockage_mask, horizontal_ring_id_);
 
   blockage_result_.ground.blockage_ratio = get_nonzero_ratio(ground_blockage_mask);
   blockage_result_.sky.blockage_ratio = get_nonzero_ratio(sky_blockage_mask);
