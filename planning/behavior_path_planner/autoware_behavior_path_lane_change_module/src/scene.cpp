@@ -144,6 +144,10 @@ void NormalLaneChange::update_lanes(const bool is_approved)
   *common_data_ptr_->lanes_polygon_ptr = create_lanes_polygon(common_data_ptr_);
   common_data_ptr_->no_lane_change_lines =
     utils::lane_change::get_no_lane_change_lines(common_data_ptr_->lanes_ptr->current, direction_);
+  common_data_ptr_->inverval_dist_no_lane_change_lines =
+    utils::lane_change::get_inverval_dist_no_lane_change_lines(
+      common_data_ptr_->no_lane_change_lines, common_data_ptr_->current_lanes_path,
+      common_data_ptr_->get_ego_pose());
 }
 
 void NormalLaneChange::update_transient_data(const bool is_approved)

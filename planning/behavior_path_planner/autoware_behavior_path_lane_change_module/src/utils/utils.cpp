@@ -1284,35 +1284,45 @@ std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
   return no_lane_change_lines;
 }
 
-bool is_intersecting_no_lane_change_lines(
+std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
   const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
-  const std::vector<PathPointWithLaneId> & lane_change_path)
+  const PathWithLaneId & centerline_path, const Pose & ego_pose)
 {
-  using ranges::views::sliding;
+  std::vector<std::pair<double, double>> interval;
 
-  // Create a sliding view over the path
-  auto path_segments = lane_change_path | ranges::views::sliding(2);
+  for (const auto & line : no_lane_change_lines) {
+    const auto & start = line.front();
 
-  return ranges::any_of(path_segments, [&](const auto & p_seg) {
-    // FIX 1: Use iterators for the path segment
-    auto p_it = p_seg.begin();
-    const auto & path_p1 = p_it->point.pose.position;
-    const auto & path_p2 = (++p_it)->point.pose.position;
+    const auto dist_front = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(start.x(), start.y(), start.z()));
 
-    const auto is_intersecting = [&](const auto & l_seg) {
-      auto l_it = l_seg.begin();
-      const auto & p1 = *l_it;
-      const auto & p2 = *++l_it;
+    const auto & back = line.back();
+    const auto dist_back = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(back.x(), back.y(), back.z()));
 
-      const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(p1);
-      const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(p2);
+    if (dist_front <= dist_back) {
+      interval.emplace_back(dist_front, dist_back);
+    } else {
+      interval.emplace_back(dist_back, dist_front);
+    }
+  }
 
-      return autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value();
-    };
+  return interval;
+}
 
-    return ranges::any_of(no_lane_change_lines, [&](const auto & ls) {
-      return ranges::any_of(ls | ranges::views::sliding(2), is_intersecting);
-    });
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<std::pair<double, double>> & inverval_dist_no_lane_change_lines,
+  const double expected_intersecting_dist, const double buffer)
+{
+  int i = 0;
+  return ranges::any_of(inverval_dist_no_lane_change_lines, [&](const auto & interval) {
+    const auto [start, end] = interval;
+    ++i;
+    std::cerr << i << ") No lane change interval: [" << start << ", " << end << ", " << expected_intersecting_dist << "]\n";
+    return expected_intersecting_dist >= (start - buffer) &&
+           expected_intersecting_dist <= (end + buffer);
   });
 }
 

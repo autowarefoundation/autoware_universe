@@ -276,6 +276,8 @@ struct CommonData
   PathWithLaneId target_lanes_path;
   ModuleType lc_type;
   std::vector<lanelet::ConstLineString3d> no_lane_change_lines;
+  std::vector<std::pair<double, double>> inverval_dist_no_lane_change_lines;
+
   Direction direction;
 
   [[nodiscard]] const Pose & get_ego_pose() const { return self_odometry_ptr->pose.pose; }

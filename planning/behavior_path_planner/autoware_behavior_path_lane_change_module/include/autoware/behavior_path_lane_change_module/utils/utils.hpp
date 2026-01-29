@@ -505,8 +505,12 @@ void trim_preferred_after_alternative(
 std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
   const lanelet::ConstLanelets & target_lanes, const Direction direction);
 
-bool is_intersecting_no_lane_change_lines(
+std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
   const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
-  const std::vector<PathPointWithLaneId> & lane_change_path);
+  const PathWithLaneId & centerline_path, const Pose & ego_pose);
+
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<std::pair<double, double>> & inverval_dist_no_lane_change_lines,
+  const double expected_intersecting_dist, const double buffer);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
