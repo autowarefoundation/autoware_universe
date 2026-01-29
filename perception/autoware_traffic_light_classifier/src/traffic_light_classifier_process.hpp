@@ -49,7 +49,7 @@ std::string convertShapeT4toString(
 
 bool isColorLabel(const std::string & label);
 
-bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold);
+double compute_brightness(const cv::Mat & img);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light
