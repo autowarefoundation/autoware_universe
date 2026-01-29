@@ -88,9 +88,9 @@ struct PreprocessingParams
 struct PostprocessingParams
 {
   PostprocessingParams(
-    const double score_threshold, const std::vector<std::string> & class_names,
-    const std::vector<int64_t> & palette, const std::vector<std::string> & excluded_class_names)
-  : score_threshold(static_cast<float>(score_threshold)),
+    const double ground_prob_threshold, const std::vector<std::string> & class_names,
+    const std::vector<int64_t> & palette, const std::string & ground_class)
+  : ground_prob_threshold(static_cast<float>(ground_prob_threshold)),
     palette([&palette, &class_names]() {
       if (palette.size() % 3 != 0) {
         throw std::runtime_error("Palette size must be a multiple of 3.");
@@ -113,22 +113,18 @@ struct PostprocessingParams
       }
       return colors;
     }()),
-    excluded_class_idxs([&class_names, &excluded_class_names]() {
-      std::vector<uint32_t> excluded_class_idxs;
-      for (const auto & class_name : excluded_class_names) {
-        auto it = std::find(class_names.begin(), class_names.end(), class_name);
-        if (it != class_names.end()) {
-          excluded_class_idxs.push_back(
-            static_cast<uint32_t>(std::distance(class_names.begin(), it)));
-        }
+    ground_class_idx([&class_names, &ground_class]() -> uint32_t {
+      auto it = std::find(class_names.begin(), class_names.end(), ground_class);
+      if (it == class_names.end()) {
+        throw std::runtime_error("Ground class '" + ground_class + "' not found in class names.");
       }
-      return excluded_class_idxs;
+      return static_cast<uint32_t>(std::distance(class_names.begin(), it));
     }())
   {
   }
-  const float score_threshold;
+  const float ground_prob_threshold;
   const std::vector<float> palette;
-  const std::vector<uint32_t> excluded_class_idxs;
+  const uint32_t ground_class_idx;
 };
 
 struct Profile

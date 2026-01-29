@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="input/pointcloud" default="/sensing/lidar/top/pointcloud"/>
-  <arg name="output/pointcloud/segmentation" default="segmentation"/>
-  <arg name="output/pointcloud/visualization" default="visualization"/>
-  <arg name="output/pointcloud/filtered" default="filtered"/>
+  <arg name="input/pointcloud" default="/sensing/lidar/front_upper/pointcloud_raw_ex"/>
+  <arg name="output/pointcloud/segmentation" default="~/segmentation"/>
+  <arg name="output/pointcloud/visualization" default="~/visualization"/>
+  <arg name="output/pointcloud/filtered" default="~/filtered"/>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="frnet" description="options: `frnet`"/>
   <arg name="model_path" default="$(var data_path)/lidar_frnet"/>

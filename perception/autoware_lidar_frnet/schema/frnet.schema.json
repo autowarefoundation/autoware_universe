@@ -57,18 +57,17 @@
           "default": "480",
           "minimum": 1
         },
-        "score_threshold": {
+        "ground_prob_threshold": {
           "type": "number",
-          "description": "A threshold value for the score model segmentation result. If the score is lower than this value, the point will obtain the 'unknown' class ID.",
-          "default": "0.0"
+          "description": "A threshold value for the ground class probability. If the point's ground class probability is greater or equal to this value, the point will be considered as ground and excluded from the filtered output cloud.",
+          "default": "0.05",
+          "minimum": 0.0,
+          "maximum": 1.0
         },
-        "excluded_class_names": {
-          "type": "array",
-          "description": "A list of class names to be excluded in filtered output cloud.",
-          "items": {
-            "type": "string"
-          },
-          "default": ["driveable_surface"]
+        "ground_class": {
+          "type": "string",
+          "description": "The class name representing ground points to be excluded from filtered output cloud.",
+          "default": "drivable_surface"
         },
         "palette": {
           "type": "array",
@@ -94,8 +93,8 @@
         "frustum_height",
         "interpolation_width",
         "interpolation_height",
-        "score_threshold",
-        "excluded_class_names",
+        "ground_prob_threshold",
+        "ground_class",
         "palette"
       ],
       "additionalProperties": false

@@ -32,6 +32,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
+#include <mutex>
 #include <optional>
 
 namespace autoware::lidar_frnet
@@ -66,8 +67,10 @@ private:
     ros_utils::generateSegmentationPointCloudLayout()};
   const ros_utils::PointCloudLayout cloud_viz_layout_{
     ros_utils::generateVisualizationPointCloudLayout()};
-  const ros_utils::PointCloudLayout cloud_filtered_layout_{
-    ros_utils::generateFilteredPointCloudLayout()};
+
+  // Filtered layout is initialized dynamically from first input message
+  std::optional<ros_utils::PointCloudLayout> cloud_filtered_layout_;
+  std::once_flag init_filtered_layout_;
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;

@@ -51,8 +51,9 @@ public:
     const uint32_t num_points, const int64_t * coors, const int64_t * coors_keys,
     uint32_t & output_num_unique_coors, int64_t * output_voxel_coors, int64_t * output_inverse_map);
 
+  /// @brief Project points to 2D frustum coordinates (dispatches to templated implementation)
   cudaError_t projectPoints_launch(
-    const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
+    const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
     float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
     uint32_t * output_proj_idxs, uint64_t * output_proj_2d);
 
@@ -61,6 +62,13 @@ public:
     int64_t * output_coors, int64_t * output_coors_keys);
 
 private:
+  /// @brief Templated implementation for projectPoints_launch
+  template <typename PointT>
+  cudaError_t projectPoints_launch_impl(
+    const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
+    float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
+    uint32_t * output_proj_idxs, uint64_t * output_proj_2d);
+
   const utils::Dims2d interpolation_;
   cudaStream_t stream_;
 };

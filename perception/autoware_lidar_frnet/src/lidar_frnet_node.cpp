@@ -45,9 +45,9 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
     declare_parameter<int64_t>("interpolation_height"));
 
   auto postprocessing_params = utils::PostprocessingParams(
-    declare_parameter<double>("score_threshold"), class_names,
+    declare_parameter<double>("ground_prob_threshold"), class_names,
     declare_parameter<std::vector<int64_t>>("palette"),
-    declare_parameter<std::vector<std::string>>("excluded_class_names"));
+    declare_parameter<std::string>("ground_class"));
 
   const auto model_params = utils::NetworkParams(
     class_names, declare_parameter<std::vector<int64_t>>("num_points"),
@@ -109,6 +109,14 @@ void LidarFRNetNode::cloudCallback(
     stop_watch_ptr_->toc("processing/total", true);
   }
 
+  // Initialize filtered layout from first message (preserves input format)
+  std::call_once(init_filtered_layout_, [this, &msg]() {
+    cloud_filtered_layout_.emplace(ros_utils::generateFilteredPointCloudLayoutFromInput(*msg));
+    RCLCPP_INFO(
+      this->get_logger(), "Initialized filtered cloud layout with %zu fields, point_step=%zu",
+      cloud_filtered_layout_->fields.size(), cloud_filtered_layout_->point_step);
+  });
+
   const auto active_comm = utils::ActiveComm(
     cloud_seg_pub_->get_subscription_count() +
         cloud_seg_pub_->get_intra_process_subscription_count() >
@@ -128,7 +136,7 @@ void LidarFRNetNode::cloudCallback(
   auto cloud_seg_msg_ptr = ros_utils::generatePointCloudMessageFromInput(*msg, cloud_seg_layout_);
   auto cloud_viz_msg_ptr = ros_utils::generatePointCloudMessageFromInput(*msg, cloud_viz_layout_);
   auto cloud_filtered_msg_ptr =
-    ros_utils::generatePointCloudMessageFromInput(*msg, cloud_filtered_layout_);
+    ros_utils::generatePointCloudMessageFromInput(*msg, *cloud_filtered_layout_);
 
   std::unordered_map<std::string, double> proc_timing;
 

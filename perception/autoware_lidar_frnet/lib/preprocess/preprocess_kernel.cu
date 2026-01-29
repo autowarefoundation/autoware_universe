@@ -127,15 +127,45 @@ __device__ int2 project2d(const float3 point, const uint32_t scale_x, const uint
     static_cast<int32_t>(fminf(fmaxf(proj_y, 0.0f), static_cast<float>(scale_y) - 1.0f)));
 }
 
+/// @brief Trait to get intensity as float from different point types (CUDA device code)
+template <typename PointT>
+__device__ inline float get_intensity(const PointT & point);
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZI & point)
+{
+  return point.intensity;
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRC & point)
+{
+  return static_cast<float>(point.intensity);
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRADRT & point)
+{
+  return point.intensity;
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRCAEDT & point)
+{
+  return static_cast<float>(point.intensity);
+}
+
+template <typename PointT>
 __global__ void projectPoints_kernel(
-  const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
+  const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
   uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
 {
   uint32_t point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_points) return;
 
-  const InputPointType & point = cloud[point_idx];
+  const PointT & point = cloud[point_idx];
+  const float intensity = get_intensity(point);
   const auto point3d = make_float3(point.x, point.y, point.z);
   const auto proj_point = project2d(point3d, const_interpolation.w, const_interpolation.h);
   const auto proj_coor = project2d(point3d, const_frustum.w, const_frustum.h);
@@ -147,7 +177,7 @@ __global__ void projectPoints_kernel(
   output_points[point_idx * 4 + 0] = point.x;
   output_points[point_idx * 4 + 1] = point.y;
   output_points[point_idx * 4 + 2] = point.z;
-  output_points[point_idx * 4 + 3] = point.intensity;
+  output_points[point_idx * 4 + 3] = intensity;
 
   output_coors[point_idx * 3 + 0] = 0;
   output_coors[point_idx * 3 + 1] = proj_coor.y;
@@ -156,7 +186,7 @@ __global__ void projectPoints_kernel(
   output_coors_keys[point_idx] = proj_coor.y * const_frustum.w + proj_coor.x;
 
   // Update projection if not yet filled
-  auto point_half4 = half4(point.x, point.y, point.z, point.intensity);
+  auto point_half4 = half4(point.x, point.y, point.z, intensity);
   auto output_proj_2d_address = reinterpret_cast<unsigned long long *>(&output_proj_2d[proj_idx]);
   if (!atomicExch(&output_proj_idxs[proj_idx], 1)) {
     *output_proj_2d_address = pack_half4(point_half4);
@@ -165,8 +195,9 @@ __global__ void projectPoints_kernel(
   }
 }
 
-cudaError_t PreprocessCuda::projectPoints_launch(
-  const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
+template <typename PointT>
+cudaError_t PreprocessCuda::projectPoints_launch_impl(
+  const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
   uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
 {
@@ -178,6 +209,47 @@ cudaError_t PreprocessCuda::projectPoints_launch(
     output_proj_idxs, output_proj_2d);
 
   return cudaGetLastError();
+}
+
+// Explicit instantiations
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZI>(
+  const InputPointTypeXYZI *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *, uint32_t *,
+  uint64_t *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRC>(
+  const InputPointTypeXYZIRC *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRADRT>(
+  const InputPointTypeXYZIRADRT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRCAEDT>(
+  const InputPointTypeXYZIRCAEDT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *);
+
+cudaError_t PreprocessCuda::projectPoints_launch(
+  const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
+  float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
+{
+  switch (format) {
+    case InputFormat::XYZIRCAEDT:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRCAEDT *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d);
+    case InputFormat::XYZIRADRT:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRADRT *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d);
+    case InputFormat::XYZIRC:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRC *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d);
+    case InputFormat::XYZI:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZI *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d);
+    default:
+      return cudaErrorInvalidValue;
+  }
 }
 
 __global__ void interpolatePoints_kernel(

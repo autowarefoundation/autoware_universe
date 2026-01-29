@@ -30,13 +30,22 @@ class PostprocessCuda
 public:
   PostprocessCuda(const utils::PostprocessingParams & params, cudaStream_t stream);
 
+  /// @brief Fill output clouds with segmentation results (dispatches to templated implementation)
   cudaError_t fillCloud_launch(
-    const InputPointType * cloud, const float * seg_logit, const int32_t num_points,
+    const void * cloud, const float * seg_logit, const int32_t num_points, InputFormat format,
     const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
     OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
-    InputPointType * output_cloud_filtered);
+    void * output_cloud_filtered);
 
 private:
+  /// @brief Templated implementation for fillCloud_launch
+  template <typename PointT>
+  cudaError_t fillCloud_launch_impl(
+    const PointT * cloud, const float * seg_logit, const int32_t num_points,
+    const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
+    OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
+    PointT * output_cloud_filtered);
+
   cudaStream_t stream_;
 };
 

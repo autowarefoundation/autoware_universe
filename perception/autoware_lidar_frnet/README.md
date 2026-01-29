@@ -57,7 +57,9 @@ ros2 launch autoware_lidar_frnet lidar_frnet.launch.xml build_only:=true
 
 ## Assumptions / Known limits
 
-This library operates on raw cloud data (bytes). It is assumed that the input pointcloud message has XYZIRC format:
+This library operates on raw cloud data (bytes). It supports multiple input pointcloud formats and automatically detects the format on the first received message. The supported formats are (checked in order from largest to smallest, with exact field count match required):
+
+### XYZIRCAEDT (10 fields)
 
 ```python
 [
@@ -65,12 +67,57 @@ This library operates on raw cloud data (bytes). It is assumed that the input po
   sensor_msgs.msg.PointField(name='y', offset=4, datatype=7, count=1),
   sensor_msgs.msg.PointField(name='z', offset=8, datatype=7, count=1),
   sensor_msgs.msg.PointField(name='intensity', offset=12, datatype=2, count=1),
-  sensor_msgs.msg.PointField(name='ring', offset=13, datatype=2, count=1),
+  sensor_msgs.msg.PointField(name='return_type', offset=13, datatype=2, count=1),
+  sensor_msgs.msg.PointField(name='channel', offset=14, datatype=4, count=1),
+  sensor_msgs.msg.PointField(name='azimuth', offset=16, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='elevation', offset=20, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='distance', offset=24, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='time_stamp', offset=28, datatype=6, count=1)
+]
+```
+
+### XYZIRADRT (9 fields)
+
+```python
+[
+  sensor_msgs.msg.PointField(name='x', offset=0, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='y', offset=4, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='z', offset=8, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='intensity', offset=12, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='ring', offset=16, datatype=4, count=1),
+  sensor_msgs.msg.PointField(name='azimuth', offset=18, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='distance', offset=22, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='return_type', offset=26, datatype=2, count=1),
+  sensor_msgs.msg.PointField(name='time_stamp', offset=27, datatype=8, count=1)
+]
+```
+
+### XYZIRC (6 fields)
+
+```python
+[
+  sensor_msgs.msg.PointField(name='x', offset=0, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='y', offset=4, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='z', offset=8, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='intensity', offset=12, datatype=2, count=1),
+  sensor_msgs.msg.PointField(name='return_type', offset=13, datatype=2, count=1),
   sensor_msgs.msg.PointField(name='channel', offset=14, datatype=4, count=1)
 ]
 ```
 
-This input may consist of other fields as well - shown format is required minimum.
+### XYZI (4 fields)
+
+```python
+[
+  sensor_msgs.msg.PointField(name='x', offset=0, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='y', offset=4, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='z', offset=8, datatype=7, count=1),
+  sensor_msgs.msg.PointField(name='intensity', offset=12, datatype=7, count=1)
+]
+```
+
+The filtered output cloud preserves the same format as the input cloud.
+
 For debug purposes, you can validate your pointcloud topic using simple command:
 
 ```bash
