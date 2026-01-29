@@ -227,6 +227,14 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
   const double smoothness_weight = 0.5;
   const double obstacle_distance_weight = 1.7;
   const double goal_lat_distance_weight = 1.0;
+  const double final_segment_threshold = 5.0;
+  const double extra_steering_penalty_factor = 1.0;
+  const double yaw_weight = 15.0;
+  const double distance_to_goal_extension_weight = 1.0;
+  const double reparking_forward_first_weight = 100.0;
+  const double reparking_deviation_penalty = 10.0;
+  const double reparking_alignment_weight = 2.0;
+  const double reparking_distance = 2.0;
   const auto astar_param = fpa::AstarParam{
     search_method,
     only_behind_solutions,
@@ -237,7 +245,15 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
     distance_heuristic_weight,
     smoothness_weight,
     obstacle_distance_weight,
-    goal_lat_distance_weight};
+    goal_lat_distance_weight,
+    final_segment_threshold,
+    extra_steering_penalty_factor,
+    yaw_weight,
+    distance_to_goal_extension_weight,
+    reparking_forward_first_weight,
+    reparking_deviation_penalty,
+    reparking_alignment_weight,
+    reparking_distance};
 
   auto clock_ptr = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
   auto algo =
