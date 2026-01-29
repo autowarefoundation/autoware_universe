@@ -1,0 +1,44 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: RingOutlierFilter.node
+
+launch:
+  package: autoware_pointcloud_preprocessor
+  plugin: autoware::pointcloud_preprocessor::RingOutlierFilterComponent
+  executable: ring_outlier_filter_node
+  node_output: screen
+  use_container: true
+  container_name: pointcloud_container
+
+# interface
+inputs:
+  - name: input
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: "input"
+
+outputs:
+  - name: output
+    message_type: sensor_msgs/msg/PointCloud2
+    remap_target: "output"
+
+# parameters
+parameter_files:
+  - name: ring_outlier_filter_param_file
+    default: config/ring_outlier_filter_node.param.yaml
+
+parameters:
+  - name: input_frame
+    type: string
+    default: base_link
+  - name: output_frame
+    type: string
+    default: base_link
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: input
+    outcomes:
+      - to_output: output
