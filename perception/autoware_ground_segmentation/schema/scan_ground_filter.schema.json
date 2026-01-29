@@ -84,6 +84,13 @@
           },
           "default": [4.0, 2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
         },
+        "front_azimuth_half_span_deg": {
+          "type": "number",
+          "description": "When > 0, radial_divider_angle_map is applied only in the front region (azimuth +/- this angle, x > 0). Rest of circle uses radial_divider_angle_deg. Set to 0 to use map for full circle.",
+          "default": 15.0,
+          "minimum": 0.0,
+          "maximum": 180.0
+        },
         "use_recheck_ground_cluster": {
           "type": "boolean",
           "description": "Enable recheck ground cluster",
@@ -122,6 +129,7 @@
         "radial_divider_angle_deg",
         "radial_divider_angle_map_radii",
         "radial_divider_angle_map_angles",
+        "front_azimuth_half_span_deg",
         "use_recheck_ground_cluster",
         "recheck_start_distance",
         "use_lowest_point",

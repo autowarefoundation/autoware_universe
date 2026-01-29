@@ -53,10 +53,12 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       declare_parameter<std::vector<double>>("radial_divider_angle_map_radii");
     std::vector<double> angle_array_deg =
       declare_parameter<std::vector<double>>("radial_divider_angle_map_angles");
+    const double front_azimuth_half_span_deg =
+      declare_parameter<double>("front_azimuth_half_span_deg");
     std::vector<double> angle_array_rad;
     for (const auto angle_deg : angle_array_deg) {
       angle_array_rad.push_back(deg2rad(angle_deg));
-    } 
+    }
     // Keep radial_divider_angle_deg for backward compatibility (schema requirement)
     // Initialize radial_divider_angle_rad_ before it's used
     const double radial_divider_angle_deg = declare_parameter<double>("radial_divider_angle_deg");
@@ -114,6 +116,8 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.virtual_lidar_y = 0.0f;
       param.azimuth_divider_radius_array = radius_array;
       param.azimuth_divider_angle_array = angle_array_rad;
+      param.front_azimuth_half_span_rad =
+        static_cast<float>(deg2rad(front_azimuth_half_span_deg));
 
       grid_ground_filter_ptr_ = std::make_unique<GridGroundFilter>(param);
     }

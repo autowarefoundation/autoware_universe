@@ -149,6 +149,7 @@ struct GridGroundFilterParameter
   std::vector<double> azimuth_divider_radius_array;
   std::vector<double> azimuth_divider_angle_array;
   std::vector<RadialDividerAngleEntry> radial_divider_angle_map;
+  float front_azimuth_half_span_rad;  // front region (x > 0): apply map in azimuth +/- this (rad)
 };
 
 class GridGroundFilter
@@ -187,7 +188,11 @@ public:
     grid_ptr_ = std::make_unique<Grid>(param_.virtual_lidar_x, param_.virtual_lidar_y);
     // TODO(badai-nguyen): Temporary add radial limit to 200.0m constant value.
     // need to be updated unify with cropbox range parameter
-    grid_ptr_->initialize(param_.grid_size_m, param_.radial_divider_angle_map, 200.0f);
+    // When front_azimuth_half_span_rad > 0: apply radial_divider_angle_map only in front region
+    // (azimuth +/- front_azimuth_half_span, x > 0); rest of circle uses radial_divider_angle_rad.
+    grid_ptr_->initialize(
+      param_.grid_size_m, param_.radial_divider_angle_map, 200.0f,
+      param_.radial_divider_angle_rad, param_.front_azimuth_half_span_rad);
   }
   ~GridGroundFilter() = default;
 
@@ -229,8 +234,6 @@ private:
   // float getRadialDividerAngleRad(const float radius) const;
 
   bool recursiveSearch(const int check_idx, const int search_cnt, std::vector<int> & idx) const;
-  bool recursiveSearch(
-    const int check_idx, const int search_cnt, std::vector<int> & idx, size_t count) const;
   void fitLineFromGndGrid(const std::vector<int> & idx, float & a, float & b) const;
 
   void convert();
@@ -238,11 +241,14 @@ private:
   void initializeGround(pcl::PointIndices & out_no_ground_indices);
 
   void SegmentContinuousCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void SegmentDiscontinuousCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void SegmentBreakCell(
-    const Cell & cell, PointsCentroid & ground_bin, pcl::PointIndices & out_no_ground_indices);
+    const Cell & cell, const Cell & prev_cell, PointsCentroid & ground_bin,
+    pcl::PointIndices & out_no_ground_indices);
   void classify(pcl::PointIndices & out_no_ground_indices);
 };
 

@@ -143,11 +143,16 @@ public:
   void initialize(
     const float grid_dist_size,
     const std::vector<RadialDividerAngleEntry> & radial_divider_angle_map,
-    const float grid_radial_limit)
+    const float grid_radial_limit,
+    const float default_angle_rad = 0.0f,
+    const float front_azimuth_half_span_rad = 0.0f)
   {
     grid_dist_size_ = grid_dist_size;
     radial_divider_angle_map_ = radial_divider_angle_map;
     grid_radial_limit_ = grid_radial_limit;
+    default_angle_rad_ = default_angle_rad;
+    front_azimuth_half_span_rad_ = front_azimuth_half_span_rad;
+    use_front_region_ = (front_azimuth_half_span_rad_ > 0.0f && default_angle_rad_ > 0.0f);
     grid_radial_max_num_ = std::ceil(grid_radial_limit / grid_dist_size_);
     grid_dist_size_inv_ = 1.0f / grid_dist_size_;
 
@@ -198,6 +203,16 @@ public:
     return cells_[idx];
   }
 
+  /** Same as getCell but no bounds check; use only when grid_idx is known valid (faster hot path). */
+  inline Cell & getCellUnchecked(const int grid_idx)
+  {
+    return cells_[static_cast<size_t>(grid_idx)];
+  }
+  inline const Cell & getCellUnchecked(const int grid_idx) const
+  {
+    return cells_[static_cast<size_t>(grid_idx)];
+  }
+
   void resetCells()
   {
     std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -245,12 +260,20 @@ private:
   // configured parameters
   float grid_radial_limit_ = 200.0f;  // meters
   int grid_radial_max_num_ = 0;
+  float default_angle_rad_ = 0.0f;       // for non-front region when use_front_region_
+  float front_azimuth_half_span_rad_ = 0.0f;  // front sector: +/- this angle (rad)
+  bool use_front_region_ = false;        // if true, use map only in front sector
 
   // array of grid boundaries
   std::vector<float> grid_radial_boundaries_;
   std::vector<int> azimuth_grids_per_radial_;
   std::vector<float> azimuth_interval_per_radial_;
   std::vector<int> radial_idx_offsets_;
+  // front-region: per-radial front/rest split (only used when use_front_region_)
+  std::vector<int> front_azimuth_cells_per_radial_;
+  std::vector<float> front_azimuth_interval_per_radial_;
+  std::vector<int> rest_azimuth_cells_per_radial_;
+  std::vector<float> rest_azimuth_interval_per_radial_;
 
   // list of cells
   std::vector<Cell> cells_;
@@ -307,15 +330,36 @@ private:
     }
 
     const size_t radial_grid_num = grid_radial_boundaries_.size();
+    constexpr float two_pi = 2.0f * M_PIf;
 
-    // azimuth boundaries - dynamic based on radial_divider_angle_map
-    {
-      // Initialize arrays
-      azimuth_grids_per_radial_.resize(radial_grid_num);
-      azimuth_interval_per_radial_.resize(radial_grid_num);
-
-      // Pre-compute cached values for each radius range to avoid redundant calculations
-      // Cache structure: radius_threshold -> {angle_rad, azimuth_grid_num, azimuth_interval}
+    // azimuth boundaries - dynamic based on radial_divider_angle_map (or front region + default)
+    azimuth_grids_per_radial_.resize(radial_grid_num);
+    azimuth_interval_per_radial_.resize(radial_grid_num);
+    if (use_front_region_) {
+      front_azimuth_cells_per_radial_.resize(radial_grid_num);
+      front_azimuth_interval_per_radial_.resize(radial_grid_num);
+      rest_azimuth_cells_per_radial_.resize(radial_grid_num);
+      rest_azimuth_interval_per_radial_.resize(radial_grid_num);
+      const float front_span = 2.0f * front_azimuth_half_span_rad_;
+      const float rest_span = two_pi - front_span;
+      for (size_t i = 0; i < radial_grid_num; ++i) {
+        const float cell_radius = grid_radial_boundaries_[i];
+        const float front_angle_rad = getRadialDividerAngleRad(cell_radius);
+        const int front_cells = std::max(
+          1, static_cast<int>(std::ceil(front_span / front_angle_rad)));
+        const float front_interval = front_span / static_cast<float>(front_cells);
+        const int rest_cells =
+          std::max(1, static_cast<int>(std::ceil(rest_span / default_angle_rad_)));
+        const float rest_interval = rest_span / static_cast<float>(rest_cells);
+        front_azimuth_cells_per_radial_[i] = front_cells;
+        front_azimuth_interval_per_radial_[i] = front_interval;
+        rest_azimuth_cells_per_radial_[i] = rest_cells;
+        rest_azimuth_interval_per_radial_[i] = rest_interval;
+        azimuth_grids_per_radial_[i] = front_cells + rest_cells;
+        azimuth_interval_per_radial_[i] = two_pi / static_cast<float>(front_cells + rest_cells);
+      }
+    } else {
+      // full circle uses radial_divider_angle_map
       struct CachedAngleConfig
       {
         float angle_rad;
@@ -324,9 +368,7 @@ private:
       };
       std::vector<std::pair<float, CachedAngleConfig>> angle_cache;
 
-      constexpr float two_pi = 2.0f * M_PIf;
       if (!radial_divider_angle_map_.empty()) {
-        // Pre-compute cache for each entry in the map
         for (const auto & entry : radial_divider_angle_map_) {
           const float angle_rad = entry.angle_rad;
           const int azimuth_grid_num = static_cast<int>(std::ceil(two_pi / angle_rad));
@@ -334,7 +376,6 @@ private:
           angle_cache.emplace_back(
             entry.radius, CachedAngleConfig{angle_rad, azimuth_grid_num, azimuth_interval});
         }
-        // Add entry for radius beyond the last threshold (uses last angle)
         if (angle_cache.size() > 0) {
           const auto & last_config = angle_cache.back().second;
           angle_cache.emplace_back(
@@ -344,10 +385,7 @@ private:
         }
       }
 
-      // For each radial grid, use cached values based on radius range
-      // Since both radial grids and cache are sorted, we can do a single pass
       if (angle_cache.empty()) {
-        // Fallback: compute for each grid if cache is empty
         for (size_t i = 0; i < radial_grid_num; ++i) {
           const float cell_radius = grid_radial_boundaries_[i];
           const float angle_rad = getRadialDividerAngleRad(cell_radius);
@@ -357,22 +395,14 @@ private:
           azimuth_interval_per_radial_[i] = azimuth_interval;
         }
       } else {
-        // Use cached values: iterate through radial grids and cache simultaneously
-        // The logic matches getRadialDividerAngleRad: use last entry where entry.radius <= radius
         size_t cache_idx = 0;
         for (size_t i = 0; i < radial_grid_num; ++i) {
           const float cell_radius = grid_radial_boundaries_[i];
-
-          // Advance cache index to find the last entry where threshold <= cell_radius
-          // Stop at second-to-last entry (last is sentinel for values >= last threshold)
           while (
             cache_idx < angle_cache.size() - 2 &&
             cell_radius >= angle_cache[cache_idx + 1].first) {
             ++cache_idx;
           }
-
-          // Use the cached config for current cache index
-          // This gives us the last entry where entry.radius <= cell_radius
           const auto & config = angle_cache[cache_idx].second;
           azimuth_grids_per_radial_[i] = config.azimuth_grid_num;
           azimuth_interval_per_radial_[i] = config.azimuth_interval;
@@ -390,15 +420,37 @@ private:
 
   int getAzimuthGridIdx(const int & radial_idx, const float & azimuth) const
   {
-    const int azimuth_grid_num = azimuth_grids_per_radial_[radial_idx];
+    constexpr float two_pi = 2.0f * M_PIf;
+    const float az =
+      (azimuth >= 0.0f && azimuth < two_pi) ? azimuth : (azimuth < 0.0f ? azimuth + two_pi : azimuth - two_pi);
 
+    if (use_front_region_) {
+      const int front_cells = front_azimuth_cells_per_radial_[radial_idx];
+      const int rest_cells = rest_azimuth_cells_per_radial_[radial_idx];
+      const float front_interval = front_azimuth_interval_per_radial_[radial_idx];
+      const float rest_interval = rest_azimuth_interval_per_radial_[radial_idx];
+      const float half = front_azimuth_half_span_rad_;
+      const float front_span = 2.0f * half;
+      if (az <= half || az >= two_pi - half) {
+        float offset = (az <= half) ? az : (az - (two_pi - front_span));
+        int front_idx = static_cast<int>(std::floor(offset / front_interval));
+        if (front_idx >= front_cells) front_idx = front_cells - 1;
+        if (front_idx < 0) front_idx = 0;
+        return front_idx;
+      }
+      int rest_idx =
+        static_cast<int>(std::floor((az - half) / rest_interval));
+      if (rest_idx >= rest_cells) rest_idx = rest_cells - 1;
+      if (rest_idx < 0) rest_idx = 0;
+      return front_cells + rest_idx;
+    }
+
+    const int azimuth_grid_num = azimuth_grids_per_radial_[radial_idx];
     int azimuth_grid_idx =
-      static_cast<int>(std::floor(azimuth / azimuth_interval_per_radial_[radial_idx]));
+      static_cast<int>(std::floor(az / azimuth_interval_per_radial_[radial_idx]));
     if (azimuth_grid_idx == azimuth_grid_num) {
-      // loop back to the first grid
       azimuth_grid_idx = 0;
     }
-    // dynamic azimuth interval based on radial_divider_angle_map
     return azimuth_grid_idx;
   }
 
@@ -460,18 +512,19 @@ private:
     std::unique_ptr<ScopedTimeTrack> st_ptr;
     if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+    constexpr float two_pi = 2.0f * M_PIf;
+
     for (size_t idx = 0; idx < cells_.size(); ++idx) {
       Cell & cell = cells_[idx];
 
       int radial_idx = 0;
       int azimuth_idx = 0;
-      getRadialAzimuthIdxFromCellIdx(idx, radial_idx, azimuth_idx);
+      getRadialAzimuthIdxFromCellIdx(static_cast<int>(idx), radial_idx, azimuth_idx);
 
-      cell.grid_idx_ = idx;
+      cell.grid_idx_ = static_cast<int>(idx);
       cell.radial_idx_ = radial_idx;
       cell.azimuth_idx_ = azimuth_idx;
 
-      // set width of the cell
       const auto radial_grid_num = static_cast<int>(grid_radial_boundaries_.size() - 1);
       if (radial_idx < radial_grid_num) {
         cell.radial_size_ =
@@ -479,21 +532,44 @@ private:
       } else {
         cell.radial_size_ = grid_radial_limit_ - grid_radial_boundaries_[radial_idx];
       }
-      cell.azimuth_size_ = azimuth_interval_per_radial_[radial_idx];
 
-      // set center of the cell
+      if (use_front_region_) {
+        const int front_cells = front_azimuth_cells_per_radial_[radial_idx];
+        const float front_interval = front_azimuth_interval_per_radial_[radial_idx];
+        const float rest_interval = rest_azimuth_interval_per_radial_[radial_idx];
+        const float half = front_azimuth_half_span_rad_;
+        const int front_cells_in_first_half = std::min(
+          front_cells,
+          static_cast<int>(std::floor(half / front_interval)) + 1);
+        if (azimuth_idx < front_cells) {
+          cell.azimuth_size_ = front_interval;
+          if (azimuth_idx < front_cells_in_first_half) {
+            cell.center_azimuth_ =
+              (static_cast<float>(azimuth_idx) + 0.5f) * front_interval;
+          } else {
+            cell.center_azimuth_ = two_pi - half +
+              (static_cast<float>(azimuth_idx - front_cells_in_first_half) + 0.5f) * front_interval;
+          }
+        } else {
+          const int rest_idx = azimuth_idx - front_cells;
+          cell.azimuth_size_ = rest_interval;
+          cell.center_azimuth_ =
+            half + (static_cast<float>(rest_idx) + 0.5f) * rest_interval;
+        }
+      } else {
+        cell.azimuth_size_ = azimuth_interval_per_radial_[radial_idx];
+        cell.center_azimuth_ =
+          (static_cast<float>(azimuth_idx) + 0.5f) * cell.azimuth_size_;
+      }
+
       cell.center_radius_ = grid_radial_boundaries_[radial_idx] + cell.radial_size_ * 0.5f;
-      cell.center_azimuth_ = (static_cast<float>(azimuth_idx) + 0.5f) * cell.azimuth_size_;
 
-      // set previous grid id, which is radially previous
       int prev_grid_idx = -1;
-      // only if the previous radial grid exists
       if (radial_idx > 0) {
-        // find nearest azimuth grid in the previous radial grid
         const float azimuth = cell.center_azimuth_;
-        // dynamic azimuth interval based on radial_divider_angle_map
-        const size_t azimuth_idx_prev_radial_grid = getAzimuthGridIdx(radial_idx - 1, azimuth);
-        prev_grid_idx = getGridIdx(radial_idx - 1, azimuth_idx_prev_radial_grid);
+        const int azimuth_idx_prev =
+          getAzimuthGridIdx(radial_idx - 1, azimuth);
+        prev_grid_idx = getGridIdx(radial_idx - 1, azimuth_idx_prev);
       }
       cell.prev_grid_idx_ = prev_grid_idx;
       cell.scan_grid_root_idx_ = -1;
