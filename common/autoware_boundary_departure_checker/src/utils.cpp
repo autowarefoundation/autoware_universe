@@ -349,37 +349,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   return vehicle_footprints;
 }
 
-std::vector<LinearRing2d> create_ego_footprints(
-  const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
-  const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
-  const VehicleInfo & vehicle_info, const Param & param)
-{
-  if (abnormality_type == AbnormalityType::LONGITUDINAL) {
-    const auto longitudinal_config_opt =
-      param.get_abnormality_config<LongitudinalConfig>(abnormality_type);
-    return create_vehicle_footprints(
-      ego_pred_traj, vehicle_info, uncertainty_fp_margin, longitudinal_config_opt->get());
-  }
-
-  if (
-    abnormality_type == AbnormalityType::STEERING_ACCELERATED ||
-    abnormality_type == AbnormalityType::STEERING_STUCK ||
-    abnormality_type == AbnormalityType::STEERING_SUDDEN_LEFT ||
-    abnormality_type == AbnormalityType::STEERING_SUDDEN_RIGHT) {
-    const auto config = param.get_abnormality_config<SteeringConfig>(abnormality_type);
-    return utils::steering::create_vehicle_footprints(
-      ego_pred_traj, vehicle_info, current_steering, *config);
-  }
-
-  FootprintMargin margin = uncertainty_fp_margin;
-  if (abnormality_type == AbnormalityType::LOCALIZATION) {
-    const auto loc_config_opt = param.get_abnormality_config<LocalizationConfig>(abnormality_type);
-    const auto & footprint_envelop = loc_config_opt->get().footprint_envelop;
-    margin = margin + footprint_envelop;
-  }
-  return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, margin);
-}
-
 Side<Segment2d> get_footprint_sides(
   const LinearRing2d & footprint, const bool use_center_right, const bool use_center_left)
 {

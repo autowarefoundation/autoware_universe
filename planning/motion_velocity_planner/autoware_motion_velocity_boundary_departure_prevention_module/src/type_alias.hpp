@@ -91,11 +91,11 @@ using autoware_utils_system::StopWatch;          // NOLINT
 using vehicle_info_utils::VehicleInfo;           // NOLINT
 
 using boundary_departure_checker::Abnormalities;                        // NOLINT
-using boundary_departure_checker::AbnormalityType;                      // NOLINT
 using boundary_departure_checker::DeparturePoint;                       // NOLINT
 using boundary_departure_checker::DeparturePoints;                      // NOLINT
 using boundary_departure_checker::DepartureType;                        // NOLINT
 using boundary_departure_checker::FootprintMargin;                      // NOLINT
+using boundary_departure_checker::FootprintType;                        // NOLINT
 using boundary_departure_checker::ProjectionToBound;                    // NOLINT
 using boundary_departure_checker::Side;                                 // NOLINT
 using boundary_departure_checker::SideKey;                              // NOLINT

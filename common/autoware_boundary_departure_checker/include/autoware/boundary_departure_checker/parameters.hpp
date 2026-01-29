@@ -93,7 +93,7 @@ struct SteeringConfig
 
 using AbnormalityConfig =
   std::variant<NormalConfig, LocalizationConfig, LongitudinalConfig, SteeringConfig>;
-using AbnormalitiesConfigs = std::unordered_map<AbnormalityType, AbnormalityConfig>;
+using AbnormalitiesConfigs = std::unordered_map<FootprintType, AbnormalityConfig>;
 
 struct TriggerThreshold
 {
@@ -148,11 +148,11 @@ struct Param
   double critical_departure_off_time_buffer_s{0.15};
   AbnormalitiesConfigs abnormality_configs;
   std::vector<std::string> boundary_types_to_detect;
-  std::vector<AbnormalityType> abnormality_types_to_compensate;
+  std::vector<FootprintType> footprint_types_to_check;
 
   template <typename ConfigType>
   tl::expected<std::reference_wrapper<const ConfigType>, std::string> get_abnormality_config(
-    const AbnormalityType type) const
+    const FootprintType type) const
   {
     auto it = abnormality_configs.find(type);
     if (it == abnormality_configs.end()) {

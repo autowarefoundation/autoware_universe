@@ -205,7 +205,7 @@ MarkerArray create_debug_marker_array(
   const auto color = color::green();
   const auto m_scale = autoware_utils_visualization::create_marker_scale(0.05, 0, 0);
 
-  const auto get_type_str = [&](const AbnormalityType type) {
+  const auto get_type_str = [&](const FootprintType type) {
     auto type_str = std::string(magic_enum::enum_name(type));
     std::transform(type_str.begin(), type_str.end(), type_str.begin(), [](unsigned char c) {
       return std::tolower(c);
@@ -229,7 +229,7 @@ MarkerArray create_debug_marker_array(
   marker_array.markers.push_back(create_boundary_segments_marker(
     abnormalities_data.boundary_segments, marker, "boundary_segments", base_link_z));
 
-  for (const auto type : bdc_param.abnormality_types_to_compensate) {
+  for (const auto type : bdc_param.footprint_types_to_check) {
     const auto type_str = get_type_str(type);
     marker_array.markers.push_back(create_footprint_marker(
       abnormalities_data.footprints[type], curr_time, type_str, base_link_z, color::aqua()));
