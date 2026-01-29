@@ -344,7 +344,7 @@ void TRTBEVFormerNode::cameraInfoCallback(
   Eigen::Quaternion<double> rot;
   Eigen::Translation3d translation;
   getTransform(
-    tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)), rot,
+    tf_buffer_->lookupTransform("base_link", msg->header.frame_id, tf2::TimePointZero), rot,
     translation);
   cams2ego_rot_[idx] = rot;
   cams2ego_trans_[idx] = translation;

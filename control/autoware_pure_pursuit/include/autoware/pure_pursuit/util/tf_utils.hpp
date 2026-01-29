@@ -47,6 +47,17 @@ inline boost::optional<geometry_msgs::msg::TransformStamped> getTransform(
   }
 }
 
+inline boost::optional<geometry_msgs::msg::TransformStamped> getTransform(
+  const tf2_ros::Buffer & tf_buffer, const std::string & from, const std::string & to,
+  const tf2::TimePoint & time, const tf2::Duration & duration)
+{
+  try {
+    return tf_buffer.lookupTransform(from, to, time, duration);
+  } catch (tf2::TransformException & ex) {
+    return {};
+  }
+}
+
 inline geometry_msgs::msg::TransformStamped waitForTransform(
   const tf2_ros::Buffer & tf_buffer, const std::string & from, const std::string & to)
 {
@@ -77,8 +88,8 @@ inline geometry_msgs::msg::PoseStamped transform2pose(
 inline boost::optional<geometry_msgs::msg::PoseStamped> getCurrentPose(
   const tf2_ros::Buffer & tf_buffer, const double timeout = 1.0)
 {
-  const auto tf_current_pose = getTransform(
-    tf_buffer, "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.0));
+  const auto tf_current_pose =
+    getTransform(tf_buffer, "map", "base_link", tf2::TimePointZero, tf2::durationFromSec(1.0));
   if (!tf_current_pose) {
     return {};
   }
