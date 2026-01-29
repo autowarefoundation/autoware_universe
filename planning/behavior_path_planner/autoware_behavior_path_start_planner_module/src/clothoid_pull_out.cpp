@@ -1454,7 +1454,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
         pull_out_lanes, pull_out_path.start_pose, pull_out_path.end_pose);
 
     const double shift_length =
-      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.end);
+      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
     if (shift_length < parameters_.th_rejected_shift_length) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("ClothoidPullOut"),
