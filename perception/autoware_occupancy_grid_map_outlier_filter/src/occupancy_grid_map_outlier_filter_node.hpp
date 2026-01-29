@@ -74,8 +74,7 @@ public:
 
 private:
   void onOccupancyGridMapAndPointCloud2(
-    const OccupancyGrid::ConstSharedPtr & input_occupancy_grid_map,
-    const PointCloud2::ConstSharedPtr & input_pointcloud);
+    const OccupancyGrid::ConstSharedPtr & input_ogm, const PointCloud2::ConstSharedPtr & input_pc);
   void filterByOccupancyGridMap(
     const OccupancyGrid & occupancy_grid_map, const PointCloud2 & pointcloud,
     PointCloud2 & high_confidence, PointCloud2 & low_confidence, PointCloud2 & out_ogm);
