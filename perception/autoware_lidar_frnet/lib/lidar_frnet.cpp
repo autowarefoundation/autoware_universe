@@ -89,8 +89,7 @@ InputFormat LidarFRNet::detectInputFormat(const cuda_blackboard::CudaPointCloud2
   const auto num_fields = fields.size();
 
   // Check from largest to smallest format, requiring exact field count match
-  if (
-    num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
+  if (num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
     return InputFormat::XYZIRCAEDT;
   }
   if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
@@ -286,8 +285,8 @@ bool LidarFRNet::postprocess(
       stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_filtered.data.get(), cloud_filtered_d_.get(),
-      input_point_step_ * num_points_filtered, cudaMemcpyDeviceToDevice, stream_));
+      cloud_filtered.data.get(), cloud_filtered_d_.get(), input_point_step_ * num_points_filtered,
+      cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     cloud_filtered.width = num_points_filtered;
     cloud_filtered.row_step = num_points_filtered * cloud_filtered.point_step;
