@@ -16,7 +16,7 @@ inputs:
 
 outputs:
   - name: laserscan
-    message_type: nav_msgs/msg/OccupancyGrid
+    message_type: sensor_msgs/msg/LaserScan
     qos:
       reliability: reliable
       durability: transient_local

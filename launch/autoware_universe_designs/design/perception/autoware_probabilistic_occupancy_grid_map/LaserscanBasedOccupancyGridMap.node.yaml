@@ -20,7 +20,8 @@ inputs:
     message_type: sensor_msgs/msg/PointCloud2
   - name: raw_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-
+  - name: laserscan
+    message_type: sensor_msgs/msg/LaserScan
 outputs:
   - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
