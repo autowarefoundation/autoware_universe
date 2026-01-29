@@ -65,6 +65,8 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<int64_t>("negative_match_num_threshold");
   param_.vote_threshold_for_detect_marker =
     this->declare_parameter<int64_t>("vote_threshold_for_detect_marker");
+  param_.max_average_intensity_threshold =
+    this->declare_parameter<double>("max_average_intensity_threshold");
   param_.marker_to_vehicle_offset_y = this->declare_parameter<double>("marker_to_vehicle_offset_y");
   param_.marker_height_from_ground = this->declare_parameter<double>("marker_height_from_ground");
   param_.lower_ring_id_init = this->declare_parameter<int64_t>("lower_ring_id_init");
@@ -582,7 +584,9 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
       double min_intensity = std::numeric_limits<double>::max();
       double max_intensity = std::numeric_limits<double>::lowest();
 
-      // find max_min
+      // find max_min and calculate average intensity
+      double sum_intensity = 0.0;
+      int valid_bin_count = 0;
       for (size_t j = 0; j < param_.intensity_pattern.size(); j++) {
         if (intensity_num[i + j] == 0) {
           continue;
@@ -590,10 +594,26 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
 
         min_intensity = std::min(min_intensity, average_intensity[i + j]);
         max_intensity = std::max(max_intensity, average_intensity[i + j]);
+        sum_intensity += average_intensity[i + j];
+        valid_bin_count++;
       }
 
       if (max_intensity <= min_intensity) {
         continue;
+      }
+
+      // Check if average intensity exceeds threshold (to reject false positives from high-intensity surfaces)
+      if (param_.max_average_intensity_threshold > 0.0 && valid_bin_count > 0) {
+        const double average_intensity_value = sum_intensity / static_cast<double>(valid_bin_count);
+        if (average_intensity_value >= param_.max_average_intensity_threshold) {
+          RCLCPP_DEBUG_STREAM_THROTTLE(
+            this->get_logger(), *this->get_clock(), 1000,
+            "[detect_landmarks] Skipping pattern match at bin " << i
+                                                                << " due to high average intensity: "
+                                                                << average_intensity_value
+                                                                << " >= " << param_.max_average_intensity_threshold);
+          continue;  // Skip this pattern match
+        }
       }
 
       const double center_intensity = (max_intensity - min_intensity) / 2.0 + min_intensity;

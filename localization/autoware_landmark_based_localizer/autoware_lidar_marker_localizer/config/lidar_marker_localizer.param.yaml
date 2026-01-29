@@ -17,6 +17,9 @@
     positive_match_num_threshold: 3
     negative_match_num_threshold: 3
     vote_threshold_for_detect_marker: 20
+    # Maximum threshold for average intensity (disabled when 0.0).
+    # To prevent false detection on surfaces directly facing the LiDAR receiver, matching is disabled when this value is exceeded.
+    max_average_intensity_threshold: 0.0
     marker_to_vehicle_offset_y: 0.0
     marker_height_from_ground: 1.075
     lower_ring_id_init: 128

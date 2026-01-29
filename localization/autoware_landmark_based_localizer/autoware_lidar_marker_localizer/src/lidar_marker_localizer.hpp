@@ -80,6 +80,7 @@ protected:
     int64_t positive_match_num_threshold;
     int64_t negative_match_num_threshold;
     int64_t vote_threshold_for_detect_marker;
+    double max_average_intensity_threshold;
     double marker_to_vehicle_offset_y;
     double marker_height_from_ground;
     int64_t reference_ring_number;
