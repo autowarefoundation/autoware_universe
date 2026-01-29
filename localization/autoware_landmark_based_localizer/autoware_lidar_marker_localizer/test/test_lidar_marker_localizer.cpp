@@ -414,7 +414,6 @@ TEST_F(LidarMarkerLocalizerTest, CheckPointcloudRingsNarrowerThanConfiguredFilte
   ASSERT_TRUE(true);  // エラーなく実行できれば成功
 }
 
-
 }  // namespace autoware::lidar_marker_localizer
 
 int main(int argc, char ** argv)

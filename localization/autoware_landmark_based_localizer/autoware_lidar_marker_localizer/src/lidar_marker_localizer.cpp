@@ -443,11 +443,13 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     // Use actual range when parameter range is invalid
     lower_ring_id = actual_min_ring_id;
     upper_ring_id = actual_max_ring_id;
-  } else if (actual_min_ring_id != param_lower_ring_id || actual_max_ring_id != param_upper_ring_id) {
+  } else if (
+    actual_min_ring_id != param_lower_ring_id || actual_max_ring_id != param_upper_ring_id) {
     // Check if pointcloud contains rings not matching the configured filter range
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
-      "Pointcloud contains rings not matching the configured filter range. Narrowing down the range. "
+      "Pointcloud contains rings not matching the configured filter range. Narrowing down the "
+      "range. "
         << "Actual range: [" << actual_min_ring_id << ", " << actual_max_ring_id
         << "], Configured range: [" << param_lower_ring_id << ", " << param_upper_ring_id << "]");
     // Use narrowed-down range for ring filter
@@ -619,7 +621,8 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
           // ignore param_.intensity_pattern[j] == 0
         }
       }
-      const size_t bin_position = i + param_.intensity_pattern.size() / 2 + ring_array_index * bin_num;
+      const size_t bin_position =
+        i + param_.intensity_pattern.size() / 2 + ring_array_index * bin_num;
       center_intensity_grid_msg.data[bin_position] =
         std::min(static_cast<int>(center_intensity), max_vote_percentage);
       positive_grid_msg.data[bin_position] = std::min(
