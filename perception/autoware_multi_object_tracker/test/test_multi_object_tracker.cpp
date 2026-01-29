@@ -289,7 +289,8 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
 
       writer.write(tf_msg, "/tf", rclcpp::Time(tf_msg.transforms.front().header.stamp));
     } else if (bag_message->topic_name == "/perception/object_recognition/detection/objects") {
-      auto tf_transform = tf_buffer->lookupTransform(world_frame_id, ego_frame_id, rclcpp::Time(0));
+      auto tf_transform =
+        tf_buffer->lookupTransform(world_frame_id, ego_frame_id, tf2::TimePointZero);
 
       // Deserialize message
       rclcpp::SerializedMessage serialized_msg(*bag_message->serialized_data);
