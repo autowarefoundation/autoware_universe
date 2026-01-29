@@ -66,10 +66,23 @@
           "description": "The x-axis offset of addition LiDARs from vehicle center of mass [m], recommended to use only for additional LiDARs in elevation_grid_mode",
           "default": 0.0
         },
-        "radial_divider_angle_deg": {
-          "type": "number",
-          "description": "The angle which divide the whole pointcloud to sliced group [deg]",
-          "default": 1.0
+        "radial_divider_angle_map_radii": {
+          "type": "array",
+          "description": "Array of radius thresholds in meters [m] for radial divider angle map. Must match length of radial_divider_angle_map_angles.",
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          },
+          "default": [0.0, 5.0, 10.0, 20.0, 40.0, 60.0, 80.0]
+        },
+        "radial_divider_angle_map_angles": {
+          "type": "array",
+          "description": "Array of radial divider angles in degrees [deg] corresponding to radial_divider_angle_map_radii. Each angle applies to points at or above the corresponding radius threshold (up to the next threshold).",
+          "items": {
+            "type": "number",
+            "minimum": 0.0
+          },
+          "default": [4.0, 2.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
         },
         "use_recheck_ground_cluster": {
           "type": "boolean",
@@ -106,7 +119,8 @@
         "elevation_grid_mode",
         "low_priority_region_x",
         "center_pcl_shift",
-        "radial_divider_angle_deg",
+        "radial_divider_angle_map_radii",
+        "radial_divider_angle_map_angles",
         "use_recheck_ground_cluster",
         "recheck_start_distance",
         "use_lowest_point",

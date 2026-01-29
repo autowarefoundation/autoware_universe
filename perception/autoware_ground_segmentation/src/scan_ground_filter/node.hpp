@@ -158,9 +158,24 @@ private:
   float center_pcl_shift_;  // virtual center of pcl to center mass
 
   // common parameters
-  float radial_divider_angle_rad_;  // distance in rads between dividers
+  float radial_divider_angle_rad_;  // distance in rads between dividers (used for max divisions)
   size_t radial_dividers_num_;
   VehicleInfo vehicle_info_;
+
+  // Radial divider angle map: stores radius thresholds and corresponding angles
+  struct RadialDividerAngleEntry
+  {
+    float radius;     // radius threshold in meters
+    float angle_rad;  // angle in radians
+  };
+  std::vector<RadialDividerAngleEntry> radial_divider_angle_map_;
+
+  /*!
+   * Get radial divider angle based on radius
+   * @param[in] radius Radial distance in meters
+   * @return Radial divider angle in radians
+   */
+  float getRadialDividerAngleRad(const float radius) const;
 
   // common thresholds
   float global_slope_max_angle_rad_;  // radians
