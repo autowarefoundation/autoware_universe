@@ -116,8 +116,7 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.virtual_lidar_y = 0.0f;
       param.azimuth_divider_radius_array = radius_array;
       param.azimuth_divider_angle_array = angle_array_rad;
-      param.front_azimuth_half_span_rad =
-        static_cast<float>(deg2rad(front_azimuth_half_span_deg));
+      param.front_azimuth_half_span_rad = static_cast<float>(deg2rad(front_azimuth_half_span_deg));
 
       grid_ground_filter_ptr_ = std::make_unique<GridGroundFilter>(param);
     }

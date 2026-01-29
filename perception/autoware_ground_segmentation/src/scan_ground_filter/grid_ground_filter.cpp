@@ -389,8 +389,8 @@ void GridGroundFilter::classify(pcl::PointIndices & out_no_ground_indices)
     enum SegmentationMode { NONE, CONTINUOUS, DISCONTINUOUS, BREAK };
     SegmentationMode mode = NONE;
     if (!grid_idcs.empty()) {
-      const int front_radial_id =
-        grid_ptr_->getCellUnchecked(grid_idcs.back()).radial_idx_ + static_cast<int>(grid_idcs.size());
+      const int front_radial_id = grid_ptr_->getCellUnchecked(grid_idcs.back()).radial_idx_ +
+                                  static_cast<int>(grid_idcs.size());
       const float radial_diff_between_cells = cell.center_radius_ - prev_cell.center_radius_;
 
       if (radial_diff_between_cells < param_.gnd_grid_continual_thresh * cell.radial_size_) {
@@ -421,8 +421,8 @@ void GridGroundFilter::classify(pcl::PointIndices & out_no_ground_indices)
       param_.use_recheck_ground_cluster && cell.avg_radius_ > param_.recheck_start_distance &&
       ground_bin.getGroundPointNum() > 0) {
       float reference_height = param_.use_lowest_point
-                                ? ground_bin.getMinHeightOnly()
-                                : (ground_bin.processAverage(), ground_bin.getAverageHeight());
+                                 ? ground_bin.getMinHeightOnly()
+                                 : (ground_bin.processAverage(), ground_bin.getAverageHeight());
       const float threshold = reference_height + param_.non_ground_height_threshold;
       const std::vector<size_t> & gnd_indices = ground_bin.getIndicesRef();
       const std::vector<float> & height_list = ground_bin.getHeightListRef();
@@ -435,24 +435,24 @@ void GridGroundFilter::classify(pcl::PointIndices & out_no_ground_indices)
       }
     }
 
-      // finalize current cell, update the cell ground information
-      if (ground_bin.getGroundPointNum() > 0) {
-        ground_bin.processAverage();
-        cell.avg_height_ = ground_bin.getAverageHeight();
-        cell.avg_radius_ = ground_bin.getAverageRadius();
-        cell.max_height_ = ground_bin.getMaxHeight();
-        cell.min_height_ = ground_bin.getMinHeight();
-        cell.has_ground_ = true;
-      } else {
-        // copy previous cell
-        cell.avg_radius_ = prev_cell.avg_radius_;
-        cell.avg_height_ = prev_cell.avg_height_;
-        cell.max_height_ = prev_cell.max_height_;
-        cell.min_height_ = prev_cell.min_height_;
-        cell.has_ground_ = false;
-      }
+    // finalize current cell, update the cell ground information
+    if (ground_bin.getGroundPointNum() > 0) {
+      ground_bin.processAverage();
+      cell.avg_height_ = ground_bin.getAverageHeight();
+      cell.avg_radius_ = ground_bin.getAverageRadius();
+      cell.max_height_ = ground_bin.getMaxHeight();
+      cell.min_height_ = ground_bin.getMinHeight();
+      cell.has_ground_ = true;
+    } else {
+      // copy previous cell
+      cell.avg_radius_ = prev_cell.avg_radius_;
+      cell.avg_height_ = prev_cell.avg_height_;
+      cell.max_height_ = prev_cell.max_height_;
+      cell.min_height_ = prev_cell.min_height_;
+      cell.has_ground_ = false;
+    }
 
-      cell.is_processed_ = true;
+    cell.is_processed_ = true;
   }
 }
 

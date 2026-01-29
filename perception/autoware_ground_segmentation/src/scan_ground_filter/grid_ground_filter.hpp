@@ -191,8 +191,8 @@ public:
     // When front_azimuth_half_span_rad > 0: apply radial_divider_angle_map only in front region
     // (azimuth +/- front_azimuth_half_span, x > 0); rest of circle uses radial_divider_angle_rad.
     grid_ptr_->initialize(
-      param_.grid_size_m, param_.radial_divider_angle_map, 200.0f,
-      param_.radial_divider_angle_rad, param_.front_azimuth_half_span_rad);
+      param_.grid_size_m, param_.radial_divider_angle_map, 200.0f, param_.radial_divider_angle_rad,
+      param_.front_azimuth_half_span_rad);
   }
   ~GridGroundFilter() = default;
 
