@@ -35,6 +35,9 @@ inputs:
   - name: control/command/control_cmd
     message_type: autoware_control_msgs/msg/Control
     remap_target: input/ackermann_control_command
+  - name: control/command/actuation_cmd
+    message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
+    remap_target: input/actuation_command
   - name: control/command/gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
     remap_target: input/gear_command
