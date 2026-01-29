@@ -15,7 +15,7 @@ external_interfaces:
     - name: object_info
     - name: predicted_objects
   output:
-    - name: object_recognition/detection/objects
+    - name: detected_objects
     - name: obstacle_segmentation/pointcloud
 
 connections:
@@ -28,6 +28,6 @@ connections:
   - from: shape_estimation.output.objects
     to: detected_object_feature_remover.input.input
   - from: detected_object_feature_remover.output.output
-    to: output.object_recognition/detection/objects
+    to: output.detected_objects
   - from: dummy_perception_publisher.output.points_raw
     to: output.obstacle_segmentation/pointcloud
