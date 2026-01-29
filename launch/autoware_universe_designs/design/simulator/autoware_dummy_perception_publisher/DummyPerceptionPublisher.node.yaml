@@ -44,7 +44,21 @@ parameter_files:
   - name: dummy_perception_publisher_config_file
     default: config/dummy_perception_publisher.param.yaml
 
-parameters: []
+parameters:
+  - name: visible_range
+    default: 300.0
+  - name: detection_successful_rate
+    default: 0.999
+  - name: enable_ray_tracing
+    default: false
+  - name: use_object_recognition
+    default: true
+  - name: object_centric_pointcloud
+    default: false
+  - name: use_base_link_z
+    default: true
+  - name: publish_ground_truth
+    default: true
 
 # processes
 processes:
