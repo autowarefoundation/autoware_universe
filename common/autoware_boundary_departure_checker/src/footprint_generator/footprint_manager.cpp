@@ -25,8 +25,7 @@
 namespace autoware::boundary_departure_checker
 {
 
-FootprintManager::FootprintManager(
-  const std::vector<FootprintType> & footprint_types)
+FootprintManager::FootprintManager(const std::vector<FootprintType> & footprint_types)
 {
   // Always add NORMAL first
   generators_.push_back(std::make_unique<NormalFootprintGenerator>());

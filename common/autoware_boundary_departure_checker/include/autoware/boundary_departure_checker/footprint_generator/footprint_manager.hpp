@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_MANAGER_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_MANAGER_HPP_
 
 #include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/footprint_generator/footprint_generator.hpp"
@@ -50,4 +50,4 @@ private:
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_GENERATOR_MANAGER_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__FOOTPRINT_GENERATOR__FOOTPRINT_MANAGER_HPP_
