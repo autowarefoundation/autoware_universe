@@ -28,8 +28,8 @@
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -502,10 +502,12 @@ std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
     if (!search_lanes.empty()) {
       // Find closest lanelet
       lanelet::Lanelet closest_lanelet;
-      if (lanelet::utils::query::getClosestLanelet(
-            search_lanes, path_point.point.pose, &closest_lanelet)) {
+      if (
+        const auto closest_lanelet_opt =
+          autoware::experimental::lanelet2_utils::get_closest_lanelet(
+            search_lanes, path_point.point.pose)) {
         // Get z value of closest point from lanelet centerline
-        const auto centerline = closest_lanelet.centerline();
+        const auto centerline = closest_lanelet_opt.value().centerline();
         if (!centerline.empty()) {
           double min_distance = std::numeric_limits<double>::max();
           double closest_z = all_clothoid_points[i].z;  // Default is original z value
