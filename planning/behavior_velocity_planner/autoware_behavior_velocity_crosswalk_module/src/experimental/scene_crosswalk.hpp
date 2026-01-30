@@ -409,22 +409,19 @@ private:
     const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
-    const Trajectory & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
     const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
-    const Trajectory & ego_path,
-    const std::vector<PredictedObject> & objects,
+    const Trajectory & ego_path, const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose, const PlannerData & planner_data);
 
   std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
-    const Trajectory & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
@@ -445,8 +442,7 @@ private:
     const PlannerData & planner_data);
 
   void setDistanceToStop(
-    const Trajectory & ego_path,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+    const Trajectory & ego_path, const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
     const std::optional<StopPoseWithObjectUuids> & stop_factor, const PlannerData & planner_data);
 
   void planGo(
@@ -460,8 +456,7 @@ private:
 
   // minor functions
   std::pair<double, double> getAttentionRange(
-    const Trajectory & ego_path,
-    const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
+    const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const PlannerData & planner_data);
 
