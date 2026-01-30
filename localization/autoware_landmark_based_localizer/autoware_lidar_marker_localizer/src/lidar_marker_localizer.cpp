@@ -445,11 +445,13 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
     // Use actual range when parameter range is invalid
     lower_ring_id = actual_min_ring_id;
     upper_ring_id = actual_max_ring_id;
-  } else if (actual_min_ring_id != param_lower_ring_id || actual_max_ring_id != param_upper_ring_id) {
+  } else if (
+    actual_min_ring_id != param_lower_ring_id || actual_max_ring_id != param_upper_ring_id) {
     // Check if pointcloud contains rings not matching the configured filter range
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
-      "Pointcloud contains rings not matching the configured filter range. Narrowing down the range. "
+      "Pointcloud contains rings not matching the configured filter range. Narrowing down the "
+      "range. "
         << "Actual range: [" << actual_min_ring_id << ", " << actual_max_ring_id
         << "], Configured range: [" << param_lower_ring_id << ", " << param_upper_ring_id << "]");
     // Use narrowed-down range for ring filter
@@ -600,16 +602,16 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
         continue;
       }
 
-      // Check if average intensity exceeds threshold (to reject false positives from high-intensity surfaces)
+      // Check if average intensity exceeds threshold (to reject false positives from high-intensity
+      // surfaces)
       if (param_.max_average_intensity_threshold > 0.0 && valid_bin_count > 0) {
         const double average_intensity_value = sum_intensity / static_cast<double>(valid_bin_count);
         if (average_intensity_value >= param_.max_average_intensity_threshold) {
           RCLCPP_DEBUG_STREAM_THROTTLE(
             this->get_logger(), *this->get_clock(), 1000,
-            "[detect_landmarks] Skipping pattern match at bin " << i
-                                                                << " due to high average intensity: "
-                                                                << average_intensity_value
-                                                                << " >= " << param_.max_average_intensity_threshold);
+            "[detect_landmarks] Skipping pattern match at bin "
+              << i << " due to high average intensity: " << average_intensity_value
+              << " >= " << param_.max_average_intensity_threshold);
           continue;  // Skip this pattern match
         }
       }
@@ -639,7 +641,8 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
           // ignore param_.intensity_pattern[j] == 0
         }
       }
-      const size_t bin_position = i + param_.intensity_pattern.size() / 2 + ring_array_index * bin_num;
+      const size_t bin_position =
+        i + param_.intensity_pattern.size() / 2 + ring_array_index * bin_num;
       center_intensity_grid_msg.data[bin_position] =
         std::min(static_cast<int>(center_intensity), max_vote_percentage);
       positive_grid_msg.data[bin_position] = std::min(
