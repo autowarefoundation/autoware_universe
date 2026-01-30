@@ -15,7 +15,7 @@ common/autoware_polar_grid/** yukihiro.saito@tier4.jp
 common/autoware_time_utils/** christopherj.ho@gmail.com shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
 common/autoware_traffic_light_recognition_marker_publisher/** shumpei.wakabayashi@tier4.jp takeshi.miura@tier4.jp tomoya.kimura@tier4.jp
 common/autoware_traffic_light_utils/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp satoshi.ota@tier4.jp yoshi.ri@tier4.jp
-common/autoware_universe_utils/** mamoru.sobue@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+common/autoware_universe_utils/** alqudah.mohammad@tier4.jp junya.sasaki@tier4.jp mamoru.sobue@tier4.jp taiki.yamada@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 common/tier4_api_utils/** isamu.takagi@tier4.jp
 control/autoware_autonomous_emergency_braking/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp takamasa.horibe@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_collision_detector/** go.sakayori@tier4.jp kyoichi.sugahara@tier4.jp tomohito.ando@tier4.jp
@@ -33,6 +33,7 @@ control/autoware_predicted_path_checker/** berkay@leodrive.ai junya.sasaki@tier4
 control/autoware_pure_pursuit/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_shift_decider/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_smart_mpc_trajectory_follower/** kosuke.takeuchi@tier4.jp masayuki.aino@proxima-ai-tech.com takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+control/autoware_spheric_collision_detector/** simon.ranjith@lx.it.pt
 control/autoware_stop_mode_operator/** isamu.takagi@tier4.jp
 control/autoware_trajectory_follower_base/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_trajectory_follower_node/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
@@ -238,7 +239,7 @@ system/autoware_velodyne_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
 vehicle/autoware_accel_brake_map_calibrator/** eiki.nagata.2@tier4.jp taiki.tanaka@tier4.jp takeshi.miura@tier4.jp tomoya.kimura@tier4.jp
 vehicle/autoware_external_cmd_converter/** eiki.nagata.2@tier4.jp takamasa.horibe@tier4.jp
 vehicle/autoware_raw_vehicle_cmd_converter/** kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp sho.iwasawa.2@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
-vehicle/autoware_steer_offset_estimator/** taiki.tanaka@tier4.jp taiki.yamada@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
+vehicle/autoware_steer_offset_estimator/** alqudah.mohammad@tier4.jp taiki.tanaka@tier4.jp taiki.yamada@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/autoware_bag_time_manager_rviz_plugin/** junya.sasaki@tier4.jp taiki.tanaka@tier4.jp
 visualization/autoware_traffic_light_rviz_plugin/** takumi.odashima@tier4.jp yukinari.hisaki.2@tier4.jp
 visualization/tier4_adapi_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp kosuke.takeuchi@tier4.jp

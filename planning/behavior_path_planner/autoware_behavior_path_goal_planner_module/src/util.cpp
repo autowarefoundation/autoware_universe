@@ -21,6 +21,7 @@
 
 #include <Eigen/Core>
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -210,8 +211,14 @@ static double getOffsetToLanesBoundary(
   const lanelet::ConstLanelets & lanelet_sequence, const geometry_msgs::msg::Pose target_pose,
   const bool left_side)
 {
-  lanelet::ConstLanelet closest_lanelet;
-  lanelet::utils::query::getClosestLanelet(lanelet_sequence, target_pose, &closest_lanelet);
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanelet_sequence, target_pose);
+  if (!closest_lanelet_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in getOffsetToLanesBoundary, closest_lanelet_opt is "
+      "not handled");
+  }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   // the boundary closer to ego. if left_side, take right boundary
   const auto & boundary3d = left_side ? closest_lanelet.rightBound() : closest_lanelet.leftBound();
@@ -887,8 +894,14 @@ std::optional<Pose> calcRefinedGoal(
     return {};
   }
 
-  lanelet::Lanelet closest_pull_over_lanelet{};
-  lanelet::utils::query::getClosestLanelet(pull_over_lanes, goal_pose, &closest_pull_over_lanelet);
+  const auto closest_pull_over_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(pull_over_lanes, goal_pose);
+  if (!closest_pull_over_lanelet_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in calcRefinedGoal, closest_lanelet_opt is "
+      "not handled");
+  }
+  const auto & closest_pull_over_lanelet = closest_pull_over_lanelet_opt.value();
 
   // calc closest center line pose
   Pose center_pose{};
