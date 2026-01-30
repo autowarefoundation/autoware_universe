@@ -23867,7 +23867,7 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 </ul>
 <h3 id="calibration-execution-logic">Calibration Execution Logic<a class="headerlink" href="#calibration-execution-logic" title="Permanent link">#</a></h3>
 <p>A calibration is executed when a service call is received, or in case of <strong>AUTO</strong> mode update conditions are satisfied.
-When calibration is triggered the node will update the persistent YAML file and publish the offset update value on the topic <code>~/steering_offset_update</code>.</p>
+When calibration is triggered the node will update the persistent YAML file (if parameter is enabled) and publish the offset update value on the topic <code>~/steering_offset_update</code>.</p>
 <p>Calibration is executed only if specific validation checks are satisfied.</p>
 <h4 id="1-manual-mode-checks">1. Manual Mode Checks<a class="headerlink" href="#1-manual-mode-checks" title="Permanent link">#</a></h4>
 <p>When a service call is received, the following checks are performed:</p>
@@ -24111,6 +24111,13 @@ When calibration is triggered the node will update the persistent YAML file and 
 <td>min interval between offset calibration updates</td>
 <td>100.0</td>
 <td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.enable_parameter_file_overwrite</td>
+<td>boolean</td>
+<td>enable parameter file overwrite</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table></div>
