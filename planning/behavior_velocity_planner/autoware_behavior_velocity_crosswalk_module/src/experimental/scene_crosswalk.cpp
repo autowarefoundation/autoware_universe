@@ -885,17 +885,17 @@ std::pair<double, double> CrosswalkModule::clampAttentionRangeByNeighborCrosswal
 }
 
 std::optional<double> CrosswalkModule::findEgoPassageDirectionAlongPath(
-  const Trajectory & sparse_resample_path) const
+  const Trajectory & ego_path) const
 {
   auto findIntersectPoint =
     [&](const lanelet::ConstLineString3d line) -> std::optional<geometry_msgs::msg::Point> {
     const auto line_2d = lanelet::utils::to2D(line);
     const auto intersect_s_values =
-      autoware::experimental::trajectory::crossed(sparse_resample_path, line_2d.basicLineString());
+      autoware::experimental::trajectory::crossed(ego_path, line_2d.basicLineString());
     if (intersect_s_values.empty()) {
       return std::nullopt;
     }
-    const auto intersect_pose = sparse_resample_path.compute(intersect_s_values.front()).point.pose;
+    const auto intersect_pose = ego_path.compute(intersect_s_values.front()).point.pose;
     return intersect_pose.position;
   };
   const auto pt1 = findIntersectPoint(crosswalk_.leftBound());
@@ -1200,7 +1200,7 @@ void CrosswalkModule::applySlowDownByOcclusion(
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
-  const Trajectory & sparse_resample_path,
+  const Trajectory & ego_path,
   const std::pair<double, double> & crosswalk_attention_range,
   const PlannerData & planner_data) const
 {
@@ -1209,7 +1209,7 @@ Polygon2d CrosswalkModule::getAttentionArea(
 
   constexpr double sample_interval = 4.0;
   const auto ego_s =
-    autoware::experimental::trajectory::find_nearest_index(sparse_resample_path, ego_pos);
+    autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
 
   Polygon2d attention_area;
 
@@ -1230,10 +1230,10 @@ Polygon2d CrosswalkModule::getAttentionArea(
     const double target_s_back = ego_s + back_s;
 
     if (
-      target_s_front >= 0.0 && target_s_front <= sparse_resample_path.length() &&
-      target_s_back >= 0.0 && target_s_back <= sparse_resample_path.length()) {
-      const auto pose_front = sparse_resample_path.compute(target_s_front).point.pose;
-      const auto pose_back = sparse_resample_path.compute(target_s_back).point.pose;
+      target_s_front >= 0.0 && target_s_front <= ego_path.length() &&
+      target_s_back >= 0.0 && target_s_back <= ego_path.length()) {
+      const auto pose_front = ego_path.compute(target_s_front).point.pose;
+      const auto pose_back = ego_path.compute(target_s_back).point.pose;
 
       Polygon2d ego_one_step_polygon;
       offsetPolygon2d(pose_front, ego_polygon, ego_one_step_polygon);
@@ -1536,7 +1536,7 @@ CrosswalkModule::getNearestStopFactorAndReason(
 }
 
 void CrosswalkModule::updateObjectState(
-  const double dist_ego_to_stop, const Trajectory & sparse_resample_path,
+  const double dist_ego_to_stop, const Trajectory & ego_path,
   const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
   const PlannerData & planner_data)
 {
@@ -1585,9 +1585,9 @@ void CrosswalkModule::updateObjectState(
 
     // calculate collision point and state
     const auto collision_point = getCollisionPoint(
-      sparse_resample_path, object, crosswalk_attention_range, attention_area, planner_data);
+      ego_path, object, crosswalk_attention_range, attention_area, planner_data);
     const std::optional<double> ego_crosswalk_passage_direction =
-      findEgoPassageDirectionAlongPath(sparse_resample_path);
+      findEgoPassageDirectionAlongPath(ego_path);
     object_info_manager_.update(
       obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
       is_ego_yielding, has_traffic_light, collision_point, object.classification.front().label, p,

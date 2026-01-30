@@ -425,7 +425,7 @@ private:
     const PlannerData & planner_data);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
-    const Trajectory & sparse_resample_path) const;
+    const Trajectory & ego_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
     const autoware_perception_msgs::msg::PredictedPath & path) const;
 
@@ -480,7 +480,7 @@ private:
     const PlannerData & planner_data) const;
 
   Polygon2d getAttentionArea(
-    const Trajectory & sparse_resample_path,
+    const Trajectory & ego_path,
     const std::pair<double, double> & crosswalk_attention_range,
     const PlannerData & planner_data) const;
 
