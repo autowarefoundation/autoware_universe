@@ -30,8 +30,8 @@
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -918,8 +918,15 @@ bool GoalPlannerModule::isExecutionRequested() const
   const lanelet::ConstLanelets pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *(route_handler), left_side_parking_, parameters_.backward_goal_search_length,
     parameters_.forward_goal_search_length);
-  lanelet::ConstLanelet target_lane{};
-  lanelet::utils::query::getClosestLanelet(pull_over_lanes, goal_pose, &target_lane);
+  // const auto target_lane_opt =
+  const auto target_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(pull_over_lanes, goal_pose);
+  if (!target_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isExecutionRequested, target_lane_opt is "
+      "not handled");
+  }
+  const auto & target_lane = target_lane_opt.value();
 
   // Get the lanelet of the ego vehicle's side edge at the terminal pose of the previous module's
   // path. Check if the lane is the target lane or the neighboring lane. NOTE: This is because in
@@ -2149,8 +2156,14 @@ TurnSignalInfo GoalPlannerModule::calcTurnSignalInfo(const PullOverContextData &
     return {};
   }
 
-  lanelet::Lanelet closest_lanelet;
-  lanelet::utils::query::getClosestLanelet(current_lanes, current_pose, &closest_lanelet);
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanes, current_pose);
+  if (!closest_lanelet_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::calcTurnSignalInfo, closest_lanelet_opt is "
+      "not handled");
+  }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   if (is_ignore_signal(closest_lanelet.id())) {
     return getPreviousModuleOutput().turn_signal_info;
@@ -2455,11 +2468,23 @@ bool GoalPlannerModule::isCrossingPossible(
 bool GoalPlannerModule::isCrossingPossible(
   const Pose & start_pose, const Pose & end_pose, const lanelet::ConstLanelets lanes) const
 {
-  lanelet::ConstLanelet start_lane{};
-  lanelet::utils::query::getClosestLanelet(lanes, start_pose, &start_lane);
+  const auto start_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, start_pose);
+  if (!start_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isCrossingPossible, start_lane_opt is "
+      "not handled");
+  }
+  const auto & start_lane = start_lane_opt.value();
 
-  lanelet::ConstLanelet end_lane{};
-  lanelet::utils::query::getClosestLanelet(lanes, end_pose, &end_lane);
+  const auto end_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, end_pose);
+  if (!end_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isCrossingPossible, end_lane_opt is "
+      "not handled");
+  }
+  const auto & end_lane = end_lane_opt.value();
 
   return isCrossingPossible(start_lane, end_lane);
 }
