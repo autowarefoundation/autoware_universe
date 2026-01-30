@@ -1200,16 +1200,14 @@ void CrosswalkModule::applySlowDownByOcclusion(
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
-  const Trajectory & ego_path,
-  const std::pair<double, double> & crosswalk_attention_range,
+  const Trajectory & ego_path, const std::pair<double, double> & crosswalk_attention_range,
   const PlannerData & planner_data) const
 {
   const auto & ego_pos = planner_data.current_odometry->pose.position;
   const auto ego_polygon = createVehiclePolygon(planner_data.vehicle_info_);
 
   constexpr double sample_interval = 4.0;
-  const auto ego_s =
-    autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
+  const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
 
   Polygon2d attention_area;
 
@@ -1230,8 +1228,8 @@ Polygon2d CrosswalkModule::getAttentionArea(
     const double target_s_back = ego_s + back_s;
 
     if (
-      target_s_front >= 0.0 && target_s_front <= ego_path.length() &&
-      target_s_back >= 0.0 && target_s_back <= ego_path.length()) {
+      target_s_front >= 0.0 && target_s_front <= ego_path.length() && target_s_back >= 0.0 &&
+      target_s_back <= ego_path.length()) {
       const auto pose_front = ego_path.compute(target_s_front).point.pose;
       const auto pose_back = ego_path.compute(target_s_back).point.pose;
 
@@ -1584,8 +1582,8 @@ void CrosswalkModule::updateObjectState(
     const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
 
     // calculate collision point and state
-    const auto collision_point = getCollisionPoint(
-      ego_path, object, crosswalk_attention_range, attention_area, planner_data);
+    const auto collision_point =
+      getCollisionPoint(ego_path, object, crosswalk_attention_range, attention_area, planner_data);
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(ego_path);
     object_info_manager_.update(
