@@ -14,13 +14,18 @@
 
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
 
+#include <autoware/vehicle_info_utils/vehicle_info.hpp>
+
 #include <gtest/gtest.h>
+#include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/RegulatoryElement.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
+#include <csignal>
 #include <memory>
 #include <vector>
 
@@ -33,7 +38,13 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 class TrafficLightFilterTest : public ::testing::Test
 {
 protected:
-  void SetUp() override { filter_ = std::make_shared<TrafficLightFilter>(); }
+  void SetUp() override
+  {
+    filter_ = std::make_shared<TrafficLightFilter>();
+    autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+    vehicle_info.front_overhang_m = 0.0;
+    filter_->set_vehicle_info(vehicle_info);
+  }
 
   // Helper to create a simple straight lanelet map with a traffic light
   void create_and_set_map(lanelet::Id light_id, double stop_line_x)
@@ -46,11 +57,10 @@ protected:
     // 2. Create Traffic Light Shape (Dummy visual)
     lanelet::Point3d light_pt(lanelet::utils::getId(), stop_line_x + 5, 5, 5);
     lanelet::LineString3d light_shape(lanelet::utils::getId(), {light_pt});
-    light_shape.setId(light_id);
 
     // 3. Create Regulatory Element
-    auto traffic_light_re = lanelet::TrafficLight::make(
-      lanelet::utils::getId(), lanelet::AttributeMap(), {light_shape}, stop_line);
+    auto traffic_light_re =
+      lanelet::TrafficLight::make(light_id, lanelet::AttributeMap(), {light_shape}, stop_line);
 
     // 4. Create Lanelet Boundaries
     lanelet::Point3d l1(lanelet::utils::getId(), 0, -5, 0);
@@ -121,7 +131,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleNoMap)
   EXPECT_TRUE(filter_->is_feasible(points));
 }
 
-TEST_F(TrafficLightFilterTest, IsFeasibleWithRedLightIntersection)
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
 {
   const lanelet::Id light_id = 100;
   const double stop_x = 5.0;
@@ -162,4 +172,23 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithRedLightNoIntersection)
   auto points = create_trajectory(0.0, 4.0);
 
   EXPECT_TRUE(filter_->is_feasible(points)) << "Should return true if red light is not crossed";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
+{
+  const lanelet::Id light_id = 103;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+
+  // Trajectory stopping ahead of stop line (0 -> 4.0)
+  auto points = create_trajectory(0.0, 4.0);
+  // Front overhang going over the stop line
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.front_overhang_m = 2.0;
+  filter_->set_vehicle_info(vehicle_info);
+
+  EXPECT_FALSE(filter_->is_feasible(points))
+    << "Should return false when crossing red light stop line";
 }

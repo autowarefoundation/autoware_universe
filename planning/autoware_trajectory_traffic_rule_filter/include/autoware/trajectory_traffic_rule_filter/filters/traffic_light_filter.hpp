@@ -17,15 +17,10 @@
 
 #include "autoware/trajectory_traffic_rule_filter/traffic_rule_filter_interface.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
-
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-#include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/Forward.h>
 
-#include <memory>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -47,8 +42,6 @@ private:
     const lanelet::ConstLanelet & lanelet) const;
 
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
-  std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
-    boundary_departure_checker_;
 };
 
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
