@@ -53,6 +53,7 @@ public:
     if (metrics_.empty() || weight.empty()) return;
     for (size_t i = 0; i < metrics_.size() && i < weight.size(); i++) {
       const auto & w = weight.at(i);
+      const auto & metric = metrics_.at(i);
       const size_t size = std::min(w.size(), metrics.size());
       scores_.at(i) = std::inner_product(w.begin(), w.begin() + size, metric.begin(), 0.0f);
     }
