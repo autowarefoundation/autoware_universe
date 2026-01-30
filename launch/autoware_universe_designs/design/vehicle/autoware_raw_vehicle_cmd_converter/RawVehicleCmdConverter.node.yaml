@@ -6,7 +6,7 @@ name: RawVehicleCmdConverter.node
 launch:
   package: autoware_raw_vehicle_cmd_converter
   plugin: autoware::raw_vehicle_cmd_converter::RawVehicleCmdConverterNode
-  executable: raw_vehicle_cmd_converter_node
+  executable: autoware_raw_vehicle_cmd_converter_node
   node_output: screen
 
 # interfaces
