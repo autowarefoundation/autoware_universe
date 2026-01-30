@@ -325,7 +325,7 @@ Trajectory TrafficLightModule::insertStopVelocity(
   const auto stop_pose = modified_path.compute(stop_point_s).point.pose;
   debug_data_.stop_poses.push_back(stop_pose);
 
-  modified_path.longitudinal_velocity_mps().range(stop_point_s, modified_path.length()).set(0.0);
+  modified_path.set_stopline(stop_point_s);
 
   planning_factor_interface_->add(
     modified_path.restore(), planner_data.current_odometry->pose, stop_pose,
