@@ -13,19 +13,13 @@ launch:
 inputs:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
+    remap_target: cloud_in
 
 outputs:
   - name: laserscan
     message_type: sensor_msgs/msg/LaserScan
-    qos:
-      reliability: reliable
-      durability: transient_local
-  - name: pointcloud
-    message_type: sensor_msgs/msg/PointCloud2
-    qos:
-      reliability: reliable
-      durability: transient_local
-
+    remap_target: scan
+    
 # parameters
 parameter_files: []
 
