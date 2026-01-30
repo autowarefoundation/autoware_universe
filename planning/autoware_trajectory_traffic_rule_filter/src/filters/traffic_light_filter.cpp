@@ -70,12 +70,17 @@ bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
   for (const auto & p : trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
-  if (vehicle_info_ptr_ && vehicle_info_ptr_->front_overhang_m > 0.0 && trajectory_ls.size() > 1) {
+  RCLCPP_WARN(
+    rclcpp::get_logger("TrafficLightFilter"), "Front overhang = %2.2fm",
+    vehicle_info_ptr_->max_longitudinal_offset_m);
+  if (
+    vehicle_info_ptr_ && vehicle_info_ptr_->max_longitudinal_offset_m > 0.0 &&
+    trajectory_ls.size() > 1) {
     const lanelet::BasicSegment2d last_segment(
       trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
     const auto last_vector = last_segment.second - last_segment.first;
     const auto last_length = boost::geometry::length(last_segment);
-    const auto ratio = (last_length + vehicle_info_ptr_->front_overhang_m) / last_length;
+    const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
     lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
     trajectory_ls.emplace_back(front_vehicle_point);
   }

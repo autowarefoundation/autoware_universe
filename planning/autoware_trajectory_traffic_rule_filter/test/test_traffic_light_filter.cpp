@@ -42,7 +42,7 @@ protected:
   {
     filter_ = std::make_shared<TrafficLightFilter>();
     autoware::vehicle_info_utils::VehicleInfo vehicle_info;
-    vehicle_info.front_overhang_m = 0.0;
+    vehicle_info.max_longitudinal_offset_m = 0.0;
     filter_->set_vehicle_info(vehicle_info);
   }
 
@@ -186,7 +186,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
   auto points = create_trajectory(0.0, 4.0);
   // Front overhang going over the stop line
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
-  vehicle_info.front_overhang_m = 2.0;
+  vehicle_info.max_longitudinal_offset_m = 2.0;
   filter_->set_vehicle_info(vehicle_info);
 
   EXPECT_FALSE(filter_->is_feasible(points))
