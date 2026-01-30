@@ -110,7 +110,8 @@ end group
 
 1. Split the LiDAR point cloud into rings along the x-axis of the base_link coordinate system at intervals of the `resolution` size.
 2. Find the portion of intensity that matches the `intensity_pattern`.
-3. Perform steps 1 and 2 for each ring, accumulate the matching indices, and detect portions where the count exceeds the `vote_threshold_for_detect_marker` as markers.
+3. If `max_average_intensity_threshold` is set to a value greater than 0.0, check if the average intensity exceeds the threshold. If it exceeds, skip the pattern match to prevent false detection on surfaces directly facing the LiDAR receiver.
+4. Perform steps 1 and 2 for each ring, accumulate the matching indices, and detect portions where the count exceeds the `vote_threshold_for_detect_marker` as markers.
 
 ## Sample Dataset
 
