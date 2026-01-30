@@ -67,6 +67,12 @@
           "default": 20,
           "minimum": 0
         },
+        "max_average_intensity_threshold": {
+          "type": "number",
+          "description": "Maximum threshold for average intensity (disabled when 0.0). To prevent false detection on surfaces directly facing the LiDAR receiver, matching is disabled when this value is exceeded.",
+          "default": 0.0,
+          "minimum": 0.0
+        },
         "marker_to_vehicle_offset_y": {
           "type": "number",
           "description": "Y-axis offset from the center of the marker to vehicle. [m]",
@@ -173,6 +179,7 @@
         "positive_match_num_threshold",
         "negative_match_num_threshold",
         "vote_threshold_for_detect_marker",
+        "max_average_intensity_threshold",
         "marker_to_vehicle_offset_y",
         "marker_height_from_ground",
         "reference_ring_number",
