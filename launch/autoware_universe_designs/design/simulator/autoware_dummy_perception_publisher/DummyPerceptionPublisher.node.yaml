@@ -19,25 +19,20 @@ inputs:
     global: /tf_static
   - name: object
     message_type: tier4_simulation_msgs/msg/DummyObject
+    remap_target: "input/object"
   - name: predicted_objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
-
+    remap_target: "input/predicted_objects"
 outputs:
   - name: dynamic_object
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    qos:
-      reliability: reliable
-      durability: transient_local
+    remap_target: "output/dynamic_object"
   - name: points_raw
     message_type: sensor_msgs/msg/PointCloud2
-    qos:
-      reliability: reliable
-      durability: transient_local
+    remap_target: "output/points_raw"
   - name: ground_truth_objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    qos:
-      reliability: reliable
-      durability: transient_local
+    remap_target: "~/output/debug/ground_truth_objects"
 
 # parameters
 parameter_files:
