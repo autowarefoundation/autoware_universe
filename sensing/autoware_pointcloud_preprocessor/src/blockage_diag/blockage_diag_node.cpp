@@ -49,21 +49,25 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     dust_config_.dust_ratio_threshold = declare_parameter<float>("dust_ratio_threshold");
     dust_config_.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
     dust_config_.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
-    // Multi-frame dust visualization configuration
-    int dust_buffering_frames = declare_parameter<int>("dust_buffering_frames");
-    dust_visualize_data_.buffering_interval = declare_parameter<int>("dust_buffering_interval");
-    dust_visualize_data_.mask_buffer.set_capacity(dust_buffering_frames);
+    // Multi-frame dust aggregation configuration
+    MultiFrameDetectionAggregatorConfig dust_aggregator_config;
+    dust_aggregator_config.buffering_frames = declare_parameter<int>("dust_buffering_frames");
+    dust_aggregator_config.buffering_interval = declare_parameter<int>("dust_buffering_interval");
+    dust_aggregator_ = std::make_unique<MultiFrameDetectionAggregator>(dust_aggregator_config);
 
     // Blockage detection configuration
     blockage_config_.blockage_ratio_threshold =
       declare_parameter<float>("blockage_ratio_threshold");
     blockage_config_.blockage_count_threshold = declare_parameter<int>("blockage_count_threshold");
     blockage_config_.blockage_kernel = declare_parameter<int>("blockage_kernel");
-    // Multi-frame blockage visualization configuration
-    int blockage_buffering_frames = declare_parameter<int>("blockage_buffering_frames");
-    blockage_visualize_data_.buffering_interval =
+    // Multi-frame blockage aggregation configuration
+    MultiFrameDetectionAggregatorConfig blockage_aggregator_config;
+    blockage_aggregator_config.buffering_frames =
+      declare_parameter<int>("blockage_buffering_frames");
+    blockage_aggregator_config.buffering_interval =
       declare_parameter<int>("blockage_buffering_interval");
-    blockage_visualize_data_.mask_buffer.set_capacity(blockage_buffering_frames);
+    blockage_aggregator_ =
+      std::make_unique<MultiFrameDetectionAggregator>(blockage_aggregator_config);
 
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
@@ -246,38 +250,6 @@ cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask
   return blockage_mask;
 }
 
-cv::Mat BlockageDiagComponent::update_time_series_blockage_mask(const cv::Mat & blockage_mask)
-{
-  if (blockage_visualize_data_.buffering_interval == 0) {
-    return blockage_mask.clone();
-  }
-
-  assert(blockage_mask.type() == CV_8UC1);
-  auto dimensions = blockage_mask.size();
-
-  cv::Mat time_series_blockage_result(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::Mat time_series_blockage_mask(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::Mat no_return_mask_binarized(dimensions, CV_8UC1, cv::Scalar(0));
-
-  no_return_mask_binarized = blockage_mask / 255;
-  if (blockage_visualize_data_.frame_count >= blockage_visualize_data_.buffering_interval) {
-    blockage_visualize_data_.mask_buffer.push_back(no_return_mask_binarized);
-    blockage_visualize_data_.frame_count = 0;
-  } else {
-    blockage_visualize_data_.frame_count++;
-  }
-
-  for (const auto & binary_mask : blockage_visualize_data_.mask_buffer) {
-    time_series_blockage_mask += binary_mask;
-  }
-
-  cv::inRange(
-    time_series_blockage_mask, blockage_visualize_data_.mask_buffer.size() - 1,
-    blockage_visualize_data_.mask_buffer.size(), time_series_blockage_result);
-
-  return time_series_blockage_result;
-}
-
 std::pair<cv::Mat, cv::Mat> BlockageDiagComponent::segment_into_ground_and_sky(
   const cv::Mat & mask) const
 {
@@ -375,28 +347,7 @@ void BlockageDiagComponent::publish_dust_debug_info(
 
   if (publish_debug_image_) {
     auto dimensions = single_dust_img.size();
-    cv::Mat binarized_dust_mask_(dimensions, CV_8UC1, cv::Scalar(0));
-    cv::Mat multi_frame_dust_mask(dimensions, CV_8UC1, cv::Scalar(0));
-    cv::Mat multi_frame_ground_dust_result(dimensions, CV_8UC1, cv::Scalar(0));
-
-    if (dust_visualize_data_.buffering_interval == 0) {
-      single_dust_img.copyTo(multi_frame_ground_dust_result);
-      dust_visualize_data_.frame_count = 0;
-    } else {
-      binarized_dust_mask_ = single_dust_img / 255;
-      if (dust_visualize_data_.frame_count >= dust_visualize_data_.buffering_interval) {
-        dust_visualize_data_.mask_buffer.push_back(binarized_dust_mask_);
-        dust_visualize_data_.frame_count = 0;
-      } else {
-        dust_visualize_data_.frame_count++;
-      }
-      for (const auto & binarized_dust_mask : dust_visualize_data_.mask_buffer) {
-        multi_frame_dust_mask += binarized_dust_mask;
-      }
-      cv::inRange(
-        multi_frame_dust_mask, dust_visualize_data_.mask_buffer.size() - 1,
-        dust_visualize_data_.mask_buffer.size(), multi_frame_ground_dust_result);
-    }
+    cv::Mat multi_frame_ground_dust_result = dust_aggregator_->update(single_dust_img);
 
     // Publish single-frame dust mask image with color map
     cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
@@ -461,7 +412,6 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
-  cv::Mat time_series_blockage_result = update_time_series_blockage_mask(blockage_mask);
 
   auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
 
@@ -471,7 +421,7 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   update_blockage_info(ground_blockage_mask, blockage_result_.ground);
   update_blockage_info(sky_blockage_mask, blockage_result_.sky);
 
-  return time_series_blockage_result;
+  return blockage_mask;
 }
 
 void BlockageDiagComponent::update_diagnostics(
@@ -487,8 +437,9 @@ void BlockageDiagComponent::update_diagnostics(
   cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
-  cv::Mat time_series_blockage_result = compute_blockage_diagnostics(depth_image_16u);
-  const DebugInfo debug_info = {input->header, depth_image_16u, time_series_blockage_result};
+  cv::Mat single_frame_blockage_mask = compute_blockage_diagnostics(depth_image_16u);
+  cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(single_frame_blockage_mask);
+  const DebugInfo debug_info = {input->header, depth_image_16u, multi_frame_blockage_mask};
   publish_blockage_debug_info(debug_info);
 
   // Dust detection
