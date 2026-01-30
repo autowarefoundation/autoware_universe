@@ -35,7 +35,6 @@
   <arg name="occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater"/>
   <arg name="occupancy_grid_map_updater_param_path"/>
-  <arg name="lidar_detection_model"/>
   <arg name="each_traffic_light_map_based_detector_param_path"/>
   <arg name="traffic_light_fine_detector_param_path"/>
   <arg name="yolox_traffic_light_detector_param_path"/>
@@ -49,8 +48,15 @@
   <arg name="tracker_publish_merged_objects"/>
 
   <!-- ML model parameters -->
-  <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
-  <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="lidar_detection_model_type">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name" description="options: `bevfusion_lidar`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`, `transfusion` (non-exhaustive)"/>
   <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
   <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
     <choice value="centerpoint_short_range"/>
