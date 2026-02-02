@@ -43,14 +43,11 @@ private:
   rclcpp::Subscription<OperationModeState>::SharedPtr sub_operation_mode_state_;
   rclcpp::Client<ChangeOperationMode>::SharedPtr cli_change_stop_mode_;
   rclcpp::Client<ChangeOperationMode>::SharedPtr cli_change_autonomous_mode_;
-  rclcpp::Client<ChangeOperationMode>::SharedPtr cli_enable_autoware_control_;
-  rclcpp::Client<ChangeOperationMode>::SharedPtr cli_disable_autoware_control_;
 
   void on_state(const OperationModeState & msg);
   void on_engage(
     const EngageService::Request::SharedPtr req, EngageService::Response::SharedPtr res);
 
-  bool autoware_control_change_;
   OperationModeState state_;
 };
 
