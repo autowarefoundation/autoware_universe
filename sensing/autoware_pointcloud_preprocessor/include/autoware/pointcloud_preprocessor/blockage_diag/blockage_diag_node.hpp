@@ -81,37 +81,6 @@ private:
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
 
   /**
-   * @brief Make a binary, cleaned blockage mask from the input no-return mask.
-   *
-   * @param no_return_mask A mask where 255 is no-return and 0 is return.
-   * @return cv::Mat The blockage mask. The data type is `CV_8UC1`.
-   */
-  cv::Mat make_blockage_mask(const cv::Mat & no_return_mask) const;
-
-  /**
-   * @brief Get the ratio of non-zero pixels in a given mask.
-   *
-   * @param mask The input mask. The data type is `CV_8UC1`.
-   * @return float The ratio of non-zero pixels (e.g. 1.0 if all are non-zero, 0.0 if all are zero).
-   */
-  static float get_nonzero_ratio(const cv::Mat & mask);
-
-  /**
-   * @brief Update the blockage info for a specific area (ground or sky).
-   *
-   * @param blockage_mask The blockage mask. The data type is `CV_8UC1`.
-   * @param area_result Reference to the BlockageAreaResult to update.
-   */
-  void update_blockage_info(const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
-
-  /**
-   * @brief Compute blockage diagnostics and update the internal blockage info.
-   *
-   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
-
-  /**
    * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
@@ -141,8 +110,7 @@ private:
   int horizontal_ring_id_;
 
   // Blockage detection
-  BlockageDetectionConfig blockage_config_;
-  BlockageDetectionResult blockage_result_;
+  std::unique_ptr<BlockageDetector> blockage_detector_;
   std::unique_ptr<MultiFrameDetectionAggregator> blockage_aggregator_;
 
   // Dust detection
