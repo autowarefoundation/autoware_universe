@@ -314,11 +314,11 @@ public:
   {
     void init() { current_uuids_.clear(); }
     void update(
-      const unique_identifier_msgs::msg::UUID & uuid, const geometry_msgs::msg::Point & position, const double vel,
-      const rclcpp::Time & now, const bool is_ego_yielding, const bool has_traffic_light,
-      const std::optional<CollisionPoint> & collision_point, const uint8_t classification,
-      const PlannerParam & planner_param, const lanelet::BasicPolygon2d & crosswalk_polygon,
-      const Polygon2d & attention_area,
+      const unique_identifier_msgs::msg::UUID & uuid, const geometry_msgs::msg::Point & position,
+      const double vel, const rclcpp::Time & now, const bool is_ego_yielding,
+      const bool has_traffic_light, const std::optional<CollisionPoint> & collision_point,
+      const uint8_t classification, const PlannerParam & planner_param,
+      const lanelet::BasicPolygon2d & crosswalk_polygon, const Polygon2d & attention_area,
       const std::optional<double> & ego_crosswalk_passage_direction,
       const bool is_object_on_crosswalk = false)
     {
