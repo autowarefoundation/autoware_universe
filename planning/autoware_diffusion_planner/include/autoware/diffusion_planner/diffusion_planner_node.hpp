@@ -97,6 +97,7 @@ using unique_identifier_msgs::msg::UUID;
 using utils::NormalizationMap;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
+
 struct FrameContext
 {
   nav_msgs::msg::Odometry ego_kinematic_state;
@@ -125,6 +126,7 @@ struct DiffusionPlannerParams
   double turn_indicator_hold_duration;
   bool shift_x;
 };
+
 struct DiffusionPlannerDebugParams
 {
   bool publish_debug_route{true};
@@ -157,9 +159,8 @@ struct DiffusionPlannerDebugParams
  * - publish_debug_markers: Publish visualization markers for debugging.
  * - publish_predictions: Publish model predictions.
  * - on_parameter: Callback for dynamic parameter updates.
- * - create_input_data: Prepare input data for inference.
- * - create_trajectory: Convert predictions to a trajectory in map coordinates.
- * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
+ * - create_frame_context: Prepare frame context for inference.
+ * - create_input_data: Build model input tensors from frame context.
  *
  * @section Internal State
  * @brief
@@ -230,14 +231,6 @@ private:
    * @return Map of input data for the model.
    */
   InputDataMap create_input_data(const FrameContext & frame_context);
-
-  // preprocessing
-  /**
-   * @brief Replicate single sample data for batch processing.
-   * @param single_data Single sample data.
-   * @return Vector replicated for the configured batch size.
-   */
-  std::vector<float> replicate_for_batch(const std::vector<float> & single_data) const;
 
   // Inference engine
   std::unique_ptr<TensorrtInference> tensorrt_inference_{nullptr};
