@@ -125,12 +125,6 @@ public:
    */
   DiagnosticOutput get_blockage_diagnostics_output() const;
 
-  /**
-   * @brief Get the blockage detection result.
-   * @return BlockageDetectionResult The blockage detection result.
-   */
-  BlockageDetectionResult get_blockage_result() const { return result_; }
-
 private:
   /**
    * @brief Make a binary, cleaned blockage mask from the input no-return mask.

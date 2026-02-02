@@ -84,8 +84,10 @@ private:
    * @brief Publish the debug info of blockage diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
+   * @param blockage_result The blockage detection result.
    */
-  void publish_blockage_debug_info(const DebugInfo & debug_info) const;
+  void publish_blockage_debug_info(
+    const DebugInfo & debug_info, const BlockageDetectionResult & blockage_result) const;
 
   /**
    * @brief Publish the debug info of dust diagnostics if enabled.

@@ -218,10 +218,9 @@ void BlockageDiagComponent::publish_dust_debug_info(
   }
 }
 
-void BlockageDiagComponent::publish_blockage_debug_info(const DebugInfo & debug_info) const
+void BlockageDiagComponent::publish_blockage_debug_info(
+  const DebugInfo & debug_info, const BlockageDetectionResult & blockage_result) const
 {
-  BlockageDetectionResult blockage_result = blockage_detector_->get_blockage_result();
-
   autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
   ground_blockage_ratio_msg.data = blockage_result.ground.blockage_ratio;
   ground_blockage_ratio_msg.stamp = now();
@@ -264,7 +263,7 @@ void BlockageDiagComponent::update_diagnostics(
   BlockageDetectionResult blockage_result = blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
   cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(blockage_result.blockage_mask);
   const DebugInfo debug_info = {input->header, depth_image_16u, multi_frame_blockage_mask};
-  publish_blockage_debug_info(debug_info);
+  publish_blockage_debug_info(debug_info, blockage_result);
 
   // Dust detection
   if (enable_dust_diag_) {
