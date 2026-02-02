@@ -63,8 +63,6 @@ cv::Mat MultiFrameDetectionAggregator::update(const cv::Mat & mask)
   return time_series_result;
 }
 
-namespace
-{
 cv::Mat make_no_return_mask(const cv::Mat & depth_image_16u)
 {
   assert(depth_image_16u.type() == CV_16UC1);
@@ -92,7 +90,6 @@ std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
 
   return {ground_mask, sky_mask};
 }
-}  // namespace
 
 DustDetector::DustDetector(const DustDetectionConfig & config) : config_(config)
 {

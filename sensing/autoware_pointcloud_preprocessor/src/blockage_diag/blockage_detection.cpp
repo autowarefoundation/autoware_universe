@@ -22,37 +22,6 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-namespace
-{
-cv::Mat make_no_return_mask(const cv::Mat & depth_image_16u)
-{
-  assert(depth_image_16u.type() == CV_16UC1);
-  auto dimensions = depth_image_16u.size();
-
-  cv::Mat no_return_mask_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // 16-bit depth values 0-256 (equivalent to 8-bit 0-1) indicate no return
-  cv::inRange(depth_image_16u, 0, 256, no_return_mask_8u);
-
-  return no_return_mask_8u;
-}
-
-std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
-  const cv::Mat & mask, int horizontal_ring_id)
-{
-  assert(mask.type() == CV_8UC1);
-  auto dimensions = mask.size();
-
-  cv::Mat sky_mask;
-  mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id)).copyTo(sky_mask);
-
-  cv::Mat ground_mask;
-  mask(cv::Rect(0, horizontal_ring_id, dimensions.width, dimensions.height - horizontal_ring_id))
-    .copyTo(ground_mask);
-
-  return {ground_mask, sky_mask};
-}
-}  // namespace
-
 BlockageDetector::BlockageDetector(const BlockageDetectionConfig & config) : config_(config)
 {
 }
