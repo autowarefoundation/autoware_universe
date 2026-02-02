@@ -16,9 +16,6 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-
 #include <boost/geometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -31,9 +28,6 @@
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
-using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
 {
 }
@@ -62,7 +56,7 @@ std::vector<lanelet::BasicLineString2d> TrafficLightFilter::get_red_stop_lines(
 
 bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
 {
-  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty()) {
+  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty() || !vehicle_info_ptr_) {
     return true;  // Allow if no data available
   }
 
@@ -70,19 +64,17 @@ bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
   for (const auto & p : trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
-  RCLCPP_WARN(
-    rclcpp::get_logger("TrafficLightFilter"), "Front overhang = %2.2fm",
-    vehicle_info_ptr_->max_longitudinal_offset_m);
-  if (
-    vehicle_info_ptr_ && vehicle_info_ptr_->max_longitudinal_offset_m > 0.0 &&
-    trajectory_ls.size() > 1) {
+  if (vehicle_info_ptr_->max_longitudinal_offset_m > 0.0 && trajectory_ls.size() > 1) {
+    // extend the trajectory linestring by the vehicle's longitudinal offset
     const lanelet::BasicSegment2d last_segment(
       trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
     const auto last_vector = last_segment.second - last_segment.first;
     const auto last_length = boost::geometry::length(last_segment);
-    const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
-    lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
-    trajectory_ls.emplace_back(front_vehicle_point);
+    if (last_length > 0.0) {
+      const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
+      lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
+      trajectory_ls.emplace_back(front_vehicle_point);
+    }
   }
 
   const auto bbox = boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls);
