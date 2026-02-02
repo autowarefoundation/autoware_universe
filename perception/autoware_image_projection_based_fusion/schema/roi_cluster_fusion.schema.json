@@ -191,18 +191,6 @@
               "default": 5.0,
               "minimum": 2.0,
               "maximum": 10.0
-            },
-            "min_roi_height_pixels": {
-              "type": "integer",
-              "description": "Minimum ROI height in pixels",
-              "default": 20,
-              "minimum": 5
-            },
-            "min_roi_width_pixels": {
-              "type": "integer",
-              "description": "Minimum ROI width in pixels",
-              "default": 10,
-              "minimum": 3
             }
           }
         }

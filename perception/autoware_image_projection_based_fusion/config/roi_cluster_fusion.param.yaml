@@ -30,5 +30,3 @@
       max_footprint_area: 1.5         # Maximum ground footprint [m²]
       min_aspect_ratio: 1.2           # Minimum ROI height/width ratio
       max_aspect_ratio: 5.0           # Maximum ROI height/width ratio
-      min_roi_height_pixels: 20       # Minimum ROI height [pixels]
-      min_roi_width_pixels: 10        # Minimum ROI width [pixels]

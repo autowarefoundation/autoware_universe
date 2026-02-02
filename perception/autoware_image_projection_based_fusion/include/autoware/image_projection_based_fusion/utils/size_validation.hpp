@@ -105,10 +105,6 @@ struct PedestrianSizeValidationParams
   // 2D aspect ratio constraints
   double min_aspect_ratio = 1.2;
   double max_aspect_ratio = 5.0;
-
-  // Minimum ROI size in pixels
-  int min_roi_height_pixels = 20;
-  int min_roi_width_pixels = 10;
 };
 
 /**
@@ -263,13 +259,6 @@ inline AspectRatioValidationResult validatePedestrianAspectRatio(
   AspectRatioValidationResult result;
 
   if (roi.width == 0 || roi.height == 0) {
-    result.is_valid = false;
-    return result;
-  }
-
-  // Check minimum ROI size
-  if (static_cast<int>(roi.height) < params.min_roi_height_pixels ||
-      static_cast<int>(roi.width) < params.min_roi_width_pixels) {
     result.is_valid = false;
     return result;
   }
