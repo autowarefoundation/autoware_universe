@@ -94,7 +94,7 @@ std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
   return {ground_mask, sky_mask};
 }
 
-cv::Mat DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
+DustDetectionResult DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
 {
   cv::Mat no_return_mask = make_no_return_mask(depth_image_16u);
 
@@ -131,7 +131,9 @@ cv::Mat DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
     result_.dust_frame_count = 0;
   }
 
-  return single_dust_img;
+  result_.dust_mask = single_dust_img;
+
+  return result_;
 }
 
 DiagnosticOutput DustDetector::get_dust_diagnostics_output() const
@@ -217,7 +219,7 @@ void BlockageDetector::update_blockage_info(
   }
 }
 
-cv::Mat BlockageDetector::compute_blockage_diagnostics(const cv::Mat & depth_image_16u)
+BlockageDetectionResult BlockageDetector::compute_blockage_diagnostics(const cv::Mat & depth_image_16u)
 {
   cv::Mat no_return_mask = make_no_return_mask(depth_image_16u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
@@ -231,7 +233,9 @@ cv::Mat BlockageDetector::compute_blockage_diagnostics(const cv::Mat & depth_ima
   update_blockage_info(ground_blockage_mask, result_.ground);
   update_blockage_info(sky_blockage_mask, result_.sky);
 
-  return blockage_mask;
+  result_.blockage_mask = blockage_mask;
+
+  return result_;
 }
 
 DiagnosticOutput BlockageDetector::get_blockage_diagnostics_output() const

@@ -97,6 +97,7 @@ struct BlockageDetectionResult
 {
   BlockageAreaResult ground;
   BlockageAreaResult sky;
+  cv::Mat blockage_mask;
 };
 
 /**
@@ -114,9 +115,9 @@ public:
   /**
    * @brief Compute blockage diagnostics from a depth image.
    * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   * @return cv::Mat The blockage mask. The data type is `CV_8UC1`.
+   * @return BlockageDetectionResult The blockage detection result.
    */
-  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
+  BlockageDetectionResult compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
    * @brief Get diagnostic output for blockage detection.
@@ -171,6 +172,7 @@ struct DustDetectionResult
 {
   float ground_dust_ratio = -1.0f;
   int dust_frame_count = 0;
+  cv::Mat dust_mask;
 };
 
 /**
@@ -188,9 +190,9 @@ public:
   /**
    * @brief Compute dust diagnostics from a depth image.
    * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   * @return cv::Mat The dust mask. The data type is `CV_8UC1`.
+   * @return DustDetectionResult The dust detection result.
    */
-  cv::Mat compute_dust_diagnostics(const cv::Mat & depth_image_16u);
+  DustDetectionResult compute_dust_diagnostics(const cv::Mat & depth_image_16u);
 
   /**
    * @brief Get diagnostic output for dust detection.

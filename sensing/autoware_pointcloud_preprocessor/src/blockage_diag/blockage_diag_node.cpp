@@ -261,15 +261,15 @@ void BlockageDiagComponent::update_diagnostics(
   cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
-  cv::Mat single_frame_blockage_mask = blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
-  cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(single_frame_blockage_mask);
+  BlockageDetectionResult blockage_result = blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
+  cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(blockage_result.blockage_mask);
   const DebugInfo debug_info = {input->header, depth_image_16u, multi_frame_blockage_mask};
   publish_blockage_debug_info(debug_info);
 
   // Dust detection
   if (enable_dust_diag_) {
-    cv::Mat single_frame_dust_mask = dust_detector_->compute_dust_diagnostics(depth_image_16u);
-    publish_dust_debug_info(debug_info, single_frame_dust_mask);
+    DustDetectionResult dust_result = dust_detector_->compute_dust_diagnostics(depth_image_16u);
+    publish_dust_debug_info(debug_info, dust_result.dust_mask);
   }
 }
 }  // namespace autoware::pointcloud_preprocessor
