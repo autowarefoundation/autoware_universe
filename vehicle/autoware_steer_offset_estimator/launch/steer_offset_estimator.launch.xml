@@ -7,7 +7,7 @@
   <include file="$(find-pkg-share autoware_global_parameter_loader)/launch/global_params.launch.py"/>
 
   <!-- steer offset estimator -->
-  <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator" name="steer_offset_estimator" output="screen">
+  <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator_node" name="steer_offset_estimator" output="screen">
     <param from="$(var config_file)"/>
     <param from="$(var initial_steer_offset_param_path)"/>
     <param name="initial_steer_offset_param_name" value="$(var initial_steer_offset_param_name)"/>
@@ -16,5 +16,6 @@
     <remap from="~/output/steering_offset" to="~/steering_offset"/>
     <remap from="~/output/steering_offset_covariance" to="~/steering_offset_covariance"/>
     <remap from="~/output/steering_offset_error" to="~/steering_offset_error"/>
+    <remap from="~/output/debug_info" to="~/debug_info"/>
   </node>
 </launch>
