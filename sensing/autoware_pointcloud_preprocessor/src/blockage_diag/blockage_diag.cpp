@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
 
 #include <opencv2/imgproc.hpp>
@@ -20,8 +21,8 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {

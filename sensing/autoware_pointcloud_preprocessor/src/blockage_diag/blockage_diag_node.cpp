@@ -87,8 +87,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
 
     // Initialize BlockageDetector
     BlockageDetectionConfig blockage_config;
-    blockage_config.blockage_ratio_threshold =
-      declare_parameter<float>("blockage_ratio_threshold");
+    blockage_config.blockage_ratio_threshold = declare_parameter<float>("blockage_ratio_threshold");
     blockage_config.blockage_count_threshold = declare_parameter<int>("blockage_count_threshold");
     blockage_config.blockage_kernel = declare_parameter<int>("blockage_kernel");
     blockage_config.horizontal_ring_id = horizontal_ring_id;
@@ -256,7 +255,8 @@ void BlockageDiagComponent::update_diagnostics(
   cv::Mat depth_image_16u = depth_image_converter_->make_normalized_depth_image(*input);
 
   // Blockage detection
-  BlockageDetectionResult blockage_result = blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
+  BlockageDetectionResult blockage_result =
+    blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
   cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(blockage_result.blockage_mask);
   publish_blockage_debug_info(blockage_result, input->header, multi_frame_blockage_mask);
 

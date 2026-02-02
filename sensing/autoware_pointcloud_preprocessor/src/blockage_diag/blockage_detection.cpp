@@ -64,9 +64,10 @@ void BlockageDetector::update_blockage_info(
   }
 
   cv::Rect blockage_bb = cv::boundingRect(blockage_mask);
-  double blockage_start_deg = blockage_bb.x * config_.horizontal_resolution + config_.angle_range_min_deg;
-  double blockage_end_deg =
-    (blockage_bb.x + blockage_bb.width) * config_.horizontal_resolution + config_.angle_range_min_deg;
+  double blockage_start_deg =
+    blockage_bb.x * config_.horizontal_resolution + config_.angle_range_min_deg;
+  double blockage_end_deg = (blockage_bb.x + blockage_bb.width) * config_.horizontal_resolution +
+                            config_.angle_range_min_deg;
 
   area_result.blockage_start_deg = static_cast<float>(blockage_start_deg);
   area_result.blockage_end_deg = static_cast<float>(blockage_end_deg);
@@ -76,7 +77,8 @@ void BlockageDetector::update_blockage_info(
   }
 }
 
-BlockageDetectionResult BlockageDetector::compute_blockage_diagnostics(const cv::Mat & depth_image_16u)
+BlockageDetectionResult BlockageDetector::compute_blockage_diagnostics(
+  const cv::Mat & depth_image_16u)
 {
   cv::Mat no_return_mask = make_no_return_mask(depth_image_16u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
@@ -104,17 +106,15 @@ DiagnosticOutput BlockageDetector::get_blockage_diagnostics_output() const
   output.additional_data.push_back(
     {"ground_blockage_count", std::to_string(result_.ground.blockage_count)});
   output.additional_data.push_back(
-    {"ground_blockage_range_deg",
-     "[" + std::to_string(result_.ground.blockage_start_deg) + "," +
-       std::to_string(result_.ground.blockage_end_deg) + "]"});
+    {"ground_blockage_range_deg", "[" + std::to_string(result_.ground.blockage_start_deg) + "," +
+                                    std::to_string(result_.ground.blockage_end_deg) + "]"});
   output.additional_data.push_back(
     {"sky_blockage_ratio", std::to_string(result_.sky.blockage_ratio)});
   output.additional_data.push_back(
     {"sky_blockage_count", std::to_string(result_.sky.blockage_count)});
   output.additional_data.push_back(
-    {"sky_blockage_range_deg",
-     "[" + std::to_string(result_.sky.blockage_start_deg) + "," +
-       std::to_string(result_.sky.blockage_end_deg) + "]"});
+    {"sky_blockage_range_deg", "[" + std::to_string(result_.sky.blockage_start_deg) + "," +
+                                 std::to_string(result_.sky.blockage_end_deg) + "]"});
 
   output.level = DiagnosticLevel::OK;
   output.message = "OK";
