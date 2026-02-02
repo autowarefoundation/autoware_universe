@@ -44,17 +44,6 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // The angular resolution of the mask, in degrees.
     horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
 
-    // Dust detection configuration
-    enable_dust_diag_ = declare_parameter<bool>("enable_dust_diag");
-    dust_config_.dust_ratio_threshold = declare_parameter<float>("dust_ratio_threshold");
-    dust_config_.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
-    dust_config_.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
-    // Multi-frame dust aggregation configuration
-    MultiFrameDetectionAggregatorConfig dust_aggregator_config;
-    dust_aggregator_config.buffering_frames = declare_parameter<int>("dust_buffering_frames");
-    dust_aggregator_config.buffering_interval = declare_parameter<int>("dust_buffering_interval");
-    dust_aggregator_ = std::make_unique<MultiFrameDetectionAggregator>(dust_aggregator_config);
-
     // Blockage detection configuration
     blockage_config_.blockage_ratio_threshold =
       declare_parameter<float>("blockage_ratio_threshold");
@@ -100,6 +89,20 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     depth_image_config.max_distance_range = max_distance_range;
     depth_image_converter_ =
       std::make_unique<pointcloud2_to_depth_image::PointCloud2ToDepthImage>(depth_image_config);
+
+    // Initialize DustDetector
+    enable_dust_diag_ = declare_parameter<bool>("enable_dust_diag");
+    DustDetectionConfig dust_config;
+    dust_config.dust_ratio_threshold = declare_parameter<float>("dust_ratio_threshold");
+    dust_config.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
+    dust_config.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
+    dust_config.horizontal_ring_id = horizontal_ring_id_;
+    dust_detector_ = std::make_unique<DustDetector>(dust_config);
+    // Multi-frame dust aggregation configuration
+    MultiFrameDetectionAggregatorConfig dust_aggregator_config;
+    dust_aggregator_config.buffering_frames = declare_parameter<int>("dust_buffering_frames");
+    dust_aggregator_config.buffering_interval = declare_parameter<int>("dust_buffering_interval");
+    dust_aggregator_ = std::make_unique<MultiFrameDetectionAggregator>(dust_aggregator_config);
   }
 
   // Publishers setup
@@ -145,6 +148,15 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   updater_.setPeriod(0.1);
 }
 
+void update_diagnostics_status(
+  diagnostic_updater::DiagnosticStatusWrapper & stat, const DiagnosticOutput & output)
+{
+  stat.summary(static_cast<unsigned char>(output.level), output.message);
+  for (const auto & data : output.additional_data) {
+    stat.add(data.key, data.value);
+  }
+}
+
 void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
 {
   BlockageDetectionResult res = blockage_result_;
@@ -187,48 +199,8 @@ void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) c
 
 void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat) const
 {
-  stat.add("ground_dust_ratio", std::to_string(dust_result_.ground_dust_ratio));
-  auto level = DiagnosticStatus::OK;
-  std::string msg = "OK";
-  if (dust_result_.ground_dust_ratio < 0.0f) {
-    level = DiagnosticStatus::STALE;
-    msg = "STALE";
-  } else if (
-    (dust_result_.ground_dust_ratio > dust_config_.dust_ratio_threshold) &&
-    (dust_result_.dust_frame_count > dust_config_.dust_count_threshold)) {
-    level = DiagnosticStatus::ERROR;
-    msg = "ERROR";
-  } else if (dust_result_.ground_dust_ratio > 0.0f) {
-    level = DiagnosticStatus::WARN;
-    msg = "WARN";
-  }
-
-  if (dust_result_.ground_dust_ratio > 0.0f) {
-    msg = msg + ": LIDAR ground dust";
-  }
-  stat.summary(level, msg);
-}
-
-cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
-{
-  assert(image_16u.type() == CV_16UC1);
-  auto dimensions = image_16u.size();
-
-  cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
-  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
-  return image_8u;
-}
-
-cv::Mat BlockageDiagComponent::make_no_return_mask(const cv::Mat & depth_image) const
-{
-  assert(depth_image.type() == CV_8UC1);
-  auto dimensions = depth_image.size();
-
-  cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::inRange(depth_image, 0, 1, no_return_mask);
-
-  return no_return_mask;
+  DiagnosticOutput dust_diagnostic = dust_detector_->get_dust_diagnostics_output();
+  update_diagnostics_status(stat, dust_diagnostic);
 }
 
 cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask) const
@@ -248,22 +220,6 @@ cv::Mat BlockageDiagComponent::make_blockage_mask(const cv::Mat & no_return_mask
   cv::dilate(erosion_result, blockage_mask, kernel);
 
   return blockage_mask;
-}
-
-std::pair<cv::Mat, cv::Mat> BlockageDiagComponent::segment_into_ground_and_sky(
-  const cv::Mat & mask) const
-{
-  assert(mask.type() == CV_8UC1);
-  auto dimensions = mask.size();
-
-  cv::Mat sky_mask;
-  mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id_)).copyTo(sky_mask);
-
-  cv::Mat ground_mask;
-  mask(cv::Rect(0, horizontal_ring_id_, dimensions.width, dimensions.height - horizontal_ring_id_))
-    .copyTo(ground_mask);
-
-  return {ground_mask, sky_mask};
 }
 
 float BlockageDiagComponent::get_nonzero_ratio(const cv::Mat & mask)
@@ -297,51 +253,11 @@ void BlockageDiagComponent::update_blockage_info(
   }
 }
 
-cv::Mat BlockageDiagComponent::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
-{
-  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
-  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
-
-  assert(no_return_mask.type() == CV_8UC1);
-  auto dimensions = no_return_mask.size();
-
-  auto [single_dust_ground_img, sky_blank] = segment_into_ground_and_sky(no_return_mask);
-
-  // It is normal for the sky region to be blank, therefore ignore it.
-  sky_blank.setTo(cv::Scalar(0));
-
-  int kernel_size = 2 * dust_config_.dust_kernel_size + 1;
-  int kernel_center = dust_config_.dust_kernel_size;
-  cv::Mat kernel = cv::getStructuringElement(
-    cv::MORPH_RECT, cv::Size(kernel_size, kernel_size), cv::Point(kernel_center, kernel_center));
-
-  cv::dilate(single_dust_ground_img, single_dust_ground_img, kernel);
-  cv::erode(single_dust_ground_img, single_dust_ground_img, kernel);
-  cv::inRange(single_dust_ground_img, 254, 255, single_dust_ground_img);
-
-  // Re-assemble the processed ground dust image and the sky blank.
-  cv::Mat single_dust_img(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::vconcat(sky_blank, single_dust_ground_img, single_dust_img);
-
-  dust_result_.ground_dust_ratio = static_cast<float>(cv::countNonZero(single_dust_ground_img)) /
-                                   (single_dust_ground_img.cols * single_dust_ground_img.rows);
-
-  if (dust_result_.ground_dust_ratio > dust_config_.dust_ratio_threshold) {
-    if (dust_result_.dust_frame_count < 2 * dust_config_.dust_count_threshold) {
-      dust_result_.dust_frame_count++;
-    }
-  } else {
-    dust_result_.dust_frame_count = 0;
-  }
-
-  return single_dust_img;
-}
-
 void BlockageDiagComponent::publish_dust_debug_info(
   const DebugInfo & debug_info, const cv::Mat & single_dust_img)
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
-  ground_dust_ratio_msg.data = dust_result_.ground_dust_ratio;
+  ground_dust_ratio_msg.data = dust_detector_->get_ground_dust_ratio();
   ground_dust_ratio_msg.stamp = now();
   ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
 
@@ -413,7 +329,8 @@ cv::Mat BlockageDiagComponent::compute_blockage_diagnostics(const cv::Mat & dept
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
 
-  auto [ground_blockage_mask, sky_blockage_mask] = segment_into_ground_and_sky(blockage_mask);
+  auto [ground_blockage_mask, sky_blockage_mask] =
+    segment_into_ground_and_sky(blockage_mask, horizontal_ring_id_);
 
   blockage_result_.ground.blockage_ratio = get_nonzero_ratio(ground_blockage_mask);
   blockage_result_.sky.blockage_ratio = get_nonzero_ratio(sky_blockage_mask);
@@ -444,7 +361,7 @@ void BlockageDiagComponent::update_diagnostics(
 
   // Dust detection
   if (enable_dust_diag_) {
-    cv::Mat single_frame_dust_mask = compute_dust_diagnostics(depth_image_16u);
+    cv::Mat single_frame_dust_mask = dust_detector_->compute_dust_diagnostics(depth_image_16u);
     publish_dust_debug_info(debug_info, single_frame_dust_mask);
   }
 }
