@@ -177,20 +177,20 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
 }
 
 void BlockageDiagComponent::publish_dust_debug_info(
-  const DebugInfo & debug_info, const cv::Mat & single_dust_img)
+  const DebugInfo & debug_info, const DustDetectionResult & dust_result)
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
-  ground_dust_ratio_msg.data = dust_detector_->get_ground_dust_ratio();
+  ground_dust_ratio_msg.data = dust_result.ground_dust_ratio;
   ground_dust_ratio_msg.stamp = now();
   ground_dust_ratio_pub_->publish(ground_dust_ratio_msg);
 
   if (publish_debug_image_) {
-    auto dimensions = single_dust_img.size();
-    cv::Mat multi_frame_ground_dust_result = dust_aggregator_->update(single_dust_img);
+    auto dimensions = dust_result.dust_mask.size();
+    cv::Mat multi_frame_ground_dust_result = dust_aggregator_->update(dust_result.dust_mask);
 
     // Publish single-frame dust mask image with color map
     cv::Mat single_frame_ground_dust_colorized(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
-    cv::applyColorMap(single_dust_img, single_frame_ground_dust_colorized, cv::COLORMAP_JET);
+    cv::applyColorMap(dust_result.dust_mask, single_frame_ground_dust_colorized, cv::COLORMAP_JET);
     sensor_msgs::msg::Image::SharedPtr single_frame_dust_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", single_frame_ground_dust_colorized)
         .toImageMsg();
@@ -269,7 +269,7 @@ void BlockageDiagComponent::update_diagnostics(
   // Dust detection
   if (enable_dust_diag_) {
     DustDetectionResult dust_result = dust_detector_->compute_dust_diagnostics(depth_image_16u);
-    publish_dust_debug_info(debug_info, dust_result.dust_mask);
+    publish_dust_debug_info(debug_info, dust_result);
   }
 }
 }  // namespace autoware::pointcloud_preprocessor

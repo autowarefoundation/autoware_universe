@@ -200,12 +200,6 @@ public:
    */
   DiagnosticOutput get_dust_diagnostics_output() const;
 
-  /**
-   * @brief Get the ground dust ratio.
-   * @return float The ground dust ratio.
-   */
-  float get_ground_dust_ratio() const { return result_.ground_dust_ratio; }
-
 private:
   DustDetectionConfig config_;
   DustDetectionResult result_;

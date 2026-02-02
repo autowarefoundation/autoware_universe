@@ -91,8 +91,10 @@ private:
    * @brief Publish the debug info of dust diagnostics if enabled.
    *
    * @param debug_info The debug info to publish.
+   * @param dust_result The dust detection result.
    */
-  void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
+  void publish_dust_debug_info(
+    const DebugInfo & debug_info, const DustDetectionResult & dust_result);
 
   Updater updater_{this};
 
