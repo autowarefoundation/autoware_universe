@@ -17,6 +17,8 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/tracker/model/multiple_vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/model/pedestrian_and_bicycle_tracker.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -169,6 +171,7 @@ bool Tracker::updateWithMeasurement(
     // availability to SIGN_UNKNOWN
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
+  setOrientationAvailability(object_.kinematics.orientation_availability);
 
   // Update strategies:
   // 1. Normal update: Update position and shape by Kalman filter
