@@ -64,6 +64,10 @@ cv::Mat MultiFrameDetectionAggregator::update(const cv::Mat & mask)
   return time_series_result;
 }
 
+DustDetector::DustDetector(const DustDetectionConfig & config) : config_(config)
+{
+}
+
 cv::Mat quantize_to_8u(const cv::Mat & image_16u)
 {
   assert(image_16u.type() == CV_16UC1);
@@ -100,10 +104,6 @@ std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
     .copyTo(ground_mask);
 
   return {ground_mask, sky_mask};
-}
-
-DustDetector::DustDetector(const DustDetectionConfig & config) : config_(config)
-{
 }
 
 DustDetectionResult DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
