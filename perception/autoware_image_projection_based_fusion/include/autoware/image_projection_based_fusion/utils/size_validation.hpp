@@ -41,8 +41,6 @@ struct ObjectSizeConstraints
   double max_length;
   double min_width;  // y dimension (side-to-side) [m]
   double max_width;
-  double min_height;  // z dimension [m]
-  double max_height;
 };
 
 /**
@@ -55,8 +53,6 @@ inline ObjectSizeConstraints getDefaultPedestrianConstraints()
   constraints.max_length = 0.8;             // Wide stance or carrying items
   constraints.min_width = 0.3;              // Minimum shoulder width
   constraints.max_width = 1.0;              // With bags/umbrella
-  constraints.min_height = 0.8;             // Child or crouching
-  constraints.max_height = 2.2;             // Tall adult
   return constraints;
 }
 
@@ -67,17 +63,6 @@ struct SizeValidationResult
 {
   bool is_valid = false;
   double size_score = 0.0;  // 0.0 to 1.0
-  std::string rejection_reason;
-};
-
-/**
- * @brief Result of aspect ratio validation
- */
-struct AspectRatioValidationResult
-{
-  bool is_valid = false;
-  double aspect_ratio = 0.0;
-  double confidence = 0.0;
 };
 
 /**
@@ -86,13 +71,9 @@ struct AspectRatioValidationResult
 struct PedestrianSizeValidationParams
 {
   bool enable_size_validation = true;
-  bool enable_aspect_ratio_validation = true;
-  bool enable_3d_size_validation = true;
 
-  // 3D size constraints
-  double min_height = 0.8;
-  double max_height = 2.2;
-  double min_width = 0.3;
+  // 3D size constraints (x-y footprint only; no z-axis range)
+  double min_width = 0.1;
   double max_width = 1.0;
 };
 
@@ -101,23 +82,20 @@ struct PedestrianSizeValidationParams
  * @param cluster PointCloud2 cluster data
  * @param length Output: length (x dimension) in meters
  * @param width Output: width (y dimension) in meters
- * @param height Output: height (z dimension) in meters
- * @return True if dimensions were successfully calculated
+ * @return True if dimensions were successfully calculated (x-y footprint only; no z-axis)
  */
 inline bool calculateClusterDimensions(
-  const sensor_msgs::msg::PointCloud2 & cluster, double & length, double & width, double & height)
+  const sensor_msgs::msg::PointCloud2 & cluster, double & length, double & width)
 {
   if (cluster.data.empty()) {
     return false;
   }
 
-  // Initialize min/max values
+  // Initialize min/max values (x-y only)
   double min_x = std::numeric_limits<double>::max();
   double max_x = std::numeric_limits<double>::lowest();
   double min_y = std::numeric_limits<double>::max();
   double max_y = std::numeric_limits<double>::lowest();
-  double min_z = std::numeric_limits<double>::max();
-  double max_z = std::numeric_limits<double>::lowest();
 
   // Iterate through all points in the cluster
   size_t valid_points = 0;
@@ -133,8 +111,6 @@ inline bool calculateClusterDimensions(
     max_x = std::max(max_x, static_cast<double>(*iter_x));
     min_y = std::min(min_y, static_cast<double>(*iter_y));
     max_y = std::max(max_y, static_cast<double>(*iter_y));
-    min_z = std::min(min_z, static_cast<double>(*iter_z));
-    max_z = std::max(max_z, static_cast<double>(*iter_z));
     valid_points++;
   }
 
@@ -142,13 +118,12 @@ inline bool calculateClusterDimensions(
     return false;
   }
 
-  // Calculate dimensions
+  // Calculate dimensions (x-y footprint only)
   length = max_x - min_x;
   width = max_y - min_y;
-  height = max_z - min_z;
 
   // Ensure non-zero dimensions
-  if (length <= 0.0 || width <= 0.0 || height <= 0.0) {
+  if (length <= 0.0 || width <= 0.0) {
     return false;
   }
 
@@ -167,93 +142,30 @@ inline SizeValidationResult validatePedestrian3DSize(
 {
   SizeValidationResult result;
 
-  // Calculate dimensions from pointcloud cluster
-  double length, width, height;
-  if (!calculateClusterDimensions(cluster, length, width, height)) {
+  // Calculate dimensions from pointcloud cluster (x-y footprint only)
+  double length, width;
+  if (!calculateClusterDimensions(cluster, length, width)) {
     result.is_valid = false;
-    result.rejection_reason = "Failed to calculate cluster dimensions from pointcloud";
-    return result;
-  }
-
-  // Check height
-  if (height < params.min_height) {
-    result.is_valid = false;
-    result.rejection_reason =
-      "Height too small: " + std::to_string(height) + "m < " + std::to_string(params.min_height) + "m";
-    return result;
-  }
-  if (height > params.max_height) {
-    result.is_valid = false;
-    result.rejection_reason =
-      "Height too large: " + std::to_string(height) + "m > " + std::to_string(params.max_height) + "m";
     return result;
   }
 
   // Check width
   if (width < params.min_width) {
     result.is_valid = false;
-    result.rejection_reason =
-      "Width too small: " + std::to_string(width) + "m < " + std::to_string(params.min_width) + "m";
     return result;
   }
   if (width > params.max_width) {
     result.is_valid = false;
-    result.rejection_reason =
-      "Width too large: " + std::to_string(width) + "m > " + std::to_string(params.max_width) + "m";
     return result;
   }
 
-  // Check that pedestrian is upright (height should be greater than length and width)
-  if (height < length || height < width) {
-    result.is_valid = false;
-    result.rejection_reason = "Not upright: height=" + std::to_string(height) +
-                              "m, length=" + std::to_string(length) +
-                              "m, width=" + std::to_string(width) + "m";
-    return result;
-  }
-
-  // Calculate size score based on how well it matches typical pedestrian dimensions
-  // Typical adult: ~0.5m length, ~0.5m width, ~1.7m height
-  const double typical_height = 1.7;
+  // Calculate size score based on how well width matches typical pedestrian
   const double typical_width = 0.5;
-
-  const double height_score =
-    1.0 - std::abs(height - typical_height) / (params.max_height - params.min_height);
   const double width_score =
     1.0 - std::abs(width - typical_width) / (params.max_width - params.min_width);
 
   result.is_valid = true;
-  result.size_score = std::max(0.0, (height_score + width_score) / 2.0);
-  return result;
-}
-
-/**
- * @brief Validate 2D aspect ratio of ROI against pedestrian constraints
- * @param roi The region of interest to validate
- * @param params Validation parameters
- * @return Validation result with aspect ratio and confidence
- */
-inline AspectRatioValidationResult validatePedestrianAspectRatio(
-  const sensor_msgs::msg::RegionOfInterest & roi, const PedestrianSizeValidationParams & params)
-{
-  AspectRatioValidationResult result;
-
-  if (roi.width == 0 || roi.height == 0) {
-    result.is_valid = false;
-    return result;
-  }
-
-  // Calculate aspect ratio (height / width)
-  result.aspect_ratio =
-    static_cast<double>(roi.height) / static_cast<double>(roi.width);
-
-  // Calculate confidence based on how typical the aspect ratio is
-  // For pedestrians, aspect ratio around 2.0-3.0 is most typical (full body visible)
-  const double ideal_pedestrian_aspect_ratio = 2.5;
-  const double deviation = std::abs(result.aspect_ratio - ideal_pedestrian_aspect_ratio);
-  result.confidence = std::max(0.0, 1.0 - deviation / 2.0);
-
-  result.is_valid = true;
+  result.size_score = std::max(0.0, width_score);
   return result;
 }
 
@@ -267,36 +179,18 @@ inline AspectRatioValidationResult validatePedestrianAspectRatio(
  */
 inline bool validatePedestrianSize(
   const sensor_msgs::msg::PointCloud2 & cluster,
-  const sensor_msgs::msg::RegionOfInterest & cluster_roi,
-  const sensor_msgs::msg::RegionOfInterest & image_roi,
+  [[maybe_unused]] const sensor_msgs::msg::RegionOfInterest & cluster_roi,
   const PedestrianSizeValidationParams & params)
 {
   if (!params.enable_size_validation) {
     return true;  // Validation disabled
   }
 
-  // Check 2D aspect ratio (most important for pedestrians)
-  if (params.enable_aspect_ratio_validation) {
-    // Validate cluster ROI aspect ratio
-    auto cluster_aspect_result = validatePedestrianAspectRatio(cluster_roi, params);
-    if (!cluster_aspect_result.is_valid) {
-      return false;
-    }
-
-    // Validate image ROI aspect ratio
-    auto image_aspect_result = validatePedestrianAspectRatio(image_roi, params);
-    if (!image_aspect_result.is_valid) {
-      return false;
-    }
-  }
-
   // Check 3D size from pointcloud cluster
-  if (params.enable_3d_size_validation) {
-    if (!cluster.data.empty()) {
-      auto size_result = validatePedestrian3DSize(cluster, params);
-      if (!size_result.is_valid) {
-        return false;
-      }
+  if (!cluster.data.empty()) {
+    auto size_result = validatePedestrian3DSize(cluster, params);
+    if (!size_result.is_valid) {
+      return false;
     }
   }
 

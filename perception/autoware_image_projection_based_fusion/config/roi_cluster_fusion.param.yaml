@@ -20,10 +20,6 @@
 
     # Pedestrian size validation parameters
     pedestrian_size_validation:
-      enable: true                    # Enable pedestrian size validation
-      enable_aspect_ratio: true       # Enable 2D aspect ratio check (height/width)
-      enable_3d_size: true            # Enable 3D size validation
-      min_height: 0.8                 # Minimum height [m] (child or crouching)
-      max_height: 2.2                 # Maximum height [m] (tall adult)
+      enable: true                    # Enable pedestrian size validation (3D size check)
       min_width: 0.3                  # Minimum width [m] (shoulder width)
       max_width: 1.0                  # Maximum width [m] (with bags/umbrella)

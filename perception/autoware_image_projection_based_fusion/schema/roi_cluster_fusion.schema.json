@@ -130,32 +130,8 @@
           "properties": {
             "enable": {
               "type": "boolean",
-              "description": "Enable pedestrian size validation",
+              "description": "Enable pedestrian size validation (3D size check)",
               "default": true
-            },
-            "enable_aspect_ratio": {
-              "type": "boolean",
-              "description": "Enable 2D aspect ratio validation (height/width check)",
-              "default": true
-            },
-            "enable_3d_size": {
-              "type": "boolean",
-              "description": "Enable 3D size validation using object shape dimensions",
-              "default": true
-            },
-            "min_height": {
-              "type": "number",
-              "description": "Minimum pedestrian height in meters (child or crouching)",
-              "default": 0.8,
-              "minimum": 0.3,
-              "maximum": 1.5
-            },
-            "max_height": {
-              "type": "number",
-              "description": "Maximum pedestrian height in meters (tall adult)",
-              "default": 2.2,
-              "minimum": 1.5,
-              "maximum": 3.0
             },
             "min_width": {
               "type": "number",

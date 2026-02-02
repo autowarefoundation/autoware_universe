@@ -66,25 +66,15 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
 
   // Pedestrian size validation parameters
   pedestrian_size_params_.enable_size_validation =
-    declare_parameter<bool>("pedestrian_size_validation.enable", true);
-  pedestrian_size_params_.enable_aspect_ratio_validation =
-    declare_parameter<bool>("pedestrian_size_validation.enable_aspect_ratio", true);
-  pedestrian_size_params_.enable_3d_size_validation =
-    declare_parameter<bool>("pedestrian_size_validation.enable_3d_size", true);
-  pedestrian_size_params_.min_height =
-    declare_parameter<double>("pedestrian_size_validation.min_height", 0.8);
-  pedestrian_size_params_.max_height =
-    declare_parameter<double>("pedestrian_size_validation.max_height", 2.2);
+    declare_parameter<bool>("pedestrian_size_validation.enable");
   pedestrian_size_params_.min_width =
-    declare_parameter<double>("pedestrian_size_validation.min_width", 0.3);
+    declare_parameter<double>("pedestrian_size_validation.min_width");
   pedestrian_size_params_.max_width =
-    declare_parameter<double>("pedestrian_size_validation.max_width", 1.0);
+    declare_parameter<double>("pedestrian_size_validation.max_width");
 
   RCLCPP_INFO(
-    get_logger(), "Pedestrian size validation: %s (aspect_ratio: %s, 3d_size: %s)",
-    pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled",
-    pedestrian_size_params_.enable_aspect_ratio_validation ? "enabled" : "disabled",
-    pedestrian_size_params_.enable_3d_size_validation ? "enabled" : "disabled");
+    get_logger(), "Pedestrian size validation: %s",
+    pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -250,7 +240,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
           input_cluster_msg.feature_objects.at(index).feature.cluster;
 
         const bool passes_size_validation =
-          validateSizeForClass(cluster_pointcloud, cluster_roi, image_roi, roi_label);
+          validateSizeForClass(cluster_pointcloud, cluster_roi, roi_label);
 
         if (passes_size_validation) {
           fused_object.classification = feature_obj.object.classification;
@@ -359,7 +349,6 @@ void RoiClusterFusionNode::postprocess(
 bool RoiClusterFusionNode::validateSizeForClass(
   const sensor_msgs::msg::PointCloud2 & cluster,
   const sensor_msgs::msg::RegionOfInterest & cluster_roi,
-  const sensor_msgs::msg::RegionOfInterest & image_roi,
   const uint8_t label)
 {
   // Currently only validate pedestrians, other classes pass through
@@ -368,7 +357,7 @@ bool RoiClusterFusionNode::validateSizeForClass(
   }
 
   // Perform pedestrian-specific size validation using cluster pointcloud
-  return validatePedestrianSize(cluster, cluster_roi, image_roi, pedestrian_size_params_);
+  return validatePedestrianSize(cluster, cluster_roi, pedestrian_size_params_);
 }
 
 }  // namespace autoware::image_projection_based_fusion
