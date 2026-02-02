@@ -15,7 +15,7 @@
       TRAILER : 0.65
       MOTORCYCLE : 0.65
       BICYCLE : 0.65
-      PEDESTRIAN : 0.65
+      PEDESTRIAN : 0.2
     remove_unknown: true
 
     # Pedestrian size validation parameters
