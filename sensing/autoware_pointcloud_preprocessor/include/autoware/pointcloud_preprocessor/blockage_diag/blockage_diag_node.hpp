@@ -102,13 +102,6 @@ private:
   // Debug parameters
   bool publish_debug_image_;
 
-  // Mask size parameters
-  std::vector<double> angle_range_deg_;
-  double horizontal_resolution_{0.4};
-
-  // Ground/sky segmentation parameters
-  int horizontal_ring_id_;
-
   // Blockage detection
   std::unique_ptr<BlockageDetector> blockage_detector_;
   std::unique_ptr<MultiFrameDetectionAggregator> blockage_aggregator_;

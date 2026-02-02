@@ -34,7 +34,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   {
     // LiDAR configuration
     // Horizontal FoV, expects two values: [min, max]
-    angle_range_deg_ = declare_parameter<std::vector<double>>("angle_range");
+    std::vector<double> angle_range_deg = declare_parameter<std::vector<double>>("angle_range");
     // Whether the channel order is top-down (true) or bottom-up (false)
     bool is_channel_order_top2down = declare_parameter<bool>("is_channel_order_top2down");
 
@@ -42,7 +42,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // The number of vertical bins in the mask. Has to equal the number of channels of the LiDAR.
     int vertical_bins = declare_parameter<int>("vertical_bins");
     // The angular resolution of the mask, in degrees.
-    horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
+    double horizontal_resolution = declare_parameter<double>("horizontal_resolution");
 
     // Multi-frame blockage aggregation configuration
     MultiFrameDetectionAggregatorConfig blockage_aggregator_config;
@@ -64,10 +64,10 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     // Ground segmentation configuration
     // The ring ID that coincides with the horizon. Regions below are treated as ground,
     // regions above are treated as sky.
-    horizontal_ring_id_ = declare_parameter<int>("horizontal_ring_id");
+    int horizontal_ring_id = declare_parameter<int>("horizontal_ring_id");
 
     // Validate parameters
-    if (vertical_bins <= horizontal_ring_id_) {
+    if (vertical_bins <= horizontal_ring_id) {
       RCLCPP_ERROR(
         this->get_logger(),
         "The horizontal_ring_id should be smaller than vertical_bins. Skip blockage diag!");
@@ -76,9 +76,9 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
 
     // Initialize PointCloud2ToDepthImage converter
     pointcloud2_to_depth_image::ConverterConfig depth_image_config;
-    depth_image_config.horizontal.angle_range_min_deg = angle_range_deg_[0];
-    depth_image_config.horizontal.angle_range_max_deg = angle_range_deg_[1];
-    depth_image_config.horizontal.horizontal_resolution = horizontal_resolution_;
+    depth_image_config.horizontal.angle_range_min_deg = angle_range_deg[0];
+    depth_image_config.horizontal.angle_range_max_deg = angle_range_deg[1];
+    depth_image_config.horizontal.horizontal_resolution = horizontal_resolution;
     depth_image_config.vertical.vertical_bins = vertical_bins;
     depth_image_config.vertical.is_channel_order_top2down = is_channel_order_top2down;
     depth_image_config.max_distance_range = max_distance_range;
@@ -91,10 +91,10 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
       declare_parameter<float>("blockage_ratio_threshold");
     blockage_config.blockage_count_threshold = declare_parameter<int>("blockage_count_threshold");
     blockage_config.blockage_kernel = declare_parameter<int>("blockage_kernel");
-    blockage_config.horizontal_ring_id = horizontal_ring_id_;
-    blockage_config.horizontal_resolution = horizontal_resolution_;
-    blockage_config.angle_range_min_deg = angle_range_deg_[0];
-    blockage_config.angle_range_max_deg = angle_range_deg_[1];
+    blockage_config.horizontal_ring_id = horizontal_ring_id;
+    blockage_config.horizontal_resolution = horizontal_resolution;
+    blockage_config.angle_range_min_deg = angle_range_deg[0];
+    blockage_config.angle_range_max_deg = angle_range_deg[1];
     blockage_detector_ = std::make_unique<BlockageDetector>(blockage_config);
 
     // Initialize DustDetector
@@ -103,7 +103,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     dust_config.dust_ratio_threshold = declare_parameter<float>("dust_ratio_threshold");
     dust_config.dust_count_threshold = declare_parameter<int>("dust_count_threshold");
     dust_config.dust_kernel_size = declare_parameter<int>("dust_kernel_size");
-    dust_config.horizontal_ring_id = horizontal_ring_id_;
+    dust_config.horizontal_ring_id = horizontal_ring_id;
     dust_detector_ = std::make_unique<DustDetector>(dust_config);
     // Multi-frame dust aggregation configuration
     MultiFrameDetectionAggregatorConfig dust_aggregator_config;
