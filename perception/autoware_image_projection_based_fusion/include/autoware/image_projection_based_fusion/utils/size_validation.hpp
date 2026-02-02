@@ -45,7 +45,6 @@ struct ObjectSizeConstraints
   double max_height;
   double min_aspect_ratio_2d;  // height/width in 2D image
   double max_aspect_ratio_2d;
-  double max_footprint_area;  // max ground footprint [m²]
 };
 
 /**
@@ -62,7 +61,6 @@ inline ObjectSizeConstraints getDefaultPedestrianConstraints()
   constraints.max_height = 2.2;             // Tall adult
   constraints.min_aspect_ratio_2d = 1.2;    // Pedestrians are taller than wide
   constraints.max_aspect_ratio_2d = 5.0;    // Full body visible
-  constraints.max_footprint_area = 1.5;     // Maximum ground footprint
   return constraints;
 }
 
@@ -100,7 +98,6 @@ struct PedestrianSizeValidationParams
   double max_height = 2.2;
   double min_width = 0.3;
   double max_width = 1.0;
-  double max_footprint_area = 1.5;
 
   // 2D aspect ratio constraints
   double min_aspect_ratio = 1.2;
@@ -211,15 +208,6 @@ inline SizeValidationResult validatePedestrian3DSize(
     result.is_valid = false;
     result.rejection_reason =
       "Width too large: " + std::to_string(width) + "m > " + std::to_string(params.max_width) + "m";
-    return result;
-  }
-
-  // Check footprint area (pedestrians have small ground footprint)
-  const double footprint_area = length * width;
-  if (footprint_area > params.max_footprint_area) {
-    result.is_valid = false;
-    result.rejection_reason = "Footprint too large: " + std::to_string(footprint_area) +
-                              "m² > " + std::to_string(params.max_footprint_area) + "m²";
     return result;
   }
 

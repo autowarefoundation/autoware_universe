@@ -171,13 +171,6 @@
               "minimum": 0.5,
               "maximum": 2.0
             },
-            "max_footprint_area": {
-              "type": "number",
-              "description": "Maximum ground footprint area in m² (pedestrians have small footprints)",
-              "default": 1.5,
-              "minimum": 0.5,
-              "maximum": 3.0
-            },
             "min_aspect_ratio": {
               "type": "number",
               "description": "Minimum 2D ROI height/width ratio (pedestrians are taller than wide)",

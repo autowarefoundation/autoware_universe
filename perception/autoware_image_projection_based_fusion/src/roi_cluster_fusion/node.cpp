@@ -79,8 +79,6 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     declare_parameter<double>("pedestrian_size_validation.min_width", 0.3);
   pedestrian_size_params_.max_width =
     declare_parameter<double>("pedestrian_size_validation.max_width", 1.0);
-  pedestrian_size_params_.max_footprint_area =
-    declare_parameter<double>("pedestrian_size_validation.max_footprint_area", 1.5);
   pedestrian_size_params_.min_aspect_ratio =
     declare_parameter<double>("pedestrian_size_validation.min_aspect_ratio", 1.2);
   pedestrian_size_params_.max_aspect_ratio =
