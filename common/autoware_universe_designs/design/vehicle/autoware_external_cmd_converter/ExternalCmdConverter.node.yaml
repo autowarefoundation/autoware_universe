@@ -39,10 +39,20 @@ param_files:
 param_values:
   - name: csv_path_accel_map
     type: string
-    default: config/accel_map.csv
+    default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/accel_map.csv
   - name: csv_path_brake_map
     type: string
-    default: config/brake_map.csv
+    default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/brake_map.csv
+  - name: ref_vel_gain
+    default: 3.0
+  - name: timer_rate
+    default: 10.0
+  - name: wait_for_first_topic
+    default: true
+  - name: control_command_timeout
+    default: 1.0
+  - name: emergency_stop_timeout
+    default: 3.0
 
 # processes
 processes:

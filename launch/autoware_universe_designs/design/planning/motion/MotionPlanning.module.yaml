@@ -1,0 +1,78 @@
+autoware_system_design_format: v0.1.0
+
+name: MotionPlanning.module
+instances:
+  - name: elastic_band_smoother
+    entity: ElasticBandSmoother.node
+  - name: path_optimizer
+    entity: PathOptimizer.node
+  - name: motion_velocity_planner
+    entity: MotionVelocityPlanner.node
+  - name: surround_obstacle_checker
+    entity: SurroundObstacleChecker.node
+external_interfaces:
+  input:
+    - name: path
+    - name: vector_map
+    - name: odometry
+    - name: accel
+    - name: dynamic_objects
+    - name: no_ground_pointcloud
+    - name: pointcloud
+    - name: traffic_signals
+    - name: virtual_traffic_light_states
+    - name: occupancy_grid
+  output:
+    - name: trajectory
+    - name: velocity_limit
+    - name: stop_reasons
+connections:
+  # External Input -> Elastic Band Smoother
+  - from: input.path
+    to: elastic_band_smoother.input.path
+  - from: input.odometry
+    to: elastic_band_smoother.input.odometry
+
+  # Smoother -> Path Optimizer
+  - from: elastic_band_smoother.output.path
+    to: path_optimizer.input.path
+  - from: input.odometry
+    to: path_optimizer.input.odometry
+
+  # Path Optimizer -> Motion Velocity Planner
+  - from: path_optimizer.output.trajectory
+    to: motion_velocity_planner.input.trajectory
+
+  # External Inputs -> Motion Velocity Planner
+  - from: input.vector_map
+    to: motion_velocity_planner.input.vector_map
+  - from: input.odometry
+    to: motion_velocity_planner.input.vehicle_odometry
+  - from: input.accel
+    to: motion_velocity_planner.input.accel
+  - from: input.dynamic_objects
+    to: motion_velocity_planner.input.dynamic_objects
+  - from: input.no_ground_pointcloud
+    to: motion_velocity_planner.input.no_ground_pointcloud
+  - from: input.traffic_signals
+    to: motion_velocity_planner.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: motion_velocity_planner.input.virtual_traffic_light_states
+  - from: input.occupancy_grid
+    to: motion_velocity_planner.input.occupancy_grid
+
+  # External Inputs -> Surround Obstacle Checker
+  - from: input.odometry
+    to: surround_obstacle_checker.input.odometry
+  - from: input.dynamic_objects
+    to: surround_obstacle_checker.input.objects
+  - from: input.pointcloud
+    to: surround_obstacle_checker.input.pointcloud
+
+  # Internal Outputs -> External Outputs
+  - from: motion_velocity_planner.output.trajectory
+    to: output.trajectory
+  - from: motion_velocity_planner.output.velocity_limit
+    to: output.velocity_limit
+  - from: motion_velocity_planner.output.stop_reasons
+    to: output.stop_reasons

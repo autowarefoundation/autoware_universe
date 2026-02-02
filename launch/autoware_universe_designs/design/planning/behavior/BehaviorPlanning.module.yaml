@@ -1,0 +1,87 @@
+autoware_system_design_format: v0.1.0
+
+name: BehaviorPlanning.module
+instances:
+  - name: behavior_path_planner
+    entity: BehaviorPathPlanner.node
+  - name: behavior_velocity_planner
+    entity: BehaviorVelocityPlanner.node
+external_interfaces:
+  input:
+    - name: route
+    - name: vector_map
+    - name: perception
+    - name: occupancy_grid_map
+    - name: costmap
+    - name: traffic_signals
+    - name: virtual_traffic_light_states
+    - name: odometry
+    - name: accel
+    - name: scenario
+    - name: no_ground_pointcloud
+    - name: external_velocity_limit_mps
+  output:
+    - name: path
+    - name: turn_indicators_cmd
+    - name: hazard_lights_cmd
+    - name: stop_reasons
+    - name: infrastructure_commands
+    - name: modified_goal
+connections:
+  # External Inputs -> Behavior Path Planner
+  - from: input.route
+    to: behavior_path_planner.input.route
+  - from: input.vector_map
+    to: behavior_path_planner.input.vector_map
+  - from: input.perception
+    to: behavior_path_planner.input.perception
+  - from: input.occupancy_grid_map
+    to: behavior_path_planner.input.occupancy_grid_map
+  - from: input.costmap
+    to: behavior_path_planner.input.costmap
+  - from: input.traffic_signals
+    to: behavior_path_planner.input.traffic_signals
+  - from: input.odometry
+    to: behavior_path_planner.input.odometry
+  - from: input.accel
+    to: behavior_path_planner.input.accel
+  - from: input.scenario
+    to: behavior_path_planner.input.scenario
+
+  # External Inputs -> Behavior Velocity Planner
+  - from: input.vector_map
+    to: behavior_velocity_planner.input.vector_map
+  - from: input.odometry
+    to: behavior_velocity_planner.input.vehicle_odometry
+  - from: input.accel
+    to: behavior_velocity_planner.input.accel
+  - from: input.perception
+    to: behavior_velocity_planner.input.dynamic_objects
+  - from: input.no_ground_pointcloud
+    to: behavior_velocity_planner.input.no_ground_pointcloud
+  - from: input.traffic_signals
+    to: behavior_velocity_planner.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: behavior_velocity_planner.input.virtual_traffic_light_states
+  - from: input.occupancy_grid_map
+    to: behavior_velocity_planner.input.occupancy_grid
+  - from: input.external_velocity_limit_mps
+    to: behavior_velocity_planner.input.external_velocity_limit_mps
+
+  # Internal Wiring: Path Planner -> Velocity Planner
+  - from: behavior_path_planner.output.path
+    to: behavior_velocity_planner.input.path_with_lane_id
+
+  # Internal Outputs -> External Outputs
+  - from: behavior_velocity_planner.output.path
+    to: output.path
+  - from: behavior_path_planner.output.turn_indicators_cmd
+    to: output.turn_indicators_cmd
+  - from: behavior_path_planner.output.hazard_lights_cmd
+    to: output.hazard_lights_cmd
+  - from: behavior_path_planner.output.modified_goal
+    to: output.modified_goal
+  - from: behavior_velocity_planner.output.infrastructure_commands
+    to: output.infrastructure_commands
+  - from: behavior_velocity_planner.output.stop_reasons
+    to: output.stop_reasons

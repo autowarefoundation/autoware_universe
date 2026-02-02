@@ -1,0 +1,27 @@
+autoware_system_design_format: v0.1.0
+
+name: ManualLaneChangeHandler.node
+launch:
+  package: autoware_manual_lane_change_handler
+  plugin: autoware::manual_lane_change_handler::ManualLaneChangeHandler
+  executable: manual_lane_change_handler_node
+  use_container: true
+  container_name: planning_container
+inputs:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+outputs:
+  - name: lane_change_approval
+    message_type: autoware_planning_msgs/msg/LaneChangeApproval
+parameter_files:
+  - name: mission_planner_param
+    default: $(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml
+parameters: []
+processes:
+  - name: handle_request
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: lane_change_approval

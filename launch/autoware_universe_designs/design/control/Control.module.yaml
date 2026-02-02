@@ -1,0 +1,213 @@
+autoware_system_design_format: v0.1.0
+
+name: Control.module
+instances:
+  - name: trajectory_follower
+    entity: TrajectoryFollower.node
+  - name: shift_decider
+    entity: ShiftDecider.node
+  - name: vehicle_cmd_gate
+    entity: VehicleCmdGate.node
+  - name: operation_mode_transition_manager
+    entity: OperationModeTransitionManager.node
+  - name: external_cmd_selector
+    entity: ExternalCmdSelector.node
+  - name: external_cmd_converter
+    entity: ExternalCmdConverter.node
+  - name: lane_departure_checker
+    entity: LaneDepartureChecker.node
+  - name: control_validator
+    entity: ControlValidator.node
+  - name: autonomous_emergency_braking
+    entity: AutonomousEmergencyBraking.node
+  - name: collision_detector
+    entity: CollisionDetector.node
+  - name: control_evaluator
+    entity: ControlEvaluator.node
+
+external_interfaces:
+  input:
+    # Trajectory & Map
+    - name: trajectory
+    - name: route
+    - name: vector_map
+
+    # Vehicle State
+    - name: odometry
+    - name: acceleration
+    - name: steering_status
+    - name: gear_status
+    - name: velocity_status
+    - name: imu
+
+    # System & Operation
+    - name: operation_mode_state
+    - name: autoware_state
+    - name: mrm_state
+
+    # Perception
+    - name: objects
+    - name: pointcloud
+
+    # Planning Commands
+    - name: turn_indicators_cmd
+    - name: hazard_lights_cmd
+
+    # External Overrides
+    - name: remote_pedals_cmd
+    - name: remote_steering_cmd
+    - name: remote_gear_cmd
+    - name: remote_turn_indicators_cmd
+    - name: remote_hazard_lights_cmd
+    - name: remote_heartbeat
+    - name: local_pedals_cmd
+    - name: local_steering_cmd
+    - name: local_gear_cmd
+    - name: local_turn_indicators_cmd
+    - name: local_hazard_lights_cmd
+    - name: local_heartbeat
+
+  output:
+    # Actuation
+    - name: control_cmd
+    - name: gear_cmd
+    - name: turn_indicators_cmd
+    - name: hazard_lights_cmd
+
+    # Status
+    - name: control_mode
+    - name: gate_mode
+    - name: is_autonomous_available
+    - name: diagnostic
+    - name: control_evaluation
+
+connections:
+  # ==========================================
+  # 1. Trajectory Following Loop
+  # ==========================================
+  - from: input.trajectory
+    to: trajectory_follower.input.reference_trajectory
+  - from: input.odometry
+    to: trajectory_follower.input.current_odometry
+  - from: input.steering_status
+    to: trajectory_follower.input.current_steering
+  - from: input.acceleration
+    to: trajectory_follower.input.current_accel
+  - from: input.operation_mode_state
+    to: trajectory_follower.input.current_operation_mode
+
+  # ==========================================
+  # 2. Shift Logic
+  # ==========================================
+  - from: trajectory_follower.output.control_cmd
+    to: shift_decider.input.control_cmd
+  - from: input.gear_status
+    to: shift_decider.input.current_gear
+  - from: input.autoware_state
+    to: shift_decider.input.state
+
+  # ==========================================
+  # 3. External Command Pipeline
+  # ==========================================
+  - from: input.remote_pedals_cmd
+    to: external_cmd_selector.input.remote_pedals_cmd
+  - from: input.remote_gear_cmd
+    to: external_cmd_selector.input.remote_gear_cmd
+  - from: input.remote_steering_cmd
+    to: external_cmd_selector.input.remote_steering_cmd
+  - from: input.remote_turn_indicators_cmd
+    to: external_cmd_selector.input.remote_turn_indicators_cmd
+  - from: input.remote_hazard_lights_cmd
+    to: external_cmd_selector.input.remote_hazard_lights_cmd
+  - from: input.remote_heartbeat
+    to: external_cmd_selector.input.remote_heartbeat
+
+  # ==========================================
+  # 4. Command Gating (Arbitration)
+  # ==========================================
+  # Auto Inputs
+  - from: trajectory_follower.output.control_cmd
+    to: vehicle_cmd_gate.input.auto_control_cmd
+  - from: shift_decider.output.gear_cmd
+    to: vehicle_cmd_gate.input.auto_gear_cmd
+  - from: input.turn_indicators_cmd
+    to: vehicle_cmd_gate.input.auto_turn_indicators_cmd
+  - from: input.hazard_lights_cmd
+    to: vehicle_cmd_gate.input.auto_hazard_lights_cmd
+
+  # External Inputs
+  - from: external_cmd_converter.output.control_cmd
+    to: vehicle_cmd_gate.input.external_control_cmd
+
+  # System Inputs
+  - from: input.operation_mode_state
+    to: vehicle_cmd_gate.input.operation_mode
+  - from: input.mrm_state
+    to: vehicle_cmd_gate.input.mrm_state
+  - from: input.odometry
+    to: vehicle_cmd_gate.input.kinematics
+
+  # ==========================================
+  # 5. Operation Mode Manager
+  # ==========================================
+  - from: input.trajectory
+    to: operation_mode_transition_manager.input.trajectory
+  - from: trajectory_follower.output.control_cmd
+    to: operation_mode_transition_manager.input.trajectory_follower_control_cmd
+  - from: vehicle_cmd_gate.output.control_cmd
+    to: operation_mode_transition_manager.input.control_cmd
+  - from: input.steering_status
+    to: operation_mode_transition_manager.input.steering
+
+  # ==========================================
+  # 6. Safety Checks & Evaluator
+  # ==========================================
+  # Lane Departure
+  - from: input.odometry
+    to: lane_departure_checker.input.odometry
+  - from: input.vector_map
+    to: lane_departure_checker.input.lanelet_map_bin
+  - from: input.route
+    to: lane_departure_checker.input.route
+  - from: input.trajectory
+    to: lane_departure_checker.input.reference_trajectory
+
+  # AEB
+  - from: input.pointcloud
+    to: autonomous_emergency_braking.input.pointcloud
+  - from: input.objects
+    to: autonomous_emergency_braking.input.objects
+  - from: input.velocity_status
+    to: autonomous_emergency_braking.input.velocity
+  - from: input.imu
+    to: autonomous_emergency_braking.input.imu
+  - from: trajectory_follower.output.predicted_trajectory
+    to: autonomous_emergency_braking.input.predicted_trajectory
+
+  # Evaluator
+  - from: input.trajectory
+    to: control_evaluator.input.trajectory
+  - from: input.odometry
+    to: control_evaluator.input.odometry
+  - from: input.acceleration
+    to: control_evaluator.input.acceleration
+  - from: input.steering_status
+    to: control_evaluator.input.steering_status
+
+  # ==========================================
+  # 7. Global Outputs
+  # ==========================================
+  - from: vehicle_cmd_gate.output.control_cmd
+    to: output.control_cmd
+  - from: vehicle_cmd_gate.output.gear_cmd
+    to: output.gear_cmd
+  - from: vehicle_cmd_gate.output.turn_indicators_cmd
+    to: output.turn_indicators_cmd
+  - from: vehicle_cmd_gate.output.hazard_lights_cmd
+    to: output.hazard_lights_cmd
+  - from: vehicle_cmd_gate.output.gate_mode
+    to: output.gate_mode
+  - from: operation_mode_transition_manager.output.is_autonomous_available
+    to: output.is_autonomous_available
+  - from: control_evaluator.output.metrics
+    to: output.control_evaluation

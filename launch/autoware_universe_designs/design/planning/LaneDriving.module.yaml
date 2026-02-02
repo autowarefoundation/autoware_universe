@@ -1,0 +1,122 @@
+autoware_system_design_format: v0.1.0
+
+name: LaneDriving.module
+instances:
+  - name: behavior_planning
+    entity: BehaviorPlanning.module
+  - name: motion_planning
+    entity: MotionPlanning.module
+external_interfaces:
+  input:
+    # Navigation & Map
+    - name: route
+    - name: vector_map
+    - name: costmap
+    - name: scenario
+
+    # Perception
+    - name: perception
+    - name: occupancy_grid_map
+    - name: no_ground_pointcloud
+    - name: pointcloud
+    - name: traffic_signals
+    - name: virtual_traffic_light_states
+
+    # Vehicle State
+    - name: odometry
+    - name: accel
+    - name: external_velocity_limit_mps
+
+  output:
+    # Driving Control
+    - name: trajectory
+    - name: turn_indicators_cmd
+    - name: hazard_lights_cmd
+
+    # System Status & Visualization
+    - name: modified_goal
+    - name: stop_reasons
+    - name: motion_velocity_limit
+    - name: infrastructure_commands
+
+connections:
+  # ==========================================
+  # Internal Wiring (Behavior -> Motion)
+  # ==========================================
+  - from: behavior_planning.output.path
+    to: motion_planning.input.path
+
+  # ==========================================
+  # External Inputs -> Behavior Planning
+  # ==========================================
+  - from: input.route
+    to: behavior_planning.input.route
+  - from: input.vector_map
+    to: behavior_planning.input.vector_map
+  - from: input.perception
+    to: behavior_planning.input.perception
+  - from: input.occupancy_grid_map
+    to: behavior_planning.input.occupancy_grid_map
+  - from: input.costmap
+    to: behavior_planning.input.costmap
+  - from: input.traffic_signals
+    to: behavior_planning.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: behavior_planning.input.virtual_traffic_light_states
+  - from: input.odometry
+    to: behavior_planning.input.odometry
+  - from: input.accel
+    to: behavior_planning.input.accel
+  - from: input.scenario
+    to: behavior_planning.input.scenario
+  - from: input.no_ground_pointcloud
+    to: behavior_planning.input.no_ground_pointcloud
+  - from: input.external_velocity_limit_mps
+    to: behavior_planning.input.external_velocity_limit_mps
+
+  # ==========================================
+  # External Inputs -> Motion Planning
+  # ==========================================
+  - from: input.vector_map
+    to: motion_planning.input.vector_map
+  - from: input.odometry
+    to: motion_planning.input.odometry
+  - from: input.accel
+    to: motion_planning.input.accel
+  - from: input.perception
+    to: motion_planning.input.dynamic_objects
+  - from: input.no_ground_pointcloud
+    to: motion_planning.input.no_ground_pointcloud
+  - from: input.pointcloud
+    to: motion_planning.input.pointcloud
+  - from: input.traffic_signals
+    to: motion_planning.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: motion_planning.input.virtual_traffic_light_states
+  - from: input.occupancy_grid_map
+    to: motion_planning.input.occupancy_grid
+
+  # ==========================================
+  # Outputs
+  # ==========================================
+  # Primary Control
+  - from: motion_planning.output.trajectory
+    to: output.trajectory
+  - from: behavior_planning.output.turn_indicators_cmd
+    to: output.turn_indicators_cmd
+  - from: behavior_planning.output.hazard_lights_cmd
+    to: output.hazard_lights_cmd
+
+  # Status
+  - from: behavior_planning.output.modified_goal
+    to: output.modified_goal
+  - from: behavior_planning.output.infrastructure_commands
+    to: output.infrastructure_commands
+
+  # Aggregating Stop Reasons (using Behavior's for this example,
+  # in a real system these might be merged or exposed separately)
+  - from: behavior_planning.output.stop_reasons
+    to: output.stop_reasons
+
+  - from: motion_planning.output.velocity_limit
+    to: output.motion_velocity_limit

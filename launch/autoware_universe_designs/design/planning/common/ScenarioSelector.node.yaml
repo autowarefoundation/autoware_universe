@@ -1,0 +1,39 @@
+autoware_system_design_format: v0.1.0
+
+name: ScenarioSelector.node
+launch:
+  package: autoware_scenario_selector
+  plugin: autoware::scenario_selector::ScenarioSelectorNode
+  executable: scenario_selector_node
+  use_container: true
+  container_name: planning_container
+inputs:
+  - name: lane_driving_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: parking_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: lanelet_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: is_parking_completed
+    message_type: std_msgs/msg/Bool
+outputs:
+  - name: scenario
+    message_type: tier4_planning_msgs/msg/Scenario
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+parameter_files: []
+parameters: []
+processes:
+  - name: select_scenario
+    trigger_conditions:
+      - on_input: odometry
+      - periodic: 10.0
+    outcomes:
+      - to_output: scenario
+      - to_output: trajectory

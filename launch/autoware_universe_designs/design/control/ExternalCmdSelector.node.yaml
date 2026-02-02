@@ -1,0 +1,72 @@
+autoware_system_design_format: v0.1.0
+
+name: ExternalCmdSelector.node
+launch:
+  package: autoware_external_cmd_selector
+  plugin: autoware::external_cmd_selector::ExternalCmdSelector
+  executable: external_cmd_selector_node
+  use_container: true
+  container_name: target_container
+inputs:
+  # Local Source Inputs
+  - name: local_pedals_cmd
+    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+  - name: local_steering_cmd
+    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+  - name: local_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: local_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: local_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: local_heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+
+  # Remote Source Inputs
+  - name: remote_pedals_cmd
+    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+  - name: remote_steering_cmd
+    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+  - name: remote_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: remote_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: remote_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: remote_heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+
+outputs:
+  # Selected Command Outputs
+  - name: pedals_cmd
+    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+  - name: steering_cmd
+    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+
+  # Status Output
+  - name: current_selector_mode
+    message_type: tier4_external_api_msgs/msg/SelectorMode
+
+parameter_files:
+  - name: external_cmd_selector_param
+    default: $(find-pkg-share autoware_external_cmd_selector)/config/external_cmd_selector.param.yaml
+parameters: []
+
+processes:
+  - name: select_command
+    trigger_conditions:
+      - on_input: local_heartbeat
+      - on_input: remote_heartbeat
+      - periodic: 10.0 # Heartbeat check
+    outcomes:
+      - to_output: pedals_cmd
+      - to_output: steering_cmd
+      - to_output: gear_cmd

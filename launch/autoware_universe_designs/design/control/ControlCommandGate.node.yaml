@@ -1,0 +1,39 @@
+autoware_system_design_format: v0.1.0
+
+name: ControlCommandGate.node
+launch:
+  package: autoware_control_command_gate
+  plugin: autoware::control_command_gate::ControlCommandGateNode
+  executable: control_command_gate_node
+  node_output: screen
+inputs:
+  - name: main_control
+    message_type: autoware_control_msgs/msg/Control
+  - name: main_gear
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: main_hazard_lights
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: main_turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+outputs:
+  - name: control
+    message_type: autoware_control_msgs/msg/Control
+  - name: gear
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: hazard_lights
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+parameter_files:
+  - name: config
+    default: $(find-pkg-share autoware_control_command_gate)/config/default.param.yaml
+parameters: []
+processes:
+  - name: gate_control
+    trigger_conditions:
+      - on_input: main_control
+    outcomes:
+      - to_output: control
+      - to_output: gear
+      - to_output: turn_indicators
+      - to_output: hazard_lights

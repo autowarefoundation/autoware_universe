@@ -1,0 +1,32 @@
+autoware_system_design_format: v0.1.0
+
+name: RouteSelector.node
+launch:
+  package: autoware_mission_planner_universe
+  plugin: autoware::mission_planner_universe::RouteSelector
+  executable: route_selector
+  use_container: true
+  container_name: mission_planner_container
+inputs:
+  - name: planner_route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: planner_state
+    message_type: autoware_planning_msgs/msg/RouteState
+outputs:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: state
+    message_type: autoware_planning_msgs/msg/RouteState
+parameter_files: []
+parameters: []
+processes:
+  - name: on_route_update
+    trigger_conditions:
+      - on_input: planner_route
+    outcomes:
+      - to_output: route
+  - name: on_state_update
+    trigger_conditions:
+      - on_input: planner_state
+    outcomes:
+      - to_output: state

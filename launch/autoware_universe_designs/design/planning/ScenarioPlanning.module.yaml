@@ -1,0 +1,144 @@
+autoware_system_design_format: v0.1.0
+
+name: ScenarioPlanning.module
+instances:
+  - name: lane_driving
+    entity: LaneDriving.module
+  - name: parking
+    entity: Parking.module
+  - name: scenario_selector
+    entity: ScenarioSelector.node
+  - name: velocity_smoother
+    entity: VelocitySmoother.node
+  - name: external_velocity_limit_selector
+    entity: ExternalVelocityLimitSelector.node
+  - name: hazard_lights_selector
+    entity: HazardLightsSelector.node
+
+external_interfaces:
+  input:
+    # Sensor & State
+    - name: perception_objects
+    - name: pointcloud
+    - name: vector_map
+    - name: route
+    - name: odometry
+    - name: acceleration
+    - name: operation_mode_state
+
+    # Maps
+    - name: occupancy_grid_map
+    - name: costmap
+    - name: traffic_signals
+    - name: virtual_traffic_light_states
+
+  output:
+    # Final Control Outputs
+    - name: trajectory
+    - name: hazard_lights_cmd
+    - name: turn_indicators_cmd
+
+    # Status
+    - name: scenario
+    - name: current_max_velocity
+    - name: stop_reasons
+
+connections:
+  # ==========================================
+  # 1. Inputs -> Sub-Modules (Lane Driving)
+  # ==========================================
+  - from: input.route
+    to: lane_driving.input.route
+  - from: input.vector_map
+    to: lane_driving.input.vector_map
+  - from: input.perception_objects
+    to: lane_driving.input.perception
+  - from: input.occupancy_grid_map
+    to: lane_driving.input.occupancy_grid_map
+  - from: input.costmap
+    to: lane_driving.input.costmap
+  - from: input.traffic_signals
+    to: lane_driving.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: lane_driving.input.virtual_traffic_light_states
+  - from: input.odometry
+    to: lane_driving.input.odometry
+  - from: input.acceleration
+    to: lane_driving.input.accel
+  - from: input.pointcloud
+    to: lane_driving.input.no_ground_pointcloud
+  - from: scenario_selector.output.scenario
+    to: lane_driving.input.scenario
+  - from: external_velocity_limit_selector.output.external_velocity_limit_mps
+    to: lane_driving.input.external_velocity_limit_mps
+
+  # ==========================================
+  # 2. Inputs -> Sub-Modules (Parking)
+  # ==========================================
+  - from: input.perception_objects
+    to: parking.input.objects
+  - from: input.pointcloud
+    to: parking.input.points_no_ground
+  - from: input.vector_map
+    to: parking.input.vector_map
+  - from: input.route
+    to: parking.input.route
+  - from: input.odometry
+    to: parking.input.odometry
+  - from: scenario_selector.output.scenario
+    to: parking.input.scenario
+
+  # ==========================================
+  # 3. Scenario Selection Logic
+  # ==========================================
+  # Inputs to Selector
+  - from: lane_driving.output.trajectory
+    to: scenario_selector.input.lane_driving_trajectory
+  - from: parking.output.trajectory
+    to: scenario_selector.input.parking_trajectory
+  - from: input.vector_map
+    to: scenario_selector.input.lanelet_map
+  - from: input.route
+    to: scenario_selector.input.route
+  - from: input.odometry
+    to: scenario_selector.input.odometry
+  - from: input.operation_mode_state
+    to: scenario_selector.input.operation_mode_state
+  - from: parking.output.is_completed
+    to: scenario_selector.input.is_parking_completed
+
+  # ==========================================
+  # 4. Velocity Smoothing
+  # ==========================================
+  - from: scenario_selector.output.trajectory
+    to: velocity_smoother.input.trajectory
+  - from: external_velocity_limit_selector.output.external_velocity_limit_mps
+    to: velocity_smoother.input.external_velocity_limit_mps
+  - from: input.acceleration
+    to: velocity_smoother.input.acceleration
+  - from: input.operation_mode_state
+    to: velocity_smoother.input.operation_mode_state
+
+  # ==========================================
+  # 5. Hazard Lights Logic
+  # ==========================================
+  - from: lane_driving.output.hazard_lights_cmd
+    to: hazard_lights_selector.input.lane_driving_hazard_lights_cmd
+  # Note: Parking module usually handles hazard lights internally or has a simpler output,
+  # here we assume connection if the port exists or it remains unconnected/default.
+
+  # ==========================================
+  # 6. Global Outputs
+  # ==========================================
+  - from: velocity_smoother.output.trajectory
+    to: output.trajectory
+  - from: velocity_smoother.output.current_velocity_limit_mps
+    to: output.current_max_velocity
+  - from: scenario_selector.output.scenario
+    to: output.scenario
+  - from: hazard_lights_selector.output.hazard_lights_cmd
+    to: output.hazard_lights_cmd
+  - from: lane_driving.output.turn_indicators_cmd
+    to: output.turn_indicators_cmd
+  - from: lane_driving.output.stop_reasons
+    to: output.stop_reasons

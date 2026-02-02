@@ -1,0 +1,33 @@
+autoware_system_design_format: v0.1.0
+
+name: ElasticBandSmoother.node
+launch:
+  package: autoware_path_smoother
+  plugin: autoware::path_smoother::ElasticBandSmoother
+  executable: elastic_band_smoother # Placeholder
+  use_container: true
+  container_name: motion_planning_container
+inputs:
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+outputs:
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+parameter_files:
+  - name: common_param
+    default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
+  - name: nearest_search_param
+    default: $(find-pkg-share autoware_planning_common)/config/nearest_search.param.yaml
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+  - name: elastic_band_smoother_param
+    default: $(find-pkg-share autoware_path_smoother)/config/elastic_band_smoother.param.yaml
+parameters: []
+processes:
+  - name: smooth_path
+    trigger_conditions:
+      - on_input: path
+    outcomes:
+      - to_output: path

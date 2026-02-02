@@ -1,0 +1,140 @@
+autoware_system_design_format: v0.1.0
+
+name: Planning.module
+instances:
+  - name: mission_planning
+    entity: MissionPlanning.module
+  - name: manual_lane_change_handler
+    entity: ManualLaneChangeHandler.node
+  - name: scenario_planning
+    entity: ScenarioPlanning.module
+  - name: planning_validator
+    entity: PlanningValidator.node
+  - name: planning_evaluator
+    entity: PlanningEvaluator.node
+  - name: remaining_distance_time_calculator
+    entity: RemainingDistanceTimeCalculator.node
+
+external_interfaces:
+  input:
+    # Map & State
+    - name: vector_map
+    - name: odometry
+    - name: acceleration
+    - name: operation_mode_state
+
+    # Perception
+    - name: objects
+    - name: pointcloud
+    - name: occupancy_grid_map
+    - name: traffic_signals
+    - name: virtual_traffic_light_states
+
+    # Mission
+    - name: modified_goal
+
+  output:
+    # Final Trajectory
+    - name: trajectory
+
+    # Status & Feedback
+    - name: route
+    - name: state
+    - name: turn_indicators_cmd
+    - name: hazard_lights_cmd
+    - name: stop_reasons
+    - name: scenario
+
+connections:
+  # ==========================================
+  # 1. Mission Planning Subsystem
+  # ==========================================
+  - from: input.modified_goal
+    to: mission_planning.input.modified_goal
+  - from: input.vector_map
+    to: mission_planning.input.vector_map
+  - from: input.odometry
+    to: mission_planning.input.odometry
+  - from: input.operation_mode_state
+    to: mission_planning.input.operation_mode_state
+
+  # Manual Lane Change Handler
+  - from: mission_planning.output.route
+    to: manual_lane_change_handler.input.route
+  - from: input.odometry
+    to: manual_lane_change_handler.input.odometry
+
+  # ==========================================
+  # 2. Scenario Planning Subsystem
+  # ==========================================
+  # Inputs from Mission Planning
+  - from: mission_planning.output.route
+    to: scenario_planning.input.route
+
+  # Inputs from External
+  - from: input.vector_map
+    to: scenario_planning.input.vector_map
+  - from: input.odometry
+    to: scenario_planning.input.odometry
+  - from: input.acceleration
+    to: scenario_planning.input.acceleration
+  - from: input.operation_mode_state
+    to: scenario_planning.input.operation_mode_state
+  - from: input.objects
+    to: scenario_planning.input.perception_objects
+  - from: input.pointcloud
+    to: scenario_planning.input.pointcloud
+  - from: input.occupancy_grid_map
+    to: scenario_planning.input.occupancy_grid_map
+  - from: input.traffic_signals
+    to: scenario_planning.input.traffic_signals
+  - from: input.virtual_traffic_light_states
+    to: scenario_planning.input.virtual_traffic_light_states
+
+  # ==========================================
+  # 3. Validation & Evaluation
+  # ==========================================
+  # Scenario Planning -> Validator
+  - from: scenario_planning.output.trajectory
+    to: planning_validator.input.trajectory
+
+  # Validator Inputs
+  - from: input.objects
+    to: planning_validator.input.objects
+  - from: input.pointcloud
+    to: planning_validator.input.pointcloud
+
+  # Validator -> Evaluator
+  - from: planning_validator.output.trajectory
+    to: planning_evaluator.input.trajectory
+  - from: input.odometry
+    to: planning_evaluator.input.odometry
+
+  # ==========================================
+  # 4. Utilities
+  # ==========================================
+  # Remaining Distance
+  - from: mission_planning.output.route
+    to: remaining_distance_time_calculator.input.mission_route
+  - from: input.odometry
+    to: remaining_distance_time_calculator.input.odometry
+  - from: input.vector_map
+    to: remaining_distance_time_calculator.input.map
+
+  # ==========================================
+  # 5. Global Outputs
+  # ==========================================
+  - from: planning_validator.output.trajectory
+    to: output.trajectory
+  - from: mission_planning.output.route
+    to: output.route
+  - from: mission_planning.output.state
+    to: output.state
+  - from: scenario_planning.output.turn_indicators_cmd
+    to: output.turn_indicators_cmd
+  - from: scenario_planning.output.hazard_lights_cmd
+    to: output.hazard_lights_cmd
+  - from: scenario_planning.output.stop_reasons
+    to: output.stop_reasons
+  - from: scenario_planning.output.scenario
+    to: output.scenario

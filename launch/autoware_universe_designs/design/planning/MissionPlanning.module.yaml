@@ -1,0 +1,46 @@
+autoware_system_design_format: v0.1.0
+
+name: MissionPlanning.module
+instances:
+  - name: mission_planner
+    entity: MissionPlanner.node
+  - name: route_selector
+    entity: RouteSelector.node
+  - name: goal_pose_visualizer
+    entity: GoalPoseVisualizer.node
+external_interfaces:
+  input:
+    - name: vector_map
+    - name: modified_goal
+    - name: odometry
+    - name: operation_mode_state
+    - name: reroute_availability
+  output:
+    - name: route
+    - name: state
+    - name: route_marker
+connections:
+  # Inputs -> Mission Planner
+  - from: input.modified_goal
+    to: mission_planner.input.modified_goal
+  - from: input.vector_map
+    to: mission_planner.input.vector_map
+  - from: input.odometry
+    to: mission_planner.input.odometry
+  - from: input.operation_mode_state
+    to: mission_planner.input.operation_mode_state
+  - from: input.reroute_availability
+    to: mission_planner.input.reroute_availability
+  # Mission Planner -> Route Selector
+  - from: mission_planner.output.route
+    to: route_selector.input.planner_route
+  - from: mission_planner.output.state
+    to: route_selector.input.planner_state
+
+  # Route Selector outputs
+  - from: route_selector.output.route
+    to: goal_pose_visualizer.input.route
+  - from: route_selector.output.route
+    to: output.route
+  - from: route_selector.output.state
+    to: output.state

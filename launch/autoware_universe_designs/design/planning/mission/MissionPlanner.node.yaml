@@ -1,0 +1,38 @@
+autoware_system_design_format: v0.1.0
+
+name: MissionPlanner.node
+launch:
+  package: autoware_mission_planner_universe
+  plugin: autoware::mission_planner_universe::MissionPlanner
+  executable: mission_planner
+  use_container: true
+  container_name: mission_planner_container
+inputs:
+  - name: modified_goal
+    message_type: geometry_msgs/msg/PoseStamped
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: reroute_availability
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
+outputs:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: state
+    message_type: autoware_planning_msgs/msg/RouteState
+  - name: route_marker
+    message_type: visualization_msgs/msg/MarkerArray
+parameter_files:
+  - name: mission_planner_param
+    default: $(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml
+parameters: []
+processes:
+  - name: plan_route
+    trigger_conditions:
+      - on_input: modified_goal
+    outcomes:
+      - to_output: route
+      - to_output: state

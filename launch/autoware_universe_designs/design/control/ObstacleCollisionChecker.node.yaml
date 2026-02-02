@@ -1,0 +1,33 @@
+autoware_system_design_format: v0.1.0
+
+name: ObstacleCollisionChecker.node
+launch:
+  package: autoware_obstacle_collision_checker
+  plugin: autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode
+  executable: obstacle_collision_checker_node
+  use_container: true
+  container_name: control_check_container
+inputs:
+  - name: lanelet_map_bin
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: obstacle_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: reference_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+outputs:
+  - name: collision_status
+    message_type: std_msgs/msg/Bool
+parameter_files:
+  - name: obstacle_collision_checker_param
+    default: $(find-pkg-share autoware_obstacle_collision_checker)/config/obstacle_collision_checker.param.yaml
+parameters: []
+processes:
+  - name: check_obstacle
+    trigger_conditions:
+      - on_input: obstacle_pointcloud
+    outcomes:
+      - to_output: collision_status

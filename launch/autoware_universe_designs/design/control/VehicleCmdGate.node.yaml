@@ -1,0 +1,85 @@
+autoware_system_design_format: v0.1.0
+
+name: VehicleCmdGate.node
+launch:
+  package: autoware_vehicle_cmd_gate
+  plugin: autoware::vehicle_cmd_gate::VehicleCmdGate
+  executable: vehicle_cmd_gate_node
+  use_container: true
+  container_name: control_container
+inputs:
+  - name: steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+
+  # Auto Inputs
+  - name: auto_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: auto_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: auto_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: auto_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+
+  # External Inputs
+  - name: external_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: external_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: external_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: external_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: external_emergency_stop_heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+
+  # Emergency Inputs
+  - name: emergency_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: emergency_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: emergency_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: emergency_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+
+  # State Inputs
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+
+outputs:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+  - name: engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+  - name: operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: vehicle_cmd_emergency
+    message_type: autoware_vehicle_msgs/msg/VehicleEmergencyStamped
+
+parameter_files:
+  - name: vehicle_cmd_gate_param
+    default: $(find-pkg-share autoware_vehicle_cmd_gate)/config/vehicle_cmd_gate.param.yaml
+parameters: []
+processes:
+  - name: gate_commands
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: control_cmd

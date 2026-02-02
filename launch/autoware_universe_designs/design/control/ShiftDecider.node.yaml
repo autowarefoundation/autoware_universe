@@ -1,0 +1,29 @@
+autoware_system_design_format: v0.1.0
+
+name: ShiftDecider.node
+launch:
+  package: autoware_shift_decider
+  plugin: autoware::shift_decider::ShiftDecider
+  executable: shift_decider_node
+  use_container: true
+  container_name: control_container
+inputs:
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: state
+    message_type: autoware_system_msgs/msg/AutowareState
+  - name: current_gear
+    message_type: autoware_vehicle_msgs/msg/GearReport
+outputs:
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+parameter_files:
+  - name: shift_decider_param
+    default: $(find-pkg-share autoware_shift_decider)/config/shift_decider.param.yaml
+parameters: []
+processes:
+  - name: decide_shift
+    trigger_conditions:
+      - on_input: control_cmd
+    outcomes:
+      - to_output: gear_cmd

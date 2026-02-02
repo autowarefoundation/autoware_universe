@@ -1,0 +1,68 @@
+autoware_system_design_format: v0.1.0
+
+name: BehaviorVelocityPlanner.node
+launch:
+  package: autoware_behavior_velocity_planner
+  plugin: autoware::behavior_velocity_planner::experimental::BehaviorVelocityPlannerNode
+  executable: behavior_velocity_planner_node
+  use_container: true
+  container_name: behavior_planning_container
+inputs:
+  - name: path_with_lane_id
+    message_type: autoware_planning_msgs/msg/Path
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: vehicle_odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: accel
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: dynamic_objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: no_ground_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: compare_map_filtered_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: vector_map_inside_area_filtered_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: external_velocity_limit_mps
+    message_type: tier4_planning_msgs/msg/VelocityLimit
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: virtual_traffic_light_states
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: occupancy_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+outputs:
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+  - name: stop_reasons
+    message_type: tier4_planning_msgs/msg/StopReasonArray
+  - name: infrastructure_commands
+    message_type: tier4_planning_msgs/msg/InfrastructureCommandArray
+  - name: traffic_signal
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+parameters:
+  - name: launch_modules
+    type: string
+    default: autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin,
+      autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin,
+      autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin,
+      autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin,
+      autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
+parameter_files:
+  - name: common_param
+    default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
+  - name: behavior_velocity_planner_param
+    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/behavior_velocity_planner.param.yaml
+  - name: crosswalk_module_param
+    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/crosswalk_module.param.yaml
+  - name: traffic_light_module_param
+    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/traffic_light_module.param.yaml
+  - name: intersection_module_param
+    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/intersection_module.param.yaml
+processes:
+  - name: plan_velocity
+    trigger_conditions:
+      - on_input: path_with_lane_id
+    outcomes:
+      - to_output: path

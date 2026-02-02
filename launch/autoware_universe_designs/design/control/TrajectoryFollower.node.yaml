@@ -1,0 +1,50 @@
+autoware_system_design_format: v0.1.0
+
+name: TrajectoryFollower.node
+launch:
+  package: autoware_trajectory_follower_node
+  plugin: autoware::motion::control::trajectory_follower_node::Controller
+  executable: trajectory_follower_node
+  use_container: true
+  container_name: control_container
+inputs:
+  - name: reference_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: current_odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: current_steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: current_accel
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: current_operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+outputs:
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: lateral_diagnostic
+    message_type: diagnostic_msgs/msg/DiagnosticStatus
+  - name: slope_angle
+    message_type: std_msgs/msg/Float32Stamped
+  - name: longitudinal_diagnostic
+    message_type: diagnostic_msgs/msg/DiagnosticStatus
+  - name: stop_reason
+    message_type: tier4_planning_msgs/msg/StopReasonArray
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+parameter_files:
+  - name: trajectory_follower_node_param
+    default: $(find-pkg-share autoware_trajectory_follower_node)/config/trajectory_follower_node.param.yaml
+  - name: lat_controller_param
+    default: $(find-pkg-share autoware_trajectory_follower_node)/config/lateral_controller.param.yaml
+  - name: lon_controller_param
+    default: $(find-pkg-share autoware_trajectory_follower_node)/config/longitudinal_controller.param.yaml
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+parameters: []
+processes:
+  - name: follow_trajectory
+    trigger_conditions:
+      - on_input: reference_trajectory
+      - on_input: current_odometry
+    outcomes:
+      - to_output: control_cmd

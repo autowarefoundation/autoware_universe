@@ -1,0 +1,42 @@
+autoware_system_design_format: v0.1.0
+
+name: ControlEvaluator.node
+launch:
+  package: autoware_control_evaluator
+  plugin: autoware::control_evaluator::ControlEvaluatorNode
+  executable: control_evaluator
+  node_output: screen
+inputs:
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: behavior_path
+    message_type: autoware_planning_msgs/msg/Path
+  - name: steering_status
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+outputs:
+  - name: metrics
+    message_type: autoware_control_msgs/msg/ControlEvaluation
+parameters:
+  - name: output_metrics
+    type: bool
+    default: false
+parameter_files:
+  - name: control_evaluator_param
+    default: $(find-pkg-share autoware_control_evaluator)/config/control_evaluator.param.yaml
+processes:
+  - name: evaluate_control
+    trigger_conditions:
+      - on_input: odometry
+      - on_input: trajectory
+    outcomes:
+      - to_output: metrics
