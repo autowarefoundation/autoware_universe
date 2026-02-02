@@ -27,5 +27,3 @@
       max_height: 2.2                 # Maximum height [m] (tall adult)
       min_width: 0.3                  # Minimum width [m] (shoulder width)
       max_width: 1.0                  # Maximum width [m] (with bags/umbrella)
-      min_aspect_ratio: 1.2           # Minimum ROI height/width ratio
-      max_aspect_ratio: 5.0           # Maximum ROI height/width ratio

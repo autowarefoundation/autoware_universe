@@ -170,20 +170,6 @@
               "default": 1.0,
               "minimum": 0.5,
               "maximum": 2.0
-            },
-            "min_aspect_ratio": {
-              "type": "number",
-              "description": "Minimum 2D ROI height/width ratio (pedestrians are taller than wide)",
-              "default": 1.2,
-              "minimum": 0.5,
-              "maximum": 2.0
-            },
-            "max_aspect_ratio": {
-              "type": "number",
-              "description": "Maximum 2D ROI height/width ratio (full body visible)",
-              "default": 5.0,
-              "minimum": 2.0,
-              "maximum": 10.0
             }
           }
         }

@@ -43,8 +43,6 @@ struct ObjectSizeConstraints
   double max_width;
   double min_height;  // z dimension [m]
   double max_height;
-  double min_aspect_ratio_2d;  // height/width in 2D image
-  double max_aspect_ratio_2d;
 };
 
 /**
@@ -59,8 +57,6 @@ inline ObjectSizeConstraints getDefaultPedestrianConstraints()
   constraints.max_width = 1.0;              // With bags/umbrella
   constraints.min_height = 0.8;             // Child or crouching
   constraints.max_height = 2.2;             // Tall adult
-  constraints.min_aspect_ratio_2d = 1.2;    // Pedestrians are taller than wide
-  constraints.max_aspect_ratio_2d = 5.0;    // Full body visible
   return constraints;
 }
 
@@ -98,10 +94,6 @@ struct PedestrianSizeValidationParams
   double max_height = 2.2;
   double min_width = 0.3;
   double max_width = 1.0;
-
-  // 2D aspect ratio constraints
-  double min_aspect_ratio = 1.2;
-  double max_aspect_ratio = 5.0;
 };
 
 /**
@@ -254,16 +246,6 @@ inline AspectRatioValidationResult validatePedestrianAspectRatio(
   // Calculate aspect ratio (height / width)
   result.aspect_ratio =
     static_cast<double>(roi.height) / static_cast<double>(roi.width);
-
-  // Check if aspect ratio is within expected range for pedestrians
-  if (result.aspect_ratio < params.min_aspect_ratio) {
-    result.is_valid = false;
-    return result;
-  }
-  if (result.aspect_ratio > params.max_aspect_ratio) {
-    result.is_valid = false;
-    return result;
-  }
 
   // Calculate confidence based on how typical the aspect ratio is
   // For pedestrians, aspect ratio around 2.0-3.0 is most typical (full body visible)
