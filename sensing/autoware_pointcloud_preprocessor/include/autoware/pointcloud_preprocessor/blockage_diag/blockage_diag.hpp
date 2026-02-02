@@ -21,9 +21,9 @@
 
 #include <boost/circular_buffer.hpp>
 
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
