@@ -97,6 +97,7 @@ using unique_identifier_msgs::msg::UUID;
 using utils::NormalizationMap;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
+
 struct FrameContext
 {
   nav_msgs::msg::Odometry ego_kinematic_state;
@@ -125,6 +126,7 @@ struct DiffusionPlannerParams
   double turn_indicator_hold_duration;
   bool shift_x;
 };
+
 struct DiffusionPlannerDebugParams
 {
   bool publish_debug_route{true};

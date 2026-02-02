@@ -202,6 +202,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
   result.reason = "success";
   return result;
 }
+
 std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
