@@ -159,9 +159,8 @@ struct DiffusionPlannerDebugParams
  * - publish_debug_markers: Publish visualization markers for debugging.
  * - publish_predictions: Publish model predictions.
  * - on_parameter: Callback for dynamic parameter updates.
- * - create_input_data: Prepare input data for inference.
- * - create_trajectory: Convert predictions to a trajectory in map coordinates.
- * - create_ego_agent_past: Create a representation of the ego agent's past trajectory.
+ * - create_frame_context: Prepare frame context for inference.
+ * - create_input_data: Build model input tensors from frame context.
  *
  * @section Internal State
  * @brief
