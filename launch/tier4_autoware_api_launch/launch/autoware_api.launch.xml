@@ -3,6 +3,9 @@
   <arg name="launch_default_adapi" default="true"/>
   <arg name="launch_rviz_adaptors" default="true"/>
 
+  <!-- Evaluation options -->
+  <arg name="launch_evaluation_adapter" default="false"/>
+
   <!-- Parameter files -->
   <arg name="default_adapi_param_path" default="$(find-pkg-share autoware_default_adapi_universe)/config/default_adapi.param.yaml"/>
 
@@ -16,5 +19,10 @@
   <!-- AD API for RViz -->
   <group if="$(var launch_rviz_adaptors)">
     <include file="$(find-pkg-share autoware_adapi_adaptors)/launch/rviz_adaptors.launch.xml"/>
+  </group>
+
+  <!-- Evaluation adapter -->
+  <group if="$(var launch_evaluation_adapter)">
+    <include file="$(find-pkg-share autoware_evaluation_adapter)/launch/evaluation_adapter.launch.xml"/>
   </group>
 </launch>
