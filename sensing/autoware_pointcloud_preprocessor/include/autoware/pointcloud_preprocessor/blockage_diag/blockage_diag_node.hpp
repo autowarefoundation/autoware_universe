@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
