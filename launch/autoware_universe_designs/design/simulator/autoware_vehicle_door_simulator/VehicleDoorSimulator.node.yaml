@@ -1,0 +1,37 @@
+autoware_system_design_format: v0.1.0
+
+# node information
+name: VehicleDoorSimulator.node
+
+launch:
+  package: autoware_vehicle_door_simulator
+  plugin: autoware::vehicle_door_simulator::DummyDoors
+  executable: autoware_vehicle_door_simulator_node
+  node_output: screen
+
+# interfaces
+inputs: []
+
+outputs:
+  - name: doors/status
+    message_type: autoware_adapi_v1_msgs/msg/DoorStatusArray
+    remap_target: "~/doors/status"
+  - name: doors/command
+    message_type: autoware_adapi_v1_msgs/srv/SetDoorCommand
+    remap_target: "~/doors/command"
+  - name: doors/layout
+    message_type: autoware_adapi_v1_msgs/srv/GetDoorLayout
+    remap_target: "~/doors/layout"
+
+# parameters
+parameter_files: []
+
+parameters: []
+
+# processes
+processes:
+  - name: publish
+    trigger_conditions:
+      - periodic: 5
+    outcomes:
+      - to_output: doors/status
