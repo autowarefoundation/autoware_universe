@@ -62,7 +62,7 @@ public:
   void limitLateralSteer(Control & input) const;
   void limitLateralSteerRate(const double dt, Control & input) const;
   void filterAll(
-    const double dt, const double current_steer_angle, Control & input,
+    const double dt, const double current_steer_angle, Control & cmd,
     IsFilterActivated & is_activated) const;
   static IsFilterActivated checkIsActivated(
     const Control & c1, const Control & c2, const double tol = 1.0e-3);
