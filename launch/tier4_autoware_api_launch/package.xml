@@ -13,6 +13,7 @@
 
   <exec_depend>autoware_adapi_adaptors</exec_depend>
   <exec_depend>autoware_default_adapi_universe</exec_depend>
+  <exec_depend>autoware_evaluation_adapter</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
