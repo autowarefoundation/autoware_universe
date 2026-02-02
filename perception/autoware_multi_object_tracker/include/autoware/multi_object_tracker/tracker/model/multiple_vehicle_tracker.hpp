@@ -51,6 +51,8 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+  void setOrientationAvailability(
+    const types::OrientationAvailability & orientation_availability) override;
   virtual ~MultipleVehicleTracker() {}
 };
 

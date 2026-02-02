@@ -209,6 +209,12 @@ public:
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+
+  virtual void setOrientationAvailability(
+    const types::OrientationAvailability & orientation_availability)
+  {
+    object_.kinematics.orientation_availability = orientation_availability;
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

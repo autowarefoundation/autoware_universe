@@ -85,4 +85,11 @@ bool MultipleVehicleTracker::getTrackedObject(
   return true;
 }
 
+void MultipleVehicleTracker::setOrientationAvailability(
+  const types::OrientationAvailability & orientation_availability)
+{
+  normal_vehicle_tracker_.setOrientationAvailability(orientation_availability);
+  big_vehicle_tracker_.setOrientationAvailability(orientation_availability);
+}
+
 }  // namespace autoware::multi_object_tracker
