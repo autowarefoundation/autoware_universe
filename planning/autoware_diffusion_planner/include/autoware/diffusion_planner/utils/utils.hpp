@@ -85,7 +85,8 @@ Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat);
  * @param batch_size The number of times to replicate the data.
  * @return Vector replicated for the specified batch size.
  */
-std::vector<float> replicate_for_batch(const std::vector<float> & single_data, const int batch_size);
+std::vector<float> replicate_for_batch(
+  const std::vector<float> & single_data, const int batch_size);
 
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_
