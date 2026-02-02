@@ -80,7 +80,8 @@ void BlockageDetector::update_blockage_info(
 BlockageDetectionResult BlockageDetector::compute_blockage_diagnostics(
   const cv::Mat & depth_image_16u)
 {
-  cv::Mat no_return_mask = make_no_return_mask(depth_image_16u);
+  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
+  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
   cv::Mat blockage_mask = make_blockage_mask(no_return_mask);
 
   auto [ground_blockage_mask, sky_blockage_mask] =

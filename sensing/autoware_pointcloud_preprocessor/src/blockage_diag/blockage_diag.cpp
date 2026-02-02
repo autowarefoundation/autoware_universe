@@ -64,16 +64,26 @@ cv::Mat MultiFrameDetectionAggregator::update(const cv::Mat & mask)
   return time_series_result;
 }
 
-cv::Mat make_no_return_mask(const cv::Mat & depth_image_16u)
+cv::Mat quantize_to_8u(const cv::Mat & image_16u)
 {
-  assert(depth_image_16u.type() == CV_16UC1);
-  auto dimensions = depth_image_16u.size();
+  assert(image_16u.type() == CV_16UC1);
+  auto dimensions = image_16u.size();
 
-  cv::Mat no_return_mask_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // 16-bit depth values 0-256 (equivalent to 8-bit 0-1) indicate no return
-  cv::inRange(depth_image_16u, 0, 256, no_return_mask_8u);
+  cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
+  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
+  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
+  return image_8u;
+}
 
-  return no_return_mask_8u;
+cv::Mat make_no_return_mask(const cv::Mat & depth_image)
+{
+  assert(depth_image.type() == CV_8UC1);
+  auto dimensions = depth_image.size();
+
+  cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
+  cv::inRange(depth_image, 0, 1, no_return_mask);
+
+  return no_return_mask;
 }
 
 std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
@@ -98,7 +108,8 @@ DustDetector::DustDetector(const DustDetectionConfig & config) : config_(config)
 
 DustDetectionResult DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
 {
-  cv::Mat no_return_mask = make_no_return_mask(depth_image_16u);
+  cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
+  cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
 
   assert(no_return_mask.type() == CV_8UC1);
   auto dimensions = no_return_mask.size();

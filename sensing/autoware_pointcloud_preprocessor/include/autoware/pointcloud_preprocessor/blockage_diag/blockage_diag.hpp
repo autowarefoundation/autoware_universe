@@ -44,14 +44,24 @@ struct DiagnosticOutput
 };
 
 /**
+ * @brief Quantize a 16-bit image to 8-bit.
+ *
+ * The values are scaled by `1.0 / 256` to prevent overflow.
+ *
+ * @param image_16u The input 16-bit image.
+ * @return cv::Mat The quantized 8-bit image. The data type is `CV_8UC1`.
+ */
+cv::Mat quantize_to_8u(const cv::Mat & image_16u);
+
+/**
  * @brief Make a no-return mask from the input depth image.
  *
  * The mask is a binary image where 255 is no-return and 0 is return.
  *
- * @param depth_image_16u The input depth image of type `CV_16UC1`.
+ * @param depth_image The input depth image.
  * @return cv::Mat The no-return mask. The data type is `CV_8UC1`.
  */
-cv::Mat make_no_return_mask(const cv::Mat & depth_image_16u);
+cv::Mat make_no_return_mask(const cv::Mat & depth_image);
 
 /**
  * @brief Segments a given mask into two masks, according to the ground/sky segmentation
