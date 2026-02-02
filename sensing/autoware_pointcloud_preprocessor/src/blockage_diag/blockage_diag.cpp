@@ -20,6 +20,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace autoware::pointcloud_preprocessor
 {
