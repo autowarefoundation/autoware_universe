@@ -2,6 +2,8 @@ autoware_system_design_format: v0.1.0
 
 name: BehaviorPlanning.module
 instances:
+  - name: behavior_planning_container
+    entity: BehaviorPlanningContainer.node
   - name: behavior_path_planner
     entity: BehaviorPathPlanner.node
   - name: behavior_velocity_planner

@@ -2,6 +2,8 @@ autoware_system_design_format: v0.1.0
 
 name: MissionPlanning.module
 instances:
+  - name: mission_planning_container
+    entity: MissionPlanningContainer.node
   - name: mission_planner
     entity: MissionPlanner.node
   - name: route_selector

@@ -2,6 +2,8 @@ autoware_system_design_format: v0.1.0
 
 name: MotionPlanning.module
 instances:
+  - name: motion_planning_container
+    entity: MotionPlanningContainer.node
   - name: elastic_band_smoother
     entity: ElasticBandSmoother.node
   - name: path_optimizer
