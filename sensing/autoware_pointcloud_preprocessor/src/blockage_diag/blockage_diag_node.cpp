@@ -220,8 +220,7 @@ void BlockageDiagComponent::publish_dust_debug_info(
 
 void BlockageDiagComponent::publish_blockage_debug_info(
   const BlockageDetectionResult & blockage_result, const std_msgs::msg::Header & input_header,
-  const cv::Mat & depth_image_16u,
-  const cv::Mat & blockage_mask_multi_frame) const
+  const cv::Mat & depth_image_16u, const cv::Mat & blockage_mask_multi_frame) const
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
   ground_blockage_ratio_msg.data = blockage_result.ground.blockage_ratio;
@@ -235,8 +234,7 @@ void BlockageDiagComponent::publish_blockage_debug_info(
 
   if (publish_debug_image_) {
     sensor_msgs::msg::Image::SharedPtr lidar_depth_map_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "mono16", depth_image_16u)
-        .toImageMsg();
+      cv_bridge::CvImage(std_msgs::msg::Header(), "mono16", depth_image_16u).toImageMsg();
     lidar_depth_map_msg->header = input_header;
     lidar_depth_map_pub_.publish(lidar_depth_map_msg);
 
@@ -265,7 +263,8 @@ void BlockageDiagComponent::update_diagnostics(
   BlockageDetectionResult blockage_result =
     blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
   cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(blockage_result.blockage_mask);
-  publish_blockage_debug_info(blockage_result, input->header, depth_image_16u, multi_frame_blockage_mask);
+  publish_blockage_debug_info(
+    blockage_result, input->header, depth_image_16u, multi_frame_blockage_mask);
 
   // Dust detection
   if (enable_dust_diag_) {
