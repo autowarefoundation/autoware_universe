@@ -29,11 +29,11 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 // for the svg mapper
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -768,11 +768,13 @@ bool is_before_terminal(
 
 double calc_angle_to_lanelet_segment(const lanelet::ConstLanelets & lanelets, const Pose & pose)
 {
-  lanelet::ConstLanelet closest_lanelet;
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanelets, pose);
 
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, pose, &closest_lanelet)) {
+  if (!closest_lanelet_opt) {
     return autoware_utils::deg2rad(180);
   }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
   const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
     closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(pose));
   return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, pose));

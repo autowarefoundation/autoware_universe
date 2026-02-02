@@ -108,6 +108,7 @@ struct InterfaceDebug
 {
   std::string_view failing_reason;
   LaneChangeStates lc_state;
+  std::string request_info;
 };
 }  // namespace autoware::behavior_path_planner::lane_change
 
