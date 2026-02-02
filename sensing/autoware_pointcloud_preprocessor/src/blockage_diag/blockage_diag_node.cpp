@@ -177,7 +177,8 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
 }
 
 void BlockageDiagComponent::publish_dust_debug_info(
-  const DebugInfo & debug_info, const DustDetectionResult & dust_result)
+  const DustDetectionResult & dust_result, const std_msgs::msg::Header & input_header,
+  const cv::Mat & blockage_mask_multi_frame)
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
   ground_dust_ratio_msg.data = dust_result.ground_dust_ratio;
@@ -208,18 +209,19 @@ void BlockageDiagComponent::publish_dust_debug_info(
     // Publish blockage and dust merged image
     cv::Mat blockage_dust_merged_img(dimensions, CV_8UC3, cv::Scalar(0, 0, 0));
     blockage_dust_merged_img.setTo(
-      cv::Vec3b(0, 0, 255), debug_info.blockage_mask_multi_frame);  // red:blockage
+      cv::Vec3b(0, 0, 255), blockage_mask_multi_frame);  // red:blockage
     blockage_dust_merged_img.setTo(
       cv::Vec3b(0, 255, 255), multi_frame_ground_dust_result);  // yellow:dust
     sensor_msgs::msg::Image::SharedPtr blockage_dust_merged_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", blockage_dust_merged_img).toImageMsg();
-    blockage_dust_merged_msg->header = debug_info.input_header;
+    blockage_dust_merged_msg->header = input_header;
     blockage_dust_merged_pub.publish(blockage_dust_merged_msg);
   }
 }
 
 void BlockageDiagComponent::publish_blockage_debug_info(
-  const DebugInfo & debug_info, const BlockageDetectionResult & blockage_result) const
+  const BlockageDetectionResult & blockage_result, const std_msgs::msg::Header & input_header,
+  const cv::Mat & blockage_mask_multi_frame) const
 {
   autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
   ground_blockage_ratio_msg.data = blockage_result.ground.blockage_ratio;
@@ -232,17 +234,11 @@ void BlockageDiagComponent::publish_blockage_debug_info(
   sky_blockage_ratio_pub_->publish(sky_blockage_ratio_msg);
 
   if (publish_debug_image_) {
-    sensor_msgs::msg::Image::SharedPtr lidar_depth_map_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "mono16", debug_info.depth_image_16u)
-        .toImageMsg();
-    lidar_depth_map_msg->header = debug_info.input_header;
-    lidar_depth_map_pub_.publish(lidar_depth_map_msg);
     cv::Mat blockage_mask_colorized;
-    cv::applyColorMap(
-      debug_info.blockage_mask_multi_frame, blockage_mask_colorized, cv::COLORMAP_JET);
+    cv::applyColorMap(blockage_mask_multi_frame, blockage_mask_colorized, cv::COLORMAP_JET);
     sensor_msgs::msg::Image::SharedPtr blockage_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", blockage_mask_colorized).toImageMsg();
-    blockage_mask_msg->header = debug_info.input_header;
+    blockage_mask_msg->header = input_header;
     blockage_mask_pub_.publish(blockage_mask_msg);
   }
 }
@@ -262,13 +258,12 @@ void BlockageDiagComponent::update_diagnostics(
   // Blockage detection
   BlockageDetectionResult blockage_result = blockage_detector_->compute_blockage_diagnostics(depth_image_16u);
   cv::Mat multi_frame_blockage_mask = blockage_aggregator_->update(blockage_result.blockage_mask);
-  const DebugInfo debug_info = {input->header, depth_image_16u, multi_frame_blockage_mask};
-  publish_blockage_debug_info(debug_info, blockage_result);
+  publish_blockage_debug_info(blockage_result, input->header, multi_frame_blockage_mask);
 
   // Dust detection
   if (enable_dust_diag_) {
     DustDetectionResult dust_result = dust_detector_->compute_dust_diagnostics(depth_image_16u);
-    publish_dust_debug_info(debug_info, dust_result);
+    publish_dust_debug_info(dust_result, input->header, multi_frame_blockage_mask);
   }
 }
 }  // namespace autoware::pointcloud_preprocessor
