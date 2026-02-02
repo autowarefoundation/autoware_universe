@@ -47,6 +47,14 @@ parameters:
     type: boolean
     default: false
     description: Whether to use multithreaded processing.
+  - name: input_obstacle_pointcloud
+    type: boolean
+    default: false
+    description: Whether to input obstacle pointcloud.
+  - name: input_obstacle_and_raw_pointcloud
+    type: boolean
+    default: true
+    description: Whether to input obstacle and raw pointcloud.
 # processes
 processes:
   - name: update
