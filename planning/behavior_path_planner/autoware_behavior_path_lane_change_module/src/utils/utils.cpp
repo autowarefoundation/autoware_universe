@@ -1284,7 +1284,7 @@ std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
   return no_lane_change_lines;
 }
 
-std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
   const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
   const PathWithLaneId & centerline_path, const Pose & ego_pose)
 {
@@ -1313,10 +1313,10 @@ std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
 }
 
 bool is_intersecting_no_lane_change_lines(
-  const std::vector<std::pair<double, double>> & inverval_dist_no_lane_change_lines,
+  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
   const double expected_intersecting_dist, const double buffer)
 {
-  return ranges::any_of(inverval_dist_no_lane_change_lines, [&](const auto & interval) {
+  return ranges::any_of(interval_dist_no_lane_change_lines, [&](const auto & interval) {
     const auto [start, end] = interval;
     return expected_intersecting_dist >= (start - buffer) &&
            expected_intersecting_dist <= (end + buffer);

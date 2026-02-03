@@ -520,7 +520,7 @@ std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
  * @param ego_pose              Current ego vehicle pose used as distance reference point.
  * @return Vector of distance intervals [start, end] representing no-lane-change zones.
  */
-std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
   const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
   const PathWithLaneId & centerline_path, const Pose & ego_pose);
 
@@ -534,7 +534,7 @@ std::vector<std::pair<double, double>> get_inverval_dist_no_lane_change_lines(
  * @return True if the distance point falls within at least one buffered interval, false otherwise.
  */
 bool is_intersecting_no_lane_change_lines(
-  const std::vector<std::pair<double, double>> & inverval_dist_no_lane_change_lines,
+  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
   const double expected_intersecting_dist, const double buffer);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
