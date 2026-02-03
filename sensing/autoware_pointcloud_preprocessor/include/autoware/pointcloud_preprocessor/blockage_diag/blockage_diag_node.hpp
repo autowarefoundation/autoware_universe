@@ -17,6 +17,7 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/dust_detection.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>

@@ -106,51 +106,6 @@ private:
   boost::circular_buffer<cv::Mat> mask_buffer_;
 };
 
-struct DustDetectionConfig
-{
-  float dust_ratio_threshold;
-  int dust_kernel_size;
-  int dust_count_threshold;
-  int horizontal_ring_id;
-};
-
-struct DustDetectionResult
-{
-  float ground_dust_ratio = -1.0f;
-  int dust_frame_count = 0;
-  cv::Mat dust_mask;
-};
-
-/**
- * @brief A class to detect dust in point cloud data.
- */
-class DustDetector
-{
-public:
-  /**
-   * @brief Constructor.
-   * @param config Configuration for dust detection.
-   */
-  explicit DustDetector(const DustDetectionConfig & config);
-
-  /**
-   * @brief Compute dust diagnostics from a depth image.
-   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   * @return DustDetectionResult The dust detection result.
-   */
-  DustDetectionResult compute_dust_diagnostics(const cv::Mat & depth_image_16u);
-
-  /**
-   * @brief Get diagnostic output for dust detection.
-   * @return DiagnosticOutput The diagnostic output.
-   */
-  DiagnosticOutput get_dust_diagnostics_output() const;
-
-private:
-  DustDetectionConfig config_;
-  DustDetectionResult result_;
-};
-
 /**
  * @brief Validate that the PointCloud2 message has required fields for blockage diagnosis.
  *
