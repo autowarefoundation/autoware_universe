@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     model_params:
+      model_params_version: "1.0.0"
       class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
       point_feature_size: 4
       max_voxel_size: 40000
@@ -10,3 +11,26 @@
       encoder_in_feature_size: 9
       has_variance: false
       has_twist: false
+      # Distances in bev meters
+      # 0-50m, 50.0-90m, 90.0-121.0m, 121.0-inf
+      score_distances: [
+        50.0,
+        90.0,
+        121.0
+      ]
+      # CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      score_thresholds:
+        [
+          # Must match with score_distances
+          # 0-50m, 50.0-90m, 90.0-121.0m, 121.0-inf
+          # CAR
+          [0.35, 0.35, 0.35, 0.35],
+          # TRUCK
+          [0.35, 0.35, 0.35, 0.35],
+          # BUS
+          [0.35, 0.35, 0.35, 0.35],
+          # BICYCLE
+          [0.35, 0.35, 0.35, 0.35],
+          # PEDESTRIAN
+          [0.35, 0.35, 0.35, 0.35],
+        ]
