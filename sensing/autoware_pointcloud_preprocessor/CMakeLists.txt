@@ -112,6 +112,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/vector_map_filter/lanelet2_map_filter_node.cpp
   src/distortion_corrector/distortion_corrector.cpp
   src/distortion_corrector/distortion_corrector_node.cpp
+  src/blockage_diag/blockage_detection.cpp
   src/blockage_diag/blockage_diag.cpp
   src/blockage_diag/blockage_diag_node.cpp
   src/blockage_diag/pointcloud2_to_depth_image.cpp

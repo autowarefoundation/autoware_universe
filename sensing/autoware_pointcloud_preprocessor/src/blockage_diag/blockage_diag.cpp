@@ -14,6 +14,8 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
+
 #include <opencv2/imgproc.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -104,7 +106,7 @@ std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
   return {ground_mask, sky_mask};
 }
 
-cv::Mat DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
+DustDetectionResult DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
 {
   cv::Mat depth_image_8u = quantize_to_8u(depth_image_16u);
   cv::Mat no_return_mask = make_no_return_mask(depth_image_8u);
@@ -142,7 +144,9 @@ cv::Mat DustDetector::compute_dust_diagnostics(const cv::Mat & depth_image_16u)
     result_.dust_frame_count = 0;
   }
 
-  return single_dust_img;
+  result_.dust_mask = single_dust_img;
+
+  return result_;
 }
 
 DiagnosticOutput DustDetector::get_dust_diagnostics_output() const
