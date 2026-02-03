@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
@@ -70,60 +71,31 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
   void update_diagnostics(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input);
-  struct DebugInfo
-  {
-    std_msgs::msg::Header input_header;
-    cv::Mat depth_image_16u;
-    cv::Mat blockage_mask_multi_frame;
-  };
-
   void run_blockage_check(DiagnosticStatusWrapper & stat) const;
   void run_dust_check(DiagnosticStatusWrapper & stat) const;
 
   /**
-   * @brief Make a binary, cleaned blockage mask from the input no-return mask.
-   *
-   * @param no_return_mask A mask where 255 is no-return and 0 is return.
-   * @return cv::Mat The blockage mask. The data type is `CV_8UC1`.
-   */
-  cv::Mat make_blockage_mask(const cv::Mat & no_return_mask) const;
-
-  /**
-   * @brief Get the ratio of non-zero pixels in a given mask.
-   *
-   * @param mask The input mask. The data type is `CV_8UC1`.
-   * @return float The ratio of non-zero pixels (e.g. 1.0 if all are non-zero, 0.0 if all are zero).
-   */
-  static float get_nonzero_ratio(const cv::Mat & mask);
-
-  /**
-   * @brief Update the blockage info for a specific area (ground or sky).
-   *
-   * @param blockage_mask The blockage mask. The data type is `CV_8UC1`.
-   * @param area_result Reference to the BlockageAreaResult to update.
-   */
-  void update_blockage_info(const cv::Mat & blockage_mask, BlockageAreaResult & area_result);
-
-  /**
-   * @brief Compute blockage diagnostics and update the internal blockage info.
-   *
-   * @param depth_image_16u The input depth image. The data type is `CV_16UC1`.
-   */
-  cv::Mat compute_blockage_diagnostics(const cv::Mat & depth_image_16u);
-
-  /**
    * @brief Publish the debug info of blockage diagnostics if enabled.
    *
-   * @param debug_info The debug info to publish.
+   * @param blockage_result The blockage detection result.
+   * @param input_header The header of the input point cloud.
+   * @param depth_image_16u The depth image converted from the input point cloud.
+   * @param blockage_mask_multi_frame The multi-frame blockage mask.
    */
-  void publish_blockage_debug_info(const DebugInfo & debug_info) const;
+  void publish_blockage_debug_info(
+    const BlockageDetectionResult & blockage_result, const std_msgs::msg::Header & input_header,
+    const cv::Mat & depth_image_16u, const cv::Mat & blockage_mask_multi_frame) const;
 
   /**
    * @brief Publish the debug info of dust diagnostics if enabled.
    *
-   * @param debug_info The debug info to publish.
+   * @param dust_result The dust detection result.
+   * @param input_header The header of the input point cloud.
+   * @param blockage_mask_multi_frame The multi-frame blockage mask.
    */
-  void publish_dust_debug_info(const DebugInfo & debug_info, const cv::Mat & single_dust_img);
+  void publish_dust_debug_info(
+    const DustDetectionResult & dust_result, const std_msgs::msg::Header & input_header,
+    const cv::Mat & blockage_mask_multi_frame);
 
   Updater updater_{this};
 
@@ -133,16 +105,8 @@ private:
   // Debug parameters
   bool publish_debug_image_;
 
-  // Mask size parameters
-  std::vector<double> angle_range_deg_;
-  double horizontal_resolution_{0.4};
-
-  // Ground/sky segmentation parameters
-  int horizontal_ring_id_;
-
   // Blockage detection
-  BlockageDetectionConfig blockage_config_;
-  BlockageDetectionResult blockage_result_;
+  std::unique_ptr<BlockageDetector> blockage_detector_;
   std::unique_ptr<MultiFrameDetectionAggregator> blockage_aggregator_;
 
   // Dust detection
