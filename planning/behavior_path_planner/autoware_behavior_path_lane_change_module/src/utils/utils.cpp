@@ -1316,10 +1316,8 @@ bool is_intersecting_no_lane_change_lines(
   const std::vector<std::pair<double, double>> & inverval_dist_no_lane_change_lines,
   const double expected_intersecting_dist, const double buffer)
 {
-  int i = 0;
   return ranges::any_of(inverval_dist_no_lane_change_lines, [&](const auto & interval) {
     const auto [start, end] = interval;
-    ++i;
     return expected_intersecting_dist >= (start - buffer) &&
            expected_intersecting_dist <= (end + buffer);
   });
