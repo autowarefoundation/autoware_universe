@@ -17,7 +17,7 @@
  * @brief traffic information read class
  */
 
-#include "system_monitor/traffic_reader/traffic_reader_service.hpp"
+#include "traffic_reader_service.hpp"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/process.hpp>
@@ -38,7 +38,7 @@ namespace traffic_reader_service
 {
 
 TrafficReaderService::TrafficReaderService(std::string socket_path)
-: socket_path_(std::move(socket_path)), stop_(false)
+: socket_path_(std::move(socket_path)), stop_(false), result_()
 {
 }
 

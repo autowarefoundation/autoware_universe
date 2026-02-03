@@ -17,10 +17,10 @@
  * @brief HDD monitor class
  */
 
-#include "system_monitor/hdd_monitor/hdd_monitor.hpp"
+#include "hdd_monitor.hpp"
 
-#include "system_monitor/hdd_reader/hdd_reader.hpp"
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
+#include "hdd_reader/hdd_reader.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -219,9 +219,7 @@ void HddMonitor::checkSmart(
       } break;
       case HddSmartInfoItem::RECOVERED_ERROR: {
         int32_t recovered_error = static_cast<int32_t>(hdd_itr->second.recovered_error_);
-        if (initial_recovered_errors_.find(itr->first) == initial_recovered_errors_.end()) {
-          initial_recovered_errors_[itr->first] = recovered_error;
-        }
+        initial_recovered_errors_.try_emplace(itr->first, recovered_error);
         recovered_error -= initial_recovered_errors_[itr->first];
 
         level = DiagStatus::OK;
@@ -792,7 +790,7 @@ void HddMonitor::updateHddStatistics()
       continue;
     }
 
-    SysfsDevStat & last_sysfs_dev_stat = hdd_stat.second.last_sysfs_dev_stat_;
+    const SysfsDevStat & last_sysfs_dev_stat = hdd_stat.second.last_sysfs_dev_stat_;
 
     hdd_stat.second.read_data_rate_MBs_ = getIncreaseSysfsDeviceStatValuePerSec(
       sysfs_dev_stat.rd_sectors_, last_sysfs_dev_stat.rd_sectors_, duration_sec);
@@ -891,7 +889,7 @@ void HddMonitor::updateHddConnections()
   }
 }
 
-int HddMonitor::unmountDevice(std::string & device)
+int HddMonitor::unmountDevice(const std::string & device)
 {
   // Create a new socket
   int sock = socket(AF_UNIX, SOCK_STREAM, 0);

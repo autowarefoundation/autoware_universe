@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "system_monitor/process_monitor/process_monitor.hpp"
+#include "process_monitor/process_monitor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

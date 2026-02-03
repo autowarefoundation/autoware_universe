@@ -17,9 +17,10 @@
  * @brief TEGRA PU monitor class
  */
 
-#include "system_monitor/cpu_monitor/tegra_cpu_monitor.hpp"
+#include "tegra_cpu_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
+#include "cpu_information.hpp"
 
 #include <string>
 #include <vector>

@@ -17,9 +17,9 @@
  * @brief Memory monitor class
  */
 
-#include "system_monitor/mem_monitor/mem_monitor.hpp"
+#include "mem_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <boost/process.hpp>
 
