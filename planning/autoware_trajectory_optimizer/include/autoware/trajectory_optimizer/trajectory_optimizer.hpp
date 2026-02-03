@@ -65,6 +65,9 @@ private:
   std::unique_ptr<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>> plugin_loader_;
   std::vector<std::shared_ptr<plugin::TrajectoryOptimizerPluginBase>> plugins_;
 
+  // Debug trajectory publishers (one per plugin)
+  std::vector<rclcpp::Publisher<Trajectory>::SharedPtr> debug_trajectory_pubs_;
+
   // interface subscriber
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   // interface publisher

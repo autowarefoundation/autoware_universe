@@ -16,8 +16,9 @@
 #ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_VELOCITY_OPTIMIZER_HPP_
+
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
-#include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,7 +34,7 @@ namespace autoware::trajectory_optimizer::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::velocity_smoother::JerkFilteredSmoother;
+using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
 
 struct TrajectoryVelocityOptimizerParams
 {
@@ -43,10 +44,16 @@ struct TrajectoryVelocityOptimizerParams
   double target_pull_out_acc_mps2{1.0};
   double max_speed_mps{8.33};
   double max_lateral_accel_mps2{1.5};
+  double min_limited_speed_mps{3.0};  // Minimum speed when applying lateral acceleration limit
+  int skip_lateral_accel_limit_head_points{2};  // Number of head points to skip for lat accel limit
+  int skip_lateral_accel_limit_tail_points{2};  // Number of tail points to skip for lat accel limit
   bool set_engage_speed{false};
   bool limit_speed{true};
   bool limit_lateral_acceleration{false};
   bool smooth_velocities{false};
+
+  // Continuous jerk smoother parameters
+  ContinuousJerkSmootherParams continuous_jerk_smoother_params;
 };
 
 class TrajectoryVelocityOptimizer : public TrajectoryOptimizerPluginBase
@@ -55,8 +62,6 @@ public:
   TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
 
-  void set_up_velocity_smoother(
-    rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
     const TrajectoryOptimizerData & data) override;
@@ -65,7 +70,7 @@ public:
     const std::vector<rclcpp::Parameter> & parameters) override;
 
 private:
-  std::shared_ptr<JerkFilteredSmoother> jerk_filtered_smoother_{nullptr};
+  std::shared_ptr<ContinuousJerkSmoother> continuous_jerk_smoother_{nullptr};
   TrajectoryVelocityOptimizerParams velocity_params_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin

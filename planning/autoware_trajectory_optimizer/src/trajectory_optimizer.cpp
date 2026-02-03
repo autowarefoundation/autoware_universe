@@ -25,7 +25,9 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <iomanip>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -66,9 +68,27 @@ void TrajectoryOptimizer::initialize_optimizers()
   // Get plugin names from parameter
   const auto plugin_names = get_parameter("plugin_names").as_string_array();
 
-  // Load each plugin in order
-  for (const auto & plugin_name : plugin_names) {
-    load_plugin(plugin_name);
+  // Load each plugin in order and create debug publishers
+  for (size_t i = 0; i < plugin_names.size(); ++i) {
+    load_plugin(plugin_names[i]);
+
+    // Extract short plugin name from full class name
+    // e.g., "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer" ->
+    // "TrajectoryPointFixer"
+    std::string short_name = plugin_names[i];
+    const auto last_colon = short_name.rfind("::");
+    if (last_colon != std::string::npos) {
+      short_name = short_name.substr(last_colon + 2);
+    }
+
+    // Create debug publisher with format: ~/debug/{index:02d}_{name}/trajectory
+    std::ostringstream topic_name;
+    topic_name << "~/debug/" << short_name << "_" << std::setfill('0') << std::setw(2) << i
+               << "/trajectory";
+    auto pub = create_publisher<Trajectory>(topic_name.str(), 1);
+    debug_trajectory_pubs_.push_back(pub);
+
+    RCLCPP_INFO_STREAM(get_logger(), "Created debug publisher: " << topic_name.str());
   }
 
   initialized_optimizers_ = true;
@@ -184,8 +204,16 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     // Apply optimizations - plugins execute in order from plugin_names parameter
-    for (auto & plugin : plugins_) {
-      plugin->optimize_trajectory(trajectory.points, params_, data);
+    for (size_t i = 0; i < plugins_.size(); ++i) {
+      plugins_[i]->optimize_trajectory(trajectory.points, params_, data);
+
+      // Publish debug trajectory after each plugin (only for first candidate)
+      if (i < debug_trajectory_pubs_.size() && debug_trajectory_pubs_[i]) {
+        Trajectory debug_traj;
+        debug_traj.header = trajectory.header;
+        debug_traj.points = trajectory.points;
+        debug_trajectory_pubs_[i]->publish(debug_traj);
+      }
     }
     motion_utils::calculate_time_from_start(
       trajectory.points, current_odometry_ptr_->pose.pose.position);

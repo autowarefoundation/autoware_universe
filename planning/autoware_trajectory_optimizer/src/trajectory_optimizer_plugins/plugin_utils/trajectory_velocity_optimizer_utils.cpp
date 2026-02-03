@@ -145,13 +145,12 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
   input_trajectory_array.back().acceleration_mps2 = 0.0f;
 }
 
-void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
-  const Odometry & current_odometry)
+std::vector<double> limit_lateral_acceleration(
+  TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
+  const double max_lateral_accel_mps2, const double min_limited_speed_mps,
+  const Odometry & current_odometry, const int skip_head_points, const int skip_tail_points)
 {
-  if (input_trajectory_array.empty()) {
-    return;
-  }
+  const size_t traj_size = input_trajectory_array.size();
 
   auto get_delta_time = [](const auto & next, const auto & current) -> double {
     return next->time_from_start.sec + next->time_from_start.nanosec * 1e-9 -
@@ -163,11 +162,36 @@ void limit_lateral_acceleration(
 
   const auto closest_index =
     motion_utils::findNearestIndex(input_trajectory_array, current_position);
+
+  // Calculate start and end indices, excluding head and tail points
+  const size_t effective_skip_head = static_cast<size_t>(std::max(0, skip_head_points));
+  const size_t effective_skip_tail = static_cast<size_t>(std::max(0, skip_tail_points));
+
+  // Start index: max of closest_index and skip_head_points
+  const size_t start_index = std::max(closest_index, effective_skip_head);
+
+  // End index: (size - 1 - skip_tail_points) to avoid the last skip_tail_points transitions
+  // The loop processes pairs (i, i+1), so we stop at (size - 1 - skip_tail_points)
+  const size_t end_index =
+    (traj_size > effective_skip_tail + 1) ? (traj_size - 1 - effective_skip_tail) : start_index;
+
+  // Ensure we have a valid range
+  if (start_index >= traj_size || start_index > end_index) {
+    return max_velocity_per_point;
+  }
+
   const auto start_itr = std::next(
     input_trajectory_array.begin(),
-    static_cast<std::vector<TrajectoryPoint>::difference_type>(closest_index));
+    static_cast<std::vector<TrajectoryPoint>::difference_type>(start_index));
 
-  for (auto itr = start_itr; itr < std::prev(input_trajectory_array.end()); ++itr) {
+  size_t current_index = start_index;
+  for (auto itr = start_itr; itr < std::prev(input_trajectory_array.end());
+       ++itr, ++current_index) {
+    // Skip tail points to avoid orientation discontinuity issues
+    if (current_index > end_index) {
+      continue;
+    }
+
     const auto current_pose = itr->pose;
     const auto next_pose = std::next(itr)->pose;
     const auto delta_time = get_delta_time(std::next(itr), itr);
@@ -189,29 +213,40 @@ void limit_lateral_acceleration(
     const double current_speed = std::abs(itr->longitudinal_velocity_mps);
     // Compute lateral acceleration
     const double lateral_acceleration = current_speed * yaw_rate;
-    if (lateral_acceleration < max_lateral_accel_mps2) continue;
 
-    itr->longitudinal_velocity_mps = static_cast<float>(max_lateral_accel_mps2 / yaw_rate);
+    if (lateral_acceleration < max_lateral_accel_mps2) {
+      // No modification needed
+      continue;
+    }
+
+    // Compute velocity limit based on lateral acceleration constraint
+    const double limited_velocity =
+      std::max(max_lateral_accel_mps2 / yaw_rate, min_limited_speed_mps);
+
+    if (current_speed < limited_velocity) {
+      // No modification needed
+      continue;
+    }
+
+    // Update max velocity constraint for this point
+    max_velocity_per_point.at(current_index) =
+      std::min(max_velocity_per_point.at(current_index), limited_velocity);
   }
 
-  motion_utils::calculate_time_from_start(
-    input_trajectory_array, current_odometry.pose.pose.position);
-
-  // recalculate acceleration after velocity change
-  autoware::trajectory_optimizer::utils::recalculate_longitudinal_acceleration(
-    input_trajectory_array);
+  return max_velocity_per_point;
 }
 
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
   const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
-  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry)
+  const std::shared_ptr<ContinuousJerkSmoother> & smoother, const Odometry & current_odometry,
+  const std::vector<double> & max_velocity_per_point)
 {
   if (!smoother) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
     RCLCPP_ERROR_THROTTLE(
       rclcpp::get_logger("trajectory_velocity_optimizer"), *clock, 5000,
-      "JerkFilteredSmoother is not initialized");
+      "ContinuousJerkSmoother is not initialized");
     return;
   }
 
@@ -222,26 +257,11 @@ void filter_velocity(
   const auto & initial_motion_speed = initial_motion.speed_mps;
   const auto & initial_motion_acc = initial_motion.acc_mps2;
 
-  constexpr bool enable_smooth_limit = true;
-  constexpr bool use_resampling = true;
-
-  input_trajectory = smoother->applyLateralAccelerationFilter(
-    input_trajectory, initial_motion_speed, initial_motion_acc, enable_smooth_limit,
-    use_resampling);
-
-  // Steering angle rate limit (Note: set use_resample = false since it is resampled above)
-  input_trajectory = smoother->applySteeringRateLimit(input_trajectory, false);
-  // Resample trajectory with ego-velocity based interval distance
-
-  input_trajectory = smoother->resampleTrajectory(
-    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold_m,
-    nearest_yaw_threshold_rad);
-
   const size_t traj_closest = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     input_trajectory, current_odometry.pose.pose, nearest_dist_threshold_m,
     nearest_yaw_threshold_rad);
 
-  // // Clip trajectory from closest point
+  // Clip trajectory from closest point
   TrajectoryPoints clipped;
   clipped.insert(
     clipped.end(),
@@ -249,14 +269,24 @@ void filter_velocity(
     input_trajectory.end());
   input_trajectory = clipped;
 
-  std::vector<TrajectoryPoints> debug_trajectories;
+  // Also clip the max velocity array if provided
+  std::vector<double> clipped_max_vel;
+  if (!max_velocity_per_point.empty() && max_velocity_per_point.size() > traj_closest) {
+    clipped_max_vel.insert(
+      clipped_max_vel.end(),
+      max_velocity_per_point.begin() +
+        static_cast<std::vector<double>::difference_type>(traj_closest),
+      max_velocity_per_point.end());
+  }
+
+  // Apply continuous jerk smoother with per-point velocity constraints
   if (!smoother->apply(
         initial_motion_speed, initial_motion_acc, input_trajectory, input_trajectory,
-        debug_trajectories, false)) {
+        clipped_max_vel)) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("trajectory_velocity_optimizer"), *clock, 5000,
-      "Fail to solve optimization.");
+      "Continuous jerk smoother optimization failed.");
   }
 }
 

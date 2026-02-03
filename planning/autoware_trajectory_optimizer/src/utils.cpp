@@ -19,9 +19,13 @@
 #include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <tf2/utils.h>
+
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -122,6 +126,49 @@ void copy_trajectory_orientation(
     const auto nearest_index = nearest_index_opt.value();
     out_point.pose.orientation = input_trajectory.at(nearest_index).pose.orientation;
   }
+}
+
+void debug_log_trajectory_tail_orientations(
+  const TrajectoryPoints & traj, const std::string & stage_name, size_t num_tail_points)
+{
+  auto logger = rclcpp::get_logger("trajectory_pipeline_debug");
+
+  if (traj.empty()) {
+    RCLCPP_INFO(logger, "[%s] Empty trajectory", stage_name.c_str());
+    return;
+  }
+
+  const size_t traj_size = traj.size();
+  const size_t start_idx = (traj_size > num_tail_points) ? (traj_size - num_tail_points) : 0;
+
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(4);
+  oss << "[" << stage_name << "] traj_size=" << traj_size << ", tail orientations:\n";
+
+  for (size_t i = start_idx; i < traj_size; ++i) {
+    const auto & pt = traj[i];
+    const double yaw = tf2::getYaw(pt.pose.orientation);
+
+    oss << "  idx=" << i << ": yaw=" << yaw << " rad (" << (yaw * 180.0 / M_PI) << " deg)";
+    oss << ", vel=" << pt.longitudinal_velocity_mps << " m/s";
+
+    // Compute delta_theta to next point if not the last point
+    if (i + 1 < traj_size) {
+      const auto & next_pt = traj[i + 1];
+      const double next_yaw = tf2::getYaw(next_pt.pose.orientation);
+      double delta_theta = next_yaw - yaw;
+
+      // Normalize to [-pi, pi]
+      while (delta_theta > M_PI) delta_theta -= 2.0 * M_PI;
+      while (delta_theta < -M_PI) delta_theta += 2.0 * M_PI;
+
+      oss << ", delta_theta_to_next=" << delta_theta << " rad (" << (delta_theta * 180.0 / M_PI)
+          << " deg)";
+    }
+    oss << "\n";
+  }
+
+  RCLCPP_INFO(logger, "%s", oss.str().c_str());
 }
 
 }  // namespace autoware::trajectory_optimizer::utils

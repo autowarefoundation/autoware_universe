@@ -18,7 +18,6 @@
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
-#include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <rclcpp/logger.hpp>
 
@@ -33,6 +32,7 @@
 #include <nav_msgs/msg/detail/odometry__struct.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
@@ -44,7 +44,6 @@ using autoware::path_smoother::EgoNearestParam;
 using autoware::path_smoother::PlannerData;
 using autoware::path_smoother::ReplanChecker;
 
-using autoware::velocity_smoother::JerkFilteredSmoother;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
@@ -104,6 +103,20 @@ double compute_dt(const TrajectoryPoint & current, const TrajectoryPoint & next)
 void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
+
+/**
+ * @brief Debug utility to log yaw angles and delta_theta for the tail of a trajectory.
+ *
+ * This function logs the yaw angle of each of the last N points and the delta_theta
+ * (orientation change) between consecutive points. Useful for debugging orientation
+ * discontinuities at the end of trajectories.
+ *
+ * @param traj The trajectory points to analyze.
+ * @param stage_name A descriptive name for the pipeline stage (e.g., "AFTER_SPLINE_SMOOTHER").
+ * @param num_tail_points Number of tail points to log (default: 5).
+ */
+void debug_log_trajectory_tail_orientations(
+  const TrajectoryPoints & traj, const std::string & stage_name, size_t num_tail_points = 5);
 
 };  // namespace autoware::trajectory_optimizer::utils
 

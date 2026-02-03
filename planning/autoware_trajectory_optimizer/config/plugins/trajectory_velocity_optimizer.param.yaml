@@ -6,17 +6,33 @@
       nearest_yaw_threshold_deg: 60.0  # [deg] Yaw threshold for trajectory matching
 
       # Engage behavior
-      target_pull_out_speed_mps: 1.0  # [m/s] Target speed during pull-out maneuver
-      target_pull_out_acc_mps2: 1.0   # [m/s²] Target acceleration during pull-out
+      target_pull_out_speed_mps: 0.5  # [m/s] Target speed during pull-out maneuver
+      target_pull_out_acc_mps2: 0.5   # [m/s²] Target acceleration during pull-out
       set_engage_speed: false         # Set minimum speed during engage
 
       # Speed limiting
-      max_speed_mps: 13.88             # [m/s] Maximum allowed speed (30 km/h default)
+      max_speed_mps: 11.11             # [m/s] Maximum allowed speed (30 km/h default)
       limit_speed: true               # Enable speed limiting
 
       # Lateral acceleration limiting
-      max_lateral_accel_mps2: 1.5     # [m/s²] Maximum lateral acceleration
-      limit_lateral_acceleration: false  # Enable lateral acceleration limiting
+      max_lateral_accel_mps2: 1.0     # [m/s²] Maximum lateral acceleration
+      limit_lateral_acceleration: true  # Enable lateral acceleration limiting
+      min_limited_speed_mps: 4.0        # [m/s] Minimum speed when applying lateral acceleration limit
+      skip_lateral_accel_limit_head_points: 2  # Number of head points to skip (handles orientation discontinuities at start)
+      skip_lateral_accel_limit_tail_points: 2  # Number of tail points to skip (handles orientation discontinuities at end)
 
       # Velocity smoothing
-      smooth_velocities: false        # Enable jerk-filtered velocity smoothing
+      smooth_velocities: true        # Enable jerk-filtered velocity smoothing
+
+      # Continuous jerk smoother settings
+      # Note: Kinematic limits (max_accel, min_decel, max_jerk, min_jerk) are loaded
+      # from the common namespace (limit.max_acc, limit.min_acc, limit.max_jerk, limit.min_jerk)
+      # Note: max_velocity uses max_speed_mps from parent namespace
+      continuous_jerk_smoother:
+        # QP optimization weights
+        jerk_weight: 10.0                    # Weight for jerk minimization (smoothness)
+        over_v_weight: 50000.0              # Weight for velocity limit violation (slack)
+        over_a_weight: 3000.0               # Weight for acceleration limit violation (slack)
+        over_j_weight: 10.0                # Weight for jerk limit violation (slack)
+        velocity_tracking_weight: 0.0     # Weight for tracking reference velocity from input trajectory (not used)
+        accel_tracking_weight: 3000.0         # Weight for tracking reference acceleration from input trajectory
