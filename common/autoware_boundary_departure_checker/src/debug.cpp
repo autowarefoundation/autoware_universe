@@ -87,9 +87,8 @@ Marker create_projections_to_bound_marker(
 }
 
 MarkerArray create_projections_type_wall_marker(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  [[maybe_unused]] const Trajectory & ego_traj, const rclcpp::Time & curr_time,
-  const std::string & side_key_str, const double base_link_z)
+  const ProjectionsToBound & projections_to_bound, [[maybe_unused]] const Trajectory & ego_traj,
+  const rclcpp::Time & curr_time, const std::string & side_key_str, const double base_link_z)
 {
   int32_t id{0};
   auto marker_near_bound = autoware_utils_visualization::create_default_marker(
@@ -117,11 +116,14 @@ MarkerArray create_projections_type_wall_marker(
   };
 
   for (const auto & pt : projections_to_bound) {
-    if (pt.departure_type == DepartureType::NEAR_BOUNDARY) {
+    if (!pt.departure_type_opt) {
+      continue;
+    }
+    if (pt.is_near_boundary()) {
       marker_near_bound.points.push_back(to_geom(pt.pt_on_bound));
-    } else if (pt.departure_type == DepartureType::APPROACHING_DEPARTURE) {
+    } else if (pt.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
       marker_approaching.points.push_back(to_geom(pt.pt_on_bound));
-    } else if (pt.departure_type == DepartureType::CRITICAL_DEPARTURE) {
+    } else if (pt.is_critical_departure()) {
       marker_critical.points.push_back(to_geom(pt.pt_on_bound));
     } else {
       marker_others.points.push_back(to_geom(pt.pt_on_ego));
