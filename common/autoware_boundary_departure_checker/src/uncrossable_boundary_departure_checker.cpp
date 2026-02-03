@@ -444,14 +444,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & abnormality_to_check = manager_->get_ordered_types();
+  const auto & footprint_types_to_check = manager_->get_ordered_types();
 
-  if (abnormality_to_check.empty()) {
+  if (footprint_types_to_check.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
   }
 
   const auto is_empty = std::any_of(
-    abnormality_to_check.begin(), abnormality_to_check.end(),
+    footprint_types_to_check.begin(), footprint_types_to_check.end(),
     [&projections_to_bound, &side_key](const auto footprint_type) {
       return projections_to_bound[footprint_type][side_key].empty();
     });
@@ -460,14 +460,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return tl::make_unexpected(std::string(__func__) + ": projections to bound is empty.");
   }
 
-  const auto & fr_proj_to_bound = projections_to_bound[abnormality_to_check.front()][side_key];
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_types_to_check.front()][side_key];
 
   const auto check_size = [&](const auto footprint_type) {
     return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
   };
 
-  const auto has_size_diff =
-    std::any_of(std::next(abnormality_to_check.begin()), abnormality_to_check.end(), check_size);
+  const auto has_size_diff = std::any_of(
+    std::next(footprint_types_to_check.begin()), footprint_types_to_check.end(), check_size);
 
   if (has_size_diff) {
     return tl::make_unexpected(
@@ -484,11 +484,11 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return lat_dist <= param_.th_trigger.th_dist_to_boundary_m[side_key].max;
   };
 
-  const auto fp_size = projections_to_bound[abnormality_to_check.front()][side_key].size();
+  const auto fp_size = projections_to_bound[footprint_types_to_check.front()][side_key].size();
   min_to_bound.reserve(fp_size);
   for (size_t idx = 0; idx < fp_size; ++idx) {
     std::unique_ptr<ProjectionToBound> min_pt;
-    for (const auto footprint_type : abnormality_to_check) {
+    for (const auto footprint_type : footprint_types_to_check) {
       const auto pt = projections_to_bound[footprint_type][side_key][idx];
       if (pt.ego_sides_idx != idx) {
         continue;
