@@ -683,12 +683,11 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
       // Preceding lanes does not include detection_lane so add them at the end
       const auto & inserted = detection_ids.insert(ll.id());
       if (inserted.second) detection_and_preceding_lanelets.push_back(ll);
-      const auto routing_graph_ptr_copy = routing_graph_ptr;
       // get preceding lanelets without ego_lanelets
       // to prevent the detection area from including the ego lanes and its' preceding lanes.
       const auto lanelet_sequences =
         autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
-          ll, routing_graph_ptr_copy, length, ego_lanelets);
+          ll, routing_graph_ptr, length, ego_lanelets);
       for (const auto & ls : lanelet_sequences) {
         for (const auto & l : ls) {
           const auto & inner_inserted = detection_ids.insert(l.id());
