@@ -14,10 +14,10 @@
 
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 
-#include <gtest/gtest.h>
-
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+
+#include <gtest/gtest.h>
 
 #include <cmath>
 #include <limits>
