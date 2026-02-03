@@ -20,12 +20,15 @@
 #include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -34,6 +37,7 @@ namespace autoware::trajectory_optimizer::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware::velocity_smoother::JerkFilteredSmoother;
+using autoware_internal_planning_msgs::msg::VelocityLimit;
 
 struct TrajectoryVelocityOptimizerParams
 {
@@ -55,6 +59,9 @@ public:
   TrajectoryVelocityOptimizer() = default;
   ~TrajectoryVelocityOptimizer() = default;
 
+  void initialize(
+    const std::string & name, rclcpp::Node * node_ptr,
+    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
   void set_up_velocity_smoother(
     rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
   void optimize_trajectory(
@@ -67,6 +74,8 @@ public:
 private:
   std::shared_ptr<JerkFilteredSmoother> jerk_filtered_smoother_{nullptr};
   TrajectoryVelocityOptimizerParams velocity_params_;
+  rclcpp::Subscription<VelocityLimit>::SharedPtr sub_planning_velocity_;
+  std::optional<VelocityLimit> latest_external_velocity_limit_opt_{std::nullopt};
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

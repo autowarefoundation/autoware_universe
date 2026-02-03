@@ -19,13 +19,28 @@
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/logging.hpp>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
-
 namespace autoware::trajectory_optimizer::plugin
 {
+
+void TrajectoryVelocityOptimizer::initialize(
+  const std::string & name, rclcpp::Node * node_ptr,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+{
+  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
+
+  set_up_params();
+  sub_planning_velocity_ = node_ptr->create_subscription<VelocityLimit>(
+    "/planning/scenario_planning/max_velocity_default", rclcpp::QoS{1},
+    [this](const VelocityLimit::ConstSharedPtr msg) {
+      latest_external_velocity_limit_opt_ = *msg;
+    });
+}
 
 void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
   rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
@@ -51,7 +66,6 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   const auto & current_linear_acceleration = current_acceleration.accel.accel.linear.x;
   const double & target_pull_out_speed_mps = velocity_params_.target_pull_out_speed_mps;
   const double & target_pull_out_acc_mps2 = velocity_params_.target_pull_out_acc_mps2;
-  const double & max_speed_mps = velocity_params_.max_speed_mps;
 
   if (velocity_params_.limit_lateral_acceleration) {
     trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
@@ -71,8 +85,13 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   }
 
   if (velocity_params_.limit_speed) {
-    trajectory_velocity_optimizer_utils::set_max_velocity(
-      traj_points, static_cast<float>(max_speed_mps));
+    const auto max_param_speed_mps = static_cast<float>(velocity_params_.max_speed_mps);
+    const auto max_speed_mps =
+      (latest_external_velocity_limit_opt_.has_value())
+        ? std::min(latest_external_velocity_limit_opt_->max_velocity, max_param_speed_mps)
+        : max_param_speed_mps;
+
+    trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
   }
 
   if (velocity_params_.smooth_velocities) {
