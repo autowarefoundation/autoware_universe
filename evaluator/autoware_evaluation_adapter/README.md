@@ -1,1 +1,6 @@
-[See GitHub Pages](https://tier4.github.io/autoware-documentation/tier4-main/design/autoware-interfaces/prototyping/)
+# autoware_evaluation_adapter
+
+This package privodes following interfaces. Please do not use these as we will create a new evaluation interface in the future.
+
+- /api/external/set/engage
+- /api/autoware/set/velocity_limit
