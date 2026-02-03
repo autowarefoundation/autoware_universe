@@ -67,9 +67,8 @@ FootprintType SteeringFootprintGenerator::get_type() const
 }
 
 Footprints SteeringFootprintGenerator::generate(
-  const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, const Param & param,
-  [[maybe_unused]] const FootprintMargin & uncertainty_fp_margin)
+  const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+  const Param & param, [[maybe_unused]] const FootprintMargin & uncertainty_fp_margin)
 {
   const auto config_opt = param.get_abnormality_config<SteeringConfig>(type_);
   if (!config_opt) {

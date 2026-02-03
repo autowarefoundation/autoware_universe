@@ -25,9 +25,8 @@ FootprintType LocalizationFootprintGenerator::get_type() const
 }
 
 Footprints LocalizationFootprintGenerator::generate(
-  const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, const Param & param,
-  const FootprintMargin & uncertainty_fp_margin)
+  const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+  const Param & param, const FootprintMargin & uncertainty_fp_margin)
 {
   FootprintMargin margin = uncertainty_fp_margin;
   const auto loc_config_opt =

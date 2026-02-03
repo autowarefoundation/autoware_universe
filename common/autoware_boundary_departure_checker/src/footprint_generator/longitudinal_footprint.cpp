@@ -24,9 +24,8 @@ FootprintType LongitudinalFootprintGenerator::get_type() const
 }
 
 Footprints LongitudinalFootprintGenerator::generate(
-  const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, const Param & param,
-  const FootprintMargin & uncertainty_fp_margin)
+  const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+  const Param & param, const FootprintMargin & uncertainty_fp_margin)
 {
   const auto longitudinal_config_opt =
     param.get_abnormality_config<LongitudinalConfig>(FootprintType::LONGITUDINAL);

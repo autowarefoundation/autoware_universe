@@ -24,9 +24,8 @@ FootprintType NormalFootprintGenerator::get_type() const
 }
 
 Footprints NormalFootprintGenerator::generate(
-  const TrajectoryPoints & pred_traj, [[maybe_unused]] const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, [[maybe_unused]] const Param & param,
-  const FootprintMargin & uncertainty_fp_margin)
+  const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+  [[maybe_unused]] const Param & param, const FootprintMargin & uncertainty_fp_margin)
 {
   return utils::create_vehicle_footprints(pred_traj, info, uncertainty_fp_margin);
 }

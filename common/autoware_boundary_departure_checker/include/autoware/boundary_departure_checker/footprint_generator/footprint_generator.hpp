@@ -34,9 +34,8 @@ public:
   [[nodiscard]] virtual FootprintType get_type() const = 0;
 
   virtual Footprints generate(
-    const TrajectoryPoints & pred_traj, const SteeringReport & steering,
-    const vehicle_info_utils::VehicleInfo & info, const Param & param,
-    const FootprintMargin & uncertainty_fp_margin) = 0;
+    const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+    const Param & param, const FootprintMargin & uncertainty_fp_margin) = 0;
 };
 
 }  // namespace autoware::boundary_departure_checker

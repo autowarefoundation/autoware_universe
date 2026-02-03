@@ -570,8 +570,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   }
 
   const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
-    raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, *steering_angle_ptr_, curr_vel,
-    curr_acc);
+    raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, curr_vel, curr_acc);
 
   if (!abnormality_data_opt) {
     return tl::make_unexpected(abnormality_data_opt.error());

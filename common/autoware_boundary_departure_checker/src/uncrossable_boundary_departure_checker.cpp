@@ -282,8 +282,8 @@ DeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure
 tl::expected<AbnormalitiesData, std::string>
 UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
-  const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
-  const SteeringReport & current_steering, const double curr_vel, const double curr_acc)
+  const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
+  const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -294,11 +294,8 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto trimmed_pred_traj =
     utils::trim_pred_path(predicted_traj, param_.th_cutoff_time_predicted_path_s);
 
-  const auto uncertainty_fp_margin =
-    utils::calc_margin_from_covariance(curr_pose_with_cov, param_.footprint_extra_margin);
-
-  const auto all_footprints = manager_->generate_all(
-    trimmed_pred_traj, current_steering, *vehicle_info_ptr_, param_, uncertainty_fp_margin);
+  const auto all_footprints =
+    manager_->generate_all(trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
   const auto & ordered_types = manager_->get_ordered_types();
 
   if (all_footprints.empty()) {

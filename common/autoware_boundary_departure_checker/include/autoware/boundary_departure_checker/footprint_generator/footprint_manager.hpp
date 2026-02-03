@@ -34,9 +34,8 @@ public:
   explicit FootprintManager(const std::vector<FootprintType> & footprint_types);
 
   [[nodiscard]] std::vector<Footprints> generate_all(
-    const TrajectoryPoints & pred_traj, const SteeringReport & steering,
-    const vehicle_info_utils::VehicleInfo & info, const Param & param,
-    const FootprintMargin & uncertainty_fp_margin) const;
+    const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+    const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const Param & param) const;
 
   [[nodiscard]] const std::vector<FootprintType> & get_ordered_types() const
   {

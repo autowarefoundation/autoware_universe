@@ -27,9 +27,8 @@ public:
   [[nodiscard]] FootprintType get_type() const final;
 
   Footprints generate(
-    const TrajectoryPoints & pred_traj, const SteeringReport & steering,
-    const vehicle_info_utils::VehicleInfo & info, const Param & param,
-    const FootprintMargin & uncertainty_fp_margin) override;
+    const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+    const Param & param, const FootprintMargin & uncertainty_fp_margin) final;
 
 private:
   FootprintType type_;

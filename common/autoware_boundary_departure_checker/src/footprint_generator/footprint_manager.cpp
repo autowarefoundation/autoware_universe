@@ -18,6 +18,7 @@
 #include "autoware/boundary_departure_checker/footprint_generator/longitudinal_footprint.hpp"
 #include "autoware/boundary_departure_checker/footprint_generator/normal_footprint.hpp"
 #include "autoware/boundary_departure_checker/footprint_generator/steering_footprint.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <memory>
 #include <vector>
@@ -54,15 +55,17 @@ FootprintManager::FootprintManager(const std::vector<FootprintType> & footprint_
 }
 
 std::vector<Footprints> FootprintManager::generate_all(
-  const TrajectoryPoints & pred_traj, const SteeringReport & steering,
-  const vehicle_info_utils::VehicleInfo & info, const Param & param,
-  const FootprintMargin & uncertainty_fp_margin) const
+  const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
+  const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const Param & param) const
 {
   std::vector<Footprints> all_footprints;
+
+  const auto uncertainty_fp_margin =
+    utils::calc_margin_from_covariance(curr_pose_with_cov, param.footprint_extra_margin);
+
   all_footprints.reserve(generators_.size());
   for (const auto & generator : generators_) {
-    all_footprints.push_back(
-      generator->generate(pred_traj, steering, info, param, uncertainty_fp_margin));
+    all_footprints.push_back(generator->generate(pred_traj, info, param, uncertainty_fp_margin));
   }
   return all_footprints;
 }
