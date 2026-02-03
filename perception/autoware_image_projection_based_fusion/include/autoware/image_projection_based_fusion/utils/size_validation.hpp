@@ -49,9 +49,9 @@ struct ObjectSizeConstraints
 inline ObjectSizeConstraints getDefaultPedestrianConstraints()
 {
   ObjectSizeConstraints constraints;
-  constraints.min_length = 0.2;             // Very thin from front
-  constraints.max_length = 0.8;             // Wide stance or carrying items
-  constraints.min_width = 0.3;              // Minimum shoulder width
+  constraints.min_length = 0.1;             // Very thin from front
+  constraints.max_length = 1.0;             // Wide stance or carrying items
+  constraints.min_width = 0.1;              // Minimum shoulder width
   constraints.max_width = 1.0;              // With bags/umbrella
   return constraints;
 }

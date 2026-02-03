@@ -227,7 +227,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
 
       if (is_roi_iou_over_threshold && is_roi_existence_prob_higher) {
         // Get the label from the image ROI
-        const uint8_t roi_label = feature_obj.object.classification.front().label;
+        const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
 
         // Perform size validation for specific classes (especially pedestrians)
         auto image_roi = feature_obj.feature.roi;
