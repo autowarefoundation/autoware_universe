@@ -62,7 +62,7 @@ void normalize_input_data(
  */
 std::vector<float> create_ego_current_state(
   const nav_msgs::msg::Odometry & kinematic_state_msg,
-  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, float wheel_base);
+  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, const float wheel_base);
 
 /**
  * @brief Creates ego agent past trajectory data from pose messages.

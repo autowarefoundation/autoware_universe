@@ -81,7 +81,7 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
 
 std::vector<float> create_ego_current_state(
   const nav_msgs::msg::Odometry & kinematic_state_msg,
-  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, float wheel_base)
+  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, const float wheel_base)
 {
   constexpr float MAX_YAW_RATE = 0.95f;
   constexpr float MAX_STEER_ANGLE = static_cast<float>((2.0 / 3.0) * M_PI);
