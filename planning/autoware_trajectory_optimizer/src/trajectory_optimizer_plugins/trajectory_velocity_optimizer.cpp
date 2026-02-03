@@ -36,7 +36,7 @@ void TrajectoryVelocityOptimizer::initialize(
 
   set_up_params();
   sub_planning_velocity_ = node_ptr->create_subscription<VelocityLimit>(
-    "/planning/scenario_planning/max_velocity_default", rclcpp::QoS{1},
+    "~/input/external_velocity_limit_mps", rclcpp::QoS{1},
     [this](const VelocityLimit::ConstSharedPtr msg) {
       latest_external_velocity_limit_opt_ = *msg;
     });
