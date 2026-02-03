@@ -40,6 +40,6 @@
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/input/odometry" to="/localization/kinematic_state"/>
     <remap from="~/input/acceleration" to="/localization/acceleration"/>
-    <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity_default"/>
+    <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity"/>
   </node>
 </launch>
