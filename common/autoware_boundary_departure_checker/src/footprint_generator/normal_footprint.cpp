@@ -18,11 +18,6 @@
 
 namespace autoware::boundary_departure_checker
 {
-FootprintType NormalFootprintGenerator::get_type() const
-{
-  return FootprintType::NORMAL;
-}
-
 Footprints NormalFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
   [[maybe_unused]] const Param & param, const FootprintMargin & uncertainty_fp_margin)

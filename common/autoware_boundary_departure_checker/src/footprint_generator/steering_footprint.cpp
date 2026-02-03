@@ -57,15 +57,6 @@ geometry_msgs::msg::Pose update_pose_with_bicycle_model(
 }
 }  // anonymous namespace
 
-SteeringFootprintGenerator::SteeringFootprintGenerator(const FootprintType type) : type_(type)
-{
-}
-
-FootprintType SteeringFootprintGenerator::get_type() const
-{
-  return type_;
-}
-
 Footprints SteeringFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
   const Param & param, [[maybe_unused]] const FootprintMargin & uncertainty_fp_margin)

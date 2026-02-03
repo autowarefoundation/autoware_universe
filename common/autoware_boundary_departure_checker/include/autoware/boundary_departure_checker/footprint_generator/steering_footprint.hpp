@@ -22,16 +22,11 @@ namespace autoware::boundary_departure_checker
 class SteeringFootprintGenerator : public FootprintGenerator
 {
 public:
-  explicit SteeringFootprintGenerator(const FootprintType type);
-
-  [[nodiscard]] FootprintType get_type() const final;
+  explicit SteeringFootprintGenerator(const FootprintType type) : FootprintGenerator(type) {}
 
   Footprints generate(
     const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
     const Param & param, const FootprintMargin & uncertainty_fp_margin) final;
-
-private:
-  FootprintType type_;
 };
 
 }  // namespace autoware::boundary_departure_checker

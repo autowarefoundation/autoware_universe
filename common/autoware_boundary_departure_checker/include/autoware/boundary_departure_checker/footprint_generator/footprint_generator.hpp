@@ -21,21 +21,29 @@
 
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
-#include <vector>
-
 namespace autoware::boundary_departure_checker
 {
 
+// footprint_generator.hpp
 class FootprintGenerator
 {
 public:
   virtual ~FootprintGenerator() = default;
 
-  [[nodiscard]] virtual FootprintType get_type() const = 0;
+  [[nodiscard]] FootprintType get_type() const { return type_; }
 
   virtual Footprints generate(
     const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
     const Param & param, const FootprintMargin & uncertainty_fp_margin) = 0;
+
+  FootprintGenerator(const FootprintGenerator &) = default;
+  FootprintGenerator(FootprintGenerator &&) = delete;
+  FootprintGenerator & operator=(const FootprintGenerator &) = default;
+  FootprintGenerator & operator=(FootprintGenerator &&) = delete;
+
+protected:
+  explicit FootprintGenerator(const FootprintType type) : type_(type) {}
+  FootprintType type_;
 };
 
 }  // namespace autoware::boundary_departure_checker

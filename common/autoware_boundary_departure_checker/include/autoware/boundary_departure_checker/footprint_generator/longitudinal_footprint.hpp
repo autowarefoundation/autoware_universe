@@ -22,13 +22,11 @@ namespace autoware::boundary_departure_checker
 class LongitudinalFootprintGenerator : public FootprintGenerator
 {
 public:
-  LongitudinalFootprintGenerator() = default;
-
-  [[nodiscard]] FootprintType get_type() const final;
+  LongitudinalFootprintGenerator() : FootprintGenerator(FootprintType::LONGITUDINAL) {}
 
   Footprints generate(
     const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
-    const Param & param, const FootprintMargin & uncertainty_fp_margin) override;
+    const Param & param, const FootprintMargin & uncertainty_fp_margin) final;
 };
 }  // namespace autoware::boundary_departure_checker
 

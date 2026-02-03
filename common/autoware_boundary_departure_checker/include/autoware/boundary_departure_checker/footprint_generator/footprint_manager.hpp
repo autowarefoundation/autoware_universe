@@ -37,14 +37,14 @@ public:
     const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
     const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const Param & param) const;
 
-  [[nodiscard]] const std::vector<FootprintType> & get_ordered_types() const
+  [[nodiscard]] const std::vector<FootprintType> & get_footprint_types() const
   {
-    return ordered_types_;
+    return footprint_types_;
   }
 
 private:
-  std::vector<std::unique_ptr<FootprintGenerator>> generators_;
-  std::vector<FootprintType> ordered_types_;
+  std::vector<std::unique_ptr<FootprintGenerator>> generator_;
+  std::vector<FootprintType> footprint_types_;
 };
 
 }  // namespace autoware::boundary_departure_checker

@@ -29,8 +29,8 @@ namespace autoware::boundary_departure_checker
 FootprintManager::FootprintManager(const std::vector<FootprintType> & footprint_types)
 {
   // Always add NORMAL first
-  generators_.push_back(std::make_unique<NormalFootprintGenerator>());
-  ordered_types_.push_back(FootprintType::NORMAL);
+  generator_.push_back(std::make_unique<NormalFootprintGenerator>());
+  footprint_types_.push_back(FootprintType::NORMAL);
 
   for (const auto footprint_type : footprint_types) {
     if (footprint_type == FootprintType::NORMAL) {
@@ -38,18 +38,18 @@ FootprintManager::FootprintManager(const std::vector<FootprintType> & footprint_
     }
 
     if (footprint_type == FootprintType::LOCALIZATION) {
-      generators_.push_back(std::make_unique<LocalizationFootprintGenerator>());
-      ordered_types_.push_back(footprint_type);
+      generator_.push_back(std::make_unique<LocalizationFootprintGenerator>());
+      footprint_types_.push_back(footprint_type);
     } else if (footprint_type == FootprintType::LONGITUDINAL) {
-      generators_.push_back(std::make_unique<LongitudinalFootprintGenerator>());
-      ordered_types_.push_back(footprint_type);
+      generator_.push_back(std::make_unique<LongitudinalFootprintGenerator>());
+      footprint_types_.push_back(footprint_type);
     } else if (
       footprint_type == FootprintType::STEERING_ACCELERATED ||
       footprint_type == FootprintType::STEERING_STUCK ||
       footprint_type == FootprintType::STEERING_SUDDEN_LEFT ||
       footprint_type == FootprintType::STEERING_SUDDEN_RIGHT) {
-      generators_.push_back(std::make_unique<SteeringFootprintGenerator>(footprint_type));
-      ordered_types_.push_back(footprint_type);
+      generator_.push_back(std::make_unique<SteeringFootprintGenerator>(footprint_type));
+      footprint_types_.push_back(footprint_type);
     }
   }
 }
@@ -58,16 +58,17 @@ std::vector<Footprints> FootprintManager::generate_all(
   const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const Param & param) const
 {
-  std::vector<Footprints> all_footprints;
+  std::vector<Footprints> generated_footprints;
 
   const auto uncertainty_fp_margin =
     utils::calc_margin_from_covariance(curr_pose_with_cov, param.footprint_extra_margin);
 
-  all_footprints.reserve(generators_.size());
-  for (const auto & generator : generators_) {
-    all_footprints.push_back(generator->generate(pred_traj, info, param, uncertainty_fp_margin));
+  generated_footprints.reserve(generator_.size());
+  for (const auto & generator : generator_) {
+    generated_footprints.push_back(
+      generator->generate(pred_traj, info, param, uncertainty_fp_margin));
   }
-  return all_footprints;
+  return generated_footprints;
 }
 
 }  // namespace autoware::boundary_departure_checker

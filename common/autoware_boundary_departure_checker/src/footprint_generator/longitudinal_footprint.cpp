@@ -18,11 +18,6 @@
 
 namespace autoware::boundary_departure_checker
 {
-FootprintType LongitudinalFootprintGenerator::get_type() const
-{
-  return FootprintType::LONGITUDINAL;
-}
-
 Footprints LongitudinalFootprintGenerator::generate(
   const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
   const Param & param, const FootprintMargin & uncertainty_fp_margin)

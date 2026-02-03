@@ -139,7 +139,7 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   last_found_critical_dpt_time_(clock_ptr->now().seconds()),
   clock_ptr_(clock_ptr),
   time_keeper_(std::move(time_keeper)),
-  manager_(std::make_unique<FootprintManager>(param_.footprint_types_to_check))
+  footprint_manager_(std::make_unique<FootprintManager>(param_.footprint_types_to_check))
 {
   auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 
@@ -294,9 +294,9 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto trimmed_pred_traj =
     utils::trim_pred_path(predicted_traj, param_.th_cutoff_time_predicted_path_s);
 
-  const auto all_footprints =
-    manager_->generate_all(trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
-  const auto & ordered_types = manager_->get_ordered_types();
+  const auto all_footprints = footprint_manager_->generate_all(
+    trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
+  const auto & footprint_types = footprint_manager_->get_footprint_types();
 
   if (all_footprints.empty()) {
     return tl::make_unexpected("Failed to generate any footprints for abnormalities");
@@ -444,14 +444,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & footprint_types_to_check = manager_->get_ordered_types();
+  const auto & footprint_types = footprint_manager_->get_footprint_types();
 
-  if (footprint_types_to_check.empty()) {
+  if (footprint_types.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
   }
 
   const auto is_empty = std::any_of(
-    footprint_types_to_check.begin(), footprint_types_to_check.end(),
+    footprint_types.begin(), footprint_types.end(),
     [&projections_to_bound, &side_key](const auto footprint_type) {
       return projections_to_bound[footprint_type][side_key].empty();
     });
@@ -460,14 +460,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return tl::make_unexpected(std::string(__func__) + ": projections to bound is empty.");
   }
 
-  const auto & fr_proj_to_bound = projections_to_bound[footprint_types_to_check.front()][side_key];
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_types.front()][side_key];
 
   const auto check_size = [&](const auto footprint_type) {
     return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
   };
 
-  const auto has_size_diff = std::any_of(
-    std::next(footprint_types_to_check.begin()), footprint_types_to_check.end(), check_size);
+  const auto has_size_diff =
+    std::any_of(std::next(footprint_types.begin()), footprint_types.end(), check_size);
 
   if (has_size_diff) {
     return tl::make_unexpected(
@@ -484,11 +484,11 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return lat_dist <= param_.th_trigger.th_dist_to_boundary_m[side_key].max;
   };
 
-  const auto fp_size = projections_to_bound[footprint_types_to_check.front()][side_key].size();
+  const auto fp_size = projections_to_bound[footprint_types.front()][side_key].size();
   min_to_bound.reserve(fp_size);
   for (size_t idx = 0; idx < fp_size; ++idx) {
     std::unique_ptr<ProjectionToBound> min_pt;
-    for (const auto footprint_type : footprint_types_to_check) {
+    for (const auto footprint_type : footprint_types) {
       const auto pt = projections_to_bound[footprint_type][side_key][idx];
       if (pt.ego_sides_idx != idx) {
         continue;
