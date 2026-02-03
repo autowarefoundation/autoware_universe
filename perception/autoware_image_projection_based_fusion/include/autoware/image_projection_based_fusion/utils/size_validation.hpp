@@ -23,9 +23,9 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <cmath>
+#include <limits>
 #include <map>
 #include <string>
-#include <limits>
 
 namespace autoware::image_projection_based_fusion
 {
@@ -49,10 +49,10 @@ struct ObjectSizeConstraints
 inline ObjectSizeConstraints getDefaultPedestrianConstraints()
 {
   ObjectSizeConstraints constraints;
-  constraints.min_length = 0.1;             // Very thin from front
-  constraints.max_length = 1.0;             // Wide stance or carrying items
-  constraints.min_width = 0.1;              // Minimum shoulder width
-  constraints.max_width = 1.0;              // With bags/umbrella
+  constraints.min_length = 0.1;  // Very thin from front
+  constraints.max_length = 1.0;  // Wide stance or carrying items
+  constraints.min_width = 0.1;   // Minimum shoulder width
+  constraints.max_width = 1.0;   // With bags/umbrella
   return constraints;
 }
 
@@ -99,8 +99,8 @@ inline bool calculateClusterDimensions(
 
   // Iterate through all points in the cluster
   size_t valid_points = 0;
-  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(cluster, "x"),
-       iter_y(cluster, "y"), iter_z(cluster, "z");
+  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(cluster, "x"), iter_y(cluster, "y"),
+       iter_z(cluster, "z");
        iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
     // Skip invalid points
     if (!std::isfinite(*iter_x) || !std::isfinite(*iter_y) || !std::isfinite(*iter_z)) {
@@ -137,8 +137,7 @@ inline bool calculateClusterDimensions(
  * @return Validation result with score and rejection reason if invalid
  */
 inline SizeValidationResult validatePedestrian3DSize(
-  const sensor_msgs::msg::PointCloud2 & cluster,
-  const PedestrianSizeValidationParams & params)
+  const sensor_msgs::msg::PointCloud2 & cluster, const PedestrianSizeValidationParams & params)
 {
   SizeValidationResult result;
 

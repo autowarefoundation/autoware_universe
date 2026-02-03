@@ -348,8 +348,7 @@ void RoiClusterFusionNode::postprocess(
 
 bool RoiClusterFusionNode::validateSizeForClass(
   const sensor_msgs::msg::PointCloud2 & cluster,
-  const sensor_msgs::msg::RegionOfInterest & cluster_roi,
-  const uint8_t label)
+  const sensor_msgs::msg::RegionOfInterest & cluster_roi, const uint8_t label)
 {
   // Currently only validate pedestrians, other classes pass through
   if (!isPedestrianLabel(label)) {

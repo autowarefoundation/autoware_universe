@@ -17,7 +17,6 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 #include "autoware/image_projection_based_fusion/utils/size_validation.hpp"
-
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
 #include <map>
@@ -71,8 +70,7 @@ private:
    */
   bool validateSizeForClass(
     const sensor_msgs::msg::PointCloud2 & cluster,
-    const sensor_msgs::msg::RegionOfInterest & cluster_roi,
-    const uint8_t label);
+    const sensor_msgs::msg::RegionOfInterest & cluster_roi, const uint8_t label);
 };
 
 }  // namespace autoware::image_projection_based_fusion
