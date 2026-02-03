@@ -458,22 +458,14 @@ LaneChangePath get_candidate_path(
   }
 
   return utils::lane_change::construct_candidate_path(
-    common_data_ptr, lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
+    lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
 }
 
 LaneChangePath construct_candidate_path(
-  const CommonDataPtr & common_data_ptr, const LaneChangeInfo & lane_change_info,
-  const PathWithLaneId & prepare_segment, const PathWithLaneId & target_lane_reference_path,
+  const LaneChangeInfo & lane_change_info, const PathWithLaneId & prepare_segment,
+  const PathWithLaneId & target_lane_reference_path,
   const std::vector<std::vector<int64_t>> & sorted_lane_ids)
 {
-  if (is_intersecting_no_lane_change_lines(
-        common_data_ptr->inverval_dist_no_lane_change_lines,
-        lane_change_info.length.prepare + (lane_change_info.length.lane_changing / 2),
-        common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer)) {
-    RCLCPP_INFO(get_logger(), "Path intersects no lane change lines.");
-    throw std::logic_error("Path intersects no lane change lines.");
-  }
-
   const auto & shift_line = lane_change_info.shift_line;
   const auto terminal_lane_changing_velocity = lane_change_info.terminal_lane_changing_velocity;
 
@@ -520,7 +512,6 @@ LaneChangePath construct_candidate_path(
             << yaw_diff_th << " radian threshold.";
     throw std::logic_error(err_msg.str());
   }
-
 
   LaneChangePath candidate_path;
   candidate_path.path = utils::combinePath(prepare_segment, shifted_path.path);
@@ -731,13 +722,6 @@ std::optional<LaneChangePath> get_candidate_path(
   info.length = {prepare_metric.length, lane_changing_candidate.lengths.back()};
   info.lane_changing_start = prepare_segment.points.back().point.pose;
   info.lane_changing_end = lane_changing_candidate.poses.back();
-
-  if (is_intersecting_no_lane_change_lines(
-        common_data_ptr->inverval_dist_no_lane_change_lines,
-        info.length.prepare + info.length.lane_changing / 2,
-        common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer)) {
-    throw std::logic_error("Path intersects no lane change lines.");
-  }
 
   ShiftLine sl;
 

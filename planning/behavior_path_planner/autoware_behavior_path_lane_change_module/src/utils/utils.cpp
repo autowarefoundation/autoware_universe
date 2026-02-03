@@ -1320,7 +1320,6 @@ bool is_intersecting_no_lane_change_lines(
   return ranges::any_of(inverval_dist_no_lane_change_lines, [&](const auto & interval) {
     const auto [start, end] = interval;
     ++i;
-    std::cerr << i << ") No lane change interval: [" << start << ", " << end << ", " << expected_intersecting_dist << "]\n";
     return expected_intersecting_dist >= (start - buffer) &&
            expected_intersecting_dist <= (end + buffer);
   });
