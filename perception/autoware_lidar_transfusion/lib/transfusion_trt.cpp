@@ -39,13 +39,12 @@ TransfusionTRT::TransfusionTRT(
   const DensificationParam & densification_param, TransfusionConfig config)
 : config_(std::move(config))
 {
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing/inner");
   initPtr();
   initTrt(trt_config);
-
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 }
 
 TransfusionTRT::~TransfusionTRT()
@@ -183,6 +182,10 @@ bool TransfusionTRT::preprocess(
     return false;
   }
 
+  const auto points_capacity_size = config_.cloud_capacity_ * config_.num_point_feature_size_;
+  cuda::clear_async(points_aux_d_.get(), points_capacity_size, stream_);
+  cuda::clear_async(points_d_.get(), points_capacity_size, stream_);
+
   cuda::clear_async(cls_output_d_.get(), cls_size_, stream_);
   cuda::clear_async(box_output_d_.get(), box_size_, stream_);
   cuda::clear_async(dir_cls_output_d_.get(), dir_cls_size_, stream_);
@@ -190,8 +193,6 @@ bool TransfusionTRT::preprocess(
   cuda::clear_async(voxel_num_d_.get(), voxel_num_size_, stream_);
   cuda::clear_async(voxel_idxs_d_.get(), voxel_idxs_size_, stream_);
   cuda::clear_async(params_input_d_.get(), 1, stream_);
-  cuda::clear_async(
-    points_aux_d_.get(), config_.cloud_capacity_ * config_.num_point_feature_size_, stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   const auto count = vg_ptr_->generateSweepPoints(msg_ptr, points_aux_d_);
