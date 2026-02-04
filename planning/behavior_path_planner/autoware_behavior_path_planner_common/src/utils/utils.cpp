@@ -18,8 +18,8 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/boundary_departure_checker/utils.hpp>
-#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
