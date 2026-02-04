@@ -23,6 +23,7 @@
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::boundary_departure_checker
@@ -33,18 +34,18 @@ class FootprintManager
 public:
   explicit FootprintManager(const std::vector<FootprintType> & footprint_types);
 
-  [[nodiscard]] std::vector<Footprints> generate_all(
+  [[nodiscard]] std::unordered_map<FootprintType, Footprints> generate_all(
     const TrajectoryPoints & pred_traj, const vehicle_info_utils::VehicleInfo & info,
     const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const Param & param) const;
 
-  [[nodiscard]] const std::vector<FootprintType> & get_footprint_types() const
+  [[nodiscard]] const std::vector<FootprintType> & get_footprint_type_order() const
   {
-    return footprint_types_;
+    return footprint_type_order_;
   }
 
 private:
   std::vector<std::unique_ptr<FootprintGenerator>> generator_;
-  std::vector<FootprintType> footprint_types_;
+  std::vector<FootprintType> footprint_type_order_;
 };
 
 }  // namespace autoware::boundary_departure_checker

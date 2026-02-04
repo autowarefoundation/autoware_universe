@@ -294,25 +294,23 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto trimmed_pred_traj =
     utils::trim_pred_path(predicted_traj, param_.th_cutoff_time_predicted_path_s);
 
-  const auto all_footprints = footprint_manager_->generate_all(
+  auto generated_footprints = footprint_manager_->generate_all(
     trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
-  const auto & footprint_types = footprint_manager_->get_footprint_types();
+  const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
-  if (all_footprints.empty()) {
+  if (generated_footprints.empty() || footprint_type_order.empty()) {
     return tl::make_unexpected("Failed to generate any footprints for abnormalities");
   }
 
   AbnormalitiesData abnormalities_data;
-  for (size_t i = 0; i < all_footprints.size(); ++i) {
-    const auto & type = ordered_types[i];
-    abnormalities_data.footprints[type] = all_footprints[i];
-    abnormalities_data.footprints_sides[type] = utils::get_sides_from_footprints(all_footprints[i]);
+  for (const auto type : footprint_type_order) {
+    abnormalities_data.footprints[type] = std::move(generated_footprints.at(type));
+    abnormalities_data.footprints_sides[type] =
+      utils::get_sides_from_footprints(abnormalities_data.footprints[type]);
   }
 
-  if (predicted_traj.empty()) {
-    return tl::make_unexpected("Ego predicted trajectory is empty");
-  }
-  const auto & normal_footprints = abnormalities_data.footprints_sides[FootprintType::NORMAL];
+  const auto & normal_footprints =
+    abnormalities_data.footprints_sides[footprint_type_order.front()];
 
   abnormalities_data.boundary_segments =
     get_boundary_segments(normal_footprints, trimmed_pred_traj);
@@ -323,8 +321,7 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
     return tl::make_unexpected("Unable to find any closest segments");
   }
 
-  for (size_t i = 0; i < all_footprints.size(); ++i) {
-    const auto & type = ordered_types[i];
+  for (const auto type : footprint_type_order) {
     abnormalities_data.projections_to_bound[type] = utils::get_closest_boundary_segments_from_side(
       trimmed_pred_traj, abnormalities_data.boundary_segments,
       abnormalities_data.footprints_sides[type]);
@@ -444,15 +441,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & footprint_types = footprint_manager_->get_footprint_types();
+  const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
-  if (footprint_types.empty()) {
+  if (footprint_type_order.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
   }
 
-  const auto is_empty = std::any_of(
-    footprint_types.begin(), footprint_types.end(),
-    [&projections_to_bound, &side_key](const auto footprint_type) {
+  const auto is_empty = ranges::any_of(
+    footprint_type_order, [&projections_to_bound, &side_key](const auto footprint_type) {
       return projections_to_bound[footprint_type][side_key].empty();
     });
 
@@ -460,14 +456,14 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return tl::make_unexpected(std::string(__func__) + ": projections to bound is empty.");
   }
 
-  const auto & fr_proj_to_bound = projections_to_bound[footprint_types.front()][side_key];
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
 
   const auto check_size = [&](const auto footprint_type) {
     return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
   };
 
   const auto has_size_diff =
-    std::any_of(std::next(footprint_types.begin()), footprint_types.end(), check_size);
+    std::any_of(std::next(footprint_type_order.begin()), footprint_type_order.end(), check_size);
 
   if (has_size_diff) {
     return tl::make_unexpected(
@@ -484,11 +480,11 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return lat_dist <= param_.th_trigger.th_dist_to_boundary_m[side_key].max;
   };
 
-  const auto fp_size = projections_to_bound[footprint_types.front()][side_key].size();
+  const auto fp_size = projections_to_bound[footprint_type_order.front()][side_key].size();
   min_to_bound.reserve(fp_size);
   for (size_t idx = 0; idx < fp_size; ++idx) {
     std::unique_ptr<ProjectionToBound> min_pt;
-    for (const auto footprint_type : footprint_types) {
+    for (const auto footprint_type : footprint_type_order) {
       const auto pt = projections_to_bound[footprint_type][side_key][idx];
       if (pt.ego_sides_idx != idx) {
         continue;
