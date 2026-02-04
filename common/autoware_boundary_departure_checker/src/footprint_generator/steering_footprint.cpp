@@ -85,7 +85,7 @@ Footprints SteeringFootprintGenerator::generate(
   for (auto i = 0UL; i + 1 < pred_traj.size(); ++i) {
     original_steering_changes.push_back(
       pred_traj[i + 1].front_wheel_angle_rad - pred_traj[i].front_wheel_angle_rad);
-   if (t >= config.delay_s) {
+    if (t >= config.delay_s) {
       if (!delayed_index) delayed_index = i;
       continue;
     }
