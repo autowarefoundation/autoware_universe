@@ -703,11 +703,13 @@ auto generate_half_lanelet(
     autoware::experimental::lanelet2_utils::get_centerline_with_offset(lanelet, offset);
 
   const auto original_left_bound =
-    !is_right ? lanelet::utils::getLeftBoundWithOffset(lanelet, expand_width_from_bound)
+    !is_right ? autoware::experimental::lanelet2_utils::get_left_bound_with_offset(
+                  lanelet, expand_width_from_bound)
               : offset_centerline;
   const auto original_right_bound =
     !is_right ? offset_centerline
-              : lanelet::utils::getRightBoundWithOffset(lanelet, expand_width_from_bound);
+              : autoware::experimental::lanelet2_utils::get_right_bound_with_offset(
+                  lanelet, expand_width_from_bound);
 
   for (const auto & pt : original_left_bound) {
     lefts.emplace_back(pt);
