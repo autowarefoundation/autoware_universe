@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/multi_frame_detection_aggregator.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/mat.hpp>
