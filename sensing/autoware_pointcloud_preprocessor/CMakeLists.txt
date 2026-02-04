@@ -336,6 +336,10 @@ if(BUILD_TESTING)
     test/blockage_diag/test_blockage_detection.cpp
   )
 
+  ament_add_gtest(test_dust_detection
+    test/blockage_diag/test_dust_detection.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
@@ -346,6 +350,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_detection pointcloud_preprocessor_filter)
+  target_link_libraries(test_dust_detection pointcloud_preprocessor_filter)
 
   add_ros_test(
     test/test_concatenate_node_component.py
