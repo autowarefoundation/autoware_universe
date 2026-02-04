@@ -134,8 +134,6 @@ public:
   std::size_t head_out_vel_size_{2};
 
   // post-process params
-  //   std::vector<float> score_upper_bounds_{};
-  // upper_bound_distance: [class_score_thresholds]
   std::vector<float> score_upper_bounds_{};
   std::vector<float> score_thresholds_{};
   float circle_nms_dist_threshold_{1.5f};
