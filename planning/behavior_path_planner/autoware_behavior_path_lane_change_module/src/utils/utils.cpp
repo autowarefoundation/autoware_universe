@@ -1016,7 +1016,8 @@ bool filter_target_lane_objects(
 
   const auto is_lateral_far = std::invoke([&]() -> bool {
     const auto dist_object_to_current_lanes_center =
-      lanelet::utils::getLateralDistanceToClosestLanelet(current_lanes, object.initial_pose);
+      autoware::experimental::lanelet2_utils::get_lateral_distance_to_centerline(
+        current_lanes, object.initial_pose);
     const auto lateral = dist_object_to_current_lanes_center - dist_ego_to_current_lanes_center;
     return std::abs(lateral) > (vehicle_width / 2);
   });

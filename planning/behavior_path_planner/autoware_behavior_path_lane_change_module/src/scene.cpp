@@ -1012,7 +1012,8 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
 
   const auto & lanes_polygon = *common_data_ptr_->lanes_polygon_ptr;
   const auto dist_ego_to_current_lanes_center =
-    lanelet::utils::getLateralDistanceToClosestLanelet(current_lanes, current_pose);
+    autoware::experimental::lanelet2_utils::get_lateral_distance_to_centerline(
+      current_lanes, current_pose);
 
   FilteredLanesObjects filtered_objects;
   const auto reserve_size = objects.objects.size();
@@ -1300,7 +1301,8 @@ bool NormalLaneChange::get_path_using_path_shifter(
     const auto & lane_changing_start_pose = prepare_segment.points.back().point.pose;
 
     const auto shift_length =
-      lanelet::utils::getLateralDistanceToClosestLanelet(target_lanes, lane_changing_start_pose);
+      autoware::experimental::lanelet2_utils::get_lateral_distance_to_centerline(
+        target_lanes, lane_changing_start_pose);
 
     lane_change_debug_.lane_change_metrics.emplace_back();
     auto & debug_metrics = lane_change_debug_.lane_change_metrics.back();
@@ -1466,7 +1468,8 @@ std::optional<PathWithLaneId> NormalLaneChange::compute_terminal_lane_change_pat
   const auto & lane_changing_start_pose = prepare_segment.points.back().point.pose;
   const auto & target_lanes = common_data_ptr_->lanes_ptr->target;
   const auto shift_length =
-    lanelet::utils::getLateralDistanceToClosestLanelet(target_lanes, lane_changing_start_pose);
+    autoware::experimental::lanelet2_utils::get_lateral_distance_to_centerline(
+      target_lanes, lane_changing_start_pose);
 
   const auto dist_lc_start_to_end_of_lanes = calculation::calc_dist_from_pose_to_terminal_end(
     common_data_ptr_, common_data_ptr_->lanes_ptr->target_neighbor,
