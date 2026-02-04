@@ -21,7 +21,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <magic_enum.hpp>
@@ -599,15 +599,17 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
   // Get the lanelets that will be queried for target objects
   const auto relevant_lanelets = std::invoke([&]() -> std::optional<lanelet::ConstLanelets> {
     lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(
-          target_lanes, ego_overhang_point_as_pose, &closest_lanelet))
+    const auto closest_lanelet_opt = autoware::experimental::lanelet2_utils::get_closest_lanelet(
+      target_lanes, ego_overhang_point_as_pose);
+    if (!closest_lanelet_opt) {
       return std::nullopt;
+    }
     // Check backwards just in case the Vehicle behind ego is in a different lanelet
     constexpr double backwards_length = 200.0;
     auto prev_lanes = autoware::behavior_path_planner::utils::getBackwardLanelets(
       *route_handler, target_lanes, ego_pose, backwards_length);
     // return all the relevant lanelets
-    lanelet::ConstLanelets relevant_lanelets{closest_lanelet};
+    lanelet::ConstLanelets relevant_lanelets{closest_lanelet_opt.value()};
     std::move(prev_lanes.begin(), prev_lanes.end(), std::back_inserter(relevant_lanelets));
     return relevant_lanelets;
   });
@@ -665,10 +667,12 @@ StartPlannerModule::getGapBetweenEgoAndLaneBorder(
     point_pose.position = autoware_utils::to_msg(point.to_3d());
     point_pose.orientation = ego_pose.orientation;
 
-    lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(target_lanes, point_pose, &closest_lanelet)) {
+    const auto closest_lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(target_lanes, point_pose);
+    if (!closest_lanelet_opt) {
       return std::nullopt;
     }
+    const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto [current_lane_bound, other_side_lane_bound] =
       get_lane_bound(ego_is_merging_from_the_left, closest_lanelet);
@@ -795,7 +799,14 @@ bool StartPlannerModule::isExecutionReady() const
   }
 
   if (!is_safe) {
-    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    if (previous_stop_pose_) {
+      stop_pose_ = previous_stop_pose_;
+    } else {
+      stop_pose_ = previous_stop_pose_ =
+        PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    }
+  } else {
+    previous_stop_pose_.reset();
   }
 
   return is_safe;
@@ -1004,9 +1015,18 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   const std::string stop_reason =
     !status_.is_safe_dynamic_objects ? "unsafe against dynamic objects" : "waiting approval";
 
-  stop_pose_ = utils::insert_feasible_stop_point(
-    stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop, stop_reason);
+  if (!stop_pose_ && previous_stop_pose_) {
+    stop_pose_ = previous_stop_pose_;
+  }
+  if (!stop_pose_) {
+    previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
+      stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+      parameters_->maximum_jerk_for_stop, stop_reason);
+  } else {
+    const auto stop_length =
+      motion_utils::calcSignedArcLength(stop_path.points, 0UL, stop_pose_->pose.position);
+    utils::insertStopPoint(stop_length, stop_path);
+  }
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
@@ -1154,7 +1174,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
 
     // Delete stop point if conditions are met
     if (status_.is_safe_dynamic_objects && isStopped()) {
-      stop_pose_ = std::nullopt;
+      previous_stop_pose_ = stop_pose_ = std::nullopt;
       status_.prev_stop_path_after_approval = nullptr;
       return getCurrentPath();
     }
@@ -1168,7 +1188,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   waitApproval();
   removeRTCStatus();
 
-  stop_pose_ = utils::insert_feasible_stop_point(
+  previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
     current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
     parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
 
@@ -1376,9 +1396,14 @@ PathWithLaneId StartPlannerModule::generateStopPath() const
     const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
       planner_data_,
       planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-    lanelet::Lanelet closest_lanelet;
-    lanelet::utils::query::getClosestLanelet(pull_out_lanes, pose, &closest_lanelet);
-    p.lane_ids.push_back(closest_lanelet.id());
+    const auto closest_lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(pull_out_lanes, pose);
+    if (!closest_lanelet_opt) {
+      throw std::runtime_error(
+        "erroneous implementation in StartPlannerModule::generateStopPath, closest_lanelet_opt is "
+        "not handled");
+    }
+    p.lane_ids.push_back(closest_lanelet_opt.value().id());
     return p;
   };
 
@@ -1731,8 +1756,14 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     return is_ignore ? std::make_optional(id) : std::nullopt;
   };
 
-  lanelet::Lanelet closest_lanelet;
-  lanelet::utils::query::getClosestLanelet(current_lanes, current_pose, &closest_lanelet);
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanes, current_pose);
+  if (!closest_lanelet_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in StartPlannerModule::calcTurnSignalInfo, closest_lanelet_opt is "
+      "not handled");
+  }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   if (is_ignore_signal(closest_lanelet.id())) {
     return getPreviousModuleOutput().turn_signal_info;

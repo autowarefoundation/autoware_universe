@@ -345,7 +345,7 @@ ProjectionToBound find_closest_segment(
  * @param ego_sides_from_footprints List of left/right segments derived from ego footprint polygons.
  * @return Closest projections to boundaries, separated by side.
  */
-ProjectionsToBound get_closest_boundary_segments_from_side(
+Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
   const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
   const EgoSides & ego_sides_from_footprints);
 
@@ -353,7 +353,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
  * @brief Generate filtered and sorted departure points from lateral projections to road
  * boundaries.
  *
- * This function creates `DeparturePoint` instances from a list of `ClosestProjectionToBound`
+ * This function creates `DeparturePoint` instances from a list of `ProjectionToBound`
  * by adjusting their longitudinal position with `lon_offset_m`, and applying hysteresis
  * threshold.
  *
@@ -371,7 +371,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const ProjectionsToBound & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m);
 
@@ -424,6 +424,11 @@ double calc_judge_line_dist_with_jerk_limit(
 
 std::optional<double> calc_signed_lateral_distance_to_boundary(
   const lanelet::ConstLineString3d & boundary, const Pose & reference_pose);
+
+std::optional<std::pair<double, double>> is_point_shifted(
+  const autoware::boundary_departure_checker::Pose & prev_iter_pt,
+  const autoware::boundary_departure_checker::Pose & curr_iter_pt, const double th_shift_m,
+  const double th_yaw_diff_rad);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
