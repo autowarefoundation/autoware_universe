@@ -20,9 +20,9 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/time.hpp>
 
@@ -295,10 +295,12 @@ struct PlannerData
     {
       const auto start_pose = path.points.at(shift_start_idx).point.pose;
       const auto start_shift_length =
-        lanelet::utils::getArcCoordinates(current_lanelets, start_pose).distance;
+        autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, start_pose)
+          .distance;
       const auto end_pose = path.points.at(shift_end_idx).point.pose;
       const auto end_shift_length =
-        lanelet::utils::getArcCoordinates(current_lanelets, end_pose).distance;
+        autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, end_pose)
+          .distance;
       shifted_path.shift_length.at(shift_start_idx) = start_shift_length;
       shifted_path.shift_length.at(shift_end_idx) = end_shift_length;
 
