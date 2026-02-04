@@ -49,8 +49,8 @@
   <arg name="tracker_publish_merged_objects"/>
 
   <!-- ML model parameters -->
-  <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
-  <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <let name="lidar_detection_model_type" value="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
+  <let name="lidar_detection_model_name" value="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
   <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
   <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
     <choice value="centerpoint_short_range"/>
@@ -79,23 +79,6 @@
     <choice value="radar"/>
   </arg>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-  <arg name="lidar_detection_model_type" default="$(var lidar_detection_model_type)">
-    <choice value="bevfusion"/>
-    <choice value="centerpoint"/>
-    <choice value="pointpainting"/>
-    <choice value="transfusion"/>
-    <choice value="apollo"/>
-    <choice value="clustering"/>
-  </arg>
-  <arg name="lidar_detection_model_name" default="$(var lidar_detection_model_name)">
-    <choice value="bevfusion_lidar"/>
-    <choice value="centerpoint"/>
-    <choice value="centerpoint_tiny"/>
-    <choice value="centerpoint_sigma"/>
-    <choice value="pointpainting"/>
-    <choice value="transfusion"/>
-    <choice value=""/>
-  </arg>
   <arg name="image_raw0" default="/sensing/camera/camera0/image_rect_color" description="image raw topic name"/>
   <arg name="camera_info0" default="/sensing/camera/camera0/camera_info" description="camera info topic name"/>
   <arg name="detection_rois0" default="/perception/object_recognition/detection/rois0" description="detection rois output topic name"/>

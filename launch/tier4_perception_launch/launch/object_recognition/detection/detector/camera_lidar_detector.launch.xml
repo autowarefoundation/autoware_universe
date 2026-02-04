@@ -12,15 +12,7 @@
     <choice value="apollo"/>
     <choice value="clustering"/>
   </arg>
-  <arg name="lidar_detection_model_name">
-    <choice value="bevfusion_lidar"/>
-    <choice value="centerpoint"/>
-    <choice value="centerpoint_tiny"/>
-    <choice value="centerpoint_sigma"/>
-    <choice value="pointpainting"/>
-    <choice value="transfusion"/>
-    <choice value=""/>
-  </arg>
+  <arg name="lidar_detection_model_name" description="options: `bevfusion_lidar`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`, `transfusion` (non-exhaustive)"/>
   <arg name="use_low_intensity_cluster_filter"/>
   <arg name="use_image_segmentation_based_filter"/>
 
