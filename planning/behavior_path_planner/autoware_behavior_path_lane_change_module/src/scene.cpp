@@ -24,6 +24,7 @@
 #include "autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -192,10 +193,11 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
   transient_data.target_lane_length =
     lanelet::geometry::length2d(lanelet::LaneletSequence(common_data_ptr_->lanes_ptr->target));
 
-  transient_data.current_lanes_ego_arc = lanelet::utils::getArcCoordinates(
-    common_data_ptr_->lanes_ptr->current, common_data_ptr_->get_ego_pose());
+  transient_data.current_lanes_ego_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      common_data_ptr_->lanes_ptr->current, common_data_ptr_->get_ego_pose());
 
-  transient_data.target_lanes_ego_arc = lanelet::utils::getArcCoordinates(
+  transient_data.target_lanes_ego_arc = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     common_data_ptr_->lanes_ptr->target, common_data_ptr_->get_ego_pose());
 
   transient_data.is_ego_near_current_terminal_start =
@@ -687,13 +689,15 @@ std::optional<PathWithLaneId> NormalLaneChange::extendPath()
     forward_path_length) {
     return std::nullopt;
   }
-  const auto dist_to_end_of_path =
-    lanelet::utils::getArcCoordinates(target_lanes, path.points.back().point.pose).length;
+  const auto dist_to_end_of_path = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                     target_lanes, path.points.back().point.pose)
+                                     .length;
 
   if (common_data_ptr_->lanes_ptr->target_lane_in_goal_section) {
     const auto goal_pose = getRouteHandler()->getGoalPose();
 
-    const auto dist_to_goal = lanelet::utils::getArcCoordinates(target_lanes, goal_pose).length;
+    const auto dist_to_goal =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, goal_pose).length;
 
     return getRouteHandler()->getCenterLinePath(target_lanes, dist_to_end_of_path, dist_to_goal);
   }
@@ -716,7 +720,7 @@ std::optional<PathWithLaneId> NormalLaneChange::extendPath()
   });
 
   const auto dist_to_target_pose =
-    lanelet::utils::getArcCoordinates(target_lanes, target_pose).length;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, target_pose).length;
 
   return getRouteHandler()->getCenterLinePath(
     target_lanes, dist_to_end_of_path, dist_to_target_pose);
@@ -1687,8 +1691,9 @@ bool NormalLaneChange::calcAbortPath()
 
   const auto abort_start_pose = lane_changing_path.points.at(abort_start_idx).point.pose;
   const auto abort_return_pose = lane_changing_path.points.at(abort_return_idx).point.pose;
-  const auto shift_length =
-    lanelet::utils::getArcCoordinates(reference_lanelets, abort_return_pose).distance;
+  const auto shift_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                              reference_lanelets, abort_return_pose)
+                              .distance;
 
   ShiftLine shift_line;
   shift_line.start = abort_start_pose;

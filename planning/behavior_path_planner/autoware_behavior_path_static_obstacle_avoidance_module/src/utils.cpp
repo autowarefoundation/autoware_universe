@@ -22,6 +22,7 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
 #include <Eigen/Dense>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
@@ -549,8 +550,9 @@ double getShiftableRatio(
  */
 double getDistanceToCenterline(const ObjectData & object, const AvoidancePlanningData & data)
 {
-  const double to_centerline =
-    lanelet::utils::getArcCoordinates(data.current_lanelets, object.getPose()).distance;
+  const double to_centerline = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                 data.current_lanelets, object.getPose())
+                                 .distance;
   return to_centerline;
 }
 
@@ -1047,8 +1049,9 @@ bool isSatisfiedWithNonVehicleCondition(
   }
 
   // Object is on center line -> ignore.
-  object.to_centerline =
-    lanelet::utils::getArcCoordinates(data.current_lanelets, object.getPose()).distance;
+  object.to_centerline = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                           data.current_lanelets, object.getPose())
+                           .distance;
   if (std::abs(object.to_centerline) < parameters->threshold_distance_object_is_on_center) {
     object.info = ObjectInfo::TOO_NEAR_TO_CENTERLINE;
     return false;
@@ -1757,7 +1760,8 @@ lanelet::ConstLanelets getExtendLanes(
   while (rclcpp::ok()) {
     const double lane_length =
       lanelet::geometry::length2d(lanelet::LaneletSequence(extend_lanelets));
-    const auto arc_coordinates = lanelet::utils::getArcCoordinates(extend_lanelets, ego_pose);
+    const auto arc_coordinates =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(extend_lanelets, ego_pose);
     const auto forward_length = lane_length - arc_coordinates.length;
 
     if (forward_length > planner_data->parameters.forward_path_length) {
