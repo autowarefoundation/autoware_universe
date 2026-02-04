@@ -76,6 +76,7 @@ private:
   TrajectoryVelocityOptimizerParams velocity_params_;
   std::shared_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>
     sub_planning_velocity_;
+  rclcpp::Publisher<VelocityLimit>::SharedPtr pub_velocity_limit_;
 };
 }  // namespace autoware::trajectory_optimizer::plugin
 

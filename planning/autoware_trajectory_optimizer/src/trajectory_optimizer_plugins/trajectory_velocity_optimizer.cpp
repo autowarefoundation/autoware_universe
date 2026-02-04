@@ -38,6 +38,15 @@ void TrajectoryVelocityOptimizer::initialize(
   sub_planning_velocity_ =
     std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
       node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
+
+  pub_velocity_limit_ = node_ptr->create_publisher<VelocityLimit>(
+    "~/output/current_velocity_limit_mps", rclcpp::QoS{1}.transient_local());
+
+  // publish default max velocity
+  VelocityLimit max_vel_msg{};
+  max_vel_msg.stamp = node_ptr->now();
+  max_vel_msg.max_velocity = static_cast<float>(velocity_params_.default_max_velocity_mps);
+  pub_velocity_limit_->publish(max_vel_msg);
 }
 
 void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
@@ -83,11 +92,14 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   }
 
   if (velocity_params_.limit_speed) {
-    const auto latest_external_velocity_limit = sub_planning_velocity_->take_data();
-    const auto max_speed_mps = latest_external_velocity_limit
-                                 ? static_cast<float>(latest_external_velocity_limit->max_velocity)
+    const auto external_velocity_limit = sub_planning_velocity_->take_data();
+    const auto max_speed_mps = (external_velocity_limit)
+                                 ? static_cast<float>(external_velocity_limit->max_velocity)
                                  : static_cast<float>(velocity_params_.default_max_velocity_mps);
     trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
+    if (external_velocity_limit) {
+      pub_velocity_limit_->publish(*external_velocity_limit);
+    }
   }
 
   if (velocity_params_.smooth_velocities) {
