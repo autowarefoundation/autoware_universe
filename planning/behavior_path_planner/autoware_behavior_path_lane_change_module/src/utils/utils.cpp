@@ -29,6 +29,7 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 // for the svg mapper
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
@@ -248,7 +249,8 @@ std::vector<std::vector<int64_t>> get_sorted_lane_ids(const CommonDataPtr & comm
   const auto & current_pose = common_data_ptr->get_ego_pose();
 
   const auto rough_shift_length =
-    lanelet::utils::getArcCoordinates(target_lanes, current_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, current_pose)
+      .distance;
 
   std::vector<std::vector<int64_t>> sorted_lane_ids{};
   sorted_lane_ids.reserve(target_lanes.size());
