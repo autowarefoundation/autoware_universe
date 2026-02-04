@@ -408,8 +408,9 @@ std::optional<lanelet::CompoundPolygon3d> generate_attention_area(
   // `blind_ego_side_path_boundary_before_turning`, so latter part of
   // `backward_road_lane_offset_boundary` is ignored
   const double sign = (turn_direction == TurnDirection::Left) ? 1.0 : -1.0;
-  const auto backward_road_lane_offset_boundary = lanelet::utils::getCenterlineWithOffset(
-    road_lanelets_before_turning_merged, sign * ego_width / 2.0, 3.0 /* [m] */);
+  const auto backward_road_lane_offset_boundary =
+    autoware::experimental::lanelet2_utils::get_centerline_with_offset(
+      road_lanelets_before_turning_merged, sign * ego_width / 2.0, 3.0 /* [m] */);
   const auto & blind_ego_side_path_boundary_before_turning =
     blind_ego_side_path_boundary_before_turning_opt.value();
   for (const auto & point : backward_road_lane_offset_boundary) {
