@@ -62,7 +62,6 @@ inline ObjectSizeConstraints getDefaultPedestrianConstraints()
 struct SizeValidationResult
 {
   bool is_valid = false;
-  double size_score = 0.0;  // 0.0 to 1.0
 };
 
 /**
@@ -164,7 +163,6 @@ inline SizeValidationResult validatePedestrian3DSize(
     1.0 - std::abs(width - typical_width) / (params.max_width - params.min_width);
 
   result.is_valid = true;
-  result.size_score = std::max(0.0, width_score);
   return result;
 }
 
