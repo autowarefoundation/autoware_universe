@@ -155,7 +155,9 @@ lanelet::ConstLanelets extend_lanelet(
   const geometry_msgs::msg::Pose & ref_point, const double distance_th)
 {
   lanelet::ConstLanelets extended_lanelets{ll};
-  auto current_arc_length = lanelet::utils::getArcCoordinates(extended_lanelets, ref_point).length;
+  auto current_arc_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(extended_lanelets, ref_point)
+      .length;
   if (current_arc_length >= distance_th) return extended_lanelets;
 
   lanelet::ConstLanelets prev_lanelets = {ll};

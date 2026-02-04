@@ -15,8 +15,8 @@
 #include "remaining_distance_time_calculator_node.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
@@ -217,8 +217,8 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 
   remaining_distance_ = std::invoke([&]() -> double {
     // remaining distance in current lanelet (if it is not the goal lanelet)
-    lanelet::ArcCoordinates arc_coord =
-      lanelet::utils::getArcCoordinates({current_lanelet}, current_vehicle_pose_);
+    lanelet::ArcCoordinates arc_coord = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      {current_lanelet}, current_vehicle_pose_);
     double this_lanelet_length = lanelet::geometry::length2d(current_lanelet);
     double dist_in_current_lanelet =
       (current_lanelet.id() != goal_lanelet_.id()) ? this_lanelet_length - arc_coord.length : 0.0;
@@ -234,8 +234,11 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
     // remaining distance in goal lanelet
     double dist_in_goal_lanelet =
       (current_lanelet.id() != goal_lanelet_.id())
-        ? lanelet::utils::getArcCoordinates({goal_lanelet_}, goal_pose_).length
-        : lanelet::utils::getArcCoordinates({goal_lanelet_}, goal_pose_).length - arc_coord.length;
+        ? autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lanelet_}, goal_pose_)
+            .length
+        : autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lanelet_}, goal_pose_)
+              .length -
+            arc_coord.length;
     return std::max(dist_in_current_lanelet + middle_lanes_distance + dist_in_goal_lanelet, 0.0);
   });
 }

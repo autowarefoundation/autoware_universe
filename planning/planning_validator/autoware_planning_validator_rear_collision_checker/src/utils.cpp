@@ -14,6 +14,7 @@
 
 #include "utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -359,7 +360,8 @@ auto check_turn_behavior(
   const auto & route_handler = context->data->route_handler;
   const auto & vehicle_info = context->vehicle_info;
 
-  const auto ego_coordinate_on_arc = lanelet::utils::getArcCoordinates(lanelets, ego_pose);
+  const auto ego_coordinate_on_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, ego_pose);
 
   const auto distance_to_stop_point =
     autoware::motion_utils::calcDistanceToForwardStopPoint(points, ego_pose);
@@ -682,7 +684,8 @@ auto generate_detection_polygon(
   const lanelet::ConstLanelets & lanelets, const geometry_msgs::msg::Pose & ego_pose,
   const double forward_distance, const double backward_distance) -> lanelet::BasicPolygon3d
 {
-  const auto ego_coordinate_on_arc = lanelet::utils::getArcCoordinates(lanelets, ego_pose).length;
+  const auto ego_coordinate_on_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, ego_pose).length;
   const auto polygon = lanelet::utils::getPolygonFromArcLength(
     lanelets, ego_coordinate_on_arc - backward_distance, ego_coordinate_on_arc + forward_distance);
   return polygon.basicPolygon();
