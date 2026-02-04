@@ -16,8 +16,8 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -132,7 +132,8 @@ std::pair<double, bool> calcEndArcLength(
     return {s_forward_length, false};
   }
 
-  const double s_goal = lanelet::utils::getArcCoordinates(road_lanes, goal_pose).length;
+  const double s_goal =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, goal_pose).length;
 
   // If the goal is behind the start or beyond the forward length, use forward length.
   if (s_goal < s_start || s_goal >= s_forward_length) {
