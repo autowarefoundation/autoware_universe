@@ -56,7 +56,6 @@
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
 using autoware::universe_utils::normalizeRadian;
