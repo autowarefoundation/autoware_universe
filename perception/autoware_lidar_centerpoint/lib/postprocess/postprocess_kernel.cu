@@ -106,7 +106,7 @@ __global__ void generateBoxes3D_kernel(
 
   // Index = distance_bucket_index * class_size + label since row = num of distance buckets and
   // column = num of classes
-  float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
+  const float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
 
   // If the score is less than the class score threshold, then we set the score to 0, and stop
   // processing
