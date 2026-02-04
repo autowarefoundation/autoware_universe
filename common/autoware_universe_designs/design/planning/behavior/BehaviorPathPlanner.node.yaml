@@ -39,12 +39,12 @@ outputs:
     message_type: tier4_planning_msgs/msg/StopReasonArray
 parameters:
   - name: launch_modules
-    type: string
-    default: >
-      autoware::behavior_path_planner::LaneChangeRightModuleManager,
-      autoware::behavior_path_planner::LaneChangeLeftModuleManager,
-      autoware::behavior_path_planner::ObstacleAvoidanceModuleManager,
-      autoware::behavior_path_planner::GoalPlannerModuleManager
+    type: string_array
+    default:
+      - autoware::behavior_path_planner::LaneChangeRightModuleManager
+      - autoware::behavior_path_planner::LaneChangeLeftModuleManager
+      - autoware::behavior_path_planner::ObstacleAvoidanceModuleManager
+      - autoware::behavior_path_planner::GoalPlannerModuleManager
 parameter_files:
   - name: behavior_path_planner_param
     default: $(find-pkg-share autoware_behavior_path_planner)/config/behavior_path_planner.param.yaml
