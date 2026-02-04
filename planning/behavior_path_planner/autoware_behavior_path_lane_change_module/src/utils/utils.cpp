@@ -1257,4 +1257,70 @@ void trim_preferred_after_alternative(
   base_lanes.erase(first_pref_after_alt_it, base_lanes.end());
 }
 
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction)
+{
+  std::vector<lanelet::ConstLineString3d> no_lane_change_lines;
+  no_lane_change_lines.reserve(target_lanes.size());
+
+  for (const auto & ll : target_lanes) {
+    const auto & ls = (direction == Direction::LEFT) ? ll.leftBound() : ll.rightBound();
+
+    // 1. Check if the physical line is solid
+    const bool is_solid =
+      (ls.attributeOr(lanelet::AttributeName::Subtype, "") == lanelet::AttributeValueString::Solid);
+
+    // 2. Check for explicit lane_change permission tags
+    const std::string lane_change_val = ls.attributeOr("lane_change", "");
+
+    const bool explicit_no = (lane_change_val == "no");
+    const bool explicit_yes = (lane_change_val == "yes");
+
+    if ((is_solid && !explicit_yes) || explicit_no) {
+      no_lane_change_lines.push_back(ls);
+    }
+  }
+
+  return no_lane_change_lines;
+}
+
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const PathWithLaneId & centerline_path, const Pose & ego_pose)
+{
+  std::vector<std::pair<double, double>> interval;
+
+  for (const auto & line : no_lane_change_lines) {
+    const auto & start = line.front();
+
+    const auto dist_front = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(start.x(), start.y(), start.z()));
+
+    const auto & back = line.back();
+    const auto dist_back = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(back.x(), back.y(), back.z()));
+
+    if (dist_front <= dist_back) {
+      interval.emplace_back(dist_front, dist_back);
+    } else {
+      interval.emplace_back(dist_back, dist_front);
+    }
+  }
+
+  return interval;
+}
+
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
+  const double expected_intersecting_dist, const double buffer)
+{
+  return ranges::any_of(interval_dist_no_lane_change_lines, [&](const auto & interval) {
+    const auto [start, end] = interval;
+    return expected_intersecting_dist >= (start - buffer) &&
+           expected_intersecting_dist <= (end + buffer);
+  });
+}
+
 }  // namespace autoware::behavior_path_planner::utils::lane_change

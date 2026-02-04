@@ -501,5 +501,40 @@ bool is_lanelet_in_lanelet_collections(
  */
 void trim_preferred_after_alternative(
   lanelet::ConstLanelets & base_lanes, const lanelet::ConstLanelets & preferred_lanes);
+
+/**
+ * @brief Extract line strings that prohibit lane changes from target lanes.
+ *
+ * @param target_lanes  Lanelet sequence to extract boundaries from.
+ * @param direction     Direction (LEFT or RIGHT) indicating which boundary to check.
+ * @return Vector of line strings where lane changes are prohibited.
+ */
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction);
+
+/**
+ * @brief Convert no-lane-change line strings to distance intervals along the centerline path.
+ *
+ * @param no_lane_change_lines  Line strings marking no-lane-change zones.
+ * @param centerline_path       Reference path for distance calculations.
+ * @param ego_pose              Current ego vehicle pose used as distance reference point.
+ * @return Vector of distance intervals [start, end] representing no-lane-change zones.
+ */
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const PathWithLaneId & centerline_path, const Pose & ego_pose);
+
+/**
+ * @brief Check if a distance point intersects with any no-lane-change interval.
+ *
+ * @param interval_dist_no_lane_change_lines  Distance intervals where lane changes are prohibited.
+ * @param expected_intersecting_dist          Distance point to check for intersection.
+ * @param buffer                              Additional buffer distance added to both ends of each
+ * interval.
+ * @return True if the distance point falls within at least one buffered interval, false otherwise.
+ */
+bool is_intersecting_no_lane_change_lines(
+  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
+  const double expected_intersecting_dist, const double buffer);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_
