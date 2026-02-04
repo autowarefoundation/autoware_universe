@@ -349,13 +349,13 @@ void RoiClusterFusionNode::postprocess(
 bool RoiClusterFusionNode::validateSizeForClass(
   const sensor_msgs::msg::PointCloud2 & cluster, const uint8_t label)
 {
-  // Currently only validate pedestrians, other classes pass through
-  if (!isPedestrianLabel(label)) {
-    return true;
+  // NOTE: Currently only validate pedestrians, the other classes are passed through
+  switch (label) {
+    case ObjectClassification::PEDESTRIAN:
+      return validatePedestrianSize(cluster, pedestrian_size_params_);
+    default:
+      return true;
   }
-
-  // Perform pedestrian-specific size validation using cluster pointcloud
-  return validatePedestrianSize(cluster, pedestrian_size_params_);
 }
 
 }  // namespace autoware::image_projection_based_fusion

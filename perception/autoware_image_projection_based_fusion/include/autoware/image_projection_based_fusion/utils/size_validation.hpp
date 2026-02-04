@@ -168,16 +168,6 @@ inline bool validatePedestrianSize(
   return true;
 }
 
-/**
- * @brief Check if the given label is a pedestrian
- * @param label Object classification label
- * @return True if the label is PEDESTRIAN
- */
-inline bool isPedestrianLabel(const uint8_t label)
-{
-  return label == ObjectClassification::PEDESTRIAN;
-}
-
 }  // namespace autoware::image_projection_based_fusion
 
 #endif  // AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__UTILS__SIZE_VALIDATION_HPP_
