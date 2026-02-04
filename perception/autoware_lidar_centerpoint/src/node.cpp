@@ -38,10 +38,16 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
-  const std::vector<double> score_thresholds_double =
-    this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
-  const std::vector<float> score_thresholds(
-    score_thresholds_double.begin(), score_thresholds_double.end());
+  const std::string model_params_version =
+    this->declare_parameter<std::string>("model_params.model_params_version");
+  if (model_params_version != "1.0.0") {
+    RCLCPP_ERROR_STREAM(
+      rclcpp::get_logger(this->logger_name_.c_str()),
+      "The model_params_version is not supported: " + model_params_version);
+    throw std::invalid_argument(
+      "The model_params_version is not supported: " + model_params_version);
+  }
+
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
@@ -76,6 +82,16 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
   const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
 
+  // Distance-based score thresholds
+  const std::vector<double> score_upper_bounds_double =
+    this->declare_parameter<std::vector<double>>("model_params.score_thresholds.upper_bounds");
+  const std::vector<double> score_thresholds_double =
+    this->declare_parameter<std::vector<double>>("model_params.score_thresholds.thresholds");
+  const std::vector<float> score_upper_bounds(
+    score_upper_bounds_double.begin(), score_upper_bounds_double.end());
+  const std::vector<float> score_thresholds(
+    score_thresholds_double.begin(), score_thresholds_double.end());
+
   // Set up logger name
   this->logger_name_ = this->declare_parameter<std::string>("logger_name", "lidar_centerpoint");
 
@@ -107,7 +123,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   }
   CenterPointConfig config(
     class_names_.size(), point_feature_size, cloud_capacity, max_voxel_size, point_cloud_range,
-    voxel_size, downsample_factor, encoder_in_feature_size, score_thresholds,
+    voxel_size, downsample_factor, encoder_in_feature_size, score_upper_bounds, score_thresholds,
     circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_, this->logger_name_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
