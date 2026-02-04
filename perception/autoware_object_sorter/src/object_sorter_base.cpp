@@ -117,30 +117,14 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   ObjsMsgType output_objects;
   output_objects.header = input_msg->header;
 
-  double tx;
-  double ty;
-  double cos_yaw;
-  double sin_yaw;
+  geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame;
   // Even when it failed to get the transform, we still can do the velocity check
   bool transform_success = false;
   try {
-    const geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame =
-      tf_buffer_.lookupTransform(
-        range_calc_frame_id_,        // target frame
-        input_msg->header.frame_id,  // source frame
-        input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
-
-    // Extract translation
-    tx = tf_input_frame_to_target_frame.transform.translation.x;
-    ty = tf_input_frame_to_target_frame.transform.translation.y;
-
-    // Extract yaw from quaternion
-    const geometry_msgs::msg::Quaternion & q = tf_input_frame_to_target_frame.transform.rotation;
-    const tf2::Quaternion tf_q(q.x, q.y, q.z, q.w);
-    const double yaw = tf2::getYaw(tf_q);
-
-    cos_yaw = std::cos(yaw);
-    sin_yaw = std::sin(yaw);
+    tf_input_frame_to_target_frame = tf_buffer_.lookupTransform(
+      range_calc_frame_id_,        // target frame
+      input_msg->header.frame_id,  // source frame
+      input_msg->header.stamp, rclcpp::Duration::from_seconds(0.5));
 
     transform_success = true;
   } catch (tf2::TransformException & ex) {
@@ -161,14 +145,14 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
     }
 
     if (transform_success) {
-      // We will check the condition in 2D (x-y)
-      const double object_x = object.kinematics.pose_with_covariance.pose.position.x;
-      const double object_y = object.kinematics.pose_with_covariance.pose.position.y;
-      const double object_x_in_target_frame = object_x * cos_yaw - object_y * sin_yaw + tx;
-      const double object_y_in_target_frame = object_x * sin_yaw + object_y * cos_yaw + ty;
+      geometry_msgs::msg::PointStamped object_point;
+      object_point.point = object.kinematics.pose_with_covariance.pose.position;
+      geometry_msgs::msg::PointStamped object_point_transformed;
+      tf2::doTransform(object_point, object_point_transformed, tf_input_frame_to_target_frame);
 
-      const double object_diff_x = object_x_in_target_frame - range_calc_offset_x_;
-      const double object_diff_y = object_y_in_target_frame - range_calc_offset_y_;
+      // We will check the condition in 2D (x-y)
+      const double object_diff_x = object_point_transformed.point.x - range_calc_offset_x_;
+      const double object_diff_y = object_point_transformed.point.y - range_calc_offset_y_;
 
       if (!label_settings.isInTargetRange(object_diff_x, object_diff_y)) {
         continue;

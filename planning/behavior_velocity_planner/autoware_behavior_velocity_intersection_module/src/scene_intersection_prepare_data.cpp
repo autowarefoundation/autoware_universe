@@ -22,7 +22,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -34,6 +33,7 @@
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
 #include <list>
@@ -252,7 +252,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   // attention_area for the first time
   const auto local_footprint = planner_data_->vehicle_info_.createFootprint(0.0, 0.0);
   const std::optional<size_t> first_footprint_inside_1st_attention_ip_opt =
-    util::getFirstPointInsidePolygonByFootprint(
+    util::getLastPointOutsidePolygonByFootprint(
       first_attention_area, interpolated_path_info, local_footprint, baselink2front);
   if (!first_footprint_inside_1st_attention_ip_opt) {
     return std::nullopt;
@@ -404,7 +404,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
       // NOTE: when ego vehicle is approaching attention area and already passed
       // first_conflicting_area, this could be null.
       // ==========================================================================================
-      const auto stuck_stopline_idx_ip_opt = util::getFirstPointInsidePolygonByFootprint(
+      const auto stuck_stopline_idx_ip_opt = util::getLastPointOutsidePolygonByFootprint(
         first_conflicting_area, interpolated_path_info, local_footprint, baselink2front);
       if (!stuck_stopline_idx_ip_opt) {
         return {0, false};
@@ -682,8 +682,9 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
       if (inserted.second) detection_and_preceding_lanelets.push_back(ll);
       // get preceding lanelets without ego_lanelets
       // to prevent the detection area from including the ego lanes and its' preceding lanes.
-      const auto lanelet_sequences = lanelet::utils::query::getPrecedingLaneletSequences(
-        routing_graph_ptr, ll, length, ego_lanelets);
+      const auto lanelet_sequences =
+        autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
+          ll, routing_graph_ptr, length, ego_lanelets);
       for (const auto & ls : lanelet_sequences) {
         for (const auto & l : ls) {
           const auto & inner_inserted = detection_ids.insert(l.id());

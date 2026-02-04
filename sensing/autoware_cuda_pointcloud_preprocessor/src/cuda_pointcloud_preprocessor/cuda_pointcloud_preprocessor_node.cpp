@@ -21,7 +21,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
-#include <agnocast/agnocast_subscription.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/point_types/types.hpp>
 

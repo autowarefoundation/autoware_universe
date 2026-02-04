@@ -2,6 +2,17 @@
 Changelog for package yabloc_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Map and Localization Component) (`#11787 <https://github.com/autowarefoundation/autoware_universe/issues/11787>`_)
+  * localization component toBinMsg replacement
+  * map component fromBinMsg replacement
+  * localization component fromBinMsg replacement
+  * remove unused dep from localization/autoware_pose_estimator_arbiter
+  ---------
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
