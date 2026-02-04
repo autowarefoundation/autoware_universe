@@ -27,6 +27,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <utility>
 
 namespace autoware::image_projection_based_fusion
 {
@@ -60,11 +61,11 @@ struct PedestrianSizeValidationParams
  * @param width Output: width (y dimension) in meters
  * @return True if dimensions were successfully calculated (x-y footprint only; no z-axis)
  */
-inline bool calculateClusterDimensions(
-  const sensor_msgs::msg::PointCloud2 & cluster, double & length, double & width)
+inline std::optional<std::pair<double, double>> calculateClusterDimensions(
+  const sensor_msgs::msg::PointCloud2 & cluster)
 {
   if (cluster.data.empty()) {
-    return false;
+    return std::nullopt;
   }
 
   // Initialize min/max values (x-y only)
@@ -91,19 +92,19 @@ inline bool calculateClusterDimensions(
   }
 
   if (valid_points == 0) {
-    return false;
+    return std::nullopt;
   }
 
   // Calculate dimensions (x-y footprint only)
-  length = max_x - min_x;
-  width = max_y - min_y;
+  double length = max_x - min_x;
+  double width = max_y - min_y;
 
   // Ensure non-zero dimensions
   if (length <= 0.0 || width <= 0.0) {
-    return false;
+    return std::nullopt;
   }
 
-  return true;
+  return std::make_pair(length, width);
 }
 
 /**
@@ -116,16 +117,23 @@ inline bool isPedestrian3DSizeValidated(
   const sensor_msgs::msg::PointCloud2 & cluster, const PedestrianSizeValidationParams & params)
 {
   // Calculate dimensions from pointcloud cluster (x-y footprint only)
-  double length, width;
-  if (!calculateClusterDimensions(cluster, length, width)) {
+  const auto dimensions = calculateClusterDimensions(cluster);
+  if (!dimensions.has_value()) {
     return false;
   }
 
-  // Check width
-  if (width < params.min_width) {
+  // Check length
+  if (dimensions->first < params.min_width) {
     return false;
   }
-  if (width > params.max_width) {
+  if (dimensions->first > params.max_width) {
+    return false;
+  }
+  // Check width
+  if (dimensions->second < params.min_width) {
+    return false;
+  }
+  if (dimensions->second > params.max_width) {
     return false;
   }
   return true;
