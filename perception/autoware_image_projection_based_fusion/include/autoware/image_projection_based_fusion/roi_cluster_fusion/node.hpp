@@ -68,9 +68,7 @@ private:
    * @param label The object classification label
    * @return True if the object passes size validation (or is not a pedestrian)
    */
-  bool validateSizeForClass(
-    const sensor_msgs::msg::PointCloud2 & cluster,
-    const sensor_msgs::msg::RegionOfInterest & cluster_roi, const uint8_t label);
+  bool validateSizeForClass(const sensor_msgs::msg::PointCloud2 & cluster, const uint8_t label);
 };
 
 }  // namespace autoware::image_projection_based_fusion

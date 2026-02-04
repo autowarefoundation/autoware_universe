@@ -33,30 +33,6 @@ namespace autoware::image_projection_based_fusion
 using autoware_perception_msgs::msg::ObjectClassification;
 
 /**
- * @brief Size constraints for different object classes
- */
-struct ObjectSizeConstraints
-{
-  double min_length;  // x dimension (front-back) [m]
-  double max_length;
-  double min_width;  // y dimension (side-to-side) [m]
-  double max_width;
-};
-
-/**
- * @brief Default pedestrian size constraints based on real-world measurements
- */
-inline ObjectSizeConstraints getDefaultPedestrianConstraints()
-{
-  ObjectSizeConstraints constraints;
-  constraints.min_length = 0.1;  // Very thin from front
-  constraints.max_length = 1.0;  // Wide stance or carrying items
-  constraints.min_width = 0.1;   // Minimum shoulder width
-  constraints.max_width = 1.0;   // With bags/umbrella
-  return constraints;
-}
-
-/**
  * @brief Result of size validation
  */
 struct SizeValidationResult
@@ -175,9 +151,7 @@ inline SizeValidationResult validatePedestrian3DSize(
  * @return True if the object passes pedestrian size validation
  */
 inline bool validatePedestrianSize(
-  const sensor_msgs::msg::PointCloud2 & cluster,
-  [[maybe_unused]] const sensor_msgs::msg::RegionOfInterest & cluster_roi,
-  const PedestrianSizeValidationParams & params)
+  const sensor_msgs::msg::PointCloud2 & cluster, const PedestrianSizeValidationParams & params)
 {
   if (!params.enable_size_validation) {
     return true;  // Validation disabled
