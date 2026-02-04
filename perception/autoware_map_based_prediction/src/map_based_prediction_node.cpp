@@ -798,15 +798,14 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
   if (
     object.kinematics.orientation_availability ==
     autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN) {
-      const auto original_yaw =
-        tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-      // flip the angle
-      object.kinematics.pose_with_covariance.pose.orientation =
-        autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
+    const auto original_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+    // flip the angle
+    object.kinematics.pose_with_covariance.pose.orientation =
+      autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
 
-      // flip the vector
-      object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
-      object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
+    // flip the vector
+    object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
+    object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
   }
 
   return;
