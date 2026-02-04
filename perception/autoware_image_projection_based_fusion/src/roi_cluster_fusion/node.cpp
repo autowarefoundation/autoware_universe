@@ -190,15 +190,14 @@ void RoiClusterFusionNode::fuse_on_single_image(
     double max_iou = 0.0;
     const auto obj_label = getHighestProbLabel(feature_obj.object.classification);
     const float obj_class_iou_threshold = iou_threshold_.get_class_iou_thresh(obj_label);
-
+    auto image_roi = feature_obj.feature.roi;
+    sanitizeROI(image_roi, camera_info.width, camera_info.height);
     const bool is_roi_label_known = obj_label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
       bool use_rough_iou_match = is_far_enough(
         input_cluster_msg.feature_objects.at(cluster_map.first), strict_iou_fusion_distance_);
-      auto image_roi = feature_obj.feature.roi;
       auto cluster_roi = cluster_map.second;
-      sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
       if (use_rough_iou_match || (!is_roi_label_known)) {
         iou = cal_iou_by_mode(cluster_roi, image_roi, rough_iou_match_mode_);
@@ -229,18 +228,11 @@ void RoiClusterFusionNode::fuse_on_single_image(
         // Get the label from the image ROI
         const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
 
-        // Perform size validation for specific classes (especially pedestrians)
-        auto image_roi = feature_obj.feature.roi;
-        auto cluster_roi = m_cluster_roi.at(index);
-        sanitizeROI(image_roi, camera_info.width, camera_info.height);
-        sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
-
         // Get the cluster pointcloud for 3D size validation
         const auto & cluster_pointcloud =
           input_cluster_msg.feature_objects.at(index).feature.cluster;
 
-        const bool passes_size_validation =
-          validateSizeForClass(cluster_pointcloud, roi_label);
+        const bool passes_size_validation = validateSizeForClass(cluster_pointcloud, roi_label);
 
         if (passes_size_validation) {
           fused_object.classification = feature_obj.object.classification;
