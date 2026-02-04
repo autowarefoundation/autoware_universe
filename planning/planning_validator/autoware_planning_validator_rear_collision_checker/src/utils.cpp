@@ -699,7 +699,8 @@ auto generate_half_lanelet(
   lanelet::Points3d lefts, rights;
 
   const double offset = !is_right ? ignore_width_from_centerline : -ignore_width_from_centerline;
-  const auto offset_centerline = lanelet::utils::getCenterlineWithOffset(lanelet, offset);
+  const auto offset_centerline =
+    autoware::experimental::lanelet2_utils::get_centerline_with_offset(lanelet, offset);
 
   const auto original_left_bound =
     !is_right ? lanelet::utils::getLeftBoundWithOffset(lanelet, expand_width_from_bound)
