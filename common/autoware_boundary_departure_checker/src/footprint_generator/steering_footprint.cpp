@@ -62,7 +62,7 @@ Footprints SteeringFootprintGenerator::generate(
   const Param & param, [[maybe_unused]] const FootprintMargin & uncertainty_fp_margin)
 {
   const auto config_opt = param.get_abnormality_config<SteeringConfig>(type_);
-  if (!config_opt) {
+  if (!config_opt || pred_traj.empty()) {
     return {};
   }
   const auto & config = config_opt->get();
@@ -70,18 +70,13 @@ Footprints SteeringFootprintGenerator::generate(
   std::vector<autoware_utils_geometry::LinearRing2d> vehicle_footprints;
   vehicle_footprints.reserve(pred_traj.size());
   const auto local_vehicle_footprint = info.createFootprint(0.0, 0.0, 0.0, 0.0, 0.0, true);
-  if (pred_traj.size() < 2) {
-    for (const auto & p : pred_traj) {
-      vehicle_footprints.push_back(
-        autoware_utils_geometry::transform_vector(
-          local_vehicle_footprint, autoware_utils_geometry::pose2transform(p.pose)));
-      return vehicle_footprints;
-    }
-  }
 
   vehicle_footprints.push_back(
     autoware_utils_geometry::transform_vector(
       local_vehicle_footprint, autoware_utils_geometry::pose2transform(pred_traj.front().pose)));
+
+  if (pred_traj.size() < 2) return vehicle_footprints;
+
   std::vector<double> original_steering_changes;
   original_steering_changes.reserve(pred_traj.size());
   auto t = 0.0;
