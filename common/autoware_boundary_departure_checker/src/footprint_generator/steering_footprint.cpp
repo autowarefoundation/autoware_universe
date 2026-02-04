@@ -85,18 +85,16 @@ Footprints SteeringFootprintGenerator::generate(
   for (auto i = 0UL; i + 1 < pred_traj.size(); ++i) {
     original_steering_changes.push_back(
       pred_traj[i + 1].front_wheel_angle_rad - pred_traj[i].front_wheel_angle_rad);
-    if (t >= config.delay_s) {
-      if (!delayed_index) {
-        delayed_index = i;
-      }
-    } else {
-      vehicle_footprints.push_back(
-        autoware_utils_geometry::transform_vector(
-          local_vehicle_footprint, autoware_utils_geometry::pose2transform(pred_traj[i].pose)));
-      const auto dt = rclcpp::Duration(pred_traj[i + 1].time_from_start) -
-                      rclcpp::Duration(pred_traj[i].time_from_start);
-      t += dt.seconds();
+   if (t >= config.delay_s) {
+      if (!delayed_index) delayed_index = i;
+      continue;
     }
+    vehicle_footprints.push_back(
+      autoware_utils_geometry::transform_vector(
+        local_vehicle_footprint, autoware_utils_geometry::pose2transform(pred_traj[i].pose)));
+    const auto dt = rclcpp::Duration(pred_traj[i + 1].time_from_start) -
+                    rclcpp::Duration(pred_traj[i].time_from_start);
+    t += dt.seconds();
   }
   if (!delayed_index) {
     delayed_index = 0UL;
