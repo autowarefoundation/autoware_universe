@@ -571,7 +571,16 @@ lanelet::ConstLanelets generateExpandedLanelets(
 {
   const auto left_extend_offset = (direction == Direction::LEFT) ? left_offset : 0.0;
   const auto right_extend_offset = (direction == Direction::RIGHT) ? -right_offset : 0.0;
-  return lanelet::utils::getExpandedLanelets(lanes, left_extend_offset, right_extend_offset);
+
+  const auto expand_lanelets_opt =
+    autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      lanes, left_extend_offset, right_extend_offset);
+  if (expand_lanelets_opt.has_value()) {
+    return *expand_lanelets_opt;
+  } else {
+    RCLCPP_WARN(get_logger(), "Failed to expand lanelets, return original lanelets");
+    return lanes;
+  }
 }
 
 rclcpp::Logger getLogger(const std::string & type)
