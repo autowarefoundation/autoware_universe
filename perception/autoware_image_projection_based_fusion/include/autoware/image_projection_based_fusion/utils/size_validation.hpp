@@ -22,6 +22,7 @@
 #include <sensor_msgs/msg/region_of_interest.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -111,35 +112,23 @@ inline bool calculateClusterDimensions(
  * @param params Validation parameters
  * @return Validation result with score and rejection reason if invalid
  */
-inline SizeValidationResult validatePedestrian3DSize(
+inline bool isPedestrian3DSizeValidated(
   const sensor_msgs::msg::PointCloud2 & cluster, const PedestrianSizeValidationParams & params)
 {
-  SizeValidationResult result;
-
   // Calculate dimensions from pointcloud cluster (x-y footprint only)
   double length, width;
   if (!calculateClusterDimensions(cluster, length, width)) {
-    result.is_valid = false;
-    return result;
+    return false;
   }
 
   // Check width
   if (width < params.min_width) {
-    result.is_valid = false;
-    return result;
+    return false;
   }
   if (width > params.max_width) {
-    result.is_valid = false;
-    return result;
+    return false;
   }
-
-  // Calculate size score based on how well width matches typical pedestrian
-  const double typical_width = 0.5;
-  const double width_score =
-    1.0 - std::abs(width - typical_width) / (params.max_width - params.min_width);
-
-  result.is_valid = true;
-  return result;
+  return true;
 }
 
 /**
@@ -159,8 +148,7 @@ inline bool validatePedestrianSize(
 
   // Check 3D size from pointcloud cluster
   if (!cluster.data.empty()) {
-    auto size_result = validatePedestrian3DSize(cluster, params);
-    if (!size_result.is_valid) {
+    if (!isPedestrian3DSizeValidated(cluster, params)) {
       return false;
     }
   }

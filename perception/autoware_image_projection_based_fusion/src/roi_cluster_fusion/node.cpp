@@ -240,7 +240,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
           input_cluster_msg.feature_objects.at(index).feature.cluster;
 
         const bool passes_size_validation =
-          validateSizeForClass(cluster_pointcloud, cluster_roi, roi_label);
+          validateSizeForClass(cluster_pointcloud, roi_label);
 
         if (passes_size_validation) {
           fused_object.classification = feature_obj.object.classification;
