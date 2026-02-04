@@ -612,11 +612,15 @@ auto get_previous_polygons_with_lane_recursively(
 
   if (route_handler->getPreviousLanelets(target_lanes.front()).empty()) {
     const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
-    const auto expand_lanelets =
-      lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
-    const auto polygon = lanelet::utils::getPolygonFromArcLength(
-      expand_lanelets, total_length - s2, total_length - s1);
-    ret.emplace_back(polygon.basicPolygon(), target_lanes);
+    const auto expand_lanelets_opt =
+      autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+        target_lanes, left_offset, -1.0 * right_offset);
+    if (expand_lanelets_opt.has_value()) {
+      const auto expand_lanelets = expand_lanelets_opt.value();
+      const auto polygon = lanelet::utils::getPolygonFromArcLength(
+        expand_lanelets, total_length - s2, total_length - s1);
+      ret.emplace_back(polygon.basicPolygon(), target_lanes);
+    }
     return ret;
   }
 
@@ -627,11 +631,15 @@ auto get_previous_polygons_with_lane_recursively(
         [&prev_lane](const auto & lane) { return lane.id() == prev_lane.id(); });
       const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(target_lanes));
       if (overlap_current_lanes) {
-        const auto expand_lanelets =
-          lanelet::utils::getExpandedLanelets(target_lanes, left_offset, -1.0 * right_offset);
-        const auto polygon = lanelet::utils::getPolygonFromArcLength(
-          expand_lanelets, total_length - s2, total_length - s1);
-        ret.emplace_back(polygon.basicPolygon(), target_lanes);
+        const auto expand_lanelets_opt =
+          autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+            target_lanes, left_offset, -1.0 * right_offset);
+        if (expand_lanelets_opt.has_value()) {
+          const auto expand_lanelets = expand_lanelets_opt.value();
+          const auto polygon = lanelet::utils::getPolygonFromArcLength(
+            expand_lanelets, total_length - s2, total_length - s1);
+          ret.emplace_back(polygon.basicPolygon(), target_lanes);
+        }
 
         continue;
       }
@@ -643,11 +651,15 @@ auto get_previous_polygons_with_lane_recursively(
     {
       const auto total_length = lanelet::geometry::length2d(lanelet::LaneletSequence(pushed_lanes));
       if (total_length > s2) {
-        const auto expand_lanelets =
-          lanelet::utils::getExpandedLanelets(pushed_lanes, left_offset, -1.0 * right_offset);
-        const auto polygon = lanelet::utils::getPolygonFromArcLength(
-          expand_lanelets, total_length - s2, total_length - s1);
-        ret.emplace_back(polygon.basicPolygon(), pushed_lanes);
+        const auto expand_lanelets_opt =
+          autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+            pushed_lanes, left_offset, -1.0 * right_offset);
+        if (expand_lanelets_opt.has_value()) {
+          const auto expand_lanelets = expand_lanelets_opt.value();
+          const auto polygon = lanelet::utils::getPolygonFromArcLength(
+            expand_lanelets, total_length - s2, total_length - s1);
+          ret.emplace_back(polygon.basicPolygon(), pushed_lanes);
+        }
       } else {
         const auto polygons = get_previous_polygons_with_lane_recursively(
           current_lanes, pushed_lanes, s1, s2, route_handler, left_offset, right_offset);
