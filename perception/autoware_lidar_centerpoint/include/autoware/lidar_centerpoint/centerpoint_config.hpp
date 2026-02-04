@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__LIDAR_CENTERPOINT__CENTERPOINT_CONFIG_HPP_
 #define AUTOWARE__LIDAR_CENTERPOINT__CENTERPOINT_CONFIG_HPP_
 
+#include <algorithm>
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -134,7 +136,7 @@ public:
   // post-process params
   //   std::vector<float> score_upper_bounds_{};
   // upper_bound_distance: [class_score_thresholds]
-  std : vector<float> score_upper_bounds_{};
+  std::vector<float> score_upper_bounds_{};
   std::vector<float> score_thresholds_{};
   float circle_nms_dist_threshold_{1.5f};
   std::vector<float> yaw_norm_thresholds_{};

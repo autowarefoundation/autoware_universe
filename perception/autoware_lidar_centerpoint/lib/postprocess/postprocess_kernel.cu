@@ -32,7 +32,7 @@ namespace autoware::lidar_centerpoint
 struct is_score_keep
 {
   __device__ bool operator()(const Box3D & b) { return b.score > 0.0; }
-}
+};
 
 struct is_kept
 {
@@ -53,10 +53,10 @@ __global__ void generateBoxes3D_kernel(
   const float * out_heatmap, const float * out_offset, const float * out_z, const float * out_dim,
   const float * out_rot, const float * out_vel, const float voxel_size_x, const float voxel_size_y,
   const float range_min_x, const float range_min_y, const std::size_t down_grid_size_x,
-  const std::size_t down_grid_size_y, const std::size_t downsample_factor, const int class_size, ,
+  const std::size_t down_grid_size_y, const std::size_t downsample_factor, const int class_size,
   const float * score_upper_bounds, const float * score_thresholds,
-  const int num_score_upper_bounds, const bool has_variance, const float * yaw_norm_thresholds,
-  Box3D * det_boxes3d)
+  const std::size_t num_score_upper_bounds, const bool has_variance,
+  const float * yaw_norm_thresholds, Box3D * det_boxes3d)
 {
   // generate boxes3d from the outputs of the network.
   // shape of out_*: (N, DOWN_GRID_SIZE_Y, DOWN_GRID_SIZE_X)
@@ -104,14 +104,13 @@ __global__ void generateBoxes3D_kernel(
     return;
   }
 
-  float score = yaw_norm >= yaw_norm_thresholds[label] ? max_score : 0.f;
   // Index = distance_bucket_index * class_size + label since row = num of distance buckets and
   // column = num of classes
   float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
 
   // If the score is less than the class score threshold, then we set the score to 0, and stop
   // processing
-  if (score < class_score_threshold) {
+  if (max_score < class_score_threshold) {
     det_boxes3d[idx].score = 0.f;
     return;
   }
@@ -127,7 +126,13 @@ __global__ void generateBoxes3D_kernel(
   const float vel_y = out_vel[down_grid_size * 1 + idx];
 
   det_boxes3d[idx].label = label;
-  det_boxes3d[idx].score = score;
+  det_boxes3d[idx].score = yaw_norm >= yaw_norm_thresholds[label] ? max_score : 0.f;
+
+  // If the score is 0, then we stop processing
+  if (det_boxes3d[idx].score == 0.f) {
+    return;
+  }
+
   det_boxes3d[idx].x = x;
   det_boxes3d[idx].y = y;
   det_boxes3d[idx].z = z;

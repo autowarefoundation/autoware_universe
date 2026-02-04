@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     model_params:
-      model_params_version: "1.0.0"
+      params_version: "1.0.0"
       class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
       point_feature_size: 4
       max_voxel_size: 40000

@@ -24,6 +24,7 @@
 #include <pcl_ros/transforms.hpp>
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -39,7 +40,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
   const std::string model_params_version =
-    this->declare_parameter<std::string>("model_params.model_params_version");
+    this->declare_parameter<std::string>("model_params.params_version");
+
   if (model_params_version != "1.0.0") {
     RCLCPP_ERROR_STREAM(
       rclcpp::get_logger(this->logger_name_.c_str()),

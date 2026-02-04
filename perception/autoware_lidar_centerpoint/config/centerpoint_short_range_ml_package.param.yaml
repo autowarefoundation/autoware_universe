@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     model_params:
+      params_version: "1.0.0"
       class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
       point_feature_size: 4
       max_voxel_size: 40000
@@ -10,3 +11,16 @@
       encoder_in_feature_size: 10
       has_variance: false
       has_twist: false
+      score_thresholds:
+        # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
+        # [0-50m), [50.0-90m), [90.0-121.0m), [121.0-200.0m), set a very high number for the last one to be safe
+        upper_bounds: [50.0, 90.0, 121.0, 200.0]
+        # Number of thresholds must match with number of upper_bounds * number of classes
+        # Column: Number of classes, row: Number of upper_bounds
+        thresholds: [
+          # CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+          0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+          0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+          0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+          0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+        ]

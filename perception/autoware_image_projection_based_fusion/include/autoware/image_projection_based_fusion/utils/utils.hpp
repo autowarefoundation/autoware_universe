@@ -43,11 +43,7 @@
 #include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
 #include <sensor_msgs/msg/camera_info.hpp>
 
-#if __has_include(<image_geometry/pinhole_camera_model.hpp>)
-#include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
-#else
-#include <image_geometry/pinhole_camera_model.h>  // for ROS 2 Humble or older
-#endif
+#include <image_geometry/pinhole_camera_model.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -66,19 +62,6 @@ struct PointData
   float distance;
   size_t orig_index;
   pcl::PointXYZ orig_point;
-};
-
-struct ObjClassIoUThresh
-{
-  float UNKNOWN;
-  float CAR;
-  float TRUCK;
-  float BUS;
-  float TRAILER;
-  float MOTORCYCLE;
-  float BICYCLE;
-  float PEDESTRIAN;
-  float get_class_iou_thresh(const uint8_t label);
 };
 
 bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info);
