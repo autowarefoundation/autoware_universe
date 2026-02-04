@@ -21,7 +21,6 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -35,11 +34,10 @@ void TrajectoryVelocityOptimizer::initialize(
   TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
 
   set_up_params();
-  sub_planning_velocity_ = node_ptr->create_subscription<VelocityLimit>(
-    "~/input/external_velocity_limit_mps", rclcpp::QoS{1},
-    [this](const VelocityLimit::ConstSharedPtr msg) {
-      latest_external_velocity_limit_opt_ = *msg;
-    });
+
+  sub_planning_velocity_ =
+    std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
+      node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
 }
 
 void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
@@ -85,12 +83,10 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   }
 
   if (velocity_params_.limit_speed) {
-    const auto max_param_speed_mps = static_cast<float>(velocity_params_.max_speed_mps);
-    const auto max_speed_mps =
-      (latest_external_velocity_limit_opt_.has_value())
-        ? std::min(latest_external_velocity_limit_opt_->max_velocity, max_param_speed_mps)
-        : max_param_speed_mps;
-
+    const auto latest_external_velocity_limit = sub_planning_velocity_->take_data();
+    const auto max_speed_mps = latest_external_velocity_limit
+                                 ? static_cast<float>(latest_external_velocity_limit->max_velocity)
+                                 : static_cast<float>(velocity_params_.default_max_velocity_mps);
     trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
   }
 
@@ -119,10 +115,10 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.target_pull_out_speed_mps");
   velocity_params_.target_pull_out_acc_mps2 = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.target_pull_out_acc_mps2");
-  velocity_params_.max_speed_mps =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_velocity_optimizer.max_speed_mps");
   velocity_params_.max_lateral_accel_mps2 = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.max_lateral_accel_mps2");
+  velocity_params_.default_max_velocity_mps =
+    get_or_declare_parameter<double>(*node_ptr, "max_vel");
   velocity_params_.set_engage_speed =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.set_engage_speed");
   velocity_params_.limit_speed =
@@ -150,8 +146,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
   update_param(
     parameters, "trajectory_velocity_optimizer.target_pull_out_acc_mps2",
     velocity_params_.target_pull_out_acc_mps2);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.max_speed_mps", velocity_params_.max_speed_mps);
   update_param(
     parameters, "trajectory_velocity_optimizer.max_lateral_accel_mps2",
     velocity_params_.max_lateral_accel_mps2);
