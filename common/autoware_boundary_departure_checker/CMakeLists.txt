@@ -9,6 +9,11 @@ ament_auto_add_library(boundary_departure_checker_utils SHARED
   src/steering_abnormality_utils.cpp
   src/utils.cpp
   src/debug.cpp
+  src/footprint_generator/normal_footprint.cpp
+  src/footprint_generator/localization_footprint.cpp
+  src/footprint_generator/longitudinal_footprint.cpp
+  src/footprint_generator/steering_footprint.cpp
+  src/footprint_generator/footprint_manager.cpp
 )
 
 ament_auto_add_library(uncrossable_boundary_departure_checker SHARED

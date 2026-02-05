@@ -185,7 +185,7 @@ skinparam backgroundColor #WHITE
 title Getting abnormalities data
 start
 :Generate initial margin footprint's margin\nconsidering current pose's covariance;
-:Generate footprints for all AbnormalityType;
+:Generate footprints for all FootprintType;
 :Find segments nearest to ego's predicted path.\nThe segments are separated to left and right;
 :Project left side of ego to the nearest left segment,\nand right side of ego to the nearest right segment;
 
