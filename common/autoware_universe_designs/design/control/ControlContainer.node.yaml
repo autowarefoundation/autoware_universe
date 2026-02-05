@@ -1,6 +1,6 @@
 autoware_system_design_format: v0.1.0
 
-name: MissionPlanningContainer.node
+name: ControlContainer.node
 
 launch:
   package: autoware_launch
@@ -18,7 +18,7 @@ parameters:
     default: true
   - name: container_name
     type: string
-    default: mission_planner_container
+    default: control_container
 
 # processes
 processes:

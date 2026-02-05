@@ -2,28 +2,63 @@ autoware_system_design_format: v0.1.0
 
 name: Control.module
 instances:
+  - name: control_container
+    entity: ControlContainer.node
   - name: trajectory_follower
     entity: TrajectoryFollower.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: shift_decider
     entity: ShiftDecider.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: vehicle_cmd_gate
     entity: VehicleCmdGate.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: operation_mode_transition_manager
     entity: OperationModeTransitionManager.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: external_cmd_selector
     entity: ExternalCmdSelector.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: external_cmd_converter
     entity: ExternalCmdConverter.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: lane_departure_checker
     entity: LaneDepartureChecker.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: control_validator
     entity: ControlValidator.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: autonomous_emergency_braking
     entity: AutonomousEmergencyBraking.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: collision_detector
     entity: CollisionDetector.node
+    launch:
+      use_container: true
+      container_name: control_container
   - name: control_evaluator
     entity: ControlEvaluator.node
+    launch:
+      use_container: true
+      container_name: control_container
 
 external_interfaces:
   input:

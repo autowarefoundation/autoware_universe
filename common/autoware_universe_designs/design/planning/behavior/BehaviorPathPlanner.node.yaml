@@ -43,7 +43,7 @@ parameters:
     default:
       - autoware::behavior_path_planner::LaneChangeRightModuleManager
       - autoware::behavior_path_planner::LaneChangeLeftModuleManager
-      - autoware::behavior_path_planner::ObstacleAvoidanceModuleManager
+      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
       - autoware::behavior_path_planner::GoalPlannerModuleManager
 parameter_files:
   - name: behavior_path_planner_param

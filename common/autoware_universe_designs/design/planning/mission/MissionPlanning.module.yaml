@@ -6,10 +6,19 @@ instances:
     entity: MissionPlanningContainer.node
   - name: mission_planner
     entity: MissionPlanner.node
+    launch:
+      use_container: true
+      container_name: mission_planner_container
   - name: route_selector
     entity: RouteSelector.node
+    launch:
+      use_container: true
+      container_name: mission_planner_container
   - name: goal_pose_visualizer
     entity: GoalPoseVisualizer.node
+    launch:
+      use_container: true
+      container_name: mission_planner_container
 external_interfaces:
   input:
     - name: vector_map
