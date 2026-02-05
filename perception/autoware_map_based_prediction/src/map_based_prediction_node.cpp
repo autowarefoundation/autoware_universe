@@ -784,12 +784,6 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
     return;
   }
 
-  // Compute yaw angle from the velocity and position of the object
-  const auto & object_pose = object.kinematics.pose_with_covariance.pose;
-  const auto & object_twist = object.kinematics.twist_with_covariance.twist;
-  const auto future_object_pose = autoware_utils::calc_offset_pose(
-    object_pose, object_twist.linear.x * 0.1, object_twist.linear.y * 0.1, 0.0);
-
   // assumption: the object vx is much larger than vy
   if (object.kinematics.twist_with_covariance.twist.linear.x >= 0.0) return;
 
@@ -800,26 +794,19 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
   constexpr double min_abs_speed = 1e-1;  // 0.1 m/s
   if (abs_object_speed < min_abs_speed) return;
 
-  switch (object.kinematics.orientation_availability) {
-    case autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN: {
-      const auto original_yaw =
-        tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-      // flip the angle
-      object.kinematics.pose_with_covariance.pose.orientation =
-        autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
-      break;
-    }
-    default: {
-      const auto updated_object_yaw =
-        autoware_utils::calc_azimuth_angle(object_pose.position, future_object_pose.position);
+  // invert yaw to align with tracked movement when state is SIGN_UNKNOWN
+  if (
+    object.kinematics.orientation_availability ==
+    autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN) {
+    const auto original_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+    // flip the angle
+    object.kinematics.pose_with_covariance.pose.orientation =
+      autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
 
-      object.kinematics.pose_with_covariance.pose.orientation =
-        autoware_utils::create_quaternion_from_yaw(updated_object_yaw);
-      break;
-    }
+    // flip the vector
+    object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
+    object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
   }
-  object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
-  object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
 
   return;
 }
