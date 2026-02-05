@@ -10,8 +10,7 @@
       target_pull_out_acc_mps2: 1.0   # [m/s²] Target acceleration during pull-out
       set_engage_speed: false         # Set minimum speed during engage
 
-      # Speed limiting
-      max_speed_mps: 13.88             # [m/s] Maximum allowed speed (30 km/h default)
+      # Speed limiting (uses external_velocity_limit topic to set max speed)
       limit_speed: true               # Enable speed limiting
 
       # Lateral acceleration limiting

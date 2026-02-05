@@ -394,12 +394,6 @@
               "minimum": 0,
               "description": "Target acceleration during pull-out maneuver [m/s²]"
             },
-            "max_speed_mps": {
-              "type": "number",
-              "default": 8.33,
-              "minimum": 0,
-              "description": "Maximum allowed speed [m/s]"
-            },
             "max_lateral_accel_mps2": {
               "type": "number",
               "default": 1.5,
@@ -432,7 +426,6 @@
             "nearest_yaw_threshold_deg",
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
-            "max_speed_mps",
             "max_lateral_accel_mps2",
             "set_engage_speed",
             "limit_speed",
