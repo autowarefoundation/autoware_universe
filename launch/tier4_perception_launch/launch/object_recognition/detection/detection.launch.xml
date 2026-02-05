@@ -91,6 +91,7 @@
   <!-- Parameter paths -->
   <arg name="sync_param_path"/>
   <arg name="voxel_grid_based_euclidean_param_path"/>
+  <arg name="irregular_object_detector_param_path"/>
 
   <!-- internal interfaces -->
   <let name="pointcloud_filter/output/pointcloud" value="$(var ns)/pointcloud_map_filtered/pointcloud"/>
@@ -257,6 +258,7 @@
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="output/objects" value="$(var irregular_object_pipeline/output/objects)"/>
       <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
+      <arg name="sync_param_path" value="$(var sync_param_path)"/>
     </include>
   </group>
   <group if="$(var switch/detector/lidar_dnn)">
