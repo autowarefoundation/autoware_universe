@@ -26,6 +26,7 @@
 #include <cmath>
 #include <memory>
 #include <string>
+#include <vector>
 
 class BlockageDiagIntegrationTest : public ::testing::Test
 {
