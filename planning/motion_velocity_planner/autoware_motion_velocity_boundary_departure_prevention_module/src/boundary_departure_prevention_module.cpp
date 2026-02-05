@@ -99,40 +99,39 @@ void BoundaryDeparturePreventionModule::update_parameters(
   const std::string ns_localization_abnormality{ns_abnormality + "localization."};
   const std::string ns_longitudinal_abnormality{ns_abnormality + "longitudinal."};
 
-  const auto has_type = [&](const AbnormalityType type_to_check) {
+  const auto has_type = [&](const FootprintType type_to_check) {
     return std::any_of(
-      pp.bdc_param.abnormality_types_to_compensate.begin(),
-      pp.bdc_param.abnormality_types_to_compensate.end(),
-      [&](const AbnormalityType type) { return type == type_to_check; });
+      pp.bdc_param.footprint_types_to_check.begin(), pp.bdc_param.footprint_types_to_check.end(),
+      [&](const FootprintType type) { return type == type_to_check; });
   };
 
-  const auto update_types_to_compensate = [&](const AbnormalityType type, const std::string & ns) {
+  const auto update_types_to_compensate = [&](const FootprintType type, const std::string & ns) {
     const auto original_compensate = has_type(type);
     bool new_compensate{};
     if (update_param(parameters, ns + "enable", new_compensate)) {
       if (new_compensate && !original_compensate) {
-        pp.bdc_param.abnormality_types_to_compensate.push_back(type);
+        pp.bdc_param.footprint_types_to_check.push_back(type);
       } else if (!new_compensate && original_compensate) {
-        pp.bdc_param.abnormality_types_to_compensate.erase(
+        pp.bdc_param.footprint_types_to_check.erase(
           std::remove(
-            pp.bdc_param.abnormality_types_to_compensate.begin(),
-            pp.bdc_param.abnormality_types_to_compensate.end(), type),
-          pp.bdc_param.abnormality_types_to_compensate.end());
+            pp.bdc_param.footprint_types_to_check.begin(),
+            pp.bdc_param.footprint_types_to_check.end(), type),
+          pp.bdc_param.footprint_types_to_check.end());
       }
     }
   };
-  update_types_to_compensate(AbnormalityType::NORMAL, ns_normal_abnormality);
+  update_types_to_compensate(FootprintType::NORMAL, ns_normal_abnormality);
   NormalConfig normal_config =
-    pp.bdc_param.get_abnormality_config<NormalConfig>(AbnormalityType::NORMAL).value();
+    pp.bdc_param.get_abnormality_config<NormalConfig>(FootprintType::NORMAL).value();
   const std::string footprint_envelop_ns{ns_normal_abnormality + "footprint_envelop."};
   update_param(parameters, footprint_envelop_ns + "lat_m", normal_config.footprint_envelop.lat_m);
   update_param(parameters, footprint_envelop_ns + "lon_m", normal_config.footprint_envelop.lon_m);
-  configs.insert_or_assign(AbnormalityType::NORMAL, normal_config);
+  configs.insert_or_assign(FootprintType::NORMAL, normal_config);
 
-  const auto update_steer_params = [&](const auto steer_abnormality_type, const auto & ns) {
-    update_types_to_compensate(steer_abnormality_type, ns);
+  const auto update_steer_params = [&](const auto steer_footprint_type, const auto & ns) {
+    update_types_to_compensate(steer_footprint_type, ns);
     SteeringConfig steering_config =
-      pp.bdc_param.get_abnormality_config<SteeringConfig>(steer_abnormality_type).value();
+      pp.bdc_param.get_abnormality_config<SteeringConfig>(steer_footprint_type).value();
     update_param(parameters, ns + "delay_s", steering_config.delay_s);
     update_param(parameters, ns + "factor", steering_config.factor);
     update_param(parameters, ns + "offset_rps", steering_config.offset_rps);
@@ -141,20 +140,20 @@ void BoundaryDeparturePreventionModule::update_parameters(
       steering_config.steering_rate_velocities_mps);
     update_param(
       parameters, ns + "steering_rate_limits_rps", steering_config.steering_rate_limits_rps);
-    configs.insert_or_assign(steer_abnormality_type, steering_config);
+    configs.insert_or_assign(steer_footprint_type, steering_config);
   };
   const std::string ns_steering_abnormality_accelerated{ns_abnormality + "steering_accelerated."};
-  update_steer_params(AbnormalityType::STEERING_ACCELERATED, ns_steering_abnormality_accelerated);
+  update_steer_params(FootprintType::STEERING_ACCELERATED, ns_steering_abnormality_accelerated);
   const std::string ns_steering_abnormality_stuck{ns_abnormality + "steering_stuck."};
-  update_steer_params(AbnormalityType::STEERING_STUCK, ns_steering_abnormality_stuck);
+  update_steer_params(FootprintType::STEERING_STUCK, ns_steering_abnormality_stuck);
   const std::string ns_steering_abnormality_sudden_left{ns_abnormality + "steering_sudden_left."};
-  update_steer_params(AbnormalityType::STEERING_SUDDEN_LEFT, ns_steering_abnormality_sudden_left);
+  update_steer_params(FootprintType::STEERING_SUDDEN_LEFT, ns_steering_abnormality_sudden_left);
   const std::string ns_steering_abnormality_sudden_right{ns_abnormality + "steering_sudden_right."};
-  update_steer_params(AbnormalityType::STEERING_SUDDEN_RIGHT, ns_steering_abnormality_sudden_right);
+  update_steer_params(FootprintType::STEERING_SUDDEN_RIGHT, ns_steering_abnormality_sudden_right);
 
-  update_types_to_compensate(AbnormalityType::LOCALIZATION, ns_localization_abnormality);
+  update_types_to_compensate(FootprintType::LOCALIZATION, ns_localization_abnormality);
   LocalizationConfig localization_config =
-    pp.bdc_param.get_abnormality_config<LocalizationConfig>(AbnormalityType::LOCALIZATION).value();
+    pp.bdc_param.get_abnormality_config<LocalizationConfig>(FootprintType::LOCALIZATION).value();
   const std::string localization_footprint_envelop_ns{
     ns_localization_abnormality + "footprint_envelop."};
   update_param(
@@ -163,17 +162,17 @@ void BoundaryDeparturePreventionModule::update_parameters(
   update_param(
     parameters, localization_footprint_envelop_ns + "lon_m",
     localization_config.footprint_envelop.lon_m);
-  configs.insert_or_assign(AbnormalityType::LOCALIZATION, localization_config);
+  configs.insert_or_assign(FootprintType::LOCALIZATION, localization_config);
 
-  update_types_to_compensate(AbnormalityType::LOCALIZATION, ns_longitudinal_abnormality);
+  update_types_to_compensate(FootprintType::LOCALIZATION, ns_longitudinal_abnormality);
   LongitudinalConfig longitudinal_config =
-    pp.bdc_param.get_abnormality_config<LongitudinalConfig>(AbnormalityType::LONGITUDINAL).value();
+    pp.bdc_param.get_abnormality_config<LongitudinalConfig>(FootprintType::LONGITUDINAL).value();
   const std::string lon_tracking_ns{ns_longitudinal_abnormality + "lon_tracking."};
   update_param(parameters, lon_tracking_ns + "scale", longitudinal_config.lon_tracking.scale);
   update_param(
     parameters, lon_tracking_ns + "extra_margin_m",
     longitudinal_config.lon_tracking.extra_margin_m);
-  configs.insert_or_assign(AbnormalityType::LONGITUDINAL, longitudinal_config);
+  configs.insert_or_assign(FootprintType::LONGITUDINAL, longitudinal_config);
 
   // Point/goal shift thresholds
   update_param(parameters, module_name + "th_pt_shift.dist_m", pp.th_pt_shift_dist_m);
@@ -571,8 +570,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   }
 
   const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
-    raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, *steering_angle_ptr_, curr_vel,
-    curr_acc);
+    raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, curr_vel, curr_acc);
 
   if (!abnormality_data_opt) {
     return tl::make_unexpected(abnormality_data_opt.error());

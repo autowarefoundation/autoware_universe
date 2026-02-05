@@ -15,6 +15,7 @@
 #include "autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp"
 
 #include "autoware/boundary_departure_checker/conversion.hpp"
+#include "autoware/boundary_departure_checker/footprint_generator/footprint_manager.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
@@ -137,7 +138,8 @@ UncrossableBoundaryDepartureChecker::UncrossableBoundaryDepartureChecker(
   last_no_critical_dpt_time_(clock_ptr->now().seconds()),
   last_found_critical_dpt_time_(clock_ptr->now().seconds()),
   clock_ptr_(clock_ptr),
-  time_keeper_(std::move(time_keeper))
+  time_keeper_(std::move(time_keeper)),
+  footprint_manager_(std::make_unique<FootprintManager>(param_.footprint_types_to_check))
 {
   auto try_uncrossable_boundaries_rtree = build_uncrossable_boundaries_tree(lanelet_map_ptr_);
 
@@ -280,8 +282,8 @@ DeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure
 tl::expected<AbnormalitiesData, std::string>
 UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
-  const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
-  const SteeringReport & current_steering, const double curr_vel, const double curr_acc)
+  const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
+  const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -292,20 +294,23 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto trimmed_pred_traj =
     utils::trim_pred_path(predicted_traj, param_.th_cutoff_time_predicted_path_s);
 
-  const auto uncertainty_fp_margin =
-    utils::calc_margin_from_covariance(curr_pose_with_cov, param_.footprint_extra_margin);
+  auto generated_footprints = footprint_manager_->generate_all(
+    trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
+  const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
-  AbnormalitiesData abnormalities_data;
-  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
-    auto & fps = abnormalities_data.footprints[abnormality_type];
-    fps = utils::create_ego_footprints(
-      abnormality_type, uncertainty_fp_margin, trimmed_pred_traj, current_steering,
-      *vehicle_info_ptr_, param_);
-
-    abnormalities_data.footprints_sides[abnormality_type] = utils::get_sides_from_footprints(fps);
+  if (generated_footprints.empty() || footprint_type_order.empty()) {
+    return tl::make_unexpected("Failed to generate any footprints for abnormalities");
   }
 
-  const auto & normal_footprints = abnormalities_data.footprints_sides[AbnormalityType::NORMAL];
+  AbnormalitiesData abnormalities_data;
+  for (const auto type : footprint_type_order) {
+    abnormalities_data.footprints[type] = std::move(generated_footprints.at(type));
+    abnormalities_data.footprints_sides[type] =
+      utils::get_sides_from_footprints(abnormalities_data.footprints[type]);
+  }
+
+  const auto & normal_footprints =
+    abnormalities_data.footprints_sides[footprint_type_order.front()];
 
   abnormalities_data.boundary_segments =
     get_boundary_segments(normal_footprints, trimmed_pred_traj);
@@ -316,11 +321,10 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
     return tl::make_unexpected("Unable to find any closest segments");
   }
 
-  for (const auto abnormality_type : param_.abnormality_types_to_compensate) {
-    auto & proj_to_bound = abnormalities_data.projections_to_bound[abnormality_type];
-    proj_to_bound = utils::get_closest_boundary_segments_from_side(
+  for (const auto type : footprint_type_order) {
+    abnormalities_data.projections_to_bound[type] = utils::get_closest_boundary_segments_from_side(
       trimmed_pred_traj, abnormalities_data.boundary_segments,
-      abnormalities_data.footprints_sides[abnormality_type]);
+      abnormalities_data.footprints_sides[type]);
   }
 
   auto closest_projections_to_bound_opt = get_closest_projections_to_boundaries(
@@ -437,30 +441,29 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & abnormality_to_check = param_.abnormality_types_to_compensate;
+  const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
-  if (abnormality_to_check.empty()) {
+  if (footprint_type_order.empty()) {
     return tl::make_unexpected(std::string(__func__) + ": Nothing to check.");
   }
 
-  const auto is_empty = std::any_of(
-    abnormality_to_check.begin(), abnormality_to_check.end(),
-    [&projections_to_bound, &side_key](const auto abnormality_type) {
-      return projections_to_bound[abnormality_type][side_key].empty();
+  const auto is_empty = ranges::any_of(
+    footprint_type_order, [&projections_to_bound, &side_key](const auto footprint_type) {
+      return projections_to_bound[footprint_type][side_key].empty();
     });
 
   if (is_empty) {
     return tl::make_unexpected(std::string(__func__) + ": projections to bound is empty.");
   }
 
-  const auto & fr_proj_to_bound = projections_to_bound[abnormality_to_check.front()][side_key];
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
 
-  const auto check_size = [&](const auto abnormality_type) {
-    return fr_proj_to_bound.size() != projections_to_bound[abnormality_type][side_key].size();
+  const auto check_size = [&](const auto footprint_type) {
+    return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
   };
 
   const auto has_size_diff =
-    std::any_of(std::next(abnormality_to_check.begin()), abnormality_to_check.end(), check_size);
+    std::any_of(std::next(footprint_type_order.begin()), footprint_type_order.end(), check_size);
 
   if (has_size_diff) {
     return tl::make_unexpected(
@@ -477,27 +480,26 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     return lat_dist <= param_.th_trigger.th_dist_to_boundary_m[side_key].max;
   };
 
-  const auto fp_size = projections_to_bound[abnormality_to_check.front()][side_key].size();
+  const auto fp_size = projections_to_bound[footprint_type_order.front()][side_key].size();
   min_to_bound.reserve(fp_size);
   for (size_t idx = 0; idx < fp_size; ++idx) {
     std::unique_ptr<ProjectionToBound> min_pt;
-    for (const auto abnormality_type : abnormality_to_check) {
-      const auto pt = projections_to_bound[abnormality_type][side_key][idx];
+    for (const auto footprint_type : footprint_type_order) {
+      const auto pt = projections_to_bound[footprint_type][side_key][idx];
       if (pt.ego_sides_idx != idx) {
         continue;
       }
 
-      const auto create_min_pt =
-        [](const auto pt, const auto dpt_type, const auto abnormality_type) {
-          std::unique_ptr<ProjectionToBound> min_pt = std::make_unique<ProjectionToBound>(pt);
-          min_pt->departure_type_opt = dpt_type;
-          min_pt->abnormality_type_opt = abnormality_type;
-          min_pt->time_from_start = pt.time_from_start;
-          return min_pt;
-        };
+      const auto create_min_pt = [](const auto pt, const auto dpt_type, const auto footprint_type) {
+        std::unique_ptr<ProjectionToBound> min_pt = std::make_unique<ProjectionToBound>(pt);
+        min_pt->departure_type_opt = dpt_type;
+        min_pt->footprint_type_opt = footprint_type;
+        min_pt->time_from_start = pt.time_from_start;
+        return min_pt;
+      };
 
-      if (abnormality_type == AbnormalityType::NORMAL && is_on_bound(pt.lat_dist, side_key)) {
-        min_pt = create_min_pt(pt, DepartureType::CRITICAL_DEPARTURE, abnormality_type);
+      if (footprint_type == FootprintType::NORMAL && is_on_bound(pt.lat_dist, side_key)) {
+        min_pt = create_min_pt(pt, DepartureType::CRITICAL_DEPARTURE, footprint_type);
         break;
       }
 
@@ -506,10 +508,10 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       }
 
       if (!min_pt || pt.lat_dist < min_pt->lat_dist) {
-        min_pt = create_min_pt(pt, DepartureType::NEAR_BOUNDARY, abnormality_type);
+        min_pt = create_min_pt(pt, DepartureType::NEAR_BOUNDARY, footprint_type);
       }
     }
-    if (!min_pt || !min_pt->departure_type_opt || !min_pt->abnormality_type_opt) {
+    if (!min_pt || !min_pt->departure_type_opt || !min_pt->footprint_type_opt) {
       continue;
     }
 
@@ -621,4 +623,6 @@ UncrossableBoundaryDepartureChecker::build_uncrossable_boundaries_tree(
   return utils::build_uncrossable_boundaries_rtree(
     *lanelet_map_ptr, param_.boundary_types_to_detect);
 }
+
+UncrossableBoundaryDepartureChecker::~UncrossableBoundaryDepartureChecker() = default;
 }  // namespace autoware::boundary_departure_checker
