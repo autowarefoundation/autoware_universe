@@ -17,6 +17,7 @@
 
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
+  <arg name="input_external_velocity_limit" default="/planning/scenario_planning/max_velocity_default"/>
   <arg name="output_traj" default="/planning/trajectory"/>
   <arg name="output_trajectories" default="/planning/generator/candidate_trajectories"/>
   <arg name="output_current_velocity_limit_mps" default="/planning/scenario_planning/current_max_velocity"/>
@@ -40,8 +41,8 @@
     <remap from="~/output/current_velocity_limit_mps" to="$(var output_current_velocity_limit_mps)"/>
     <remap from="~/input/traj" to="$(var input_traj)"/>
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/input/external_velocity_limit_mps" to="$(var input_external_velocity_limit)"/>
     <remap from="~/input/odometry" to="/localization/kinematic_state"/>
     <remap from="~/input/acceleration" to="/localization/acceleration"/>
-    <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity_default"/>
   </node>
 </launch>
