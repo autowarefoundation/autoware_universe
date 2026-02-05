@@ -35,6 +35,11 @@
   <arg name="occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater"/>
   <arg name="occupancy_grid_map_updater_param_path"/>
+  <!-- TODO: Convert to arg after migration into autoware_launch repository -->
+  <let
+    name="obstacle_segmentation_occupancy_grid_map_outlier_filter_param_path"
+    value="$(find-pkg-share autoware_launch)/config/perception/obstacle_segmentation/occupancy_grid_based_outlier_filter/occupancy_grid_map_outlier_filter.param.yaml"
+  />
   <arg name="lidar_detection_model"/>
   <arg name="each_traffic_light_map_based_detector_param_path"/>
   <arg name="traffic_light_fine_detector_param_path"/>
@@ -233,6 +238,7 @@
         <arg name="obstacle_segmentation_ground_segmentation_param_path" value="$(var obstacle_segmentation_ground_segmentation_param_path)"/>
         <arg name="use_single_frame_filter" value="$(var use_obstacle_segmentation_single_frame_filter)"/>
         <arg name="use_time_series_filter" value="$(var use_obstacle_segmentation_time_series_filter)"/>
+        <arg name="ogm_outlier_filter_param_path" value="$(var obstacle_segmentation_occupancy_grid_map_outlier_filter_param_path)"/>
       </include>
     </group>
 
