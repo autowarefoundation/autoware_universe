@@ -15,11 +15,7 @@
 #ifndef AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
 #define AUTOWARE__SPHERIC_COLLISION_DETECTOR__SPHERE3_HPP_
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <vector>
 
