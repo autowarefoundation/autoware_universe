@@ -14,7 +14,7 @@
 
 #include "node.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 
@@ -199,9 +199,8 @@ void TrafficLightMapVisualizerNode::trafficSignalsCallback(
 void TrafficLightMapVisualizerNode::binMapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_map_msg)
 {
-  lanelet::LaneletMapPtr viz_lanelet_map(new lanelet::LaneletMap);
-
-  lanelet::utils::conversion::fromBinMsg(*input_map_msg, viz_lanelet_map);
+  lanelet::LaneletMapPtr viz_lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_map_msg));
   RCLCPP_DEBUG(get_logger(), "Map is loaded\n");
 
   // get lanelets etc to visualize

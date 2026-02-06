@@ -50,7 +50,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
  * @param pose The pose containing position and orientation information.
  * @return A 4x4 transformation matrix representing the pose.
  */
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose);
 
 /**
  * @brief Extracts yaw angle from rotation matrix and converts to cos/sin representation.
@@ -61,6 +61,15 @@ Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose);
 std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotation_matrix);
 
 /**
+ * @brief Shifts the pose along the x-axis by a specified length.
+ *
+ * @param pose The pose to shift.
+ * @param shift_length The length to shift the pose along the x-axis.
+ * @return The shifted pose.
+ */
+geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const double shift_length);
+
+/**
  * @brief Computes the inverse of a 4x4 transformation matrix.
  * @note This function assumes that the matrix represents a rigid transformation and uses the
  * properties of Eigen::Isometry3d internally instead of a general 4x4 matrix inversion for better
@@ -69,6 +78,15 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
  * @return A 4x4 transformation matrix representing the inverse.
  */
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat);
+
+/**
+ * @brief Replicate single sample data for batch processing.
+ * @param single_data Single sample data.
+ * @param batch_size The number of times to replicate the data.
+ * @return Vector replicated for the specified batch size.
+ */
+std::vector<float> replicate_for_batch(
+  const std::vector<float> & single_data, const int batch_size);
 
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__UTILS_HPP_

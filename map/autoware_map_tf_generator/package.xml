@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_map_tf_generator</name>
-  <version>0.48.0</version>
+  <version>0.49.0</version>
   <description>map_tf_generator package as a ROS 2 node</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
@@ -13,7 +13,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>libpcl-all-dev</depend>
   <depend>pcl_conversions</depend>
   <depend>rclcpp</depend>

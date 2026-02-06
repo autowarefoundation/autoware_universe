@@ -65,7 +65,7 @@ public:
    *
    * @param lanelet_map_ptr Shared pointer to the lanelet map.
    */
-  explicit LaneSegmentContext(const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr);
+  explicit LaneSegmentContext(const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr);
 
   /**
    * @brief Select route segment indices based on route and constraints.
@@ -73,11 +73,12 @@ public:
    * @param route The lanelet route to process.
    * @param center_x X-coordinate of the center point.
    * @param center_y Y-coordinate of the center point.
+   * @param center_z Z-coordinate of the center point.
    * @param max_segments Maximum number of segments to select.
    * @return Vector of lane segment indices.
    */
   std::vector<int64_t> select_route_segment_indices(
-    const LaneletRoute & route, const double center_x, const double center_y,
+    const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
     const int64_t max_segments) const;
 
   /**

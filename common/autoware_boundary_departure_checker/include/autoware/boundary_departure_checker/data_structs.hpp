@@ -33,6 +33,7 @@
 
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -45,8 +46,8 @@ enum class DepartureType {
   CRITICAL_DEPARTURE,
 };
 
-enum class AbnormalityType {
-  NORMAL,
+enum class FootprintType {
+  NORMAL = 0,
   LOCALIZATION,
   LONGITUDINAL,
   STEERING_STUCK,
@@ -61,34 +62,15 @@ constexpr std::array<SideKey, 2> g_side_keys = {SideKey::LEFT, SideKey::RIGHT};
 template <typename T>
 struct Abnormalities
 {
-  T normal;
-  T longitudinal;
-  T localization;
-  T steering_stuck;
-  T steering_accelerated;
-  T steering_sudden_left;
-  T steering_sudden_right;
-  T & operator[](const AbnormalityType key)
-  {
-    if (key == AbnormalityType::NORMAL) return normal;
-    if (key == AbnormalityType::LOCALIZATION) return localization;
-    if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
-    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
-    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
-    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
-    throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
-  }
+  std::unordered_map<FootprintType, T> data;
+  T & operator[](const FootprintType key) { return data[key]; }
 
-  const T & operator[](const AbnormalityType key) const
+  const T & operator[](const FootprintType key) const
   {
-    if (key == AbnormalityType::NORMAL) return normal;
-    if (key == AbnormalityType::LOCALIZATION) return localization;
-    if (key == AbnormalityType::LONGITUDINAL) return longitudinal;
-    if (key == AbnormalityType::STEERING_ACCELERATED) return steering_accelerated;
-    if (key == AbnormalityType::STEERING_STUCK) return steering_stuck;
-    if (key == AbnormalityType::STEERING_SUDDEN_LEFT) return steering_sudden_left;
-    if (key == AbnormalityType::STEERING_SUDDEN_RIGHT) return steering_sudden_right;
+    const auto it = data.find(key);
+    if (it != data.end()) {
+      return it->second;
+    }
     throw std::invalid_argument("Invalid key: " + std::string(magic_enum::enum_name(key)));
   }
 };
@@ -115,6 +97,9 @@ struct Side
 
 struct ProjectionToBound
 {
+  std::optional<DepartureType> departure_type_opt;
+  std::optional<FootprintType> footprint_type_opt;
+
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
   double lon_dist_on_pred_traj{std::numeric_limits<double>::max()};
@@ -136,33 +121,15 @@ struct ProjectionToBound
     ego_sides_idx(idx)
   {
   }
-};
 
-struct ClosestProjectionToBound : ProjectionToBound
-{
-  DepartureType departure_type = DepartureType::NONE;
-  AbnormalityType abnormality_type = AbnormalityType::NORMAL;
-  ClosestProjectionToBound() = default;
-  explicit ClosestProjectionToBound(const ProjectionToBound & base)
+  [[nodiscard]] bool is_near_boundary() const
   {
-    pt_on_ego = base.pt_on_ego;
-    pt_on_bound = base.pt_on_bound;
-    nearest_bound_seg = base.nearest_bound_seg;
-    lat_dist = base.lat_dist;
-    ego_sides_idx = base.ego_sides_idx;
-    lon_dist_on_pred_traj = base.lon_dist_on_pred_traj;
+    return departure_type_opt && departure_type_opt.value() == DepartureType::NEAR_BOUNDARY;
   }
 
-  ClosestProjectionToBound(
-    const ProjectionToBound & base, const AbnormalityType abnormality_type,
-    const DepartureType departure_type)
-  : departure_type(departure_type), abnormality_type(abnormality_type)
+  [[nodiscard]] bool is_critical_departure() const
   {
-    pt_on_ego = base.pt_on_ego;
-    pt_on_bound = base.pt_on_bound;
-    nearest_bound_seg = base.nearest_bound_seg;
-    lat_dist = base.lat_dist;
-    ego_sides_idx = base.ego_sides_idx;
+    return departure_type_opt && departure_type_opt.value() == DepartureType::CRITICAL_DEPARTURE;
   }
 };
 
@@ -210,16 +177,13 @@ struct IdxForRTreeSegmentHash
 using SegmentWithIdx = std::pair<Segment2d, IdxForRTreeSegment>;
 using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
 using BoundarySideWithIdx = Side<std::vector<SegmentWithIdx>>;
-using ProjectionsToBound = Side<std::vector<ProjectionToBound>>;
-using ClosestProjectionsToBound = Side<std::vector<ClosestProjectionToBound>>;
 using EgoSide = Side<Segment2d>;
 using EgoSides = std::vector<EgoSide>;
 
 struct DeparturePoint
 {
-  std::string uuid;
   DepartureType departure_type{DepartureType::NONE};
-  AbnormalityType abnormality_type{AbnormalityType::NORMAL};
+  FootprintType footprint_type{FootprintType::NORMAL};
   Point2d point;
   double th_point_merge_distance_m{2.0};
   double lat_dist_to_bound{1000.0};
@@ -228,16 +192,7 @@ struct DeparturePoint
   double velocity{0.0};
   size_t idx_from_ego_traj{};
   bool can_be_removed{false};
-
-  [[nodiscard]] bool is_nearby(const Pose & pose) const { return is_nearby(pose.position); }
-
-  [[nodiscard]] bool is_nearby(const Point & point) const { return is_nearby({point.x, point.y}); }
-
-  [[nodiscard]] bool is_nearby(const Point2d & candidate_point) const
-  {
-    const auto diff = boost::geometry::distance(point, candidate_point);
-    return diff < th_point_merge_distance_m;
-  }
+  geometry_msgs::msg::Pose pose_on_current_ref_traj;
 
   [[nodiscard]] Point to_geom_pt(const double z = 0.0) const
   {
@@ -251,49 +206,20 @@ struct DeparturePoint
 };
 using DeparturePoints = std::vector<DeparturePoint>;
 
-struct CriticalDeparturePoint : DeparturePoint
-{
-  geometry_msgs::msg::Pose pose_on_current_ref_traj;
-  CriticalDeparturePoint() = default;
-  explicit CriticalDeparturePoint(const DeparturePoint & base)
-  {
-    uuid = base.uuid;
-    departure_type = base.departure_type;
-    abnormality_type = base.abnormality_type;
-    point = base.point;
-    th_point_merge_distance_m = base.th_point_merge_distance_m;
-    lat_dist_to_bound = base.lat_dist_to_bound;
-    ego_dist_on_ref_traj = base.ego_dist_on_ref_traj;
-    velocity = base.velocity;
-    can_be_removed = base.can_be_removed;
-  }
-};
-
-using CriticalDeparturePoints = std::vector<CriticalDeparturePoint>;
-
-struct DepartureInterval
-{
-  TrajectoryPoint start;
-  TrajectoryPoint end;
-  SideKey side_key;
-  double start_dist_on_traj;
-  double end_dist_on_traj;
-
-  bool start_at_traj_front{false};
-
-  DeparturePoints candidates;
-};
-using DepartureIntervals = std::vector<DepartureInterval>;
-
 using Footprint = LinearRing2d;
 using Footprints = std::vector<Footprint>;
+
+using ProjectionsToBound = std::vector<ProjectionToBound>;
 
 struct AbnormalitiesData
 {
   Abnormalities<EgoSides> footprints_sides;
   Abnormalities<Footprints> footprints;
   BoundarySideWithIdx boundary_segments;
-  Abnormalities<ProjectionsToBound> projections_to_bound;
+  Abnormalities<Side<ProjectionsToBound>> projections_to_bound;
+  Side<ProjectionsToBound> closest_projections_to_bound;
+  Side<DeparturePoints> departure_points;
+  DeparturePoints critical_departure_points;
 };
 }  // namespace autoware::boundary_departure_checker
 

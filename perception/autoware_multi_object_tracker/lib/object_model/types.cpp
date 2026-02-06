@@ -14,6 +14,9 @@
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+
+#include <cmath>
 #include <vector>
 
 namespace autoware::multi_object_tracker
