@@ -190,7 +190,7 @@ planning/sampling_based_planner/autoware_bezier_sampler/** maxime.clement@tier4.
 planning/sampling_based_planner/autoware_frenet_planner/** maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_path_sampler/** maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_sampler_common/** maxime.clement@tier4.jp
-sensing/autoware_calibration_status_classifier/** amadeusz.szymko.2@tier4.jp manato.hirabayashi@tier4.jp
+sensing/autoware_calibration_status_classifier/** amadeusz.szymko.2@tier4.jp manato.hirabayashi@tier4.jp patiphon.narksri.2@tier4.jp
 sensing/autoware_cuda_pointcloud_preprocessor/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp max.schmeller@tier4.jp yihsiang.fang@tier4.jp
 sensing/autoware_cuda_utils/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp
 sensing/autoware_image_diagnostics/** dai.nguyen@tier4.jp masato.saeki@tier4.jp yihsiang.fang@tier4.jp yoshi.ri@tier4.jp

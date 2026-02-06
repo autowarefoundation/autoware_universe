@@ -6,6 +6,7 @@
   <description>A node for LiDAR camera miscalibration detection</description>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
+  <maintainer email="patiphon.narksri.2@tier4.jp">Patiphon Narksri</maintainer>
   <license>Apache License 2.0</license>
   <author email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</author>
 
