@@ -26,19 +26,15 @@
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 
+#include <tf2/utils.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
 #include <tuple>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <tf2/utils.hpp>
 
 namespace autoware::motion_velocity_planner
 {
