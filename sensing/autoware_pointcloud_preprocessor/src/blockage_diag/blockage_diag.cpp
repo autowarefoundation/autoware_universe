@@ -14,51 +14,55 @@
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
 
+#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
+
 #include <opencv2/imgproc.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
 
-MultiFrameDetectionAggregator::MultiFrameDetectionAggregator(
-  const MultiFrameDetectionAggregatorConfig & config)
-: frame_count_(0), buffering_interval_(config.buffering_interval)
+cv::Mat quantize_to_8u(const cv::Mat & image_16u)
 {
-  mask_buffer_.set_capacity(config.buffering_frames);
+  assert(image_16u.type() == CV_16UC1);
+  auto dimensions = image_16u.size();
+
+  cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
+  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
+  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
+  return image_8u;
 }
 
-cv::Mat MultiFrameDetectionAggregator::update(const cv::Mat & mask)
+cv::Mat make_no_return_mask(const cv::Mat & depth_image)
 {
-  if (buffering_interval_ == 0) {
-    return mask.clone();
-  }
+  assert(depth_image.type() == CV_8UC1);
+  auto dimensions = depth_image.size();
 
+  cv::Mat no_return_mask(dimensions, CV_8UC1, cv::Scalar(0));
+  cv::inRange(depth_image, 0, 1, no_return_mask);
+
+  return no_return_mask;
+}
+
+std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(
+  const cv::Mat & mask, int horizontal_ring_id)
+{
   assert(mask.type() == CV_8UC1);
   auto dimensions = mask.size();
 
-  cv::Mat time_series_result(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::Mat time_series_mask(dimensions, CV_8UC1, cv::Scalar(0));
-  cv::Mat binarized_mask(dimensions, CV_8UC1, cv::Scalar(0));
+  cv::Mat sky_mask;
+  mask(cv::Rect(0, 0, dimensions.width, horizontal_ring_id)).copyTo(sky_mask);
 
-  binarized_mask = mask / 255;
-  if (frame_count_ >= buffering_interval_) {
-    mask_buffer_.push_back(binarized_mask);
-    frame_count_ = 0;
-  } else {
-    frame_count_++;
-  }
+  cv::Mat ground_mask;
+  mask(cv::Rect(0, horizontal_ring_id, dimensions.width, dimensions.height - horizontal_ring_id))
+    .copyTo(ground_mask);
 
-  for (const auto & binary_mask : mask_buffer_) {
-    time_series_mask += binary_mask;
-  }
-
-  cv::inRange(time_series_mask, mask_buffer_.size() - 1, mask_buffer_.size(), time_series_result);
-
-  return time_series_result;
+  return {ground_mask, sky_mask};
 }
 
 void validate_pointcloud_fields(const sensor_msgs::msg::PointCloud2 & input)

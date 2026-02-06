@@ -35,6 +35,8 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>visualization_msgs</depend>
 
+  <exec_depend>autoware_core_planning</exec_depend>
+
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
