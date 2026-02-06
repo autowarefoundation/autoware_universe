@@ -4,6 +4,7 @@
   <arg name="visible_range" default="300.0"/>
   <arg name="real" default="true"/>
   <arg name="use_object_recognition" default="true"/>
+  <arg name="use_empty_traffic_light_recognition" default="true"/>
   <arg name="use_base_link_z" default="true"/>
   <arg name="dummy_perception_publisher_config_file" default="$(find-pkg-share autoware_dummy_perception_publisher)/config/dummy_perception_publisher.param.yaml"/>
 
@@ -45,6 +46,12 @@
         <param name="enable_ray_tracing" value="false"/>
         <param name="use_object_recognition" value="$(var use_object_recognition)"/>
         <param name="use_base_link_z" value="$(var use_base_link_z)"/>
+      </node>
+    </group>
+
+    <group if="$(var use_empty_traffic_light_recognition)">
+      <node pkg="autoware_dummy_perception_publisher" exec="empty_traffic_light_group_array_publisher" name="empty_traffic_light_group_array_publisher" output="screen">
+        <remap from="~/output/traffic_light_group_array" to="/perception/traffic_light_recognition/traffic_signals"/>
       </node>
     </group>
 
