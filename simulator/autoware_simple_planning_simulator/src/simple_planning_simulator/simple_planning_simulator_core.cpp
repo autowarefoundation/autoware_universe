@@ -756,6 +756,8 @@ void SimplePlanningSimulator::set_initial_state(const Pose & pose, const Twist &
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD_MECHANICAL ||
     vehicle_model_type_ == VehicleModelType::ACTUATION_CMD_STEER_MAP) {
     state << x, y, yaw, vx, steer, accx;
+  } else if (vehicle_model_type_ == VehicleModelType::DELAY_STEER_ACC_GEARED_WO_FALL_GUARD) {
+    state << x, y, yaw, vx, steer, accx, pedal_accx;
   }
   vehicle_model_ptr_->setState(state);
 
