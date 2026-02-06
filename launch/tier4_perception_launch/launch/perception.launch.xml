@@ -135,6 +135,7 @@
   <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
   <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
   <arg name="use_camera_vru_detector" default="false" description="enable pipeline for camera based VRU object detection"/>
+  <arg name="use_cuda_ground_segmentation" default="false" description="use cuda ground segmentation filter at the ground segmentation"/>
 
   <!-- traffic light recognition options to switch launch function/module -->
   <arg name="use_traffic_light_recognition"/>
@@ -233,6 +234,7 @@
         <arg name="obstacle_segmentation_ground_segmentation_param_path" value="$(var obstacle_segmentation_ground_segmentation_param_path)"/>
         <arg name="use_single_frame_filter" value="$(var use_obstacle_segmentation_single_frame_filter)"/>
         <arg name="use_time_series_filter" value="$(var use_obstacle_segmentation_time_series_filter)"/>
+        <arg name="use_cuda_ground_segmentation" value="$(var use_cuda_ground_segmentation)"/>
       </include>
     </group>
 
