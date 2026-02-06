@@ -77,6 +77,11 @@
           "type": "array",
           "description": "An array in which each element is the maximum z value in a crop box",
           "default": []
+        },
+        "crop_box.negative": {
+          "type": "array",
+          "description": "An array of boolean, true for preserving points outside, and false for preserving points inside",
+          "default": []
         }
       },
       "required": [

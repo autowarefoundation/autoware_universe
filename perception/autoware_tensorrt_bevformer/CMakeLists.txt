@@ -56,25 +56,7 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# CUDNN
-option(CUDNN_AVAIL "CUDNN available" OFF)
-find_library(CUDNN_LIBRARY
-  NAMES libcudnn.so libcudnn
-  PATHS $ENV{LD_LIBRARY_PATH} ${CUDNN_ROOT_DIR} ${CMAKE_INSTALL_PREFIX}
-  PATH_SUFFIXES lib lib64 bin
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
-  endif()
-  set(CUDNN_AVAIL ON)
-else()
-  message("CUDNN is NOT available")
-  set(CUDNN_AVAIL OFF)
-endif()
-
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
@@ -106,7 +88,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       -Wno-unused-variable -Wno-unused-but-set-variable -Wno-comment -Wno-switch>
   )
   target_link_libraries(${TENSORRT_OPS_TARGET}
-    ${CUDNN_LIBRARY}
     ${NVINFER}
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
@@ -155,7 +136,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${OpenCV_LIBRARIES}
     ${NVINFER}
     ${NVONNXPARSER}
-    ${CUDNN_LIBRARY}
     ${TENSORRT_OPS_TARGET}
     dl
   )
@@ -198,6 +178,6 @@ else()
   # Dependencies missing
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
-  message(WARNING "Required dependencies (CUDA, TensorRT, CUDNN) not found. Skipping ${PROJECT_NAME} build.")
+  message(WARNING "Required dependencies (CUDA, TensorRT) not found. Skipping ${PROJECT_NAME} build.")
   ament_auto_package(INSTALL_TO_SHARE launch)
 endif()

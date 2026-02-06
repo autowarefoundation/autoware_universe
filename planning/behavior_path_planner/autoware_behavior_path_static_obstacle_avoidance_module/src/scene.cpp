@@ -24,10 +24,12 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/debug.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+
+#include <boost/geometry/algorithms/correct.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -226,10 +228,9 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   data.extend_lanelets = utils::static_obstacle_avoidance::getExtendLanes(
     data.current_lanelets, getEgoPose(), planner_data_);
 
-  lanelet::ConstLanelet closest_lanelet{};
-  if (lanelet::utils::query::getClosestLanelet(
-        data.current_lanelets, getEgoPose(), &closest_lanelet))
-    data.closest_lanelet = closest_lanelet;
+  const auto closest_lanelet_opt = autoware::experimental::lanelet2_utils::get_closest_lanelet(
+    data.current_lanelets, getEgoPose());
+  if (closest_lanelet_opt) data.closest_lanelet = closest_lanelet_opt.value();
 
   // expand drivable lanes
   const auto is_within_current_lane =
@@ -1581,12 +1582,17 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
       linestring.emplace_back(p.x, p.y);
     });
 
+    const auto footprint_ring = planner_data_->parameters.vehicle_info.createFootprint();
+
     for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
       const auto transform =
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
-      const auto footprint = autoware_utils::transform_vector(
-        planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, linestring)) {
+
+      autoware_utils_geometry::Polygon2d footprint_polygon;
+      footprint_polygon.outer() = autoware_utils::transform_vector(footprint_ring, transform);
+      boost::geometry::correct(footprint_polygon);
+
+      if (boost::geometry::intersects(footprint_polygon, linestring)) {
         return true;
       }
     }

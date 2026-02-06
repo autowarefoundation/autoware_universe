@@ -43,25 +43,7 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# Find CUDNN library (optional, often used with TRT)
-option(CUDNN_AVAIL "CUDNN available" OFF)
-find_library(CUDNN_LIBRARY
-  NAMES libcudnn.so
-  PATHS $ENV{LD_LIBRARY_PATH} ${CUDA_TOOLKIT_ROOT_DIR}/lib64
-  DOC "CUDNN library."
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
-  endif()
-  set(CUDNN_AVAIL ON)
-else()
-  message(WARNING "CUDNN is NOT Available")
-  set(CUDNN_AVAIL OFF)
-endif()
-
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+if(TRT_AVAIL AND CUDA_AVAIL)
   # Add compile option to suppress deprecation warnings (optional)
   add_compile_options(-Wno-deprecated-declarations)
 
@@ -73,7 +55,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
-    src/conversion/ego.cpp
     src/postprocessing/postprocessing_utils.cpp
     src/preprocessing/lane_segments.cpp
     src/preprocessing/preprocessing_utils.cpp
@@ -93,7 +74,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${NVONNXPARSER}
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
-    ${CUDNN_LIBRARY}
   )
 
   rclcpp_components_register_node(autoware_diffusion_planner_component
@@ -105,7 +85,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
       test/lanelet_test.cpp
-      test/ego_test.cpp
       test/lane_segments_test.cpp
       test/pre_processing_utils_test.cpp
       test/postprocessing_utils_test.cpp

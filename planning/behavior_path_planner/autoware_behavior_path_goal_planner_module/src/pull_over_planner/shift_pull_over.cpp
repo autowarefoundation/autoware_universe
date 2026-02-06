@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -213,9 +214,10 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
     PathPointWithLaneId p{};
     p.point.longitudinal_velocity_mps = 0.0;
     p.point.pose = goal_pose;
-    lanelet::Lanelet goal_lanelet{};
-    if (lanelet::utils::query::getClosestLanelet(lanes, goal_pose, &goal_lanelet)) {
-      p.lane_ids = {goal_lanelet.id()};
+    const auto goal_lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, goal_pose);
+    if (goal_lanelet_opt) {
+      p.lane_ids = {goal_lanelet_opt.value().id()};
     } else {
       p.lane_ids = shifted_path.path.points.back().lane_ids;
     }
@@ -231,9 +233,10 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
     auto & point = shifted_path.path.points.at(i);
     point.point.longitudinal_velocity_mps =
       std::min(point.point.longitudinal_velocity_mps, static_cast<float>(pull_over_velocity));
-    lanelet::Lanelet lanelet{};
-    if (lanelet::utils::query::getClosestLanelet(lanes, point.point.pose, &lanelet)) {
-      point.lane_ids = {lanelet.id()};  // overwrite lane_ids
+    const auto lanelet_opt =
+      autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, point.point.pose);
+    if (lanelet_opt) {
+      point.lane_ids = {lanelet_opt.value().id()};  // overwrite lane_ids
     } else if (i > 0) {
       point.lane_ids = shifted_path.path.points.at(i - 1).lane_ids;
     }

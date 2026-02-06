@@ -18,6 +18,7 @@
 
   <depend>autoware_boundary_departure_checker</depend>
   <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_factor_interface</depend>

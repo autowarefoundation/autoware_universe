@@ -17,11 +17,11 @@
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
+  <depend>autoware_qos_utils</depend>
   <depend>autoware_utils</depend>
   <depend>grid_map_cv</depend>
   <depend>grid_map_pcl</depend>
   <depend>grid_map_ros</depend>
-  <depend>grid_map_rviz_plugin</depend>
   <depend>libpcl-all-dev</depend>
   <depend>map_msgs</depend>
   <depend>pcl_conversions</depend>
@@ -33,6 +33,8 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
+
+  <exec_depend>grid_map_rviz_plugin</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
