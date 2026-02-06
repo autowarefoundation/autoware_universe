@@ -139,6 +139,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   ekf_angle_.estimated_scale_angle_ = ekf_angle_.initial_scale_;
   ekf_angle_.max_variance_p_angle_ = declare_parameter<double>("ekf_angle.variance_p_angle");
   ekf_angle_.noise_ekf_r_angle_ = declare_parameter<double>("ekf_angle.measurement_noise_r_angle");
+  ekf_angle_.q_angle_ << 0, 0, 0, declare_parameter<double>("ekf_angle.process_noise_q_angle");
   ekf_angle_.p_angle_ << ekf_angle_.max_variance_p_angle_, 0, 0, ekf_angle_.max_variance_p_angle_;
   ekf_angle_.r_angle_ << ekf_angle_.noise_ekf_r_angle_ * ekf_angle_.noise_ekf_r_angle_;
   ekf_angle_.filtered_scale_angle_ = ekf_angle_.initial_scale_;

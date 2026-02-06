@@ -65,7 +65,7 @@ Currently, it is possible to use methods other than NDT as a `pose_source` for A
 
 In the future, with careful implementation for pose errors, the IMU bias estimated by NDT could potentially be used not only for validation but also for online calibration.
 
-The Extended Kalman Filter (EKF) is used for scale estimation. The NDT pose is used as ground truth, and we assume it's accurate enough to provide long-term convergence for the correct scale observation, the EFK filter includes an initial checking and it requires N amount of consecutive in bounds samples to initialize `samples_in_bounds_to_init` , otherwise retries up to the value set on `max_reinitialization_retries` before triggering an error.
+The Extended Kalman Filter (EKF) is used for scale estimation. The NDT pose is used as ground truth, and we assume it's accurate enough to provide long-term convergence for the correct scale observation, the EKF filter includes an initial checking and it requires N amount of consecutive in bounds samples to initialize `samples_in_bounds_to_init` , otherwise retries up to the value set on `max_reinitialization_retries` before triggering an error.
 
 ### Output
 
