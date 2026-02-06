@@ -88,6 +88,11 @@
   <arg name="input/tracked_objects" default="/perception/object_recognition/tracking/objects"/>
   <arg name="output/objects" default="objects"/>
 
+  <!-- Parameter paths -->
+  <arg name="sync_param_path"/>
+  <arg name="voxel_grid_based_euclidean_param_path"/>
+  <arg name="irregular_object_detector_param_path"/>
+
   <!-- internal interfaces -->
   <let name="pointcloud_filter/output/pointcloud" value="$(var ns)/pointcloud_map_filtered/pointcloud"/>
   <let name="lidar_ml_detector/output/objects" value="$(var ns)/$(var lidar_detection_model_type)/objects"/>
@@ -234,6 +239,8 @@
       <arg name="pointpainting_fusion_common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="sync_param_path" value="$(var sync_param_path)"/>
+      <arg name="voxel_grid_based_euclidean_param_path" value="$(var voxel_grid_based_euclidean_param_path)"/>
       <arg name="camera_2d_detector/model_path" value="$(var camera_2d_detector/model_path)"/>
       <arg name="camera_2d_detector/label_path" value="$(var camera_2d_detector/label_path)"/>
       <arg name="camera_2d_detector/color_map_path" value="$(var camera_2d_detector/color_map_path)"/>
@@ -251,6 +258,7 @@
       <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
       <arg name="output/objects" value="$(var irregular_object_pipeline/output/objects)"/>
       <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
+      <arg name="sync_param_path" value="$(var sync_param_path)"/>
     </include>
   </group>
   <group if="$(var switch/detector/lidar_dnn)">
@@ -277,6 +285,7 @@
       <arg name="output/cluster_objects" value="$(var lidar_rule_detector/output/cluster_objects)"/>
       <arg name="output/objects" value="$(var lidar_rule_detector/output/objects)"/>
       <arg name="use_low_height_cropbox" value="$(var use_low_height_cropbox)"/>
+      <arg name="voxel_grid_based_euclidean_param_path" value="$(var voxel_grid_based_euclidean_param_path)"/>
     </include>
   </group>
   <group if="$(var switch/detector/radar)">

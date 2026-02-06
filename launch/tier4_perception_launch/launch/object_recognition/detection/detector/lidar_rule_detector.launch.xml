@@ -10,6 +10,8 @@
   <arg name="output/cluster_objects"/>
   <arg name="output/objects"/>
 
+  <arg name="voxel_grid_based_euclidean_param_path"/>
+
   <!-- Internal interfaces -->
   <let name="euclidean_cluster/input/pointcloud" value="$(var input/pointcloud_map/pointcloud)"/>
   <let name="euclidean_cluster/output/clusters" value="$(var ns)/clustering/clusters"/>
@@ -28,6 +30,7 @@
         <arg name="use_low_height_cropbox" value="$(var use_low_height_cropbox)"/>
         <arg name="use_pointcloud_container" value="true"/>
         <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
+        <arg name="voxel_grid_based_euclidean_param_path" value="$(var voxel_grid_based_euclidean_param_path)"/>
       </include>
     </group>
 

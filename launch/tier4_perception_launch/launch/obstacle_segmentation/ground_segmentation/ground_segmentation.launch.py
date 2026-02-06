@@ -597,8 +597,8 @@ def generate_launch_description():
     add_launch_arg(
         "ogm_outlier_filter_param_path",
         [
-            FindPackageShare("autoware_launch"),
-            "/config/perception/obstacle_segmentation/occupancy_grid_based_outlier_filter/occupancy_grid_map_outlier_filter.param.yaml",
+            FindPackageShare("autoware_occupancy_grid_map_outlier_filter"),
+            "/config/occupancy_grid_map_outlier_filter.param.yaml",
         ],
     )
 

@@ -51,6 +51,9 @@
   <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="image_topic_name"/>
 
+  <arg name="sync_param_path"/>
+  <arg name="voxel_grid_based_euclidean_param_path"/>
+
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="input/pointcloud_map/pointcloud"/>
@@ -160,6 +163,7 @@
       <arg name="output/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
       <arg name="fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
+      <arg name="sync_param_path" value="$(var sync_param_path)"/>
     </include>
   </group>
 
@@ -172,6 +176,7 @@
         <arg name="output_clusters" value="$(var euclidean_cluster/output/clusters)"/>
         <arg name="use_low_height_cropbox" value="$(var use_low_height_cropbox)"/>
         <arg name="use_pointcloud_container" value="false"/>
+        <arg name="voxel_grid_based_euclidean_param_path" value="$(var voxel_grid_based_euclidean_param_path)"/>
       </include>
     </group>
 

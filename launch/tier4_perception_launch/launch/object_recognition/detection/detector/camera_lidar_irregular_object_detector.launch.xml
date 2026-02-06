@@ -8,6 +8,7 @@
   <arg name="fusion_camera_ids" default="[0]" description="camera IDs used for fusion"/>
   <arg name="image_topic_name" default="image_raw" description="topic name of camera image"/>
   <arg name="irregular_object_detector_param_path"/>
+  <arg name="sync_param_path"/>
   <!-- small unknown object detector -->
   <group>
     <push-ros-namespace namespace="$(var pipeline_ns)"/>
@@ -20,6 +21,7 @@
         <arg name="fusion_camera_ids" value="$(var fusion_camera_ids)"/>
         <arg name="image_topic_name" value="$(var image_topic_name)"/>
         <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
+        <arg name="sync_param_path" value="$(var sync_param_path)"/>
       </include>
     </group>
     <!-- Unknown Object Convex Hull estimation -->
