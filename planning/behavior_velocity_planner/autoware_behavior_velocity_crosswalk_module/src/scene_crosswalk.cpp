@@ -1359,10 +1359,10 @@ void CrosswalkModule::updateObjectState(
       }
     }
     object_info_manager_.update(
-      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), clock_->now(), is_ego_yielding,
-      has_traffic_light, collision_point, object.classification.front().label, p,
-      crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction,
-      is_object_on_crosswalk);
+      obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), objects_ptr->header.stamp,
+      is_ego_yielding, has_traffic_light, collision_point,
+      object.classification.front().label, p, crosswalk_.polygon2d().basicPolygon(),
+      attention_area, ego_crosswalk_passage_direction, is_object_on_crosswalk);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
     if (collision_point) {
