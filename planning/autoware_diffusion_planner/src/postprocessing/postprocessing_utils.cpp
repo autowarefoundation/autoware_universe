@@ -140,9 +140,10 @@ PredictedObjects create_predicted_objects(
     // Extract poses for this neighbor (neighbor_id + 1 because 0 is ego)
     const auto & neighbor_poses = agent_poses[batch_index][neighbor_id + 1];
 
-    const double base_x = ego_centric_histories.at(neighbor_id).get_latest_state().position.x;
-    const double base_y = ego_centric_histories.at(neighbor_id).get_latest_state().position.y;
-    const double base_z = ego_centric_histories.at(neighbor_id).get_latest_state().position.z;
+    const auto & latest_pose = ego_centric_histories.at(neighbor_id).get_latest_state().pose;
+    const double base_x = latest_pose(0, 3);
+    const double base_y = latest_pose(1, 3);
+    const double base_z = latest_pose(2, 3);
     constexpr int64_t velocity_smoothing_window = 1;
     constexpr bool enable_force_stop = false;  // Don't force stop for neighbors
     constexpr double stopping_threshold = 0.0;

@@ -165,6 +165,7 @@ bool Tracker::updateWithMeasurement(
     // availability to SIGN_UNKNOWN
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
+  setOrientationAvailability(object_.kinematics.orientation_availability);
 
   // Update strategies:
   // 1. Normal update: Update position and shape by Kalman filter
