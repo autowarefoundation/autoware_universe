@@ -1,0 +1,25 @@
+/**:
+  ros__parameters:
+    # Default environment ID when area is not found in any list
+    # 0: Normal environment (default)
+    default_environment_id: 0
+
+    # Area subtype to environment ID mappings
+    # Define areas in the lanelet2 map with:
+    #   - type="feature_environment_specify"
+    #   - subtype=<subtype_name> (e.g., "uniform_road", "feature_poor_road")
+    #   - area="yes"
+    #
+    # Environment ID 1: Uniform road (e.g., tunnel straight sections, uniform shape roads)
+    # 環境ID 1: 均一形状路（トンネル直線部など）
+    area_subtype_uniform_road:
+      environment_id: 1
+
+    # Environment ID 2: Feature-poor road (roads with few features for map matching)
+    # 環境ID 2: 特徴が少ない道路（地図マッチングに特徴が少ない道路）
+    area_subtype_feature_poor_road:
+      environment_id: 2
+
+    # You can add more area subtype mappings as needed:
+    # area_subtype_custom_area:
+    #   environment_id: 3
