@@ -15,7 +15,10 @@
 #ifndef AUTOWARE__SCENARIO_SELECTOR__NODE_HPP_
 #define AUTOWARE__SCENARIO_SELECTOR__NODE_HPP_
 
+#include <autoware/route_handler/route_handler.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -27,19 +30,11 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_traffic_rules/TrafficRules.h>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-#include <autoware/route_handler/route_handler.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
-
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 

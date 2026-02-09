@@ -35,7 +35,7 @@ namespace autoware::boundary_departure_checker::utils
  */
 template <
   typename E,
-  std::enable_if_t<std::is_same_v<E, DepartureType> || std::is_same_v<E, AbnormalityType>, int> = 0>
+  std::enable_if_t<std::is_same_v<E, DepartureType> || std::is_same_v<E, FootprintType>, int> = 0>
 std::string to_enum_str(const E & value, const bool to_lower_case = true)
 {
   auto value_str = magic_enum::enum_name(value);

@@ -74,7 +74,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;
@@ -126,6 +126,21 @@ geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const do
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
 {
   return Eigen::Isometry3d(mat).inverse().matrix();
+}
+
+std::vector<float> replicate_for_batch(const std::vector<float> & single_data, const int batch_size)
+{
+  const size_t single_size = single_data.size();
+  const size_t total_size = static_cast<size_t>(batch_size) * single_size;
+
+  std::vector<float> batch_data;
+  batch_data.reserve(total_size);
+
+  for (int i = 0; i < batch_size; ++i) {
+    batch_data.insert(batch_data.end(), single_data.begin(), single_data.end());
+  }
+
+  return batch_data;
 }
 
 }  // namespace autoware::diffusion_planner::utils

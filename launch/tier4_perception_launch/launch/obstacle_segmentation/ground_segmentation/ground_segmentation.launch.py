@@ -48,6 +48,9 @@ class GroundSegmentationPipeline:
             context
         )
         self.use_time_series_filter = LaunchConfiguration("use_time_series_filter").perform(context)
+        self.use_cuda_ground_segmentation = (
+            LaunchConfiguration("use_cuda_ground_segmentation").perform(context).lower() == "true"
+        )
         # check if self.use_single_frame_filter is bool
         if isinstance(self.use_single_frame_filter, str):
             self.use_single_frame_filter = self.use_single_frame_filter.lower() == "true"
@@ -535,6 +538,46 @@ def launch_setup(context, *args, **kwargs):
     pipeline = GroundSegmentationPipeline(context)
 
     components = []
+    if pipeline.use_cuda_ground_segmentation:
+        ground_segmentation_node_param = ParameterFile(
+            param_file=LaunchConfiguration("cuda_ground_segmentation_node_param_path").perform(
+                context
+            ),
+            allow_substs=True,
+        )
+        components.append(
+            ComposableNode(
+                package="autoware_ground_segmentation_cuda",
+                plugin="autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode",
+                name="cuda_scan_ground_segmentation_filter",
+                remappings=[
+                    ("~/input/pointcloud", "/sensing/lidar/concatenated/pointcloud"),
+                    ("~/input/pointcloud/cuda", "/sensing/lidar/concatenated/pointcloud/cuda"),
+                    ("~/output/pointcloud", "/perception/obstacle_segmentation/pointcloud"),
+                    (
+                        "~/output/pointcloud/cuda",
+                        "/perception/obstacle_segmentation/pointcloud/cuda",
+                    ),
+                    (
+                        "~/output/ground_pointcloud",
+                        "/perception/obstacle_segmentation/ground_pointcloud",
+                    ),
+                    (
+                        "~/output/ground_pointcloud/cuda",
+                        "/perception/obstacle_segmentation/ground_pointcloud/cuda",
+                    ),
+                ],
+                parameters=[ground_segmentation_node_param],
+                extra_arguments=[],
+            )
+        )
+        return [
+            LoadComposableNodes(
+                composable_node_descriptions=components,
+                target_container=LaunchConfiguration("pointcloud_container_name"),
+            )
+        ]
+
     components.extend(
         pipeline.create_single_frame_obstacle_segmentation_components(
             input_topic=LaunchConfiguration("input/pointcloud"),
@@ -594,11 +637,19 @@ def generate_launch_description():
     add_launch_arg("use_intra_process", "True")
     add_launch_arg("pointcloud_container_name", "pointcloud_container")
     add_launch_arg("input/pointcloud", "/sensing/lidar/concatenated/pointcloud")
+    add_launch_arg("use_cuda_ground_segmentation", "False")
     add_launch_arg(
         "ogm_outlier_filter_param_path",
         [
-            FindPackageShare("autoware_launch"),
-            "/config/perception/obstacle_segmentation/occupancy_grid_based_outlier_filter/occupancy_grid_map_outlier_filter.param.yaml",
+            FindPackageShare("autoware_occupancy_grid_map_outlier_filter"),
+            "/config/occupancy_grid_map_outlier_filter.param.yaml",
+        ],
+    )
+    add_launch_arg(
+        "cuda_ground_segmentation_node_param_path",
+        [
+            FindPackageShare("autoware_ground_segmentation_cuda"),
+            "/config/cuda_scan_ground_segmentation_filter.param.yaml",
         ],
     )
 

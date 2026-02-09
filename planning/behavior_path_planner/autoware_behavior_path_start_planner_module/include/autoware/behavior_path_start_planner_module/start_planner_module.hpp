@@ -309,6 +309,7 @@ ego pose.
   mutable std::shared_ptr<ObjectsFilteringParams> objects_filtering_params_;
   mutable std::shared_ptr<SafetyCheckParams> safety_check_params_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+  mutable PoseWithDetailOpt previous_stop_pose_;
 
   std::vector<std::shared_ptr<PullOutPlannerBase>> start_planners_;
   PullOutStatus status_;

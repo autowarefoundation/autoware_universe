@@ -27,17 +27,11 @@
 #include <tf2/transform_datatypes.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 

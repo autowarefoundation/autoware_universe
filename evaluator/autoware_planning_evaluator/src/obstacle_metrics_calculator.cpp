@@ -246,8 +246,12 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
           obstacle_trajectory_points_.emplace_back(obstacle_pose, obstacle_velocity, ego_time, 0.0);
         }
       } else {
-        // Create obstacle trajectory points based on the predicted path.
-        const auto & obstacle_path = object.kinematics.predicted_paths.front().path;
+        // Create obstacle trajectory points based on the predicted path with highest confidence.
+        const auto & predicted_paths = object.kinematics.predicted_paths;
+        auto max_confidence_iter = std::max_element(
+          predicted_paths.begin(), predicted_paths.end(),
+          [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+        const auto & obstacle_path = max_confidence_iter->path;
 
         // initialize reference point and the point right after next reference point. Here
         // `reference_point` is the point right before the current ego trajectory point.
@@ -389,7 +393,8 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
           const double point_pet =
             ego_trajectory_points_[ego_first_overlap_idx - 1].time_from_start_s -
             obstacle_trajectory_point.time_from_start_s;
-          if (point_pet > 0) {  // Only consider the case where obstacle leaves before ego arrives.
+          if (point_pet >= 0) {  // Only consider the case where obstacle leaves before ego arrives
+                                 // （PET > 0） and occlusion occurs （PET = 0）
             obstacle_pet = std::min(obstacle_pet, point_pet);
           }
         }
