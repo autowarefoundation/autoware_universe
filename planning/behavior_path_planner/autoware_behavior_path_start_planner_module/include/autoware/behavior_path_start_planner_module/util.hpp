@@ -96,6 +96,8 @@ void set_lane_ids_to_path_point(
   PathPointWithLaneId & point, const lanelet::ConstLanelets & road_lanes,
   const std::vector<int64_t> & previous_lane_ids);
 
+std::pair<double, double> calc_start_and_end_shift_length(
+  const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose);
 }  // namespace autoware::behavior_path_planner::start_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__UTIL_HPP_
