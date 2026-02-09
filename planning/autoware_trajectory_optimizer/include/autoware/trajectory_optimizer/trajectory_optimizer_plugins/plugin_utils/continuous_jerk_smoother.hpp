@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CONTINUOUS_JERK_SMOOTHER_HPP_
-#define CONTINUOUS_JERK_SMOOTHER_HPP_
+// NOLINTNEXTLINE
+#ifndef AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__CONTINUOUS_JERK_SMOOTHER_HPP_
+// NOLINTNEXTLINE
+#define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__CONTINUOUS_JERK_SMOOTHER_HPP_
 
 #include <autoware/qp_interface/qp_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -123,4 +125,5 @@ private:
 
 }  // namespace autoware::trajectory_optimizer::plugin
 
-#endif  // CONTINUOUS_JERK_SMOOTHER_HPP_
+// NOLINTNEXTLINE
+#endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__CONTINUOUS_JERK_SMOOTHER_HPP_
