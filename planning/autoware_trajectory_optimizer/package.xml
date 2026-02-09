@@ -18,10 +18,10 @@
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_osqp_interface</depend>
-  <depend>autoware_qp_interface</depend>
   <depend>autoware_path_optimizer</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_qp_interface</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_math</depend>
