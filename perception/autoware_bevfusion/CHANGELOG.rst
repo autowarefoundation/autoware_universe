@@ -2,6 +2,38 @@
 Changelog for package autoware_bevfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_bevfusion): separate image backbone from fusion model and add lidar intensity option (`#11468 <https://github.com/autowarefoundation/autoware_universe/issues/11468>`_)
+  * image backbone building
+  * inference running without error
+  * working bevfusion-cl
+  * style(pre-commit): autofix
+  * removed unnecessary changes
+  * style(pre-commit): autofix
+  * made requested changes
+  * style(pre-commit): autofix
+  * updated memcopy for img_matrices
+  * fix parameter names and defaults
+  * style(pre-commit): autofix
+  * fixed complile time issues
+  * refactor pre-process method
+  * refactored node code
+  * style(pre-commit): autofix
+  * refactor init method
+  * style(pre-commit): autofix
+  * split node code
+  * style(pre-commit): autofix
+  * helper code complexity refactor
+  * fix lint error
+  * style(pre-commit): autofix
+  * update schema params
+  * suppress clang changes
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Samrat Thapa
+
 0.48.0 (2025-11-18)
 -------------------
 

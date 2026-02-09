@@ -21,12 +21,8 @@
 #include <Eigen/Core>
 #include <rclcpp/rclcpp.hpp>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 #include <geometry_msgs/msg/twist.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::multi_object_tracker
 {
@@ -115,6 +111,10 @@ public:
 
   bool updateStatePoseFront(
     const double & xf, const double & yf, const std::array<double, 36> & pose_cov);
+
+  enum class LengthUpdateAnchor { CENTER, FRONT, REAR };
+  bool updateStateLength(
+    const double & new_length, const LengthUpdateAnchor anchor = LengthUpdateAnchor::CENTER);
 
   bool adjustPosition(const double & delta_x, const double & delta_y);
 

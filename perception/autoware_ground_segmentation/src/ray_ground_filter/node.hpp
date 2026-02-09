@@ -45,32 +45,25 @@
 #ifndef RAY_GROUND_FILTER__NODE_HPP_
 #define RAY_GROUND_FILTER__NODE_HPP_
 
-#include "autoware_utils/system/time_keeper.hpp"
-
-#include <tf2/transform_datatypes.hpp>
-
-#include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
-
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 #include "gencolors.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <tf2/transform_datatypes.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/optional.hpp>
+
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <chrono>
 #include <memory>

@@ -38,17 +38,17 @@
           "default": true,
           "description": "Enable QP-based trajectory smoothing with explicit jerk constraints"
         },
-        "fix_invalid_points": {
+        "use_trajectory_point_fixer": {
           "type": "boolean",
           "default": true,
           "description": "Remove repeated or invalid points, or points that go against the general trajectory direction"
         },
-        "extend_trajectory_backward": {
+        "use_trajectory_extender": {
           "type": "boolean",
-          "default": true,
-          "description": "Extend trajectory backward using ego pose history"
+          "default": false,
+          "description": "Enable trajectory extender to extend trajectory backward using ego pose history"
         },
-        "optimize_velocity": {
+        "use_velocity_optimizer": {
           "type": "boolean",
           "default": true,
           "description": "Enable velocity profile optimization with jerk filtering and constraint enforcement"
@@ -77,14 +77,14 @@
               "minimum": 0,
               "description": "Minimum distance threshold for removing close proximity points [m]"
             },
-            "min_dist_to_merge_m": {
+            "min_dist_to_resample_m": {
               "type": "number",
               "default": 0.05,
               "minimum": 0,
               "description": "Minimum distance threshold for merging close proximity points [m]"
             }
           },
-          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_merge_m"]
+          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_resample_m"]
         },
         "trajectory_kinematic_feasibility": {
           "type": "object",
@@ -394,12 +394,6 @@
               "minimum": 0,
               "description": "Target acceleration during pull-out maneuver [m/s²]"
             },
-            "max_speed_mps": {
-              "type": "number",
-              "default": 8.33,
-              "minimum": 0,
-              "description": "Maximum allowed speed [m/s]"
-            },
             "max_lateral_accel_mps2": {
               "type": "number",
               "default": 1.5,
@@ -432,7 +426,6 @@
             "nearest_yaw_threshold_deg",
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
-            "max_speed_mps",
             "max_lateral_accel_mps2",
             "set_engage_speed",
             "limit_speed",
@@ -586,9 +579,9 @@
         "use_akima_spline_interpolation",
         "use_eb_smoother",
         "use_qp_smoother",
-        "fix_invalid_points",
-        "extend_trajectory_backward",
-        "optimize_velocity",
+        "use_trajectory_point_fixer",
+        "use_trajectory_extender",
+        "use_velocity_optimizer",
         "use_kinematic_feasibility_enforcer",
         "use_mpt_optimizer"
       ]

@@ -222,8 +222,8 @@ def generate_launch_description():
     add_launch_arg(
         "sync_param_path",
         [
-            FindPackageShare("autoware_launch"),
-            "/config/perception/object_recognition/detection/image_projection_based_fusion/fusion_common.param.yaml",
+            FindPackageShare("autoware_image_projection_based_fusion"),
+            "/config/fusion_common.param.yaml",
         ],
     )
 

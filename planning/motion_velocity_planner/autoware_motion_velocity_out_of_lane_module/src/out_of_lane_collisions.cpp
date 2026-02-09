@@ -115,15 +115,22 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   std::sort(initial_ids.begin(), initial_ids.end());
   lanelet::Ids overlapped_lanelets = final_ids;
   overlapped_lanelets.insert(overlapped_lanelets.end(), initial_ids.begin(), initial_ids.end());
+
+  autoware_utils_geometry::LineString2d line_string;
+  boost::geometry::convert(ls, line_string);
+
   for (const auto & candidate : candidates) {
     const auto id = candidate.id();
     // check if the id is already in the initial/final ids to avoid redoing the geometry operation
     if (
       !std::binary_search(initial_ids.begin(), initial_ids.end(), id) &&
-      !std::binary_search(final_ids.begin(), final_ids.end(), id) &&
-      !boost::geometry::disjoint(
-        ls, route_handler.getLaneletsFromId(id).polygon2d().basicPolygon())) {
-      overlapped_lanelets.push_back(id);
+      !std::binary_search(final_ids.begin(), final_ids.end(), id)) {
+      autoware_utils_geometry::Polygon2d polygon_lanelet;
+      boost::geometry::convert(
+        route_handler.getLaneletsFromId(id).polygon2d().basicPolygon(), polygon_lanelet);
+      if (!boost::geometry::disjoint(polygon_lanelet, line_string)) {
+        overlapped_lanelets.push_back(id);
+      }
     }
   }
   std::sort(overlapped_lanelets.begin(), overlapped_lanelets.end());
@@ -283,16 +290,19 @@ OutOfLanePoint calculate_out_of_lane_point(
 {
   OutOfLanePoint p;
   std::vector<LaneletNode> candidates;
+  autoware_utils_geometry::Polygon2d poly_footprint;
+  boost::geometry::convert(footprint, poly_footprint);
   out_lanelets_rtree.query(
-    boost::geometry::index::intersects(footprint), std::back_inserter(candidates));
+    boost::geometry::index::intersects(poly_footprint), std::back_inserter(candidates));
   for (const auto & [_, idx] : candidates) {
     const auto & lanelet = out_lanelets[idx];
-    lanelet::BasicPolygons2d intersections;
-    boost::geometry::intersection(footprint, lanelet.polygon2d().basicPolygon(), intersections);
+    autoware_utils_geometry::MultiPolygon2d intersections;
+    autoware_utils_geometry::Polygon2d poly_lanelet;
+    boost::geometry::convert(lanelet.polygon2d().basicPolygon(), poly_lanelet);
+    boost::geometry::intersection(poly_footprint, poly_lanelet, intersections);
+    p.out_overlaps.reserve(intersections.size());
     for (const auto & intersection : intersections) {
-      autoware_utils::Polygon2d poly;
-      boost::geometry::convert(intersection, poly);
-      p.out_overlaps.push_back(poly);
+      p.out_overlaps.push_back(intersection);
     }
     if (!intersections.empty()) {
       p.overlapped_lanelets.push_back(lanelet);
