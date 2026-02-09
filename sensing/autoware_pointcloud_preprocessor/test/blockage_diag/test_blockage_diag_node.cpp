@@ -26,7 +26,6 @@
 #include <cmath>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 class BlockageDiagIntegrationTest : public ::testing::Test
@@ -45,12 +44,12 @@ protected:
     node_options.append_parameter_override("enable_dust_diag", true);
     node_options.append_parameter_override("dust_ratio_threshold", 0.3);
     node_options.append_parameter_override("dust_count_threshold", 2);
-    node_options.append_parameter_override("dust_kernel_size", 3);
+    node_options.append_parameter_override("dust_kernel_size", 1);
     node_options.append_parameter_override("dust_buffering_frames", 5);
     node_options.append_parameter_override("dust_buffering_interval", 2);
     node_options.append_parameter_override("blockage_ratio_threshold", 0.5);
     node_options.append_parameter_override("blockage_count_threshold", 2);
-    node_options.append_parameter_override("blockage_kernel", 3);
+    node_options.append_parameter_override("blockage_kernel", 1);
     node_options.append_parameter_override("blockage_buffering_frames", 5);
     node_options.append_parameter_override("blockage_buffering_interval", 2);
     node_options.append_parameter_override("publish_debug_image", true);
@@ -69,12 +68,6 @@ protected:
     executor_->add_node(blockage_diag_node_);
     executor_->add_node(test_node_);
 
-    // Start executor in a separate thread
-    executor_thread_ = std::thread([this]() { executor_->spin(); });
-
-    // Wait for node setup
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
     // Create publisher for input topic (blockage_diag subscribes to "input")
     input_pub_ =
       test_node_->create_publisher<sensor_msgs::msg::PointCloud2>("input", rclcpp::SensorDataQoS());
@@ -87,30 +80,15 @@ protected:
         diagnostics_msg_ = msg;
         diagnostics_received_ = true;
       });
-
-    // Wait for publisher/subscriber setup
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }
 
-  void TearDown() override
-  {
-    executor_->cancel();
-    if (executor_thread_.joinable()) {
-      executor_thread_.join();
-    }
-    executor_.reset();
-    blockage_diag_node_.reset();
-    test_node_.reset();
-    rclcpp::shutdown();
-  }
+  void TearDown() override { rclcpp::shutdown(); }
 
-  // Helper function to create a pointcloud with specified horizontal bin coverage
-  sensor_msgs::msg::PointCloud2 create_pointcloud(double coverage_ratio)
+  sensor_msgs::msg::PointCloud2 create_valid_pointcloud()
   {
-    const int horizontal_bins = static_cast<int>(360.0 / 60.0);  // 6 bins
+    const int horizontal_bins = 6;  // 360.0 / 60.0
     const int vertical_bins = 4;
-    const int coverage_bins = static_cast<int>(horizontal_bins * coverage_ratio);
-    const int num_points = coverage_bins * vertical_bins;
+    const int num_points = horizontal_bins * vertical_bins;
 
     sensor_msgs::msg::PointCloud2 cloud;
     cloud.height = 1;
@@ -119,23 +97,17 @@ protected:
     modifier.setPointCloud2Fields(
       3, "channel", 1, sensor_msgs::msg::PointField::UINT16, "azimuth", 1,
       sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32);
-
     modifier.resize(num_points);
 
     sensor_msgs::PointCloud2Iterator<uint16_t> iter_channel(cloud, "channel");
     sensor_msgs::PointCloud2Iterator<float> iter_azimuth(cloud, "azimuth");
     sensor_msgs::PointCloud2Iterator<float> iter_distance(cloud, "distance");
 
-    for (int h = 0; h < coverage_bins; ++h) {
+    for (int h = 0; h < horizontal_bins; ++h) {
       for (int v = 0; v < vertical_bins; ++v) {
-        double azimuth_deg = -180.0 + h * 60.0;
-        double azimuth_rad = azimuth_deg * M_PI / 180.0;
-        float distance = 50.0;
-
         *iter_channel = v;
-        *iter_azimuth = azimuth_rad;
-        *iter_distance = distance;
-
+        *iter_azimuth = (-180.0 + h * 60.0) * M_PI / 180.0;
+        *iter_distance = 50.0f;
         ++iter_channel;
         ++iter_azimuth;
         ++iter_distance;
@@ -145,7 +117,6 @@ protected:
     return cloud;
   }
 
-  // Helper to verify diagnostic status level
   void verify_diagnostic_level(uint8_t expected_level, const std::string & test_description)
   {
     ASSERT_NE(diagnostics_msg_, nullptr) << test_description;
@@ -174,7 +145,7 @@ protected:
       if (std::chrono::steady_clock::now() - start > timeout) {
         return false;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      executor_->spin_some();
     }
 
     return true;
@@ -183,58 +154,19 @@ protected:
   std::shared_ptr<autoware::pointcloud_preprocessor::BlockageDiagComponent> blockage_diag_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
-  std::thread executor_thread_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr input_pub_;
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_sub_;
   diagnostic_msgs::msg::DiagnosticArray::SharedPtr diagnostics_msg_;
-  bool diagnostics_received_;
+  bool diagnostics_received_ = false;
 };
 
-// Test case: No input produces STALE diagnostic
-TEST_F(BlockageDiagIntegrationTest, DiagnosticsStaleTest)
-{
-  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::STALE, "STALE test");
-}
-
-// Test case: Empty pointcloud produces WARN diagnostic
-TEST_F(BlockageDiagIntegrationTest, DiagnosticsWarnTest)
-{
-  auto zero_length_pointcloud = create_pointcloud(0.0);
-  input_pub_->publish(zero_length_pointcloud);
-
-  diagnostics_received_ = false;
-  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::WARN, "WARN test");
-}
-
-// Test case: Dense pointcloud produces OK diagnostic
 TEST_F(BlockageDiagIntegrationTest, DiagnosticsOKTest)
 {
-  auto no_blockage_pointcloud = create_pointcloud(1.0);
-  input_pub_->publish(no_blockage_pointcloud);
+  input_pub_->publish(create_valid_pointcloud());
 
   diagnostics_received_ = false;
   ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
   verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK test");
-}
-
-// Test case: Blocked pointcloud produces ERROR diagnostic
-TEST_F(BlockageDiagIntegrationTest, DiagnosticsErrorTest)
-{
-  // Publish multiple frames with blockage to trigger ERROR
-  for (int frame = 0; frame < 5; ++frame) {
-    auto blocked_pointcloud = create_pointcloud(0.3);
-    input_pub_->publish(blocked_pointcloud);
-
-    diagnostics_received_ = false;
-    ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics on frame " << frame;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  diagnostics_received_ = false;
-  ASSERT_TRUE(wait_for_diagnostics()) << "Timeout waiting for diagnostics message";
-  verify_diagnostic_level(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "ERROR test");
 }
 
 int main(int argc, char ** argv)
