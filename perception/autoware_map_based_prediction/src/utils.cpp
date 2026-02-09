@@ -17,7 +17,6 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
@@ -258,7 +257,7 @@ double calculateLocalLikelihood(
   const auto centerline = current_lanelet.centerline();
   std::vector<geometry_msgs::msg::Point> converted_centerline;
   for (const auto & p : centerline) {
-    const auto converted_p = lanelet::utils::conversion::toGeomMsgPt(p);
+    const auto converted_p = experimental::lanelet2_utils::to_ros(p);
     converted_centerline.push_back(converted_p);
   }
   const double lat_dist =

@@ -22,7 +22,6 @@
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/constants.hpp>
@@ -1471,7 +1470,7 @@ std::pair<PosePath, double> MapBasedPredictionNode::convertLaneletPathToPosePath
         geometry_msgs::msg::Pose prev_p;
         for (const auto & lanelet_p : prev_lanelet.centerline()) {
           geometry_msgs::msg::Pose current_p;
-          current_p.position = lanelet::utils::conversion::toGeomMsgPt(lanelet_p);
+          current_p.position = experimental::lanelet2_utils::to_ros(lanelet_p);
           if (init_flag) {
             init_flag = false;
             prev_p = current_p;
@@ -1499,7 +1498,7 @@ std::pair<PosePath, double> MapBasedPredictionNode::convertLaneletPathToPosePath
       geometry_msgs::msg::Pose prev_p;
       for (const auto & lanelet_p : lanelet.centerline()) {
         geometry_msgs::msg::Pose current_p;
-        current_p.position = lanelet::utils::conversion::toGeomMsgPt(lanelet_p);
+        current_p.position = experimental::lanelet2_utils::to_ros(lanelet_p);
         if (init_flag) {
           init_flag = false;
           prev_p = current_p;

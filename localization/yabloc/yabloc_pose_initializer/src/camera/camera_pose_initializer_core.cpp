@@ -16,7 +16,7 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -133,11 +133,12 @@ std::optional<double> CameraPoseInitializer::estimate_pose(
   query_pose.position.y = position.y();
   query_pose.position.z = position.z();
 
-  lanelet::ConstLanelets current_lanelets;
   std::optional<double> lane_angle_rad = std::nullopt;
-  if (lanelet::utils::query::getCurrentLanelets(const_lanelets_, query_pose, &current_lanelets)) {
+  if (const auto current_lanelet_opt =
+        autoware::experimental::lanelet2_utils::get_closest_lanelet(const_lanelets_, query_pose);
+      current_lanelet_opt) {
     lane_angle_rad = autoware::experimental::lanelet2_utils::get_lanelet_angle(
-      current_lanelets.front(),
+      current_lanelet_opt.value(),
       autoware::experimental::lanelet2_utils::from_ros(query_pose.position).basicPoint());
   }
 
