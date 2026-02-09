@@ -32,7 +32,7 @@
   <!-- topic -->
   <arg name="input/vector_map" default="/map/vector_map" description="input vector map topic"/>
   <arg name="input/route" default="/planning/mission_planning/route" description="input route topic"/>
-  <arg name="input/cloud" default="/sensing/lidar/top/pointcloud_raw_ex" description="input pointcloud topic for traffic_light_occlusion_predictor"/>
+  <arg name="input_pointcloud_for_traffic_light_occlusion_predictor" default="/sensing/lidar/top/pointcloud_raw_ex" description="input pointcloud topic for traffic_light_occlusion_predictor"/>
   <arg name="internal/traffic_signals" default="/perception/traffic_light_recognition/internal/traffic_signals" description="topic from traffic_light_multi_camera_fusion"/>
   <arg name="external/traffic_signals" default="/perception/traffic_light_recognition/external/traffic_signals" description="topic from V2X"/>
   <arg name="judged/traffic_signals" default="/perception/traffic_light_recognition/judged/traffic_signals" description="topic from traffic_light_arbiter"/>
@@ -77,7 +77,7 @@
   <group if="$(eval &quot;'$(var high_accuracy_detection_type)'=='fine_detection'&quot;)">
     <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light_occlusion_predictor.launch.py">
       <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
-      <arg name="input/cloud" value="$(var input/cloud)"/>
+      <arg name="input/cloud" value="$(var input_pointcloud_for_traffic_light_occlusion_predictor)"/>
       <arg name="input/vector_map" value="$(var input/vector_map)"/>
       <arg name="param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
     </include>

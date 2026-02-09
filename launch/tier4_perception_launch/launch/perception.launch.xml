@@ -145,6 +145,7 @@
   <arg name="traffic_light_recognition/high_accuracy_detection_type"/>
 
   <!-- traffic light recognition parameters -->
+  <arg name="input_pointcloud_for_traffic_light_occlusion_predictor"/>
   <arg name="traffic_light_recognition/whole_image_detection/model_path"/>
   <arg name="traffic_light_recognition/whole_image_detection/label_path"/>
   <arg name="traffic_light_recognition/fine_detection/model_path"/>
@@ -380,6 +381,7 @@
     <group if="$(var use_traffic_light_recognition)">
       <push-ros-namespace namespace="traffic_light_recognition"/>
       <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml">
+        <arg name="input_pointcloud_for_traffic_light_occlusion_predictor" value="$(var input_pointcloud_for_traffic_light_occlusion_predictor)"/>
         <arg name="fusion_only" value="$(var traffic_light_recognition/fusion_only)"/>
         <arg name="camera_namespaces" value="$(var traffic_light_recognition/camera_namespaces)"/>
         <arg name="use_high_accuracy_detection" value="$(var traffic_light_recognition/use_high_accuracy_detection)"/>
