@@ -148,8 +148,12 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
 std::vector<double> limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
   const double max_lateral_accel_mps2, const double min_limited_speed_mps,
-  const Odometry & current_odometry, const int skip_head_points, const int skip_tail_points)
+  const Odometry & current_odometry)
 {
+  if (input_trajectory_array.empty()) {
+    return max_velocity_per_point;
+  }
+
   const size_t traj_size = input_trajectory_array.size();
 
   auto get_delta_time = [](const auto & next, const auto & current) -> double {
@@ -160,20 +164,9 @@ std::vector<double> limit_lateral_acceleration(
   const auto & current_position = current_odometry.pose.pose.position;
   motion_utils::calculate_time_from_start(input_trajectory_array, current_position);
 
-  const auto closest_index =
-    motion_utils::findNearestIndex(input_trajectory_array, current_position);
+  const auto start_index = motion_utils::findNearestIndex(input_trajectory_array, current_position);
 
-  // Calculate start and end indices, excluding head and tail points
-  const size_t effective_skip_head = static_cast<size_t>(std::max(0, skip_head_points));
-  const size_t effective_skip_tail = static_cast<size_t>(std::max(0, skip_tail_points));
-
-  // Start index: max of closest_index and skip_head_points
-  const size_t start_index = std::max(closest_index, effective_skip_head);
-
-  // End index: (size - 1 - skip_tail_points) to avoid the last skip_tail_points transitions
-  // The loop processes pairs (i, i+1), so we stop at (size - 1 - skip_tail_points)
-  const size_t end_index =
-    (traj_size > effective_skip_tail + 1) ? (traj_size - 1 - effective_skip_tail) : start_index;
+  const size_t end_index = traj_size - 1;
 
   // Ensure we have a valid range
   if (start_index >= traj_size || start_index > end_index) {
@@ -187,8 +180,9 @@ std::vector<double> limit_lateral_acceleration(
   size_t current_index = start_index;
   for (auto itr = start_itr; itr < std::prev(input_trajectory_array.end());
        ++itr, ++current_index) {
-    // Skip tail points to avoid orientation discontinuity issues
-    if (current_index > end_index) {
+    const double current_speed = std::abs(itr->longitudinal_velocity_mps);
+    if (current_speed < min_limited_speed_mps) {
+      // No modification needed for low speeds
       continue;
     }
 
@@ -210,7 +204,6 @@ std::vector<double> limit_lateral_acceleration(
 
     constexpr double epsilon_yaw_rate = 1.0e-5;
     const double yaw_rate = std::max(std::abs(delta_theta / delta_time), epsilon_yaw_rate);
-    const double current_speed = std::abs(itr->longitudinal_velocity_mps);
     // Compute lateral acceleration
     const double lateral_acceleration = current_speed * yaw_rate;
 
@@ -222,11 +215,6 @@ std::vector<double> limit_lateral_acceleration(
     // Compute velocity limit based on lateral acceleration constraint
     const double limited_velocity =
       std::max(max_lateral_accel_mps2 / yaw_rate, min_limited_speed_mps);
-
-    if (current_speed < limited_velocity) {
-      // No modification needed
-      continue;
-    }
 
     // Update max velocity constraint for this point
     max_velocity_per_point.at(current_index) =

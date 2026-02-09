@@ -22,6 +22,7 @@
 #include <rclcpp/logging.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -50,16 +51,6 @@ void TrajectoryVelocityOptimizer::initialize(
   pub_velocity_limit_->publish(max_vel_msg);
 }
 
-void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
-  rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
-{
-  const auto vehicle_info =
-    autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
-  double wheelbase = vehicle_info.wheel_base_m;  // vehicle_info.wheel_base_m;
-  jerk_filtered_smoother_ = std::make_shared<JerkFilteredSmoother>(*node_ptr, time_keeper);
-  jerk_filtered_smoother_->setWheelBase(wheelbase);
-}
-
 void TrajectoryVelocityOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
   const TrajectoryOptimizerData & data)
@@ -76,16 +67,15 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   const double & target_pull_out_acc_mps2 = velocity_params_.target_pull_out_acc_mps2;
 
   // Initialize max velocity per point with global max speed
-  std::vector<double> max_velocity_per_point(traj_points.size(), max_speed_mps);
+  std::vector<double> max_velocity_per_point(
+    traj_points.size(), std::numeric_limits<double>::max());
 
   // Apply lateral acceleration limiting and update max velocity constraints
   if (velocity_params_.limit_lateral_acceleration) {
     // limit_lateral_acceleration returns per-point max velocities based on curvature
     max_velocity_per_point = trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
       traj_points, max_velocity_per_point, velocity_params_.max_lateral_accel_mps2,
-      velocity_params_.min_limited_speed_mps, data.current_odometry,
-      velocity_params_.skip_lateral_accel_limit_head_points,
-      velocity_params_.skip_lateral_accel_limit_tail_points);
+      velocity_params_.min_limited_speed_mps, data.current_odometry);
   }
 
   auto initial_motion_speed =
@@ -107,6 +97,9 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
                                  ? static_cast<float>(external_velocity_limit->max_velocity)
                                  : static_cast<float>(velocity_params_.default_max_velocity_mps);
     trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
+    for (auto & v : max_velocity_per_point) {
+      v = std::min(v, static_cast<double>(max_speed_mps));
+    }
     if (external_velocity_limit) {
       pub_velocity_limit_->publish(*external_velocity_limit);
     }
@@ -143,10 +136,6 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.max_lateral_accel_mps2");
   velocity_params_.min_limited_speed_mps = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.min_limited_speed_mps");
-  velocity_params_.skip_lateral_accel_limit_head_points = get_or_declare_parameter<int>(
-    *node_ptr, "trajectory_velocity_optimizer.skip_lateral_accel_limit_head_points");
-  velocity_params_.skip_lateral_accel_limit_tail_points = get_or_declare_parameter<int>(
-    *node_ptr, "trajectory_velocity_optimizer.skip_lateral_accel_limit_tail_points");
   velocity_params_.default_max_velocity_mps =
     get_or_declare_parameter<double>(*node_ptr, "max_vel");
   velocity_params_.set_engage_speed =
@@ -203,12 +192,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
   update_param(
     parameters, "trajectory_velocity_optimizer.min_limited_speed_mps",
     velocity_params_.min_limited_speed_mps);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.skip_lateral_accel_limit_head_points",
-    velocity_params_.skip_lateral_accel_limit_head_points);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.skip_lateral_accel_limit_tail_points",
-    velocity_params_.skip_lateral_accel_limit_tail_points);
   update_param(
     parameters, "trajectory_velocity_optimizer.set_engage_speed",
     velocity_params_.set_engage_speed);

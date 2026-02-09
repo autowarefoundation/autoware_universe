@@ -17,8 +17,6 @@
       max_lateral_accel_mps2: 1.0     # [m/s²] Maximum lateral acceleration
       limit_lateral_acceleration: false  # Enable lateral acceleration limiting, should be launched with velocity smoother
       min_limited_speed_mps: 3.0        # [m/s] Minimum speed when applying lateral acceleration limit
-      skip_lateral_accel_limit_head_points: 2  # Number of head points to skip (handles orientation discontinuities at start)
-      skip_lateral_accel_limit_tail_points: 2  # Number of tail points to skip (handles orientation discontinuities at end)
 
       # Velocity smoothing
       smooth_velocities: false        # Enable jerk-filtered velocity smoothing
