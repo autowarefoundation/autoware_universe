@@ -79,7 +79,7 @@ void apply_spline(
       "Not enough points in trajectory after akima spline interpolation");
     return;
   }
-  const auto & last_interpolated_point = output_points.back();
+
   auto & original_trajectory_last_point = traj_points.back();
 
   if (!autoware::trajectory_optimizer::utils::validate_point(original_trajectory_last_point)) {
@@ -89,12 +89,6 @@ void apply_spline(
       "Last point in original trajectory is invalid. Removing last point");
     traj_points = output_points;
     return;
-  }
-
-  auto d = autoware_utils_geometry::calc_distance2d(
-    last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
-  if (d > min_interpolation_step) {
-    output_points.push_back(original_trajectory_last_point);
   }
 
   if (preserve_original_orientation) {
