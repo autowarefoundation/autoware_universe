@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: MapBasedPrediction.node
 
+package:
+  name: autoware_map_based_prediction
+  provider: autoware
+
 launch:
-  package: autoware_map_based_prediction
   plugin: autoware::map_based_prediction::MapBasedPredictionNode
   executable: map_based_prediction
   node_output: screen

@@ -1,7 +1,11 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrackedObjectLaneletFilter.node
+
+package:
+  name: autoware_detected_object_validation
+  provider: autoware
 
 launch:
   package: autoware_detected_object_validation

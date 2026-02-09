@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: VehicleVelocityConverter.node
 
+package:
+  name: autoware_vehicle_velocity_converter
+  provider: autoware
+
 launch:
-  package: autoware_vehicle_velocity_converter
   plugin: autoware::vehicle_velocity_converter::VehicleVelocityConverter
   executable: autoware_vehicle_velocity_converter_node
   node_output: screen

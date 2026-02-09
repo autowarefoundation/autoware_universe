@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: VoxelBasedCompareMapFilter.node
 
+package:
+  name: autoware_compare_map_segmentation
+  provider: autoware
+
 launch:
-  package: autoware_compare_map_segmentation
   plugin: autoware::compare_map_segmentation::VoxelBasedCompareMapFilterComponent
   executable: voxel_based_compare_map_filter_node
   node_output: screen

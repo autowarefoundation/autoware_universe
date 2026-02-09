@@ -1,4 +1,4 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightMultiCameraFusion_1_input.node

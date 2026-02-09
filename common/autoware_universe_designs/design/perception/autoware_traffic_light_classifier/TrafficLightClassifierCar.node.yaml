@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightClassifierCar.node
 
+package:
+  name: autoware_traffic_light_classifier
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_classifier
   plugin: autoware::traffic_light::TrafficLightClassifierNodelet
   executable: traffic_light_classifier_node
   node_output: screen

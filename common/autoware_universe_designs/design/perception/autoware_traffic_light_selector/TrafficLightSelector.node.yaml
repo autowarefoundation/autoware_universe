@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightSelector.node
 
+package:
+  name: autoware_traffic_light_selector
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_selector
   plugin: autoware::traffic_light::TrafficLightSelectorNode
   executable: traffic_light_selector_node
   node_output: screen

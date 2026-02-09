@@ -1,7 +1,11 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: LowIntensityClusterFilter.node
+
+package:
+  name: autoware_raindrop_cluster_filter
+  provider: autoware
 
 launch:
   package: autoware_raindrop_cluster_filter

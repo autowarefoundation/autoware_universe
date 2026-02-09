@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TensorrtYolox.node
 
+package:
+  name: autoware_tensorrt_yolox
+  provider: autoware
+
 launch:
-  package: autoware_tensorrt_yolox
   plugin: autoware::tensorrt_yolox::TrtYoloXNode
   executable: autoware_tensorrt_yolox_node_exe
   node_output: screen

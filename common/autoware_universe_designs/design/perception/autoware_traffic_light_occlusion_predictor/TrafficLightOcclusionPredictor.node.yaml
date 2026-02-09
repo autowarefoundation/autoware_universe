@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightOcclusionPredictor.node
 
+package:
+  name: autoware_traffic_light_occlusion_predictor
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_occlusion_predictor
   plugin: autoware::traffic_light::TrafficLightOcclusionPredictorNode
   executable: traffic_light_occlusion_predictor_node
   node_output: screen

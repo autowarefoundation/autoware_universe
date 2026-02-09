@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ExternalCmdConverter.node
 
+package:
+  name: autoware_external_cmd_converter
+  provider: autoware
+
 launch:
-  package: autoware_external_cmd_converter
   plugin: autoware::external_cmd_converter::ExternalCmdConverterNode
   executable: external_cmd_converter_node
   node_output: screen

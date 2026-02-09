@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: LidarApolloInstanceSegmentation.node
 
+package:
+  name: autoware_lidar_apollo_instance_segmentation
+  provider: autoware
+
 launch:
-  package: autoware_lidar_apollo_instance_segmentation
   plugin: autoware::lidar_apollo_instance_segmentation::LidarInstanceSegmentationNode
   executable: lidar_apollo_instance_segmentation_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: DetectionByTracker.node
 
+package:
+  name: autoware_detection_by_tracker
+  provider: autoware
+
 launch:
-  package: autoware_detection_by_tracker
   plugin: autoware::detection_by_tracker::DetectionByTracker
   executable: detection_by_tracker_node
   node_output: screen

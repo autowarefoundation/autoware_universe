@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightMapBasedDetector.node
 
+package:
+  name: autoware_traffic_light_map_based_detector
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_map_based_detector
   plugin: autoware::traffic_light::MapBasedDetector
   executable: traffic_light_map_based_detector_node
   node_output: screen

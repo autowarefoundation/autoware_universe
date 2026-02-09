@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: PoseInitializer.node
 
+package:
+  name: autoware_pose_initializer
+  provider: autoware
+
 launch:
-  package: autoware_pose_initializer
   plugin: autoware::pose_initializer::PoseInitializer
   executable: autoware_pose_initializer_node
   node_output: screen

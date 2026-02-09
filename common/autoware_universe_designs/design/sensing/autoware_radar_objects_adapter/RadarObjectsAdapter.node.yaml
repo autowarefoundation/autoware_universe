@@ -1,9 +1,12 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 name: RadarObjectsAdapter.node
 
+package:
+  name: autoware_radar_objects_adapter
+  provider: autoware
+
 launch:
-  package: autoware_radar_objects_adapter
   plugin: autoware::RadarObjectsAdapter
   executable: radar_objects_adapter_node
 

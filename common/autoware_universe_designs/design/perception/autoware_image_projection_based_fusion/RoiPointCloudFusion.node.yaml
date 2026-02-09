@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: RoiPointCloudFusion.node
 
+package:
+  name: autoware_image_projection_based_fusion
+  provider: autoware
+
 launch:
-  package: autoware_image_projection_based_fusion
   plugin: autoware::image_projection_based_fusion::RoiPointCloudFusionNode
   executable: roi_pointcloud_fusion_node
   node_output: screen

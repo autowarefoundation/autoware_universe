@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: SteerOffsetEstimator.node
 
+package:
+  name: autoware_steer_offset_estimator
+  provider: autoware
+
 launch:
-  package: autoware_steer_offset_estimator
   plugin: autoware::steer_offset_estimator::SteerOffsetEstimatorNode
   executable: steer_offset_estimator_node
   node_output: screen

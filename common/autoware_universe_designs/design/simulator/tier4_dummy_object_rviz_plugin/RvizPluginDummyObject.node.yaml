@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: RvizPluginDummyObject.node
 
+package:
+  name: tier4_dummy_object_rviz_plugin
+  provider: autoware
+
 launch:
-  package: tier4_dummy_object_rviz_plugin
   plugin: autoware::dummy_perception_publisher::DummyPerceptionPublisherNode
   executable: tier4_dummy_object_rviz_plugin_node
   node_output: screen

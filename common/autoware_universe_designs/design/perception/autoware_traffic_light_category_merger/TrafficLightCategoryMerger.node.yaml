@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightCategoryMerger.node
 
+package:
+  name: autoware_traffic_light_category_merger
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_category_merger
   plugin: autoware::traffic_light::TrafficLightCategoryMergerNode
   executable: traffic_light_category_merger_node
   node_output: screen

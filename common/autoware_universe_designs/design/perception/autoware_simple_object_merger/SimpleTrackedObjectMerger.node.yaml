@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: SimpleTrackedObjectMerger.node
 
+package:
+  name: autoware_simple_object_merger
+  provider: autoware
+
 launch:
-  package: autoware_simple_object_merger
   plugin: autoware::simple_object_merger::SimpleTrackedObjectMergerNode
   executable: simple_tracked_object_merger_node
   node_output: screen

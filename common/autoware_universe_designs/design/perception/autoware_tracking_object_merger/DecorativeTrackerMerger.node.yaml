@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: DecorativeTrackerMerger.node
 
+package:
+  name: autoware_tracking_object_merger
+  provider: autoware
+
 launch:
-  package: autoware_tracking_object_merger
   plugin: autoware::tracking_object_merger::DecorativeTrackerMergerNode
   executable: decorative_tracker_merger_node
   node_output: screen

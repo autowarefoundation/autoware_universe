@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: RadarObjectTracker.node
 
+package:
+  name: autoware_radar_object_tracker
+  provider: autoware
+
 launch:
-  package: autoware_radar_object_tracker
   plugin: autoware::radar_object_tracker::RadarObjectTrackerNode
   executable: radar_object_tracker_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: GnssPoser.node
 
+package:
+  name: autoware_gnss_poser
+  provider: autoware
+
 launch:
-  package: autoware_gnss_poser
   plugin: autoware::gnss_poser::GNSSPoser
   executable: gnss_poser
   node_output: screen

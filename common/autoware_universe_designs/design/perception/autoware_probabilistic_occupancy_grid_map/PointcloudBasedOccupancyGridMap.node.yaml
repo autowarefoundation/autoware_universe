@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: PointcloudBasedOccupancyGridMap.node
 
+package:
+  name: autoware_probabilistic_occupancy_grid_map
+  provider: autoware
+
 launch:
-  package: autoware_probabilistic_occupancy_grid_map
   plugin: autoware::occupancy_grid_map::PointcloudBasedOccupancyGridMapNode
   executable: pointcloud_based_occupancy_grid_map_node
   node_output: screen

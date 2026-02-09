@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ObjectAssociationMerger.node
 
+package:
+  name: autoware_object_merger
+  provider: autoware
+
 launch:
-  package: autoware_object_merger
   plugin: autoware::object_merger::ObjectAssociationMergerNode
   executable: object_association_merger_node
   node_output: screen

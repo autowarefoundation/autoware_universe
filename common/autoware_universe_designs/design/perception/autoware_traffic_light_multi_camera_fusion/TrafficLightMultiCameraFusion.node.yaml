@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: TrafficLightMultiCameraFusion.node
 
+package:
+  name: autoware_traffic_light_multi_camera_fusion
+  provider: autoware
+
 launch:
-  package: autoware_traffic_light_multi_camera_fusion
   plugin: autoware::traffic_light::MultiCameraFusion
   executable: traffic_light_multi_camera_fusion_node
   node_output: screen

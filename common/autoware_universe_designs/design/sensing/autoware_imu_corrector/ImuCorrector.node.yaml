@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ImuCorrector.node
 
+package:
+  name: autoware_imu_corrector
+  provider: autoware
+
 launch:
-  package: autoware_imu_corrector
   plugin: autoware::imu_corrector::ImuCorrector
   executable: imu_corrector_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ScanGroundFilter.node
 
+package:
+  name: autoware_ground_segmentation
+  provider: autoware
+
 launch:
-  package: autoware_ground_segmentation
   plugin: autoware::ground_segmentation::ScanGroundFilterComponent
   executable: scan_ground_filter_node
   node_output: screen

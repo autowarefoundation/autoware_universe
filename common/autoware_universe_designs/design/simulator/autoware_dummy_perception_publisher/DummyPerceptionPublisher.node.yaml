@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: DummyPerceptionPublisher.node
 
+package:
+  name: autoware_dummy_perception_publisher
+  provider: autoware
+
 launch:
-  package: autoware_dummy_perception_publisher
   plugin: autoware::dummy_perception_publisher::DummyPerceptionPublisherNode
   executable: autoware_dummy_perception_publisher_node
   node_output: screen

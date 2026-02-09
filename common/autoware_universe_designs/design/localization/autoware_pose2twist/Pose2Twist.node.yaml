@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: Pose2Twist.node
 
+package:
+  name: autoware_pose2twist
+  provider: autoware
+
 launch:
-  package: autoware_pose2twist
   plugin: autoware::pose2twist::Pose2Twist
   executable: autoware_pose2twist_node
   node_output: screen

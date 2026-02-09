@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ImageTransportDecompressor.node
 
+package:
+  name: autoware_image_transport_decompressor
+  provider: autoware
+
 launch:
-  package: autoware_image_transport_decompressor
   plugin: autoware::image_preprocessor::ImageTransportDecompressor
   executable: image_transport_decompressor_node
   node_output: screen

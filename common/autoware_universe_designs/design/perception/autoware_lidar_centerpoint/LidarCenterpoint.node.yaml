@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: LidarCenterpoint.node
 
+package:
+  name: autoware_lidar_centerpoint
+  provider: autoware
+
 launch:
-  package: autoware_lidar_centerpoint
   plugin: autoware::lidar_centerpoint::LidarCenterPointNode
   executable: autoware_lidar_centerpoint_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: VehicleDoorSimulator.node
 
+package:
+  name: autoware_vehicle_door_simulator
+  provider: autoware
+
 launch:
-  package: autoware_vehicle_door_simulator
   plugin: autoware::vehicle_door_simulator::DummyDoors
   executable: autoware_vehicle_door_simulator_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ConcatenateAndTimeSync.node
 
+package:
+  name: autoware_pointcloud_preprocessor
+  provider: autoware
+
 launch:
-  package: autoware_pointcloud_preprocessor
   plugin: autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent
   executable: concatenate_and_time_sync_node
   node_output: screen

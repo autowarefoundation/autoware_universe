@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: MultiObjectTracker.node
 
+package:
+  name: autoware_multi_object_tracker
+  provider: autoware
+
 launch:
-  package: autoware_multi_object_tracker
   plugin: autoware::multi_object_tracker::MultiObjectTracker
   executable: multi_object_tracker_node
 

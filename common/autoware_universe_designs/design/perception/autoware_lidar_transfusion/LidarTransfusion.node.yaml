@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: LidarTransfusion.node
 
+package:
+  name: autoware_lidar_transfusion
+  provider: autoware
+
 launch:
-  package: autoware_lidar_transfusion
   plugin: autoware::lidar_transfusion::LidarTransfusionNode
   executable: lidar_transfusion_node
   node_output: screen

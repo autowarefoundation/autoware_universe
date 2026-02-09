@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: AccelBrakeMapCalibrator.node
 
+package:
+  name: autoware_accel_brake_map_calibrator
+  provider: autoware
+
 launch:
-  package: autoware_accel_brake_map_calibrator
   plugin: autoware::accel_brake_map_calibrator::AccelBrakeMapCalibrator
   executable: accel_brake_map_calibrator
   node_output: screen

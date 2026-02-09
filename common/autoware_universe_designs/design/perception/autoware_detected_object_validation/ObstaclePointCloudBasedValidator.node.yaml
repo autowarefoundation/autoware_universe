@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: ObstaclePointCloudBasedValidator.node
 
+package:
+  name: autoware_detected_object_validation
+  provider: autoware
+
 launch:
-  package: autoware_detected_object_validation
   plugin: autoware::detected_object_validation::obstacle_pointcloud::ObstaclePointCloudBasedValidator
   executable: obstacle_pointcloud_based_validator_node
   node_output: screen

@@ -1,10 +1,13 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: v0.2.0
 
 # node information
 name: RawVehicleCmdConverter.node
 
+package:
+  name: autoware_raw_vehicle_cmd_converter
+  provider: autoware
+
 launch:
-  package: autoware_raw_vehicle_cmd_converter
   plugin: autoware::raw_vehicle_cmd_converter::RawVehicleCmdConverterNode
   executable: autoware_raw_vehicle_cmd_converter_node
   node_output: screen
