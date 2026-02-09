@@ -4685,6 +4685,8 @@
       
         
       
+        
+      
     
     
     
@@ -4836,14 +4838,14 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../evaluator/autoware_kinematic_evaluator/" class="md-nav__link ">
+            <a href="../../evaluator/autoware_evaluation_adapter/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
     
   
-    Autoware kinematic evaluator
+    Autoware evaluation adapter
   
 
     
@@ -4860,7 +4862,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Autoware kinematic evaluator
+    Autoware evaluation adapter
   
 
           </label>
@@ -4908,14 +4910,14 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../evaluator/autoware_localization_evaluator/" class="md-nav__link ">
+            <a href="../../evaluator/autoware_kinematic_evaluator/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
     
   
-    Autoware localization evaluator
+    Autoware kinematic evaluator
   
 
     
@@ -4932,7 +4934,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Autoware localization evaluator
+    Autoware kinematic evaluator
   
 
           </label>
@@ -4980,14 +4982,14 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../evaluator/autoware_perception_online_evaluator/" class="md-nav__link ">
+            <a href="../../evaluator/autoware_localization_evaluator/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
     
   
-    Autoware perception online evaluator
+    Autoware localization evaluator
   
 
     
@@ -5004,7 +5006,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Autoware perception online evaluator
+    Autoware localization evaluator
   
 
           </label>
@@ -5052,14 +5054,14 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../evaluator/autoware_planning_evaluator/" class="md-nav__link ">
+            <a href="../../evaluator/autoware_perception_online_evaluator/" class="md-nav__link ">
               
   
   
   <span class="md-ellipsis">
     
   
-    Autoware planning evaluator
+    Autoware perception online evaluator
   
 
     
@@ -5076,7 +5078,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Autoware planning evaluator
+    Autoware perception online evaluator
   
 
           </label>
@@ -5124,6 +5126,78 @@
         
           
           <div class="md-nav__link md-nav__container">
+            <a href="../../evaluator/autoware_planning_evaluator/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autoware planning evaluator
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autoware planning evaluator
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
             <a href="../../evaluator/autoware_scenario_simulator_v2_adapter/" class="md-nav__link ">
               
   
@@ -5143,8 +5217,8 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -23630,6 +23704,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#provided-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23787,6 +23872,10 @@
   </image></a>
 </p>
 
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">#</a></h2>
+<p>It's recommended to install these in a virtual environment.</p>
+<div class="highlight"><pre><span></span><code>pip3<span class="w"> </span>install<span class="w"> </span><span class="nv">numba</span><span class="o">==</span><span class="m">0</span>.58.1<span class="w"> </span>GPy
+</code></pre></div>
 <h2 id="provided-features">Provided features<a class="headerlink" href="#provided-features" title="Permanent link">#</a></h2>
 <p>This package provides smart MPC logic for path-following control as well as mechanisms for learning and evaluation. These features are described below.</p>
 <h3 id="trajectory-following-control-based-on-ilqrmppi">Trajectory following control based on iLQR/MPPI<a class="headerlink" href="#trajectory-following-control-based-on-ilqrmppi" title="Permanent link">#</a></h3>
