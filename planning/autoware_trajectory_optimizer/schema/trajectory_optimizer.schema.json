@@ -63,6 +63,11 @@
           "default": false,
           "description": "Enable MPT (Model Predictive Trajectory) optimizer plugin for geometry refinement with adaptive bounds"
         },
+        "publish_debug_trajectories": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable publishing of debug trajectories for visualization and debugging"
+        },
         "trajectory_point_fixer": {
           "type": "object",
           "properties": {
@@ -583,7 +588,8 @@
         "use_trajectory_extender",
         "use_velocity_optimizer",
         "use_kinematic_feasibility_enforcer",
-        "use_mpt_optimizer"
+        "use_mpt_optimizer",
+        "publish_debug_trajectories"
       ]
     }
   },

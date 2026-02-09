@@ -50,6 +50,7 @@ private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
   void set_up_params();
   void initialize_optimizers();
+  void init_debug_publisher(const std::vector<std::string> & plugin_names);
   void load_plugin(const std::string & plugin_name);
   bool initialized_optimizers_{false};
 

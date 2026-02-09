@@ -71,7 +71,14 @@ void TrajectoryOptimizer::initialize_optimizers()
   // Load each plugin in order and create debug publishers
   for (size_t i = 0; i < plugin_names.size(); ++i) {
     load_plugin(plugin_names[i]);
+  }
+  init_debug_publisher(plugin_names);
+  initialized_optimizers_ = true;
+}
 
+void TrajectoryOptimizer::init_debug_publisher(const std::vector<std::string> & plugin_names)
+{
+  for (size_t i = 0; i < plugin_names.size(); ++i) {
     // Extract short plugin name from full class name
     // e.g., "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer" ->
     // "TrajectoryPointFixer"
@@ -87,11 +94,8 @@ void TrajectoryOptimizer::initialize_optimizers()
                << "/trajectory";
     auto pub = create_publisher<Trajectory>(topic_name.str(), 1);
     debug_trajectory_pubs_.push_back(pub);
-
     RCLCPP_INFO_STREAM(get_logger(), "Created debug publisher: " << topic_name.str());
   }
-
-  initialized_optimizers_ = true;
 }
 
 void TrajectoryOptimizer::load_plugin(const std::string & plugin_name)
@@ -138,6 +142,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
   update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
+  update_param<bool>(parameters, "publish_debug_trajectories", params.publish_debug_trajectories);
 
   params_ = params;
 
@@ -181,6 +186,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
+  params_.publish_debug_trajectories =
+    get_or_declare_parameter<bool>(*this, "publish_debug_trajectories");
 }
 
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
@@ -207,8 +214,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     for (size_t i = 0; i < plugins_.size(); ++i) {
       plugins_[i]->optimize_trajectory(trajectory.points, params_, data);
 
-      // Publish debug trajectory after each plugin (only for first candidate)
-      if (i < debug_trajectory_pubs_.size() && debug_trajectory_pubs_[i]) {
+      if (params_.publish_debug_trajectories) {
         Trajectory debug_traj;
         debug_traj.header = trajectory.header;
         debug_traj.points = trajectory.points;
