@@ -142,6 +142,17 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
     timer_ = rclcpp::create_timer(
       this, get_clock(), period_ns, std::bind(&BehaviorPathPlannerNode::run, this));
   }
+  // Timeout handling
+  {
+    cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout", 0.90);
+    persistent_message_timeout_ =
+      declare_parameter<double>("persistent_timeout", 24.0 * 60.0 * 60.0);
+    enable_traffic_signal_timeout_ =
+      declare_parameter<bool>("enable_traffic_signal_timeout", false);
+    diagnostics_message_timeout_ =
+      std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+        this, "behavior_path_planner_incoming_message_timeout");
+  }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
@@ -265,51 +276,50 @@ void BehaviorPathPlannerNode::takeData()
   }
 }
 
-// wait until mandatory data is ready
-bool BehaviorPathPlannerNode::isDataReady()
+// check if mandatory data is ready (not timed out)
+bool BehaviorPathPlannerNode::isDataReady(const rclcpp::Time & now)
 {
-  const auto missing = [this](const auto & name) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for %s", name);
-    return false;
+  diagnostics_message_timeout_->clear();
+  const rclcpp::Time zero_stamp{0, 0, RCL_ROS_TIME};
+  bool ready = true;
+
+  const auto check = [&](const rclcpp::Time & ts, double timeout, const std::string & name) {
+    if (ts == zero_stamp) {
+      RCLCPP_INFO_SKIPFIRST_THROTTLE(
+        get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+      diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+      ready = false;
+      return;
+    }
+    if ((now - ts).seconds() > timeout) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s timeout", name.c_str());
+      diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
+      ready = false;
+      return;
+    }
+    diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
   };
 
-  if (!current_scenario_) {
-    return missing("scenario_topic");
+  check(scenario_subscriber_.latest_timestamp(), persistent_message_timeout_, "scenario");
+  check(route_subscriber_.latest_timestamp(), persistent_message_timeout_, "route");
+  check(vector_map_subscriber_.latest_timestamp(), persistent_message_timeout_, "map");
+  check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception");
+  check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
+  check(acceleration_subscriber_.latest_timestamp(), persistent_message_timeout_, "acceleration");
+  check(
+    operation_mode_subscriber_.latest_timestamp(), persistent_message_timeout_, "operation_mode");
+  check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid");
+  if (enable_traffic_signal_timeout_) {
+    check(
+      traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
   }
 
-  {
-    if (!route_ptr_) {
-      return missing("route");
-    }
+  if (!ready) {
+    diagnostics_message_timeout_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "message timeout detected");
   }
 
-  {
-    if (!map_ptr_) {
-      return missing("map");
-    }
-  }
-
-  if (!planner_data_->dynamic_object) {
-    return missing("dynamic_object");
-  }
-
-  if (!planner_data_->self_odometry) {
-    return missing("self_odometry");
-  }
-
-  if (!planner_data_->self_acceleration) {
-    return missing("self_acceleration");
-  }
-
-  if (!planner_data_->operation_mode) {
-    return missing("operation_mode");
-  }
-
-  if (!planner_data_->occupancy_grid) {
-    return missing("occupancy_grid");
-  }
-
-  return true;
+  return ready;
 }
 
 void BehaviorPathPlannerNode::run()
@@ -318,7 +328,8 @@ void BehaviorPathPlannerNode::run()
 
   takeData();
 
-  if (!isDataReady()) {
+  if (!isDataReady(stamp)) {
+    diagnostics_message_timeout_->publish(stamp);
     return;
   }
 
@@ -450,6 +461,9 @@ void BehaviorPathPlannerNode::run()
   planner_manager_->publishMarker();
   planner_manager_->publishVirtualWall();
   lk_manager.unlock();  // release planner_manager_
+
+  // publish diagnostics for timeout checking.
+  diagnostics_message_timeout_->publish(stamp);
 
   RCLCPP_DEBUG(get_logger(), "----- behavior path planner end -----\n\n");
 }
