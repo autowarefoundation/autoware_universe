@@ -194,6 +194,7 @@ rclcpp_components_register_node(voltage_monitor_lib
 )
 
 if(BUILD_TESTING)
+  # Process Monitor Test
   ament_add_ros_isolated_gtest(test_process_monitor
     test/src/process_monitor/test_process_monitor.cpp
   )
@@ -211,6 +212,7 @@ if(BUILD_TESTING)
     COMMENT "Copying test data files to the build directory after build"
   )
 
+  # CPU Monitor Test
   ament_add_ros_isolated_gtest(test_cpu_monitor
     test/src/cpu_monitor/test_${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
     ${CPU_MONITOR_SOURCE}
@@ -221,6 +223,28 @@ if(BUILD_TESTING)
   )
 
   target_link_libraries(test_cpu_monitor cpu_monitor_lib ${Boost_LIBRARIES} ${LIBRARIES})
+
+  # Mem Monitor Test
+  ament_add_ros_isolated_gtest(test_mem_monitor
+    test/src/mem_monitor/test_mem_monitor.cpp
+    src/mem_monitor/mem_monitor.cpp
+  )
+
+  target_include_directories(test_mem_monitor
+    PRIVATE "include"
+  )
+
+  target_link_libraries(test_mem_monitor mem_monitor_lib  ${Boost_LIBRARIES} ${LIBRARIES})
+
+  # helper free command to failed free command.
+  add_executable(free1 test/src/mem_monitor/free1.cpp)
+
+  add_custom_command(
+    TARGET test_mem_monitor
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:free1> $<TARGET_FILE_DIR:test_mem_monitor>
+    COMMENT "Copying free1 dummy executable to the test directory"
+  )
 
 endif()
 
