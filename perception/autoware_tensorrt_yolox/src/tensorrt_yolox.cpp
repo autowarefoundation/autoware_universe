@@ -18,6 +18,7 @@
 #include <autoware/tensorrt_yolox/calibrator.hpp>
 #include <autoware/tensorrt_yolox/preprocess.hpp>
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
+#include <autoware/tensorrt_yolox/utils.hpp>
 #include <experimental/filesystem>
 
 #include <assert.h>
@@ -36,74 +37,8 @@
 
 namespace
 {
-static void trimLeft(std::string & s)
-{
-  s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) { return !isspace(ch); }));
-}
-
-static void trimRight(std::string & s)
-{
-  s.erase(find_if(s.rbegin(), s.rend(), [](int ch) { return !isspace(ch); }).base(), s.end());
-}
-
-std::string trim(std::string & s)
-{
-  trimLeft(s);
-  trimRight(s);
-  return s;
-}
-
-bool fileExists(const std::string & file_name, bool verbose)
-{
-  if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(file_name))) {
-    if (verbose) {
-      std::cout << "File does not exist : " << file_name << std::endl;
-    }
-    return false;
-  }
-  return true;
-}
-
-std::vector<std::string> loadListFromTextFile(const std::string & filename)
-{
-  assert(fileExists(filename, true));
-  std::vector<std::string> list;
-
-  std::ifstream f(filename);
-  if (!f) {
-    std::cout << "failed to open " << filename << std::endl;
-    assert(0);
-  }
-
-  std::string line;
-  while (std::getline(f, line)) {
-    if (line.empty()) {
-      continue;
-    } else {
-      list.push_back(trim(line));
-    }
-  }
-
-  return list;
-}
-
-std::vector<std::string> loadImageList(const std::string & filename, const std::string & prefix)
-{
-  std::vector<std::string> fileList = loadListFromTextFile(filename);
-  for (auto & file : fileList) {
-    if (fileExists(file, false)) {
-      continue;
-    } else {
-      std::string prefixed = prefix + file;
-      if (fileExists(prefixed, false))
-        file = prefixed;
-      else
-        std::cerr << "WARNING: couldn't find: " << prefixed << " while loading: " << filename
-                  << std::endl;
-    }
-  }
-  return fileList;
-}
+using autoware::tensorrt_yolox::utils::loadListFromTextFile;
+using autoware::tensorrt_yolox::utils::trim;
 
 std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::string & filename)
 {
@@ -205,7 +140,8 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images = loadImageList(calibration_image_list_path, "");
+      calibration_images =
+        autoware::tensorrt_yolox::utils::loadImageList(calibration_image_list_path, "");
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};
