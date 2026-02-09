@@ -14,6 +14,9 @@
 
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -124,6 +127,47 @@ TEST_F(PreprocessingUtilsTest, HandlesSingleMeanStdForAllCols)
   EXPECT_FLOAT_EQ(input_data_map["f"][1], 1.0f);
   EXPECT_FLOAT_EQ(input_data_map["f"][2], 2.0f);
   EXPECT_FLOAT_EQ(input_data_map["f"][3], 3.0f);
+}
+
+TEST_F(PreprocessingUtilsTest, CreateEgoCurrentState)
+{
+  nav_msgs::msg::Odometry odom;
+  odom.twist.twist.linear.x = 5.0;
+  odom.twist.twist.linear.y = 0.0;
+  odom.twist.twist.angular.z = 0.1;
+
+  geometry_msgs::msg::AccelWithCovarianceStamped accel;
+  accel.accel.accel.linear.x = 1.0;
+  accel.accel.accel.linear.y = 0.5;
+
+  const float wheel_base = 2.5f;
+  const auto result = preprocess::create_ego_current_state(odom, accel, wheel_base);
+
+  // Should return 10 elements: x, y, cos_yaw, sin_yaw, vx, vy, ax, ay, steering, yaw_rate
+  ASSERT_EQ(result.size(), 10u);
+
+  // x, y should be 0 (ego frame origin)
+  EXPECT_FLOAT_EQ(result[0], 0.0f);
+  EXPECT_FLOAT_EQ(result[1], 0.0f);
+
+  // cos_yaw, sin_yaw should be 1, 0 (ego frame heading)
+  EXPECT_FLOAT_EQ(result[2], 1.0f);
+  EXPECT_FLOAT_EQ(result[3], 0.0f);
+
+  // vx, vy from odometry
+  EXPECT_FLOAT_EQ(result[4], 5.0f);
+  EXPECT_FLOAT_EQ(result[5], 0.0f);
+
+  // ax, ay from acceleration
+  EXPECT_FLOAT_EQ(result[6], 1.0f);
+  EXPECT_FLOAT_EQ(result[7], 0.5f);
+
+  // steering_angle = atan(yaw_rate * wheel_base / |linear_vel|) = atan(0.1 * 2.5 / 5.0)
+  const float expected_steering = std::atan(0.1f * 2.5f / 5.0f);
+  EXPECT_FLOAT_EQ(result[8], expected_steering);
+
+  // yaw_rate from odometry (clamped)
+  EXPECT_FLOAT_EQ(result[9], 0.1f);
 }
 
 }  // namespace autoware::diffusion_planner::test

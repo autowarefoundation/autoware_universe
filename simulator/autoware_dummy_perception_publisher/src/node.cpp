@@ -30,6 +30,7 @@
 #include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
 #include <geometry_msgs/msg/detail/transform__struct.hpp>
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 
@@ -40,12 +41,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::dummy_perception_publisher
 {

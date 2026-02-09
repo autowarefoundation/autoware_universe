@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <arg name="trajectory_optimizer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_optimizer.param.yaml"/>
-
   <arg name="jerk_filtered_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/JerkFiltered.param.yaml"/>
   <arg name="velocity_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/default_velocity_smoother.param.yaml"/>
   <arg name="common_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/default_common.param.yaml"/>
-
   <arg name="elastic_band_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_smoothing/elastic_band_smoother.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_core_planning)/config/common.param.yaml"/>
 
   <arg name="trajectory_point_fixer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_point_fixer.param.yaml"/>
   <arg name="trajectory_extender_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/plugins/trajectory_extender.param.yaml"/>
@@ -18,11 +17,14 @@
 
   <arg name="input_traj" default="/planning/diffusion_planner/trajectory"/>
   <arg name="input_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
+  <arg name="input_external_velocity_limit_mps" default="/planning/scenario_planning/max_velocity_default"/>
   <arg name="output_traj" default="/planning/trajectory"/>
   <arg name="output_trajectories" default="/planning/generator/candidate_trajectories"/>
+  <arg name="output_current_velocity_limit_mps" default="/planning/scenario_planning/current_max_velocity"/>
 
   <node pkg="autoware_trajectory_optimizer" exec="autoware_trajectory_optimizer_node" name="trajectory_optimizer_node" output="screen">
     <param from="$(var trajectory_optimizer_param_path)" allow_substs="true"/>
+    <param from="$(var common_param_path)"/>
     <param from="$(var jerk_filtered_smoother_param_path)" allow_substs="true"/>
     <param from="$(var velocity_smoother_param_path)" allow_substs="true"/>
     <param from="$(var common_smoother_param_path)" allow_substs="true"/>
@@ -36,8 +38,10 @@
     <param from="$(var trajectory_mpt_optimizer_param_path)" allow_substs="true"/>
     <remap from="~/output/trajectory" to="$(var output_traj)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
+    <remap from="~/output/current_velocity_limit_mps" to="$(var output_current_velocity_limit_mps)"/>
     <remap from="~/input/traj" to="$(var input_traj)"/>
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/input/external_velocity_limit_mps" to="$(var input_external_velocity_limit_mps)"/>
     <remap from="~/input/odometry" to="/localization/kinematic_state"/>
     <remap from="~/input/acceleration" to="/localization/acceleration"/>
   </node>
