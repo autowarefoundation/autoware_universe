@@ -6,8 +6,8 @@
       nearest_yaw_threshold_deg: 60.0  # [deg] Yaw threshold for trajectory matching
 
       # Engage behavior
-      target_pull_out_speed_mps: 0.5  # [m/s] Target speed during pull-out maneuver
-      target_pull_out_acc_mps2: 0.5   # [m/s²] Target acceleration during pull-out
+      target_pull_out_speed_mps: 1.0  # [m/s] Target speed during pull-out maneuver
+      target_pull_out_acc_mps2: 1.0   # [m/s²] Target acceleration during pull-out
       set_engage_speed: false         # Set minimum speed during engage
 
       # Speed limiting (uses external_velocity_limit topic to set max speed)
