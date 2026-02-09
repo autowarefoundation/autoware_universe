@@ -104,20 +104,6 @@ void recalculate_longitudinal_acceleration(
   TrajectoryPoints & trajectory, const bool use_constant_dt = false,
   const double constant_dt = 0.1);
 
-/**
- * @brief Debug utility to log yaw angles and delta_theta for the tail of a trajectory.
- *
- * This function logs the yaw angle of each of the last N points and the delta_theta
- * (orientation change) between consecutive points. Useful for debugging orientation
- * discontinuities at the end of trajectories.
- *
- * @param traj The trajectory points to analyze.
- * @param stage_name A descriptive name for the pipeline stage (e.g., "AFTER_SPLINE_SMOOTHER").
- * @param num_tail_points Number of tail points to log (default: 5).
- */
-void debug_log_trajectory_tail_orientations(
-  const TrajectoryPoints & traj, const std::string & stage_name, size_t num_tail_points = 5);
-
 };  // namespace autoware::trajectory_optimizer::utils
 
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__UTILS_HPP_
