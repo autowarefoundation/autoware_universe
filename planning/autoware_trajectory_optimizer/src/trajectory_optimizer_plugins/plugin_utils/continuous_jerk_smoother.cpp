@@ -36,12 +36,12 @@ ContinuousJerkSmoother::ContinuousJerkSmoother(const ContinuousJerkSmootherParam
     std::make_shared<autoware::qp_interface::ProxQPInterface>(false, 20000, 1.0e-8, 1.0e-6, false);
 }
 
-void ContinuousJerkSmoother::setParams(const ContinuousJerkSmootherParams & params)
+void ContinuousJerkSmoother::set_params(const ContinuousJerkSmootherParams & params)
 {
   params_ = params;
 }
 
-ContinuousJerkSmootherParams ContinuousJerkSmoother::getParams() const
+ContinuousJerkSmootherParams ContinuousJerkSmoother::get_params() const
 {
   return params_;
 }
@@ -84,7 +84,10 @@ bool ContinuousJerkSmoother::apply(
   const double over_j_weight = params_.over_j_weight;
   const double over_v_weight = params_.over_v_weight;
   const double over_a_weight = params_.over_a_weight;
-  // const double velocity_tracking_weight = params_.velocity_tracking_weight;
+  // const double a_stop_decel = 0.0;
+  const double smooth_weight = params_.jerk_weight;
+  const double velocity_tracking_weight = params_.velocity_tracking_weight;
+  const double accel_tracking_weight = params_.accel_tracking_weight;
 
   // Search for stop point (zero velocity) starting from index 1
   // to avoid getting 0 as a stop point at the beginning
@@ -131,7 +134,7 @@ bool ContinuousJerkSmoother::apply(
    *      a[0], a[1], .... a[N-1],               : N ~ 2N-1
    *      delta[0], ..., delta[N-1],             : 2N ~ 3N-1
    *      sigma[0], sigma[1], ...., sigma[N-1],  : 3N ~ 4N-1
-   *      gamma[0], gamma[1], ..., gamma[N-2]    : 4N ~ 5N-2
+   *      gamma[0], gamma[1], ..., gamma[N-1]    : 4N ~ 5N-2
    *     ]
    *
    * b[i]  : velocity^2
@@ -145,8 +148,8 @@ bool ContinuousJerkSmoother::apply(
   const uint32_t IDX_SIGMA0 = 3 * N;
   const uint32_t IDX_GAMMA0 = 4 * N;
 
-  const uint32_t l_variables = 5 * N - 1;  // gamma has N-1 elements
-  const uint32_t l_constraints = 4 * N;    // N + N + (N-1) + (N-1) + 2 = 4N
+  const uint32_t l_variables = 5 * N;    // gamma has N-1 elements
+  const uint32_t l_constraints = 4 * N;  // N + N + (N-1) + (N-1) + 2 = 4N - 2
 
   // Allocate matrices
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(l_constraints, l_variables);
@@ -160,7 +163,6 @@ bool ContinuousJerkSmoother::apply(
   /**************************************************************/
 
   // Jerk minimization: d(ai)/ds * v_ref -> minimize weight * ((a1 - a0) / ds * v_ref)^2 * ds
-  const double smooth_weight = params_.jerk_weight;
   for (size_t i = 0; i < N - 1; ++i) {
     const double ref_vel = 0.5 * (v_ref_arr.at(i) + v_ref_arr.at(i + 1));
     const double interval_dist = std::max(interval_dist_arr.at(i), 0.0001);
@@ -175,24 +177,30 @@ bool ContinuousJerkSmoother::apply(
   // Expands to: weight * b^2 - 2*weight*v_ref^2*b + const
   // P term: weight on b^2
   // q term: -2*weight*v_ref^2 on b
+  // Notice 2 is not needed because the QP solver assumes 1/2 factor in objective P term
+  for (size_t i = 0; i < N; ++i) {
+    const double ref_vel = v_ref_arr.at(i);
+    // const double ref_vel = 1.0;
+    P(IDX_B0 + i, IDX_B0 + i) += velocity_tracking_weight;
+    q.at(IDX_B0 + i) += -velocity_tracking_weight * ref_vel * ref_vel;
+  }
+
+  // Slack variable costs
   for (size_t i = 0; i < N; ++i) {
     // Slack variable costs
     P(IDX_DELTA0 + i, IDX_DELTA0 + i) += over_v_weight;  // over velocity cost
     P(IDX_SIGMA0 + i, IDX_SIGMA0 + i) += over_a_weight;  // over acceleration cost
-    if (i < N - 1) {
-      P(IDX_GAMMA0 + i, IDX_GAMMA0 + i) += over_j_weight;  // over jerk cost
-    }
+    P(IDX_GAMMA0 + i, IDX_GAMMA0 + i) += over_j_weight;  // over jerk cost
   }
 
   // Reference acceleration tracking: minimize weight * (a - a_ref)^2
   // Expands to: weight * a^2 - 2*weight*a_ref*a + const
   // P term: weight on a^2
   // q term: -2*weight*a_ref on a
-  const double accel_tracking_weight = params_.accel_tracking_weight;
   for (size_t i = 0; i < N; ++i) {
     const double a_ref = input.at(i).acceleration_mps2;
     P(IDX_A0 + i, IDX_A0 + i) += accel_tracking_weight;
-    q.at(IDX_A0 + i) += -2.0 * accel_tracking_weight * a_ref;
+    q.at(IDX_A0 + i) += -accel_tracking_weight * a_ref;
   }
 
   /**************************************************************/
@@ -249,7 +257,7 @@ bool ContinuousJerkSmoother::apply(
     A(constr_idx, IDX_A0) = 1.0;  // a0
     upper_bound[constr_idx] = a0;
     lower_bound[constr_idx] = a0;
-    ++constr_idx;
+    // ++constr_idx;  // Not needed as this is the last constraint
   }
 
   // Execute optimization

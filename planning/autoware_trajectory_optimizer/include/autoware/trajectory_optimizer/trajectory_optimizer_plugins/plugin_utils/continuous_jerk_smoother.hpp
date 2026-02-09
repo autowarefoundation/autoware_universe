@@ -100,13 +100,13 @@ public:
    * @brief Set smoother parameters
    * @param params New parameters
    */
-  void setParams(const ContinuousJerkSmootherParams & params);
+  void set_params(const ContinuousJerkSmootherParams & params);
 
   /**
    * @brief Get current smoother parameters
    * @return Current parameters
    */
-  ContinuousJerkSmootherParams getParams() const;
+  ContinuousJerkSmootherParams get_params() const;
 
 private:
   /**

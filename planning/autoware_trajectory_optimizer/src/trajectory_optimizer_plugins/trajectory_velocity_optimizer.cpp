@@ -218,7 +218,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
 
   // Update smoother parameters if it exists
   if (continuous_jerk_smoother_) {
-    continuous_jerk_smoother_->setParams(cjs);
+    continuous_jerk_smoother_->set_params(cjs);
   }
 
   rcl_interfaces::msg::SetParametersResult result;
