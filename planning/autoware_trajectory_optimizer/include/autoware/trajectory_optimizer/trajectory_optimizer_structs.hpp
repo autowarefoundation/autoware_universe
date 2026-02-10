@@ -48,7 +48,6 @@ struct TrajectoryOptimizerParams
   bool use_trajectory_extender{false};
   bool use_kinematic_feasibility_enforcer{false};
   bool use_mpt_optimizer{false};
-  bool publish_debug_trajectories{true};
 };
 }  // namespace autoware::trajectory_optimizer
 #endif  // AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_STRUCTS_HPP_

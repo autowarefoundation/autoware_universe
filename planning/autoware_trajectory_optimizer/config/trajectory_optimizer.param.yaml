@@ -21,4 +21,3 @@
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
-    publish_debug_trajectories: true
