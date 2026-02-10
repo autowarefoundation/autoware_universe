@@ -20,8 +20,8 @@
 
 namespace autoware::tensorrt_yolox
 {
-static void trimLeft(std::string & s);
-static void trimRight(std::string & s);
+void trimLeft(std::string & s);
+void trimRight(std::string & s);
 std::string trim(std::string & s);
 
 bool fileExists(const std::string & file_name, bool verbose);

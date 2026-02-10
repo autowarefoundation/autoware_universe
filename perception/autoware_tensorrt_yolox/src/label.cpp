@@ -26,12 +26,12 @@
 
 namespace autoware::tensorrt_yolox
 {
-static void trimLeft(std::string & s)
+void trimLeft(std::string & s)
 {
   s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) { return !isspace(ch); }));
 }
 
-static void trimRight(std::string & s)
+void trimRight(std::string & s)
 {
   s.erase(find_if(s.rbegin(), s.rend(), [](int ch) { return !isspace(ch); }).base(), s.end());
 }
