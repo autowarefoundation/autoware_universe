@@ -305,7 +305,7 @@ bool BehaviorPathPlannerNode::isDataReady(const rclcpp::Time & now)
   check(vector_map_subscriber_.latest_timestamp(), persistent_message_timeout_, "map");
   check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception");
   check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
-  check(acceleration_subscriber_.latest_timestamp(), persistent_message_timeout_, "acceleration");
+  check(acceleration_subscriber_.latest_timestamp(), cyclic_message_timeout_, "acceleration");
   check(
     operation_mode_subscriber_.latest_timestamp(), persistent_message_timeout_, "operation_mode");
   check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid");
