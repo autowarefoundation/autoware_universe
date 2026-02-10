@@ -32,7 +32,6 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
@@ -2635,8 +2634,13 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
       pull_over_lanes, left_side_parking_, ego_pose_for_expand,
       planner_data->parameters.vehicle_info, parameters_.outer_road_detection_offset,
       parameters_.inner_road_detection_offset);
-  const auto merged_expanded_pull_over_lanes =
-    lanelet::utils::combineLaneletsShape(expanded_pull_over_lanes_between_ego);
+  const auto merged_expanded_pull_over_lanes_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(
+      expanded_pull_over_lanes_between_ego);
+  lanelet::ConstLanelet merged_expanded_pull_over_lanes{};
+  if (merged_expanded_pull_over_lanes_opt.has_value()) {
+    merged_expanded_pull_over_lanes = merged_expanded_pull_over_lanes_opt.value();
+  }
   debug_data_.expanded_pull_over_lane_between_ego = merged_expanded_pull_over_lanes;
 
   const auto filtered_objects = filterObjectsByWithinPolicy(

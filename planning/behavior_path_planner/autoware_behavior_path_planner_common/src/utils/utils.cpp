@@ -549,7 +549,13 @@ bool isEgoWithinOriginalLane(
   const lanelet::ConstLanelets & current_lanes, const Pose & current_pose,
   const BehaviorPathPlannerParameters & common_param, const double outer_margin)
 {
-  const auto combined_lane = lanelet::utils::combineLaneletsShape(current_lanes);
+  const auto combined_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(current_lanes);
+  if (!combined_lane_opt.has_value()) {
+    // if current_lanes is empty, ego is out of lane.
+    return false;
+  }
+  const auto combined_lane = combined_lane_opt.value();
   const auto lane_polygon = combined_lane.polygon2d().basicPolygon();
   return isEgoWithinOriginalLane(lane_polygon, current_pose, common_param, outer_margin);
 }
@@ -978,7 +984,15 @@ std::optional<double> getSignedDistanceFromBoundary(
     front_corner_point = autoware_utils::transform_point(front_right, vehicle_pose);
   }
 
-  const auto combined_lane = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combined_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combined_lane_opt.has_value()) {
+    // if lanelets is empty, return nullopt
+    RCLCPP_WARN(
+      rclcpp::get_logger("behavior_path_planner").get_child("utils"), "input lanelets is empty.");
+    return std::nullopt;
+  }
+  const auto combined_lane = combined_lane_opt.value();
   const auto & bound_line_2d = left_side ? lanelet::utils::to2D(combined_lane.leftBound3d())
                                          : lanelet::utils::to2D(combined_lane.rightBound3d());
 
