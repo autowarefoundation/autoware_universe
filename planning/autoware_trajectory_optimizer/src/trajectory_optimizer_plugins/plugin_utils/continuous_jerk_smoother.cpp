@@ -46,7 +46,7 @@ ContinuousJerkSmootherParams ContinuousJerkSmoother::get_params() const
   return params_;
 }
 
-std::vector<double> ContinuousJerkSmoother::calcTrajectoryIntervalDistance(
+std::vector<double> ContinuousJerkSmoother::calc_trajectory_interval_distance(
   const TrajectoryPoints & trajectory) const
 {
   std::vector<double> intervals;
@@ -113,7 +113,7 @@ bool ContinuousJerkSmoother::apply(
 
   output = input;
 
-  const std::vector<double> interval_dist_arr = calcTrajectoryIntervalDistance(input);
+  const std::vector<double> interval_dist_arr = calc_trajectory_interval_distance(input);
 
   // v_max_arr: Per-point velocity upper bounds (e.g., from lateral acceleration limits)
   std::vector<double> v_max_arr(N, 0.0);

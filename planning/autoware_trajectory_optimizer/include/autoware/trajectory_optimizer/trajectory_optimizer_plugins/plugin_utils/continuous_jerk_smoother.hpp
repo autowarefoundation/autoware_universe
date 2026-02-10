@@ -116,7 +116,7 @@ private:
    * @param trajectory Input trajectory
    * @return Vector of distances between consecutive points
    */
-  std::vector<double> calcTrajectoryIntervalDistance(const TrajectoryPoints & trajectory) const;
+  std::vector<double> calc_trajectory_interval_distance(const TrajectoryPoints & trajectory) const;
 
   ContinuousJerkSmootherParams params_;
   std::shared_ptr<autoware::qp_interface::QPInterface> qp_interface_;
