@@ -458,12 +458,12 @@ LaneChangePath get_candidate_path(
   }
 
   return utils::lane_change::construct_candidate_path(
-    lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
+    common_data_ptr, lane_change_info, prep_segment, target_lane_reference_path, sorted_lane_ids);
 }
 
 LaneChangePath construct_candidate_path(
-  const LaneChangeInfo & lane_change_info, const PathWithLaneId & prepare_segment,
-  const PathWithLaneId & target_lane_reference_path,
+  const CommonDataPtr & common_data_ptr, const LaneChangeInfo & lane_change_info,
+  const PathWithLaneId & prepare_segment, const PathWithLaneId & target_lane_reference_path,
   const std::vector<std::vector<int64_t>> & sorted_lane_ids)
 {
   const auto & shift_line = lane_change_info.shift_line;
@@ -501,6 +501,11 @@ LaneChangePath construct_candidate_path(
     const auto nearest_idx =
       autoware::motion_utils::findNearestIndex(target_lane_reference_path.points, point.point.pose);
     point.lane_ids = target_lane_reference_path.points.at(*nearest_idx).lane_ids;
+  }
+
+  if (utils::lane_change::is_intersecting_no_lane_change_lines(
+        common_data_ptr, lane_change_info.length, shifted_path.path.points)) {
+    throw std::logic_error("Intersect no lane change lines.");
   }
 
   constexpr auto yaw_diff_th = autoware_utils::deg2rad(5.0);
@@ -722,6 +727,11 @@ std::optional<LaneChangePath> get_candidate_path(
   info.length = {prepare_metric.length, lane_changing_candidate.lengths.back()};
   info.lane_changing_start = prepare_segment.points.back().point.pose;
   info.lane_changing_end = lane_changing_candidate.poses.back();
+
+  if (utils::lane_change::is_intersecting_no_lane_change_lines(
+        common_data_ptr, info.length, shifted_path.path.points)) {
+    throw std::logic_error("Intersect no lane change lines.");
+  }
 
   ShiftLine sl;
 

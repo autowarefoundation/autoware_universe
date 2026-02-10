@@ -40,6 +40,7 @@
 
 namespace autoware::behavior_path_planner::utils::lane_change
 {
+using autoware::behavior_path_planner::lane_change::PhaseInfo;
 using autoware::behavior_path_planner::utils::path_safety_checker::ExtendedPredictedObject;
 using autoware::behavior_path_planner::utils::path_safety_checker::
   PoseWithVelocityAndPolygonStamped;
@@ -534,7 +535,7 @@ std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
  * @return True if the distance point falls within at least one buffered interval, false otherwise.
  */
 bool is_intersecting_no_lane_change_lines(
-  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
-  const double expected_intersecting_dist, const double buffer);
+  const CommonDataPtr & common_data_ptr, const PhaseInfo lc_length,
+  const std::vector<PathPointWithLaneId> & lane_changing_path);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_

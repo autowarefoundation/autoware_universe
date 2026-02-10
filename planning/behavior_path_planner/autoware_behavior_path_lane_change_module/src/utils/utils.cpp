@@ -1313,14 +1313,60 @@ std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
 }
 
 bool is_intersecting_no_lane_change_lines(
-  const std::vector<std::pair<double, double>> & interval_dist_no_lane_change_lines,
-  const double expected_intersecting_dist, const double buffer)
+  const CommonDataPtr & common_data_ptr, const PhaseInfo lc_length,
+  const std::vector<PathPointWithLaneId> & lane_changing_path)
 {
-  return ranges::any_of(interval_dist_no_lane_change_lines, [&](const auto & interval) {
-    const auto [start, end] = interval;
-    return expected_intersecting_dist >= (start - buffer) &&
-           expected_intersecting_dist <= (end + buffer);
-  });
+  const auto & intervals = common_data_ptr->transient_data.interval_dist_no_lane_change_lines;
+  const auto & lines = common_data_ptr->no_lane_change_lines;
+  const auto buffer = common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
+
+  // intervals are sorted in ascending order
+  if (intervals.empty() || lc_length.prepare >= intervals.back().second) {
+    return false;
+  }
+
+  const auto prepare_length = lc_length.prepare;
+  const auto total_length = lc_length.sum();
+  for (const auto & zip : ranges::views::zip(intervals, lines)) {
+    const auto & interval = std::get<0>(zip);
+    const auto [interval_start, interval_end] = interval;
+
+    const auto interval_upper_bound = interval_end + buffer;
+    if (prepare_length >= interval_upper_bound) {
+      continue;
+    }
+
+    const auto interval_lower_bound = interval_start - buffer;
+    // intervals are sorted in ascending order
+    if (total_length <= interval_lower_bound) {
+      return false;
+    }
+
+    const auto & line = std::get<1>(zip);
+
+    bool is_intersecting =
+      ranges::any_of(ranges::views::sliding(lane_changing_path, 2), [&](const auto & path_segment) {
+        const auto & path_p1 = path_segment[0].point.pose.position;
+        const auto & path_p2 = path_segment[1].point.pose.position;
+
+        for (size_t i = 0; i + 1 < line.size(); ++i) {
+          const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(line[i]);
+          const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(line[i + 1]);
+
+          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value()) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+
+    if (is_intersecting) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace autoware::behavior_path_planner::utils::lane_change
