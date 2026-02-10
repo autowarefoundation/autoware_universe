@@ -195,7 +195,7 @@ sensing/autoware_cuda_pointcloud_preprocessor/** amadeusz.szymko.2@tier4.jp davi
 sensing/autoware_cuda_utils/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp
 sensing/autoware_image_diagnostics/** dai.nguyen@tier4.jp masato.saeki@tier4.jp yihsiang.fang@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_image_transport_decompressor/** kenzo.lobos@tier4.jp yukihiro.saito@tier4.jp
-sensing/autoware_imu_corrector/** taiki.yamada@tier4.jp yamato.ando@tier4.jp
+sensing/autoware_imu_corrector/** taiki.yamada@tier4.jp yamato.ando@tier4.jp sergioreyes.sanchez@tier4.jp
 sensing/autoware_pcl_extensions/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp
 sensing/autoware_pointcloud_preprocessor/** abrahammonrroy@yahoo.com dai.nguyen@tier4.jp david.wong@tier4.jp kaan.colak.dev@gmail.com kenzo.lobos@tier4.jp kyoichi.sugahara@tier4.jp max.schmeller@tier4.jp melike@leodrive.ai yihsiang.fang@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 sensing/autoware_radar_objects_adapter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
