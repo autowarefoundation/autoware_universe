@@ -32,7 +32,6 @@
 #include <nav_msgs/msg/detail/odometry__struct.hpp>
 
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::trajectory_optimizer::utils
