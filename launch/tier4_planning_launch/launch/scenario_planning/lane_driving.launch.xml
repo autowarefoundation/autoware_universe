@@ -4,6 +4,10 @@
   <arg name="input_objects_topic_name"/>
   <arg name="input_pointcloud_topic_name"/>
 
+  <!-- Agnocast -->
+  <arg name="use_agnocast" default="false" description="enable Agnocast for planning containers"/>
+  <arg name="agnocast_heaphook_path" description="path to agnocast heaphook library"/>
+
   <!-- lane_driving scenario -->
   <group>
     <push-ros-namespace namespace="lane_driving"/>
@@ -29,6 +33,8 @@
           <arg name="container_type" value="component_container_mt"/>
           <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
           <arg name="input_pointcloud_topic_name" value="$(var input_pointcloud_topic_name)"/>
+          <arg name="use_agnocast" value="$(var use_agnocast)"/>
+          <arg name="agnocast_heaphook_path" value="$(var agnocast_heaphook_path)"/>
         </include>
       </group>
     </group>
