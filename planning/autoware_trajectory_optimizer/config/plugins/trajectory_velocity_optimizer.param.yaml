@@ -27,9 +27,9 @@
       # Note: max_velocity uses max_speed_mps from parent namespace
       continuous_jerk_smoother:
         # QP optimization weights
-        jerk_weight: 20.0                     # Weight for jerk minimization (smoothness)
-        over_v_weight: 10000.0               # Weight for velocity limit violation (slack)
+        jerk_weight: 100.0                     # Weight for jerk minimization (smoothness)
+        over_v_weight: 1000.0               # Weight for velocity limit violation (slack)
         over_a_weight: 30.0                 # Weight for acceleration limit violation (slack)
         over_j_weight: 10.0                  # Weight for jerk limit violation (slack)
         velocity_tracking_weight: 1.0        # Weight for tracking reference velocity from input trajectory
-        accel_tracking_weight: 3000.0         # Weight for tracking reference acceleration from input trajectory
+        accel_tracking_weight: 300.0         # Weight for tracking reference acceleration from input trajectory
