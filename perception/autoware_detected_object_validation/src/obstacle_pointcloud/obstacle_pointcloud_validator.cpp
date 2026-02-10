@@ -16,24 +16,18 @@
 
 #include "obstacle_pointcloud_validator.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <boost/geometry.hpp>
 
+#include <cmath>
 #include <memory>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
-#include <cmath>
 
 namespace autoware::detected_object_validation
 {

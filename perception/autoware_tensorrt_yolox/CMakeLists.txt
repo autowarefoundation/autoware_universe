@@ -80,15 +80,16 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   # but nvcc assume comma separated as argument of `-Xcompiler` option).
   # That is why `cuda_add_library` is used here.
 
-  # cSpell: ignore gencode
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
-  # TODO(knzo25): enable when the driver supports it
-  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  if(CUDA_VERSION VERSION_LESS "13.0")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+  else()  # CUDA 13.0 renamed SM101 to SM110
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+  endif()
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
 
   cuda_add_library(${PROJECT_NAME}_gpu_preprocess
     SHARED
