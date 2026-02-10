@@ -166,7 +166,7 @@ bool path_footprint_exceeds_target_lane_bound(
 
   const auto combined_target_lane_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanes);
-  if (combined_target_lane_opt.has_value()) {
+  if (!combined_target_lane_opt.has_value()) {
     // empty target_lanes -> no boundary
     return false;
   }
