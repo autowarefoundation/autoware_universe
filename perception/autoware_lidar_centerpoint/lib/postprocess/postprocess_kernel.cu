@@ -80,6 +80,11 @@ __global__ void generateBoxes3D_kernel(
     }
   }
 
+  if (label == -1) {
+    det_boxes3d[idx].score = 0.f;
+    return;
+  }
+
   const float offset_x = out_offset[down_grid_size * 0 + idx];
   const float offset_y = out_offset[down_grid_size * 1 + idx];
   const float x = voxel_size_x * downsample_factor * (xi + offset_x) + range_min_x;
@@ -99,7 +104,7 @@ __global__ void generateBoxes3D_kernel(
   // If the radial distance is greater than the last score_upper_bound, which is out of bound and
   // then we set the score to 0, and stop processing or the label is not found, then we set the
   // score to 0, and stop processing
-  if (distance_bucket_index == -1 || label == -1) {
+  if (distance_bucket_index == -1) {
     det_boxes3d[idx].score = 0.f;
     return;
   }
