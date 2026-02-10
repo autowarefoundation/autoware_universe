@@ -15,12 +15,10 @@
         # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
         # [0-50m), [50.0-90m), [90.0-121.0m), [121.0-200.0m), set a very high number for the last one to be safe
         upper_bounds: [50.0, 90.0, 121.0, 200.0]
-        # Number of thresholds must match with number of upper_bounds * number of classes
-        # Column: Number of classes, row: Number of upper_bounds
-        thresholds: [
-          # CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
-          0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
-          0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
-          0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
-          0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
-        ]
+        # Each list of thresholds must match with the number of upper_bounds, and each threshold corresponds to a distance bucket in the order of the upper bounds
+        thresholds:
+          CAR: [0.35, 0.35, 0.35, 0.35]
+          TRUCK: [0.35, 0.35, 0.35, 0.35]
+          BUS: [0.35, 0.35, 0.35, 0.35]
+          BICYCLE: [0.35, 0.35, 0.35, 0.35]
+          PEDESTRIAN: [0.35, 0.35, 0.35, 0.35]
