@@ -23192,31 +23192,6 @@ a[0] = a_0
 <span class="w">  </span><span class="o">~</span><span class="n">ContinuousJerkSmoother</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">default</span><span class="p">;</span>
 <span class="p">};</span>
 </code></pre></div>
-<h4 id="322-key-methods">3.2.2 Key Methods<a class="headerlink" href="#322-key-methods" title="Permanent link">#</a></h4>
-<ol>
-<li>
-<p><strong><code>apply()</code></strong>: Main optimization routine</p>
-<ul>
-<li>Detects stop points using <code>autoware::motion_utils::searchZeroVelocityIndex</code></li>
-<li>Sets up QP problem with appropriate constraints</li>
-<li>Solves using ProxQP interface</li>
-<li>Extracts optimized velocities and accelerations</li>
-</ul>
-</li>
-<li>
-<p><strong><code>calc_trajectory_interval_distance()</code></strong>: Utility function</p>
-<ul>
-<li>Calculates Euclidean distances between consecutive trajectory points</li>
-<li>Used for dynamics constraints and jerk calculations</li>
-</ul>
-</li>
-</ol>
-<h4 id="323-private-members">3.2.3 Private Members<a class="headerlink" href="#323-private-members" title="Permanent link">#</a></h4>
-<ul>
-<li><code>params_</code>: Current smoother parameters</li>
-<li><code>qp_interface_</code>: QP solver instance (ProxQP)</li>
-<li><code>logger_</code>: ROS 2 logger for debugging and warnings</li>
-</ul>
 <h2 id="4-implementation-details">4. Implementation Details<a class="headerlink" href="#4-implementation-details" title="Permanent link">#</a></h2>
 <h3 id="41-qp-problem-setup">4.1 QP Problem Setup<a class="headerlink" href="#41-qp-problem-setup" title="Permanent link">#</a></h3>
 <p>The optimization problem is formulated as:</p>
@@ -23234,11 +23209,11 @@ a[0] = a_0
 <li><span class="arithmatex">\(l\)</span>, <span class="arithmatex">\(<span class="arithmatex">\(u\)</span>\)</span> = Lower and upper bounds</li>
 </ul>
 <h3 id="42-variable-indexing">4.2 Variable Indexing<a class="headerlink" href="#42-variable-indexing" title="Permanent link">#</a></h3>
-<div class="highlight"><pre><span></span><code>IDX_B0 = 0;      // Start of b variables (velocity squared)
-IDX_A0 = N;      // Start of a variables (acceleration)
-IDX_DELTA0 = 2N; // Start of delta variables (velocity slack)
-IDX_SIGMA0 = 3N; // Start of sigma variables (acceleration slack)
-IDX_GAMMA0 = 4N; // Start of gamma variables (jerk slack)
+<div class="highlight"><pre><span></span><code><span class="n">IDX_B0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of b variables (velocity squared)</span>
+<span class="n">IDX_A0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w">      </span><span class="c1">// Start of a variables (acceleration)</span>
+<span class="n">IDX_DELTA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of delta variables (velocity slack)</span>
+<span class="n">IDX_SIGMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of sigma variables (acceleration slack)</span>
+<span class="n">IDX_GAMMA0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="c1">// Start of gamma variables (jerk slack)</span>
 </code></pre></div>
 <h3 id="43-error-handling">4.3 Error Handling<a class="headerlink" href="#43-error-handling" title="Permanent link">#</a></h3>
 <ul>
