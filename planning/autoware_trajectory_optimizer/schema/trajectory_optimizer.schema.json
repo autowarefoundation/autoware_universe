@@ -433,48 +433,6 @@
             "smooth_velocities"
           ]
         },
-        "jerk_filter_params": {
-          "type": "object",
-          "properties": {
-            "jerk_weight": {
-              "type": "number",
-              "default": 10.0,
-              "minimum": 0,
-              "description": "Weight for smoothness cost for jerk"
-            },
-            "over_v_weight": {
-              "type": "number",
-              "default": 100000.0,
-              "minimum": 0,
-              "description": "Weight for over speed limit cost"
-            },
-            "over_a_weight": {
-              "type": "number",
-              "default": 5000.0,
-              "minimum": 0,
-              "description": "Weight for over accel limit cost"
-            },
-            "over_j_weight": {
-              "type": "number",
-              "default": 2000.0,
-              "minimum": 0,
-              "description": "Weight for over jerk limit cost"
-            },
-            "jerk_filter_ds": {
-              "type": "number",
-              "default": 0.1,
-              "exclusiveMinimum": 0,
-              "description": "Resampling ds for jerk filter [m]"
-            }
-          },
-          "required": [
-            "jerk_weight",
-            "over_v_weight",
-            "over_a_weight",
-            "over_j_weight",
-            "jerk_filter_ds"
-          ]
-        },
         "elastic_band_params": {
           "type": "object",
           "properties": {

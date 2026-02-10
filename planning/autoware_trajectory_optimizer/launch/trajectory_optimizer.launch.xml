@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <arg name="trajectory_optimizer_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_optimizer.param.yaml"/>
-  <arg name="jerk_filtered_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/JerkFiltered.param.yaml"/>
-  <arg name="velocity_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/default_velocity_smoother.param.yaml"/>
-  <arg name="common_smoother_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/velocity_smoothing/default_common.param.yaml"/>
   <arg name="elastic_band_param_path" default="$(find-pkg-share autoware_trajectory_optimizer)/config/trajectory_smoothing/elastic_band_smoother.param.yaml"/>
   <arg name="common_param_path" default="$(find-pkg-share autoware_core_planning)/config/common.param.yaml"/>
 
@@ -25,9 +22,6 @@
   <node pkg="autoware_trajectory_optimizer" exec="autoware_trajectory_optimizer_node" name="trajectory_optimizer_node" output="screen">
     <param from="$(var trajectory_optimizer_param_path)" allow_substs="true"/>
     <param from="$(var common_param_path)"/>
-    <param from="$(var jerk_filtered_smoother_param_path)" allow_substs="true"/>
-    <param from="$(var velocity_smoother_param_path)" allow_substs="true"/>
-    <param from="$(var common_smoother_param_path)" allow_substs="true"/>
     <param from="$(var elastic_band_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_point_fixer_param_path)" allow_substs="true"/>
     <param from="$(var trajectory_extender_param_path)" allow_substs="true"/>

@@ -19,6 +19,7 @@
 #include <Eigen/Core>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
