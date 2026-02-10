@@ -381,8 +381,14 @@ std::optional<lanelet::CompoundPolygon3d> generate_attention_area(
                                 : attention_area_left_boundary;
 
   // far side bound
+  const auto blind_side_lanelets_before_turning_merged_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(
+      blind_side_lanelets_before_turning);
+  if (!blind_side_lanelets_before_turning_merged_opt.has_value()) {
+    return std::nullopt;
+  }
   const auto blind_side_lanelets_before_turning_merged =
-    lanelet::utils::combineLaneletsShape(blind_side_lanelets_before_turning);
+    blind_side_lanelets_before_turning_merged_opt.value();
   const auto blind_side_lanelet_boundary_before_turning =
     (turn_direction == TurnDirection::Left)
       ? blind_side_lanelets_before_turning_merged.leftBound()
