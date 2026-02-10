@@ -16,9 +16,9 @@
 #include "autoware/cuda_utils/cuda_unique_ptr.hpp"
 
 #include <autoware/tensorrt_yolox/calibrator.hpp>
+#include <autoware/tensorrt_yolox/label.hpp>
 #include <autoware/tensorrt_yolox/preprocess.hpp>
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
-#include <autoware/tensorrt_yolox/label.hpp>
 #include <experimental/filesystem>
 
 #include <assert.h>
