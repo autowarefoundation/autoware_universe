@@ -156,7 +156,8 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
 }
 
 void PointcloudBasedOccupancyGridMapNode::onPointcloudApproximateSync(
-  const PointCloud2::ConstSharedPtr & input_obstacle_msg, const PointCloud2::ConstSharedPtr & input_raw_msg)
+  const PointCloud2::ConstSharedPtr & input_obstacle_msg,
+  const PointCloud2::ConstSharedPtr & input_raw_msg)
 {
   // Keep the existing async upload/compute model, but trigger processing at approx-synced arrival.
   obstacle_pointcloud_.fromROSMsgAsync(input_obstacle_msg);
