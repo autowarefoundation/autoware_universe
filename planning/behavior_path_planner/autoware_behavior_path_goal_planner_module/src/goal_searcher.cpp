@@ -24,7 +24,6 @@
 #include "autoware_lanelet2_extension/regulatory_elements/no_parking_area.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
-#include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/lanelet2_utils/geometry.hpp>
@@ -322,7 +321,12 @@ GoalCandidates GoalSearcher::search(
   const auto departure_check_lane = goal_planner_utils::createDepartureCheckLanelet(
     pull_over_lanes_, *route_handler, left_side_parking_);
 
-  const auto pull_over_lanelet = lanelet::utils::combineLaneletsShape(pull_over_lanes_);
+  const auto pull_over_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(pull_over_lanes_);
+  if (!pull_over_lanelet_opt.has_value()) {
+    return goal_candidates;
+  }
+  const auto pull_over_lanelet = pull_over_lanelet_opt.value();
   const auto boundary =
     left_side_parking_ ? pull_over_lanelet.leftBound() : pull_over_lanelet.rightBound();
 

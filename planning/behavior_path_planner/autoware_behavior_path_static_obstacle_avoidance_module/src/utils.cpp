@@ -1398,7 +1398,9 @@ bool isWithinLanes(
     concat_lanelets.push_back(next_lanelet);
   }
 
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(concat_lanelets);
+  // concat_lanelets is already confirmed to have at least one lanelet (nearest lanelet)
+  const auto combine_lanelet =
+    *autoware::experimental::lanelet2_utils::combine_lanelets_shape(concat_lanelets);
 
   return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }

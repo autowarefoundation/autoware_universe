@@ -164,7 +164,13 @@ bool path_footprint_exceeds_target_lane_bound(
   const auto & target_lanes = common_data_ptr->lanes_ptr->target;
   const bool is_left = common_data_ptr->direction == Direction::LEFT;
 
-  const auto combined_target_lane = lanelet::utils::combineLaneletsShape(target_lanes);
+  const auto combined_target_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanes);
+  if (combined_target_lane_opt.has_value()) {
+    // empty target_lanes -> no boundary
+    return false;
+  }
+  const auto combined_target_lane = combined_target_lane_opt.value();
 
   for (const auto & path_point : path.points) {
     const auto & pose = path_point.point.pose;
