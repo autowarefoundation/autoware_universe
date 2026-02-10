@@ -25,7 +25,6 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
-#include <iomanip>
 #include <memory>
 #include <string>
 #include <vector>
