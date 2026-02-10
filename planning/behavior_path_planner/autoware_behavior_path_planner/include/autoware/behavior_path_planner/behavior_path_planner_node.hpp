@@ -146,10 +146,16 @@ private:
   double persistent_message_timeout_; // seconds
   bool enable_traffic_signal_timeout_;
   std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_message_timeout_;
+  enum class DataReadyStatus
+  {
+    SUCCESS,
+    NOT_RECEIVED,
+    TIMEOUT,
+  };
 
   // setup
   void takeData();
-  bool isDataReady(const rclcpp::Time & now);
+  DataReadyStatus isDataReady(const rclcpp::Time & now);
 
   // data processing called from takeData()
   void onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg);

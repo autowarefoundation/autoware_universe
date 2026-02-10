@@ -277,24 +277,27 @@ void BehaviorPathPlannerNode::takeData()
 }
 
 // check if mandatory data is ready (not timed out)
-bool BehaviorPathPlannerNode::isDataReady(const rclcpp::Time & now)
+BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
+  const rclcpp::Time & now)
 {
   diagnostics_message_timeout_->clear();
   const rclcpp::Time zero_stamp{0, 0, RCL_ROS_TIME};
-  bool ready = true;
+  DataReadyStatus status = DataReadyStatus::SUCCESS;
 
   const auto check = [&](const rclcpp::Time & ts, double timeout, const std::string & name) {
     if (ts == zero_stamp) {
       RCLCPP_INFO_SKIPFIRST_THROTTLE(
         get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
       diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
-      ready = false;
+      status = DataReadyStatus::NOT_RECEIVED;
       return;
     }
     if ((now - ts).seconds() > timeout) {
       RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s timeout", name.c_str());
       diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
-      ready = false;
+      if (status == DataReadyStatus::SUCCESS) {
+        status = DataReadyStatus::TIMEOUT;
+      }
       return;
     }
     diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
@@ -305,7 +308,7 @@ bool BehaviorPathPlannerNode::isDataReady(const rclcpp::Time & now)
   check(vector_map_subscriber_.latest_timestamp(), persistent_message_timeout_, "map");
   check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception");
   check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
-  check(acceleration_subscriber_.latest_timestamp(), cyclic_message_timeout_, "acceleration");
+  check(acceleration_subscriber_.latest_timestamp(), persistent_message_timeout_, "acceleration");
   check(
     operation_mode_subscriber_.latest_timestamp(), persistent_message_timeout_, "operation_mode");
   check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid");
@@ -314,12 +317,12 @@ bool BehaviorPathPlannerNode::isDataReady(const rclcpp::Time & now)
       traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
   }
 
-  if (!ready) {
+  if (status != DataReadyStatus::SUCCESS) {
     diagnostics_message_timeout_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "message timeout detected");
   }
 
-  return ready;
+  return status;
 }
 
 void BehaviorPathPlannerNode::run()
@@ -328,7 +331,8 @@ void BehaviorPathPlannerNode::run()
 
   takeData();
 
-  if (!isDataReady(stamp)) {
+  const auto data_ready_status = isDataReady(stamp);
+  if (data_ready_status == DataReadyStatus::NOT_RECEIVED) {
     diagnostics_message_timeout_->publish(stamp);
     return;
   }
