@@ -83,6 +83,14 @@ LidarFRNet::LidarFRNet(
   stop_watch_ptr_->tic("processing/inner");
 }
 
+LidarFRNet::~LidarFRNet()
+{
+  if (stream_) {
+    cudaStreamSynchronize(stream_);
+    cudaStreamDestroy(stream_);
+  }
+}
+
 bool LidarFRNet::process(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
   cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
