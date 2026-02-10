@@ -4,19 +4,22 @@
 
 The **Continuous Jerk Smoother** provides jerk-constrained velocity smoothing for neural network output trajectories, ensuring kinematic feasibility while maintaining smooth motion profiles.
 
-### Key Features:
+### Key Features
+
 - **Jerk-constrained optimization**: Enforces jerk limits for comfortable passenger experience
 - **Stop point detection**: Automatically detects and handles zero-velocity points in trajectories
 - **Reference tracking**: Tracks input trajectory velocities and accelerations as soft constraints
 - **Hard constraint enforcement**: Enforces velocity upper bounds (including lateral acceleration limits)
 - **QP-based formulation**: Uses quadratic programming for efficient optimization
 
-### Design Philosophy:
+### Design Philosophy
+
 The smoother is adapted from `JerkFilteredSmoother` but specifically designed for **neural network output paths**. It optimizes velocity profiles while respecting acceleration and jerk constraints, making it suitable for autonomous driving applications where smooth motion is critical.
 
 ## 2. Mathematical Formulation
 
 ### 2.1 Optimization Variables
+
 The optimization uses the following variables for N trajectory points:
 
 $$
@@ -30,37 +33,49 @@ x = \begin{bmatrix}
 $$
 
 Where:
+
 - $b[i] = v[i]^2$ (velocity squared)
 - $a[i]$ = acceleration at point i
 - $\delta[i]$, $\sigma[i]$, $\gamma[i]$ = slack variables for soft constraints
 
 ### 2.2 Objective Function
+
 The optimization minimizes a weighted sum of several objectives:
 
 #### 2.2.1 Jerk Minimization
+
 Minimizes the squared jerk along the trajectory:
+
 $$
 J_{jerk} = \sum_{i} w_{jerk} \cdot \left(\frac{a[i+1] - a[i]}{\Delta s} \cdot v_{ref}[i]\right)^2 \cdot \Delta s
 $$
+
 Where:
+
 - $w_{jerk}$ = jerk weight parameter
 - $\Delta s$ = distance between consecutive points
 - $v_{ref}[i]$ = reference velocity at segment i
 
 #### 2.2.2 Velocity Tracking
+
 Tracks reference velocities from input trajectory:
+
 $$
 J_{vel} = \sum_{i} w_{vel} \cdot (b[i] - v_{ref}[i]^2)^2
 $$
 
 #### 2.2.3 Acceleration Tracking
+
 Tracks reference accelerations from input trajectory:
+
 $$
 J_{accel} = \sum_{i} w_{accel} \cdot (a[i] - a_{ref}[i])^2
 $$
 
 #### 2.2.4 Slack Variable Penalties
+
 Penalizes constraint violations:
+
 $$
 J_{slack} = \sum_{i} (w_v \cdot \delta[i]^2 + w_a \cdot \sigma[i]^2 + w_j \cdot \gamma[i]^2)
 $$
@@ -68,38 +83,49 @@ $$
 ### 2.3 Constraints
 
 #### 2.3.1 Velocity Upper Bound (Soft)
+
 $$
 0 \leq b[i] - \delta[i] \leq v_{max}[i]^2
 $$
+
 Where $$v_{max}[i]$$ includes lateral acceleration limits.
 
 #### 2.3.2 Acceleration Limits (Soft)
+
 $$
 a_{min} \leq a[i] - \sigma[i] \leq a_{max}
 $$
 
 #### 2.3.3 Jerk Limits (Soft)
+
 $$
 j_{min} \cdot \Delta s \leq (a[i+1] - a[i]) \cdot v_{ref}[i] - \gamma[i] \cdot \Delta s \leq j_{max} \cdot \Delta s
 $$
 
 #### 2.3.4 Dynamics Constraint (Hard)
+
 Relates velocity squared to acceleration:
+
 $$
 \frac{b[i+1] - b[i]}{\Delta s} = 2 \cdot a[i]
 $$
-Derived from kinematic relation: $$\frac{d(v^2)}{ds} = 2a$$
+
+Derived from kinematic relation: $\frac{d(v^2)}{ds} = 2a$
 
 #### 2.3.5 Initial Conditions (Hard)
+
 $$
 b[0] = v_0^2
 $$
+
 $$
 a[0] = a_0
 $$
 
 ### 2.4 Stop Point Detection
+
 The optimizer automatically detects stop points (zero velocity) and:
+
 1. Optimizes only up to the stop point
 2. Sets velocities to zero for points after the stop
 3. Reduces computational complexity
@@ -107,6 +133,7 @@ The optimizer automatically detects stop points (zero velocity) and:
 ## 3. Class Structures
 
 ### 3.1 `ContinuousJerkSmootherParams`
+
 Configuration structure containing all tunable parameters:
 
 ```cpp
@@ -136,7 +163,7 @@ class ContinuousJerkSmoother {
 public:
   // Constructor
   explicit ContinuousJerkSmoother(const ContinuousJerkSmootherParams & params);
-  
+
   // Main smoothing function
   bool apply(
     const double v0,                    // Initial velocity [m/s]
@@ -145,11 +172,11 @@ public:
     TrajectoryPoints & output,          // Output smoothed trajectory points
     const std::vector<double> & max_velocity_per_point = {}  // Per-point velocity upper bounds
   );
-  
+
   // Parameter management
   void set_params(const ContinuousJerkSmootherParams & params);
   ContinuousJerkSmootherParams get_params() const;
-  
+
   ~ContinuousJerkSmoother() = default;
 };
 ```
@@ -157,6 +184,7 @@ public:
 #### 3.2.2 Key Methods
 
 1. **`apply()`**: Main optimization routine
+
    - Detects stop points using `autoware::motion_utils::searchZeroVelocityIndex`
    - Sets up QP problem with appropriate constraints
    - Solves using ProxQP interface
@@ -167,6 +195,7 @@ public:
    - Used for dynamics constraints and jerk calculations
 
 #### 3.2.3 Private Members
+
 - `params_`: Current smoother parameters
 - `qp_interface_`: QP solver instance (ProxQP)
 - `logger_`: ROS 2 logger for debugging and warnings
@@ -174,7 +203,9 @@ public:
 ## 4. Implementation Details
 
 ### 4.1 QP Problem Setup
+
 The optimization problem is formulated as:
+
 $$
 \begin{align}
 \text{minimize:} & \quad \frac{1}{2} x^T P x + q^T x \\
@@ -183,12 +214,14 @@ $$
 $$
 
 Where:
+
 - $P$ = Hessian matrix (quadratic terms)
 - $q$ = Linear term vector
 - $A$ = Constraint matrix
 - $l$, $$u$$ = Lower and upper bounds
 
 ### 4.2 Variable Indexing
+
 ```
 IDX_B0 = 0;      // Start of b variables (velocity squared)
 IDX_A0 = N;      // Start of a variables (acceleration)
@@ -198,6 +231,7 @@ IDX_GAMMA0 = 4N; // Start of gamma variables (jerk slack)
 ```
 
 ### 4.3 Error Handling
+
 - Returns `false` if optimization fails
 - Logs warnings for empty trajectories or optimization failures
 - Handles NaN values in optimization results
@@ -240,4 +274,3 @@ The continuous jerk smoother is typically used within the trajectory velocity op
 - **Computational Complexity**: $$O(N^3)$$ for QP solving, but N is typically small (≤ 100 points)
 - **Memory Usage**: Matrices of size $$(5N \times 5N)$$ for P and $$(4N \times 5N)$$ for A
 - **Real-time Feasibility**: Suitable for real-time operation with typical trajectory lengths
-
