@@ -114,6 +114,7 @@ The Planner Manager's responsibilities include:
 | ~/output/hazard_lights_cmd    | `autoware_vehicle_msgs::msg::HazardLightsCommand`      | Hazard lights command                                                                         | `volatile`        |
 | ~/output/modified_goal        | `autoware_planning_msgs::msg::PoseWithUuidStamped`     | Output modified goal commands                                                                 | `transient_local` |
 | ~/output/reroute_availability | `tier4_planning_msgs::msg::RerouteAvailability`        | The path the module is about to take. To be executed as soon as external approval is obtained | `volatile`        |
+| /diagnostics                  | `diagnostic_msgs::msg::DiagnosticArray`                | Diagnostics information for input message timeout detection                                   | `volatile`        |
 
 ### Debug
 
