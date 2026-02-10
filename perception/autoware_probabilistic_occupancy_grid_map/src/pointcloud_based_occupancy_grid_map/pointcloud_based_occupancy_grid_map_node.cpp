@@ -64,14 +64,18 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     this->declare_parameter<bool>("filter_obstacle_pointcloud_by_raw_pointcloud");
   const double map_length = this->declare_parameter<double>("map_length");
   const double map_resolution = this->declare_parameter<double>("map_resolution");
+  constexpr int approx_sync_queue_size = 10;
 
   /* Subscriber and publisher */
-  obstacle_pointcloud_sub_ptr_ = this->create_subscription<PointCloud2>(
-    "~/input/obstacle_pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback, this, _1));
-  raw_pointcloud_sub_ptr_ = this->create_subscription<PointCloud2>(
-    "~/input/raw_pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback, this, _1));
+  // Approximate time sync for obstacle/raw pointclouds
+  const auto qos_profile =
+    rclcpp::SensorDataQoS{}.keep_last(approx_sync_queue_size).get_rmw_qos_profile();
+  obstacle_pointcloud_sub_.subscribe(this, "~/input/obstacle_pointcloud", qos_profile);
+  raw_pointcloud_sub_.subscribe(this, "~/input/raw_pointcloud", qos_profile);
+  sync_ptr_ = std::make_shared<Sync>(
+    SyncPolicy(approx_sync_queue_size), obstacle_pointcloud_sub_, raw_pointcloud_sub_);
+  sync_ptr_->registerCallback(
+    std::bind(&PointcloudBasedOccupancyGridMapNode::onPointcloudApproximateSync, this, _1, _2));
 
   occupancy_grid_map_pub_ = create_publisher<OccupancyGrid>("~/output/occupancy_grid_map", 1);
 
@@ -151,24 +155,13 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
 
-void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
-  const PointCloud2::ConstSharedPtr & input_obstacle_msg)
+void PointcloudBasedOccupancyGridMapNode::onPointcloudApproximateSync(
+  const PointCloud2::ConstSharedPtr & input_obstacle_msg, const PointCloud2::ConstSharedPtr & input_raw_msg)
 {
+  // Keep the existing async upload/compute model, but trigger processing at approx-synced arrival.
   obstacle_pointcloud_.fromROSMsgAsync(input_obstacle_msg);
-
-  if (obstacle_pointcloud_.header.stamp == raw_pointcloud_.header.stamp) {
-    onPointcloudWithObstacleAndRaw();
-  }
-}
-
-void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
-  const PointCloud2::ConstSharedPtr & input_raw_msg)
-{
   raw_pointcloud_.fromROSMsgAsync(input_raw_msg);
-
-  if (obstacle_pointcloud_.header.stamp == raw_pointcloud_.header.stamp) {
-    onPointcloudWithObstacleAndRaw();
-  }
+  onPointcloudWithObstacleAndRaw();
 }
 
 void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_time_ms)

@@ -26,6 +26,9 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <laser_geometry/laser_geometry.hpp>
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/synchronizer.h>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/laser_scan.hpp>
@@ -57,8 +60,9 @@ public:
   explicit PointcloudBasedOccupancyGridMapNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  void obstaclePointcloudCallback(const PointCloud2::ConstSharedPtr & input_obstacle_msg);
-  void rawPointcloudCallback(const PointCloud2::ConstSharedPtr & input_raw_msg);
+  void onPointcloudApproximateSync(
+    const PointCloud2::ConstSharedPtr & input_obstacle_msg,
+    const PointCloud2::ConstSharedPtr & input_raw_msg);
   void onPointcloudWithObstacleAndRaw();
   void checkProcessingTime(double processing_time_ms);
 
@@ -68,8 +72,14 @@ private:
 
 private:
   rclcpp::Publisher<OccupancyGrid>::SharedPtr occupancy_grid_map_pub_;
-  rclcpp::Subscription<PointCloud2>::SharedPtr obstacle_pointcloud_sub_ptr_;
-  rclcpp::Subscription<PointCloud2>::SharedPtr raw_pointcloud_sub_ptr_;
+
+  // Approximate time synchronization for obstacle/raw pointclouds
+  message_filters::Subscriber<PointCloud2> obstacle_pointcloud_sub_;
+  message_filters::Subscriber<PointCloud2> raw_pointcloud_sub_;
+  using SyncPolicy = message_filters::sync_policies::ApproximateTime<PointCloud2, PointCloud2>;
+  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  std::shared_ptr<Sync> sync_ptr_;
+
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{};
 
