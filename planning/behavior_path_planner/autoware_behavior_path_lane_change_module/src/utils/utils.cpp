@@ -398,7 +398,7 @@ std::optional<lanelet::ConstLanelet> get_target_lane(
 {
   const auto & ego_pose = common_data_ptr->get_ego_pose();
   const auto & route_handler_ptr = common_data_ptr->route_handler_ptr;
-  const auto & current_lanes_path =
+  const auto current_lanes_path =
     route_handler_ptr->getCenterLinePath(current_lanes, 0.0, std::numeric_limits<double>::max());
 
   auto is_lanelet_behind_ego = [&](const lanelet::ConstLanelet & lanelet) {
