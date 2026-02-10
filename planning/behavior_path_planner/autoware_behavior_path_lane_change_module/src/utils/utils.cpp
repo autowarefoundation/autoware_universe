@@ -1342,11 +1342,6 @@ bool is_intersecting_no_lane_change_lines(
       return false;
     }
 
-    // intervals are in between lane changing path
-    if (interval_lower_bound >= prepare_length && interval_upper_bound <= total_length) {
-      return true;
-    }
-
     const auto & line = std::get<1>(zip);
 
     bool is_intersecting =
