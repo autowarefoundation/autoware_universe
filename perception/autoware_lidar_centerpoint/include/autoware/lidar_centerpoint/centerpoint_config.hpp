@@ -68,6 +68,12 @@ public:
     if (!std::is_sorted(score_upper_bounds.begin(), score_upper_bounds.end())) {
       throw std::invalid_argument("score_upper_bounds must be sorted in ascending order");
     }
+    // score_upper_bounds must be greater than 0.f
+    for (auto & score_upper_bound : score_upper_bounds) {
+      if (score_upper_bound <= 0.f) {
+        throw std::invalid_argument("score_upper_bound must be greater than 0.f");
+      }
+    }
     score_upper_bounds_ = score_upper_bounds;
 
     // score_thresholds must have the size of score_upper_bounds * class_size
