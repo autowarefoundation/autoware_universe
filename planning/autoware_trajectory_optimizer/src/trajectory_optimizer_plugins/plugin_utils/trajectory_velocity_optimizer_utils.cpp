@@ -190,6 +190,10 @@ std::vector<double> limit_lateral_acceleration(
     const auto current_pose = itr->pose;
     const auto next_pose = std::next(itr)->pose;
     const auto delta_time = get_delta_time(std::next(itr), itr);
+    constexpr double epsilon_dt = 1.0e-3;
+    if (delta_time <= epsilon_dt) {
+      continue;
+    }
 
     tf2::Quaternion q_current;
     tf2::Quaternion q_next;
