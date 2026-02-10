@@ -244,7 +244,13 @@ auto check_shift_behavior(
   const auto & vehicle_width = context->vehicle_info.vehicle_width_m;
   const auto & max_longitudinal_offset = context->vehicle_info.max_longitudinal_offset_m;
 
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    RCLCPP_WARN(rclcpp::get_logger("validator_rear_collision_checker"), "Input lanelets is empty.");
+    return std::make_pair(Behavior::NONE, 0.0);
+  }
+  const auto combine_lanelet = combine_lanelet_opt.value();
   const auto nearest_idx =
     autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(points, ego_pose);
   {
@@ -504,7 +510,13 @@ auto check_turn_behavior(
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas)
 {
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    RCLCPP_WARN(rclcpp::get_logger("validator_rear_collision_checker"), "Input lanelets is empty.");
+    return;
+  }
+  const auto combine_lanelet = combine_lanelet_opt.value();
 
   const autoware_utils_geometry::Polygon2d combine_lanelet_boost = [&]() {
     autoware_utils_geometry::Polygon2d poly;
