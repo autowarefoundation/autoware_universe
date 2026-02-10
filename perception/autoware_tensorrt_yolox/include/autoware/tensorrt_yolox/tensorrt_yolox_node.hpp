@@ -1,4 +1,4 @@
-// Copyright 2022 Tier IV, Inc.
+// Copyright 2022 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #define AUTOWARE__TENSORRT_YOLOX__TENSORRT_YOLOX_NODE_HPP_
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware/tensorrt_yolox/label.hpp"
 
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -39,6 +40,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,8 +48,8 @@
 namespace autoware::tensorrt_yolox
 {
 // cspell: ignore Semseg
-using LabelMap = std::map<int, std::string>;
 using Label = tier4_perception_msgs::msg::Semantic;
+
 class TrtYoloXNode : public rclcpp::Node
 {
   struct RoiOverlaySemsegLabel
@@ -75,39 +77,40 @@ public:
 private:
   void onConnect();
   void onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg);
-  bool readLabelFile(const std::string & label_path);
-  void replaceLabelMap();
   void overlapSegmentByRoi(
     const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
   int mapRoiLabel2SegLabel(const int32_t roi_label_index);
+  void setupLabel(
+    const std::string & roi_label_file_path,
+    const std::string & segment_color_map_file_path,
+    const std::string & roi_label_remap_file_path,
+    const std::string & roi_segment_remap_path);
+  void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
+
   image_transport::Publisher image_pub_;
   image_transport::Publisher mask_pub_;
-
   image_transport::Publisher color_mask_pub_;
-
   rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr objects_pub_;
 
   image_transport::Subscriber image_sub_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
-  LabelMap label_map_;
   std::unique_ptr<tensorrt_yolox::TrtYoloX> trt_yolox_;
-  bool is_roi_overlap_segment_;
+
+  bool is_roi_overlap_semseg_;
   bool is_publish_color_mask_;
   float overlap_roi_score_threshold_;
-  // TODO(badai-nguyen): change to function
-  std::map<std::string, int> remap_roi_to_semantic_ = {
-    {"UNKNOWN", 3},     // other
-    {"ANIMAL", 0},      // other
-    {"PEDESTRIAN", 6},  // person
-    {"CAR", 7},         // car
-    {"TRUCK", 7},       // truck
-    {"BUS", 7},         // bus
-    {"BICYCLE", 8},     // bicycle
-    {"MOTORBIKE", 8},   // motorcycle
-  };
-  RoiOverlaySemsegLabel roi_overlay_segment_labels_;
+
+  // using -1 to represent labels that be ignored
+  static constexpr int unmapped_class_id_ = -1;
+  std::vector<std::string> roi_id_to_name_map_;
+  std::vector<int> roi_id_to_class_id_map_;
+  std::vector<int> roi_id_to_semseg_id_map_;
+
+  std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map_;
+  RoiOverlaySemsegLabel roi_overlay_semseg_labels_;
+
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 };

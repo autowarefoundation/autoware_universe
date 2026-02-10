@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/tensorrt_yolox/label.hpp"
 #include "autoware/tensorrt_yolox/tensorrt_yolox_node.hpp"
 
 #include "autoware/object_recognition_utils/object_classification.hpp"
@@ -40,7 +41,6 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   using std::chrono_literals::operator""ms;
 
   const std::string model_path = this->declare_parameter<std::string>("model_path");
-  const std::string label_path = this->declare_parameter<std::string>("label_path");
   const std::string precision = this->declare_parameter<std::string>("precision");
   const float score_threshold =
     static_cast<float>(this->declare_parameter<double>("score_threshold"));
@@ -57,29 +57,49 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<std::string>("calibration_image_list_path");
   const uint8_t gpu_id = this->declare_parameter<uint8_t>("gpu_id");
 
-  std::string color_map_path = this->declare_parameter<std::string>("color_map_path");
+  const std::string label_path = this->declare_parameter<std::string>("label_path");
+  const std::string semseg_color_map_path =
+    this->declare_parameter<std::string>("semantic_segmentation_color_map_path", "");
 
-  if (!readLabelFile(label_path)) {
-    RCLCPP_ERROR(this->get_logger(), "Could not find label file");
-    rclcpp::shutdown();
-  }
+  // if the remap file path is an empty string, it will not do remap the labels
+  const std::string roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
+  const std::string roi_to_semseg_remap_path =
+    this->declare_parameter<std::string>("semantic_segmentation_remap_path", "");
 
-  is_roi_overlap_segment_ = declare_parameter<bool>("is_roi_overlap_segment");
+  is_roi_overlap_semseg_ = declare_parameter<bool>("is_roi_overlap_segmentation");
   is_publish_color_mask_ = declare_parameter<bool>("is_publish_color_mask");
   overlap_roi_score_threshold_ = declare_parameter<float>("overlap_roi_score_threshold");
-  roi_overlay_segment_labels_.UNKNOWN =
-    declare_parameter<bool>("roi_overlay_segment_label.UNKNOWN");
-  roi_overlay_segment_labels_.CAR = declare_parameter<bool>("roi_overlay_segment_label.CAR");
-  roi_overlay_segment_labels_.TRUCK = declare_parameter<bool>("roi_overlay_segment_label.TRUCK");
-  roi_overlay_segment_labels_.BUS = declare_parameter<bool>("roi_overlay_segment_label.BUS");
-  roi_overlay_segment_labels_.MOTORCYCLE =
-    declare_parameter<bool>("roi_overlay_segment_label.MOTORCYCLE");
-  roi_overlay_segment_labels_.BICYCLE =
-    declare_parameter<bool>("roi_overlay_segment_label.BICYCLE");
-  roi_overlay_segment_labels_.PEDESTRIAN =
-    declare_parameter<bool>("roi_overlay_segment_label.PEDESTRIAN");
-  roi_overlay_segment_labels_.ANIMAL = declare_parameter<bool>("roi_overlay_segment_label.ANIMAL");
-  replaceLabelMap();
+  roi_overlay_semseg_labels_.UNKNOWN =
+    declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
+  roi_overlay_semseg_labels_.CAR = declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
+  roi_overlay_semseg_labels_.TRUCK =
+    declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
+  roi_overlay_semseg_labels_.BUS = declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
+  roi_overlay_semseg_labels_.MOTORCYCLE =
+    declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
+  roi_overlay_semseg_labels_.BICYCLE =
+    declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
+  roi_overlay_semseg_labels_.PEDESTRIAN =
+    declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
+  roi_overlay_semseg_labels_.ANIMAL =
+    declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
+
+  if (is_publish_color_mask_ && semseg_color_map_path.empty()){
+    std::stringstream error_msg;
+    error_msg << "semseg_color_map_path must be specified"
+    << "when `is_publish_color_mask_` is true.";
+    throw std::runtime_error{error_msg.str()};
+  }
+
+  if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()){
+    std::stringstream error_msg;
+    error_msg << "semantic_segmentation_remap_path must be specified"
+    << "when `is_roi_overlap_segmentation` is true.";
+    throw std::runtime_error{error_msg.str()};
+  }
+
+  // setup the label information and process the remappings
+  setupLabel(label_path, semseg_color_map_path, roi_remap_path, roi_to_semseg_remap_path);
 
   TrtCommonConfig trt_config(
     model_path, precision, "", (1ULL << 30U), dla_core_id, profile_per_layer);
@@ -91,8 +111,8 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   const std::string cache_dir = "";
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
-    trt_config, label_map_.size(), score_threshold, nms_threshold, preprocess_on_gpu, gpu_id,
-    calibration_image_list_path, norm_factor, cache_dir, color_map_path, calib_config);
+    trt_config, roi_id_to_name_map_.size(), score_threshold, nms_threshold, preprocess_on_gpu, gpu_id,
+    calibration_image_list_path, norm_factor, cache_dir, calib_config);
 
   if (!trt_yolox_->isGPUInitialized()) {
     RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", gpu_id);
@@ -165,9 +185,21 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     object.feature.roi.width = yolox_object.width;
     object.feature.roi.height = yolox_object.height;
     object.object.existence_probability = yolox_object.score;
-    object.object.classification = autoware::object_recognition_utils::toObjectClassifications(
-      label_map_[yolox_object.type], 1.0f);
+
+    // direct mapping from YOLOX ID to class ID
+    const int target_class_id = roi_id_to_class_id_map_[yolox_object.type];
+
+    // drop the object if it is marked as ignore
+    if (target_class_id == unmapped_class_id_) continue;
+
+    autoware_perception_msgs::msg::ObjectClassification classification;
+    classification.label = static_cast<uint8_t>(target_class_id);
+    classification.probability = 1.0f;
+
+    object.object.classification.push_back(classification);
+
     out_objects.feature_objects.push_back(object);
+
     const auto left = std::max(0, static_cast<int>(object.feature.roi.x_offset));
     const auto top = std::max(0, static_cast<int>(object.feature.roi.y_offset));
     const auto right =
@@ -179,10 +211,11 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       8, 0);
     // Refine mask: replacing segmentation mask by roi class
     // This should remove when the segmentation accuracy is high
-    if (is_roi_overlap_segment_ && trt_yolox_->getMultitaskNum() > 0) {
+    if (is_roi_overlap_semseg_ && trt_yolox_->getMultitaskNum() > 0) {
       overlapSegmentByRoi(yolox_object, mask, width, height);
     }
   }
+
   if (trt_yolox_->getMultitaskNum() > 0) {
     sensor_msgs::msg::Image::SharedPtr out_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::MONO8, mask)
@@ -196,8 +229,10 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       std::memcpy(&out_mask_msg->data[i * step], &compressed_data.at(i).first, sizeof(uint8_t));
       std::memcpy(&out_mask_msg->data[i * step + 1], &compressed_data.at(i).second, sizeof(int));
     }
+
     mask_pub_.publish(out_mask_msg);
   }
+
   image_pub_.publish(in_image_ptr->toImageMsg());
   out_objects.header = msg->header;
   objects_pub_->publish(out_objects);
@@ -220,7 +255,8 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 
   if (is_publish_color_mask_ && trt_yolox_->getMultitaskNum() > 0) {
     cv::Mat color_mask = cv::Mat::zeros(mask.rows, mask.cols, CV_8UC3);
-    trt_yolox_->getColorizedMask(trt_yolox_->getColorMap(), mask, color_mask);
+    getColorizedMask(mask, color_mask);
+
     sensor_msgs::msg::Image::SharedPtr output_color_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::BGR8, color_mask)
         .toImageMsg();
@@ -229,46 +265,105 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   }
 }
 
-bool TrtYoloXNode::readLabelFile(const std::string & label_path)
+/**
+  * @brief Read label files and remap files. Then remap the labels based on the remap information.
+  *
+  * This method will process label and remap data in the following order:
+  *
+  *  1. Read the label and remap files for ROI output.
+  *  2. Remap the ROI label based on the remap information.
+  *  3. Read the color map and remap files for semantic segmentation output.
+  *  4. Create a remap from ROI to segmentation label based on the remap information.
+  *
+  * you still need to use the original label name even you remap the ROI label for
+  * remapping segmentation label.
+  *
+  * @param[in] roi_label_path file path of label file for ROI
+  * @param[in] semseg_color_map_path file path of color map file for segmentation
+  * @param[in] roi_label_remap_path file path of remap file for ROI
+  * @param[in] roi_to_semseg_remap_path file path of remap file for segmentation
+  */
+void TrtYoloXNode::setupLabel(
+  const std::string & roi_label_path,
+  const std::string & semseg_color_map_path,
+  const std::string & roi_label_remap_path,
+  const std::string & roi_to_semseg_remap_path)
 {
-  std::ifstream label_file(label_path);
-  if (!label_file.is_open()) {
-    RCLCPP_ERROR(this->get_logger(), "Could not open label file. [%s]", label_path.c_str());
-    return false;
-  }
-  int label_index{};
-  std::string label;
-  while (getline(label_file, label)) {
-    std::transform(
-      label.begin(), label.end(), label.begin(), [](auto c) { return std::toupper(c); });
-    label_map_.insert({label_index, label});
-    ++label_index;
-  }
-  return true;
-}
+  try {
+    std::unordered_map<std::string, int> roi_name_to_id_map;
+    // read label file and store to roi_id_to_name_map_
+    read_label_file(
+      roi_label_path, roi_id_to_name_map_, roi_name_to_id_map);
 
-void TrtYoloXNode::replaceLabelMap()
-{
-  for (std::size_t i = 0; i < label_map_.size(); ++i) {
-    auto & label = label_map_[i];
-    if (label == "PERSON") {
-      label = "PEDESTRIAN";
-    } else if (label == "MOTORBIKE") {
-      label = "MOTORCYCLE";
-    } else if (
-      label != "CAR" && label != "PEDESTRIAN" && label != "BUS" && label != "TRUCK" &&
-      label != "BICYCLE" && label != "MOTORCYCLE") {
-      label = "UNKNOWN";
+    roi_id_to_class_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
+
+    if (!roi_label_remap_path.empty()) {
+      std::unordered_map<std::string, int> roi_label_to_new_id_remap;
+      constexpr uint32_t skip_header_lines = 1;
+      // load remapping of ROI to autoware interface class types
+      // e.g. MOTORBIKE -> 5 (MOTORCYCLE)
+      load_label_id_remap_file(roi_label_remap_path, roi_label_to_new_id_remap, skip_header_lines);
+
+      // map original YOLOX ID directly to class ID
+      for (size_t i = 0; i < roi_id_to_name_map_.size(); ++i) {
+        const std::string & original_name = roi_id_to_name_map_[i];
+
+        if (roi_label_to_new_id_remap.count(original_name) > 0) {
+          roi_id_to_class_id_map_[i] = roi_label_to_new_id_remap.at(original_name);
+        } else {
+          // if there is no label name in the original YOLOX class, we will consider as an error
+          // since it might using the wrong model
+          std::stringstream error_msg;
+          error_msg << "ROI label " << original_name << " not found in remap file.";
+          throw std::runtime_error{error_msg.str()};
+        }
+      }
     }
+
+    std::unordered_map<std::string, int> semseg_name_to_id_map;
+    if (!semseg_color_map_path.empty()) {
+      constexpr uint32_t skip_header_lines = 1;
+      // load semantic segmentation label information (label, label name, r, g, b)
+      load_segmentation_colormap(
+        semseg_color_map_path,
+        semseg_color_map_,
+        semseg_name_to_id_map,
+        skip_header_lines);
+    }
+
+    roi_id_to_semseg_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
+    if (!roi_to_semseg_remap_path.empty()) {
+      std::unordered_map<std::string, int> roi_name_to_semseg_id_remap;
+      constexpr uint32_t skip_header_lines = 1;
+      // load remapping of ROI to semantic segmentation label
+      // e.g. PEDESTRIAN -> 6 (PEDESTRIAN)
+      load_label_id_remap_file(roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
+
+      // map original YOLOX ID directly to semantic segmentation ID
+      for (size_t i = 0; i < roi_id_to_name_map_.size(); ++i) {
+        const std::string & original_name = roi_id_to_name_map_[i];
+
+        if (roi_name_to_semseg_id_remap.count(original_name) > 0) {
+          roi_id_to_semseg_id_map_[i] = roi_name_to_semseg_id_remap.at(original_name);
+        } else {
+          // if there is no label name in the original YOLOX class, we will consider as an error
+          // since it might using the wrong model
+          std::stringstream error_msg;
+          error_msg << "ROI label " << original_name << " not found in remap file.";
+          throw std::runtime_error{error_msg.str()};
+        }
+      }
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Label initialization failed: %s", e.what());
+    throw;
   }
 }
 
 int TrtYoloXNode::mapRoiLabel2SegLabel(const int32_t roi_label_index)
 {
-  if (roi_overlay_segment_labels_.isOverlay(static_cast<uint8_t>(roi_label_index))) {
-    std::string label = label_map_[roi_label_index];
-
-    return remap_roi_to_semantic_[label];
+  if (roi_overlay_semseg_labels_.isOverlay(static_cast<uint8_t>(roi_label_index))) {
+    return roi_id_to_semseg_id_map_[roi_label_index];
   }
   return -1;
 }
@@ -292,6 +387,30 @@ void TrtYoloXNode::overlapSegmentByRoi(
     cv::Size(roi_width, roi_height), mask.type(), static_cast<uint8_t>(seg_class_index));
   replace_roi.copyTo(mask.colRange(roi_x_offset, roi_x_offset + roi_width)
                        .rowRange(roi_y_offset, roi_y_offset + roi_height));
+}
+
+/**
+  * @brief get colorized masks from index using specific colormap
+  * @param[out] cmask colorized mask
+  * @param[in] index multitask index
+  * @param[in] colormap colormap for masks
+  */
+void TrtYoloXNode::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
+{
+  int width = mask.cols;
+  int height = mask.rows;
+  if ((cmask.cols != mask.cols) || (cmask.rows != mask.rows)) {
+    throw std::runtime_error("input and output image have difference size.");
+  }
+
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      unsigned char id = mask.at<unsigned char>(y, x);
+      cmask.at<cv::Vec3b>(y, x)[0] = semseg_color_map_[id].color[2];
+      cmask.at<cv::Vec3b>(y, x)[1] = semseg_color_map_[id].color[1];
+      cmask.at<cv::Vec3b>(y, x)[2] = semseg_color_map_[id].color[0];
+    }
+  }
 }
 
 }  // namespace autoware::tensorrt_yolox
