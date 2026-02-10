@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_YOLOX__UTILS_HPP_
-#define AUTOWARE__TENSORRT_YOLOX__UTILS_HPP_
+#ifndef AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
+#define AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 
 #include <string>
 #include <vector>
 
-namespace autoware::tensorrt_yolox::utils
+namespace autoware::tensorrt_yolox
 {
 static void trimLeft(std::string & s);
 static void trimRight(std::string & s);
@@ -28,6 +28,6 @@ bool fileExists(const std::string & file_name, bool verbose);
 std::vector<std::string> loadListFromTextFile(const std::string & filename);
 std::vector<std::string> loadImageList(const std::string & filename, const std::string & prefix);
 
-}  // namespace autoware::tensorrt_yolox::utils
+}  // namespace autoware::tensorrt_yolox
 
-#endif  // AUTOWARE__TENSORRT_YOLOX__UTILS_HPP_
+#endif  // AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_

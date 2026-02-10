@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_yolox/utils.hpp"
+#include "autoware/tensorrt_yolox/label.hpp"
 
 #include <experimental/filesystem>
 
@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::tensorrt_yolox::utils
+namespace autoware::tensorrt_yolox
 {
 static void trimLeft(std::string & s)
 {
@@ -95,4 +95,4 @@ std::vector<std::string> loadImageList(const std::string & filename, const std::
   return fileList;
 }
 
-}  // namespace autoware::tensorrt_yolox::utils
+}  // namespace autoware::tensorrt_yolox

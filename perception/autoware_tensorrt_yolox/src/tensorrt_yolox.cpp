@@ -18,7 +18,7 @@
 #include <autoware/tensorrt_yolox/calibrator.hpp>
 #include <autoware/tensorrt_yolox/preprocess.hpp>
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
-#include <autoware/tensorrt_yolox/utils.hpp>
+#include <autoware/tensorrt_yolox/label.hpp>
 #include <experimental/filesystem>
 
 #include <assert.h>
@@ -37,8 +37,8 @@
 
 namespace
 {
-using autoware::tensorrt_yolox::utils::loadListFromTextFile;
-using autoware::tensorrt_yolox::utils::trim;
+using autoware::tensorrt_yolox::loadListFromTextFile;
+using autoware::tensorrt_yolox::trim;
 
 std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::string & filename)
 {
@@ -140,8 +140,7 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images =
-        autoware::tensorrt_yolox::utils::loadImageList(calibration_image_list_path, "");
+      calibration_images = loadImageList(calibration_image_list_path, "");
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};
