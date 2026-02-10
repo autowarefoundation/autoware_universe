@@ -36,39 +36,87 @@ bool readImage(const std::string & filename, cv::Mat & rgb_img)
   return true;
 }
 
-TEST(is_harsh_backlight, normal)
+///////////////////////////////////////////////////////////
+// check over exposure case
+TEST(is_over_exposure, normal)
 {
   cv::Mat rgb_img;
   EXPECT_TRUE(readImage("normal.png", rgb_img));
-  const double backlight_threshold = 0.85;
-  bool result = autoware::traffic_light::utils::is_harsh_backlight(rgb_img, backlight_threshold);
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
   EXPECT_FALSE(result);
 }
 
-TEST(is_harsh_backlight, backlight_weak)
+TEST(is_over_exposure, backlight_weak)
 {
   cv::Mat rgb_img;
   EXPECT_TRUE(readImage("backlight_weak.png", rgb_img));
-  const double backlight_threshold = 0.85;
-  bool result = autoware::traffic_light::utils::is_harsh_backlight(rgb_img, backlight_threshold);
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
   EXPECT_FALSE(result);
 }
 
-TEST(is_harsh_backlight, backlight_medium)
+TEST(is_over_exposure, backlight_medium)
 {
   cv::Mat rgb_img;
   EXPECT_TRUE(readImage("backlight_medium.png", rgb_img));
-  const double backlight_threshold = 0.85;
-  bool result = autoware::traffic_light::utils::is_harsh_backlight(rgb_img, backlight_threshold);
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
   EXPECT_FALSE(result);
 }
 
-TEST(is_harsh_backlight, backlight_strong)
+TEST(is_over_exposure, backlight_strong)
 {
   cv::Mat rgb_img;
   EXPECT_TRUE(readImage("backlight_strong.png", rgb_img));
-  const double backlight_threshold = 0.85;
-  bool result = autoware::traffic_light::utils::is_harsh_backlight(rgb_img, backlight_threshold);
+  const double over_exposure_threshold = 0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness > over_exposure_threshold;
+  EXPECT_TRUE(result);
+}
+
+///////////////////////////////////////////////////////////
+// check under exposure case
+TEST(is_under_exposure, normal)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_normal.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_weak)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_weak.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_medium)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_medium.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
+  EXPECT_FALSE(result);
+}
+
+TEST(is_under_exposure, dimmed_strong)
+{
+  cv::Mat rgb_img;
+  EXPECT_TRUE(readImage("traffic_light_dimmed_strong.png", rgb_img));
+  const double under_exposure_threshold = -0.85;
+  const double brightness = autoware::traffic_light::utils::compute_brightness(rgb_img);
+  bool result = brightness < under_exposure_threshold;
   EXPECT_TRUE(result);
 }
 
