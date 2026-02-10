@@ -157,13 +157,53 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 
   // Distance-based score thresholds
   const std::vector<double> score_upper_bounds_double =
-    this->declare_parameter<std::vector<double>>("model_params.score_thresholds.upper_bounds");
-  const std::vector<double> score_thresholds_double =
-    this->declare_parameter<std::vector<double>>("model_params.score_thresholds.thresholds");
+    this->declare_parameter<std::vector<double>>(
+      "model_params.score_thresholds.upper_bounds", std::vector<double>{});
+  // Must set at least one upper bound
+  if (score_upper_bounds_double.empty()) {
+    throw std::invalid_argument("The number of upper bounds must be at least one");
+  }
   const std::vector<float> score_upper_bounds(
     score_upper_bounds_double.begin(), score_upper_bounds_double.end());
-  const std::vector<float> score_thresholds(
-    score_thresholds_double.begin(), score_thresholds_double.end());
+
+  // Create empty vector of thresholds for each class * number of upper bounds
+  std::vector<float> score_thresholds =
+    std::vector<float>(class_names_.size() * score_upper_bounds.size(), 0.0);
+  int current_class_index = 0;
+  for (const auto & class_name : class_names_) {
+    // Construct the parameter path (e.g., "model_params.score_thresholds.CAR")
+    std::string param_path = "model_params.score_thresholds.thresholds." + class_name;
+
+    // Declare it. If the number of thresholds is not equal to the number of upper bounds, throw an
+    // error
+    auto class_score_thresholds =
+      this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    if (class_score_thresholds.size() != score_upper_bounds.size()) {
+      throw std::invalid_argument(
+        "The number of thresholds for " + class_name +
+        " is not equal to the number of upper bounds");
+    }
+
+    // Move it to the correct position in the 1d-vector score_thresholds, where the order is number
+    // of classes * number of upper bounds
+    int current_upper_bound_index = 0;
+    for (auto class_score_threshold : class_score_thresholds) {
+      // The index is the current class index + the current upper bound index * the number of
+      // classes since score thresholds for the same class are in the same column For example, #
+      // CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      // [
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+      //  0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+      // ]
+      auto score_threshold_index =
+        current_class_index + current_upper_bound_index * class_names_.size();
+      score_thresholds[score_threshold_index] = class_score_threshold;
+      current_upper_bound_index++;
+    }
+    current_class_index++;
+  }
 
   // diagnostics parameters
   max_allowed_processing_time_ms_ =
