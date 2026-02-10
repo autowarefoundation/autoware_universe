@@ -64,16 +64,17 @@ void apply_spline(
 
   TrajectoryPoints output_points{};
   output_points.reserve(static_cast<size_t>(1 + trajectory_interpolation_util->length() / ds));
-  double s{};
-  for (s = 0.0; s <= trajectory_interpolation_util->length(); s += ds) {
+  double last_s{0.0};
+  for (auto s = 0.0; s <= trajectory_interpolation_util->length(); s += ds) {
     auto p = trajectory_interpolation_util->compute(s);
     if (!autoware::trajectory_optimizer::utils::validate_point(p)) {
       continue;
     }
     output_points.push_back(p);
+    last_s = s;
   }
 
-  if (trajectory_interpolation_util->length() - s > min_interpolation_step) {
+  if (trajectory_interpolation_util->length() - last_s > min_interpolation_step) {
     output_points.push_back(
       trajectory_interpolation_util->compute(trajectory_interpolation_util->length()));
   }
