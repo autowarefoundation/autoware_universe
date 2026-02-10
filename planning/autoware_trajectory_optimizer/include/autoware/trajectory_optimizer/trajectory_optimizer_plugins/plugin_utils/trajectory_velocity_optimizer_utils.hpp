@@ -74,14 +74,12 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
  * @param max_lateral_accel_mps2 Maximum allowed lateral acceleration
  * @param min_limited_speed_mps Minimum speed when applying lateral acceleration limit
  * @param current_odometry Current vehicle odometry for time calculation
- * @return Vector of max velocities per point based on lateral acceleration limits.
- *         Points that were limited will have their constrained velocity;
- *         other points will have their original velocity as the max.
+ * @param inplace If true, directly modify trajectory velocities; if false, only update
  */
-std::vector<double> limit_lateral_acceleration(
+void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
   const double max_lateral_accel_mps2, const double min_limited_speed_mps,
-  const Odometry & current_odometry);
+  const Odometry & current_odometry, const bool inplace = false);
 
 /**
  * @brief Filters velocity profile using jerk-constrained smoothing.

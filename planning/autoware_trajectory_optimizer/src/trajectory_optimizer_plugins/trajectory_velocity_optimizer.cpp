@@ -70,12 +70,14 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   std::vector<double> max_velocity_per_point(
     traj_points.size(), std::numeric_limits<double>::max());
 
+  const bool max_speed_update_in_place = !velocity_params_.smooth_velocities;
+
   // Apply lateral acceleration limiting and update max velocity constraints
   if (velocity_params_.limit_lateral_acceleration) {
     // limit_lateral_acceleration returns per-point max velocities based on curvature
-    max_velocity_per_point = trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
+    trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
       traj_points, max_velocity_per_point, velocity_params_.max_lateral_accel_mps2,
-      velocity_params_.min_limited_speed_mps, data.current_odometry);
+      velocity_params_.min_limited_speed_mps, data.current_odometry, max_speed_update_in_place);
   }
 
   auto initial_motion_speed =
@@ -96,9 +98,14 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
     const auto max_speed_mps = (external_velocity_limit)
                                  ? static_cast<float>(external_velocity_limit->max_velocity)
                                  : static_cast<float>(velocity_params_.default_max_velocity_mps);
-    trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
-    for (auto & v : max_velocity_per_point) {
-      v = std::min(v, static_cast<double>(max_speed_mps));
+    if (max_speed_update_in_place) {
+      // Directly set max velocity on trajectory points
+      trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
+    } else {
+      // Update per-point max velocity constraints
+      for (auto & v : max_velocity_per_point) {
+        v = std::min(v, static_cast<double>(max_speed_mps));
+      }
     }
     if (external_velocity_limit) {
       pub_velocity_limit_->publish(*external_velocity_limit);

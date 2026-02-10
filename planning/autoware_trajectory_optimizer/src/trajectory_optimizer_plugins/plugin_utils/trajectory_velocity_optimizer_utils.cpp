@@ -146,13 +146,13 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
   input_trajectory_array.back().acceleration_mps2 = 0.0f;
 }
 
-std::vector<double> limit_lateral_acceleration(
+void limit_lateral_acceleration(
   TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
   const double max_lateral_accel_mps2, const double min_limited_speed_mps,
-  const Odometry & current_odometry)
+  const Odometry & current_odometry, const bool inplace)
 {
   if (input_trajectory_array.empty()) {
-    return max_velocity_per_point;
+    return;
   }
 
   const size_t traj_size = input_trajectory_array.size();
@@ -171,7 +171,7 @@ std::vector<double> limit_lateral_acceleration(
 
   // Ensure we have a valid range
   if (start_index >= traj_size || start_index > end_index) {
-    return max_velocity_per_point;
+    return;
   }
 
   const auto start_itr = std::next(
@@ -217,9 +217,14 @@ std::vector<double> limit_lateral_acceleration(
     // Update max velocity constraint for this point
     max_velocity_per_point.at(current_index) =
       std::min(max_velocity_per_point.at(current_index), limited_velocity);
+
+    // Inplace trajectory update
+    if (inplace) {
+      itr->longitudinal_velocity_mps = static_cast<float>(max_velocity_per_point.at(current_index));
+    }
   }
 
-  return max_velocity_per_point;
+  return;
 }
 
 void filter_velocity(
