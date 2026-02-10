@@ -181,25 +181,6 @@ public:
 };
 ```
 
-#### 3.2.2 Key Methods
-
-1. **`apply()`**: Main optimization routine
-
-   - Detects stop points using `autoware::motion_utils::searchZeroVelocityIndex`
-   - Sets up QP problem with appropriate constraints
-   - Solves using ProxQP interface
-   - Extracts optimized velocities and accelerations
-
-2. **`calc_trajectory_interval_distance()`**: Utility function
-   - Calculates Euclidean distances between consecutive trajectory points
-   - Used for dynamics constraints and jerk calculations
-
-#### 3.2.3 Private Members
-
-- `params_`: Current smoother parameters
-- `qp_interface_`: QP solver instance (ProxQP)
-- `logger_`: ROS 2 logger for debugging and warnings
-
 ## 4. Implementation Details
 
 ### 4.1 QP Problem Setup
@@ -222,7 +203,7 @@ Where:
 
 ### 4.2 Variable Indexing
 
-```
+```cpp
 IDX_B0 = 0;      // Start of b variables (velocity squared)
 IDX_A0 = N;      // Start of a variables (acceleration)
 IDX_DELTA0 = 2N; // Start of delta variables (velocity slack)
