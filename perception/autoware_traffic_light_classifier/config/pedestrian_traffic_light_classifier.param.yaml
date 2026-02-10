@@ -4,6 +4,7 @@
     precision: fp16
     mean: [123.675, 116.28, 103.53]
     std: [58.395, 57.12, 57.375]
-    backlight_threshold: 0.85
+    over_exposure_threshold: 0.85
+    under_exposure_threshold: -0.83
     classifier_type: 1
     traffic_light_type: 1

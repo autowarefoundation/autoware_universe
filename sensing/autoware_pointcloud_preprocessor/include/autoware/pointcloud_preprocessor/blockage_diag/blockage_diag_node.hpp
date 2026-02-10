@@ -16,19 +16,18 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/blockage_diag/blockage_detection.hpp"
-#include "autoware/pointcloud_preprocessor/blockage_diag/blockage_diag.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/dust_detection.hpp"
+#include "autoware/pointcloud_preprocessor/blockage_diag/multi_frame_detection_aggregator.hpp"
 #include "autoware/pointcloud_preprocessor/blockage_diag/pointcloud2_to_depth_image.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/mat.hpp>
-#include <opencv2/core/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <std_msgs/msg/header.hpp>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -36,8 +35,6 @@
 #else
 #include <cv_bridge/cv_bridge.h>
 #endif
-
-#include <boost/circular_buffer.hpp>
 
 #include <memory>
 #include <utility>
