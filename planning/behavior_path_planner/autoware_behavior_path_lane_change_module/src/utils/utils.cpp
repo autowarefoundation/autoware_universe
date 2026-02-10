@@ -1321,21 +1321,21 @@ bool is_intersecting_no_lane_change_lines(
   const auto buffer = common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
 
   // intervals are sorted in ascending order
-  if (intervals.empty() || lc_length.prepare >= intervals.back().first) {
+  if (intervals.empty() || lc_length.prepare >= intervals.back().second) {
     return false;
   }
 
+  const auto prepare_length = lc_length.prepare;
+  const auto total_length = lc_length.sum();
   for (const auto & zip : ranges::views::zip(intervals, lines)) {
     const auto & interval = std::get<0>(zip);
     const auto [interval_start, interval_end] = interval;
 
-    const auto prepare_length = lc_length.prepare;
     const auto interval_upper_bound = interval_end + buffer;
     if (prepare_length >= interval_upper_bound) {
       continue;
     }
 
-    const auto total_length = lc_length.sum();
     const auto interval_lower_bound = interval_start - buffer;
     // intervals are sorted in ascending order
     if (total_length <= interval_lower_bound) {
