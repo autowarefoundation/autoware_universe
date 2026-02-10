@@ -67,9 +67,9 @@ void TrajectoryOptimizer::initialize_optimizers()
   // Get plugin names from parameter
   const auto plugin_names = get_parameter("plugin_names").as_string_array();
 
-  // Load each plugin in order and create debug publishers
-  for (size_t i = 0; i < plugin_names.size(); ++i) {
-    load_plugin(plugin_names[i]);
+  // Load each plugin in order
+  for (const auto & plugin_name : plugin_names) {
+    load_plugin(plugin_name);
   }
   initialized_optimizers_ = true;
 }
@@ -184,8 +184,8 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     // Apply optimizations - plugins execute in order from plugin_names parameter
-    for (size_t i = 0; i < plugins_.size(); ++i) {
-      plugins_[i]->optimize_trajectory(trajectory.points, params_, data);
+    for (auto & plugin : plugins_) {
+      plugin->optimize_trajectory(trajectory.points, params_, data);
     }
     motion_utils::calculate_time_from_start(
       trajectory.points, current_odometry_ptr_->pose.pose.position);
