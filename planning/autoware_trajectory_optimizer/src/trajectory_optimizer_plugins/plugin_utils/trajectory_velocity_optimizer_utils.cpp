@@ -17,6 +17,7 @@
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -192,19 +193,12 @@ std::vector<double> limit_lateral_acceleration(
 
     tf2::Quaternion q_current;
     tf2::Quaternion q_next;
-    tf2::convert(current_pose.orientation, q_current);
-    tf2::convert(next_pose.orientation, q_next);
-    double delta_theta = q_current.angleShortestPath(q_next);
-    // Handle wrap-around
-    if (delta_theta > M_PI) {
-      delta_theta -= 2.0 * M_PI;
-    } else if (delta_theta < -M_PI) {
-      delta_theta += 2.0 * M_PI;
-    }
 
+    const double yaw_current = autoware_utils_geometry::get_rpy(current_pose).z;
+    const double yaw_next = autoware_utils_geometry::get_rpy(next_pose).z;
+    const double delta_yaw = autoware_utils_geometry::normalize_radian(yaw_next - yaw_current);
     constexpr double epsilon_yaw_rate = 1.0e-5;
-    const double yaw_rate = std::max(std::abs(delta_theta / delta_time), epsilon_yaw_rate);
-    // Compute lateral acceleration
+    const double yaw_rate = std::max(std::abs(delta_yaw / delta_time), epsilon_yaw_rate);
     const double lateral_acceleration = current_speed * yaw_rate;
 
     if (lateral_acceleration < max_lateral_accel_mps2) {
