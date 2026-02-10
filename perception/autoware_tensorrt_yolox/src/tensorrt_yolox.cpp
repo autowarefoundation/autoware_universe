@@ -35,11 +35,10 @@
 #include <utility>
 #include <vector>
 
+namespace autoware::tensorrt_yolox
+{
 namespace
 {
-using autoware::tensorrt_yolox::loadListFromTextFile;
-using autoware::tensorrt_yolox::trim;
-
 std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::string & filename)
 {
   std::vector<autoware::tensorrt_yolox::Colormap> seg_cmap;
@@ -87,8 +86,6 @@ std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::stri
 
 }  // anonymous namespace
 
-namespace autoware::tensorrt_yolox
-{
 TrtYoloX::TrtYoloX(
   TrtCommonConfig & trt_config, const int num_class, const float score_threshold,
   const float nms_threshold, const bool use_gpu_preprocess, const uint8_t gpu_id,
