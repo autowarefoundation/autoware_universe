@@ -24442,31 +24442,10 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.</p>
 <td>N/A</td>
 </tr>
 <tr>
-<td>update_vel_threshold</td>
+<td>steer_offset_filter_cutoff_hz</td>
 <td>float</td>
-<td>If the velocity is smaller than this value, the data is not used for the offset estimation</td>
-<td>5.56</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>update_steer_threshold</td>
-<td>float</td>
-<td>If the steering angle is larger than this value, the data is not used for the offset estimation</td>
-<td>0.035</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>average_num</td>
-<td>integer</td>
-<td>The average of this number of data is used as a steering offset</td>
-<td>1000</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>steering_offset_limit</td>
-<td>float</td>
-<td>The angle limit to be applied to the offset compensation</td>
-<td>0.02</td>
+<td>Cutoff frequency of lowpass filter for steering offset [Hz]</td>
+<td>0.5</td>
 <td>N/A</td>
 </tr>
 </tbody>
