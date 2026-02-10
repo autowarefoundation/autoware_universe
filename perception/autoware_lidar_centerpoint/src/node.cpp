@@ -35,17 +35,6 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
-  const std::string model_params_version =
-    this->declare_parameter<std::string>("model_params.params_version");
-
-  if (model_params_version != "1.0.0") {
-    RCLCPP_ERROR_STREAM(
-      rclcpp::get_logger(this->logger_name_.c_str()),
-      "The model_params_version is not supported: " + model_params_version);
-    throw std::invalid_argument(
-      "The model_params_version is not supported: " + model_params_version);
-  }
-
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
