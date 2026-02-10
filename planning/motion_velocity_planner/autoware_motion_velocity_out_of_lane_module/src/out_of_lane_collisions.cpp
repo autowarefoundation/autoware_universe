@@ -276,7 +276,8 @@ void calculate_collisions_to_avoid(
   for (auto & p : out_of_lane_data.outside_points) {
     calculate_min_max_arrival_times(p, trajectory);
     if (params.mode == "ttc") {
-      const auto threshold = has_prev_avoidance_decision ? params.ttc_release_threshold : params.ttc_threshold;
+      const auto threshold =
+        has_prev_avoidance_decision ? params.ttc_release_threshold : params.ttc_threshold;
       p.to_avoid = p.ttc && p.ttc <= threshold;
     } else {
       p.to_avoid = p.min_object_arrival_time && p.min_object_arrival_time <= params.time_threshold;
