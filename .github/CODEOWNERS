@@ -47,16 +47,6 @@ evaluator/autoware_perception_online_evaluator/** fumiya.watanabe@tier4.jp junya
 evaluator/autoware_planning_evaluator/** kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp temkei.kem@tier4.jp
 evaluator/autoware_scenario_simulator_v2_adapter/** junya.sasaki@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp takamasa.horibe@tier4.jp temkei.kem@tier4.jp
 examples/autoware_diagnostic_graph_test_examples/** isamu.takagi@tier4.jp
-launch/tier4_autoware_api_launch/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp
-launch/tier4_control_launch/** kyoichi.sugahara@tier4.jp satoshi.ota@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp takumi.odashima@tier4.jp
-launch/tier4_localization_launch/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
-launch/tier4_map_launch/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
-launch/tier4_perception_launch/** masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-launch/tier4_planning_launch/** fumiya.watanabe@tier4.jp kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp mamoru.sobue@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp zhe.shen@tier4.jp zulfaqar.azmi@tier4.jp
-launch/tier4_sensing_launch/** yukihiro.saito@tier4.jp
-launch/tier4_simulator_launch/** keisuke.shima@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
-launch/tier4_system_launch/** fumihito.ito@tier4.jp tetsuhiro.kawaguchi@tier4.jp
-launch/tier4_vehicle_launch/** yukihiro.saito@tier4.jp
 localization/autoware_geo_pose_projector/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 localization/autoware_landmark_based_localizer/autoware_ar_tag_based_localizer/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
 localization/autoware_landmark_based_localizer/autoware_landmark_manager/** anh.nguyen.2@tier4.jp masahiro.sakamoto@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
@@ -195,7 +185,7 @@ sensing/autoware_cuda_pointcloud_preprocessor/** amadeusz.szymko.2@tier4.jp davi
 sensing/autoware_cuda_utils/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp
 sensing/autoware_image_diagnostics/** dai.nguyen@tier4.jp masato.saeki@tier4.jp yihsiang.fang@tier4.jp yoshi.ri@tier4.jp
 sensing/autoware_image_transport_decompressor/** kenzo.lobos@tier4.jp yukihiro.saito@tier4.jp
-sensing/autoware_imu_corrector/** taiki.yamada@tier4.jp yamato.ando@tier4.jp sergioreyes.sanchez@tier4.jp
+sensing/autoware_imu_corrector/** taiki.yamada@tier4.jp yamato.ando@tier4.jp
 sensing/autoware_pcl_extensions/** amadeusz.szymko.2@tier4.jp david.wong@tier4.jp
 sensing/autoware_pointcloud_preprocessor/** abrahammonrroy@yahoo.com dai.nguyen@tier4.jp david.wong@tier4.jp kaan.colak.dev@gmail.com kenzo.lobos@tier4.jp kyoichi.sugahara@tier4.jp max.schmeller@tier4.jp melike@leodrive.ai yihsiang.fang@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 sensing/autoware_radar_objects_adapter/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
