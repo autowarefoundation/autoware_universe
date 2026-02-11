@@ -46,6 +46,48 @@
               "type": "integer",
               "description": "A size of encoder input feature channels.",
               "default": 9
+            },
+            "score_thresholds": {
+              "type": "object",
+              "description": "A dictionary of score thresholds for each class.",
+              "properties": {
+                "upper_bounds": {
+                  "type": "array",
+                  "description": "An array of upper bounds of score thresholds.",
+                  "default": [50.0, 90.0, 121.0, 200.0]
+                },
+                "thresholds": {
+                  "type": "object",
+                  "description": "A dictionary of score thresholds for each class.",
+                  "properties": {
+                    "CAR": {
+                      "type": "array",
+                      "description": "A score threshold for CAR.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "TRUCK": {
+                      "type": "array",
+                      "description": "A score threshold for TRUCK.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BUS": {
+                      "type": "array",
+                      "description": "A score threshold for BUS.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BICYCLE": {
+                      "type": "array",
+                      "description": "A score threshold for BICYCLE.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "PEDESTRIAN": {
+                      "type": "array",
+                      "description": "A score threshold for PEDESTRIAN.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    }
+                  }
+                }
+              }
             }
           }
         }
