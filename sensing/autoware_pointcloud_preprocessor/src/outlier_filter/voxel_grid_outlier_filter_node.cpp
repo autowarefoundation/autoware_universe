@@ -75,16 +75,16 @@ rcl_interfaces::msg::SetParametersResult VoxelGridOutlierFilterComponent::param_
   std::scoped_lock lock(mutex_);
 
   if (get_param(p, "voxel_size_x", voxel_size_x_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_x_);
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_x to: %f.", voxel_size_x_);
   }
   if (get_param(p, "voxel_size_y", voxel_size_y_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_y_);
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_y to: %f.", voxel_size_y_);
   }
   if (get_param(p, "voxel_size_z", voxel_size_z_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %f.", voxel_size_z_);
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_z to: %f.", voxel_size_z_);
   }
   if (get_param(p, "voxel_points_threshold", voxel_points_threshold_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new distance threshold to: %d.", voxel_points_threshold_);
+    RCLCPP_DEBUG(get_logger(), "Setting new voxel_points_threshold to: %d.", voxel_points_threshold_);
   }
 
   rcl_interfaces::msg::SetParametersResult result;
