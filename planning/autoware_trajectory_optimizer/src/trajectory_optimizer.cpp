@@ -70,7 +70,6 @@ void TrajectoryOptimizer::initialize_optimizers()
   for (const auto & plugin_name : plugin_names) {
     load_plugin(plugin_name);
   }
-
   initialized_optimizers_ = true;
 }
 
