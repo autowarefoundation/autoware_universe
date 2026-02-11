@@ -80,6 +80,7 @@ __global__ void generateBoxes3D_kernel(
     }
   }
 
+  // If the label is not found, then we set the score to 0, and stop processing
   if (label == -1) {
     det_boxes3d[idx].score = 0.f;
     return;
@@ -102,8 +103,7 @@ __global__ void generateBoxes3D_kernel(
   }
 
   // If the radial distance is greater than the last score_upper_bound, which is out of bound and
-  // then we set the score to 0, and stop processing or the label is not found, then we set the
-  // score to 0, and stop processing
+  // then we set the score to 0, and stop processing 
   if (distance_bucket_index == -1) {
     det_boxes3d[idx].score = 0.f;
     return;
