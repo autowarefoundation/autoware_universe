@@ -120,6 +120,8 @@ void DynamicObstacleAvoidanceModuleManager::init(rclcpp::Node * node)
       node->declare_parameter<double>(ns + "predicted_path.end_time_to_consider");
     p.threshold_confidence =
       node->declare_parameter<double>(ns + "predicted_path.threshold_confidence");
+    p.use_predicted_path_for_drivable_area =
+      node->declare_parameter<bool>(ns + "use_predicted_path_for_drivable_area");
     p.max_lat_offset_to_avoid = node->declare_parameter<double>(ns + "max_lat_offset_to_avoid");
     p.max_time_for_lat_shift =
       node->declare_parameter<double>(ns + "max_time_for_object_lat_shift");
@@ -250,6 +252,9 @@ void DynamicObstacleAvoidanceModuleManager::updateModuleParams(
       parameters, ns + "predicted_path.end_time_to_consider", p->end_time_to_consider);
     update_param<double>(
       parameters, ns + "predicted_path.threshold_confidence", p->threshold_confidence);
+    update_param<bool>(
+      parameters, ns + "use_predicted_path_for_drivable_area",
+      p->use_predicted_path_for_drivable_area);
     update_param<double>(parameters, ns + "max_lat_offset_to_avoid", p->max_lat_offset_to_avoid);
     update_param<double>(
       parameters, ns + "max_time_for_object_lat_shift", p->max_time_for_lat_shift);

@@ -140,6 +140,7 @@ struct DynamicAvoidanceParameters
 
   double end_time_to_consider{0.0};
   double threshold_confidence{0.0};
+  bool use_predicted_path_for_drivable_area{true};
 
   double max_lat_offset_to_avoid{0.0};
   double max_time_for_lat_shift{0.0};
@@ -445,6 +446,8 @@ private:
   std::optional<autoware_utils::Polygon2d> calcObjectPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object) const;
   std::optional<autoware_utils::Polygon2d> calcPredictedPathBasedDynamicObstaclePolygon(
+    const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
+  std::optional<autoware_utils::Polygon2d> calcCurrentPoseBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
   EgoPathReservePoly calcEgoPathReservePoly(const PathWithLaneId & ego_path) const;
   lanelet::ConstLanelets getCurrentLanesFromPath(

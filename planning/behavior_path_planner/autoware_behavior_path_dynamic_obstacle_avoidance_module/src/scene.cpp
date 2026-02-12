@@ -33,6 +33,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <string>
@@ -380,6 +381,7 @@ void DynamicObstacleAvoidanceModule::updateData()
       target_objects_.push_back(target_object_candidate);
     }
   }
+  std::cout << "target_objects_.size(): " << target_objects_.size() << std::endl;
 }
 
 bool DynamicObstacleAvoidanceModule::canTransitSuccessState()
@@ -401,14 +403,22 @@ BehaviorModuleOutput DynamicObstacleAvoidanceModule::plan()
   for (const auto & object : target_objects_) {
     const auto obstacle_poly = [&]() {
       if (getObjectType(object.label) == ObjectType::UNREGULATED) {
-        return calcPredictedPathBasedDynamicObstaclePolygon(object, ego_path_reserve_poly);
+        if (parameters_->use_predicted_path_for_drivable_area) {
+          auto output = calcPredictedPathBasedDynamicObstaclePolygon(object, ego_path_reserve_poly);
+          return output;
+        }
+        auto output = calcCurrentPoseBasedDynamicObstaclePolygon(object, ego_path_reserve_poly);
+        return output;
       }
 
       if (parameters_->polygon_generation_method == PolygonGenerationMethod::EGO_PATH_BASE) {
         return calcEgoPathBasedDynamicObstaclePolygon(object);
       }
       if (parameters_->polygon_generation_method == PolygonGenerationMethod::OBJECT_PATH_BASE) {
-        return calcObjectPathBasedDynamicObstaclePolygon(object);
+        if (parameters_->use_predicted_path_for_drivable_area) {
+          return calcObjectPathBasedDynamicObstaclePolygon(object);
+        }
+        return calcEgoPathBasedDynamicObstaclePolygon(object);
       }
       throw std::logic_error("The polygon_generation_method's string is invalid.");
     }();
@@ -846,8 +856,12 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
   const auto input_points = toGeometryPoints(input_path.points);  // for efficient computation
 
   const size_t ego_seg_idx = planner_data_->findEgoSegmentIndex(input_path.points);
+  // std::cout << "target_objects_manager_.getValidObjects().size(): "
+  //           << target_objects_manager_.getValidObjects().size() << std::endl;
   for (const auto & object : target_objects_manager_.getValidObjects()) {
     if (getObjectType(object.label) != ObjectType::UNREGULATED) {
+      std::cout << "[DynamicAvoidance] Unregulated: skip " << object.uuid
+                << " (not UNREGULATED object type)" << std::endl;
       continue;
     }
     const size_t obj_seg_idx =
@@ -875,6 +889,9 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
                lat_lon_offset.max_lon_offset);
     }();
     if (signed_dist_ego_to_obj < 0) {
+      std::cout << "[DynamicAvoidance] Unregulated: skip " << obj_uuid
+                << " (ego is behind object, signed_dist_ego_to_obj=" << signed_dist_ego_to_obj
+                << ")" << std::endl;
       RCLCPP_INFO_EXPRESSION(
         getLogger(), parameters_->enable_debug_info,
         "[DynamicAvoidance] Ignore obstacle (%s) since distance from ego to object (%f) is less "
@@ -888,6 +905,9 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
     const auto lat_offset_to_avoid = calcMinMaxLateralOffsetToAvoidUnregulatedObject(
       ref_points_for_obj_poly, getObstacleFromUuid(prev_objects, obj_uuid), object);
     if (!lat_offset_to_avoid) {
+      std::cout << "[DynamicAvoidance] Unregulated: skip " << obj_uuid
+                << " (object laterally covers ego path enough, no lat_offset_to_avoid)"
+                << std::endl;
       RCLCPP_INFO_EXPRESSION(
         getLogger(), parameters_->enable_debug_info,
         "[DynamicAvoidance] Ignore obstacle (%s) since the object will intersects the ego's path "
@@ -899,6 +919,10 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
     const bool is_collision_left = (lat_offset_to_avoid.value().max_value > 0.0);
     const auto lon_offset_to_avoid = MinMaxValue{0.0, 1.0};  // not used. dummy value
 
+    std::cout << "[DynamicAvoidance] Unregulated: will cut out " << obj_uuid
+              << " (lat_offset_to_avoid: min=" << lat_offset_to_avoid->min_value
+              << " max=" << lat_offset_to_avoid->max_value
+              << ", is_collision_left=" << is_collision_left << ")" << std::endl;
     const bool should_be_avoided = true;
     target_objects_manager_.updateObjectVariables(
       obj_uuid, lon_offset_to_avoid, *lat_offset_to_avoid, is_collision_left, should_be_avoided,
@@ -1328,6 +1352,14 @@ MinMaxValue DynamicObstacleAvoidanceModule::calcMinMaxLongitudinalOffsetToAvoid(
            std::abs(relative_velocity) * parameters_->end_duration_to_avoid_overtaking_object;
   }();
 
+  // When not using predicted_path for drivable area, longitudinal range is based only on current
+  // object position and duration margins.
+  if (!parameters_->use_predicted_path_for_drivable_area) {
+    return MinMaxValue{
+      obj_lon_offset.min_value - start_length_to_avoid,
+      obj_lon_offset.max_value + end_length_to_avoid};
+  }
+
   // calculate valid path for the forked object's path from the ego's path
   if (obj_vel < -parameters_->max_stopped_object_vel) {
     const bool is_object_same_direction = false;
@@ -1606,9 +1638,7 @@ DynamicObstacleAvoidanceModule::calcMinMaxLateralOffsetToAvoidUnregulatedObject(
     return combineMinMaxValues(current_pos_area, current_pos_area + object.lat_vel * 3.0);
   }();
 
-  if (
-    obj_occupancy_region.min_value * obj_occupancy_region.max_value < 0.0 ||
-    obj_occupancy_region.max_value - obj_occupancy_region.min_value < 1e-3) {
+  if (obj_occupancy_region.min_value * obj_occupancy_region.max_value < 0.0) {
     return std::nullopt;
   }
 
@@ -1863,6 +1893,52 @@ DynamicObstacleAvoidanceModule::calcPredictedPathBasedDynamicObstaclePolygon(
       object.uuid.c_str());
     return {};
   } else if (output_poly.size() >= 2) {
+    RCLCPP_INFO_EXPRESSION(
+      getLogger(), parameters_->enable_debug_info,
+      "[DynamicAvoidance] Ignore obstacle (%s) because it covers the ego's path.",
+      object.uuid.c_str());
+    return {};
+  }
+
+  return output_poly[0];
+}
+
+// Calculate obstacle polygon from current pose only (no predicted_path). Used when
+// use_predicted_path_for_drivable_area is false for unregulated objects.
+std::optional<autoware_utils::Polygon2d>
+DynamicObstacleAvoidanceModule::calcCurrentPoseBasedDynamicObstaclePolygon(
+  const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const
+{
+  autoware_utils::Polygon2d obj_poly;
+  boost::geometry::append(
+    obj_poly, autoware_utils::to_footprint(
+                object.pose, object.shape.dimensions.x * 0.5, object.shape.dimensions.x * 0.5,
+                object.shape.dimensions.y * 0.5)
+                .outer());
+  boost::geometry::correct(obj_poly);
+
+  autoware_utils::MultiPolygon2d expanded_poly;
+  namespace strategy = boost::geometry::strategy::buffer;
+  boost::geometry::buffer(
+    obj_poly, expanded_poly,
+    strategy::distance_symmetric<double>(parameters_->margin_distance_around_pedestrian),
+    strategy::side_straight(), strategy::join_round(), strategy::end_flat(),
+    strategy::point_circle());
+  if (expanded_poly.empty()) return {};
+
+  autoware_utils::MultiPolygon2d output_poly;
+  boost::geometry::difference(
+    expanded_poly[0],
+    object.is_collision_left ? ego_path_poly.right_avoid : ego_path_poly.left_avoid, output_poly);
+
+  if (output_poly.empty()) {
+    RCLCPP_INFO_EXPRESSION(
+      getLogger(), parameters_->enable_debug_info,
+      "[DynamicAvoidance] Ignore obstacle (%s) because it stay inside the ego's path.",
+      object.uuid.c_str());
+    return {};
+  }
+  if (output_poly.size() >= 2) {
     RCLCPP_INFO_EXPRESSION(
       getLogger(), parameters_->enable_debug_info,
       "[DynamicAvoidance] Ignore obstacle (%s) because it covers the ego's path.",
