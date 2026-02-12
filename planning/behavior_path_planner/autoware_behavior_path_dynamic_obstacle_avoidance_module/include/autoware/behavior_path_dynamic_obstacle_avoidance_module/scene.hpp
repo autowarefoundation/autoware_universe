@@ -158,17 +158,6 @@ struct DynamicAvoidanceParameters
   double end_duration_to_avoid_oncoming_object{0.0};
 };
 
-struct TimeWhileCollision
-{
-  double time_to_start_collision;
-  double time_to_end_collision;
-};
-
-struct LatFeasiblePaths
-{
-  std::vector<geometry_msgs::msg::Point> left_path;
-  std::vector<geometry_msgs::msg::Point> right_path;
-};
 class DynamicObstacleAvoidanceModule : public SceneModuleInterface
 {
 public:
@@ -209,7 +198,6 @@ public:
     bool is_collision_left{false};
     bool should_be_avoided{false};
     std::vector<geometry_msgs::msg::Pose> ref_points_for_obj_poly;
-    LatFeasiblePaths ego_lat_feasible_paths;
 
     // add additional information (not update to the latest data)
     void update(
@@ -239,11 +227,7 @@ public:
     {
       // add/update object
       if (object_map_.count(uuid) != 0) {
-        const auto prev_object = object_map_.at(uuid);
         object_map_.at(uuid) = object;
-        // TODO(murooka) refactor this. Counter can be moved to DynamicObject,
-        //               and TargetObjectsManager can be removed.
-        object_map_.at(uuid).ego_lat_feasible_paths = prev_object.ego_lat_feasible_paths;
       } else {
         object_map_.emplace(uuid, object);
       }
@@ -259,7 +243,7 @@ public:
       current_uuids_.push_back(uuid);
     }
 
-    void finalize(const LatFeasiblePaths & ego_lat_feasible_paths)
+    void finalize()
     {
       // decrease counter for not updated uuids
       std::vector<std::string> not_updated_uuids;
@@ -280,7 +264,6 @@ public:
       for (const auto & counter : counter_map_) {
         if (!isInVector(counter.first, valid_object_uuids_) && max_count_ <= counter.second) {
           valid_object_uuids_.push_back(counter.first);
-          object_map_.at(counter.first).ego_lat_feasible_paths = ego_lat_feasible_paths;
         }
       }
       valid_object_uuids_.erase(
@@ -386,22 +369,16 @@ private:
     const std::vector<DynamicAvoidanceObject> & prev_objects);
   void determineWhetherToAvoidAgainstUnregulatedObjects(
     const std::vector<DynamicAvoidanceObject> & prev_objects);
-  LatFeasiblePaths generateLateralFeasiblePaths(
-    const geometry_msgs::msg::Pose & ego_pose, const double ego_vel) const;
   void updateRefPathBeforeLaneChange(const std::vector<PathPointWithLaneId> & ego_ref_path_points);
   bool isObjectFarFromPath(
     const PredictedObject & predicted_object, const double obj_dist_to_path) const;
-  TimeWhileCollision calcTimeWhileCollision(
-    const std::vector<PathPointWithLaneId> & ego_path, const double obj_tangent_vel,
-    const LatLonOffset & lat_lon_offset) const;
   LatLonOffset getLateralLongitudinalOffset(
     const std::vector<geometry_msgs::msg::Pose> & ego_points,
     const geometry_msgs::msg::Pose & obj_pose, const size_t obj_seg_idx,
     const autoware_perception_msgs::msg::Shape & obj_shape) const;
   MinMaxValue calcMinMaxLongitudinalOffsetToAvoid(
     const std::vector<geometry_msgs::msg::Pose> & ref_points_for_obj_poly,
-    const geometry_msgs::msg::Pose & obj_pose, const Polygon2d & obj_points, const double obj_vel,
-    const TimeWhileCollision & time_while_collision) const;
+    const geometry_msgs::msg::Pose & obj_pose, const Polygon2d & obj_points) const;
   std::optional<MinMaxValue> calcMinMaxLateralOffsetToAvoidRegulatedObject(
     const std::vector<geometry_msgs::msg::Pose> & ref_points_for_obj_poly,
     const Polygon2d & obj_points, const geometry_msgs::msg::Point & obj_pos, const double obj_vel,
