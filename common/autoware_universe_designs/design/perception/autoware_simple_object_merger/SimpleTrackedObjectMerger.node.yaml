@@ -37,7 +37,7 @@ parameter_files:
   - name: parameters
     default: config/simple_tracked_object_merger.param.yaml
 
-parameters: 
+parameters:
   - name: input_topics
     type: array
     default: "[${input object1}, ${input object2}]"

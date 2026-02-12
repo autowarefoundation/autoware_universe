@@ -163,13 +163,13 @@ parameters:
     default: DELAY_STEER_ACC_GEARED
   - name: model_module_paths
     default:
-      - ''
+      - ""
   - name: model_class_names
     default:
-      - ''
+      - ""
   - name: model_param_paths
     default:
-      - ''
+      - ""
 
   - name: wheel_base
     default: 2.79

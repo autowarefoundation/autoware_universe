@@ -50,9 +50,9 @@ processes:
   - name: process
     trigger_conditions:
       - and:
-        - once: vector_map
-        - on_input: route
-        - on_input: camera_info
+          - once: vector_map
+          - on_input: route
+          - on_input: camera_info
     outcomes:
       - to_output: rough_rois
       - to_output: expected_rois

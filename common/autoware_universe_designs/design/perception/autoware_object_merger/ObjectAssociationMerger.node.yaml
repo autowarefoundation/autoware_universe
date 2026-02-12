@@ -40,7 +40,7 @@ parameter_files:
   - name: object_association_merger_param_path
     default: config/object_association_merger.param.yaml
 
-parameters: 
+parameters:
   - name: priority_mode
     type: int
     default: 2

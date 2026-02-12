@@ -24,16 +24,15 @@ override:
       type: array
       default: "[${input input1}, ${input input2}, ${input input3}, ${input input4}, ${input input5}, ${input input6}, ${input input7}, ${input input8}]"
   processes:
-  - name: update
-    trigger_conditions:
-      - on_input: input1
-      - on_input: input2
-      - on_input: input3
-      - on_input: input4
-      - on_input: input5
-      - on_input: input6
-      - on_input: input7
-      - on_input: input8
-    outcomes:
-      - to_trigger: concatenate
-
+    - name: update
+      trigger_conditions:
+        - on_input: input1
+        - on_input: input2
+        - on_input: input3
+        - on_input: input4
+        - on_input: input5
+        - on_input: input6
+        - on_input: input7
+        - on_input: input8
+      outcomes:
+        - to_trigger: concatenate

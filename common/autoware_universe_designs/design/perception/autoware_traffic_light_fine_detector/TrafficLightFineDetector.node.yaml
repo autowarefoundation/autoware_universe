@@ -56,8 +56,8 @@ processes:
   - name: detection
     trigger_conditions:
       - and:
-        - on_input: image
-        - on_input: rough_rois
-        - on_input: expect_rois
+          - on_input: image
+          - on_input: rough_rois
+          - on_input: expect_rois
     outcomes:
       - to_output: rois

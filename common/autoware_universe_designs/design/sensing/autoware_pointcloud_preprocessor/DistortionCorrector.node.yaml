@@ -44,10 +44,10 @@ parameters:
 processes:
   - name: undistort
     trigger_conditions:
-      -and: 
+      -and:
         - on_input: pointcloud
-        - or: 
-          - on_input: twist
-          - on_input: imu
+        - or:
+            - on_input: twist
+            - on_input: imu
     outcomes:
       - to_output: pointcloud

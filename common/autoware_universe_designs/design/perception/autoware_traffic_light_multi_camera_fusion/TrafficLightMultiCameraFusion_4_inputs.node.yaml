@@ -8,50 +8,50 @@ base: TrafficLightMultiCameraFusion.node
 # interfaces
 override:
   inputs:
-  - name: camera3/camera_info
-    message_type: sensor_msgs/msg/CameraInfo
-    remap_target: camera3/camera_info
-  - name: camera3/classification/traffic_signals
-    message_type: tier4_perception_msgs/msg/TrafficLightArray
-    remap_target: camera3/classification/traffic_signals
-  - name: camera3/detection/rois
-    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: camera3/detection/rois
-  - name: camera4/camera_info
-    message_type: sensor_msgs/msg/CameraInfo
-    remap_target: camera4/camera_info
-  - name: camera4/classification/traffic_signals
-    message_type: tier4_perception_msgs/msg/TrafficLightArray
-    remap_target: camera4/classification/traffic_signals
-  - name: camera4/detection/rois
-    message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: camera4/detection/rois
+    - name: camera3/camera_info
+      message_type: sensor_msgs/msg/CameraInfo
+      remap_target: camera3/camera_info
+    - name: camera3/classification/traffic_signals
+      message_type: tier4_perception_msgs/msg/TrafficLightArray
+      remap_target: camera3/classification/traffic_signals
+    - name: camera3/detection/rois
+      message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+      remap_target: camera3/detection/rois
+    - name: camera4/camera_info
+      message_type: sensor_msgs/msg/CameraInfo
+      remap_target: camera4/camera_info
+    - name: camera4/classification/traffic_signals
+      message_type: tier4_perception_msgs/msg/TrafficLightArray
+      remap_target: camera4/classification/traffic_signals
+    - name: camera4/detection/rois
+      message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
+      remap_target: camera4/detection/rois
   parameters:
-  - name: camera_namespaces
-    type: array
-    default: "['camera1', 'camera2', 'camera3', 'camera4']"
-    description: List of camera namespaces to be used for fusion.
+    - name: camera_namespaces
+      type: array
+      default: "['camera1', 'camera2', 'camera3', 'camera4']"
+      description: List of camera namespaces to be used for fusion.
 
-# processes
+  # processes
   processes:
-  - name: process
-    trigger_conditions:
-    - or:
-      - and:
-        - on_input: camera1/camera_info
-        - on_input: camera1/classification/traffic_signals
-        - on_input: camera1/detection/rois
-      - and:
-        - on_input: camera2/camera_info
-        - on_input: camera2/classification/traffic_signals
-        - on_input: camera2/detection/rois
-      - and:
-        - on_input: camera3/camera_info
-        - on_input: camera3/classification/traffic_signals
-        - on_input: camera3/detection/rois
-      - and:
-        - on_input: camera4/camera_info
-        - on_input: camera4/classification/traffic_signals
-        - on_input: camera4/detection/rois
-    outcomes:
-    - to_output: traffic_signals
+    - name: process
+      trigger_conditions:
+        - or:
+            - and:
+                - on_input: camera1/camera_info
+                - on_input: camera1/classification/traffic_signals
+                - on_input: camera1/detection/rois
+            - and:
+                - on_input: camera2/camera_info
+                - on_input: camera2/classification/traffic_signals
+                - on_input: camera2/detection/rois
+            - and:
+                - on_input: camera3/camera_info
+                - on_input: camera3/classification/traffic_signals
+                - on_input: camera3/detection/rois
+            - and:
+                - on_input: camera4/camera_info
+                - on_input: camera4/classification/traffic_signals
+                - on_input: camera4/detection/rois
+      outcomes:
+        - to_output: traffic_signals

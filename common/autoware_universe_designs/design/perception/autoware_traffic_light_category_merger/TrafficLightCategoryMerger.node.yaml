@@ -19,7 +19,7 @@ inputs:
     remap_target: "input/car_signals"
   - name: pedestrian_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
-    remap_target: "input/pedestrian_signals" 
+    remap_target: "input/pedestrian_signals"
 
 outputs:
   - name: traffic_signals

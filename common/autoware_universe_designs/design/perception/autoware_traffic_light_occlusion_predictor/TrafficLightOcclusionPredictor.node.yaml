@@ -48,18 +48,18 @@ processes:
   - name: predict_car
     trigger_conditions:
       - and:
-        - on_input: car/traffic_signals
-        - on_input: rois
-        - on_input: camera_info
-        - on_input: cloud
+          - on_input: car/traffic_signals
+          - on_input: rois
+          - on_input: camera_info
+          - on_input: cloud
     outcomes:
       - to_output: traffic_signals
   - name: predict_pedestrian
     trigger_conditions:
       - and:
-        - on_input: pedestrian/traffic_signals
-        - on_input: rois
-        - on_input: camera_info
-        - on_input: cloud
+          - on_input: pedestrian/traffic_signals
+          - on_input: rois
+          - on_input: camera_info
+          - on_input: cloud
     outcomes:
       - to_output: traffic_signals

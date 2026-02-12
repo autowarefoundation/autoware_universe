@@ -14,12 +14,10 @@ override:
       type: array
       default: "[${input input1}, ${input input2}, ${input input3}]"
   processes:
-  - name: update
-    trigger_conditions:
-      - on_input: input1
-      - on_input: input2
-      - on_input: input3
-    outcomes:
-      - to_trigger: concatenate
-
-
+    - name: update
+      trigger_conditions:
+        - on_input: input1
+        - on_input: input2
+        - on_input: input3
+      outcomes:
+        - to_trigger: concatenate

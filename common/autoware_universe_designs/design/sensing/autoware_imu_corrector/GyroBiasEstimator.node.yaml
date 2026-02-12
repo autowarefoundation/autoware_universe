@@ -42,12 +42,12 @@ parameter_files:
 parameters: []
 
 # processes
-processes: 
+processes:
   - name: estimate_bias
     trigger_conditions:
       - and:
-        - on_input: imu_raw
-        - on_input: odom
+          - on_input: imu_raw
+          - on_input: odom
     outcomes:
       - to_output: gyro_bias
       - to_output: gyro_scale

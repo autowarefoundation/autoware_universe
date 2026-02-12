@@ -50,7 +50,7 @@ processes:
   - name: classify
     trigger_conditions:
       - and:
-        - on_input: image
-        - on_input: rois
+          - on_input: image
+          - on_input: rois
     outcomes:
       - to_output: traffic_signals

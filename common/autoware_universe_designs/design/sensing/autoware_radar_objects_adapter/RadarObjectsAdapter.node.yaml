@@ -11,7 +11,7 @@ launch:
   executable: radar_objects_adapter_node
 
 # interfaces
-inputs: 
+inputs:
   - name: objects
     message_type: autoware_sensing_msgs/msg/RadarObjects
   - name: radar_info
@@ -28,7 +28,7 @@ parameter_files:
   - name: param_path
     default: config/radar_objects_adapter.param.yaml
     schema: schema/radar_objects_adapter.schema.json
-  
+
 parameters: []
 
 # processes
