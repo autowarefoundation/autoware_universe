@@ -22,6 +22,7 @@
 #include <cuda/std/optional>  // for cuda::std::optional
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/exceptions/exceptions.hpp>
+
 #include <thrust/iterator/transform_iterator.h>
 
 #include <cstdint>
