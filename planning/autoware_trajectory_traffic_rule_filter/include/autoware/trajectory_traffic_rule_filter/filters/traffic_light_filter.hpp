@@ -40,15 +40,15 @@ public:
 
   void set_parameters(const traffic_rule_filter::Params & params) override { params_ = params; }
 
+  [[nodiscard]] bool can_pass_amber_light(
+    const double distance_to_stop_line, const double current_velocity,
+    const double current_acceleration);
+
 private:
   /// @brief return the red and amber stop lines related to the given lanelets
   [[nodiscard]] std::pair<
     std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
   get_stop_lines(const lanelet::Lanelets & lanelets) const;
-
-  [[nodiscard]] bool can_pass_amber_light(
-    const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration);
 
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
   traffic_rule_filter::Params params_;
