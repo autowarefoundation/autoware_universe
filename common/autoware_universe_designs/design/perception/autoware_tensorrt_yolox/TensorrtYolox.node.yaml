@@ -1,5 +1,7 @@
 autoware_system_design_format: 0.2.0
 
+# cspell: ignore semseg
+
 # node information
 name: TensorrtYolox.node
 

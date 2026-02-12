@@ -31,7 +31,7 @@ outputs:
       reliability: reliable
       durability: transient_local
 
-# paremeters
+# parameters
 parameter_files:
   - name: voxel_grid_based_euclidean_param_path
     default: config/voxel_grid_based_euclidean_cluster.param.yaml
