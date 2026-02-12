@@ -56,6 +56,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
 
   const double ctrl_period = declare_parameter<double>("ctrl_period");
   timeout_thr_sec_ = declare_parameter<double>("timeout_thr_sec");
+  incoming_message_timeout_threshold_sec_ = declare_parameter<double>("incoming_message_timeout_sec", 0.9);
   // NOTE: It is possible that using control_horizon could be expected to enhance performance,
   // but it is not a formal interface topic, only an experimental one.
   // So it is disabled by default.
@@ -119,6 +120,9 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+
+  diag_updater_->add(
+    "incoming_message_timeout", this, &Controller::check_incoming_message_timeout);
 }
 
 Controller::LateralControllerMode Controller::getLateralControllerMode(
@@ -136,6 +140,21 @@ Controller::LongitudinalControllerMode Controller::getLongitudinalControllerMode
   if (controller_mode == "pid") return LongitudinalControllerMode::PID;
 
   return LongitudinalControllerMode::INVALID;
+}
+
+void Controller::check_incoming_message_timeout(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const auto traj_timestamp = sub_ref_path_.latest_timestamp();
+
+  const auto elapsed = (this->now() - traj_timestamp).seconds();
+  if (elapsed > incoming_message_timeout_threshold_sec_) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "timeout (elapsed: " + std::to_string(elapsed) + " sec)");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK");
+    stat.add("trajectory", "OK");
+  }
 }
 
 bool Controller::processData(rclcpp::Clock & clock)
