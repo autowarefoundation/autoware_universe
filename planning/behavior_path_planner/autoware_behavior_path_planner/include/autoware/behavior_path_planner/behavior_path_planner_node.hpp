@@ -142,12 +142,11 @@ private:
   std::mutex mutex_manager_;  // mutex for bt_manager_ or planner_manager_
 
   // timeout checking
-  double cyclic_message_timeout_;     // seconds
-  double persistent_message_timeout_; // seconds
+  double cyclic_message_timeout_;      // seconds
+  double persistent_message_timeout_;  // seconds
   bool enable_traffic_signal_timeout_;
   std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_message_timeout_;
-  enum class DataReadyStatus
-  {
+  enum class DataReadyStatus {
     SUCCESS,
     NOT_RECEIVED,
     TIMEOUT,
@@ -225,8 +224,6 @@ private:
   void publishPathReference(
     const std::vector<std::shared_ptr<SceneModuleManagerInterface>> & managers,
     const std::shared_ptr<PlannerData> & planner_data);
-
-  
 
   /**
    * @brief convert path with lane id to path for publish path candidate
