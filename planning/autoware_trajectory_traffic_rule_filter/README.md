@@ -20,8 +20,9 @@ The package uses a plugin architecture that allows for flexible and extensible t
 
 - Validates trajectory compliance with traffic signals
 - Monitors traffic light states from perception system
-- Checks if trajectory would pass through red lights
-- Allows trajectories only when traffic lights permit passage
+- Reject trajectories when:
+  - they cross a red traffic light;
+  - they cross a yellow traffic light and fail the "pass judge" condition (see [autoware_behavior_velocity_traffic_light_module](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/#dilemma-zone)).
 
 ## Interface
 
