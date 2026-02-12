@@ -84,7 +84,8 @@ rcl_interfaces::msg::SetParametersResult VoxelGridOutlierFilterComponent::param_
     RCLCPP_DEBUG(get_logger(), "Setting new voxel_size_z to: %f.", voxel_size_z_);
   }
   if (get_param(p, "voxel_points_threshold", voxel_points_threshold_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new voxel_points_threshold to: %d.", voxel_points_threshold_);
+    RCLCPP_DEBUG(
+      get_logger(), "Setting new voxel_points_threshold to: %d.", voxel_points_threshold_);
   }
 
   rcl_interfaces::msg::SetParametersResult result;
