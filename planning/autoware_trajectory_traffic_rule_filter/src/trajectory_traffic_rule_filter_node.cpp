@@ -19,8 +19,6 @@
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
-
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
@@ -41,10 +39,16 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()},
   listener_{std::make_unique<traffic_rule_filter::ParamListener>(get_node_parameters_interface())}
 {
-  const auto filters = listener_->get_params().filter_names;
-  for (const auto & filter : filters) {
+  const auto params = listener_->get_params();
+  for (const auto & filter : params.filter_names) {
     load_metric(filter);
   }
+
+  listener_->setUserCallback([this](const traffic_rule_filter::Params & params) {
+    for (const auto & plugin : plugins_) {
+      plugin->set_parameters(params);
+    }
+  });
 
   debug_processing_time_detail_pub_ =
     this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
@@ -141,6 +145,8 @@ void TrajectoryTrafficRuleFilter::load_metric(const std::string & name)
     }
 
     plugin->set_vehicle_info(vehicle_info_);
+    plugin->set_parameters(listener_->get_params());
+    plugin->set_logger(get_logger().get_child(name));
     plugins_.push_back(plugin);
 
     RCLCPP_INFO_STREAM(
