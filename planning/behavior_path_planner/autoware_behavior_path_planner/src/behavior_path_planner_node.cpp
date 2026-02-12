@@ -293,7 +293,6 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
       return;
     }
     if ((now - ts).seconds() > timeout) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s timeout", name.c_str());
       diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
       if (status == DataReadyStatus::SUCCESS) {
         status = DataReadyStatus::TIMEOUT;
