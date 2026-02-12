@@ -30,7 +30,7 @@ using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
 MarkerArray create_debug_marker_array(
-  const AbnormalitiesData & abnormalities_data, const Trajectory & ego_traj,
+  const DepartureData & abnormalities_data, const Trajectory & ego_traj,
   const rclcpp::Time & curr_time, const double base_link_z, const Param & bdc_param);
 }  // namespace autoware::boundary_departure_checker::debug
 

@@ -198,7 +198,7 @@ Marker create_boundary_segments_marker(
 }
 
 MarkerArray create_debug_marker_array(
-  const AbnormalitiesData & abnormalities_data, const Trajectory & ego_traj,
+  const DepartureData & abnormalities_data, const Trajectory & ego_traj,
   const rclcpp::Time & curr_time, const double base_link_z, const Param & bdc_param)
 {
   const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;

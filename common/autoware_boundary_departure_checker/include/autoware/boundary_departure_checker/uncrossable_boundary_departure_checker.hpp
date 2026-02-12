@@ -82,10 +82,10 @@ public:
    *
    * @param predicted_traj         Ego's predicted trajectory (from MPC or trajectory follower).
    * @param curr_pose_with_cov     Ego pose with covariance for uncertainty margin calculation.
-   * @return AbnormalitiesData containing footprints, their left/right sides, and projections to
+   * @return DepartureData containing footprints, their left/right sides, and projections to
    * boundaries. Returns an error message string on failure.
    */
-  tl::expected<AbnormalitiesData, std::string> get_abnormalities_data(
+  tl::expected<DepartureData, std::string> get_departure_data(
     const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
     const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
     const double curr_acc);
@@ -153,7 +153,7 @@ public:
    * failure.
    */
   tl::expected<ProjectionsToBound, std::string> get_closest_projections_to_boundaries_side(
-    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
+    const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound,
     const double min_braking_dist, const double max_braking_dist, const SideKey side_key);
 
   /**
@@ -185,7 +185,7 @@ public:
    * sides, or error string.
    */
   tl::expected<Side<ProjectionsToBound>, std::string> get_closest_projections_to_boundaries(
-    const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
+    const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
     const double curr_acc);
 
 private:

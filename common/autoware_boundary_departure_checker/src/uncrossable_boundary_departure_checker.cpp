@@ -279,8 +279,7 @@ DeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure
   return new_critical_departure_points;
 }
 
-tl::expected<AbnormalitiesData, std::string>
-UncrossableBoundaryDepartureChecker::get_abnormalities_data(
+tl::expected<DepartureData, std::string> UncrossableBoundaryDepartureChecker::get_departure_data(
   const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
   const double curr_acc)
@@ -302,7 +301,7 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
     return tl::make_unexpected("Failed to generate any footprints for abnormalities");
   }
 
-  AbnormalitiesData abnormalities_data;
+  DepartureData abnormalities_data;
   for (const auto type : footprint_type_order) {
     abnormalities_data.footprints[type] = std::move(generated_footprints.at(type));
     abnormalities_data.footprints_sides[type] =
@@ -436,7 +435,7 @@ BoundarySideWithIdx UncrossableBoundaryDepartureChecker::get_boundary_segments(
 
 tl::expected<ProjectionsToBound, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound,
   const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -549,7 +548,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<Side<ProjectionsToBound>, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
