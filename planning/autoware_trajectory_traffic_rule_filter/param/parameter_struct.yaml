@@ -2,5 +2,36 @@ traffic_rule_filter:
   filter_names:
     type: string_array
     default_value: []
-    description: metrics.
+    description: list of filter names.
     read_only: false
+  traffic_light_filter:
+    max_accel:
+      type: double
+      default_value: -2.8
+      description: maximum acceleration for stop decision.
+      read_only: false
+    max_jerk:
+      type: double
+      default_value: -5.0
+      description: maximum jerk for stop decision.
+      read_only: false
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: delay response time for stop decision.
+      read_only: false
+    yellow_lamp_period:
+      type: double
+      default_value: 2.75
+      description: yellow lamp period.
+      read_only: false
+    yellow_light_stop_velocity:
+      type: double
+      default_value: 1.0
+      description: velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns yellow.
+      read_only: false
+    enable_pass_judge:
+      type: bool
+      default_value: true
+      description: enable pass judge for yellow light.
+      read_only: false
