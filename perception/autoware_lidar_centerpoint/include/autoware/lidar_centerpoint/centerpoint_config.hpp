@@ -134,7 +134,7 @@ public:
   std::size_t head_out_vel_size_{2};
 
   // post-process params
-  std::vector<float> score_upper_bounds_{};
+  std::vector<float> distance_bin_upper_limits_{};
   std::vector<float> score_thresholds_{};
   float circle_nms_dist_threshold_{1.5f};
   std::vector<float> yaw_norm_thresholds_{};
