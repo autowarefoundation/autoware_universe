@@ -18,7 +18,7 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ## How to use
 
-### (1) Prerequisite
+### (1) Prerequisites
 
 Make sure the appropriate version weight is set for the path specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml`.
 
