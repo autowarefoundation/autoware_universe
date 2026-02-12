@@ -342,18 +342,25 @@ std::optional<lanelet::ConstLanelet> get_target_lane_for_mandatory_lane_change(
   const auto route_handler_ptr = common_data_ptr->route_handler_ptr;
   const auto routing_graph_ptr = route_handler_ptr->getRoutingGraphPtr();
 
+  const bool is_intersection_ll = std::invoke([&]() -> bool {
+    const std::string id = ref_lane.attributeOr("intersection_area", "else");
+    return id != "else" && std::atoi(id.c_str());
+  });
+
   const int num = route_handler_ptr->getNumLaneToPreferredLane(ref_lane, direction);
   if (num == 0) return std::nullopt;
   if (direction == Direction::NONE || direction == Direction::RIGHT) {
     if (num < 0) {
-      const auto right_lanes = routing_graph_ptr->right(ref_lane);
+      const auto right_lanes = is_intersection_ll ? routing_graph_ptr->adjacentRight(ref_lane)
+                                                  : routing_graph_ptr->right(ref_lane);
       if (right_lanes) return *right_lanes;
     }
   }
 
   if (direction == Direction::NONE || direction == Direction::LEFT) {
     if (num > 0) {
-      const auto left_lanes = routing_graph_ptr->left(ref_lane);
+      const auto left_lanes = is_intersection_ll ? routing_graph_ptr->adjacentLeft(ref_lane)
+                                                 : routing_graph_ptr->left(ref_lane);
       if (left_lanes) return *left_lanes;
     }
   }
