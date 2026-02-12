@@ -87,7 +87,7 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
         static_cast<float>(min_pt_tf.z()), static_cast<float>(max_pt_tf.x()),
         static_cast<float>(max_pt_tf.y()), static_cast<float>(max_pt_tf.z())};
       RCLCPP_INFO(
-        this->get_logger(), "Crop box in sensor frame: [%f, %f, %f, %f, %f, %f]", 
+        this->get_logger(), "Crop box in sensor frame: [%f, %f, %f, %f, %f, %f]",
         crop_box_bounds_sensor_[0], crop_box_bounds_sensor_[1], crop_box_bounds_sensor_[2],
         crop_box_bounds_sensor_[3], crop_box_bounds_sensor_[4], crop_box_bounds_sensor_[5]);
       tf_ready_ = true;

@@ -7,8 +7,8 @@
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="frnet" description="options: `frnet`"/>
   <arg name="sensor_model" default="ot128">
-    <choice value="ot128" description="Hesai OT128" />
-    <choice value="qt128" description="Hesai QT128" />
+    <choice value="ot128" description="Hesai OT128"/>
+    <choice value="qt128" description="Hesai QT128"/>
   </arg>
   <arg name="model_path" default="$(var data_path)/lidar_frnet"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_frnet)/config/$(var model_name).param.yaml"/>

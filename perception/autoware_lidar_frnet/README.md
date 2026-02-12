@@ -127,9 +127,10 @@ ros2 topic echo <input_topic> --field fields
 ## Trained Models
 
 The model was trained on the T4Dataset using approximately 16,000 frames (4,000 frames × 4 surrounding sensors) and is available in the Autoware artifacts for two sensor models:
+
 - Hesai OT128
 - Hesai QT128
-Due to the design of FRNet, specifically its use of range images, the input point cloud must be referenced to the sensor's origin. Additionally, any differences in your sensor's specifications, such as FoV or horizontal/vertical resolution, may affect performance.
+  Due to the design of FRNet, specifically its use of range images, the input point cloud must be referenced to the sensor's origin. Additionally, any differences in your sensor's specifications, such as FoV or horizontal/vertical resolution, may affect performance.
 
 ## References/External links
 

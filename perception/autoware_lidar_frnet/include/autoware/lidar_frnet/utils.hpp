@@ -73,8 +73,8 @@ struct PostprocessingParams
 {
   PostprocessingParams(
     const double filter_class_confidence_threshold, const std::vector<std::string> & filter_classes,
-    const std::array<float, 6> & crop_box_bounds,
-    const std::vector<std::string> & class_names, const std::vector<int64_t> & palette)
+    const std::array<float, 6> & crop_box_bounds, const std::vector<std::string> & class_names,
+    const std::vector<int64_t> & palette)
   : filter_class_confidence_threshold(static_cast<float>(filter_class_confidence_threshold)),
     palette(make_palette(class_names, palette)),
     filter_class_indices(make_filter_class_indices(class_names, filter_classes)),

@@ -40,9 +40,7 @@ namespace autoware::lidar_frnet
 LidarFRNet::LidarFRNet(
   const TrtCommonConfig & trt_config, const utils::NetworkParams & network_params,
   const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger)
-: logger_(logger),
-  network_params_(network_params),
-  postprocessing_params_(postprocessing_params)
+: logger_(logger), network_params_(network_params), postprocessing_params_(postprocessing_params)
 {
   auto profile_dims = std::make_unique<std::vector<ProfileDims>>(std::initializer_list<ProfileDims>{
     ProfileDims(
@@ -176,11 +174,9 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   cuda_utils::clear_async(coors_keys_d_.get(), network_params_.num_points_profile.max, stream_);
   cuda_utils::clear_async(num_points_d_.get(), 1, stream_);
   cuda_utils::clear_async(
-    proj_idxs_d_.get(),
-    network_params_.interpolation.w * network_params_.interpolation.h, stream_);
+    proj_idxs_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h, stream_);
   cuda_utils::clear_async(
-    proj_2d_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h,
-    stream_);
+    proj_2d_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h, stream_);
   cuda_utils::clear_async(points_d_.get(), network_params_.num_points_profile.max * 4, stream_);
   cuda_utils::clear_async(coors_d_.get(), network_params_.num_points_profile.max * 3, stream_);
   cuda_utils::clear_async(
