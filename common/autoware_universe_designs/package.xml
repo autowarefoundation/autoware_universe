@@ -11,8 +11,6 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>autoware_system_designer</depend>
-
   <export>
     <build_type>ament_cmake</build_type>
   </export>
