@@ -22,9 +22,6 @@
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
-#include <tier4_planning_msgs/msg/avoidance_debug_msg.hpp>
-#include <tier4_planning_msgs/msg/avoidance_debug_msg_array.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -369,7 +366,6 @@ private:
     const std::vector<DynamicAvoidanceObject> & prev_objects);
   void determineWhetherToAvoidAgainstUnregulatedObjects(
     const std::vector<DynamicAvoidanceObject> & prev_objects);
-  void updateRefPathBeforeLaneChange(const std::vector<PathPointWithLaneId> & ego_ref_path_points);
   bool isObjectFarFromPath(
     const PredictedObject & predicted_object, const double obj_dist_to_path) const;
   LatLonOffset getLateralLongitudinalOffset(
@@ -388,31 +384,14 @@ private:
     const std::vector<geometry_msgs::msg::Pose> & ref_points_for_obj_poly,
     const std::optional<DynamicAvoidanceObject> & prev_object,
     const DynamicAvoidanceObject & object) const;
-  std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> getAdjacentLanes(
-    const double forward_distance, const double backward_distance) const;
   std::optional<autoware_utils::Polygon2d> calcEgoPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object) const;
   std::optional<autoware_utils::Polygon2d> calcCurrentPoseBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
   EgoPathReservePoly calcEgoPathReservePoly(const PathWithLaneId & ego_path) const;
-  lanelet::ConstLanelets getCurrentLanesFromPath(
-    const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data);
-  DrivableLanes generateExpandedDrivableLanes(
-    const lanelet::ConstLanelet & lanelet, const std::shared_ptr<const PlannerData> & planner_data,
-    const std::shared_ptr<DynamicAvoidanceParameters> & parameters);
-
-  void printIgnoreReason(const std::string & obj_uuid, const std::string & reason)
-  {
-    const auto reason_text =
-      "[DynamicAvoidance] Ignore obstacle (%s)" + (reason == "" ? "." : " since " + reason + ".");
-    RCLCPP_INFO_EXPRESSION(
-      getLogger(), parameters_->enable_debug_info, reason_text.c_str(), obj_uuid.c_str());
-  }
 
   std::vector<DynamicObstacleAvoidanceModule::DynamicAvoidanceObject> target_objects_;
   // std::vector<DynamicObstacleAvoidanceModule::DynamicAvoidanceObject> prev_target_objects_;
-  std::optional<std::vector<PathPointWithLaneId>> prev_input_ref_path_points_{std::nullopt};
-  std::optional<std::vector<PathPointWithLaneId>> ref_path_before_lane_change_{std::nullopt};
   std::shared_ptr<DynamicAvoidanceParameters> parameters_;
 
   TargetObjectsManager target_objects_manager_;

@@ -19,7 +19,6 @@
 #include "autoware/signal_processing/lowpass_filter_1d.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -28,12 +27,7 @@
 #include <boost/geometry/algorithms/difference.hpp>
 #include <boost/geometry/algorithms/union.hpp>
 
-#include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_core/geometry/Polygon.h>
-
 #include <algorithm>
-#include <iostream>
-#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -100,40 +94,12 @@ void appendExtractedPolygonMarker(
   marker_array.markers.push_back(marker);
 }
 
-bool isEndPointsConnected(
-  const lanelet::ConstLanelet & left_lane, const lanelet::ConstLanelet & right_lane)
-{
-  const auto left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
-  const auto right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
-
-  constexpr double epsilon = 1e-5;
-  return (right_back_point_2d - left_back_point_2d).norm() < epsilon;
-}
-
-template <typename T>
-void pushUniqueVector(T & base_vector, const T & additional_vector)
-{
-  base_vector.insert(base_vector.end(), additional_vector.begin(), additional_vector.end());
-}
-
-template <typename T>
-std::optional<T> getObjectFromUuid(const std::vector<T> & objects, const std::string & target_uuid)
-{
-  const auto itr = std::find_if(objects.begin(), objects.end(), [&](const auto & object) {
-    return object.uuid == target_uuid;
-  });
-
-  if (itr == objects.end()) {
-    return std::nullopt;
-  }
-  return *itr;
-}
-
 double calcObstacleMaxLength(const autoware_perception_msgs::msg::Shape & shape)
 {
   if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     return std::hypot(shape.dimensions.x / 2.0, shape.dimensions.y / 2.0);
-  } else if (shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
+  }
+  if (shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
     return shape.dimensions.x / 2.0;
   } else if (shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
     double max_length_to_point = 0.0;
@@ -178,10 +144,7 @@ bool isLeft(
     autoware_utils::calc_azimuth_angle(path_points.at(target_idx).point.pose.position, target_pos);
   const double diff_yaw = autoware_utils::normalize_radian(angle_to_target_pos - target_yaw);
 
-  if (0 < diff_yaw) {
-    return true;
-  }
-  return false;
+  return 0 < diff_yaw;
 }
 
 template <typename T>
@@ -305,7 +268,6 @@ void DynamicObstacleAvoidanceModule::updateData()
       target_objects_.push_back(target_object_candidate);
     }
   }
-  std::cout << "target_objects_.size(): " << target_objects_.size() << std::endl;
 }
 
 bool DynamicObstacleAvoidanceModule::canTransitSuccessState()
@@ -342,17 +304,8 @@ BehaviorModuleOutput DynamicObstacleAvoidanceModule::plan()
   }
   // generate drivable lanes
   DrivableAreaInfo current_drivable_area_info;
-  if (parameters_->expand_drivable_area) {
-    auto current_lanelets =
-      getCurrentLanesFromPath(getPreviousModuleOutput().reference_path, planner_data_);
-    std::for_each(current_lanelets.begin(), current_lanelets.end(), [&](const auto & lanelet) {
-      current_drivable_area_info.drivable_lanes.push_back(
-        generateExpandedDrivableLanes(lanelet, planner_data_, parameters_));
-    });
-  } else {
-    current_drivable_area_info.drivable_lanes =
-      getPreviousModuleOutput().drivable_area_info.drivable_lanes;
-  }
+  current_drivable_area_info.drivable_lanes =
+    getPreviousModuleOutput().drivable_area_info.drivable_lanes;
   current_drivable_area_info.obstacles = obstacles_for_drivable_area;
   current_drivable_area_info.enable_expanding_hatched_road_markings =
     parameters_->use_hatched_road_markings;
@@ -621,7 +574,6 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstRegulatedObje
       obj_uuid, lon_offset_to_avoid, *lat_offset_to_avoid, is_collision_left, should_be_avoided,
       ref_points_for_obj_poly);
   }
-  // prev_input_ref_path_points_ = input_ref_path_points;
 }
 
 void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedObjects(
@@ -633,18 +585,11 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
   const auto input_points = toGeometryPoints(input_path.points);  // for efficient computation
 
   const size_t ego_seg_idx = planner_data_->findEgoSegmentIndex(input_path.points);
-  // std::cout << "target_objects_manager_.getValidObjects().size(): "
-  //           << target_objects_manager_.getValidObjects().size() << std::endl;
   for (const auto & object : target_objects_manager_.getValidObjects()) {
     if (getObjectType(object.label) != ObjectType::UNREGULATED) {
-      std::cout << "[DynamicAvoidance] Unregulated: skip " << object.uuid
-                << " (not UNREGULATED object type)" << std::endl;
       continue;
     }
     if (parameters_->max_stopped_object_vel < std::hypot(object.vel, object.lat_vel)) {
-      std::cout << "[DynamicAvoidance] Unregulated: skip " << object.uuid
-                << " (moving object, vel=" << std::hypot(object.vel, object.lat_vel) << ")"
-                << std::endl;
       continue;
     }
     const size_t obj_seg_idx =
@@ -672,9 +617,6 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
                lat_lon_offset.max_lon_offset);
     }();
     if (signed_dist_ego_to_obj < 0) {
-      std::cout << "[DynamicAvoidance] Unregulated: skip " << obj_uuid
-                << " (ego is behind object, signed_dist_ego_to_obj=" << signed_dist_ego_to_obj
-                << ")" << std::endl;
       RCLCPP_INFO_EXPRESSION(
         getLogger(), parameters_->enable_debug_info,
         "[DynamicAvoidance] Ignore obstacle (%s) since distance from ego to object (%f) is less "
@@ -688,9 +630,6 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
     const auto lat_offset_to_avoid = calcMinMaxLateralOffsetToAvoidUnregulatedObject(
       ref_points_for_obj_poly, getObstacleFromUuid(prev_objects, obj_uuid), object);
     if (!lat_offset_to_avoid) {
-      std::cout << "[DynamicAvoidance] Unregulated: skip " << obj_uuid
-                << " (object laterally covers ego path enough, no lat_offset_to_avoid)"
-                << std::endl;
       RCLCPP_INFO_EXPRESSION(
         getLogger(), parameters_->enable_debug_info,
         "[DynamicAvoidance] Ignore obstacle (%s) since the object will intersects the ego's path "
@@ -702,41 +641,10 @@ void DynamicObstacleAvoidanceModule::determineWhetherToAvoidAgainstUnregulatedOb
     const bool is_collision_left = (lat_offset_to_avoid.value().max_value > 0.0);
     const auto lon_offset_to_avoid = MinMaxValue{0.0, 1.0};  // not used. dummy value
 
-    std::cout << "[DynamicAvoidance] Unregulated: will cut out " << obj_uuid
-              << " (lat_offset_to_avoid: min=" << lat_offset_to_avoid->min_value
-              << " max=" << lat_offset_to_avoid->max_value
-              << ", is_collision_left=" << is_collision_left << ")" << std::endl;
     const bool should_be_avoided = true;
     target_objects_manager_.updateObjectVariables(
       obj_uuid, lon_offset_to_avoid, *lat_offset_to_avoid, is_collision_left, should_be_avoided,
       ref_points_for_obj_poly);
-  }
-}
-
-[[maybe_unused]] void DynamicObstacleAvoidanceModule::updateRefPathBeforeLaneChange(
-  const std::vector<PathPointWithLaneId> & ego_ref_path_points)
-{
-  if (ref_path_before_lane_change_) {
-    // check if the ego is close enough to the current ref path, meaning that lane change ends.
-    const auto ego_pos = getEgoPose().position;
-    const double dist_to_ref_path =
-      std::abs(autoware::motion_utils::calcLateralOffset(ego_ref_path_points, ego_pos));
-
-    constexpr double epsilon_dist_to_ref_path = 0.5;
-    if (dist_to_ref_path < epsilon_dist_to_ref_path) {
-      ref_path_before_lane_change_ = std::nullopt;
-    }
-  } else {
-    // check if the ego is during lane change.
-    if (prev_input_ref_path_points_ && !prev_input_ref_path_points_->empty()) {
-      const double dist_ref_paths = std::abs(
-        autoware::motion_utils::calcLateralOffset(
-          ego_ref_path_points, prev_input_ref_path_points_->front().point.pose.position));
-      constexpr double epsilon_ref_paths_diff = 1.0;
-      if (epsilon_ref_paths_diff < dist_ref_paths) {
-        ref_path_before_lane_change_ = *prev_input_ref_path_points_;
-      }
-    }
   }
 }
 
@@ -748,47 +656,6 @@ bool DynamicObstacleAvoidanceModule::isObjectFarFromPath(
     0.0, obj_dist_to_path - planner_data_->parameters.vehicle_width / 2.0 - obj_max_length);
 
   return parameters_->max_obj_lat_offset_to_ego_path < min_obj_dist_to_path;
-}
-
-std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets>
-DynamicObstacleAvoidanceModule::getAdjacentLanes(
-  const double forward_distance, const double backward_distance) const
-{
-  const auto & rh = planner_data_->route_handler;
-
-  lanelet::ConstLanelet current_lane;
-  if (!rh->getClosestLaneletWithinRoute(getEgoPose(), &current_lane)) {
-    RCLCPP_ERROR(
-      rclcpp::get_logger("behavior_path_planner").get_child("dynamic_avoidance"),
-      "failed to find closest lanelet within route!!!");
-    return {};
-  }
-
-  const auto ego_succeeding_lanes =
-    rh->getLaneletSequence(current_lane, getEgoPose(), backward_distance, forward_distance);
-
-  lanelet::ConstLanelets right_lanes;
-  lanelet::ConstLanelets left_lanes;
-  for (const auto & lane : ego_succeeding_lanes) {
-    // left lane
-    const auto opt_left_lane = rh->getLeftLanelet(lane);
-    if (opt_left_lane) {
-      left_lanes.push_back(opt_left_lane.value());
-    }
-
-    // right lane
-    const auto opt_right_lane = rh->getRightLanelet(lane);
-    if (opt_right_lane) {
-      right_lanes.push_back(opt_right_lane.value());
-    }
-
-    const auto right_opposite_lanes = rh->getRightOppositeLanelets(lane);
-    if (!right_opposite_lanes.empty()) {
-      right_lanes.push_back(right_opposite_lanes.front());
-    }
-  }
-
-  return std::make_pair(right_lanes, left_lanes);
 }
 
 DynamicObstacleAvoidanceModule::LatLonOffset
@@ -1237,164 +1104,4 @@ DynamicObstacleAvoidanceModule::calcEgoPathReservePoly(const PathWithLaneId & eg
   return {left_avoid_poly, right_avoid_poly};
 }
 
-lanelet::ConstLanelets DynamicObstacleAvoidanceModule::getCurrentLanesFromPath(
-  const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data)
-{
-  if (path.points.empty()) {
-    throw std::logic_error("empty path.");
-  }
-
-  const auto idx = planner_data->findEgoIndex(path.points);
-
-  if (path.points.at(idx).lane_ids.empty()) {
-    throw std::logic_error("empty lane ids.");
-  }
-
-  const auto start_id = path.points.at(idx).lane_ids.front();
-  const auto start_lane = planner_data->route_handler->getLaneletsFromId(start_id);
-  const auto & p = planner_data->parameters;
-
-  return planner_data->route_handler->getLaneletSequence(
-    start_lane, p.backward_path_length, p.forward_path_length);
-}
-
-DrivableLanes DynamicObstacleAvoidanceModule::generateExpandedDrivableLanes(
-  const lanelet::ConstLanelet & lanelet, const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<DynamicAvoidanceParameters> & parameters)
-{
-  const auto & route_handler = planner_data->route_handler;
-
-  DrivableLanes current_drivable_lanes;
-  current_drivable_lanes.left_lane = lanelet;
-  current_drivable_lanes.right_lane = lanelet;
-
-  if (parameters->use_lane_type == "current_lane") {
-    return current_drivable_lanes;
-  }
-
-  const auto use_opposite_lane = parameters->use_lane_type == "opposite_direction_lane";
-
-  // 1. get left/right side lanes
-  const auto update_left_lanelets = [&](const lanelet::ConstLanelet & target_lane) {
-    const auto all_left_lanelets =
-      route_handler->getAllLeftSharedLinestringLanelets(target_lane, use_opposite_lane, true);
-    if (!all_left_lanelets.empty()) {
-      current_drivable_lanes.left_lane = all_left_lanelets.back();  // leftmost lanelet
-      pushUniqueVector(
-        current_drivable_lanes.middle_lanes,
-        lanelet::ConstLanelets(all_left_lanelets.begin(), all_left_lanelets.end() - 1));
-    }
-  };
-  const auto update_right_lanelets = [&](const lanelet::ConstLanelet & target_lane) {
-    const auto all_right_lanelets =
-      route_handler->getAllRightSharedLinestringLanelets(target_lane, use_opposite_lane, true);
-    if (!all_right_lanelets.empty()) {
-      current_drivable_lanes.right_lane = all_right_lanelets.back();  // rightmost lanelet
-      pushUniqueVector(
-        current_drivable_lanes.middle_lanes,
-        lanelet::ConstLanelets(all_right_lanelets.begin(), all_right_lanelets.end() - 1));
-    }
-  };
-
-  update_left_lanelets(lanelet);
-  update_right_lanelets(lanelet);
-
-  // 2.1 when there are multiple lanes whose previous lanelet is the same
-  const auto get_next_lanes_from_same_previous_lane =
-    [&route_handler](const lanelet::ConstLanelet & lane) {
-      // get previous lane, and return false if previous lane does not exist
-      lanelet::ConstLanelets prev_lanes;
-      if (!route_handler->getPreviousLaneletsWithinRoute(lane, &prev_lanes)) {
-        return lanelet::ConstLanelets{};
-      }
-
-      lanelet::ConstLanelets next_lanes;
-      for (const auto & prev_lane : prev_lanes) {
-        const auto next_lanes_from_prev = route_handler->getNextLanelets(prev_lane);
-        pushUniqueVector(next_lanes, next_lanes_from_prev);
-      }
-      return next_lanes;
-    };
-
-  const auto next_lanes_for_right =
-    get_next_lanes_from_same_previous_lane(current_drivable_lanes.right_lane);
-  const auto next_lanes_for_left =
-    get_next_lanes_from_same_previous_lane(current_drivable_lanes.left_lane);
-
-  // 2.2 look for neighbor lane recursively, where end line of the lane is connected to end line
-  // of the original lane
-  const auto update_drivable_lanes =
-    [&](const lanelet::ConstLanelets & next_lanes, const bool is_left) {
-      for (const auto & next_lane : next_lanes) {
-        const auto & edge_lane =
-          is_left ? current_drivable_lanes.left_lane : current_drivable_lanes.right_lane;
-        if (next_lane.id() == edge_lane.id()) {
-          continue;
-        }
-
-        const auto & left_lane = is_left ? next_lane : edge_lane;
-        const auto & right_lane = is_left ? edge_lane : next_lane;
-        if (!isEndPointsConnected(left_lane, right_lane)) {
-          continue;
-        }
-
-        if (is_left) {
-          current_drivable_lanes.left_lane = next_lane;
-        } else {
-          current_drivable_lanes.right_lane = next_lane;
-        }
-
-        const auto & middle_lanes = current_drivable_lanes.middle_lanes;
-        const auto has_same_lane = std::any_of(
-          middle_lanes.begin(), middle_lanes.end(),
-          [&edge_lane](const auto & lane) { return lane.id() == edge_lane.id(); });
-
-        if (!has_same_lane) {
-          if (is_left) {
-            if (current_drivable_lanes.right_lane.id() != edge_lane.id()) {
-              current_drivable_lanes.middle_lanes.push_back(edge_lane);
-            }
-          } else {
-            if (current_drivable_lanes.left_lane.id() != edge_lane.id()) {
-              current_drivable_lanes.middle_lanes.push_back(edge_lane);
-            }
-          }
-        }
-
-        return true;
-      }
-      return false;
-    };
-
-  const auto expand_drivable_area_recursively =
-    [&](const lanelet::ConstLanelets & next_lanes, const bool is_left) {
-      // NOTE: set max search num to avoid infinity loop for drivable area expansion
-      constexpr size_t max_recursive_search_num = 3;
-      for (size_t i = 0; i < max_recursive_search_num; ++i) {
-        const bool is_update_kept = update_drivable_lanes(next_lanes, is_left);
-        if (!is_update_kept) {
-          break;
-        }
-        if (i == max_recursive_search_num - 1) {
-          RCLCPP_DEBUG(
-            rclcpp::get_logger(logger_namespace), "Drivable area expansion reaches max iteration.");
-        }
-      }
-    };
-  expand_drivable_area_recursively(next_lanes_for_right, false);
-  expand_drivable_area_recursively(next_lanes_for_left, true);
-
-  // 3. update again for new left/right lanes
-  update_left_lanelets(current_drivable_lanes.left_lane);
-  update_right_lanelets(current_drivable_lanes.right_lane);
-
-  // 4. compensate that current_lane is in either of left_lane, right_lane or middle_lanes.
-  if (
-    current_drivable_lanes.left_lane.id() != lanelet.id() &&
-    current_drivable_lanes.right_lane.id() != lanelet.id()) {
-    current_drivable_lanes.middle_lanes.push_back(lanelet);
-  }
-
-  return current_drivable_lanes;
-}
 }  // namespace autoware::behavior_path_planner
