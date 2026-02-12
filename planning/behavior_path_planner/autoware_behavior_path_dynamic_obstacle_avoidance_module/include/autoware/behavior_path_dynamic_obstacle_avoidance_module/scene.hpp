@@ -22,7 +22,6 @@
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_path.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <tier4_planning_msgs/msg/avoidance_debug_msg.hpp>
 #include <tier4_planning_msgs/msg/avoidance_debug_msg_array.hpp>
@@ -58,7 +57,6 @@ std::vector<T> getAllKeys(const std::unordered_map<T, S> & map)
 namespace autoware::behavior_path_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
-using autoware_perception_msgs::msg::PredictedPath;
 using autoware_utils::Polygon2d;
 
 struct MinMaxValue
@@ -193,9 +191,6 @@ public:
       is_object_on_ego_path(arg_is_object_on_ego_path),
       latest_time_inside_ego_path(arg_latest_time_inside_ego_path)
     {
-      for (const auto & path : predicted_object.kinematics.predicted_paths) {
-        predicted_paths.push_back(path);
-      }
     }
 
     std::string uuid{};
@@ -206,7 +201,6 @@ public:
     double lat_vel{0.0};
     bool is_object_on_ego_path{false};
     std::optional<rclcpp::Time> latest_time_inside_ego_path{std::nullopt};
-    std::vector<autoware_perception_msgs::msg::PredictedPath> predicted_paths{};
 
     // NOTE: Previous values of the following are used for low-pass filtering.
     //       Therefore, they has to be initialized as nullopt.
@@ -341,12 +335,6 @@ public:
     std::vector<std::string> valid_object_uuids_{};
   };
 
-  struct DecisionWithReason
-  {
-    bool decision;
-    std::string reason{""};
-  };
-
   DynamicObstacleAvoidanceModule(
     const std::string & name, rclcpp::Node & node,
     std::shared_ptr<DynamicAvoidanceParameters> parameters,
@@ -401,34 +389,18 @@ private:
   LatFeasiblePaths generateLateralFeasiblePaths(
     const geometry_msgs::msg::Pose & ego_pose, const double ego_vel) const;
   void updateRefPathBeforeLaneChange(const std::vector<PathPointWithLaneId> & ego_ref_path_points);
-  bool willObjectCutIn(
-    const std::vector<PathPointWithLaneId> & ego_path, const PredictedPath & predicted_path,
-    const double obj_tangent_vel, const LatLonOffset & lat_lon_offset) const;
-  DecisionWithReason willObjectCutOut(
-    const double obj_tangent_vel, const double obj_normal_vel, const bool is_object_left,
-    const std::optional<DynamicAvoidanceObject> & prev_object) const;
-  bool willObjectBeOutsideEgoChangingPath(
-    const geometry_msgs::msg::Pose & obj_pose,
-    const autoware_perception_msgs::msg::Shape & obj_shape, const double obj_vel) const;
   bool isObjectFarFromPath(
     const PredictedObject & predicted_object, const double obj_dist_to_path) const;
   TimeWhileCollision calcTimeWhileCollision(
     const std::vector<PathPointWithLaneId> & ego_path, const double obj_tangent_vel,
     const LatLonOffset & lat_lon_offset) const;
-  std::optional<std::pair<size_t, size_t>> calcCollisionSection(
-    const std::vector<PathPointWithLaneId> & ego_path, const PredictedPath & obj_path) const;
   LatLonOffset getLateralLongitudinalOffset(
     const std::vector<geometry_msgs::msg::Pose> & ego_points,
     const geometry_msgs::msg::Pose & obj_pose, const size_t obj_seg_idx,
     const autoware_perception_msgs::msg::Shape & obj_shape) const;
-  double calcValidLengthToAvoid(
-    const PredictedPath & obj_path, const geometry_msgs::msg::Pose & obj_pose,
-    const autoware_perception_msgs::msg::Shape & obj_shape,
-    const bool is_object_same_direction) const;
   MinMaxValue calcMinMaxLongitudinalOffsetToAvoid(
     const std::vector<geometry_msgs::msg::Pose> & ref_points_for_obj_poly,
     const geometry_msgs::msg::Pose & obj_pose, const Polygon2d & obj_points, const double obj_vel,
-    const PredictedPath & obj_path, const autoware_perception_msgs::msg::Shape & obj_shape,
     const TimeWhileCollision & time_while_collision) const;
   std::optional<MinMaxValue> calcMinMaxLateralOffsetToAvoidRegulatedObject(
     const std::vector<geometry_msgs::msg::Pose> & ref_points_for_obj_poly,
@@ -443,10 +415,6 @@ private:
     const double forward_distance, const double backward_distance) const;
   std::optional<autoware_utils::Polygon2d> calcEgoPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object) const;
-  std::optional<autoware_utils::Polygon2d> calcObjectPathBasedDynamicObstaclePolygon(
-    const DynamicAvoidanceObject & object) const;
-  std::optional<autoware_utils::Polygon2d> calcPredictedPathBasedDynamicObstaclePolygon(
-    const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
   std::optional<autoware_utils::Polygon2d> calcCurrentPoseBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
   EgoPathReservePoly calcEgoPathReservePoly(const PathWithLaneId & ego_path) const;
