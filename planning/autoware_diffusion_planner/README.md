@@ -46,18 +46,6 @@ diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid
 
      # state transition
      drive_state_stop_dist: 0.5
-diff --git a/autoware_launch/config/planning/preset/default_preset.yaml b/autoware_launch/config/planning/preset/default_preset.yaml
---- a/autoware_launch/config/planning/preset/default_preset.yaml
-+++ b/autoware_launch/config/planning/preset/default_preset.yaml
-@@ -52,7 +52,7 @@ launch:
-       default: "true"
-   - arg:
-       name: launch_traffic_light_module
--      default: "true"
-+      default: "false"
-   - arg:
-       name: launch_intersection_module
-       default: "true"
 diff --git a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
 --- a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
 +++ b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
