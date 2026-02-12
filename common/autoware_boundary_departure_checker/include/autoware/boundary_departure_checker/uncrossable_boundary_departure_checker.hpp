@@ -59,7 +59,6 @@ public:
     const Side<ProjectionsToBound> & closest_projections_to_bound);
   bool is_critical_departure_persist(const Side<ProjectionsToBound> & closest_projections_to_bound);
 
-  // ==== abnormalities ===
   /**
    * @brief Build an R-tree of uncrossable boundaries (e.g., road_border) from a lanelet map.
    *
@@ -147,7 +146,7 @@ public:
    * trajectory index, and selects the best candidate based on lateral distance and classification
    * logic (CRITICAL/NEAR).
    *
-   * @param projections_to_bound Abnormality-aware projections to boundaries.
+   * @param projections_to_bound Footprint sides' projections to boundaries.
    * @param side_key             Side to process (left or right).
    * @return Vector of closest projections with departure classification, or an error message on
    * failure.
@@ -180,7 +179,7 @@ public:
    * type based on braking feasibility (APPROACHING_DEPARTURE) using trajectory spacing and braking
    * model.
    *
-   * @param projections_to_bound Abnormality-wise projections to boundaries.
+   * @param projections_to_bound Footprint sides' projections to boundaries.
    * @return Side<ProjectionsToBound> structure containing selected points for both
    * sides, or error string.
    */
