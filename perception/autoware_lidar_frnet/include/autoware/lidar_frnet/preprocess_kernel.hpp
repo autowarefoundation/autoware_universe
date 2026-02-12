@@ -45,7 +45,7 @@ struct Coord
 class PreprocessCuda
 {
 public:
-  PreprocessCuda(const utils::PreprocessingParams & params, cudaStream_t stream);
+  PreprocessCuda(const utils::NetworkParams & params, cudaStream_t stream);
 
   void generateUniqueCoors(
     const uint32_t num_points, const int64_t * coors, const int64_t * coors_keys,

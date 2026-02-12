@@ -69,62 +69,63 @@ struct FieldOfView
   float total;
 };
 
-struct PreprocessingParams
-{
-  PreprocessingParams(
-    const double fov_up_deg, const double fov_down_deg, const int64_t frustum_width,
-    const int64_t frustum_height, const int64_t interpolation_width,
-    const int64_t interpolation_height)
-  : fov(fov_up_deg, fov_down_deg),
-    frustum(frustum_width, frustum_height),
-    interpolation(interpolation_width, interpolation_height)
-  {
-  }
-  const FieldOfView fov;
-  const Dims2d frustum;
-  const Dims2d interpolation;
-};
-
 struct PostprocessingParams
 {
   PostprocessingParams(
-    const double ground_prob_threshold, const std::vector<std::string> & class_names,
-    const std::vector<int64_t> & palette, const std::string & ground_class)
-  : ground_prob_threshold(static_cast<float>(ground_prob_threshold)),
-    palette([&palette, &class_names]() {
-      if (palette.size() % 3 != 0) {
-        throw std::runtime_error("Palette size must be a multiple of 3.");
-      }
-      if (palette.size() != class_names.size() * 3) {
-        throw std::runtime_error("Palette size does not match class names size.");
-      }
-      std::vector<float> colors;
-      for (size_t i = 0; i < palette.size(); i += 3) {
-        const auto & r = palette[i];
-        const auto & g = palette[i + 1];
-        const auto & b = palette[i + 2];
-        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-          throw std::runtime_error("Color values must be within 0-255 range.");
-        }
-        const int64_t color = (r << 16) + (g << 8) + b;
-        float result;
-        memcpy(&result, &color, sizeof(result));
-        colors.emplace_back(result);
-      }
-      return colors;
-    }()),
-    ground_class_idx([&class_names, &ground_class]() -> uint32_t {
-      auto it = std::find(class_names.begin(), class_names.end(), ground_class);
-      if (it == class_names.end()) {
-        throw std::runtime_error("Ground class '" + ground_class + "' not found in class names.");
-      }
-      return static_cast<uint32_t>(std::distance(class_names.begin(), it));
-    }())
+    const double filter_class_confidence_threshold, const std::vector<std::string> & filter_classes,
+    const std::array<float, 6> & crop_box_bounds,
+    const std::vector<std::string> & class_names, const std::vector<int64_t> & palette)
+  : filter_class_confidence_threshold(static_cast<float>(filter_class_confidence_threshold)),
+    palette(make_palette(class_names, palette)),
+    filter_class_indices(make_filter_class_indices(class_names, filter_classes)),
+    crop_box_bounds(crop_box_bounds)
   {
   }
-  const float ground_prob_threshold;
+
+  static std::vector<float> make_palette(
+    const std::vector<std::string> & class_names, const std::vector<int64_t> & palette)
+  {
+    if (palette.size() % 3 != 0) {
+      throw std::runtime_error("Palette size must be a multiple of 3.");
+    }
+    if (palette.size() != class_names.size() * 3) {
+      throw std::runtime_error("Palette size does not match class names size.");
+    }
+    std::vector<float> colors;
+    for (size_t i = 0; i < palette.size(); i += 3) {
+      const auto & r = palette[i];
+      const auto & g = palette[i + 1];
+      const auto & b = palette[i + 2];
+      if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+        throw std::runtime_error("Color values must be within 0-255 range.");
+      }
+      const uint32_t color = (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
+                             (static_cast<uint32_t>(b));
+      float result = 0.0f;
+      memcpy(&result, &color, sizeof(result));
+      colors.emplace_back(result);
+    }
+    return colors;
+  }
+
+  static std::vector<uint32_t> make_filter_class_indices(
+    const std::vector<std::string> & class_names, const std::vector<std::string> & filter_classes)
+  {
+    std::vector<uint32_t> indices;
+    for (const auto & filter_class : filter_classes) {
+      auto it = std::find(class_names.begin(), class_names.end(), filter_class);
+      if (it == class_names.end()) {
+        throw std::runtime_error("Filter class '" + filter_class + "' not found in class names.");
+      }
+      indices.push_back(static_cast<uint32_t>(std::distance(class_names.begin(), it)));
+    }
+    return indices;
+  }
+  const float filter_class_confidence_threshold;
   const std::vector<float> palette;
-  const uint32_t ground_class_idx;
+  const std::vector<uint32_t> filter_class_indices;
+  const std::string crop_reference_frame;
+  const std::array<float, 6> crop_box_bounds;  // [min_x, min_y, min_z, max_x, max_y, max_z]
 };
 
 struct Profile
@@ -142,17 +143,25 @@ struct NetworkParams
 {
   NetworkParams(
     const std::vector<std::string> & class_names, const std::vector<int64_t> & num_points,
-    const std::vector<int64_t> & num_unique_coors)
+    const std::vector<int64_t> & num_unique_coors, const double fov_up_deg,
+    const double fov_down_deg, const int64_t frustum_width, const int64_t frustum_height,
+    const int64_t interpolation_width, const int64_t interpolation_height)
   : class_names(class_names),
     num_points_profile(num_points),
     num_unique_coors_profile(num_unique_coors),
-    num_classes(class_names.size())
+    num_classes(class_names.size()),
+    fov(fov_up_deg, fov_down_deg),
+    frustum(frustum_width, frustum_height),
+    interpolation(interpolation_width, interpolation_height)
   {
   }
   const std::vector<std::string> class_names;
   const Profile num_points_profile;
   const Profile num_unique_coors_profile;
   const uint32_t num_classes;
+  const FieldOfView fov;
+  const Dims2d frustum;
+  const Dims2d interpolation;
 };
 
 struct DiagnosticParams

@@ -51,7 +51,6 @@ public:
   LidarFRNet(
     const tensorrt_common::TrtCommonConfig & trt_config,
     const utils::NetworkParams & network_params,
-    const utils::PreprocessingParams & preprocessing_params,
     const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger);
   ~LidarFRNet() = default;
 
@@ -85,7 +84,6 @@ private:
   std::unique_ptr<PostprocessCuda> postprocess_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   utils::NetworkParams network_params_;
-  utils::PreprocessingParams preprocessing_params_;
   utils::PostprocessingParams postprocessing_params_;
 
   cudaStream_t stream_;

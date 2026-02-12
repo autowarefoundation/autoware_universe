@@ -38,7 +38,7 @@ __constant__ utils::FieldOfView const_fov;
 __constant__ utils::Dims2d const_interpolation;
 __constant__ utils::Dims2d const_frustum;
 
-PreprocessCuda::PreprocessCuda(const utils::PreprocessingParams & params, cudaStream_t stream)
+PreprocessCuda::PreprocessCuda(const utils::NetworkParams & params, cudaStream_t stream)
 : interpolation_(params.interpolation), stream_(stream)
 {
   CHECK_CUDA_ERROR(cudaMemcpyToSymbol(

@@ -39,11 +39,9 @@ namespace autoware::lidar_frnet
 
 LidarFRNet::LidarFRNet(
   const TrtCommonConfig & trt_config, const utils::NetworkParams & network_params,
-  const utils::PreprocessingParams & preprocessing_params,
   const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger)
 : logger_(logger),
   network_params_(network_params),
-  preprocessing_params_(preprocessing_params),
   postprocessing_params_(postprocessing_params)
 {
   auto profile_dims = std::make_unique<std::vector<ProfileDims>>(std::initializer_list<ProfileDims>{
@@ -74,7 +72,7 @@ LidarFRNet::LidarFRNet(
   }
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  preprocess_ptr_ = std::make_unique<PreprocessCuda>(preprocessing_params, stream_);
+  preprocess_ptr_ = std::make_unique<PreprocessCuda>(network_params, stream_);
   postprocess_ptr_ = std::make_unique<PostprocessCuda>(postprocessing_params, stream_);
 
   initTensors();
@@ -179,9 +177,9 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   cuda_utils::clear_async(num_points_d_.get(), 1, stream_);
   cuda_utils::clear_async(
     proj_idxs_d_.get(),
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h, stream_);
+    network_params_.interpolation.w * network_params_.interpolation.h, stream_);
   cuda_utils::clear_async(
-    proj_2d_d_.get(), preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h,
+    proj_2d_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h,
     stream_);
   cuda_utils::clear_async(points_d_.get(), network_params_.num_points_profile.max * 4, stream_);
   cuda_utils::clear_async(coors_d_.get(), network_params_.num_points_profile.max * 3, stream_);
@@ -304,9 +302,9 @@ void LidarFRNet::initTensors()
   coors_keys_d_ = cuda_utils::make_unique<int64_t[]>(network_params_.num_points_profile.max);
   num_points_d_ = cuda_utils::make_unique<uint32_t[]>(1);
   proj_idxs_d_ = cuda_utils::make_unique<uint32_t[]>(
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
+    network_params_.interpolation.w * network_params_.interpolation.h);
   proj_2d_d_ = cuda_utils::make_unique<uint64_t[]>(
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
+    network_params_.interpolation.w * network_params_.interpolation.h);
   seg_data_d_ =
     cuda_utils::make_unique<OutputSegmentationPointType[]>(network_params_.num_points_profile.max);
   viz_data_d_ =
