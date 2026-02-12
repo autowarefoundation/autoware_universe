@@ -47,42 +47,42 @@
               "description": "A size of encoder input feature channels.",
               "default": 9
             },
-            "score_thresholds": {
+            "detection_score_thresholds": {
               "type": "object",
-              "description": "A dictionary of score thresholds for each class.",
+              "description": "A dictionary of minimum confidence scores for each class and a distance bin upper limits.",
               "properties": {
-                "upper_bounds": {
+                "distance_bin_upper_limits": {
                   "type": "array",
-                  "description": "An array of upper bounds of score thresholds.",
+                  "description": "An array of upper bounds of each distance bin.",
                   "default": [50.0, 90.0, 121.0, 200.0]
                 },
-                "thresholds": {
+                "min_confidence_scores": {
                   "type": "object",
-                  "description": "A dictionary of score thresholds for each class.",
+                  "description": "A dictionary of minimum confidence scores for each class.",
                   "properties": {
                     "CAR": {
                       "type": "array",
-                      "description": "A score threshold for CAR.",
+                      "description": "A minimum confidence score for CAR in each distance bin.",
                       "default": [0.35, 0.35, 0.35, 0.35]
                     },
                     "TRUCK": {
                       "type": "array",
-                      "description": "A score threshold for TRUCK.",
+                      "description": "A minimum confidence score for TRUCK in each distance bin.",
                       "default": [0.35, 0.35, 0.35, 0.35]
                     },
                     "BUS": {
                       "type": "array",
-                      "description": "A score threshold for BUS.",
+                      "description": "A minimum confidence score for BUS in each distance bin.",
                       "default": [0.35, 0.35, 0.35, 0.35]
                     },
                     "BICYCLE": {
                       "type": "array",
-                      "description": "A score threshold for BICYCLE.",
+                      "description": "A minimum confidence score for BICYCLE in each distance bin.",
                       "default": [0.35, 0.35, 0.35, 0.35]
                     },
                     "PEDESTRIAN": {
                       "type": "array",
-                      "description": "A score threshold for PEDESTRIAN.",
+                      "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
                       "default": [0.35, 0.35, 0.35, 0.35]
                     }
                   }
