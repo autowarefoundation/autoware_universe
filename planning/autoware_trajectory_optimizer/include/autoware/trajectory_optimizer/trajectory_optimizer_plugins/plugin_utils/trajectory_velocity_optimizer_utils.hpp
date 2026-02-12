@@ -17,8 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_VELOCITY_OPTIMIZER_UTILS_HPP_
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/continuous_jerk_smoother.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
-#include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -29,7 +29,7 @@
 namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
 {
 using autoware::trajectory_optimizer::InitialMotion;
-using autoware::velocity_smoother::JerkFilteredSmoother;
+using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using nav_msgs::msg::Odometry;
@@ -64,34 +64,44 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
  * @brief Limits lateral acceleration by reducing velocity at high curvature points.
  *
  * Calculates lateral acceleration from yaw rate and velocity, then reduces velocity
- * where lateral acceleration exceeds the limit. Recalculates longitudinal acceleration
- * after velocity adjustments.
+ * where lateral acceleration exceeds the limit. Updates max_velocity_per_point constraints
+ * rather than directly modifying trajectory velocities, allowing the QP smoother to handle
+ * optimization systematically.
  *
- * @param input_trajectory_array The trajectory points to be updated (modified in place)
+ * @param input_trajectory_array The trajectory points (used for reading geometry/time, not
+ * modified)
+ * @param max_velocity_per_point Per-point velocity upper bounds (modified in place)
  * @param max_lateral_accel_mps2 Maximum allowed lateral acceleration
+ * @param min_limited_speed_mps Minimum speed when applying lateral acceleration limit
  * @param current_odometry Current vehicle odometry for time calculation
+ * @param inplace If true, directly modify trajectory velocities; if false, only update
  */
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
-  const Odometry & current_odometry);
+  TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
+  const double max_lateral_accel_mps2, const double min_limited_speed_mps,
+  const Odometry & current_odometry, const bool inplace = false);
 
 /**
  * @brief Filters velocity profile using jerk-constrained smoothing.
  *
- * Applies lateral acceleration filtering, steering rate limiting, trajectory resampling,
- * and jerk-filtered velocity optimization using the JerkFilteredSmoother.
+ * Applies jerk-filtered velocity optimization using the ContinuousJerkSmoother.
+ * This smoother is designed for continuous trajectories without stop points.
  *
  * @param input_trajectory The trajectory points to be filtered (modified in place)
  * @param initial_motion The initial speed and acceleration for motion
  * @param nearest_dist_threshold_m Distance threshold for trajectory matching
  * @param nearest_yaw_threshold_rad Yaw threshold for trajectory matching
- * @param smoother The jerk filtered smoother instance
+ * @param smoother The continuous jerk smoother instance
  * @param current_odometry The current vehicle odometry data
+ * @param max_velocity_per_point Per-point velocity upper bounds [m/s].
+ *        Should be initialized with max_speed_mps and updated by lateral acceleration limits.
+ *        This allows enforcing lateral acceleration limits as hard constraints in the QP.
  */
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
   const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
-  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry);
+  const std::shared_ptr<ContinuousJerkSmoother> & smoother, const Odometry & current_odometry,
+  const std::vector<double> & max_velocity_per_point = {});
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
 
