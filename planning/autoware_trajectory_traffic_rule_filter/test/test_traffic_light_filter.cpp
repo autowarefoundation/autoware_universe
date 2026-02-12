@@ -45,12 +45,50 @@ protected:
     autoware::vehicle_info_utils::VehicleInfo vehicle_info;
     vehicle_info.max_longitudinal_offset_m = 0.0;
     filter_->set_vehicle_info(vehicle_info);
+
+    // Initialize parameters
+    traffic_rule_filter::Params params;
+    params.traffic_light_filter.max_accel = -2.8;
+    params.traffic_light_filter.max_jerk = -5.0;
+    params.traffic_light_filter.delay_response_time = 0.5;
+    params.traffic_light_filter.yellow_lamp_period = 2.75;
+    params.traffic_light_filter.yellow_light_stop_velocity = 1.0;
+    params.traffic_light_filter.enable_pass_judge = true;
+    filter_->set_parameters(params);
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
   void create_and_set_map(lanelet::Id light_id, double stop_line_x)
   {
-    filter_->set_lanelet_map(utils::create_map(light_id, stop_line_x), nullptr, nullptr);
+    // 1. Create Stop Line
+    lanelet::Point3d sl1(lanelet::utils::getId(), stop_line_x, -5, 0);
+    lanelet::Point3d sl2(lanelet::utils::getId(), stop_line_x, 5, 0);
+    lanelet::LineString3d stop_line(lanelet::utils::getId(), {sl1, sl2});
+
+    // 2. Create Traffic Light Shape (Dummy visual)
+    lanelet::Point3d light_pt(lanelet::utils::getId(), stop_line_x + 5, 5, 5);
+    lanelet::LineString3d light_shape(lanelet::utils::getId(), {light_pt});
+
+    // 3. Create Regulatory Element
+    auto traffic_light_re =
+      lanelet::TrafficLight::make(light_id, lanelet::AttributeMap(), {light_shape}, stop_line);
+
+    // 4. Create Lanelet Boundaries
+    lanelet::Point3d l1(lanelet::utils::getId(), 0, -5, 0);
+    lanelet::Point3d l2(lanelet::utils::getId(), 100, -5, 0);
+    lanelet::Point3d r1(lanelet::utils::getId(), 0, 5, 0);
+    lanelet::Point3d r2(lanelet::utils::getId(), 100, 5, 0);
+
+    lanelet::LineString3d left(lanelet::utils::getId(), {l1, l2});
+    lanelet::LineString3d right(lanelet::utils::getId(), {r1, r2});
+
+    // 5. Create Lanelet and add RE
+    lanelet::Lanelet lanelet(lanelet::utils::getId(), left, right);
+    lanelet.addRegulatoryElement(traffic_light_re);
+
+    // 6. Create and Set Map
+    std::shared_ptr<lanelet::LaneletMap> map = lanelet::utils::createMap({lanelet});
+    filter_->set_lanelet_map(map, nullptr, nullptr);
   }
 
   // Helper to set traffic light signal
@@ -73,16 +111,19 @@ protected:
   }
 
   // Helper to create a straight trajectory
-  static std::vector<TrajectoryPoint> create_trajectory(double start_x, double end_x)
+  static std::vector<TrajectoryPoint> create_trajectory(
+    double start_x, double end_x, double velocity = 5.0)
   {
     std::vector<TrajectoryPoint> points;
     TrajectoryPoint tp1;
     tp1.pose.position.x = start_x;
     tp1.pose.position.y = 0;
+    tp1.longitudinal_velocity_mps = velocity;
 
     TrajectoryPoint tp2;
     tp2.pose.position.x = end_x;
     tp2.pose.position.y = 0;
+    tp2.longitudinal_velocity_mps = velocity;
 
     points.push_back(tp1);
     points.push_back(tp2);
@@ -164,4 +205,85 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
 
   EXPECT_FALSE(filter_->is_feasible(points))
     << "Should return false when crossing red light stop line";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
+{
+  const lanelet::Id light_id = 200;
+  const double stop_x = 20.0;  // Stop line at 20m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 5m/s.
+  // stop_x is 20m away.
+  // Stoppable distance is roughly 5^2 / (2 * 2.8) + 5 * 0.5 = 6.96m.
+  // Since 6.96 < 20.0, it IS stoppable.
+  // can_pass_amber_light should return false.
+
+  auto points = create_trajectory(0.0, 30.0, 5.0);
+
+  EXPECT_FALSE(filter_->is_feasible(points)) << "Should return false if amber light can be stopped";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
+{
+  const lanelet::Id light_id = 201;
+  const double stop_x = 5.0;  // Stop line at 5m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 10m/s.
+  // stop_x is 5m away.
+  // Stoppable distance is roughly 10^2 / (2 * 2.8) + 10 * 0.5 = 22.85m.
+  // Since 22.85 > 5.0, it is NOT stoppable.
+
+  // Reachable distance: v * yellow_lamp_period = 10 * 2.75 = 27.5m.
+  // Since 5.0 < 27.5, it IS reachable.
+  // can_pass_amber_light should return true.
+
+  auto points = create_trajectory(0.0, 10.0, 10.0);
+
+  EXPECT_TRUE(filter_->is_feasible(points))
+    << "Should return true if amber light cannot be stopped but is reachable";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightDilemmaZone)
+{
+  const lanelet::Id light_id = 202;
+  const double stop_x = 50.0;  // Stop line at 50m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 10m/s.
+  // stop_x is 50m away.
+  // Stoppable distance is 22.85m. 22.85 < 50.0, so it IS stoppable.
+  // Wait, I want a DILEMMA ZONE where it is NOT stoppable but also NOT reachable.
+  // Stoppable distance = v^2 / (2*a) + v*t. To make it NOT stoppable, stop_x < 22.85.
+  // Reachable distance = v * T_yellow. To make it NOT reachable, stop_x > v * T_yellow.
+  // If v=10, T_yellow=2.75, reachable = 27.5.
+  // If stop_x = 30, it IS stoppable (30 > 22.85) and NOT reachable (30 > 27.5).
+  // Stoppable = true means it returns false.
+
+  // Let's adjust params to create a dilemma zone.
+  traffic_rule_filter::Params params;
+  params.traffic_light_filter.max_accel = -0.5;  // Very weak braking
+  params.traffic_light_filter.delay_response_time = 1.0;
+  params.traffic_light_filter.yellow_lamp_period = 1.0;  // Short yellow
+  params.traffic_light_filter.enable_pass_judge = true;
+  filter_->set_parameters(params);
+
+  // v = 10.
+  // Stoppable distance = 10^2 / (2 * 0.5) + 10 * 1.0 = 100 + 10 = 110m.
+  // Reachable distance = 10 * 1.0 = 10m.
+  // If stop_x = 50m:
+  // stop_x < 110 -> NOT stoppable.
+  // stop_x > 10 -> NOT reachable.
+  // This is a dilemma zone.
+
+  auto points = create_trajectory(0.0, 100.0, 10.0);
+
+  EXPECT_FALSE(filter_->is_feasible(points)) << "Should return false in dilemma zone";
 }

@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAFFIC_RULE_FILTER_INTERFACE_HPP_
 #define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAFFIC_RULE_FILTER_INTERFACE_HPP_
 
-#include <autoware_trajectory_traffic_rule_filter_param.hpp>
+#include <autoware_trajectory_traffic_rule_filter/autoware_trajectory_traffic_rule_filter_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tl_expected/expected.hpp>
 
