@@ -213,8 +213,8 @@ using ProjectionsToBound = std::vector<ProjectionToBound>;
 
 struct DepartureData
 {
-  FootprintMap<EgoSides> footprints_sides;
   FootprintMap<Footprints> footprints;
+  FootprintMap<EgoSides> footprints_sides;
   FootprintMap<Side<ProjectionsToBound>> projections_to_bound;
 
   BoundarySideWithIdx boundary_segments;
