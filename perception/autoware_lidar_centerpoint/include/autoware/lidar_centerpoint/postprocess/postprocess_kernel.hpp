@@ -39,7 +39,7 @@ private:
   CenterPointConfig config_;
 
   cudaStream_t stream_;
-  cuda::unique_ptr<float[]> score_upper_bounds_d_ptr_{nullptr};
+  cuda::unique_ptr<float[]> distance_bin_upper_limits_d_ptr_{nullptr};
   cuda::unique_ptr<float[]> score_thresholds_d_ptr_{nullptr};
 };
 

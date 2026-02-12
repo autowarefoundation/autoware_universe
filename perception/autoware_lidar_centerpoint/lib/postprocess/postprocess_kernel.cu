@@ -54,8 +54,8 @@ __global__ void generateBoxes3D_kernel(
   const float * out_rot, const float * out_vel, const float voxel_size_x, const float voxel_size_y,
   const float range_min_x, const float range_min_y, const std::size_t down_grid_size_x,
   const std::size_t down_grid_size_y, const std::size_t downsample_factor, const int class_size,
-  const float * score_upper_bounds, const float * score_thresholds,
-  const std::size_t num_score_upper_bounds, const bool has_variance,
+  const float * distance_bin_upper_limits, const float * score_thresholds,
+  const std::size_t num_distance_bin_upper_limits, const bool has_variance,
   const float * yaw_norm_thresholds, Box3D * det_boxes3d)
 {
   // generate boxes3d from the outputs of the network.
@@ -95,15 +95,15 @@ __global__ void generateBoxes3D_kernel(
   // sorted in ascending order, the first one that is greater than the radial distance is the
   // distance bucket index
   int distance_bucket_index = -1;
-  for (int i = 0; i < num_score_upper_bounds; i++) {
-    if (radial_distance < score_upper_bounds[i]) {
+  for (int i = 0; i < num_distance_bin_upper_limits; i++) {
+    if (radial_distance < distance_bin_upper_limits[i]) {
       distance_bucket_index = i;
       break;
     }
   }
 
-  // If the radial distance is greater than the last score_upper_bound, which is out of bound and
-  // then we set the score to 0, and stop processing
+  // If the radial distance is greater than the last distance_bin_upper_limit, which is out of bound
+  // and then we set the score to 0, and stop processing
   if (distance_bucket_index == -1) {
     det_boxes3d[idx].score = 0.f;
     return;
@@ -182,15 +182,16 @@ PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t 
 {
   // Allocate memory for score thresholds on device using cuda::make_unique
   score_thresholds_d_ptr_ = cuda::make_unique<float[]>(config_.score_thresholds_.size());
-  score_upper_bounds_d_ptr_ = cuda::make_unique<float[]>(config_.score_upper_bounds_.size());
+  distance_bin_upper_limits_d_ptr_ =
+    cuda::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
 
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     score_thresholds_d_ptr_.get(), config_.score_thresholds_.data(),
     config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    score_upper_bounds_d_ptr_.get(), config_.score_upper_bounds_.data(),
-    config_.score_upper_bounds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+    distance_bin_upper_limits_d_ptr_.get(), config_.distance_bin_upper_limits_.data(),
+    config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
 // cspell: ignore divup
@@ -211,8 +212,8 @@ cudaError_t PostProcessCUDA::generateDetectedBoxes3D_launch(
     out_heatmap, out_offset, out_z, out_dim, out_rot, out_vel, config_.voxel_size_x_,
     config_.voxel_size_y_, config_.range_min_x_, config_.range_min_y_, config_.down_grid_size_x_,
     config_.down_grid_size_y_, config_.downsample_factor_, config_.class_size_,
-    score_upper_bounds_d_ptr_.get(), score_thresholds_d_ptr_.get(),
-    config_.score_upper_bounds_.size(), config_.has_variance_,
+    distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
+    config_.distance_bin_upper_limits_.size(), config_.has_variance_,
     thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
     thrust::raw_pointer_cast(boxes3d_d.data()));
 

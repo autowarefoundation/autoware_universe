@@ -30,7 +30,7 @@ public:
     const std::size_t class_size, const float point_feature_size, const std::size_t cloud_capacity,
     const std::size_t max_voxel_size, const std::vector<double> & point_cloud_range,
     const std::vector<double> & voxel_size, const std::size_t downsample_factor,
-    const std::size_t encoder_in_feature_size, const std::vector<float> & score_upper_bounds,
+    const std::size_t encoder_in_feature_size, const std::vector<float> & distance_bin_upper_limits,
     const std::vector<float> & score_thresholds, const float circle_nms_dist_threshold,
     const std::vector<double> yaw_norm_thresholds, const bool has_variance,
     const std::string logger_name = "lidar_centerpoint")
@@ -65,21 +65,15 @@ public:
     }
 
     // score_upper_bounds must be sorted in ascending order, raise an error if not
-    if (!std::is_sorted(score_upper_bounds.begin(), score_upper_bounds.end())) {
+    if (!std::is_sorted(distance_bin_upper_limits.begin(), distance_bin_upper_limits.end())) {
       throw std::invalid_argument("score_upper_bounds must be sorted in ascending order");
     }
-    // score_upper_bounds must be greater than 0.f
-    for (auto & score_upper_bound : score_upper_bounds) {
-      if (score_upper_bound <= 0.f) {
-        throw std::invalid_argument("score_upper_bound must be greater than 0.f");
-      }
-    }
-    score_upper_bounds_ = score_upper_bounds;
+    distance_bin_upper_limits_ = distance_bin_upper_limits;
 
     // score_thresholds must have the size of score_upper_bounds * class_size
-    if (score_thresholds.size() != score_upper_bounds_.size() * class_size_) {
+    if (score_thresholds.size() != distance_bin_upper_limits_.size() * class_size_) {
       throw std::invalid_argument(
-        "score_thresholds must have the size of score_upper_bounds * class_size");
+        "score_thresholds must have the size of distance_bin_upper_limits * class_size");
     }
     score_thresholds_ = score_thresholds;
     for (auto & score_threshold : score_thresholds_) {
