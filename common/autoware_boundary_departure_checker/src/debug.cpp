@@ -198,8 +198,8 @@ Marker create_boundary_segments_marker(
 }
 
 MarkerArray create_debug_marker_array(
-  const AbnormalitiesData & abnormalities_data, const Trajectory & ego_traj,
-  const rclcpp::Time & curr_time, const double base_link_z, const Param & bdc_param)
+  const DepartureData & departure_data, const Trajectory & ego_traj, const rclcpp::Time & curr_time,
+  const double base_link_z, const Param & bdc_param)
 {
   const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
   const auto color = color::green();
@@ -227,17 +227,17 @@ MarkerArray create_debug_marker_array(
     "map", curr_time, "", 0, line_list, m_scale, color);
 
   marker_array.markers.push_back(create_boundary_segments_marker(
-    abnormalities_data.boundary_segments, marker, "boundary_segments", base_link_z));
+    departure_data.boundary_segments, marker, "boundary_segments", base_link_z));
 
   for (const auto type : bdc_param.footprint_types_to_check) {
     const auto type_str = get_type_str(type);
     marker_array.markers.push_back(create_footprint_marker(
-      abnormalities_data.footprints[type], curr_time, type_str, base_link_z, color::aqua()));
+      departure_data.footprints[type], curr_time, type_str, base_link_z, color::aqua()));
 
     for (const auto side_key : g_side_keys) {
       const auto side_key_str = get_side_key_str(side_key);
       marker_array.markers.push_back(create_projections_to_bound_marker(
-        abnormalities_data.projections_to_bound[type][side_key], marker, type_str, side_key_str,
+        departure_data.projections_to_bound[type][side_key], marker, type_str, side_key_str,
         base_link_z));
     }
   }
@@ -246,14 +246,14 @@ MarkerArray create_debug_marker_array(
     const auto side_key_str = get_side_key_str(side_key);
 
     marker_array.markers.push_back(create_departure_points_marker(
-      abnormalities_data.departure_points[side_key], curr_time, side_key_str, base_link_z));
+      departure_data.departure_points[side_key], curr_time, side_key_str, base_link_z));
     marker_array.markers.push_back(create_projections_to_bound_marker(
-      abnormalities_data.closest_projections_to_bound[side_key], marker, "closest", side_key_str,
+      departure_data.closest_projections_to_bound[side_key], marker, "closest", side_key_str,
       base_link_z));
     autoware_utils_visualization::append_marker_array(
       create_projections_type_wall_marker(
-        abnormalities_data.closest_projections_to_bound[side_key], ego_traj, curr_time,
-        side_key_str, base_link_z),
+        departure_data.closest_projections_to_bound[side_key], ego_traj, curr_time, side_key_str,
+        base_link_z),
       &marker_array);
   }
   return marker_array;

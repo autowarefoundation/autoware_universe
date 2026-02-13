@@ -279,8 +279,7 @@ DeparturePoints UncrossableBoundaryDepartureChecker::find_new_critical_departure
   return new_critical_departure_points;
 }
 
-tl::expected<AbnormalitiesData, std::string>
-UncrossableBoundaryDepartureChecker::get_abnormalities_data(
+tl::expected<DepartureData, std::string> UncrossableBoundaryDepartureChecker::get_departure_data(
   const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
   const double curr_acc)
@@ -299,42 +298,39 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
   const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
   if (generated_footprints.empty() || footprint_type_order.empty()) {
-    return tl::make_unexpected("Failed to generate any footprints for abnormalities");
+    return tl::make_unexpected("Failed to generate any footprints");
   }
 
-  AbnormalitiesData abnormalities_data;
+  DepartureData departure_data;
   for (const auto type : footprint_type_order) {
-    abnormalities_data.footprints[type] = std::move(generated_footprints.at(type));
-    abnormalities_data.footprints_sides[type] =
-      utils::get_sides_from_footprints(abnormalities_data.footprints[type]);
+    departure_data.footprints[type] = std::move(generated_footprints.at(type));
+    departure_data.footprints_sides[type] =
+      utils::get_sides_from_footprints(departure_data.footprints[type]);
   }
 
-  const auto & normal_footprints =
-    abnormalities_data.footprints_sides[footprint_type_order.front()];
+  const auto & normal_footprints = departure_data.footprints_sides[footprint_type_order.front()];
 
-  abnormalities_data.boundary_segments =
-    get_boundary_segments(normal_footprints, trimmed_pred_traj);
+  departure_data.boundary_segments = get_boundary_segments(normal_footprints, trimmed_pred_traj);
 
   if (
-    abnormalities_data.boundary_segments.left.empty() &&
-    abnormalities_data.boundary_segments.right.empty()) {
+    departure_data.boundary_segments.left.empty() &&
+    departure_data.boundary_segments.right.empty()) {
     return tl::make_unexpected("Unable to find any closest segments");
   }
 
   for (const auto type : footprint_type_order) {
-    abnormalities_data.projections_to_bound[type] = utils::get_closest_boundary_segments_from_side(
-      trimmed_pred_traj, abnormalities_data.boundary_segments,
-      abnormalities_data.footprints_sides[type]);
+    departure_data.projections_to_bound[type] = utils::get_closest_boundary_segments_from_side(
+      trimmed_pred_traj, departure_data.boundary_segments, departure_data.footprints_sides[type]);
   }
 
-  auto closest_projections_to_bound_opt = get_closest_projections_to_boundaries(
-    abnormalities_data.projections_to_bound, curr_vel, curr_acc);
+  auto closest_projections_to_bound_opt =
+    get_closest_projections_to_boundaries(departure_data.projections_to_bound, curr_vel, curr_acc);
 
   if (!closest_projections_to_bound_opt) {
     return tl::make_unexpected(closest_projections_to_bound_opt.error());
   }
 
-  abnormalities_data.closest_projections_to_bound = std::move(*closest_projections_to_bound_opt);
+  departure_data.closest_projections_to_bound = std::move(*closest_projections_to_bound_opt);
 
   std::vector<double> pred_traj_idx_to_ref_traj_lon_dist;
   pred_traj_idx_to_ref_traj_lon_dist.reserve(predicted_traj.size());
@@ -343,19 +339,19 @@ UncrossableBoundaryDepartureChecker::get_abnormalities_data(
       motion_utils::calcSignedArcLength(trajectory_points, 0UL, p.pose.position));
   }
 
-  abnormalities_data.departure_points = get_departure_points(
-    abnormalities_data.closest_projections_to_bound, pred_traj_idx_to_ref_traj_lon_dist);
+  departure_data.departure_points = get_departure_points(
+    departure_data.closest_projections_to_bound, pred_traj_idx_to_ref_traj_lon_dist);
 
   const auto ego_dist_on_traj_m =
     motion_utils::calcSignedArcLength(trajectory_points, 0UL, curr_pose_with_cov.pose.position);
 
   update_critical_departure_points(
-    trajectory_points, ego_dist_on_traj_m, abnormalities_data.departure_points,
-    abnormalities_data.closest_projections_to_bound);
+    trajectory_points, ego_dist_on_traj_m, departure_data.departure_points,
+    departure_data.closest_projections_to_bound);
 
-  abnormalities_data.critical_departure_points = critical_departure_points_;
+  departure_data.critical_departure_points = critical_departure_points_;
 
-  return abnormalities_data;
+  return departure_data;
 }
 
 std::vector<SegmentWithIdx> UncrossableBoundaryDepartureChecker::find_closest_boundary_segments(
@@ -436,7 +432,7 @@ BoundarySideWithIdx UncrossableBoundaryDepartureChecker::get_boundary_segments(
 
 tl::expected<ProjectionsToBound, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
-  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound,
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound,
   const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -466,8 +462,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
     std::any_of(std::next(footprint_type_order.begin()), footprint_type_order.end(), check_size);
 
   if (has_size_diff) {
-    return tl::make_unexpected(
-      std::string(__func__) + ": Some abnormality type has incorrect size.");
+    return tl::make_unexpected(std::string(__func__) + ": Some footprint type has incorrect size.");
   }
 
   ProjectionsToBound min_to_bound;
@@ -549,7 +544,7 @@ UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
 
 tl::expected<Side<ProjectionsToBound>, std::string>
 UncrossableBoundaryDepartureChecker::get_closest_projections_to_boundaries(
-  const Abnormalities<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const double curr_vel,
   const double curr_acc)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);

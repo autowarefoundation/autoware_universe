@@ -569,7 +569,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return tl::make_unexpected(ref_traj_pts_opt.error().what);
   }
 
-  const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
+  const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_departure_data(
     raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, curr_vel, curr_acc);
 
   if (!abnormality_data_opt) {
@@ -577,7 +577,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   }
 
   output_.abnormalities_data = *abnormality_data_opt;
-  toc_curr_watch("get_abnormalities_data");
+  toc_curr_watch("get_departure_data");
 
   const auto ego_dist_on_traj_m =
     motion_utils::calcSignedArcLength(raw_trajectory_points, 0UL, curr_pose.pose.position);
