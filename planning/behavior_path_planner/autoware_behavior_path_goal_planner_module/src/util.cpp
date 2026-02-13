@@ -269,6 +269,9 @@ lanelet::ConstLanelets generateBetweenEgoAndExpandedPullOverLanes(
   if (expand_lanelets_opt.has_value()) {
     return expand_lanelets_opt.value();
   } else {
+    RCLCPP_WARN(
+      rclcpp::get_logger("generateBetweenEgoAndExpandedPullOverLanes"),
+      "Failed to expand lanelet.");
     return pull_over_lanes;
   }
 }
