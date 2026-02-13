@@ -331,13 +331,103 @@ CandidateOutput assignToCandidate(
 std::optional<lanelet::ConstLanelet> get_lane_change_target_lane(
   const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes)
 {
+  const bool is_mandatory_lc = is_mandatory_lane_change(common_data_ptr->lc_type);
+  return get_target_lane(common_data_ptr, current_lanes, is_mandatory_lc);
+}
+
+std::optional<lanelet::ConstLanelet> get_target_lane_for_mandatory_lane_change(
+  const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelet & ref_lane)
+{
   const auto direction = common_data_ptr->direction;
   const auto route_handler_ptr = common_data_ptr->route_handler_ptr;
-  if (is_mandatory_lane_change(common_data_ptr->lc_type)) {
-    return route_handler_ptr->getLaneChangeTarget(current_lanes, direction);
+  const auto routing_graph_ptr = route_handler_ptr->getRoutingGraphPtr();
+
+  const bool is_intersection_ll = std::invoke([&]() -> bool {
+    const std::string id = ref_lane.attributeOr("intersection_area", "else");
+    return id != "else" && std::atoi(id.c_str());
+  });
+
+  const int num = route_handler_ptr->getNumLaneToPreferredLane(ref_lane, direction);
+  if (num == 0) return std::nullopt;
+  if (direction == Direction::NONE || direction == Direction::RIGHT) {
+    if (num < 0) {
+      const auto right_lanes = is_intersection_ll ? routing_graph_ptr->adjacentRight(ref_lane)
+                                                  : routing_graph_ptr->right(ref_lane);
+      if (right_lanes) return *right_lanes;
+    }
   }
 
-  return route_handler_ptr->getLaneChangeTargetExceptPreferredLane(current_lanes, direction);
+  if (direction == Direction::NONE || direction == Direction::LEFT) {
+    if (num > 0) {
+      const auto left_lanes = is_intersection_ll ? routing_graph_ptr->adjacentLeft(ref_lane)
+                                                 : routing_graph_ptr->left(ref_lane);
+      if (left_lanes) return *left_lanes;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<lanelet::ConstLanelet> get_target_lane_for_non_mandatory_lane_change(
+  const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelet & ref_lane)
+{
+  const auto direction = common_data_ptr->direction;
+  const auto route_handler_ptr = common_data_ptr->route_handler_ptr;
+  const auto routing_graph_ptr = route_handler_ptr->getRoutingGraphPtr();
+
+  if (direction == Direction::RIGHT) {
+    // Get right lanelet if preferred lane is on the left
+    if (route_handler_ptr->getNumLaneToPreferredLane(ref_lane, direction) < 0) {
+      return std::nullopt;
+    }
+
+    const auto right_lanes = routing_graph_ptr->right(ref_lane);
+    if (right_lanes) {
+      return *right_lanes;
+    }
+  }
+
+  if (direction == Direction::LEFT) {
+    // Get left lanelet if preferred lane is on the right
+    if (route_handler_ptr->getNumLaneToPreferredLane(ref_lane, direction) > 0) {
+      return std::nullopt;
+    }
+    const auto left_lanes = routing_graph_ptr->left(ref_lane);
+    if (left_lanes) {
+      return *left_lanes;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<lanelet::ConstLanelet> get_target_lane(
+  const CommonDataPtr & common_data_ptr, const lanelet::ConstLanelets & current_lanes,
+  const bool is_mandatory_lc)
+{
+  const auto & ego_pose = common_data_ptr->get_ego_pose();
+  const auto & route_handler_ptr = common_data_ptr->route_handler_ptr;
+  const auto current_lanes_path =
+    route_handler_ptr->getCenterLinePath(current_lanes, 0.0, std::numeric_limits<double>::max());
+
+  auto is_lanelet_behind_ego = [&](const lanelet::ConstLanelet & lanelet) {
+    const auto lanelet_end = lanelet.centerline2d().back().basicPoint2d();
+    const auto lanelet_end_position =
+      autoware_utils::create_point(lanelet_end.x(), lanelet_end.y(), 0.0);
+    const auto dist_from_ego = autoware::motion_utils::calcSignedArcLength(
+      current_lanes_path.points, ego_pose.position, lanelet_end_position);
+    return dist_from_ego < 0.0;
+  };
+
+  for (const auto & lanelet : current_lanes) {
+    if (is_lanelet_behind_ego(lanelet)) continue;
+
+    const auto target_lane =
+      is_mandatory_lc ? get_target_lane_for_mandatory_lane_change(common_data_ptr, lanelet)
+                      : get_target_lane_for_non_mandatory_lane_change(common_data_ptr, lanelet);
+
+    if (target_lane) return target_lane;
+  }
+
+  return std::nullopt;
 }
 
 bool isParkedObject(

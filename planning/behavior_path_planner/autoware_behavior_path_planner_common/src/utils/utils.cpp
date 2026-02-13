@@ -1297,6 +1297,12 @@ lanelet::ConstLanelets getCurrentLanesFromPath(
              front_lane_ids.end();
     });
   };
+
+  // if current lanes already have front lanes, return as is
+  if (have_front_lanes(current_lanes)) {
+    return current_lanes;
+  }
+
   auto extended_lanes = current_lanes;
   while (rclcpp::ok()) {
     const size_t pre_extension_size = extended_lanes.size();  // Get existing size before extension
