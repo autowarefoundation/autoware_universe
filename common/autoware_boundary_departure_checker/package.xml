@@ -22,6 +22,7 @@
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_pyplot</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_universe_utils</depend>
   <depend>autoware_utils_debug</depend>
