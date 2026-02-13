@@ -19,11 +19,11 @@ launch:
 inputs:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/objects"
+    remap_target: input/objects
 outputs:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "output/objects"
+    remap_target: output/objects
     qos:
       reliability: reliable
       durability: transient_local

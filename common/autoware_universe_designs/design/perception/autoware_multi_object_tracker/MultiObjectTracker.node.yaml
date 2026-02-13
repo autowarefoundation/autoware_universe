@@ -43,13 +43,13 @@ inputs:
 outputs:
   - name: objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    remap_target: "output/objects"
+    remap_target: output/objects
     qos:
       reliability: reliable
       durability: transient_local
   - name: merged_objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "output/merged_objects"
+    remap_target: output/merged_objects
     qos:
       reliability: reliable
       durability: transient_local
