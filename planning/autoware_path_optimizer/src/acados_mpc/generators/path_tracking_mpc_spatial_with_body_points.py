@@ -4,7 +4,6 @@ from acados_template import AcadosOcp
 from acados_template import AcadosOcpSolver
 from generators.bicycle_model_spatial_with_body_points import bicycle_model_spatial_with_body_points
 import numpy as np
-import scipy.linalg
 
 
 class PathTrackingMPCSpatialWithBodyPoints:
@@ -60,7 +59,9 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp.cost.cost_type_e = "LINEAR_LS"
         unscale = self.N / self.Tf
 
-        ocp.cost.W = unscale * scipy.linalg.block_diag(Q, R)
+        ocp.cost.W = unscale * np.block(
+            [[Q, np.zeros((Q.shape[0], R.shape[1]))], [np.zeros((R.shape[0], Q.shape[1])), R]]
+        )
         ocp.cost.W_e = Qe / unscale
 
         Vx = np.zeros((ny, nx))
