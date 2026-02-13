@@ -19,12 +19,12 @@ inputs:
     global: /tf
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input"
+    remap_target: input
 
 outputs:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "objects"
+    remap_target: objects
     qos:
       reliability: reliable
       durability: transient_local

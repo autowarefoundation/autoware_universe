@@ -21,12 +21,12 @@ inputs:
     global: /tf
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "input"
+    remap_target: input
 
 outputs:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "output"
+    remap_target: output
     qos:
       reliability: best_effort
       durability: volatile

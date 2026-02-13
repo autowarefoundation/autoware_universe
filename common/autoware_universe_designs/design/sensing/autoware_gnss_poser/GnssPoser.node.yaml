@@ -16,27 +16,27 @@ launch:
 inputs:
   - name: fix
     message_type: sensor_msgs/msg/NavSatFix
-    remap_target: "fix"
+    remap_target: fix
   - name: autoware_orientation
     message_type: autoware_sensing_msgs/msg/GnssInsOrientationStamped
-    remap_target: "autoware_orientation"
+    remap_target: autoware_orientation
 
 outputs:
   - name: gnss_pose
     message_type: geometry_msgs/msg/PoseStamped
-    remap_target: "gnss_pose"
+    remap_target: gnss_pose
     qos:
       reliability: reliable
       durability: volatile
   - name: gnss_pose_cov
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
-    remap_target: "gnss_pose_cov"
+    remap_target: gnss_pose_cov
     qos:
       reliability: reliable
       durability: volatile
   - name: gnss_fixed
     message_type: autoware_internal_debug_msgs/msg/BoolStamped
-    remap_target: "gnss_fixed"
+    remap_target: gnss_fixed
     qos:
       reliability: reliable
       durability: volatile

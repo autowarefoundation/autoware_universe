@@ -16,17 +16,17 @@ launch:
 inputs:
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
-    remap_target: "~/sub/vector_map"
+    remap_target: ~/sub/vector_map
   - name: perception_traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
-    remap_target: "~/sub/perception_traffic_signals"
+    remap_target: ~/sub/perception_traffic_signals
   - name: external_traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroup
-    remap_target: "~/sub/external_traffic_signals"
+    remap_target: ~/sub/external_traffic_signals
 outputs:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
-    remap_target: "~/pub/traffic_signals"
+    remap_target: ~/pub/traffic_signals
     qos:
       reliability: reliable
       durability: transient_local

@@ -19,15 +19,15 @@ inputs:
     global: /tf
   - name: main_object
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    remap_target: "input/main_object"
+    remap_target: input/main_object
   - name: sub_object
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    remap_target: "input/sub_object"
+    remap_target: input/sub_object
 
 outputs:
   - name: merged_object
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    remap_target: "output/object"
+    remap_target: output/object
     qos:
       reliability: reliable
       durability: transient_local

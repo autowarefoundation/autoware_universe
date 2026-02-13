@@ -27,7 +27,7 @@ inputs:
 outputs:
   - name: merged_object
     message_type: autoware_perception_msgs/msg/TrackedObjects
-    remap_target: "~/output/objects"
+    remap_target: ~/output/objects
     qos:
       reliability: reliable
       durability: transient_local

@@ -18,7 +18,7 @@ launch:
 inputs:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "input/pointcloud"
+    remap_target: input/pointcloud
   - name: ros_transform
     message_type: tf2_msgs/msg/TFMessage
     global: /tf
@@ -26,7 +26,7 @@ inputs:
 outputs:
   - name: labeled_clusters
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "output/labeled_clusters"
+    remap_target: output/labeled_clusters
     qos:
       reliability: reliable
       durability: transient_local

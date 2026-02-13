@@ -21,20 +21,20 @@ inputs:
     global: /tf
   - name: input
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "input"
+    remap_target: input
   - name: map
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "map"
+    remap_target: map
   - name: service_pointcloud_map_diff
     message_type: autoware_map_msgs/srv/GetDifferentialPointCloudMap
-    remap_target: "map_loader_service"
+    remap_target: map_loader_service
   - name: kinematic_state
     message_type: nav_msgs/msg/Odometry
-    remap_target: "kinematic_state"
+    remap_target: kinematic_state
 outputs:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "output"
+    remap_target: output
     qos:
       reliability: reliable
       durability: transient_local

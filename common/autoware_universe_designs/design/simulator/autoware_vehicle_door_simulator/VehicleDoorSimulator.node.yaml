@@ -18,13 +18,13 @@ inputs: []
 outputs:
   - name: doors/status
     message_type: autoware_adapi_v1_msgs/msg/DoorStatusArray
-    remap_target: "~/doors/status"
+    remap_target: ~/doors/status
   - name: doors/command
     message_type: autoware_adapi_v1_msgs/srv/SetDoorCommand
-    remap_target: "~/doors/command"
+    remap_target: ~/doors/command
   - name: doors/layout
     message_type: autoware_adapi_v1_msgs/srv/GetDoorLayout
-    remap_target: "~/doors/layout"
+    remap_target: ~/doors/layout
 
 # parameters
 parameter_files: []

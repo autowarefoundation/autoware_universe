@@ -21,12 +21,12 @@ inputs:
     global: /tf
   - name: input_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "input"
+    remap_target: input
 
 outputs:
   - name: output_clusters
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "output"
+    remap_target: output
     qos:
       reliability: reliable
       durability: transient_local

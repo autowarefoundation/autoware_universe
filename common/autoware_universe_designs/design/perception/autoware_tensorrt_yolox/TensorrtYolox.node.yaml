@@ -18,15 +18,15 @@ launch:
 inputs:
   - name: image
     message_type: sensor_msgs/msg/Image
-    remap_target: "~/in/image"
+    remap_target: ~/in/image
 
 outputs:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "~/out/objects"
+    remap_target: ~/out/objects
   - name: mask
     message_type: sensor_msgs/msg/Image
-    remap_target: "~/out/mask"
+    remap_target: ~/out/mask
 
 # parameters
 parameter_files:

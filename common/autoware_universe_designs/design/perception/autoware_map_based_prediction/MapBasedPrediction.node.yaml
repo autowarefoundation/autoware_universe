@@ -21,12 +21,12 @@ inputs:
     global: /tf
   - name: vector_map_topic
     message_type: autoware_map_msgs/msg/LaneletMapBin
-    remap_target: "/vector_map"
+    remap_target: /vector_map
   - name: objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
   - name: traffic_signals_topic
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
-    remap_target: "/traffic_signals"
+    remap_target: /traffic_signals
 
 outputs:
   - name: objects

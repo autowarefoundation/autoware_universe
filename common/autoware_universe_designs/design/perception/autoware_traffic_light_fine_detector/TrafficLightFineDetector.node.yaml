@@ -16,18 +16,18 @@ launch:
 inputs:
   - name: image
     message_type: sensor_msgs/msg/Image
-    remap_target: "~/input/image"
+    remap_target: ~/input/image
   - name: rough_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "~/input/rois"
+    remap_target: ~/input/rois
   - name: expect_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "~/expect/rois"
+    remap_target: ~/expect/rois
 
 outputs:
   - name: rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "~/output/rois"
+    remap_target: ~/output/rois
     qos:
       reliability: reliable
       durability: transient_local

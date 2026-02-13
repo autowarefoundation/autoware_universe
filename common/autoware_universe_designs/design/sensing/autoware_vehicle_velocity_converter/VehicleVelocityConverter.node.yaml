@@ -17,12 +17,12 @@ launch:
 inputs:
   - name: velocity_status
     message_type: autoware_vehicle_msgs/msg/VelocityReport
-    remap_target: "velocity_status"
+    remap_target: velocity_status
 
 outputs:
   - name: twist_with_covariance
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
-    remap_target: "twist_with_covariance"
+    remap_target: twist_with_covariance
     qos:
       reliability: reliable
       durability: transient_local

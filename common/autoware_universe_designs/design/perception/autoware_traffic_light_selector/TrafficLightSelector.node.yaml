@@ -18,21 +18,21 @@ launch:
 inputs:
   - name: detected_rois
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/detected_rois"
+    remap_target: input/detected_rois
   - name: rough_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "input/rough_rois"
+    remap_target: input/rough_rois
   - name: expect_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "input/expect_rois"
+    remap_target: input/expect_rois
   - name: camera_info
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info"
+    remap_target: input/camera_info
 
 outputs:
   - name: traffic_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
-    remap_target: "output/traffic_rois"
+    remap_target: output/traffic_rois
     qos:
       reliability: reliable
       durability: transient_local

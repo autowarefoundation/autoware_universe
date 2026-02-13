@@ -24,52 +24,52 @@ inputs:
     message_type: sensor_msgs/msg/PointCloud2
   - name: rois0
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois0"
+    remap_target: input/rois0
   - name: camera_info0
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info0"
+    remap_target: input/camera_info0
   - name: rois1
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois1"
+    remap_target: input/rois1
   - name: camera_info1
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info1"
+    remap_target: input/camera_info1
   - name: rois2
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois2"
+    remap_target: input/rois2
   - name: camera_info2
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info2"
+    remap_target: input/camera_info2"
   - name: rois3
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois3"
+    remap_target: input/rois3
   - name: camera_info3
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info3"
+    remap_target: input/camera_info3
   - name: rois4
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois4"
+    remap_target: input/rois4
   - name: camera_info4
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info4"
+    remap_target: input/camera_info4
   - name: rois5
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois5"
+    remap_target: input/rois5
   - name: camera_info5
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info5"
+    remap_target: input/camera_info5
   - name: rois6
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois6"
+    remap_target: input/rois6
   - name: camera_info6
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info6"
+    remap_target: input/camera_info6
   - name: rois7
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "input/rois7"
+    remap_target: input/rois7
   - name: camera_info7
     message_type: sensor_msgs/msg/CameraInfo
-    remap_target: "input/camera_info7"
+    remap_target: input/camera_info7
 
 outputs:
   - name: objects

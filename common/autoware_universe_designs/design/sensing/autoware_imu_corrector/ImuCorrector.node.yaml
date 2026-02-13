@@ -17,18 +17,18 @@ launch:
 inputs:
   - name: imu_raw
     message_type: sensor_msgs/msg/Imu
-    remap_target: "input"
+    remap_target: input
   - name: gyro_bias
     message_type: geometry_msgs/msg/Vector3Stamped
-    remap_target: "gyro_bias_input"
+    remap_target: gyro_bias_input
   - name: gyro_scale
     message_type: geometry_msgs/msg/Vector3Stamped
-    remap_target: "gyro_scale_input"
+    remap_target: gyro_scale_input
 
 outputs:
   - name: imu_data
     message_type: sensor_msgs/msg/Imu
-    remap_target: "output"
+    remap_target: output
     qos:
       reliability: reliable
       durability: transient_local

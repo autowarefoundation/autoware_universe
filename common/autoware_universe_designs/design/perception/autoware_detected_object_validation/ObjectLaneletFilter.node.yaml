@@ -21,15 +21,15 @@ inputs:
     global: /tf
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
-    remap_target: "input/vector_map"
+    remap_target: input/vector_map
   - name: object
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "input/object"
+    remap_target: input/object
 
 outputs:
   - name: object
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "output/object"
+    remap_target: output/object
     qos:
       reliability: reliable
       durability: transient_local

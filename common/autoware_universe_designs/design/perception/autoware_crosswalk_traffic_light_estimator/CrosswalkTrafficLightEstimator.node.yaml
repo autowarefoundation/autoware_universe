@@ -25,7 +25,7 @@ inputs:
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
-    remap_target: "~/input/classified/traffic_signals"
+    remap_target: ~/input/classified/traffic_signals
 
 outputs:
   - name: traffic_signals

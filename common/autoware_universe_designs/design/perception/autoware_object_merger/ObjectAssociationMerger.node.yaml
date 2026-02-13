@@ -19,14 +19,14 @@ inputs:
     global: /tf
   - name: object0
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "input/object0"
+    remap_target: input/object0
   - name: object1
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "input/object1"
+    remap_target: input/object1
 outputs:
   - name: merged_object
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "output/object"
+    remap_target: output/object
     qos:
       reliability: reliable
       durability: transient_local

@@ -59,10 +59,6 @@ outputs:
   - name: offset_covariance
     message_type: std_msgs/msg/Float32MultiArray
 
-  # node: in terms of system, output of this node are files to be stored in the filesystem and addressed by csv_calibrated_map_dir
-  # csv_calibrated_map_dir/accel_map.csv
-  # csv_calibrated_map_dir/brake_map.csv
-
 # parameters
 parameter_files:
   - name: accel_brake_map_calib_param

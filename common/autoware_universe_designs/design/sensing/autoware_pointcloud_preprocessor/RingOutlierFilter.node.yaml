@@ -18,12 +18,12 @@ launch:
 inputs:
   - name: input
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "input"
+    remap_target: input
 
 outputs:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
-    remap_target: "output"
+    remap_target: output
 
 # parameters
 parameter_files:

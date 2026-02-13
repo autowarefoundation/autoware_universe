@@ -16,12 +16,12 @@ launch:
 inputs:
   - name: input
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: "~/input"
+    remap_target: ~/input
 
 outputs:
   - name: output
     message_type: autoware_perception_msgs/msg/DetectedObjects
-    remap_target: "~/output"
+    remap_target: ~/output
     qos:
       reliability: reliable
       durability: transient_local
