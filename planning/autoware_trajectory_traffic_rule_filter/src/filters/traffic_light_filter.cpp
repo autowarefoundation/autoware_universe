@@ -169,11 +169,11 @@ bool TrafficLightFilter::can_pass_amber_light(
   const double max_acc = params_.traffic_light_filter.max_accel;
   const double max_jerk = params_.traffic_light_filter.max_jerk;
   const double delay_response_time = params_.traffic_light_filter.delay_response_time;
-  const double yellow_lamp_period = params_.traffic_light_filter.yellow_lamp_period;
-  const double yellow_light_stop_velocity = params_.traffic_light_filter.yellow_light_stop_velocity;
+  const double amber_lamp_period = params_.traffic_light_filter.amber_lamp_period;
+  const double amber_light_stop_velocity = params_.traffic_light_filter.amber_light_stop_velocity;
   const bool enable_pass_judge = params_.traffic_light_filter.enable_pass_judge;
 
-  const double reachable_distance = current_velocity * yellow_lamp_period;
+  const double reachable_distance = current_velocity * amber_lamp_period;
 
   // Calculate distance until ego vehicle decide not to stop,
   // taking into account the jerk and acceleration.
@@ -182,7 +182,7 @@ bool TrafficLightFilter::can_pass_amber_light(
       current_velocity, current_acceleration, max_acc, max_jerk, delay_response_time);
 
   const bool distance_stoppable = pass_judge_line_distance < distance_to_stop_line;
-  const bool slow_velocity = current_velocity < yellow_light_stop_velocity;
+  const bool slow_velocity = current_velocity < amber_light_stop_velocity;
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = distance_to_stop_line < reachable_distance;
   const bool cannot_pass = enable_pass_judge && stoppable && !reachable;
@@ -190,7 +190,7 @@ bool TrafficLightFilter::can_pass_amber_light(
   if (cannot_pass) {
     auto tmp_clock = rclcpp::Clock();
     RCLCPP_WARN_THROTTLE(
-      *logger_, tmp_clock, 1000, "cannot pass through intersection during yellow lamp.");
+      *logger_, tmp_clock, 1000, "cannot pass through intersection during amber lamp.");
     return false;
   }
   return true;

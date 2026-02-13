@@ -20,18 +20,18 @@ traffic_rule_filter:
       default_value: 0.5
       description: delay response time for stop decision.
       read_only: false
-    yellow_lamp_period:
+    amber_lamp_period:
       type: double
       default_value: 2.75
-      description: yellow lamp period.
+      description: amber lamp period.
       read_only: false
-    yellow_light_stop_velocity:
+    amber_light_stop_velocity:
       type: double
       default_value: 1.0
-      description: velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns yellow.
+      description: velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns amber.
       read_only: false
     enable_pass_judge:
       type: bool
       default_value: true
-      description: enable pass judge for yellow light.
+      description: enable pass judge for amber light.
       read_only: false

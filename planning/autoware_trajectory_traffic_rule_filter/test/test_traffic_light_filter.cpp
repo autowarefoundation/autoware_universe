@@ -51,8 +51,8 @@ protected:
     params.traffic_light_filter.max_accel = -2.8;
     params.traffic_light_filter.max_jerk = -5.0;
     params.traffic_light_filter.delay_response_time = 0.5;
-    params.traffic_light_filter.yellow_lamp_period = 2.75;
-    params.traffic_light_filter.yellow_light_stop_velocity = 1.0;
+    params.traffic_light_filter.amber_lamp_period = 2.75;
+    params.traffic_light_filter.amber_light_stop_velocity = 1.0;
     params.traffic_light_filter.enable_pass_judge = true;
     filter_->set_parameters(params);
   }
@@ -239,7 +239,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
   // Stoppable distance is roughly 10^2 / (2 * 2.8) + 10 * 0.5 = 22.85m.
   // Since 22.85 > 5.0, it is NOT stoppable.
 
-  // Reachable distance: v * yellow_lamp_period = 10 * 2.75 = 27.5m.
+  // Reachable distance: v * amber_lamp_period = 10 * 2.75 = 27.5m.
   // Since 5.0 < 27.5, it IS reachable.
   // can_pass_amber_light should return true.
 
@@ -262,8 +262,8 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightDilemmaZone)
   // Stoppable distance is 22.85m. 22.85 < 50.0, so it IS stoppable.
   // Wait, I want a DILEMMA ZONE where it is NOT stoppable but also NOT reachable.
   // Stoppable distance = v^2 / (2*a) + v*t. To make it NOT stoppable, stop_x < 22.85.
-  // Reachable distance = v * T_yellow. To make it NOT reachable, stop_x > v * T_yellow.
-  // If v=10, T_yellow=2.75, reachable = 27.5.
+  // Reachable distance = v * T_amber. To make it NOT reachable, stop_x > v * T_amber.
+  // If v=10, T_amber=2.75, reachable = 27.5.
   // If stop_x = 30, it IS stoppable (30 > 22.85) and NOT reachable (30 > 27.5).
   // Stoppable = true means it returns false.
 
@@ -271,7 +271,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightDilemmaZone)
   traffic_rule_filter::Params params;
   params.traffic_light_filter.max_accel = -0.5;  // Very weak braking
   params.traffic_light_filter.delay_response_time = 1.0;
-  params.traffic_light_filter.yellow_lamp_period = 1.0;  // Short yellow
+  params.traffic_light_filter.amber_lamp_period = 1.0;  // Short amber
   params.traffic_light_filter.enable_pass_judge = true;
   filter_->set_parameters(params);
 
