@@ -18,11 +18,11 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -89,6 +89,34 @@ std::optional<lanelet::Polygon3d> getPolygonByPoint(
     }
   }
   return std::nullopt;
+}
+
+geometry_msgs::msg::Pose to_geom_msg_pose(
+  const lanelet::BasicPoint3d & src_point, const lanelet::ConstLanelet & target_lane)
+{
+  const auto point = experimental::lanelet2_utils::to_ros(src_point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
+  geometry_msgs::msg::Pose pose;
+  pose.position = point;
+  tf2::Quaternion quat;
+  quat.setRPY(0, 0, yaw);
+  pose.orientation = tf2::toMsg(quat);
+  return pose;
+}
+
+geometry_msgs::msg::Pose to_geom_msg_pose(
+  const lanelet::BasicPoint2d & src_point, const lanelet::ConstLanelet & target_lane)
+{
+  const auto point = experimental::lanelet2_utils::to_ros(src_point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
+  geometry_msgs::msg::Pose pose;
+  pose.position = point;
+  tf2::Quaternion quat;
+  quat.setRPY(0, 0, yaw);
+  pose.orientation = tf2::toMsg(quat);
+  return pose;
 }
 
 double l2Norm(const Vector3 vector)
@@ -401,7 +429,7 @@ bool set_goal(
 const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lanelet)
 {
   // return goal;
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal.position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(goal.position);
   const double distance = boost::geometry::distance(
     goal_lanelet.polygon2d().basicPolygon(), lanelet::utils::to2D(lanelet_point).basicPoint());
   if (distance < std::numeric_limits<double>::epsilon()) {
@@ -923,7 +951,7 @@ PathPointWithLaneId insertStopPoint(const double length, PathWithLaneId & path)
 double getSignedDistanceFromLaneBoundary(
   const lanelet::ConstLanelet & lanelet, const Point & position, bool left_side)
 {
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(position);
   const auto & boundary_line_2d = left_side ? lanelet.leftBound2d() : lanelet.rightBound2d();
   const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
     boundary_line_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
@@ -988,8 +1016,8 @@ std::optional<double> getSignedDistanceFromBoundary(
     double min_distance = std::numeric_limits<double>::max();
 
     for (size_t i = 0; i < bound_line_2d.size() - 1; i++) {
-      const Point p1 = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i]);
-      const Point p2 = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i + 1]);
+      const Point p1 = experimental::lanelet2_utils::to_ros(bound_line_2d[i]);
+      const Point p2 = experimental::lanelet2_utils::to_ros(bound_line_2d[i + 1]);
 
       const Point inverse_p1 = autoware_utils::inverse_transform_point(p1, vehicle_corner_pose);
       const Point inverse_p2 = autoware_utils::inverse_transform_point(p2, vehicle_corner_pose);
@@ -1049,7 +1077,7 @@ std::optional<double> getSignedDistanceFromBoundary(
   for (size_t i = rear_lateral_distance_with_idx.value().second + 1;
        i < front_lateral_distance_with_idx.value().second; i++) {
     Pose bound_pose;
-    bound_pose.position = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i]);
+    bound_pose.position = experimental::lanelet2_utils::to_ros(bound_line_2d[i]);
     bound_pose.orientation = vehicle_pose.orientation;
 
     const Point inverse_rear_point =
