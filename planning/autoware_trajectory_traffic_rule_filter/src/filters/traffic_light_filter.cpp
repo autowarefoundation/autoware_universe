@@ -32,6 +32,32 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+/// @brief get stop lines where ego need to stop, and corresponding signal matching the given
+/// lanelet
+std::vector<std::pair<lanelet::BasicLineString2d, autoware_perception_msgs::msg::TrafficLightGroup>>
+get_matching_stop_lines(
+  const lanelet::Lanelet & lanelet,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightGroup> & traffic_light_groups)
+{
+  std::vector<
+    std::pair<lanelet::BasicLineString2d, autoware_perception_msgs::msg::TrafficLightGroup>>
+    matching_stop_lines;
+  for (const auto & element : lanelet.regulatoryElementsAs<lanelet::TrafficLight>()) {
+    for (const auto & signal : traffic_light_groups) {
+      if (
+        signal.traffic_light_group_id == element->id() && element->stopLine().has_value() &&
+        autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
+        matching_stop_lines.emplace_back(
+          lanelet::utils::to2D(element->stopLine()->basicLineString()), signal);
+      }
+    }
+  }
+  return matching_stop_lines;
+}
+}  // namespace
+
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
 TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
@@ -50,21 +76,15 @@ TrafficLightFilter::get_stop_lines(const lanelet::Lanelets & lanelets) const
   std::vector<lanelet::BasicLineString2d> red_stop_lines;
   std::vector<lanelet::BasicLineString2d> amber_stop_lines;
   for (const auto & lanelet : lanelets) {
-    for (const auto & element : lanelet.regulatoryElementsAs<lanelet::TrafficLight>()) {
-      for (const auto & signal : traffic_lights_->traffic_light_groups) {
-        if (
-          signal.traffic_light_group_id == element->id() && element->stopLine().has_value() &&
-          traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
-          if (traffic_light_utils::hasTrafficLightCircleColor(
-                signal.elements, tier4_perception_msgs::msg::TrafficLightElement::RED)) {
-            red_stop_lines.push_back(lanelet::utils::to2D(element->stopLine()->basicLineString()));
-          }
-          if (traffic_light_utils::hasTrafficLightCircleColor(
-                signal.elements, tier4_perception_msgs::msg::TrafficLightElement::AMBER)) {
-            amber_stop_lines.push_back(
-              lanelet::utils::to2D(element->stopLine()->basicLineString()));
-          }
-        }
+    for (const auto & [stop_line, signal] :
+         get_matching_stop_lines(lanelet, traffic_lights_->traffic_light_groups)) {
+      if (traffic_light_utils::hasTrafficLightCircleColor(
+            signal.elements, tier4_perception_msgs::msg::TrafficLightElement::RED)) {
+        red_stop_lines.push_back(stop_line);
+      }
+      if (traffic_light_utils::hasTrafficLightCircleColor(
+            signal.elements, tier4_perception_msgs::msg::TrafficLightElement::AMBER)) {
+        amber_stop_lines.push_back(stop_line);
       }
     }
   }

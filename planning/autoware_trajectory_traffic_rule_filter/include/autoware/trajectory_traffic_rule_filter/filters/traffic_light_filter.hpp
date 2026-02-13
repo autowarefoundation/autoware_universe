@@ -40,6 +40,7 @@ public:
 
   void set_parameters(const traffic_rule_filter::Params & params) override { params_ = params; }
 
+  /// @brief return true if ego can safely pass an amber traffic light
   [[nodiscard]] bool can_pass_amber_light(
     const double distance_to_stop_line, const double current_velocity,
     const double current_acceleration);
