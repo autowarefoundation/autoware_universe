@@ -444,7 +444,7 @@ void AstarSearch::setPath(const AstarNode & goal_node)
     const auto parent_pose = node2pose(*node.parent);
     const double distance_2d = calc_distance2d(node2pose(node), parent_pose);
     const int n = static_cast<int>(distance_2d / min_expansion_dist_);
-    for (int i = 1; i < n; ++i) {
+    for (int i = n - 1; i >= 1; --i) {
       const double dist =
         ((distance_2d * i) / n) * (node.is_back == is_backward_search_ ? 1.0 : -1.0);
       const double steering = node.steering_index * steering_resolution_;
