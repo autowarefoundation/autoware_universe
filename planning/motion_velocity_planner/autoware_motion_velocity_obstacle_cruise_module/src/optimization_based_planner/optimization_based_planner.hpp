@@ -21,7 +21,6 @@
 #include "s_boundary.hpp"
 #include "velocity_optimizer.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/rclcpp.hpp>
 
