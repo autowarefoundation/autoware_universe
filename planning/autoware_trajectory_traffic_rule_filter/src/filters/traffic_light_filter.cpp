@@ -175,22 +175,22 @@ bool TrafficLightFilter::can_pass_amber_light(
 
   const double reachable_distance = current_velocity * amber_lamp_period;
 
-  // Calculate distance until ego vehicle decide not to stop,
-  // taking into account the jerk and acceleration.
-  const double pass_judge_line_distance =
+  const double distance_for_ego_to_stop =
     boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
       current_velocity, current_acceleration, max_acc, max_jerk, delay_response_time);
 
-  const bool distance_stoppable = pass_judge_line_distance < distance_to_stop_line;
+  const bool distance_stoppable = distance_for_ego_to_stop < distance_to_stop_line;
   const bool slow_velocity = current_velocity < amber_light_stop_velocity;
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = distance_to_stop_line < reachable_distance;
-  const bool cannot_pass = enable_pass_judge && stoppable && !reachable;
+  const bool can_pass = enable_pass_judge && !stoppable && reachable;
 
-  if (cannot_pass) {
+  if (!can_pass) {
     auto tmp_clock = rclcpp::Clock();
     RCLCPP_WARN_THROTTLE(
-      *logger_, tmp_clock, 1000, "cannot pass through intersection during amber lamp.");
+      *logger_, tmp_clock, 1000,
+      "cannot pass the amber light (can stop ? %d can pass before the light turns red ? %d)",
+      stoppable, !reachable);
     return false;
   }
   return true;

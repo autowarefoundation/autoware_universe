@@ -112,7 +112,7 @@ protected:
 
   // Helper to create a straight trajectory
   static std::vector<TrajectoryPoint> create_trajectory(
-    double start_x, double end_x, double velocity = 5.0)
+    double start_x, double end_x, float velocity = 5.0)
   {
     std::vector<TrajectoryPoint> points;
     TrajectoryPoint tp1;
@@ -249,25 +249,22 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
     << "Should return true if amber light cannot be stopped but is reachable";
 }
 
-TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightDilemmaZone)
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
 {
   const lanelet::Id light_id = 202;
-  const double stop_x = 50.0;  // Stop line at 50m
+  const double stop_x = 150.0;  // Stop line at 150m
 
   create_and_set_map(light_id, stop_x);
   set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
 
   // Ego at 0m, velocity 10m/s.
-  // stop_x is 50m away.
-  // Stoppable distance is 22.85m. 22.85 < 50.0, so it IS stoppable.
-  // Wait, I want a DILEMMA ZONE where it is NOT stoppable but also NOT reachable.
-  // Stoppable distance = v^2 / (2*a) + v*t. To make it NOT stoppable, stop_x < 22.85.
-  // Reachable distance = v * T_amber. To make it NOT reachable, stop_x > v * T_amber.
-  // If v=10, T_amber=2.75, reachable = 27.5.
-  // If stop_x = 30, it IS stoppable (30 > 22.85) and NOT reachable (30 > 27.5).
-  // Stoppable = true means it returns false.
+  // stop_x is 150m away.
+  // Stoppable distance is 110m. 110 < 150, so it IS stoppable.
+  // Reachable distance = v * T_amber. 10 * 1.0 = 10m.
+  // stop_x > 10 -> NOT reachable.
+  // This is a scenario where ego can stop and cannot pass.
 
-  // Let's adjust params to create a dilemma zone.
+  // Let's adjust params to create the desired scenario.
   traffic_rule_filter::Params params;
   params.traffic_light_filter.max_accel = -0.5;  // Very weak braking
   params.traffic_light_filter.delay_response_time = 1.0;
@@ -275,15 +272,8 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightDilemmaZone)
   params.traffic_light_filter.enable_pass_judge = true;
   filter_->set_parameters(params);
 
-  // v = 10.
-  // Stoppable distance = 10^2 / (2 * 0.5) + 10 * 1.0 = 100 + 10 = 110m.
-  // Reachable distance = 10 * 1.0 = 10m.
-  // If stop_x = 50m:
-  // stop_x < 110 -> NOT stoppable.
-  // stop_x > 10 -> NOT reachable.
-  // This is a dilemma zone.
+  auto points = create_trajectory(0.0, 200.0, 10.0);
 
-  auto points = create_trajectory(0.0, 100.0, 10.0);
-
-  EXPECT_FALSE(filter_->is_feasible(points)) << "Should return false in dilemma zone";
+  EXPECT_FALSE(filter_->is_feasible(points))
+    << "Should return false if ego can stop but cannot pass";
 }
