@@ -179,7 +179,7 @@ getPathEndPointsOnCrosswalk(
   const auto crossed_s_values =
     autoware::experimental::trajectory::crossed_with_polygon(ego_path, polygon);
 
-  if (crossed_s_values.empty()) {
+  if (crossed_s_values.empty() || crossed_s_values.size() < 2) {
     return std::nullopt;
   }
 
