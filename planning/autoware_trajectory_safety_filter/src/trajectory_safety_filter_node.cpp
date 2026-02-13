@@ -78,6 +78,11 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
     return;
   }
 
+  context.acceleration = sub_acceleration_.take_data();
+  if (!context.acceleration) {
+    return;
+  }
+
   context.lanelet_map = lanelet_map_ptr_;
   if (!context.lanelet_map) {
     return;
