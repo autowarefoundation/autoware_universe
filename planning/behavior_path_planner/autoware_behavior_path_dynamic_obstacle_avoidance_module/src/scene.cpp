@@ -165,6 +165,7 @@ std::vector<geometry_msgs::msg::Point> convertToPoints(
   const std::vector<geometry_msgs::msg::Pose> & poses)
 {
   std::vector<geometry_msgs::msg::Point> points;
+  points.reserve(poses.size());
   for (const auto & pose : poses) {
     points.push_back(pose.position);
   }
@@ -177,6 +178,7 @@ std::vector<geometry_msgs::msg::Pose> toGeometryPoints(
   const std::vector<PathPointWithLaneId> & path_points)
 {
   std::vector<geometry_msgs::msg::Pose> geom_points;
+  geom_points.reserve(path_points.size());
   for (const auto & path_point : path_points) {
     geom_points.push_back(path_point.point.pose);
   }

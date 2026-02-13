@@ -70,11 +70,6 @@ struct MinMaxValue
   void swap() { std::swap(min_value, max_value); }
 };
 
-enum class PolygonGenerationMethod {
-  EGO_PATH_BASE = 0,
-  OBJECT_PATH_BASE,
-};
-
 enum class ObjectType {
   OUT_OF_SCOPE = 0,  // The module do not care about this type of objects.
   REGULATED,    // The module assumes this type of objects move in parallel against lanes. Drivable
@@ -91,8 +86,6 @@ struct DynamicAvoidanceParameters
   bool enable_debug_info{true};
   bool use_hatched_road_markings{true};
 
-  std::string use_lane_type{"opposite_direction_lane"};
-
   // obstacle types to avoid
   bool avoid_car{true};
   bool avoid_truck{true};
@@ -102,57 +95,23 @@ struct DynamicAvoidanceParameters
   bool avoid_bicycle{false};
   bool avoid_motorcycle{false};
   bool avoid_pedestrian{false};
-  double max_obstacle_vel{0.0};
-  double min_obstacle_vel{0.0};
   int successive_num_to_entry_dynamic_avoidance_condition{0};
   int successive_num_to_exit_dynamic_avoidance_condition{0};
 
   double min_obj_lat_offset_to_ego_path{0.0};
   double max_obj_lat_offset_to_ego_path{0.0};
 
-  double min_time_to_start_cut_in{0.0};
-  double min_lon_offset_ego_to_cut_in_object{0.0};
-  double min_cut_in_object_vel{0.0};
-  double max_time_from_outside_ego_path_for_cut_out{0.0};
-  double min_cut_out_object_lat_vel{0.0};
-  double min_cut_out_object_vel{0.0};
-  double max_front_object_angle{0.0};
   double min_front_object_vel{0.0};
   double max_front_object_ego_path_lat_cover_ratio{0.0};
-  double min_overtaking_crossing_object_vel{0.0};
-  double max_overtaking_crossing_object_angle{0.0};
-  double min_oncoming_crossing_object_vel{0.0};
-  double max_oncoming_crossing_object_angle{0.0};
-  double max_pedestrian_crossing_vel{0.0};
   double max_stopped_object_vel{0.0};
 
   // drivable area generation
-  PolygonGenerationMethod polygon_generation_method{};
-  bool expand_drivable_area;
-  double min_obj_path_based_lon_polygon_margin{0.0};
   double lat_offset_from_obstacle{0.0};
   double margin_distance_around_pedestrian{0.0};
-
-  double end_time_to_consider{0.0};
-  double threshold_confidence{0.0};
-  bool use_predicted_path_for_drivable_area{true};
 
   double max_lat_offset_to_avoid{0.0};
   double max_time_for_lat_shift{0.0};
   double lpf_gain_for_lat_avoid_to_offset{0.0};
-
-  double max_ego_lat_acc{0.0};
-  double max_ego_lat_jerk{0.0};
-  double delay_time_ego_shift{0.0};
-
-  double max_time_to_collision_overtaking_object{0.0};
-  double start_duration_to_avoid_overtaking_object{0.0};
-  double end_duration_to_avoid_overtaking_object{0.0};
-  double duration_to_hold_avoidance_overtaking_object{0.0};
-
-  double max_time_to_collision_oncoming_object{0.0};
-  double start_duration_to_avoid_oncoming_object{0.0};
-  double end_duration_to_avoid_oncoming_object{0.0};
 };
 
 class DynamicObstacleAvoidanceModule : public SceneModuleInterface
