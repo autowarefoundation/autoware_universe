@@ -46,9 +46,9 @@ get_matching_stop_lines(
     matching_stop_lines;
   for (const auto & element : lanelet.regulatoryElementsAs<lanelet::TrafficLight>()) {
     for (const auto & signal : traffic_light_groups) {
-      if (
-        signal.traffic_light_group_id == element->id() && element->stopLine().has_value() &&
-        autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
+      const auto is_matching =
+        signal.traffic_light_group_id == element->id() && element->stopLine().has_value();
+      if (is_matching && autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
         matching_stop_lines.emplace_back(
           lanelet::utils::to2D(element->stopLine()->basicLineString()), signal);
       }
@@ -185,8 +185,9 @@ bool TrafficLightFilter::can_pass_amber_light(
   const bool slow_velocity = current_velocity < yellow_light_stop_velocity;
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = distance_to_stop_line < reachable_distance;
+  const bool cannot_pass = enable_pass_judge && stoppable && !reachable;
 
-  if (enable_pass_judge && stoppable && !reachable) {
+  if (cannot_pass) {
     auto tmp_clock = rclcpp::Clock();
     RCLCPP_WARN_THROTTLE(
       *logger_, tmp_clock, 1000, "cannot pass through intersection during yellow lamp.");
