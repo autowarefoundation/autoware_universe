@@ -2,6 +2,9 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

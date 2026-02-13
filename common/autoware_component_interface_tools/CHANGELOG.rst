@@ -2,6 +2,12 @@
 Changelog for package autoware_component_interface_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_component_interface_tools): link with yaml-cpp (`#11872 <https://github.com/autowarefoundation/autoware_universe/issues/11872>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

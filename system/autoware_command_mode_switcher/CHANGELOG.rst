@@ -2,6 +2,9 @@
 Changelog for package autoware_command_mode_switcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

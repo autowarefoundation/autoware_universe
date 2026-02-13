@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_velocity_no_drivable_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
