@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   make-sure-label-is-present:
+    if: ${{ github.event_name == 'pull_request_target' }}
     uses: autowarefoundation/autoware-github-actions/.github/workflows/make-sure-label-is-present.yaml@v1
     with:
       label: run:deploy-docs
