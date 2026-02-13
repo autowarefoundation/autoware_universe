@@ -22,18 +22,13 @@
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/utils.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <queue>
 #include <utility>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <algorithm>
 #include <vector>
 
 namespace autoware::freespace_planning_algorithms

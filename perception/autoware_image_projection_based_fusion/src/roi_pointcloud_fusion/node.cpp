@@ -14,23 +14,17 @@
 
 #include "autoware/image_projection_based_fusion/roi_pointcloud_fusion/node.hpp"
 
+#include "autoware/euclidean_cluster/utils.hpp"
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 
-#include <memory>
-#include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
-#include "autoware/euclidean_cluster/utils.hpp"
+#include <memory>
+#include <vector>
 
 namespace autoware::image_projection_based_fusion
 {

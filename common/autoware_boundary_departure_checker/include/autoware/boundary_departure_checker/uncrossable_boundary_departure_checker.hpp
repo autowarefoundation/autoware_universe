@@ -30,14 +30,23 @@
 
 namespace autoware::boundary_departure_checker
 {
+
+class FootprintManager;
+
 class UncrossableBoundaryDepartureChecker
 {
 public:
+  UncrossableBoundaryDepartureChecker(const UncrossableBoundaryDepartureChecker &) = delete;
+  UncrossableBoundaryDepartureChecker(UncrossableBoundaryDepartureChecker &&) = delete;
+  UncrossableBoundaryDepartureChecker & operator=(const UncrossableBoundaryDepartureChecker &) =
+    delete;
+  UncrossableBoundaryDepartureChecker & operator=(UncrossableBoundaryDepartureChecker &&) = delete;
   UncrossableBoundaryDepartureChecker(
     const rclcpp::Clock::SharedPtr clock_ptr, lanelet::LaneletMapPtr lanelet_map_ptr,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, Param param = Param{},
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils_debug::TimeKeeper>());
+  ~UncrossableBoundaryDepartureChecker();
 
   void set_param(const Param & param) { param_ = param; }
 
@@ -73,14 +82,13 @@ public:
    *
    * @param predicted_traj         Ego's predicted trajectory (from MPC or trajectory follower).
    * @param curr_pose_with_cov     Ego pose with covariance for uncertainty margin calculation.
-   * @param current_steering       Current steering angle report.
    * @return AbnormalitiesData containing footprints, their left/right sides, and projections to
    * boundaries. Returns an error message string on failure.
    */
   tl::expected<AbnormalitiesData, std::string> get_abnormalities_data(
     const TrajectoryPoints & trajectory_points, const TrajectoryPoints & predicted_traj,
-    const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
-    const SteeringReport & current_steering, const double curr_vel, const double curr_acc);
+    const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov, const double curr_vel,
+    const double curr_acc);
 
   /**
    * @brief Queries a spatial index (R-tree) to find nearby uncrossable lane boundaries and filters
@@ -164,9 +172,6 @@ public:
     const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist);
   // === Abnormalities
 
-  Footprint get_ego_footprints(
-    const AbnormalityType abnormality_type, const FootprintMargin uncertainty_fp_margin);
-
   /**
    * @brief Select the closest projections to boundaries for both sides based on all abnormality
    * types.
@@ -193,7 +198,7 @@ private:
   double last_found_critical_dpt_time_{0.0};
   rclcpp::Clock::SharedPtr clock_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  // To be used from the motion_velocity_planner
+  std::unique_ptr<FootprintManager> footprint_manager_;
   static DeparturePoints find_new_critical_departure_points(
     const Side<DeparturePoints> & new_departure_points,
     const DeparturePoints & critical_departure_points,

@@ -15,6 +15,7 @@
 #include "remaining_distance_time_calculator_node.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -102,19 +103,23 @@ void RemainingDistanceTimeCalculatorNode::on_map(const HADMapBin::ConstSharedPtr
 
 void RemainingDistanceTimeCalculatorNode::compute_route()
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        road_lanes_, current_vehicle_pose_, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
     return;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
-  if (!lanelet::utils::query::getClosestLanelet(road_lanes_, goal_pose_, &goal_lanelet_)) {
+  const auto goal_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, goal_pose_);
+  if (!goal_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
     return;
   }
+  goal_lanelet_ = goal_lanelet_opt.value();
 
   const lanelet::Optional<lanelet::routing::Route> optional_route =
     routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet_, 0);
@@ -186,14 +191,15 @@ void RemainingDistanceTimeCalculatorNode::on_timer()
 
 void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        current_lanes_, current_vehicle_pose_, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(current_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
 
     return;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   if (
     current_lanes_.empty() || current_lanes_lengths_.empty() ||
@@ -217,8 +223,8 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 
   remaining_distance_ = std::invoke([&]() -> double {
     // remaining distance in current lanelet (if it is not the goal lanelet)
-    lanelet::ArcCoordinates arc_coord =
-      lanelet::utils::getArcCoordinates({current_lanelet}, current_vehicle_pose_);
+    lanelet::ArcCoordinates arc_coord = lanelet::utils::getArcCoordinates(
+      lanelet::ConstLanelets{current_lanelet}, current_vehicle_pose_);
     double this_lanelet_length = lanelet::geometry::length2d(current_lanelet);
     double dist_in_current_lanelet =
       (current_lanelet.id() != goal_lanelet_.id()) ? this_lanelet_length - arc_coord.length : 0.0;

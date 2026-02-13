@@ -799,7 +799,14 @@ bool StartPlannerModule::isExecutionReady() const
   }
 
   if (!is_safe) {
-    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    if (previous_stop_pose_) {
+      stop_pose_ = previous_stop_pose_;
+    } else {
+      stop_pose_ = previous_stop_pose_ =
+        PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    }
+  } else {
+    previous_stop_pose_.reset();
   }
 
   return is_safe;
@@ -1008,9 +1015,18 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   const std::string stop_reason =
     !status_.is_safe_dynamic_objects ? "unsafe against dynamic objects" : "waiting approval";
 
-  stop_pose_ = utils::insert_feasible_stop_point(
-    stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop, stop_reason);
+  if (!stop_pose_ && previous_stop_pose_) {
+    stop_pose_ = previous_stop_pose_;
+  }
+  if (!stop_pose_) {
+    previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
+      stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+      parameters_->maximum_jerk_for_stop, stop_reason);
+  } else {
+    const auto stop_length =
+      motion_utils::calcSignedArcLength(stop_path.points, 0UL, stop_pose_->pose.position);
+    utils::insertStopPoint(stop_length, stop_path);
+  }
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
@@ -1158,7 +1174,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
 
     // Delete stop point if conditions are met
     if (status_.is_safe_dynamic_objects && isStopped()) {
-      stop_pose_ = std::nullopt;
+      previous_stop_pose_ = stop_pose_ = std::nullopt;
       status_.prev_stop_path_after_approval = nullptr;
       return getCurrentPath();
     }
@@ -1172,7 +1188,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   waitApproval();
   removeRTCStatus();
 
-  stop_pose_ = utils::insert_feasible_stop_point(
+  previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
     current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
     parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
 

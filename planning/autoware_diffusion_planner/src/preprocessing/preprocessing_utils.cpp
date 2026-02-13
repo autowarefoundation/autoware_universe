@@ -14,10 +14,12 @@
 
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 
+#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <random>
@@ -75,6 +77,37 @@ void normalize_input_data(InputDataMap & input_data_map, const NormalizationMap 
     const auto & [mean, std_dev] = normalization_map.at(key);
     normalize_vector(value, mean, std_dev);
   }
+}
+
+std::vector<float> create_ego_current_state(
+  const nav_msgs::msg::Odometry & kinematic_state_msg,
+  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, const float wheel_base)
+{
+  constexpr float MAX_YAW_RATE = 0.95f;
+  constexpr float MAX_STEER_ANGLE = static_cast<float>((2.0 / 3.0) * M_PI);
+
+  const auto & lin = kinematic_state_msg.twist.twist.linear;
+  const auto & ang = kinematic_state_msg.twist.twist.angular;
+
+  float yaw_rate;
+  float steering_angle;
+  const float linear_vel = std::hypot(lin.x, lin.y);
+  if (linear_vel < constants::MOVING_VELOCITY_THRESHOLD_MPS) {
+    yaw_rate = 0.0f;
+    steering_angle = 0.0f;
+  } else {
+    yaw_rate = std::clamp(static_cast<float>(ang.z), -MAX_YAW_RATE, MAX_YAW_RATE);
+    const float raw_steer = std::atan(yaw_rate * wheel_base / linear_vel);
+    steering_angle = std::clamp(raw_steer, -MAX_STEER_ANGLE, MAX_STEER_ANGLE);
+  }
+
+  const float vx = static_cast<float>(lin.x);
+  const float vy = static_cast<float>(lin.y);
+  const float ax = static_cast<float>(acceleration_msg.accel.accel.linear.x);
+  const float ay = static_cast<float>(acceleration_msg.accel.accel.linear.y);
+
+  // x, y, cos_yaw, sin_yaw are always 0, 0, 1, 0 in ego frame
+  return {0.0f, 0.0f, 1.0f, 0.0f, vx, vy, ax, ay, steering_angle, yaw_rate};
 }
 
 std::vector<float> create_ego_agent_past(

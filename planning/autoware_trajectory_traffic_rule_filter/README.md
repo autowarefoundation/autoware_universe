@@ -21,7 +21,6 @@ The package uses a plugin architecture that allows for flexible and extensible t
 - Validates trajectory compliance with traffic signals
 - Monitors traffic light states from perception system
 - Checks if trajectory would pass through red lights
-- Uses `isTrafficSignalStop()` from autoware traffic light utils
 - Allows trajectories only when traffic lights permit passage
 
 ## Interface

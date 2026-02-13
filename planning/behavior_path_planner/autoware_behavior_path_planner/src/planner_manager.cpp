@@ -281,13 +281,11 @@ void PlannerManager::updateCurrentRouteLanelet(
     lanelet_sequence, pose, p.ego_nearest_dist_threshold, p.ego_nearest_yaw_threshold);
   if (opt.has_value()) {
     closest_lane = *opt;
-  }
-  const auto could_calculate_closest_lanelet =
-    opt.has_value() ||
-    lanelet::utils::query::getClosestLanelet(lanelet_sequence, pose, &closest_lane);
-
-  if (could_calculate_closest_lanelet) {
     *current_route_lanelet_ = closest_lane;
+  } else if (const auto opt_constraint =
+               experimental::lanelet2_utils::get_closest_lanelet(lanelet_sequence, pose);
+             opt_constraint) {
+    *current_route_lanelet_ = opt_constraint.value();
   } else if (!is_any_approved_module_running) {
     resetCurrentRouteLanelet(data);
   }

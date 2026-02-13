@@ -18,11 +18,11 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -264,13 +264,14 @@ void fillLaneIdsFromMap(Iterator begin, Iterator end, const lanelet::ConstLanele
 {
   for (auto it = begin; it != end; ++it) {
     const auto point = it->point;
-    lanelet::ConstLanelet lanelet;
-    if (lanelet::utils::query::getClosestLanelet(lanelets, point.pose, &lanelet)) {
+    if (const auto lanelet_opt =
+          experimental::lanelet2_utils::get_closest_lanelet(lanelets, point.pose);
+        lanelet_opt) {
       // TODO(hisaki): Writing "it->lane_ids = {lanelet.id()}" may cause a segmentation fault.
       // I'm not sure of the reason. (╥﹏╥)
       auto & ids = it->lane_ids;
       ids.clear();
-      ids.push_back(lanelet.id());
+      ids.push_back(lanelet_opt.value().id());
     }
   }
 }
@@ -645,10 +646,12 @@ double getDistanceToNextIntersection(
 {
   const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
 
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return std::numeric_limits<double>::max();
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   double distance = 0;
   bool is_after_current_lanelet = false;
@@ -701,10 +704,12 @@ lanelet::ConstLanelets nearest_turn_direction_lane_within_route(
     return {};
   }
 
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return {};
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   const auto current_llt_itr = std::find_if(
     lanelets.begin(), lanelets.end(),
@@ -753,10 +758,12 @@ std::optional<double> calc_distance_to_next_turn_direction_lane(
     return std::nullopt;
   }
 
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return std::nullopt;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   const auto current_llt_itr = std::find_if(
     lanelets.begin(), lanelets.end(),
@@ -801,10 +808,12 @@ double getDistanceToCrosswalk(
 {
   const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
 
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return std::numeric_limits<double>::infinity();
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   double distance = 0;
   bool is_after_current_lanelet = false;
@@ -924,10 +933,10 @@ double getSignedDistanceFromLaneBoundary(
 double getSignedDistanceFromBoundary(
   const lanelet::ConstLanelets & lanelets, const Pose & pose, bool left_side)
 {
-  lanelet::ConstLanelet closest_lanelet;
-
-  if (lanelet::utils::query::getClosestLanelet(lanelets, pose, &closest_lanelet)) {
-    return getSignedDistanceFromLaneBoundary(closest_lanelet, pose.position, left_side);
+  const auto closest_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, pose);
+  if (closest_lanelet_opt) {
+    return getSignedDistanceFromLaneBoundary(closest_lanelet_opt.value(), pose.position, left_side);
   }
 
   RCLCPP_ERROR_STREAM(
@@ -1269,8 +1278,13 @@ lanelet::ConstLanelets getCurrentLanesFromPath(
     reference_lanes.push_back(planner_data->route_handler->getLaneletsFromId(id));
   }
 
-  lanelet::ConstLanelet current_lane;
-  lanelet::utils::query::getClosestLanelet(reference_lanes, current_pose, &current_lane);
+  const auto current_lane_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(reference_lanes, current_pose);
+  if (!current_lane_opt) {
+    return {};
+  }
+  const auto & current_lane = current_lane_opt.value();
+
   auto current_lanes = route_handler->getLaneletSequence(
     current_lane, current_pose, p.backward_path_length, p.forward_path_length);
 

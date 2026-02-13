@@ -19,17 +19,12 @@
 #include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/optional.hpp>
 
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -547,9 +542,10 @@ void OccupancyGridMapOutlierFilterComponent::Debugger::publishLowConfidence(
 }
 
 void OccupancyGridMapOutlierFilterComponent::Debugger::transformToBaseLink(
-  const PointCloud2 & ros_input, [[maybe_unused]] const Header & header, PointCloud2 & output)
+  const PointCloud2 & pointcloud_input, [[maybe_unused]] const Header & header,
+  PointCloud2 & output)
 {
-  transformPointcloud(ros_input, *(node_.tf2_), node_.base_link_frame_, output);
+  transformPointcloud(pointcloud_input, *(node_.tf2_), node_.base_link_frame_, output);
 }
 
 }  // namespace autoware::occupancy_grid_map_outlier_filter

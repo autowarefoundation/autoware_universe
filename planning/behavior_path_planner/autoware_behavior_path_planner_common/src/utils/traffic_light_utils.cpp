@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 
@@ -26,10 +27,12 @@ using autoware::motion_utils::calcSignedArcLength;
 double getDistanceToNextTrafficLight(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets)
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, current_pose, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
+  if (!current_lanelet_opt) {
     return std::numeric_limits<double>::infinity();
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
   const auto to_object = lanelet::geometry::toArcCoordinates(

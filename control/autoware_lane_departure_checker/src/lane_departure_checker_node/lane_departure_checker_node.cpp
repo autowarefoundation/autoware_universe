@@ -72,8 +72,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
 
     for (const auto & primitive : route_ptr->segments.front().primitives) {
       const auto lane_id = primitive.id;
-      for (const auto & lanelet_sequence : lanelet::utils::query::getPrecedingLaneletSequences(
-             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+      for (const auto & lanelet_sequence :
+           autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
+             lanelet_map->laneletLayer.get(lane_id), routing_graph, extension_length)) {
         for (const auto & preceding_lanelet : lanelet_sequence) {
           route_lanelets[preceding_lanelet.id()] = preceding_lanelet;
         }
@@ -94,8 +95,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
 
     for (const auto & primitive : route_ptr->segments.back().primitives) {
       const auto lane_id = primitive.id;
-      for (const auto & lanelet_sequence : lanelet::utils::query::getSucceedingLaneletSequences(
-             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+      for (const auto & lanelet_sequence :
+           autoware::experimental::lanelet2_utils::get_succeeding_lanelet_sequences(
+             lanelet_map->laneletLayer.get(lane_id), routing_graph, extension_length)) {
         for (const auto & succeeding_lanelet : lanelet_sequence) {
           route_lanelets[succeeding_lanelet.id()] = succeeding_lanelet;
         }

@@ -23,10 +23,10 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_parameters.hpp"
 #include "autoware/behavior_path_sampling_planner_module/util.hpp"
+#include "autoware/lanelet2_utils/nn_search.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware_bezier_sampler/bezier_sampling.hpp"
 #include "autoware_frenet_planner/frenet_planner.hpp"
-#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_sampler_common/constraints/footprint.hpp"
 #include "autoware_sampler_common/constraints/hard_constraint.hpp"
@@ -186,10 +186,26 @@ private:
       current_lanes.push_back(d.left_lane);
       current_lanes.insert(current_lanes.end(), d.middle_lanes.begin(), d.middle_lanes.end());
     }
-    lanelet::ConstLanelet closest_lanelet_to_ego;
-    lanelet::utils::query::getClosestLanelet(current_lanes, ego_pose, &closest_lanelet_to_ego);
-    lanelet::ConstLanelet closest_lanelet_to_goal;
-    lanelet::utils::query::getClosestLanelet(current_lanes, goal_pose, &closest_lanelet_to_goal);
+    const auto closest_lanelet_to_ego_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(current_lanes, ego_pose);
+    if (!closest_lanelet_to_ego_opt) {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("behavior_path_planner").get_child("utils"),
+        "failed to find closest lanelet to ego!!!");
+      return false;
+    }
+    const auto & closest_lanelet_to_ego = closest_lanelet_to_ego_opt.value();
+
+    const auto closest_lanelet_to_goal_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(current_lanes, goal_pose);
+    if (!closest_lanelet_to_goal_opt) {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("behavior_path_planner").get_child("utils"),
+        "failed to find closest lanelet to goal!!!");
+      return false;
+    }
+    const auto & closest_lanelet_to_goal = closest_lanelet_to_goal_opt.value();
+
     const bool ego_and_goal_on_same_lanelet =
       closest_lanelet_to_goal.id() == closest_lanelet_to_ego.id();
 

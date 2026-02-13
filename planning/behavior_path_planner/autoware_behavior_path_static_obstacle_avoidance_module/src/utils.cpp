@@ -22,7 +22,8 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
 #include <Eigen/Dense>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -2543,12 +2544,13 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
     return ret;
   }();
 
-  lanelet::ConstLanelet closest_lanelet;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
-  if (!lanelet::utils::query::getClosestLanelet(
-        data.current_lanelets, ego_pose, &closest_lanelet)) {
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(data.current_lanelets, ego_pose);
+  if (!closest_lanelet_opt) {
     return {};
   }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   const auto is_moving = [&parameters](const auto & object) {
     const auto & object_twist = object.kinematics.initial_twist_with_covariance.twist;

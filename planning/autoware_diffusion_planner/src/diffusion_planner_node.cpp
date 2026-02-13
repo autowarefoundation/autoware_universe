@@ -16,7 +16,6 @@
 
 #include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent.hpp"
-#include "autoware/diffusion_planner/conversion/ego.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
@@ -202,6 +201,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
   result.reason = "success";
   return result;
 }
+
 std::optional<FrameContext> DiffusionPlanner::create_frame_context()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -312,20 +312,23 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
   {
     const std::vector<float> single_ego_agent_past =
       preprocess::create_ego_agent_past(ego_history_, EGO_HISTORY_SHAPE[1], map_to_ego_transform);
-    input_data_map["ego_agent_past"] = replicate_for_batch(single_ego_agent_past);
+    input_data_map["ego_agent_past"] =
+      utils::replicate_for_batch(single_ego_agent_past, params_.batch_size);
   }
   // Ego state
   {
-    EgoState ego_state(
+    const auto ego_current_state = preprocess::create_ego_current_state(
       frame_context.ego_kinematic_state, frame_context.ego_acceleration,
       static_cast<float>(vehicle_info_.wheel_base_m));
-    input_data_map["ego_current_state"] = replicate_for_batch(ego_state.as_array());
+    input_data_map["ego_current_state"] =
+      utils::replicate_for_batch(ego_current_state, params_.batch_size);
   }
   // Agent data on ego reference frame
   {
     const auto neighbor_agents_past = flatten_histories_to_vector(
       frame_context.ego_centric_neighbor_histories, MAX_NUM_NEIGHBORS, INPUT_T + 1);
-    input_data_map["neighbor_agents_past"] = replicate_for_batch(neighbor_agents_past);
+    input_data_map["neighbor_agents_past"] =
+      utils::replicate_for_batch(neighbor_agents_past, params_.batch_size);
   }
   // Static objects
   // TODO(Daniel): add static objects
@@ -333,7 +336,8 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     std::vector<int64_t> single_batch_shape(
       STATIC_OBJECTS_SHAPE.begin() + 1, STATIC_OBJECTS_SHAPE.end());
     auto static_objects_data = utils::create_float_data(single_batch_shape, 0.0f);
-    input_data_map["static_objects"] = replicate_for_batch(static_objects_data);
+    input_data_map["static_objects"] =
+      utils::replicate_for_batch(static_objects_data, params_.batch_size);
   }
 
   // map data on ego reference frame
@@ -342,8 +346,9 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
       map_to_ego_transform, center_x, center_y, NUM_SEGMENTS_IN_LANE);
     const auto [lanes, lanes_speed_limit] = lane_segment_context_->create_tensor_data_from_indices(
       map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_LANE);
-    input_data_map["lanes"] = replicate_for_batch(lanes);
-    input_data_map["lanes_speed_limit"] = replicate_for_batch(lanes_speed_limit);
+    input_data_map["lanes"] = utils::replicate_for_batch(lanes, params_.batch_size);
+    input_data_map["lanes_speed_limit"] =
+      utils::replicate_for_batch(lanes_speed_limit, params_.batch_size);
   }
 
   // route data on ego reference frame
@@ -354,22 +359,23 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     const auto [route_lanes, route_lanes_speed_limit] =
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
-    input_data_map["route_lanes"] = replicate_for_batch(route_lanes);
-    input_data_map["route_lanes_speed_limit"] = replicate_for_batch(route_lanes_speed_limit);
+    input_data_map["route_lanes"] = utils::replicate_for_batch(route_lanes, params_.batch_size);
+    input_data_map["route_lanes_speed_limit"] =
+      utils::replicate_for_batch(route_lanes_speed_limit, params_.batch_size);
   }
 
   // polygons
   {
     const auto & polygons =
       lane_segment_context_->create_polygon_tensor(map_to_ego_transform, center_x, center_y);
-    input_data_map["polygons"] = replicate_for_batch(polygons);
+    input_data_map["polygons"] = utils::replicate_for_batch(polygons, params_.batch_size);
   }
 
   // line strings
   {
     const auto & line_strings =
       lane_segment_context_->create_line_string_tensor(map_to_ego_transform, center_x, center_y);
-    input_data_map["line_strings"] = replicate_for_batch(line_strings);
+    input_data_map["line_strings"] = utils::replicate_for_batch(line_strings, params_.batch_size);
   }
 
   // goal pose
@@ -391,7 +397,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
       utils::rotation_matrix_to_cos_sin(goal_pose_ego_4x4.block<3, 3>(0, 0));
 
     std::vector<float> single_goal_pose = {x, y, cos_yaw, sin_yaw};
-    input_data_map["goal_pose"] = replicate_for_batch(single_goal_pose);
+    input_data_map["goal_pose"] = utils::replicate_for_batch(single_goal_pose, params_.batch_size);
   }
 
   // ego shape
@@ -402,7 +408,7 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
     const float vehicle_width = static_cast<float>(
       vehicle_info_.left_overhang_m + vehicle_info_.wheel_tread_m + vehicle_info_.right_overhang_m);
     std::vector<float> single_ego_shape = {wheel_base, vehicle_length, vehicle_width};
-    input_data_map["ego_shape"] = replicate_for_batch(single_ego_shape);
+    input_data_map["ego_shape"] = utils::replicate_for_batch(single_ego_shape, params_.batch_size);
   }
 
   // turn indicators
@@ -414,27 +420,11 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
         static_cast<int64_t>(turn_indicators_history_.size()) - 1 - t, static_cast<int64_t>(0));
       single_turn_indicators[INPUT_T - t] = turn_indicators_history_[index].report;
     }
-    input_data_map["turn_indicators"] = replicate_for_batch(single_turn_indicators);
+    input_data_map["turn_indicators"] =
+      utils::replicate_for_batch(single_turn_indicators, params_.batch_size);
   }
 
   return input_data_map;
-}
-
-std::vector<float> DiffusionPlanner::replicate_for_batch(
-  const std::vector<float> & single_data) const
-{
-  const int batch_size = params_.batch_size;
-  const size_t single_size = single_data.size();
-  const size_t total_size = static_cast<size_t>(batch_size) * single_size;
-
-  std::vector<float> batch_data;
-  batch_data.reserve(total_size);
-
-  for (int i = 0; i < batch_size; ++i) {
-    batch_data.insert(batch_data.end(), single_data.begin(), single_data.end());
-  }
-
-  return batch_data;
 }
 
 void DiffusionPlanner::publish_debug_markers(

@@ -133,18 +133,27 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   ekf_rate_.filtered_scale_initialized_ = false;
   ekf_rate_.n_big_changes_detected_ = 0;
 
-  ekf_angle_.x_state_(0) = 0.0;            // angle
-  ekf_angle_.x_state_(1) = initial_scale;  // estimated scale
-  ekf_angle_.estimated_scale_angle_ = initial_scale;
+  ekf_angle_.initial_scale_ = initial_scale;
+  ekf_angle_.x_state_(0) = 0.0;                        // angle
+  ekf_angle_.x_state_(1) = ekf_angle_.initial_scale_;  // estimated scale
+  ekf_angle_.estimated_scale_angle_ = ekf_angle_.initial_scale_;
   ekf_angle_.max_variance_p_angle_ = declare_parameter<double>("ekf_angle.variance_p_angle");
-  double noise_ekf_r_angle = declare_parameter<double>("ekf_angle.measurement_noise_r_angle");
-  ekf_angle_.p_angle_ << ekf_angle_.max_variance_p_angle_, 0, 0, ekf_angle_.max_variance_p_angle_;
+  ekf_angle_.noise_ekf_r_angle_ = declare_parameter<double>("ekf_angle.measurement_noise_r_angle");
   ekf_angle_.q_angle_ << 0, 0, 0, declare_parameter<double>("ekf_angle.process_noise_q_angle");
-  ekf_angle_.r_angle_ << noise_ekf_r_angle * noise_ekf_r_angle;
-  ekf_angle_.filtered_scale_angle_ = initial_scale;
+  ekf_angle_.p_angle_ << ekf_angle_.max_variance_p_angle_, 0, 0, ekf_angle_.max_variance_p_angle_;
+  ekf_angle_.r_angle_ << ekf_angle_.noise_ekf_r_angle_ * ekf_angle_.noise_ekf_r_angle_;
+  ekf_angle_.filtered_scale_angle_ = ekf_angle_.initial_scale_;
   ekf_angle_.has_gyro_yaw_angle_init_ = false;
   ekf_angle_.min_covariance_angle_ = declare_parameter<double>("ekf_angle.min_covariance_angle");
   ekf_angle_.decay_coefficient_ = declare_parameter<double>("ekf_angle.decay_coefficient");
+  ekf_angle_.in_bounds_sample_count_ = 0;
+  ekf_angle_.samples_in_bounds_to_init_ =
+    declare_parameter<int>("ekf_angle.samples_in_bounds_to_init");
+  ekf_angle_.filter_initialized_ = false;
+  ekf_angle_.reinitialization_count_ = 0;
+  ekf_angle_.max_reinitialization_retries_ =
+    declare_parameter<int>("ekf_angle.max_reinitialization_retries");
+  ekf_angle_.reinitialization_failed_ = false;
 
   scale_imu_.modify_imu_scale_ = declare_parameter<bool>("scale_imu_injection.modify_imu_scale");
   scale_imu_.drift_scale_ = declare_parameter<double>("scale_imu_injection.drift_scale");
@@ -326,11 +335,83 @@ double GyroBiasEstimator::compute_yaw_rate_from_quat(
   return angular_velocity.z();
 }
 
-void GyroBiasEstimator::update_angle_ekf(
-  double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const
+void GyroBiasEstimator::reinitialize_angle_ekf(EKFEstimateScaleAngleVars & ekf_angle)
+{
+  ekf_angle.x_state_(0) = 0.0;                       // angle
+  ekf_angle.x_state_(1) = ekf_angle.initial_scale_;  // estimated scale
+  ekf_angle.estimated_scale_angle_ = ekf_angle.initial_scale_;
+  ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
+  ekf_angle.q_angle_ << 0, 0, 0, ekf_angle.process_noise_q_angle_;
+  ekf_angle.r_angle_ << ekf_angle.noise_ekf_r_angle_ * ekf_angle.noise_ekf_r_angle_;
+  ekf_angle.filtered_scale_angle_ = ekf_angle.initial_scale_;
+  ekf_angle.has_gyro_yaw_angle_init_ = false;
+  ekf_angle.in_bounds_sample_count_ = 0;
+}
+
+void GyroBiasEstimator::update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle)
 {
   const double angle_tolerance_eval = 0.1;  // radians
 
+  // If reinitialization has failed (max retries exceeded), don't update EKF
+  if (ekf_angle.reinitialization_failed_) {
+    return;
+  }
+
+  // Check if estimated scale falls outside the allowed tolerances
+  if (
+    ekf_angle.estimated_scale_angle_ < min_allowed_scale_ ||
+    ekf_angle.estimated_scale_angle_ > max_allowed_scale_) {
+    // If filter is not yet initialized and scale goes out of bounds, reinitialize
+    if (!ekf_angle.filter_initialized_) {
+      ekf_angle.in_bounds_sample_count_ = 0;
+
+      // Check if max retries exceeded
+      if (ekf_angle.reinitialization_count_ >= ekf_angle.max_reinitialization_retries_) {
+        ekf_angle.reinitialization_failed_ = true;
+        gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+        gyro_info_.scale_status_summary = "ERR";
+        gyro_info_.scale_summary_message =
+          "EKF angle scale reinitialization failed after maximum attempts";
+        RCLCPP_ERROR(
+          this->get_logger(),
+          "Failed to initialize EKF angle after %d attempts. Scale: %.6f, limits: [%.6f, %.6f]",
+          ekf_angle.max_reinitialization_retries_, ekf_angle.estimated_scale_angle_,
+          min_allowed_scale_, max_allowed_scale_);
+        return;
+      }
+
+      ekf_angle.reinitialization_count_++;
+      reinitialize_angle_ekf(ekf_angle);
+      gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      RCLCPP_WARN(
+        this->get_logger(), "EKF angle scale out of bounds (%.6f). Reinitialization attempt %d/%d",
+        ekf_angle.estimated_scale_angle_, ekf_angle.reinitialization_count_,
+        ekf_angle.max_reinitialization_retries_);
+      gyro_info_.scale_summary_message = "EKF angle scale out of bounds, reinitializing";
+      return;
+    }
+    // If already initialized, continue updating EKF normally
+  } else {
+    // Scale is within bounds - track consecutive in-bounds samples for initialization
+    if (!ekf_angle.filter_initialized_) {
+      ekf_angle.in_bounds_sample_count_++;
+
+      // Initialize filtered_scale_angle_ once we have enough consecutive in-bounds samples
+      if (ekf_angle.in_bounds_sample_count_ >= ekf_angle.samples_in_bounds_to_init_) {
+        ekf_angle.filtered_scale_angle_ = ekf_angle.estimated_scale_angle_;
+        ekf_angle.filter_initialized_ = true;
+        gyro_info_.scale_summary_message = "EKF angle scale successfully initialized";
+        RCLCPP_INFO(
+          this->get_logger(),
+          "EKF angle filter successfully initialized. filtered_scale_angle = %.6f after %d "
+          "consecutive in-bounds samples (reinitializations: %d)",
+          ekf_angle.filtered_scale_angle_, ekf_angle.samples_in_bounds_to_init_,
+          ekf_angle.reinitialization_count_);
+      }
+    }
+  }
+
+  // EKF update only if the angle difference is within tolerance
   if (std::abs(yaw_ndt - ekf_angle.x_state_(0)) < angle_tolerance_eval) {
     Eigen::Matrix<double, 1, 2> h_matrix;
     h_matrix << 1, 0;
@@ -343,8 +424,11 @@ void GyroBiasEstimator::update_angle_ekf(
     ekf_angle.x_state_ = ekf_angle.x_state_ + k_matrix * y;
     ekf_angle.estimated_scale_angle_ = ekf_angle.x_state_(1);
     ekf_angle.p_angle_ = (Eigen::Matrix2d::Identity() - k_matrix * h_matrix) * ekf_angle.p_angle_;
-    ekf_angle.filtered_scale_angle_ =
-      alpha_ * ekf_angle.filtered_scale_angle_ + (1.0 - alpha_) * ekf_angle.estimated_scale_angle_;
+    // Update filtered scale if initial value was in bounds
+    if (ekf_angle.filter_initialized_) {
+      ekf_angle.filtered_scale_angle_ = alpha_ * ekf_angle.filtered_scale_angle_ +
+                                        (1.0 - alpha_) * ekf_angle.estimated_scale_angle_;
+    }
   }
 }
 
@@ -424,38 +508,44 @@ void GyroBiasEstimator::update_rate_ekf(
       }
     }
 
-    if (ekf_rate_state.estimated_scale_rate_ < min_allowed_scale_) {
+    if (ekf_angle_.reinitialization_failed_) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
       gyro_info_.scale_status_summary = "ERR";
       gyro_info_.scale_summary_message =
-        "Scale is under the minimum, check the IMU, NDT device or TF.";
-    } else if (ekf_rate_state.estimated_scale_rate_ > max_allowed_scale_) {
+        "EKF angle scale reinitialization failed after maximum attempts. Check IMU, NDT device or "
+        "TF.";
+    } else if (
+      ekf_angle_.filtered_scale_angle_ < min_allowed_scale_ ||
+      ekf_angle_.filtered_scale_angle_ > max_allowed_scale_) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
       gyro_info_.scale_status_summary = "ERR";
       gyro_info_.scale_summary_message =
-        "Scale is over the maximum, check the IMU, NDT device or TF.";
+        "Scale is out of the limits, check the IMU, NDT device or TF.";
     } else if (ekf_rate_state.n_big_changes_detected_ == 0) {
       gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::OK;
     }
 
     // Check if the estimated scale is within the allowed range or if a big change is detected
-    if (
-      ekf_rate_state.estimated_scale_rate_ >=
-        ekf_rate_state.filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
-      ekf_rate_state.estimated_scale_rate_ <=
-        ekf_rate_state.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
-      ekf_rate_state.filtered_scale_rate_ = alpha_ * ekf_rate_state.filtered_scale_rate_ +
-                                            (1 - alpha_) * ekf_rate_state.estimated_scale_rate_;
-      ekf_rate_state.n_big_changes_detected_ = 0;
-    } else {
-      ekf_rate_state.n_big_changes_detected_++;
-      const int n_iterations_until_big_change_error = 10;  // 10 iterations approx 1 seconds
-      if (ekf_rate_state.n_big_changes_detected_ >= n_iterations_until_big_change_error) {
-        gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-        gyro_info_.scale_status_summary = "ERR";
-        gyro_info_.scale_summary_message =
-          "Large gyro scale change detected in short period of time, check the IMU, NDT device "
-          "or TF.";
+    // only after the angle EKF initialized successfully
+    if (ekf_angle_.filter_initialized_) {
+      if (
+        ekf_rate_state.estimated_scale_rate_ >=
+          ekf_rate_state.filtered_scale_rate_ * (1 - percentage_scale_rate_allow_correct_) &&
+        ekf_rate_state.estimated_scale_rate_ <=
+          ekf_rate_state.filtered_scale_rate_ * (1 + percentage_scale_rate_allow_correct_)) {
+        ekf_rate_state.filtered_scale_rate_ = alpha_ * ekf_rate_state.filtered_scale_rate_ +
+                                              (1 - alpha_) * ekf_rate_state.estimated_scale_rate_;
+        ekf_rate_state.n_big_changes_detected_ = 0;
+      } else {
+        ekf_rate_state.n_big_changes_detected_++;
+        const int n_iterations_until_big_change_error = 10;  // 10 iterations approx 1 seconds
+        if (ekf_rate_state.n_big_changes_detected_ >= n_iterations_until_big_change_error) {
+          gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+          gyro_info_.scale_status_summary = "ERR";
+          gyro_info_.scale_summary_message =
+            "Large gyro scale change detected in short period of time, check the IMU, NDT device "
+            "or TF.";
+        }
       }
     }
 

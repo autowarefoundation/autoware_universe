@@ -19,22 +19,36 @@
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/logging.hpp>
 
+#include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
-
 namespace autoware::trajectory_optimizer::plugin
 {
 
-void TrajectoryVelocityOptimizer::set_up_velocity_smoother(
-  rclcpp::Node * node_ptr, const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
+void TrajectoryVelocityOptimizer::initialize(
+  const std::string & name, rclcpp::Node * node_ptr,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
-  const auto vehicle_info =
-    autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
-  double wheelbase = vehicle_info.wheel_base_m;  // vehicle_info.wheel_base_m;
-  jerk_filtered_smoother_ = std::make_shared<JerkFilteredSmoother>(*node_ptr, time_keeper);
-  jerk_filtered_smoother_->setWheelBase(wheelbase);
+  TrajectoryOptimizerPluginBase::initialize(name, node_ptr, time_keeper);
+
+  set_up_params();
+
+  sub_planning_velocity_ =
+    std::make_shared<autoware_utils_rclcpp::InterProcessPollingSubscriber<VelocityLimit>>(
+      node_ptr, "~/input/external_velocity_limit_mps", rclcpp::QoS{1});
+
+  pub_velocity_limit_ = node_ptr->create_publisher<VelocityLimit>(
+    "~/output/current_velocity_limit_mps", rclcpp::QoS{1}.transient_local());
+
+  // publish default max velocity
+  VelocityLimit max_vel_msg{};
+  max_vel_msg.stamp = node_ptr->now();
+  max_vel_msg.max_velocity = static_cast<float>(velocity_params_.default_max_velocity_mps);
+  pub_velocity_limit_->publish(max_vel_msg);
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
@@ -51,11 +65,19 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   const auto & current_linear_acceleration = current_acceleration.accel.accel.linear.x;
   const double & target_pull_out_speed_mps = velocity_params_.target_pull_out_speed_mps;
   const double & target_pull_out_acc_mps2 = velocity_params_.target_pull_out_acc_mps2;
-  const double & max_speed_mps = velocity_params_.max_speed_mps;
 
+  // Initialize max velocity per point with global max speed
+  std::vector<double> max_velocity_per_point(
+    traj_points.size(), std::numeric_limits<double>::max());
+
+  const bool max_speed_update_in_place = !velocity_params_.smooth_velocities;
+
+  // Apply lateral acceleration limiting and update max velocity constraints
   if (velocity_params_.limit_lateral_acceleration) {
+    // limit_lateral_acceleration returns per-point max velocities based on curvature
     trajectory_velocity_optimizer_utils::limit_lateral_acceleration(
-      traj_points, velocity_params_.max_lateral_accel_mps2, data.current_odometry);
+      traj_points, max_velocity_per_point, velocity_params_.max_lateral_accel_mps2,
+      velocity_params_.min_limited_speed_mps, data.current_odometry, max_speed_update_in_place);
   }
 
   auto initial_motion_speed =
@@ -70,20 +92,37 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
       static_cast<float>(initial_motion_acc));
   }
 
+  // Apply global speed limit to trajectory and max velocity array
   if (velocity_params_.limit_speed) {
-    trajectory_velocity_optimizer_utils::set_max_velocity(
-      traj_points, static_cast<float>(max_speed_mps));
+    const auto external_velocity_limit = sub_planning_velocity_->take_data();
+    const auto max_speed_mps = (external_velocity_limit)
+                                 ? static_cast<float>(external_velocity_limit->max_velocity)
+                                 : static_cast<float>(velocity_params_.default_max_velocity_mps);
+    if (max_speed_update_in_place) {
+      // Directly set max velocity on trajectory points
+      trajectory_velocity_optimizer_utils::set_max_velocity(traj_points, max_speed_mps);
+    } else {
+      // Update per-point max velocity constraints
+      for (auto & v : max_velocity_per_point) {
+        v = std::min(v, static_cast<double>(max_speed_mps));
+      }
+    }
+    if (external_velocity_limit) {
+      pub_velocity_limit_->publish(*external_velocity_limit);
+    }
   }
 
   if (velocity_params_.smooth_velocities) {
-    if (!jerk_filtered_smoother_) {
-      set_up_velocity_smoother(get_node_ptr(), get_time_keeper());
+    if (!continuous_jerk_smoother_) {
+      continuous_jerk_smoother_ =
+        std::make_shared<ContinuousJerkSmoother>(velocity_params_.continuous_jerk_smoother_params);
     }
     InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
+    // Pass max velocity per point to enforce lateral acceleration as hard constraint in QP
     trajectory_velocity_optimizer_utils::filter_velocity(
       traj_points, initial_motion, velocity_params_.nearest_dist_threshold_m,
       autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
-      jerk_filtered_smoother_, current_odometry);
+      continuous_jerk_smoother_, current_odometry, max_velocity_per_point);
   }
 }
 
@@ -100,10 +139,12 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.target_pull_out_speed_mps");
   velocity_params_.target_pull_out_acc_mps2 = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.target_pull_out_acc_mps2");
-  velocity_params_.max_speed_mps =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_velocity_optimizer.max_speed_mps");
   velocity_params_.max_lateral_accel_mps2 = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_velocity_optimizer.max_lateral_accel_mps2");
+  velocity_params_.min_limited_speed_mps = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.min_limited_speed_mps");
+  velocity_params_.default_max_velocity_mps =
+    get_or_declare_parameter<double>(*node_ptr, "max_vel");
   velocity_params_.set_engage_speed =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.set_engage_speed");
   velocity_params_.limit_speed =
@@ -112,6 +153,27 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.limit_lateral_acceleration");
   velocity_params_.smooth_velocities =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.smooth_velocities");
+
+  // Continuous jerk smoother parameters - QP weights
+  auto & cjs = velocity_params_.continuous_jerk_smoother_params;
+  cjs.jerk_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight");
+  cjs.over_v_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight");
+  cjs.over_a_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight");
+  cjs.over_j_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight");
+  cjs.velocity_tracking_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight");
+  cjs.accel_tracking_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight");
+
+  // Kinematic limits - loaded from common namespace (limit.*)
+  cjs.max_accel = get_or_declare_parameter<double>(*node_ptr, "limit.max_acc");
+  cjs.min_decel = get_or_declare_parameter<double>(*node_ptr, "limit.min_acc");
+  cjs.max_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.max_jerk");
+  cjs.min_jerk = get_or_declare_parameter<double>(*node_ptr, "limit.min_jerk");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_parameter(
@@ -132,10 +194,11 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
     parameters, "trajectory_velocity_optimizer.target_pull_out_acc_mps2",
     velocity_params_.target_pull_out_acc_mps2);
   update_param(
-    parameters, "trajectory_velocity_optimizer.max_speed_mps", velocity_params_.max_speed_mps);
-  update_param(
     parameters, "trajectory_velocity_optimizer.max_lateral_accel_mps2",
     velocity_params_.max_lateral_accel_mps2);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.min_limited_speed_mps",
+    velocity_params_.min_limited_speed_mps);
   update_param(
     parameters, "trajectory_velocity_optimizer.set_engage_speed",
     velocity_params_.set_engage_speed);
@@ -147,6 +210,38 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
   update_param(
     parameters, "trajectory_velocity_optimizer.smooth_velocities",
     velocity_params_.smooth_velocities);
+
+  // Continuous jerk smoother parameters - QP weights
+  auto & cjs = velocity_params_.continuous_jerk_smoother_params;
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight",
+    cjs.jerk_weight);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight",
+    cjs.over_v_weight);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight",
+    cjs.over_a_weight);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight",
+    cjs.over_j_weight);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight",
+    cjs.velocity_tracking_weight);
+  update_param(
+    parameters, "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight",
+    cjs.accel_tracking_weight);
+
+  // Kinematic limits - from common namespace (limit.*)
+  update_param(parameters, "limit.max_acc", cjs.max_accel);
+  update_param(parameters, "limit.min_acc", cjs.min_decel);
+  update_param(parameters, "limit.max_jerk", cjs.max_jerk);
+  update_param(parameters, "limit.min_jerk", cjs.min_jerk);
+
+  // Update smoother parameters if it exists
+  if (continuous_jerk_smoother_) {
+    continuous_jerk_smoother_->set_params(cjs);
+  }
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

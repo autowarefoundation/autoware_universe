@@ -21,9 +21,13 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/convert.hpp>
+#include <tf2/transform_datatypes.hpp>
 
 #include "autoware_perception_msgs/msg/tracked_object.hpp"
 #include <geometry_msgs/msg/transform.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/optional.hpp>
 
@@ -32,16 +36,6 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-#include <tf2/LinearMath/Transform.hpp>
-#include <tf2/convert.hpp>
-#include <tf2/transform_datatypes.hpp>
-
 #include <tf2_ros/buffer.h>
 
 #include <string>
