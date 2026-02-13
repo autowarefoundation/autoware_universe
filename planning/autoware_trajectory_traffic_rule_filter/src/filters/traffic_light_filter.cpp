@@ -186,19 +186,10 @@ bool TrafficLightFilter::can_pass_amber_light(
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = distance_to_stop_line < reachable_distance;
 
-  if (enable_pass_judge && !stoppable) {
-    // Cannot stop under acceleration and jerk limits.
-    // However, ego vehicle can't enter the intersection while the light is yellow.
-    // It is called dilemma zone. Make a stop decision to be safe.
-    if (!reachable) {
-      // dilemma zone: emergency stop
-      auto tmp_clock = rclcpp::Clock();
-      RCLCPP_WARN_THROTTLE(
-        *logger_, tmp_clock, 1000,
-        "[traffic_light] cannot pass through intersection during yellow lamp!");
-      return false;
-    }
-  } else {
+  if (enable_pass_judge && stoppable && !reachable) {
+    auto tmp_clock = rclcpp::Clock();
+    RCLCPP_WARN_THROTTLE(
+      *logger_, tmp_clock, 1000, "cannot pass through intersection during yellow lamp.");
     return false;
   }
   return true;
