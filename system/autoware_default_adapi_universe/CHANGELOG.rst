@@ -2,8 +2,8 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: system related packages support jazzy (`#11626 <https://github.com/autowarefoundation/autoware_universe/issues/11626>`_)
 * Contributors: Ryohsuke Mitsudome, 心刚

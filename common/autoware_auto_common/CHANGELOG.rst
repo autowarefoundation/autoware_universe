@@ -2,8 +2,8 @@
 Changelog for package autoware_auto_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: control : fix contol packages compile error when using ros2 jazzy (`#11556 <https://github.com/autowarefoundation/autoware_universe/issues/11556>`_)
 * Contributors: Ryohsuke Mitsudome, 心刚

@@ -2,8 +2,8 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_lidar_centerpoint): add distance-based confidence thresholds to CenterPoint (`#12026 <https://github.com/autowarefoundation/autoware_universe/issues/12026>`_)
   * Add temp

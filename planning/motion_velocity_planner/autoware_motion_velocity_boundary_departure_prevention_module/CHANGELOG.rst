@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(boundary_departure): rename Abnormalities type (`#12071 <https://github.com/autowarefoundation/autoware_universe/issues/12071>`_)
   * refactor(boundary_departure): rename Abnormalities type

@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_lidar_transfusion): update nvcc flags (`#12051 <https://github.com/autowarefoundation/autoware_universe/issues/12051>`_)
   Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>

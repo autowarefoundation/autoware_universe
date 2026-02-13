@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_sampling_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(behavior_path_planner node, common, sampling_planner): replace getClosesetLanelet to handle invalid value (`#12017 <https://github.com/autowarefoundation/autoware_universe/issues/12017>`_)
 * fix(behavior_path_sampling_planner_module): avoid dangling pointers (`#11926 <https://github.com/autowarefoundation/autoware_universe/issues/11926>`_)

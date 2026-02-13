@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_safety_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(trajectory_safety_filter): fix maintainer (`#12095 <https://github.com/autowarefoundation/autoware_universe/issues/12095>`_)
   put back saito-san

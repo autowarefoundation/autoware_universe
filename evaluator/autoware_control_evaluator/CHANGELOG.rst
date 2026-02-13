@@ -2,8 +2,8 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(evaluator): migrate deprecated getClosestLanelet() (`#11987 <https://github.com/autowarefoundation/autoware_universe/issues/11987>`_)
 * Contributors: Mamoru Sobue, Ryohsuke Mitsudome

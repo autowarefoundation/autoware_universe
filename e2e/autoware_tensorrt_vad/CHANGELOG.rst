@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_vad
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_tensorrt_vad): update nvcc flags (`#12044 <https://github.com/autowarefoundation/autoware_universe/issues/12044>`_)
   Co-authored-by: Max-Bin <vborisw@gmail.com>

@@ -2,8 +2,8 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * test(blockage_diag): add unit tests to classes for blockage and dust detection (`#12029 <https://github.com/autowarefoundation/autoware_universe/issues/12029>`_)
   * test(blockage_diag): add unit tests for blockage detection functionality

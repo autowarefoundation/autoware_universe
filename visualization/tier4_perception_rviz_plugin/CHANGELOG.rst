@@ -2,8 +2,8 @@
 Changelog for package tier4_perception_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: visualization related packages support jazzy (`#11621 <https://github.com/autowarefoundation/autoware_universe/issues/11621>`_)
   fix::visualization::fix visualization packages compile error when using ros2 jazzy

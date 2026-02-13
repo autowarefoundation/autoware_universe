@@ -2,8 +2,8 @@
 Changelog for package autoware_scenario_simulator_v2_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(simulator): enabled grouping and outputting of diagnostic errors (`#11798 <https://github.com/autowarefoundation/autoware_universe/issues/11798>`_)
   * feat: group diagnostic information and output levels

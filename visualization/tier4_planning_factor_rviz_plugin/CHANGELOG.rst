@@ -2,8 +2,8 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info (`#11827 <https://github.com/autowarefoundation/autoware_universe/issues/11827>`_)
   * refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info

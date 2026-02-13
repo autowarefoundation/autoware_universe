@@ -2,8 +2,8 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(path_optimizer): eliminate redundant move (`#11874 <https://github.com/autowarefoundation/autoware_universe/issues/11874>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome

@@ -2,8 +2,8 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore: use local default config files instead of autoware_launch and fix arg propagation chain (`#12031 <https://github.com/autowarefoundation/autoware_universe/issues/12031>`_)
   * use local default config files instead of autoware_launch

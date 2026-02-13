@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(behavior_velocity_crosswalk_module): use Trajectory instead of PathWithLaneId (`#11840 <https://github.com/autowarefoundation/autoware_universe/issues/11840>`_)
   Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>

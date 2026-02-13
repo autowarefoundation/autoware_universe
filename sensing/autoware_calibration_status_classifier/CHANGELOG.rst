@@ -2,8 +2,8 @@
 Changelog for package autoware_calibration_status_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_calibration_status_classifier): update nvcc flags (`#12058 <https://github.com/autowarefoundation/autoware_universe/issues/12058>`_)
 * chore: update `autoware_calibration_status_classifier` maintainer (`#12035 <https://github.com/autowarefoundation/autoware_universe/issues/12035>`_)

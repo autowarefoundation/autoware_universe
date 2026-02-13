@@ -2,8 +2,8 @@
 Changelog for package autoware_remaining_distance_time_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(planning): deprecate getClosestLanelet usage (`#12032 <https://github.com/autowarefoundation/autoware_universe/issues/12032>`_)
 * Contributors: Mamoru Sobue, Ryohsuke Mitsudome

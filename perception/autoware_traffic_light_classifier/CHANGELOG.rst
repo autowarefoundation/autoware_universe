@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(traffic_light_classifier): add under exposure detection (`#11818 <https://github.com/autowarefoundation/autoware_universe/issues/11818>`_)
   * add under exposure detection

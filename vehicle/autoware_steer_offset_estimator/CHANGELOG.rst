@@ -2,8 +2,8 @@
 Changelog for package autoware_steer_offset_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(steer_offset_estimator): implement new steer offset estimator using kalman filter (`#11911 <https://github.com/autowarefoundation/autoware_universe/issues/11911>`_)
   * refactor(steer_offset_estimator): restructure node and estimator implementation

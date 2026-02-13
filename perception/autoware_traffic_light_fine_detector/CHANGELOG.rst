@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_fine_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(autoware_traffic_light_fine_detector): remove cudnn dependency (`#11900 <https://github.com/autowarefoundation/autoware_universe/issues/11900>`_)
 * Contributors: Amadeusz Szymko, Ryohsuke Mitsudome

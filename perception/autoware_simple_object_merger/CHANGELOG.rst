@@ -2,8 +2,8 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_simple_object_merger): make the merger parallel  (`#11832 <https://github.com/autowarefoundation/autoware_universe/issues/11832>`_)
   * refactor(object_merger): improve timestamp handling in onTimer method

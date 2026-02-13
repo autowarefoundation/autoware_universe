@@ -2,8 +2,8 @@
 Changelog for package autoware_object_sorter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_object_sorter): fix object transformation (`#11957 <https://github.com/autowarefoundation/autoware_universe/issues/11957>`_)
   * fix object transform

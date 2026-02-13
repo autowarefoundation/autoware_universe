@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(out_of_lane): clarify boolean argument name to avoid semantic ambiguity (`#12062 <https://github.com/autowarefoundation/autoware_universe/issues/12062>`_)
   * refactor(out_of_lane): clarify boolean argument in collision avoidance calculation

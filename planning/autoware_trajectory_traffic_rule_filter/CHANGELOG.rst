@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_traffic_rule_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(trajectory_ranker,trajectory_traffic_rule_filter): add maintainers (`#12020 <https://github.com/autowarefoundation/autoware_universe/issues/12020>`_)
   chore(trajectory_ranker,traffic_rule_filter): add maintainers

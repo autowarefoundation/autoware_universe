@@ -2,8 +2,8 @@
 Changelog for package autoware_ptv3
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_ptv3): update nvcc flags (`#12053 <https://github.com/autowarefoundation/autoware_universe/issues/12053>`_)
 * chore(autoware_ptv3): remove cudnn dependency (`#11894 <https://github.com/autowarefoundation/autoware_universe/issues/11894>`_)

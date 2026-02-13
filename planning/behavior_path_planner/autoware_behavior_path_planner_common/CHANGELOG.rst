@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(lane_change): fix incorrect activation of lane change module (`#12039 <https://github.com/autowarefoundation/autoware_universe/issues/12039>`_)
   * refactor code to get lc target lane, ignore lanes behind ego

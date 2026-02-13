@@ -2,8 +2,8 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(vehicle_cmd_gate): fix funcArgNamesDifferent (`#11977 <https://github.com/autowarefoundation/autoware_universe/issues/11977>`_)
   fix(vehicle_cmd_gate):

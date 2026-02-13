@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_frnet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_lidar_frnet): update nvcc flags (`#12050 <https://github.com/autowarefoundation/autoware_universe/issues/12050>`_)
 * chore(autoware_lidar_frnet): remove cudnn dependency (`#11888 <https://github.com/autowarefoundation/autoware_universe/issues/11888>`_)

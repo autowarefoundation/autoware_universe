@@ -2,8 +2,8 @@
 Changelog for package autoware_elevation_map_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(elevation_map_loader): fix jazzy build (`#11923 <https://github.com/autowarefoundation/autoware_universe/issues/11923>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome

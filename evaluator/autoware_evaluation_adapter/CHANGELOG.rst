@@ -2,8 +2,8 @@
 Changelog for package autoware_evaluation_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * chore: match all package versions
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(tier4_autoware_api_launch): remove tier4 api adapter (`#11831 <https://github.com/autowarefoundation/autoware_universe/issues/11831>`_)

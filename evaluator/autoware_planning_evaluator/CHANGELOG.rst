@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_planning_evaluator): sort predicted paths (`#12034 <https://github.com/autowarefoundation/autoware_universe/issues/12034>`_)
   fix predicted path sorting bug

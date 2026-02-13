@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_occlusion_predictor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(traffic_light_occlusion_predictor): improve type safety (`#11916 <https://github.com/autowarefoundation/autoware_universe/issues/11916>`_)
 * refactor(traffic_light_occlusion_predictor): rename synchronizer\_ to synchronizer_car\_ (`#11915 <https://github.com/autowarefoundation/autoware_universe/issues/11915>`_)

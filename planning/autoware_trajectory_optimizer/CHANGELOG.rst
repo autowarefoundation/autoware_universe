@@ -2,8 +2,8 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_trajectory_optimizer): velocity optimizer refactor (`#12021 <https://github.com/autowarefoundation/autoware_universe/issues/12021>`_)
   * feat: diffusion planner optimizer refactor

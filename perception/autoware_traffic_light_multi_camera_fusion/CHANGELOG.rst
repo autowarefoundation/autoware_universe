@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_multi_camera_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_traffic_light_multi_camera_fusion): use valid color and use whole elements as state (`#11989 <https://github.com/autowarefoundation/autoware_universe/issues/11989>`_)
   * feat(autoware_traffic_light_multi_camera_fusion): remove unknown and use whole elements as state

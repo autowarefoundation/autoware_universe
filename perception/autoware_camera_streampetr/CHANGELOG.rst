@@ -2,8 +2,8 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(stream_petr): remove invalid thrust stream policy for copy operations (`#12064 <https://github.com/autowarefoundation/autoware_universe/issues/12064>`_)
   Remove unnecessary thrust::device specification

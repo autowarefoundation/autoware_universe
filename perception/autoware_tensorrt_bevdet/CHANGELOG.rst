@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_bevdet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(autoware_tensorrt_bevdet): remove cudnn dependency (`#11904 <https://github.com/autowarefoundation/autoware_universe/issues/11904>`_)
 * fix: add cv_bridge.hpp support (`#11873 <https://github.com/autowarefoundation/autoware_universe/issues/11873>`_)

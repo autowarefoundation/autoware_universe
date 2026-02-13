@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_yolox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(tensorrt_yolox): split utility functions (`#12042 <https://github.com/autowarefoundation/autoware_universe/issues/12042>`_)
   * move util functions to utils

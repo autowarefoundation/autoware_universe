@@ -2,8 +2,8 @@
 Changelog for package autoware_ground_segmentation_cuda
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * chore: match all package versions
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_ground_segmentation_cuda): update nvcc flags (`#12047 <https://github.com/autowarefoundation/autoware_universe/issues/12047>`_)

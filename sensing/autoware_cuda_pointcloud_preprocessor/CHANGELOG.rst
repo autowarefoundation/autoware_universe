@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(cuda_polar_voxel_outlier_filter): replace cub::TransformInputIterator with thrust::transform_iterator (`#12069 <https://github.com/autowarefoundation/autoware_universe/issues/12069>`_)
   * fix(cuda_polar_voxel_outlier_filter): replace cub::TransformInputIterator with thrust::transform_iterator

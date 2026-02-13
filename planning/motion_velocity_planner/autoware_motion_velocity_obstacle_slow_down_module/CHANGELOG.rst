@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(obstacle_slowdown): the second planning factor velocity is 0 (`#11984 <https://github.com/autowarefoundation/autoware_universe/issues/11984>`_)
   * fix the second planning factor velocity

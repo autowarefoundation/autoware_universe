@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * refactor(goal_planner): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet (`#11993 <https://github.com/autowarefoundation/autoware_universe/issues/11993>`_)
   refactor(start_planner): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet

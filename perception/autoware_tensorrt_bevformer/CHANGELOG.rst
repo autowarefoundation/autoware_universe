@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_bevformer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(autoware_tensorrt_bevformer): remove cudnn dependency (`#11903 <https://github.com/autowarefoundation/autoware_universe/issues/11903>`_)
 * fix(tensorrt_bevformer): initialize Eigen::Translation3d (`#11920 <https://github.com/autowarefoundation/autoware_universe/issues/11920>`_)

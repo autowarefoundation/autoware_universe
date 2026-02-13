@@ -2,8 +2,8 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(imu_scale_bias_estimator): ekf initializes only when it has in bounds samples (`#11816 <https://github.com/autowarefoundation/autoware_universe/issues/11816>`_)
   * fix: restart scale estimation if initial value is out of bounds

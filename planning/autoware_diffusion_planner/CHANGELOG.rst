@@ -2,8 +2,8 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * docs(diffusion_planner): fix README.md (`#12067 <https://github.com/autowarefoundation/autoware_universe/issues/12067>`_)
   * Fixed README.md

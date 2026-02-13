@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_dynamic_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(behavior_path_dynamic_obstacle_avoidance_module): avoid dangling pointers (`#11925 <https://github.com/autowarefoundation/autoware_universe/issues/11925>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome

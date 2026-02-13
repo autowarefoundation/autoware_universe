@@ -2,8 +2,8 @@
 Changelog for package autoware_rtc_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix: qos compatibility (`#11878 <https://github.com/autowarefoundation/autoware_universe/issues/11878>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome

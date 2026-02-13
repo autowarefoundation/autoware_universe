@@ -2,8 +2,8 @@
 Changelog for package autoware_agnocast_wrapper
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.50.0 (2026-02-14)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(agnocast): build on jazzy, remove from ground_segmentation_cuda (`#11960 <https://github.com/autowarefoundation/autoware_universe/issues/11960>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
