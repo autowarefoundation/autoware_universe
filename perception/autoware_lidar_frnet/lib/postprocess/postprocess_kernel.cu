@@ -109,9 +109,9 @@ __global__ void fill_cloud_kernel(
     }
     // Crop box filtering
     if (
-      point.x < const_crop_box_bounds[0] || point.x > const_crop_box_bounds[3] ||
-      point.y < const_crop_box_bounds[1] || point.y > const_crop_box_bounds[4] ||
-      point.z < const_crop_box_bounds[2] || point.z > const_crop_box_bounds[5]) {
+      point.x > const_crop_box_bounds[0] & point.x < const_crop_box_bounds[3] &&
+      point.y > const_crop_box_bounds[1] & point.y < const_crop_box_bounds[4] &&
+      point.z > const_crop_box_bounds[2] & point.z < const_crop_box_bounds[5]) {
       is_filtered = true;
     }
     // Process non-filtered points

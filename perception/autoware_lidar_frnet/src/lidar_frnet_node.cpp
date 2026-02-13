@@ -76,25 +76,50 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
           this->get_logger(), *this->get_clock(), 2000, "Waiting for TF: %s", ex.what());
         return;
       }
-      // Transform crop box corners
-      Eigen::Vector3d min_pt(crop_box_bounds_[0], crop_box_bounds_[1], crop_box_bounds_[2]);
-      Eigen::Vector3d max_pt(crop_box_bounds_[3], crop_box_bounds_[4], crop_box_bounds_[5]);
+
       Eigen::Affine3d tf_eigen = tf2::transformToEigen(tf);
-      Eigen::Vector3d min_pt_tf = tf_eigen * min_pt;
-      Eigen::Vector3d max_pt_tf = tf_eigen * max_pt;
-      crop_box_bounds_sensor_ = {
-        static_cast<float>(min_pt_tf.x()), static_cast<float>(min_pt_tf.y()),
-        static_cast<float>(min_pt_tf.z()), static_cast<float>(max_pt_tf.x()),
-        static_cast<float>(max_pt_tf.y()), static_cast<float>(max_pt_tf.z())};
+
+      float xmin = crop_box_bounds_[0], ymin = crop_box_bounds_[1], zmin = crop_box_bounds_[2];
+      float xmax = crop_box_bounds_[3], ymax = crop_box_bounds_[4], zmax = crop_box_bounds_[5];
+
+      std::vector<Eigen::Vector3d> corners = {
+        {xmin, ymin, zmin}, {xmin, ymin, zmax}, {xmin, ymax, zmin}, {xmin, ymax, zmax},
+        {xmax, ymin, zmin}, {xmax, ymin, zmax}, {xmax, ymax, zmin}, {xmax, ymax, zmax}};
+
+      // 2. Transform all corners and track the new min/max
+      Eigen::Vector3d new_min(
+        std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+        std::numeric_limits<double>::max());
+      Eigen::Vector3d new_max(
+        -std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(),
+        -std::numeric_limits<double>::max());
+
+      for (const auto & corner : corners) {
+        Eigen::Vector3d transformed_corner = tf_eigen * corner;
+
+        new_min.x() = std::min(new_min.x(), transformed_corner.x());
+        new_min.y() = std::min(new_min.y(), transformed_corner.y());
+        new_min.z() = std::min(new_min.z(), transformed_corner.z());
+
+        new_max.x() = std::max(new_max.x(), transformed_corner.x());
+        new_max.y() = std::max(new_max.y(), transformed_corner.y());
+        new_max.z() = std::max(new_max.z(), transformed_corner.z());
+      }
+
+      // 3. Assign the resulting AABB
+      crop_box_bounds_sensor_ = {static_cast<float>(new_min.x()), static_cast<float>(new_min.y()),
+                                 static_cast<float>(new_min.z()), static_cast<float>(new_max.x()),
+                                 static_cast<float>(new_max.y()), static_cast<float>(new_max.z())};
+
       RCLCPP_INFO(
         this->get_logger(), "Crop box in sensor frame: [%f, %f, %f, %f, %f, %f]",
         crop_box_bounds_sensor_[0], crop_box_bounds_sensor_[1], crop_box_bounds_sensor_[2],
         crop_box_bounds_sensor_[3], crop_box_bounds_sensor_[4], crop_box_bounds_sensor_[5]);
+
       tf_ready_ = true;
       tf_timer_->cancel();
       tf_listener_.reset();
       tf_buffer_.reset();
-      RCLCPP_INFO(this->get_logger(), "Crop box transform acquired and applied.");
     });
   } else {
     tf_ready_ = true;
