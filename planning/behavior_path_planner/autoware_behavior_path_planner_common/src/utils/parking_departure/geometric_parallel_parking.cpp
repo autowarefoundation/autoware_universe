@@ -17,8 +17,8 @@
 #include <autoware/behavior_path_planner_common/utils/path_utils.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
-#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
