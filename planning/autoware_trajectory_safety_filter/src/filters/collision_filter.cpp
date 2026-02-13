@@ -18,6 +18,8 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <any>
 #include <cmath>
@@ -259,11 +261,11 @@ void CollisionFilter::set_parameters(const std::unordered_map<std::string, std::
   get_value("min_value", params_.min_ttc);
 }
 
-bool CollisionFilter::is_feasible(
+std::optional<std::string> CollisionFilter::validate(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   if (!context.predicted_objects || context.predicted_objects->objects.empty()) {
-    return true;  // No objects to check collision with
+    return std::nullopt;  // No objects to check collision with
   }
 
   const auto cache =
@@ -279,12 +281,12 @@ bool CollisionFilter::is_feasible(
     // Check collision with each cached object
     for (size_t obj_idx = 0; obj_idx < cache.size(); ++obj_idx) {
       if (check_collision(point, cache, obj_idx, time_from_start)) {
-        return false;
+        return fmt::format("Collision with object at time {:.2f}s", time_from_start);
       }
     }
   }
 
-  return true;
+  return std::nullopt;
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 
