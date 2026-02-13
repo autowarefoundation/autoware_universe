@@ -93,14 +93,14 @@ void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::
   }
 }
 
-bool OutOfLaneFilter::is_feasible(
+std::optional<std::string> OutOfLaneFilter::validate(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
   if (
     !context.lanelet_map || !context.odometry || traj_points.empty() ||
     !boundary_departure_checker_) {
-    return true;
+    return {"Insufficient context data"};
   }
 
   const auto path = convert_to_path_with_lane_id(traj_points, params_.max_check_time);
@@ -110,7 +110,10 @@ bool OutOfLaneFilter::is_feasible(
     boundary_departure_checker_->checkPathWillLeaveLane(context.lanelet_map, path);
 
   // Return false if the path will leave the lane
-  return !will_leave_lane;
+  if (will_leave_lane) {
+    return {"Trajectory goes out of lane boundaries"};
+  }
+  return std::nullopt;
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 
