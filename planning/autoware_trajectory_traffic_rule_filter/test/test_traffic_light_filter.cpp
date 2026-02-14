@@ -44,6 +44,16 @@ protected:
     autoware::vehicle_info_utils::VehicleInfo vehicle_info;
     vehicle_info.max_longitudinal_offset_m = 0.0;
     filter_->set_vehicle_info(vehicle_info);
+
+    // Initialize parameters
+    traffic_rule_filter::Params params;
+    params.traffic_light_filter.max_accel = -2.8;
+    params.traffic_light_filter.max_jerk = -5.0;
+    params.traffic_light_filter.delay_response_time = 0.5;
+    params.traffic_light_filter.amber_lamp_period = 2.75;
+    params.traffic_light_filter.amber_light_stop_velocity = 1.0;
+    params.traffic_light_filter.enable_pass_judge = true;
+    filter_->set_parameters(params);
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
@@ -64,9 +74,9 @@ protected:
 
     // 4. Create Lanelet Boundaries
     lanelet::Point3d l1(lanelet::utils::getId(), 0, -5, 0);
-    lanelet::Point3d l2(lanelet::utils::getId(), 20, -5, 0);
+    lanelet::Point3d l2(lanelet::utils::getId(), 100, -5, 0);
     lanelet::Point3d r1(lanelet::utils::getId(), 0, 5, 0);
-    lanelet::Point3d r2(lanelet::utils::getId(), 20, 5, 0);
+    lanelet::Point3d r2(lanelet::utils::getId(), 100, 5, 0);
 
     lanelet::LineString3d left(lanelet::utils::getId(), {l1, l2});
     lanelet::LineString3d right(lanelet::utils::getId(), {r1, r2});
@@ -100,16 +110,19 @@ protected:
   }
 
   // Helper to create a straight trajectory
-  static std::vector<TrajectoryPoint> create_trajectory(double start_x, double end_x)
+  static std::vector<TrajectoryPoint> create_trajectory(
+    double start_x, double end_x, float velocity = 5.0)
   {
     std::vector<TrajectoryPoint> points;
     TrajectoryPoint tp1;
     tp1.pose.position.x = start_x;
     tp1.pose.position.y = 0;
+    tp1.longitudinal_velocity_mps = velocity;
 
     TrajectoryPoint tp2;
     tp2.pose.position.x = end_x;
     tp2.pose.position.y = 0;
+    tp2.longitudinal_velocity_mps = velocity;
 
     points.push_back(tp1);
     points.push_back(tp2);
@@ -191,4 +204,75 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
 
   EXPECT_FALSE(filter_->is_feasible(points))
     << "Should return false when crossing red light stop line";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
+{
+  const lanelet::Id light_id = 200;
+  const double stop_x = 20.0;  // Stop line at 20m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 5m/s.
+  // stop_x is 20m away.
+  // Stoppable distance is roughly 5^2 / (2 * 2.8) + 5 * 0.5 = 6.96m.
+  // Since 6.96 < 20.0, it IS stoppable.
+  // can_pass_amber_light should return false.
+
+  auto points = create_trajectory(0.0, 30.0, 5.0);
+
+  EXPECT_FALSE(filter_->is_feasible(points)) << "Should return false if amber light can be stopped";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
+{
+  const lanelet::Id light_id = 201;
+  const double stop_x = 5.0;  // Stop line at 5m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 10m/s.
+  // stop_x is 5m away.
+  // Stoppable distance is roughly 10^2 / (2 * 2.8) + 10 * 0.5 = 22.85m.
+  // Since 22.85 > 5.0, it is NOT stoppable.
+
+  // Reachable distance: v * amber_lamp_period = 10 * 2.75 = 27.5m.
+  // Since 5.0 < 27.5, it IS reachable.
+  // can_pass_amber_light should return true.
+
+  auto points = create_trajectory(0.0, 10.0, 10.0);
+
+  EXPECT_TRUE(filter_->is_feasible(points))
+    << "Should return true if amber light cannot be stopped but is reachable";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
+{
+  const lanelet::Id light_id = 202;
+  const double stop_x = 150.0;  // Stop line at 150m
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  // Ego at 0m, velocity 10m/s.
+  // stop_x is 150m away.
+  // Stoppable distance is 110m. 110 < 150, so it IS stoppable.
+  // Reachable distance = v * T_amber. 10 * 1.0 = 10m.
+  // stop_x > 10 -> NOT reachable.
+  // This is a scenario where ego can stop and cannot pass.
+
+  // Let's adjust params to create the desired scenario.
+  traffic_rule_filter::Params params;
+  params.traffic_light_filter.max_accel = -0.5;  // Very weak braking
+  params.traffic_light_filter.delay_response_time = 1.0;
+  params.traffic_light_filter.amber_lamp_period = 1.0;  // Short amber
+  params.traffic_light_filter.enable_pass_judge = true;
+  filter_->set_parameters(params);
+
+  auto points = create_trajectory(0.0, 200.0, 10.0);
+
+  EXPECT_FALSE(filter_->is_feasible(points))
+    << "Should return false if ego can stop but cannot pass";
 }

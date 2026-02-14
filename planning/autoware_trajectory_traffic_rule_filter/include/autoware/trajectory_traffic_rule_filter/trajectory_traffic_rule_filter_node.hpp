@@ -17,7 +17,7 @@
 
 #include "autoware/trajectory_traffic_rule_filter/traffic_rule_filter_interface.hpp"
 
-#include <autoware_trajectory_traffic_rule_filter_param.hpp>
+#include <autoware_trajectory_traffic_rule_filter/autoware_trajectory_traffic_rule_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
