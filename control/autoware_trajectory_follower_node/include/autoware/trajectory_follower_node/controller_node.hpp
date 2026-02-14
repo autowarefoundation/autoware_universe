@@ -78,6 +78,7 @@ public:
 private:
   rclcpp::TimerBase::SharedPtr timer_control_;
   double timeout_thr_sec_;
+  double incoming_message_timeout_threshold_sec_;
   bool enable_control_cmd_horizon_pub_{false};
   boost::optional<LongitudinalOutput> longitudinal_output_{boost::none};
 
@@ -134,6 +135,7 @@ private:
   void callbackTimerControl();
   bool processData(rclcpp::Clock & clock);
   bool isTimeOut(const LongitudinalOutput & lon_out, const LateralOutput & lat_out);
+  void check_incoming_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat);
   LateralControllerMode getLateralControllerMode(const std::string & algorithm_name) const;
   LongitudinalControllerMode getLongitudinalControllerMode(
     const std::string & algorithm_name) const;
