@@ -2,6 +2,18 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* refactor(autoware_trajectory_follower_node): remove redundant diagnostic updates from lateral and longitudinal controllers (`#11934 <https://github.com/autowarefoundation/autoware_universe/issues/11934>`_)
+* fix(mpc_lateral_controller): use terminal velocity to extend trajectory (`#11826 <https://github.com/autowarefoundation/autoware_universe/issues/11826>`_)
+  * use terminal velocity when extending yaw
+  * add early return
+  * avoid 0.0
+  ---------
+* Contributors: Go Sakayori, Kyoichi Sugahara, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

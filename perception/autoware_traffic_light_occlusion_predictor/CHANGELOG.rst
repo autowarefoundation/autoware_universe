@@ -2,6 +2,16 @@
 Changelog for package autoware_traffic_light_occlusion_predictor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(traffic_light_occlusion_predictor): improve type safety (`#11916 <https://github.com/autowarefoundation/autoware_universe/issues/11916>`_)
+* refactor(traffic_light_occlusion_predictor): rename synchronizer\_ to synchronizer_car\_ (`#11915 <https://github.com/autowarefoundation/autoware_universe/issues/11915>`_)
+* docs(traffic_light_occlusion_predictor): add doxygen comments (`#11914 <https://github.com/autowarefoundation/autoware_universe/issues/11914>`_)
+* refactor(traffic_light_occlusion_predictor): reorganize includes, remove unused (`#11913 <https://github.com/autowarefoundation/autoware_universe/issues/11913>`_)
+* fix(traffic_light_occlusion_predictor): use array of bools instead (`#11883 <https://github.com/autowarefoundation/autoware_universe/issues/11883>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

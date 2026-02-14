@@ -2,6 +2,138 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* test(blockage_diag): add unit tests to classes for blockage and dust detection (`#12029 <https://github.com/autowarefoundation/autoware_universe/issues/12029>`_)
+  * test(blockage_diag): add unit tests for blockage detection functionality
+  * test(blockage_diag): add unit tests for dust detection functionality
+  * test(blockage_diag): add unit tests for multi-frame detection aggregator
+  * test(blockage_diag): reduce integration tests and simplify pointcloud creation
+  * test(blockage_diag): optimize parameters and remove unnecessary threading in integration tests
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* refactor(blockage_diag_node): separate dust detection and multi frame aggregator from blockage diag (`#12024 <https://github.com/autowarefoundation/autoware_universe/issues/12024>`_)
+  * refactor(blockage_diag): separate dust detection logic into its own files
+  * refactor(blockage_diag): separate multi-frame detection aggregator into its own files
+  * refactor(blockage_diag_node): remove unused includes to clean up code
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(blockage_diag_node): extract blockage detection logic from blockage diag node (`#12012 <https://github.com/autowarefoundation/autoware_universe/issues/12012>`_)
+  * refactor(blockage_diag): separate dust detection diagnostic logic into evaluate_dust_detection function
+  * refactor(blockage_diag): extract update_diagnostics_status function for cleaner code
+  * refactor(blockage_diag): separate dust detection logic into DustDetector class
+  * refactor(blockage_diag): unified segment_into_ground_and_sky function
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): add missing include directives for string and utility for cpp-lint check
+  * refactor(blockage_diag): extract dust detection logic into BlockageDetector class
+  * refactor(blockage_diag): remove unused member variables
+  * refactor(blockage_diag): reorder class definitions for better readability
+  * refactor(blockage_diag): remove unused functions definitions from header
+  * refactor(blockage_diag): simplify no return mask creation by removing quantization step
+  * refactor(blockage_diag): update diagnostics to return structured results for blockage and dust detection
+  * refactor(blockage_diag): update dust debug info method to use DustDetectionResult
+  * refactor(blockage_diag): update publish_blockage_debug_info to include blockage detection result
+  * refactor(blockage_diag): update debug info methods to use structured parameters
+  * refactor(blockage_diag): extract blockage detection logic into separate files
+  * refactor(blockage_diag): unify mask functions
+  * refactor(blockage_diag): apply clang
+  * refactor(blockage_diag): restore quantize_8u function to reduce diff in PR
+  * refactor(blockage_diag): reorder implementation to reduce diff
+  * fix(blockage_diag): restore lidar_depth_map publish
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(polar_voxel_outlier_filter): delete force_update() (`#12006 <https://github.com/autowarefoundation/autoware_universe/issues/12006>`_)
+* refactor(blockage_diag_node): extract dust detection logic from blockage diag node (`#11997 <https://github.com/autowarefoundation/autoware_universe/issues/11997>`_)
+  * refactor(blockage_diag): separate dust detection diagnostic logic into evaluate_dust_detection function
+  * refactor(blockage_diag): extract update_diagnostics_status function for cleaner code
+  * refactor(blockage_diag): separate dust detection logic into DustDetector class
+  * refactor(blockage_diag): unified segment_into_ground_and_sky function
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): add missing include directives for string and utility for cpp-lint check
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): extract multi frame visualization function and add unit tests (`#11976 <https://github.com/autowarefoundation/autoware_universe/issues/11976>`_)
+  * refactor(blockage_diag): implement MultiFrameDetectionVisualizer for multi-frame mask accumulation
+  * refactor(blockage_diag): update compute_blockage_diagnostics to return single frame blockage mask to align with dust detection
+  * test(blockage_diag_node): add tests for MultiFrameDetectionVisualizer
+  * refactor(blockage_diag): add comments for buffering_frame
+  * style(pre-commit): autofix
+  * refactor(blockage_diag): rename visualizer to aggregator
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): group config and results of blockage and dust detection (`#11965 <https://github.com/autowarefoundation/autoware_universe/issues/11965>`_)
+  * refactor(dust_detection): group config and parameters for dust detection
+  * refactor(blockage_diag_node): group blockage detection parameters and results
+  * refactor(blockage_diag_node): simplify comments for blockage and dust detection parameters
+  * refactor(blockage_diag_node): move blockage frame count and mask buffer to result struct
+  * refactor(blockage_diag_node): rename and restructure blockage result types for clarity
+  * refactor(blockage_diag_node): replace blockage range vector with start and end degrees for clarity
+  * refactor(blockage_diag_node): consolidate ground and sky blockage info updates into a single method
+  * refactor(blockage_diag_node): replace buffering frame parameters with local variables for clarity
+  * refactor(blockage_diag_node): introduce BlockageDetectionVisualizeData struct for multi-frame blockage visualization
+  * refactor(blockage_diag_node): introduce DustDetectionVisualizeData struct
+  * refactor(blockage_diag_node): unify visualization data structures for blockage and dust detection
+  * refactor(blockage_diag_node): organize dust mask image publishing
+  * style(blockage_diag_node): apply formatter
+  * style(pre-commit): autofix
+  * chore: trigger ci
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag_node): extract logic for conversion from pointcloud2 to depth image (`#11947 <https://github.com/autowarefoundation/autoware_universe/issues/11947>`_)
+  * refactor(blockage_diag): get image dimensions from source image
+  * refactor(blockage_diag): extract functions for conversion from pointcloud2 to depth image
+  * refactor(blockage_diag): simplify parameter handling in BlockageDiagComponent
+  * refactor(blockage_diag): rename angle range parameters to clarify
+  * refactor(blockage_diag): update PointCloud2ToDepthImage to use structured configuration
+  * refactor(blockage_diag): add unit tests for PointCloud2ToDepthImage conversion
+  * refactor(blockage_diag): refactor unit tests for conversion from pointcloud2 to depth image
+  * refactor(blockage_diag): apply formatter
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage diag_node): decouple blockage and dust detection (`#11907 <https://github.com/autowarefoundation/autoware_universe/issues/11907>`_)
+  * refactor(blockage_diag): decouple dust diagnostics and debug info publishing
+  * refactor(blockage_diag): decouple blockage and dust diagnostics
+  * refactor(blockage_diag): rename detect_blockage to update_diagnostics for clarity
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(blockage_diag): extract PointCloud2 validation logic for blockage diag (`#11866 <https://github.com/autowarefoundation/autoware_universe/issues/11866>`_)
+  * refactor(blockage_diag): extract validation logic and add tests for PointCloud2 fields
+  * refactor(blockage_diag): replace validate_pointcloud_fields function
+  * refactor(blockage_diag): update validation function description
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* fix(point_cloud_preprocessor): use uint64_t to avoid size_t variance (`#11861 <https://github.com/autowarefoundation/autoware_universe/issues/11861>`_)
+* fix(autoware_pointcloud_preprocessor): recalculate row_step and width after concatenation (`#11855 <https://github.com/autowarefoundation/autoware_universe/issues/11855>`_)
+* fix(autoware_pointcloud_preprocessor): inherit is_dense for concatenated pointcloud (`#11857 <https://github.com/autowarefoundation/autoware_universe/issues/11857>`_)
+* fix(crop_box_filter): make `output.is_dense=true` (`#11856 <https://github.com/autowarefoundation/autoware_universe/issues/11856>`_)
+* feat: localization related packages support jazzy (`#11419 <https://github.com/autowarefoundation/autoware_universe/issues/11419>`_)
+* feat(pointcloud_preprocessor): improve cloud validation (`#11853 <https://github.com/autowarefoundation/autoware_universe/issues/11853>`_)
+* feat(pointcloud_preprocessor): validate indices (`#11852 <https://github.com/autowarefoundation/autoware_universe/issues/11852>`_)
+* feat(pointcloud_preprocessor): simplify is_valid (`#11851 <https://github.com/autowarefoundation/autoware_universe/issues/11851>`_)
+* feat(blockage_diag_node): remove parameter callback and unused header file (`#11834 <https://github.com/autowarefoundation/autoware_universe/issues/11834>`_)
+  * feat(blockage_diag_node): remove parameter callback from BlockageDiagComponent
+  * refactor(blockage_diag_node): remove unused filter include
+  * refactor(blockage_diag_node): remove unused include for point types
+  * refactor(blockage_diag_node): remove unused includes for highgui and diagnostic_array
+  * feat(blockage_diag_node): disable parameter services in BlockageDiagComponent
+  * refactor(blockage_diag_node): streamline diag updater and debug publisher setup in BlockageDiagComponent
+  * refactor(blockage_diag_node): remove mutex from BlockageDiagComponent
+  * chore: trigger ci
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Hiroki OTA, Mete Fatih Cırıt, Ryohsuke Mitsudome, Takahisa Ishikawa, 心刚
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

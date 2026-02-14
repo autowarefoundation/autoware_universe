@@ -2,6 +2,70 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* docs(diffusion_planner): fix README.md (`#12067 <https://github.com/autowarefoundation/autoware_universe/issues/12067>`_)
+  * Fixed README.md
+  * Apply suggestion from @Copilot
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Apply suggestion from @Copilot
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Deleted the change of `launch_traffic_light_module`
+  ---------
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+* fix(diffusion_planner): fix the stopping logic (`#12041 <https://github.com/autowarefoundation/autoware_universe/issues/12041>`_)
+  Fixed the stopping logic
+* refactor(diffusion_planner): change `ego_current_state` class to a function (`#12022 <https://github.com/autowarefoundation/autoware_universe/issues/12022>`_)
+  * Refactored `ego_current_state`
+  * Added `CreateEgoCurrentState` test
+  * Added `const`
+  * Sorted include files
+  * Removed `std::abs` from `linear_vel`
+  ---------
+* refactor(diffusion_planner): refactor `replicate_for_batch` (`#12016 <https://github.com/autowarefoundation/autoware_universe/issues/12016>`_)
+  * Fixed break lines
+  * Moved `replicate_for_batch` from diffusion_planner_node.hpp into utils.hpp
+  * Fixed comments
+  * Added `const`
+  * Applied the formatter
+  ---------
+* refactor(diffusion_planner): refactor `AgentState` (`#11946 <https://github.com/autowarefoundation/autoware_universe/issues/11946>`_)
+  * Refactored `AgentState`
+  * Fixed to use rotation_matrix_to_cos_sin
+  ---------
+* refactor(diffusion_planner): refactor the transformation to map coordinates (`#11931 <https://github.com/autowarefoundation/autoware_universe/issues/11931>`_)
+  * Refactored transform to map
+  * Fixed
+  * Added 0.0
+  ---------
+* chore(autoware_diffusion_planner): remove cudnn dependency (`#11901 <https://github.com/autowarefoundation/autoware_universe/issues/11901>`_)
+* feat(diffusion_planner): support reconfiguration `onnx_model_path` (`#11870 <https://github.com/autowarefoundation/autoware_universe/issues/11870>`_)
+  * Added tensorrt_inference.hpp/cpp
+  * Added `#include <unordered_map>`
+  * Added `num_elements`
+  * Fixed converting float to bool
+  ---------
+* refactor(diffusion_planner): refactoring of map processing (`#11869 <https://github.com/autowarefoundation/autoware_universe/issues/11869>`_)
+  * Removed `traffic_rules_ptr\_`
+  * Removed `routing_graph_ptr\_`
+  * Removed `is_map_loaded\_`
+  * Removed `remove_const`
+  * Applied `pre-commit run -a`
+  ---------
+* feat(diffusion_planner): diffusion_planner v3 (`#11849 <https://github.com/autowarefoundation/autoware_universe/issues/11849>`_)
+  * v3.0
+  * Fixed the description of `shift_x`
+  * Fixed the default value of `turn_indicator_keep_offset`
+  * Added comments to turn_indicator_manager.hpp
+  * Fixed `keep_offset` as a parameter
+  * Added `const`
+  * Added `static_cast`
+  * Added a comment
+  * Fixed types
+  ---------
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, SakodaShintaro
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
