@@ -85,3 +85,15 @@ The plugin uses `CommonParameters` for both vehicle and pedestrian object types.
 | `max_speed_ratio`            | double | maximum speed ratio relative to dummy object speed        |
 | `speed_check_threshold`      | double | speed threshold (m/s) above which speed checks apply      |
 | `path_selection_strategy`    | string | path selection strategy: "highest_confidence" or "random" |
+
+## Auxiliary Nodes
+
+### empty_objects_publisher
+
+A simple node that publishes empty `PredictedObjects` messages at 10 Hz on `~/output/objects`. This is used as a fallback when no object recognition is running, ensuring downstream nodes still receive the expected topic.
+
+### empty_traffic_light_group_array_publisher
+
+A simple node that publishes empty `TrafficLightGroupArray` messages at 10 Hz on `~/output/traffic_light_group_array`. This is used as a fallback when no traffic light recognition is running, ensuring downstream nodes still receive the expected topic.
+
+In the launch file, this node is enabled by the `use_empty_traffic_light_recognition` argument (default: `true`) and remaps its output to `/perception/traffic_light_recognition/traffic_signals`.
