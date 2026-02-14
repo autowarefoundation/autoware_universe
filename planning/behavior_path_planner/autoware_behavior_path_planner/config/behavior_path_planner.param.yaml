@@ -2,6 +2,11 @@
   ros__parameters:
     traffic_light_signal_timeout: 1.0
 
+    # timeout checking
+    cyclic_timeout: 0.90
+    persistent_timeout: 86400.0  # 24 hours
+    enable_traffic_signal_timeout: false
+
     planning_hz: 10.0
     backward_path_length: 5.0
     forward_path_length: 300.0

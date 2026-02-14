@@ -54,9 +54,11 @@
   <depend>autoware_planning_test_manager</depend>
   <depend>autoware_signal_processing</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>behaviortree_cpp_v3</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>libboost-dev</depend>
   <depend>libopencv-dev</depend>
