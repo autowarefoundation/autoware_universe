@@ -20,6 +20,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -84,15 +85,17 @@ PathWithLaneId get_reference_path_from_target_lane(
   const auto forward_path_length = common_data_ptr->bpp_param_ptr->forward_path_length;
 
   const auto lane_change_start_arc_position =
-    lanelet::utils::getArcCoordinates(target_lanes, lane_changing_start_pose);
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      target_lanes, lane_changing_start_pose);
 
   const double s_start = lane_change_start_arc_position.length;
   const double s_end = std::invoke([&]() {
     const auto dist_from_lc_start = s_start + lane_changing_length + forward_path_length;
     if (is_goal_in_route) {
-      const double s_goal =
-        lanelet::utils::getArcCoordinates(target_lanes, route_handler.getGoalPose()).length -
-        next_lc_buffer;
+      const double s_goal = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                              target_lanes, route_handler.getGoalPose())
+                              .length -
+                            next_lc_buffer;
       return std::min(dist_from_lc_start, s_goal);
     }
     return std::min(dist_from_lc_start, target_lane_length - next_lc_buffer);
@@ -441,7 +444,8 @@ LaneChangePath get_candidate_path(
 
   const auto lc_end_pose = std::invoke([&]() {
     const auto dist_to_lc_start =
-      lanelet::utils::getArcCoordinates(target_lanes, lc_start_pose).length;
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, lc_start_pose)
+        .length;
     const auto dist_to_lc_end = dist_to_lc_start + lc_metric.length;
     return route_handler.get_pose_from_2d_arc_length(target_lanes, dist_to_lc_end);
   });
