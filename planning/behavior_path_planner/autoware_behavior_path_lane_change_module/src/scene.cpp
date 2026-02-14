@@ -24,6 +24,7 @@
 #include "autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -774,8 +775,8 @@ lanelet::ConstLanelets NormalLaneChange::get_lane_change_lanes(
   }
 
   const auto forward_length = std::invoke([&]() {
-    const auto front_pose =
-      utils::to_geom_msg_pose(lane_change_lane->centerline().front(), *lane_change_lane);
+    const auto front_pose = utils::to_geom_msg_pose(
+      lane_change_lane->centerline().front().basicPoint(), *lane_change_lane);
     const auto signed_distance = utils::getSignedDistance(front_pose, getEgoPose(), current_lanes);
     const auto forward_path_length = planner_data_->parameters.forward_path_length;
     return forward_path_length + std::max(signed_distance, 0.0);
@@ -811,7 +812,7 @@ bool NormalLaneChange::hasFinishedLaneChange() const
     const auto & lanes_polygon = common_data_ptr_->lanes_polygon_ptr->target;
     return !boost::geometry::disjoint(
       lanes_polygon,
-      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(current_pose.position)));
+      lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(current_pose.position)));
   }
 
   const auto yaw_deviation_to_centerline =
