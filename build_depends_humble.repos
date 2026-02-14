@@ -28,7 +28,7 @@ repositories:
   core/autoware_core:
     type: git
     url: https://github.com/autowarefoundation/autoware_core.git
-    version: 1.5.0
+    version: 1.7.0
   # universe
   universe/external/tier4_autoware_msgs:
     type: git
@@ -50,7 +50,7 @@ repositories:
   universe/external/cuda_blackboard:
     type: git
     url: https://github.com/autowarefoundation/cuda_blackboard.git
-    version: v0.2.0
+    version: 0.3.0
   universe/external/negotiated:
     type: git
     url: https://github.com/osrf/negotiated.git
@@ -67,7 +67,7 @@ repositories:
   middleware/external/agnocast:
     type: git
     url: https://github.com/tier4/agnocast.git
-    version: 2.1.2
+    version: backport-jazzy-support-v2.1.2
   universe/external/bevdet_vendor:
     type: git
     url: https://github.com/autowarefoundation/bevdet_vendor.git
