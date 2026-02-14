@@ -53,7 +53,7 @@ private:
   visualization_msgs::msg::Marker getTrafficLightMarker(
     const Pose & tl_pose, const uint8_t tl_color, const uint8_t tl_shape);
 
-  std::string getTrafficLightString(const uint8_t tl_color, const uint8_t tl_shape);
+  std::string getTrafficLightString(const uint8_t tl_color, const uint8_t tl_shape) const;
   std_msgs::msg::ColorRGBA getTrafficLightColor(const uint8_t tl_color, const uint8_t tl_shape);
 
   std::map<int32_t, Pose> tl_position_map_;

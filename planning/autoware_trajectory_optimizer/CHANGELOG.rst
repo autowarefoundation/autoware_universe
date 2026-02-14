@@ -2,6 +2,54 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_trajectory_optimizer): velocity optimizer refactor (`#12021 <https://github.com/autowarefoundation/autoware_universe/issues/12021>`_)
+  * feat: diffusion planner optimizer refactor
+  * feat: fix bugs in optimization formulation
+  * fix: clean un-used function
+  * fix: package.xml sort package
+  * feat: merge max velocity settings; clean up merge; clean limit_accel_acceleration
+  * fix: restore pull out acc
+  * feat: add publish debugging trajectories
+  * feat: do not add the final point to the trajectory after spline smoother
+  * fix: no lint next line
+  * tune the parameter into a smoother one, tested in bus Psim
+  * feat: clean include
+  * feat: use internal tool for better angle handling
+  * fix: clean up debugging publishers
+  * feat: update max lateral accel value
+  * feat: avoid delta time error
+  * revert: restore plugin loops
+  * feat: clean up jerk filter
+  * further clean parameters
+  * feat: expliticly choose if max speed update in place
+  * fix: clean up inclid in utils.cpp and  trajectory_optimizer.cpp
+  * clean up debug publishers
+  * feat: documentation for the continuous jerk filter
+  * fix doc
+  * fix pre-commit in readme
+  * update documentation list
+  ---------
+* fix(autoware_trajectory_optimizer): prevent yaw spikes when creating splines  (`#12043 <https://github.com/autowarefoundation/autoware_universe/issues/12043>`_)
+  * use spline util for first and last point instead of direct insertion of original traj points
+  * use last_s to actually get the last value in the loop
+  ---------
+* feat(autoware_trajectory_optimizer): add external velocity limit subscription (`#12023 <https://github.com/autowarefoundation/autoware_universe/issues/12023>`_)
+  * add external velocity limit subscription
+  * change topic name in code
+  * subscribe to the external velocity limiter selector topic and not directly the API's
+  * make the default velocity limit the same as the common_param velocity
+  * Add /output/current_velocity_limit_mps publisher
+  * output right topic name
+  * change velocity limit input to API only, add common param to sync default velocity limit to that of Autoware common.param.yaml
+  * change launch to use var name for the input external velocity for consistency
+  * add mps to var name for consistency
+  * update dependencies in package.xml
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yuxuan Liu, danielsanchezaran
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

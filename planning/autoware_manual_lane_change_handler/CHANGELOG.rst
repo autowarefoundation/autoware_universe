@@ -2,6 +2,14 @@
 Changelog for package autoware_manual_lane_change_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(manual_lane_change_handler): remove unusedVariable (`#11972 <https://github.com/autowarefoundation/autoware_universe/issues/11972>`_)
+* feat(manual_lane_change_handler): check reroute_availability when set_preferred_lanes is called (`#11819 <https://github.com/autowarefoundation/autoware_universe/issues/11819>`_)
+  add feature to check the reroute_availability when the set_preferred_lane is called
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, Taiki Yamada
+
 0.49.0 (2025-12-30)
 -------------------
 

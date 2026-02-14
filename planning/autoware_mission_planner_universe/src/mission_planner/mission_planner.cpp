@@ -15,9 +15,9 @@
 #include "mission_planner.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -343,6 +343,7 @@ void MissionPlanner::on_set_preferred_primitive(
   const autoware_planning_msgs::srv::SetPreferredPrimitive::Response::SharedPtr res)
 {
   using ResponseCode = autoware_adapi_v1_msgs::msg::ResponseStatus;
+  const auto is_reroute = state_.state == RouteState::SET;
 
   if (!current_route_) {
     res->status.success = false;
@@ -374,6 +375,20 @@ void MissionPlanner::on_set_preferred_primitive(
     throw service_utils::ServiceException(
       autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
       "There is no saved original route to reset to.");
+  }
+
+  const bool is_autonomous_driving =
+    operation_mode_state_ ? operation_mode_state_->mode == OperationModeState::AUTONOMOUS &&
+                              operation_mode_state_->is_autoware_control_enabled
+                          : false;
+
+  if (is_reroute && is_autonomous_driving) {
+    const auto reroute_availability = sub_reroute_availability_.take_data();
+    if (!reroute_availability || !reroute_availability->availability) {
+      throw service_utils::ServiceException(
+        autoware_adapi_v1_msgs::srv::SetRoute::Response::ERROR_INVALID_STATE,
+        "Cannot reroute as the planner is not in lane following.");
+    }
   }
 
   if (req->reset) {
@@ -704,11 +719,13 @@ bool MissionPlanner::check_reroute_safety(
       start_lanelets.push_back(lanelet);
     }
     // closest lanelet in start lanelets
-    lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(start_lanelets, current_pose, &closest_lanelet)) {
+    const auto closest_lanelet_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(start_lanelets, current_pose);
+    if (!closest_lanelet_opt) {
       RCLCPP_ERROR(get_logger(), "Check reroute safety failed. Cannot find the closest lanelet.");
       return false;
     }
+    const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
     const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
@@ -727,11 +744,13 @@ bool MissionPlanner::check_reroute_safety(
       start_lanelets.push_back(lanelet);
     }
     // closest lanelet in start lanelets
-    lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(start_lanelets, current_pose, &closest_lanelet)) {
+    const auto closest_lanelet_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(start_lanelets, current_pose);
+    if (!closest_lanelet_opt) {
       RCLCPP_ERROR(get_logger(), "Check reroute safety failed. Cannot find the closest lanelet.");
       return false;
     }
+    const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
     const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
