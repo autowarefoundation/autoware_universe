@@ -95,6 +95,16 @@ inline PointCloudLayout generateVisualizationPointCloudLayout()
   return layout;
 }
 
+/// @brief Generate filtered point cloud layout from input message fields (preserves input format)
+inline PointCloudLayout generateFilteredPointCloudLayoutFromInput(
+  const cuda_blackboard::CudaPointCloud2 & msg_in)
+{
+  auto fields = msg_in.fields;
+  PointCloudLayout layout(fields, msg_in.point_step);
+  return layout;
+}
+
+/// @brief Generate filtered point cloud layout for default XYZIRC format (legacy)
 inline PointCloudLayout generateFilteredPointCloudLayout()
 {
   sensor_msgs::msg::PointCloud2 msg;

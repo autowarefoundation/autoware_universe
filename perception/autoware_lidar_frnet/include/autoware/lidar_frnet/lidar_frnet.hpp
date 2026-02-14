@@ -51,7 +51,6 @@ public:
   LidarFRNet(
     const tensorrt_common::TrtCommonConfig & trt_config,
     const utils::NetworkParams & network_params,
-    const utils::PreprocessingParams & preprocessing_params,
     const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger);
   ~LidarFRNet() = default;
 
@@ -62,7 +61,11 @@ public:
     cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
     std::unordered_map<std::string, double> & proc_timing);
 
+  /// @brief Get the detected input format (valid after first process call)
+  InputFormat getInputFormat() const { return input_format_; }
+
 private:
+  InputFormat detectInputFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
   bool preprocess(const uint32_t input_num_points);
   bool inference();
   bool postprocess(
@@ -81,25 +84,29 @@ private:
   std::unique_ptr<PostprocessCuda> postprocess_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   utils::NetworkParams network_params_;
-  utils::PreprocessingParams preprocessing_params_;
   utils::PostprocessingParams postprocessing_params_;
 
   cudaStream_t stream_;
+
+  // Input format detection
+  InputFormat input_format_{InputFormat::UNKNOWN};
+  std::size_t input_point_step_{0};
+
   // Inference
   CudaUniquePtr<float[]> points_d_{nullptr};         // N x 4 (x, y, z, intensity)
   CudaUniquePtr<int64_t[]> coors_d_{nullptr};        // N x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> voxel_coors_d_{nullptr};  // M x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> inverse_map_d_{nullptr};  // N
   CudaUniquePtr<float[]> seg_logit_d_{nullptr};      // NUM_CLASSES x 1
-  // Preprocess & Postprocess
-  CudaUniquePtr<InputPointType[]> cloud_in_d_{nullptr};
+  // Preprocess & Postprocess (using raw bytes to support multiple input formats)
+  CudaUniquePtr<std::uint8_t[]> cloud_in_d_{nullptr};
   CudaUniquePtr<int64_t[]> coors_keys_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_d_{nullptr};
   CudaUniquePtr<uint32_t[]> proj_idxs_d_{nullptr};
   CudaUniquePtr<uint64_t[]> proj_2d_d_{nullptr};
   CudaUniquePtr<OutputSegmentationPointType[]> seg_data_d_{nullptr};
   CudaUniquePtr<OutputVisualizationPointType[]> viz_data_d_{nullptr};
-  CudaUniquePtr<InputPointType[]> cloud_filtered_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cloud_filtered_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_filtered_d_{nullptr};
 };
 

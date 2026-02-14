@@ -28,10 +28,14 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/buffer.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <tf2_ros/transform_listener.h>
+
 #include <memory>
+#include <mutex>
 #include <optional>
 
 namespace autoware::lidar_frnet
@@ -66,12 +70,25 @@ private:
     ros_utils::generateSegmentationPointCloudLayout()};
   const ros_utils::PointCloudLayout cloud_viz_layout_{
     ros_utils::generateVisualizationPointCloudLayout()};
-  const ros_utils::PointCloudLayout cloud_filtered_layout_{
-    ros_utils::generateFilteredPointCloudLayout()};
+
+  // Filtered layout is initialized dynamically from first input message
+  std::optional<ros_utils::PointCloudLayout> cloud_filtered_layout_;
+  std::once_flag init_filtered_layout_;
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+
+  // TF and crop box gating
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  rclcpp::TimerBase::SharedPtr tf_timer_;
+  std::atomic<bool> tf_ready_;
+  std::optional<std::string> sensor_frame_id_;
+  std::string crop_reference_frame_;
+  std::array<float, 6> crop_box_bounds_;
+  std::array<float, 6> crop_box_bounds_sensor_;
+  bool crop_box_enabled_;
 };
 
 }  // namespace autoware::lidar_frnet

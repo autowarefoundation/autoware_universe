@@ -18,9 +18,11 @@
 #include "autoware/lidar_frnet/ros_utils.hpp"
 #include "autoware/lidar_frnet/utils.hpp"
 
+#include <Eigen/Geometry>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
@@ -34,32 +36,116 @@ namespace autoware::lidar_frnet
 LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lidar_frnet", options)
 {
   auto class_names = declare_parameter<std::vector<std::string>>("class_names");
-
   auto trt_config = TrtCommonConfig(
     declare_parameter<std::string>("onnx_path"), declare_parameter<std::string>("trt_precision"));
+  // Parse crop box
+  crop_reference_frame_ =
+    this->declare_parameter<std::string>("filter.ego_crop_box.reference_frame");
+  float min_x = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.min_x"));
+  float min_y = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.min_y"));
+  float min_z = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.min_z"));
+  float max_x = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.max_x"));
+  float max_y = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.max_y"));
+  float max_z = static_cast<float>(this->declare_parameter<double>("filter.ego_crop_box.max_z"));
+  crop_box_bounds_ = {min_x, min_y, min_z, max_x, max_y, max_z};
+  crop_box_enabled_ = false;
+  for (float v : crop_box_bounds_) {
+    if (v != 0.0f) {
+      crop_box_enabled_ = true;
+      break;
+    }
+  }
 
-  auto preprocessing_params = utils::PreprocessingParams(
+  // Setup TF infra if needed
+  if (crop_box_enabled_) {
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    tf_ready_ = false;
+    tf_timer_ = this->create_wall_timer(std::chrono::milliseconds(100), [this]() {
+      if (!sensor_frame_id_) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(), *this->get_clock(), 2000, "Waiting for sensor frame ID");
+        return;
+      }
+      geometry_msgs::msg::TransformStamped tf;
+      try {
+        tf =
+          tf_buffer_->lookupTransform(*sensor_frame_id_, crop_reference_frame_, tf2::TimePointZero);
+      } catch (const tf2::TransformException & ex) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(), *this->get_clock(), 2000, "Waiting for TF: %s", ex.what());
+        return;
+      }
+
+      Eigen::Affine3d tf_eigen = tf2::transformToEigen(tf);
+
+      float xmin = crop_box_bounds_[0], ymin = crop_box_bounds_[1], zmin = crop_box_bounds_[2];
+      float xmax = crop_box_bounds_[3], ymax = crop_box_bounds_[4], zmax = crop_box_bounds_[5];
+
+      std::vector<Eigen::Vector3d> corners = {
+        {xmin, ymin, zmin}, {xmin, ymin, zmax}, {xmin, ymax, zmin}, {xmin, ymax, zmax},
+        {xmax, ymin, zmin}, {xmax, ymin, zmax}, {xmax, ymax, zmin}, {xmax, ymax, zmax}};
+
+      // 2. Transform all corners and track the new min/max
+      Eigen::Vector3d new_min(
+        std::numeric_limits<double>::max(), std::numeric_limits<double>::max(),
+        std::numeric_limits<double>::max());
+      Eigen::Vector3d new_max(
+        -std::numeric_limits<double>::max(), -std::numeric_limits<double>::max(),
+        -std::numeric_limits<double>::max());
+
+      for (const auto & corner : corners) {
+        Eigen::Vector3d transformed_corner = tf_eigen * corner;
+
+        new_min.x() = std::min(new_min.x(), transformed_corner.x());
+        new_min.y() = std::min(new_min.y(), transformed_corner.y());
+        new_min.z() = std::min(new_min.z(), transformed_corner.z());
+
+        new_max.x() = std::max(new_max.x(), transformed_corner.x());
+        new_max.y() = std::max(new_max.y(), transformed_corner.y());
+        new_max.z() = std::max(new_max.z(), transformed_corner.z());
+      }
+
+      // 3. Assign the resulting AABB
+      crop_box_bounds_sensor_ = {static_cast<float>(new_min.x()), static_cast<float>(new_min.y()),
+                                 static_cast<float>(new_min.z()), static_cast<float>(new_max.x()),
+                                 static_cast<float>(new_max.y()), static_cast<float>(new_max.z())};
+
+      RCLCPP_INFO(
+        this->get_logger(), "Crop box in sensor frame: [%f, %f, %f, %f, %f, %f]",
+        crop_box_bounds_sensor_[0], crop_box_bounds_sensor_[1], crop_box_bounds_sensor_[2],
+        crop_box_bounds_sensor_[3], crop_box_bounds_sensor_[4], crop_box_bounds_sensor_[5]);
+
+      tf_ready_ = true;
+      tf_timer_->cancel();
+      tf_listener_.reset();
+      tf_buffer_.reset();
+    });
+  } else {
+    tf_ready_ = true;
+    crop_box_bounds_sensor_ = crop_box_bounds_;
+  }
+
+  auto postprocessing_params = utils::PostprocessingParams(
+    declare_parameter<double>("filter.class_confidence_threshold"),
+    declare_parameter<std::vector<std::string>>("filter.classes"), crop_box_bounds_, class_names,
+    declare_parameter<std::vector<int64_t>>("palette"));
+
+  const auto network_params = utils::NetworkParams(
+    class_names, declare_parameter<std::vector<int64_t>>("num_points"),
+    declare_parameter<std::vector<int64_t>>("num_unique_coors"),
     declare_parameter<double>("fov_up_deg"), declare_parameter<double>("fov_down_deg"),
     declare_parameter<int64_t>("frustum_width"), declare_parameter<uint16_t>("frustum_height"),
     declare_parameter<int64_t>("interpolation_width"),
     declare_parameter<int64_t>("interpolation_height"));
-
-  auto postprocessing_params = utils::PostprocessingParams(
-    declare_parameter<double>("score_threshold"), class_names,
-    declare_parameter<std::vector<int64_t>>("palette"),
-    declare_parameter<std::vector<std::string>>("excluded_class_names"));
-
-  const auto model_params = utils::NetworkParams(
-    class_names, declare_parameter<std::vector<int64_t>>("num_points"),
-    declare_parameter<std::vector<int64_t>>("num_unique_coors"));
 
   diag_params_ = utils::DiagnosticParams(
     declare_parameter<double>("max_allowed_processing_time_ms"),
     declare_parameter<double>("max_acceptable_consecutive_delay_ms"),
     declare_parameter<double>("validation_callback_interval_ms"));
 
-  frnet_ = std::make_unique<LidarFRNet>(
-    trt_config, model_params, preprocessing_params, postprocessing_params, get_logger());
+  frnet_ =
+    std::make_unique<LidarFRNet>(trt_config, network_params, postprocessing_params, get_logger());
 
   cloud_in_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
@@ -105,9 +191,19 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
 void LidarFRNetNode::cloudCallback(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
 {
+  sensor_frame_id_ = msg->header.frame_id;
+  if (!tf_ready_) return;
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
   }
+
+  // Initialize filtered layout from first message (preserves input format)
+  std::call_once(init_filtered_layout_, [this, &msg]() {
+    cloud_filtered_layout_.emplace(ros_utils::generateFilteredPointCloudLayoutFromInput(*msg));
+    RCLCPP_INFO(
+      this->get_logger(), "Initialized filtered cloud layout with %zu fields, point_step=%zu",
+      cloud_filtered_layout_->fields.size(), cloud_filtered_layout_->point_step);
+  });
 
   const auto active_comm = utils::ActiveComm(
     cloud_seg_pub_->get_subscription_count() +
@@ -128,7 +224,7 @@ void LidarFRNetNode::cloudCallback(
   auto cloud_seg_msg_ptr = ros_utils::generatePointCloudMessageFromInput(*msg, cloud_seg_layout_);
   auto cloud_viz_msg_ptr = ros_utils::generatePointCloudMessageFromInput(*msg, cloud_viz_layout_);
   auto cloud_filtered_msg_ptr =
-    ros_utils::generatePointCloudMessageFromInput(*msg, cloud_filtered_layout_);
+    ros_utils::generatePointCloudMessageFromInput(*msg, *cloud_filtered_layout_);
 
   std::unordered_map<std::string, double> proc_timing;
 
@@ -230,6 +326,15 @@ void LidarFRNetNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatus
 }
 
 }  // namespace autoware::lidar_frnet
+// Add member variables to LidarFRNetNode:
+// std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+// std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+// rclcpp::TimerBase::SharedPtr tf_timer_;
+// std::atomic<bool> tf_ready_;
+// std::string crop_reference_frame_;
+// std::array<float, 6> crop_box_bounds_;
+// std::array<float, 6> crop_box_bounds_sensor_;
+// bool crop_box_enabled_;
 
 #include "rclcpp_components/register_node_macro.hpp"
 
