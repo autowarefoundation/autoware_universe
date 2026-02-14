@@ -134,7 +134,7 @@ planning/autoware_trajectory_concatenator/** daniel.sanchez@tier4.jp go.sakayori
 planning/autoware_trajectory_modifier/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_optimizer/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_ranker/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
-planning/autoware_trajectory_safety_filter/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
+planning/autoware_trajectory_safety_filter/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp maxime.clement@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
 planning/autoware_trajectory_traffic_rule_filter/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/** alqudah.mohammad@tier4.jp fumiya.watanabe@tier4.jp maxime.clement@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_bidirectional_traffic_module/** mamoru.sobue@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
