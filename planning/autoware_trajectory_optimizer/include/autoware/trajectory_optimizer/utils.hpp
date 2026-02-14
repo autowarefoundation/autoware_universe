@@ -18,7 +18,6 @@
 #include "autoware/path_smoother/elastic_band.hpp"
 #include "autoware/path_smoother/replan_checker.hpp"
 #include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
-#include "autoware/velocity_smoother/smoother/jerk_filtered_smoother.hpp"
 
 #include <rclcpp/logger.hpp>
 
@@ -44,7 +43,6 @@ using autoware::path_smoother::EgoNearestParam;
 using autoware::path_smoother::PlannerData;
 using autoware::path_smoother::ReplanChecker;
 
-using autoware::velocity_smoother::JerkFilteredSmoother;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;

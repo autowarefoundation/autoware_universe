@@ -169,6 +169,19 @@ std::optional<double> calc_ego_to_blind_spot_lanelet_lateral_gap(
   const autoware_utils::LinearRing2d & footprint,
   const lanelet::ConstLanelets & lanelets_before_turning,
   const autoware::experimental::lanelet2_utils::TurnDirection & turn_direction);
+
+/**
+ * @brief Searches for a neighboring lanelet that shares a boundary start point and has the same
+ * turn direction.
+ * @param[in] route_handler The route handler containing the lanelet map.
+ * @param[in] intersection_lanelet The intersection lanelet currently being evaluated.
+ * @param[in] ego_pose The current pose of the ego vehicle, used to find the closer endpoint of the
+ * lanelet.
+ * @return The adjacent lanelet if found, else std::nullopt.
+ */
+std::optional<lanelet::ConstLanelet> get_neighboring_turn_lanelet(
+  const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler,
+  const lanelet::ConstLanelet & intersection_lanelet, const geometry_msgs::msg::Pose & ego_pose);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__UTIL_HPP_

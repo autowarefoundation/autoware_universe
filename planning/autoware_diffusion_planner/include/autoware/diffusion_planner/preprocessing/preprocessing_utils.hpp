@@ -17,7 +17,8 @@
 
 #include <Eigen/Core>
 
-#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <cassert>
 #include <deque>
@@ -49,19 +50,34 @@ void normalize_input_data(
   InputDataMap & input_data_map, const NormalizationMap & normalization_map);
 
 /**
+ * @brief Creates ego current state data from odometry and acceleration messages.
+ *
+ * This function computes the ego vehicle's current state including position, heading,
+ * velocity, acceleration, steering angle, and yaw rate.
+ *
+ * @param[in] kinematic_state_msg Odometry message containing pose and twist
+ * @param[in] acceleration_msg    Acceleration message containing linear acceleration
+ * @param[in] wheel_base          Vehicle wheel base in meters
+ * @return Vector of floats containing [x, y, cos_yaw, sin_yaw, vx, vy, ax, ay, steering, yaw_rate]
+ */
+std::vector<float> create_ego_current_state(
+  const nav_msgs::msg::Odometry & kinematic_state_msg,
+  const geometry_msgs::msg::AccelWithCovarianceStamped & acceleration_msg, const float wheel_base);
+
+/**
  * @brief Creates ego agent past trajectory data from pose messages.
  *
  * This function processes a sequence of pose messages to create ego vehicle's
  * past trajectory data in the ego reference frame. Each timestep contains
  * x, y position and heading information as cos(yaw) and sin(yaw).
  *
- * @param[in] pose_msgs        Deque of pose messages
+ * @param[in] odom_msgs        Deque of odometry messages
  * @param[in] num_timesteps       Number of timesteps to process
  * @param[in] map_to_ego_transform Transformation matrix from map to ego frame
  * @return Vector of floats containing [x, y, cos_yaw, sin_yaw] for each timestep
  */
 std::vector<float> create_ego_agent_past(
-  const std::deque<geometry_msgs::msg::Pose> & pose_msgs, size_t num_timesteps,
+  const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
   const Eigen::Matrix4d & map_to_ego_transform);
 
 /**

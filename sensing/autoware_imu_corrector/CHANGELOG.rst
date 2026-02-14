@@ -2,6 +2,18 @@
 Changelog for package autoware_imu_corrector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(imu_scale_bias_estimator): ekf initializes only when it has in bounds samples (`#11816 <https://github.com/autowarefoundation/autoware_universe/issues/11816>`_)
+  * fix: restart scale estimation if initial value is out of bounds
+  * fix: variable initialization and typo error on README
+  * fix: uninitialized new variable
+  ---------
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome, SergioReyesSan
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

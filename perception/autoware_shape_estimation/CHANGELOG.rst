@@ -2,6 +2,14 @@
 Changelog for package autoware_shape_estimation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* chore(autoware_shape_estimation): remove cudnn dependency (`#11892 <https://github.com/autowarefoundation/autoware_universe/issues/11892>`_)
+* feat: simulation related packages support jazzy (`#11424 <https://github.com/autowarefoundation/autoware_universe/issues/11424>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, 心刚
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

@@ -59,17 +59,24 @@ void apply_spline(
     return;
   }
   trajectory_interpolation_util->align_orientation_with_trajectory_direction();
-  TrajectoryPoints output_points{traj_points.front()};
   constexpr double min_interpolation_step = 1e-2;
   const auto ds = std::max(interpolation_resolution_m, min_interpolation_step);
-  output_points.reserve(static_cast<size_t>(trajectory_interpolation_util->length() / ds));
 
-  for (auto s = ds; s <= trajectory_interpolation_util->length(); s += ds) {
+  TrajectoryPoints output_points{};
+  output_points.reserve(static_cast<size_t>(1 + trajectory_interpolation_util->length() / ds));
+  double last_s{0.0};
+  for (auto s = 0.0; s <= trajectory_interpolation_util->length(); s += ds) {
     auto p = trajectory_interpolation_util->compute(s);
     if (!autoware::trajectory_optimizer::utils::validate_point(p)) {
       continue;
     }
     output_points.push_back(p);
+    last_s = s;
+  }
+
+  if (trajectory_interpolation_util->length() - last_s > min_interpolation_step) {
+    output_points.push_back(
+      trajectory_interpolation_util->compute(trajectory_interpolation_util->length()));
   }
 
   if (output_points.size() < 2) {
@@ -78,23 +85,6 @@ void apply_spline(
       rclcpp::get_logger("trajectory_spline_smoother"), *clock, 5000,
       "Not enough points in trajectory after akima spline interpolation");
     return;
-  }
-  const auto & last_interpolated_point = output_points.back();
-  auto & original_trajectory_last_point = traj_points.back();
-
-  if (!autoware::trajectory_optimizer::utils::validate_point(original_trajectory_last_point)) {
-    auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
-    RCLCPP_WARN_THROTTLE(
-      rclcpp::get_logger("trajectory_spline_smoother"), *clock, 5000,
-      "Last point in original trajectory is invalid. Removing last point");
-    traj_points = output_points;
-    return;
-  }
-
-  auto d = autoware_utils_geometry::calc_distance2d(
-    last_interpolated_point.pose.position, original_trajectory_last_point.pose.position);
-  if (d > min_interpolation_step) {
-    output_points.push_back(original_trajectory_last_point);
   }
 
   if (preserve_original_orientation) {
