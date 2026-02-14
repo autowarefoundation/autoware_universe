@@ -199,10 +199,10 @@ void CostmapGenerator::loadRoadAreasFromLaneletMap(
   // convert lanelets to polygons and put into area_points array
   for (const auto & ll : road_lanelets) {
     geometry_msgs::msg::Polygon poly;
-    geometry_msgs::msg::Point32 pt;
     for (const auto & p : ll.polygon3d().basicPolygon()) {
-      lanelet::utils::conversion::toGeomMsgPt32(p, &pt);
-      poly.points.push_back(pt);
+      const auto pt = experimental::lanelet2_utils::to_ros(p);
+      poly.points.push_back(
+        geometry_msgs::build<geometry_msgs::msg::Point32>().x(pt.x).y(pt.y).z(pt.z));
     }
     area_polygons.push_back(poly);
   }
@@ -213,10 +213,24 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(
   std::vector<geometry_msgs::msg::Polygon> & area_polygons)
 {
   // Parking lots
+  auto toGeomMsgPoly =
+    [](const lanelet::ConstPolygon3d & ll_poly, geometry_msgs::msg::Polygon * geom_poly) {
+      geom_poly->points.clear();
+      geom_poly->points.reserve(ll_poly.size());
+      for (const auto & ll_pt : ll_poly) {
+        const auto geom_pt = experimental::lanelet2_utils::to_ros(ll_pt.basicPoint());
+        geom_poly->points.push_back(
+          geometry_msgs::build<geometry_msgs::msg::Point32>()
+            .x(static_cast<float>(geom_pt.x))
+            .y(static_cast<float>(geom_pt.y))
+            .z(static_cast<float>(geom_pt.z)));
+      }
+    };
+
   lanelet::ConstPolygons3d all_parking_lots = lanelet::utils::query::getAllParkingLots(lanelet_map);
   for (const auto & ll_poly : all_parking_lots) {
     geometry_msgs::msg::Polygon poly;
-    lanelet::utils::conversion::toGeomMsgPoly(ll_poly, &poly);
+    toGeomMsgPoly(ll_poly, &poly);
     area_polygons.push_back(poly);
   }
 
@@ -227,7 +241,7 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(
     lanelet::ConstPolygon3d ll_poly;
     lanelet::utils::lineStringWithWidthToPolygon(parking_space, &ll_poly);
     geometry_msgs::msg::Polygon poly;
-    lanelet::utils::conversion::toGeomMsgPoly(ll_poly, &poly);
+    toGeomMsgPoly(ll_poly, &poly);
     area_polygons.push_back(poly);
   }
 }

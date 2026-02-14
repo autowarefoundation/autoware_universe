@@ -15,6 +15,7 @@
 
 #include <autoware/behavior_path_lane_change_module/utils/calculation.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -163,7 +164,7 @@ double calc_ego_dist_to_lanes_start(
     return std::numeric_limits<double>::max();
   }
 
-  const auto target_front_pt = lanelet::utils::conversion::toGeomMsgPt(target_bound.front());
+  const auto target_front_pt = experimental::lanelet2_utils::to_ros(target_bound.front());
   const auto ego_position = common_data_ptr->get_ego_pose().position;
 
   return motion_utils::calcSignedArcLength(path.points, ego_position, target_front_pt);
