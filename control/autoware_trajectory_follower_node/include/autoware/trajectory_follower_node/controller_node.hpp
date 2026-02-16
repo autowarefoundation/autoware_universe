@@ -47,6 +47,7 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

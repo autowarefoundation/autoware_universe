@@ -145,7 +145,13 @@ void Controller::check_incoming_message_timeout(diagnostic_updater::DiagnosticSt
 {
   const auto traj_timestamp = sub_ref_path_.latest_timestamp();
 
-  const auto elapsed = (this->now() - traj_timestamp).seconds();
+  if (!traj_timestamp) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "no message received");
+    return;
+  }
+
+  const auto elapsed = (this->now() - traj_timestamp.value()).seconds();
   if (elapsed > incoming_message_timeout_threshold_sec_) {
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
     stat.add("trajectory", "timeout (elapsed: " + std::to_string(elapsed) + " sec)");
