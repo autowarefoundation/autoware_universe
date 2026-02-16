@@ -2,6 +2,24 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore: use local default config files instead of autoware_launch and fix arg propagation chain (`#12031 <https://github.com/autowarefoundation/autoware_universe/issues/12031>`_)
+  * use local default config files instead of autoware_launch
+  * update tier4_perception_launch to drill down the param path
+  * add propagation chains for sync_param_path, irregular_object_detector_param_path and change default for sync_param_path, ogm_outlier_filter_param_path
+  * append ogm_outlier_filter.param.yaml propagation chain
+  * style(pre-commit): autofix
+  * Revert "style(pre-commit): autofix"
+  This reverts commit b34af00301c6c292c0068951552f6630042afac3.
+  * Revert "append ogm_outlier_filter.param.yaml propagation chain"
+  This reverts commit 0e44926d6b51a46868a0a8ff280565c643f3e515.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(euclidean_cluster): ignore inline pcl eigen warning (`#11917 <https://github.com/autowarefoundation/autoware_universe/issues/11917>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taeseung Sohn
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

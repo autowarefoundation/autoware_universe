@@ -2,6 +2,12 @@
 Changelog for package autoware_motion_velocity_dynamic_obstacle_stop_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
