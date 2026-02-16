@@ -205,17 +205,25 @@ bool NoStoppingAreaModule::modifyPathVelocity(
     return true;
   }
 
-  debug_data_.stuck_vehicle_detect_area = toGeomPoly(*stuck_vehicle_detect_area);
-  debug_data_.stop_line_detect_area = toGeomPoly(*stop_line_detect_area);
-  // Find stuck vehicle in no stopping area
-  const bool is_entry_prohibited_by_stuck_vehicle =
-    check_stuck_vehicles_in_no_stopping_area(*stuck_vehicle_detect_area, predicted_obj_arr_ptr);
-  // Find stop line in no stopping area
-  const bool is_entry_prohibited_by_stop_line =
-    no_stopping_area::check_stop_lines_in_no_stopping_area(
-      path, *stop_line_detect_area, debug_data_);
-  const bool is_entry_prohibited =
-    is_entry_prohibited_by_stuck_vehicle || is_entry_prohibited_by_stop_line;
+  const auto is_entry_prohibited = [&]() {
+    if (stuck_vehicle_detect_area) {
+      debug_data_.stuck_vehicle_detect_area = toGeomPoly(*stuck_vehicle_detect_area);
+      // Find stuck vehicle in no stopping area
+      if (check_stuck_vehicles_in_no_stopping_area(
+            *stuck_vehicle_detect_area, predicted_obj_arr_ptr)) {
+        return true;
+      }
+    }
+    if (stop_line_detect_area) {
+      debug_data_.stop_line_detect_area = toGeomPoly(*stop_line_detect_area);
+      // Find stop line in no stopping area
+      if (no_stopping_area::check_stop_lines_in_no_stopping_area(
+            path, *stop_line_detect_area, debug_data_)) {
+        return true;
+      }
+    }
+    return false;
+  }();
 
   pass_judge_.check_if_stoppable(distance_to_stop_point, ego_data, logger_, *clock_);
   if (!pass_judge_.is_stoppable) {
