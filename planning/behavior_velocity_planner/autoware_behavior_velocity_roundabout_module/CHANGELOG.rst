@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_roundabout_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(intersection_module, roundabout_module): add collision_start_margin_time to prediction path cut duration (`#11774 <https://github.com/autowarefoundation/autoware_universe/issues/11774>`_)
+  * fix(intersection_module, roundabout_module): adjust cutPredictPathWithinDuration to include collision start margin time
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sho Iwasawa
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

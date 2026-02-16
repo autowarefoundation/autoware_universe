@@ -2,6 +2,21 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(lanelet2_extension): deprecate some functions in query (2) (`#11998 <https://github.com/autowarefoundation/autoware_universe/issues/11998>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(behavior_velocity_intersection_module): update test dependencies (`#11937 <https://github.com/autowarefoundation/autoware_universe/issues/11937>`_)
+* fix(intersection): use collision stopline index instead of closest index (`#11806 <https://github.com/autowarefoundation/autoware_universe/issues/11806>`_)
+* fix(intersection_module, roundabout_module): add collision_start_margin_time to prediction path cut duration (`#11774 <https://github.com/autowarefoundation/autoware_universe/issues/11774>`_)
+  * fix(intersection_module, roundabout_module): adjust cutPredictPathWithinDuration to include collision start margin time
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK, Sho Iwasawa, Yukinari Hisaki
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
