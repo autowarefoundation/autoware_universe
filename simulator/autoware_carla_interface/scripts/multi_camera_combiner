@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+# Entry point script for multi_camera_combiner
+import sys
+
+from autoware_carla_interface.multi_camera_combiner_node import main
+
+if __name__ == "__main__":
+    sys.exit(main())
