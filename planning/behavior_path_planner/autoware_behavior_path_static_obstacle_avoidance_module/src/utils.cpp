@@ -1399,9 +1399,12 @@ bool isWithinLanes(
   }
 
   // concat_lanelets is already confirmed to have at least one lanelet (nearest lanelet)
-  const auto combine_lanelet =
-    *autoware::experimental::lanelet2_utils::combine_lanelets_shape(concat_lanelets);
-
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(concat_lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    return false;
+  }
+  const auto combine_lanelet = combine_lanelet_opt.value();
   return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }
 

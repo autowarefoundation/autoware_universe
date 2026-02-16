@@ -248,12 +248,13 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     } while (route_handler.getNextLaneletWithinRoute(current_lane, &current_lane) &&
              current_lane.attributeOr("turn_direction", std::string("none")) == lane_attribute);
 
-    if (!combined_lane_elems.empty()) {
+    const auto combined_lanelet_opt =
+      autoware::experimental::lanelet2_utils::combine_lanelets_shape(combined_lane_elems);
+    // confirmed by combined_lanelet_opt that combined_lane_elems is not empty
+    if (combined_lanelet_opt.has_value()) {
       // store combined lane and its front lane
       const auto & combined_and_first = std::pair<lanelet::ConstLanelet, lanelet::ConstLanelet>(
-        *autoware::experimental::lanelet2_utils::combine_lanelets_shape(combined_lane_elems),
-        combined_lane_elems.front());
-      // combined_lane_elems is not empty.
+        *combined_lanelet_opt, combined_lane_elems.front());
       combined_and_front_vec.push_back(combined_and_first);
     }
   }
