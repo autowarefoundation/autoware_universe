@@ -107,6 +107,14 @@ repos:
         language: node
         files: .svg$
         additional_dependencies: [prettier@2.7.1, "@prettier/plugin-xml@2.2.0"]
+      - id: lint-system-design-format
+        name: Lint System Design Format Files
+        description: Lint autoware_system_design_format YAML files (*.node.yaml, *.module.yaml, *.system.yaml, *.parameter_set.yaml)
+        entry: bash .pre-commit-lint-system-design.sh
+        language: system
+        files: \.(node|module|system|parameter_set)\.yaml$
+        pass_filenames: true
+        require_serial: false
 
   - repo: https://github.com/AleksaC/hadolint-py
     rev: v2.14.0
