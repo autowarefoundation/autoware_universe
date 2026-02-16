@@ -227,9 +227,6 @@ void set_right_turn_target_lanelets(
   const auto combined_turn_lls_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets.turn_lanelets);
   if (!combined_turn_lls_opt.has_value()) {
-    RCLCPP_WARN(
-      rclcpp::get_logger("validator_intersection_collision_checker"),
-      "EgoLanelet's turn_lanelets is empty.");
     return;
   }
   const auto combined_turn_lls = combined_turn_lls_opt.value();
@@ -443,10 +440,6 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
         marker_array.markers.push_back(create_point_marker(
           target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
         add_text_marker(target_ll, "ICC_target_lanelets_text");
-      } else {
-        RCLCPP_WARN(
-          rclcpp::get_logger("validator_intersection_collision_checker"),
-          "Target lanelet in DebugData is empty, skipped.");
       }
     }
   }

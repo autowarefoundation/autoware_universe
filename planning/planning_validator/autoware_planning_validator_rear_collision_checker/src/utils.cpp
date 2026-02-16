@@ -247,7 +247,6 @@ auto check_shift_behavior(
   const auto combine_lanelet_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
   if (!combine_lanelet_opt.has_value()) {
-    RCLCPP_WARN(rclcpp::get_logger("validator_rear_collision_checker"), "Input lanelets is empty.");
     return std::make_pair(Behavior::NONE, 0.0);
   }
   const auto combine_lanelet = combine_lanelet_opt.value();
@@ -513,7 +512,6 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
   const auto combine_lanelet_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
   if (!combine_lanelet_opt.has_value()) {
-    RCLCPP_WARN(rclcpp::get_logger("validator_rear_collision_checker"), "Input lanelets is empty.");
     return;
   }
   const auto combine_lanelet = combine_lanelet_opt.value();

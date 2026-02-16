@@ -472,8 +472,6 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
   const auto combine_lanelet_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanelet.lanelets);
   if (!combine_lanelet_opt.has_value()) {
-    RCLCPP_WARN(
-      rclcpp::get_logger("validator_intersection_collision_checker"), "Target lanelet is empty.");
     return std::nullopt;
   }
   const auto combine_lanelet = combine_lanelet_opt.value();
