@@ -340,7 +340,7 @@ mergeLaneletsByTopologicalSort(
       const auto merged_ll_opt =
         autoware::experimental::lanelet2_utils::combine_lanelets_shape(to_be_merged);
       if (merged_ll_opt.has_value()) {
-        const auto merged_ll = merged_ll_opt.value();
+        const auto & merged_ll = merged_ll_opt.value();
         merged.push_back(merged_ll);
       } else {
         continue;

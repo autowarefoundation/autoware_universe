@@ -180,7 +180,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   if (!concat_lanelets_opt.has_value()) {
     return;
   }
-  const auto concat_lanelets = concat_lanelets_opt.value();
+  const auto & concat_lanelets = concat_lanelets_opt.value();
   const auto closest_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     {concat_lanelets}, planner_data_->current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;

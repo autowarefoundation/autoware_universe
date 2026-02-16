@@ -387,7 +387,7 @@ std::optional<lanelet::CompoundPolygon3d> generate_attention_area(
   if (!blind_side_lanelets_before_turning_merged_opt.has_value()) {
     return std::nullopt;
   }
-  const auto blind_side_lanelets_before_turning_merged =
+  const auto & blind_side_lanelets_before_turning_merged =
     blind_side_lanelets_before_turning_merged_opt.value();
   const auto blind_side_lanelet_boundary_before_turning =
     (turn_direction == TurnDirection::Left)
