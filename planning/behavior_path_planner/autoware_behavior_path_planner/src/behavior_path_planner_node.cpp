@@ -284,24 +284,24 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
   diagnostics_message_timeout_->clear();
   DataReadyStatus status = DataReadyStatus::SUCCESS;
 
-  const auto check = [&](const std::optional<rclcpp::Time> & ts, double timeout,
-                         const std::string & name) {
-    if (!ts.has_value()) {
-      RCLCPP_INFO_SKIPFIRST_THROTTLE(
-        get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
-      diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
-      status = DataReadyStatus::NOT_RECEIVED;
-      return;
-    }
-    if ((now - ts.value()).seconds() > timeout) {
-      diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
-      if (status == DataReadyStatus::SUCCESS) {
-        status = DataReadyStatus::TIMEOUT;
+  const auto check =
+    [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
+      if (!ts.has_value()) {
+        RCLCPP_INFO_SKIPFIRST_THROTTLE(
+          get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+        diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+        status = DataReadyStatus::NOT_RECEIVED;
+        return;
       }
-      return;
-    }
-    diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
-  };
+      if ((now - ts.value()).seconds() > timeout) {
+        diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
+        if (status == DataReadyStatus::SUCCESS) {
+          status = DataReadyStatus::TIMEOUT;
+        }
+        return;
+      }
+      diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
+    };
 
   check(scenario_subscriber_.latest_timestamp(), persistent_message_timeout_, "scenario");
   check(route_subscriber_.latest_timestamp(), persistent_message_timeout_, "route");
