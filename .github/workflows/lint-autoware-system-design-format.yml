@@ -25,7 +25,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Lint system design format files
-        uses: ./.github/actions/lint-system-design-format
+        uses: autowarefoundation/autoware_system_designer@main
         with:
           design_files_path: .
-          autoware_system_designer_version: main
