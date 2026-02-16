@@ -11,7 +11,7 @@
 
   <build_depend>autoware_cmake</build_depend>
 
-  <depend>autoware_auto_common</depend>
+  <depend>autoware_utils_math</depend>
   <depend>autoware_sampler_common</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
@@ -22,3 +22,4 @@
     <build_type>ament_cmake</build_type>
   </export>
 </package>
+ 
