@@ -44,7 +44,7 @@ for file in "$@"; do
     fi
 
     # Run the linter using the source code
-    python3 -m autoware_system_designer.linter.run_lint --format human "$file" || EXIT_CODE=1
+    python3 -m autoware_system_designer.linter.run_lint --format github-actions "$file" || EXIT_CODE=1
 done
 
 exit $EXIT_CODE
