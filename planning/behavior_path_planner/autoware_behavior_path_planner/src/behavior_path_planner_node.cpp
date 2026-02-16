@@ -23,6 +23,7 @@
 #include <tier4_planning_msgs/msg/path_change_module_id.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -281,18 +282,18 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
   const rclcpp::Time & now)
 {
   diagnostics_message_timeout_->clear();
-  const rclcpp::Time zero_stamp{0, 0, RCL_ROS_TIME};
   DataReadyStatus status = DataReadyStatus::SUCCESS;
 
-  const auto check = [&](const rclcpp::Time & ts, double timeout, const std::string & name) {
-    if (ts == zero_stamp) {
+  const auto check = [&](const std::optional<rclcpp::Time> & ts, double timeout,
+                         const std::string & name) {
+    if (!ts.has_value()) {
       RCLCPP_INFO_SKIPFIRST_THROTTLE(
         get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
       diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
       status = DataReadyStatus::NOT_RECEIVED;
       return;
     }
-    if ((now - ts).seconds() > timeout) {
+    if ((now - ts.value()).seconds() > timeout) {
       diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
       if (status == DataReadyStatus::SUCCESS) {
         status = DataReadyStatus::TIMEOUT;
