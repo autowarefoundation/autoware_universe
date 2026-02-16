@@ -1,0 +1,31 @@
+name: Lint Autoware System Design Format
+
+on:
+  pull_request:
+    paths:
+      - "**/*.node.yaml"
+      - "**/*.module.yaml"
+      - "**/*.system.yaml"
+      - "**/*.parameter_set.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.node.yaml"
+      - "**/*.module.yaml"
+      - "**/*.system.yaml"
+      - "**/*.parameter_set.yaml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint system design format files
+        uses: ./.github/actions/lint-system-design-format
+        with:
+          design_files_path: .
+          autoware_system_designer_version: main
