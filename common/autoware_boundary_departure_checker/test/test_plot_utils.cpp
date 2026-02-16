@@ -30,10 +30,10 @@
 
 namespace autoware::boundary_departure_checker
 {
+#ifdef EXPORT_TEST_PLOT_FIGURE
 void save_figure(
   [[maybe_unused]] const std::string & filename, [[maybe_unused]] const std::string & sub_dir)
 {
-#ifdef EXPORT_TEST_PLOT_FIGURE
   auto plt = pyplot::import();
   const std::string file_path = __FILE__;
 
@@ -49,6 +49,6 @@ void save_figure(
     plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 150));
     plt.clf();
   }
-#endif
 }
+#endif
 }  // namespace autoware::boundary_departure_checker

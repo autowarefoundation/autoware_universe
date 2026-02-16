@@ -25,6 +25,7 @@
 
 namespace
 {
+#ifdef EXPORT_TEST_PLOT_FIGURE
 using autoware::boundary_departure_checker::ProjectionToBound;
 using autoware_utils_geometry::Segment2d;
 void plot_separate_segment(
@@ -57,6 +58,7 @@ void plot_ego_and_boundary(
   plt.legend();
   plt.axis(Args("equal"));
 }
+#endif
 }  // namespace
 
 namespace autoware::boundary_departure_checker
@@ -77,10 +79,11 @@ TEST(UncrossableBoundaryTest, TestSegmentToSegmentProjection)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_NEAR(result->lat_dist, 1.0, 1e-6);
-
-  auto plt = autoware::pyplot::import();
-  plot_ego_and_boundary(plt, ego_seg, boundary_seg, *result);
-  save_figure("test_segment_to_segment_projection.png", export_folder);
+  BDC_PLOT_RESULT({
+    auto plt = autoware::pyplot::import();
+    plot_ego_and_boundary(plt, ego_seg, boundary_seg, *result);
+    save_figure("test_segment_to_segment_projection.png", export_folder);
+  });
 }
 
 TEST(UncrossableBoundaryTest, TestIntersectionDetection)
@@ -95,9 +98,11 @@ TEST(UncrossableBoundaryTest, TestIntersectionDetection)
   // Distance should be 0.0 because they intersect
   EXPECT_DOUBLE_EQ(result->lat_dist, 0.0);
 
-  auto plt = autoware::pyplot::import();
-  plot_ego_and_boundary(plt, ego_seg, boundary_seg, *result);
-  save_figure("test_intersection_detection.png", export_folder);
+  BDC_PLOT_RESULT({
+    auto plt = autoware::pyplot::import();
+    plot_ego_and_boundary(plt, ego_seg, boundary_seg, *result);
+    save_figure("test_intersection_detection.png", export_folder);
+  });
 }
 
 }  // namespace autoware::boundary_departure_checker

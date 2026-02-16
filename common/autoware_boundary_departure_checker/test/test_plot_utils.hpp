@@ -20,9 +20,21 @@
 
 #include <string>
 #include <vector>
+
+#ifdef EXPORT_TEST_PLOT_FIGURE
+#define BDC_PLOT_RESULT(code_block) \
+  do {                              \
+    code_block;                     \
+  } while (0)
+#else
+#define BDC_PLOT_RESULT(code_block) ((void)0)
+#endif
+
 namespace autoware::boundary_departure_checker
 {
+#ifdef EXPORT_TEST_PLOT_FIGURE
 void save_figure(
   [[maybe_unused]] const std::string & filename, [[maybe_unused]] const std::string & sub_dir = "");
+#endif
 }  // namespace autoware::boundary_departure_checker
 #endif  // TEST_PLOT_UTILS_HPP_
