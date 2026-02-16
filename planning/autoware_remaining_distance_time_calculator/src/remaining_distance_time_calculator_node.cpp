@@ -14,7 +14,8 @@
 
 #include "remaining_distance_time_calculator_node.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -84,9 +85,17 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
 
 void RemainingDistanceTimeCalculatorNode::on_map(const HADMapBin::ConstSharedPtr & msg)
 {
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(
-    *msg, lanelet_map_ptr_, &traffic_rules_ptr_, &routing_graph_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr_);
+
+  routing_graph_ptr_ =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   road_lanes_ = lanelet::utils::query::roadLanelets(all_lanelets);
   is_graph_ready_ = true;
@@ -94,19 +103,23 @@ void RemainingDistanceTimeCalculatorNode::on_map(const HADMapBin::ConstSharedPtr
 
 void RemainingDistanceTimeCalculatorNode::compute_route()
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        road_lanes_, current_vehicle_pose_, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
     return;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
-  if (!lanelet::utils::query::getClosestLanelet(road_lanes_, goal_pose_, &goal_lanelet_)) {
+  const auto goal_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanes_, goal_pose_);
+  if (!goal_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
     return;
   }
+  goal_lanelet_ = goal_lanelet_opt.value();
 
   const lanelet::Optional<lanelet::routing::Route> optional_route =
     routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet_, 0);
@@ -178,14 +191,15 @@ void RemainingDistanceTimeCalculatorNode::on_timer()
 
 void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 {
-  lanelet::ConstLanelet current_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        current_lanes_, current_vehicle_pose_, &current_lanelet)) {
+  const auto current_lanelet_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(current_lanes_, current_vehicle_pose_);
+  if (!current_lanelet_opt) {
     RCLCPP_WARN_STREAM_THROTTLE(
       this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
 
     return;
   }
+  const auto & current_lanelet = current_lanelet_opt.value();
 
   if (
     current_lanes_.empty() || current_lanes_lengths_.empty() ||
@@ -209,8 +223,8 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 
   remaining_distance_ = std::invoke([&]() -> double {
     // remaining distance in current lanelet (if it is not the goal lanelet)
-    lanelet::ArcCoordinates arc_coord =
-      lanelet::utils::getArcCoordinates({current_lanelet}, current_vehicle_pose_);
+    lanelet::ArcCoordinates arc_coord = lanelet::utils::getArcCoordinates(
+      lanelet::ConstLanelets{current_lanelet}, current_vehicle_pose_);
     double this_lanelet_length = lanelet::geometry::length2d(current_lanelet);
     double dist_in_current_lanelet =
       (current_lanelet.id() != goal_lanelet_.id()) ? this_lanelet_length - arc_coord.length : 0.0;

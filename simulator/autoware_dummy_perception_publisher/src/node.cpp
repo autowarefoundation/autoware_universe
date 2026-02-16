@@ -30,6 +30,7 @@
 #include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
 #include <geometry_msgs/msg/detail/transform__struct.hpp>
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 
@@ -40,12 +41,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::dummy_perception_publisher
 {
@@ -336,7 +331,7 @@ void DummyPerceptionPublisherNode::objectCallback(
       try {
         ros_map2base_link = tf_buffer_.lookupTransform(
           "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
-        object.initial_state.pose_covariance.pose.position.z =
+        object.initial_state.pose_covariance.pose.position.z +=
           ros_map2base_link.transform.translation.z + 0.5 * object.shape.dimensions.z;
       } catch (tf2::TransformException & ex) {
         RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "%s", ex.what());

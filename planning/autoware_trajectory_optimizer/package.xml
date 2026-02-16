@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_trajectory_optimizer</name>
-  <version>0.48.0</version>
+  <version>0.50.0</version>
   <description>The autoware_trajectory_optimizer package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
@@ -21,11 +21,11 @@
   <depend>autoware_path_optimizer</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_qp_interface</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_math</depend>
   <depend>autoware_vehicle_info_utils</depend>
-  <depend>autoware_velocity_smoother</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>pluginlib</depend>
@@ -34,6 +34,8 @@
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>visualization_msgs</depend>
+
+  <exec_depend>autoware_core_planning</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

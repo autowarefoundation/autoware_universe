@@ -5,7 +5,7 @@ package_name = "autoware_carla_interface"
 
 setup(
     name=package_name,
-    version="0.48.0",
+    version="0.50.0",
     packages=find_packages(where="src"),
     install_requires=["setuptools"],
     zip_safe=True,

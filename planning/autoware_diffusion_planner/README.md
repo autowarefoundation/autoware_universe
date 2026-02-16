@@ -18,9 +18,20 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 
 ## How to use
 
-Currently, some launch files must be changed to run the planning simulator with `autoware_diffusion_planner`.
+### (1) Prerequisites
 
-(1) `/path/to/src/launcher/autoware_launch`
+Make sure that the directory specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml` points to the correct model version and contains the required model weight and parameter files.
+
+```bash
+$ ls ~/autoware_data/diffusion_planner/v3.0/
+diffusion_planner.onnx diffusion_planner.param.json
+```
+
+This can be downloaded from [setup-dev-env.sh](https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh).
+
+### (2) Modify launch files
+
+Currently, some launch files must be changed to run the planning simulator with `autoware_diffusion_planner`.
 
 ```diff
 diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml b/autoware_launch/config/control/trajectory_follower/longitudinal/pid.param.yaml
@@ -35,6 +46,17 @@ diff --git a/autoware_launch/config/control/trajectory_follower/longitudinal/pid
 
      # state transition
      drive_state_stop_dist: 0.5
+diff --git a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
+--- a/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
++++ b/autoware_launch/config/planning/scenario_planning/common/common.param.yaml
+@@ -1,6 +1,6 @@
+ /**:
+   ros__parameters:
+-    max_vel: 4.17           # max velocity limit [m/s]
++    max_vel: 22.2           # max velocity limit [m/s]
+
+     # constraints param for normal driving
+     normal:
 diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_launch/config/system/diagnostics/planning.yaml
 --- a/autoware_launch/config/system/diagnostics/planning.yaml
 +++ b/autoware_launch/config/system/diagnostics/planning.yaml
@@ -59,15 +81,10 @@ diff --git a/autoware_launch/config/system/diagnostics/planning.yaml b/autoware_
 
    - path: /autoware/planning/routing/state
      type: diag
-```
-
-(2) `/path/to/autoware/src/universe/autoware_universe`
-
-```diff
-diff --git a/launch/tier4_planning_launch/launch/planning.launch.xml b/launch/tier4_planning_launch/launch/planning.launch.xml
---- a/launch/tier4_planning_launch/launch/planning.launch.xml
-+++ b/launch/tier4_planning_launch/launch/planning.launch.xml
-@@ -40,12 +40,34 @@
+diff --git a/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml b/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
+--- a/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
++++ b/tier4_universe_launch/tier4_planning_launch/launch/planning.launch.xml
+@@ -47,12 +47,34 @@
        </include>
      </group>
 
@@ -102,9 +119,9 @@ diff --git a/launch/tier4_planning_launch/launch/planning.launch.xml b/launch/ti
          <arg name="input_objects_topic_name" value="$(var input_objects_topic_name)"/>
          <arg name="input_pointcloud_topic_name" value="$(var input_pointcloud_topic_name)"/>
          <arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/>
-diff --git a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml
---- a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml
-+++ b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml
+diff --git a/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml b/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
+--- a/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
++++ b/tier4_universe_launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning_deprecated.launch.xml
 @@ -240,7 +240,7 @@
          <remap from="~/input/accel" to="/localization/acceleration"/>
          <remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/>
@@ -116,7 +133,7 @@ diff --git a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/
          <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
 ```
 
-(3) launch the planning simulator
+### (3) Launch the planning simulator
 
 ```bash
 ros2 launch autoware_launch planning_simulator.launch.xml \
@@ -124,15 +141,6 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
   vehicle_model:=sample_vehicle \
   sensor_model:=sample_sensor_kit
 ```
-
-Note: Make sure the appropriate version weight is set for the path specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml`.
-
-```bash
-$ ls ~/autoware_data/diffusion_planner/v2.0/
-diffusion_planner.onnx diffusion_planner.param.json
-```
-
-This can be downloaded from [setup-dev-env.sh](https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh).
 
 ## Features
 
@@ -227,7 +235,8 @@ To download the latest model, simply run the provided setup script:
 | ------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | **0.1** | 2025/07/05   | - First public release<br>- Route planning based on TIER IV real data                                                                                                                                                                                                                                                                                                                                                                    | NG                     |
 | **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points**                                                                                                                                                                                           | NG                     |
-| **2.0** | 2025/11/26   | - Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added `Polygon` and `LineString` as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased `NUM_SEGMENTS_IN_LANE` from 70 to 140. | OK                     |
+| **2.0** | 2025/11/26   | - Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added `Polygon` and `LineString` as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased `NUM_SEGMENTS_IN_LANE` from 70 to 140. | NG                     |
+| **3.0** | 2026/01/09   | - Added `TURN_INDICATOR_OUTPUT_KEEP` to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.                                                                                                                                                                                                              | OK                     |
 
 ---
 

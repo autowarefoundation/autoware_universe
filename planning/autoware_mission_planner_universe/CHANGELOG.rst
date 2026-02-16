@@ -2,6 +2,35 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(planning): deprecate getClosestLanelet usage (`#12032 <https://github.com/autowarefoundation/autoware_universe/issues/12032>`_)
+* fix: qos compatibility (`#11878 <https://github.com/autowarefoundation/autoware_universe/issues/11878>`_)
+* fix(mission_planner): blocking manual lane change when reroute is unavailable (`#11794 <https://github.com/autowarefoundation/autoware_universe/issues/11794>`_)
+  * Added abort when reroute not available
+  * blocking manual lane-change when rereoute unavailable
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* chore(mission_planner): add maintainer (`#11830 <https://github.com/autowarefoundation/autoware_universe/issues/11830>`_)
+  add taiki yamada as maintainer
+* Contributors: Arjun Jagdish Ram, Mamoru Sobue, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taiki Yamada
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Planning and Control Component) (`#11784 <https://github.com/autowarefoundation/autoware_universe/issues/11784>`_)
+  * planning component toBinMsg replacement
+  * control component fromBinMsg replacement
+  * planning component fromBinMsg replacement
+  ---------
+* feat(autoware_lanelet2_utils): replace the usage of remove_const (`#11727 <https://github.com/autowarefoundation/autoware_universe/issues/11727>`_)
+  replace the usage of remove_const
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

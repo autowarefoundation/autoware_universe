@@ -41,6 +41,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
+  autoware_qos_utils
   grid_map_pcl
   grid_map_ros
   pcl_conversions
@@ -50,7 +51,7 @@ ament_target_dependencies(${PROJECT_NAME}
   autoware_utils
   autoware_internal_debug_msgs
   autoware_map_msgs
-  autoware_lanelet2_extension
+  autoware_lanelet2_utils
   geometry_msgs
   lanelet2_core
   lanelet2_projection
@@ -59,6 +60,7 @@ ament_target_dependencies(${PROJECT_NAME}
   std_msgs
   tf2
   tf2_ros
+  tf2_sensor_msgs
   visualization_msgs
 )
 

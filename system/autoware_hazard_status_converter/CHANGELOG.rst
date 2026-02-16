@@ -2,6 +2,18 @@
 Changelog for package autoware_hazard_status_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(hazard_status_converter): use root output level for emergency holding (`#11954 <https://github.com/autowarefoundation/autoware_universe/issues/11954>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(hazard_status_converter): use latch level for holding status (`#11721 <https://github.com/autowarefoundation/autoware_universe/issues/11721>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.48.0 (2025-11-18)
 -------------------
 

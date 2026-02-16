@@ -14,7 +14,6 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 find_package(CUDA)
-find_package(CUDNN)
 find_package(TENSORRT)
 
 set(SHAPE_ESTIMATION_DEPENDENCIES
@@ -41,7 +40,7 @@ set(${PROJECT_NAME}_SOURCES
   lib/corrector/reference_shape_size_corrector.cpp
 )
 
-if(${CUDA_FOUND} AND ${CUDNN_FOUND} AND ${TENSORRT_FOUND})
+if(${CUDA_FOUND} AND ${TENSORRT_FOUND})
   message("CUDA found, including CUDA-specific sources")
   list(APPEND ${PROJECT_NAME}_SOURCES lib/tensorrt_shape_estimator.cpp)
   add_definitions(-DUSE_CUDA)
@@ -62,7 +61,7 @@ target_include_directories(${PROJECT_NAME}_lib
   "${EIGEN3_INCLUDE_DIR}"
 )
 
-if(${CUDA_FOUND} AND ${CUDNN_FOUND} AND ${TENSORRT_FOUND})
+if(${CUDA_FOUND} AND ${TENSORRT_FOUND})
 target_include_directories(${PROJECT_NAME}_lib
   SYSTEM PUBLIC
   "${TENSORRT_INCLUDE_DIRS}"
@@ -87,7 +86,7 @@ target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_lib
 )
 
-if(${CUDA_FOUND} AND ${CUDNN_FOUND} AND ${TENSORRT_FOUND})
+if(${CUDA_FOUND} AND ${TENSORRT_FOUND})
   target_link_libraries(${PROJECT_NAME}
     ${TENSORRT_LIBRARIES}
   )

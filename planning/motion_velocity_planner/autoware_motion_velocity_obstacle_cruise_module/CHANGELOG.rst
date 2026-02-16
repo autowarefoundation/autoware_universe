@@ -2,6 +2,30 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* docs(obstacle_cruise): revise documentation (`#11841 <https://github.com/autowarefoundation/autoware_universe/issues/11841>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Zulfaqar Azmi
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* feat(motion_velocity_planner): refactor time publisher (`#11646 <https://github.com/autowarefoundation/autoware_universe/issues/11646>`_)
+  * delete bdp time publish
+  * delete dynamic_obstacle_stop time publish
+  * delete obstacle_cruise time publish
+  * delete obstacle_slow_down time publish
+  * delete obstacle_velocity_limiter time publish
+  * delete out of lane time publish
+  * delete run out time publish
+  * add short module name function
+  ---------
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Yuki TAKAGI
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
