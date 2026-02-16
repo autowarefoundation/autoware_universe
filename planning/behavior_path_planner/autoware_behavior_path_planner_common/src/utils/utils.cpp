@@ -555,7 +555,7 @@ bool isEgoWithinOriginalLane(
     // if current_lanes is empty, ego is out of lane.
     return false;
   }
-  const auto combined_lane = combined_lane_opt.value();
+  const auto & combined_lane = combined_lane_opt.value();
   const auto lane_polygon = combined_lane.polygon2d().basicPolygon();
   return isEgoWithinOriginalLane(lane_polygon, current_pose, common_param, outer_margin);
 }
@@ -990,7 +990,7 @@ std::optional<double> getSignedDistanceFromBoundary(
     // if lanelets is empty, return nullopt
     return std::nullopt;
   }
-  const auto combined_lane = combined_lane_opt.value();
+  const auto & combined_lane = combined_lane_opt.value();
   const auto & bound_line_2d = left_side ? lanelet::utils::to2D(combined_lane.leftBound3d())
                                          : lanelet::utils::to2D(combined_lane.rightBound3d());
 

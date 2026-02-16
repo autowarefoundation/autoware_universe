@@ -170,7 +170,7 @@ bool path_footprint_exceeds_target_lane_bound(
     // empty target_lanes -> no boundary
     return false;
   }
-  const auto combined_target_lane = combined_target_lane_opt.value();
+  const auto & combined_target_lane = combined_target_lane_opt.value();
 
   for (const auto & path_point : path.points) {
     const auto & pose = path_point.point.pose;

@@ -326,7 +326,7 @@ GoalCandidates GoalSearcher::search(
   if (!pull_over_lanelet_opt.has_value()) {
     return goal_candidates;
   }
-  const auto pull_over_lanelet = pull_over_lanelet_opt.value();
+  const auto & pull_over_lanelet = pull_over_lanelet_opt.value();
   const auto boundary =
     left_side_parking_ ? pull_over_lanelet.leftBound() : pull_over_lanelet.rightBound();
 

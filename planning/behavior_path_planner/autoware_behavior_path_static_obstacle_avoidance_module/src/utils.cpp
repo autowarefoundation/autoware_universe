@@ -1404,7 +1404,7 @@ bool isWithinLanes(
   if (!combine_lanelet_opt.has_value()) {
     return false;
   }
-  const auto combine_lanelet = combine_lanelet_opt.value();
+  const auto & combine_lanelet = combine_lanelet_opt.value();
   return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }
 
