@@ -2,6 +2,21 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(perception, localization): replace getClosestLanelet function (`#12033 <https://github.com/autowarefoundation/autoware_universe/issues/12033>`_)
+  * refactor(perception, localization): replace getClosestLanelet function
+  * replace toGeomMsg
+  ---------
+* fix(map_based_prediction): remove yaw correction for orientation unavailable (`#12027 <https://github.com/autowarefoundation/autoware_universe/issues/12027>`_)
+  * remove yaw correction for orientation unavailable
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(map_based_prediction): use explicit Eigen init (`#11918 <https://github.com/autowarefoundation/autoware_universe/issues/11918>`_)
+* Contributors: Mamoru Sobue, Masaki Baba, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
