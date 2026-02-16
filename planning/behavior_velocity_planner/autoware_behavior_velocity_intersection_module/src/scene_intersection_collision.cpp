@@ -175,9 +175,14 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   }
 
   const double passing_time = time_distance_array.back().first;
-  const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
-  const auto closest_arc_coords =
-    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
+  const auto & concat_lanelets_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(path_lanelets.all);
+  if (!concat_lanelets_opt.has_value()) {
+    return;
+  }
+  const auto & concat_lanelets = concat_lanelets_opt.value();
+  const auto closest_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+    {concat_lanelets}, planner_data_->current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
   debug_data_.ego_lane = ego_lane.polygon3d();
   const auto ego_poly = ego_lane.polygon2d().basicPolygon();

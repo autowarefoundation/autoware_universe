@@ -19,8 +19,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
@@ -337,7 +337,14 @@ mergeLaneletsByTopologicalSort(
         to_be_merged.push_back(Id2lanelet[ind2Id[sub_ind]]);
         original.push_back(Id2lanelet[ind2Id[sub_ind]]);
       }
-      merged.push_back(lanelet::utils::combineLaneletsShape(to_be_merged));
+      const auto merged_ll_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(to_be_merged);
+      if (merged_ll_opt.has_value()) {
+        const auto & merged_ll = merged_ll_opt.value();
+        merged.push_back(merged_ll);
+      } else {
+        continue;
+      }
     }
   }
   return {merged, originals};

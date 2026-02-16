@@ -234,7 +234,6 @@ bool IntersectionModule::isTargetYieldStuckVehicleType(
 bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & path_lanelets) const
 {
   using lanelet::geometry::length3d;
-  using lanelet::utils::getArcCoordinates;
   using lanelet::utils::getPolygonFromArcLength;
   using lanelet::utils::to2D;
 
