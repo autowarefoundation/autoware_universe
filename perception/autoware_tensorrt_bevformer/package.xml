@@ -10,6 +10,7 @@
   <maintainer email="naveen.sathiyaseelan@multicorewareinc.com">Naveen Sathiyaseelan</maintainer>
   <maintainer email="dhinesh.panneerselvam@multicorewareinc.com">Dhinesh Panneerselvam</maintainer>
   <maintainer email="rahul.sundar@multicorewareinc.com">Rahul Gandhi Sundar</maintainer>
+  <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
