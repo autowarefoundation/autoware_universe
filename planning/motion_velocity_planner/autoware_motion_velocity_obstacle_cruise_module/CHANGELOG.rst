@@ -2,6 +2,14 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* docs(obstacle_cruise): revise documentation (`#11841 <https://github.com/autowarefoundation/autoware_universe/issues/11841>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Zulfaqar Azmi
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

@@ -33,7 +33,7 @@ jobs:
 
   deploy-docs:
     needs: make-sure-label-is-present
-    if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }}
+    if: ${{ github.event_name != 'pull_request_target' || needs.make-sure-label-is-present.outputs.result == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository

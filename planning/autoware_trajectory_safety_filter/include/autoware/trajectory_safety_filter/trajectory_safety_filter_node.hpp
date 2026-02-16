@@ -31,6 +31,7 @@
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
@@ -44,6 +45,7 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 class TrajectorySafetyFilter : public rclcpp::Node
@@ -78,6 +80,8 @@ private:
     this, "~/input/odometry"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
     this, "~/input/objects"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
+    sub_acceleration_{this, "~/input/acceleration"};
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 

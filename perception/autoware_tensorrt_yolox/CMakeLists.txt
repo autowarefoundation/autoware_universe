@@ -67,6 +67,7 @@ endif()
 # tensorrt_yolox
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tensorrt_yolox.cpp
+  src/label.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
