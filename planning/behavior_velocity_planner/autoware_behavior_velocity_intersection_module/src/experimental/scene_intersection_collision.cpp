@@ -178,14 +178,11 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   const double passing_time = time_distance_array.back().first;
   const auto concat_lanelets_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(path_lanelets.all);
-  lanelet::ConstLanelet concat_lanelets{};
+
   if (!concat_lanelets_opt.has_value()) {
-    RCLCPP_WARN(
-      rclcpp::get_logger("behavior_velocity_intersection_module"),
-      "Path lanelet is empty. Continue using empty lanelet.");
-  } else {
-    concat_lanelets = concat_lanelets_opt.value();
+    return;
   }
+  const auto concat_lanelets = concat_lanelets_opt.value();
   const auto closest_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     {concat_lanelets}, planner_data.current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
