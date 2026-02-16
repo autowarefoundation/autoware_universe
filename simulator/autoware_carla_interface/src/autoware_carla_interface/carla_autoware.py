@@ -98,7 +98,7 @@ class InitializeInterface(object):
 
     def _setup_traffic_manager(self, client):
         """Configure traffic manager with NPC vehicles."""
-        traffic_manager = client.get_trafficmanager()
+        traffic_manager = client.get_trafficmanager()  # cspell:ignore trafficmanager
         traffic_manager.set_synchronous_mode(True)
         traffic_manager.set_random_device_seed(0)
         random.seed(0)
