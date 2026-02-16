@@ -267,7 +267,6 @@ TEST(UncrossableBoundaryUtilsTest, TestPointToSegmentProjection)
 
 TEST(UncrossableBoundaryUtilsTest, TestTrimPredPath)
 {
-  // 1. Setup original trajectory
   TrajectoryPoints path;
   std::vector<double> x_orig;
   std::vector<double> y_orig;
@@ -282,7 +281,6 @@ TEST(UncrossableBoundaryUtilsTest, TestTrimPredPath)
     y_orig.push_back(p.pose.position.y);
   }
 
-  // 2. Perform the trim (cutoff at 4.5 seconds)
   constexpr double cutoff_time_s = 4.5;
   auto trimmed = utils::trim_pred_path(path, cutoff_time_s);
 
@@ -322,30 +320,26 @@ TEST(UncrossableBoundaryUtilsTest, TestTrimPredPath)
 
 TEST(UncrossableBoundaryUtilsTest, TestMarginFromCovariance)
 {
-  // 1. Setup Vehicle Info (Standard Autoware Sample Vehicle)
   const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
     0.383, 0.235, 2.79, 1.64, 1.0, 1.1, 0.128, 0.128, 2.5, 0.70);
 
-  // 2. Setup Covariance (45 deg yaw, higher X variance)
   geometry_msgs::msg::PoseWithCovariance cov_msg;
   cov_msg.covariance[0] = 0.5;  // Map X variance
   cov_msg.covariance[7] = 0.2;  // Map Y variance
   const double yaw = M_PI / 4.0;
   cov_msg.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
 
-  // 3. Apply Computation: Create base and expanded footprints
   const auto base_fp = vehicle_info.createFootprint(0.0, 0.0);
   const auto margin = utils::calc_margin_from_covariance(cov_msg, 1.0);
   const auto expanded_fp = vehicle_info.createFootprint(margin.lat_m, margin.lon_m);
 
-  // 4. Visualization
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     auto [fig, axes] = plt.subplots(1, 2);
 
-    // Helper to extract coordinates for plt.plot
     auto get_coords = [](const LinearRing2d & ring) {
-      std::vector<double> x, y;
+      std::vector<double> x;
+      std::vector<double> y;
       for (const auto & p : ring) {
         x.push_back(p.x());
         y.push_back(p.y());
@@ -356,12 +350,10 @@ TEST(UncrossableBoundaryUtilsTest, TestMarginFromCovariance)
     auto [bx, by] = get_coords(base_fp);
     auto [ex, ey] = get_coords(expanded_fp);
 
-    // Plot "Before": Base footprint in Map frame (unrotated for simplicity)
     axes[0].plot(Args(bx, by), Kwargs("color"_a = "gray", "label"_a = "Base Vehicle"));
     axes[0].set_title(Args("Step 1: Base Footprint"));
     axes[0].set_aspect(Args("equal"));
 
-    // Plot "After": Base vs Expanded to show margin effect
     axes[1].plot(Args(bx, by), Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
     axes[1].plot(Args(ex, ey), Kwargs("color"_a = "blue", "label"_a = "Expanded (Margin)"));
     axes[1].set_title(Args("Step 2: Expanded Footprint"));
