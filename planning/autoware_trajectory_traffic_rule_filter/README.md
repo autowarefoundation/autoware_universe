@@ -22,7 +22,7 @@ The package uses a plugin architecture that allows for flexible and extensible t
 - Monitors traffic light states from perception system
 - Reject trajectories when:
   - they cross a red traffic light;
-  - they cross a amber traffic light and it is determined that either 1) ego has enough time to comfortably stop or 2) ego has enough time to cross before the light turns red (see [autoware_behavior_velocity_traffic_light_module](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/#dilemma-zone) for some similar logic).
+  - they cross an amber traffic light and it is determined that either 1) ego can stop at the stop line without breaking the deceleration/jerk limits or 2) ego cannot cross the stop line within the `crossing_time_limit`.
 
 ## Interface
 
@@ -65,11 +65,10 @@ The active filters are specified in `config/trajectory_traffic_rule_filter.param
 
 #### Traffic Light Filter parameters
 
-| Name                                             | Type   | Description                                                                                                | Default Value |
-| ------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------- | ------------- |
-| `traffic_light_filter.enable_pass_judge`         | bool   | Enable pass judge logic. When false, trajectories that cross a amber light are always rejected             | true          |
-| `traffic_light_filter.max_accel`                 | double | Maximum deceleration [m/s^2] used for pass judge.                                                          | -2.8          |
-| `traffic_light_filter.max_jerk`                  | double | Maximum jerk [m/s^3] used for pass judge.                                                                  | -5.0          |
-| `traffic_light_filter.delay_response_time`       | double | Delay response time [s] used for pass judge.                                                               | 0.5           |
-| `traffic_light_filter.amber_lamp_period`         | double | Amber lamp period [s] used to estimate if ego has time to cross before the light turns red.                | 2.75          |
-| `traffic_light_filter.amber_light_stop_velocity` | double | Current ego velocity threshold [m/s] below which trajectories crossing an amber light are always rejected. | 1.0           |
+| Name                                                  | Type   | Description                                                                                                    | Default Value |
+| ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
+| `traffic_light_filter.deceleration_limit`             | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit | 2.8           |
+| `traffic_light_filter.jerk_limit`                     | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit | 5.0           |
+| `traffic_light_filter.delay_response_time`            | double | Delay response time used to estimate the minimum ego stopping distance                                         | 0.5           |
+| `traffic_light_filter.crossing_time_limit`            | double | Trajectories crossing an amber light are rejected if they cannot cross before this time                        | 2.75          |
+| `traffic_light_filter.treat_amber_light_as_red_light` | bool   | When true, amber lights are handled like red lights                                                            | true          |

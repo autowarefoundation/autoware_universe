@@ -48,12 +48,11 @@ protected:
 
     // Initialize parameters
     traffic_rule_filter::Params params;
-    params.traffic_light_filter.max_accel = -2.8;
-    params.traffic_light_filter.max_jerk = -5.0;
+    params.traffic_light_filter.deceleration_limit = 2.8;
+    params.traffic_light_filter.jerk_limit = 5.0;
     params.traffic_light_filter.delay_response_time = 0.5;
-    params.traffic_light_filter.amber_lamp_period = 2.75;
-    params.traffic_light_filter.amber_light_stop_velocity = 1.0;
-    params.traffic_light_filter.enable_pass_judge = true;
+    params.traffic_light_filter.crossing_time_limit = 2.75;
+    params.traffic_light_filter.treat_amber_light_as_red_light = false;
     filter_->set_parameters(params);
   }
 
@@ -219,7 +218,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
   // stop_x is 20m away.
   // Stoppable distance is roughly 5^2 / (2 * 2.8) + 5 * 0.5 = 6.96m.
   // Since 6.96 < 20.0, it IS stoppable.
-  // can_pass_amber_light should return false.
+  // can_pass_amber_light should return false (ego MUST stop if it can).
 
   auto points = create_trajectory(0.0, 30.0, 5.0);
 
@@ -239,9 +238,9 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
   // Stoppable distance is roughly 10^2 / (2 * 2.8) + 10 * 0.5 = 22.85m.
   // Since 22.85 > 5.0, it is NOT stoppable.
 
-  // Reachable distance: v * amber_lamp_period = 10 * 2.75 = 27.5m.
+  // Reachable distance: v * crossing_time_limit = 10 * 2.75 = 27.5m.
   // Since 5.0 < 27.5, it IS reachable.
-  // can_pass_amber_light should return true.
+  // can_pass_amber_light should return true (ego CANNOT stop and CAN pass).
 
   auto points = create_trajectory(0.0, 10.0, 10.0);
 
@@ -266,14 +265,37 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
 
   // Let's adjust params to create the desired scenario.
   traffic_rule_filter::Params params;
-  params.traffic_light_filter.max_accel = -0.5;  // Very weak braking
+  params.traffic_light_filter.deceleration_limit = -0.5;  // Very weak braking
   params.traffic_light_filter.delay_response_time = 1.0;
-  params.traffic_light_filter.amber_lamp_period = 1.0;  // Short amber
-  params.traffic_light_filter.enable_pass_judge = true;
+  params.traffic_light_filter.crossing_time_limit = 1.0;  // Short amber
+  params.traffic_light_filter.treat_amber_light_as_red_light = false;
   filter_->set_parameters(params);
 
   auto points = create_trajectory(0.0, 200.0, 10.0);
 
   EXPECT_FALSE(filter_->is_feasible(points))
     << "Should return false if ego can stop but cannot pass";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
+{
+  const lanelet::Id light_id = 300;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+
+  traffic_rule_filter::Params params;
+  params.traffic_light_filter.deceleration_limit = 2.8;
+  params.traffic_light_filter.delay_response_time = 0.5;
+  params.traffic_light_filter.crossing_time_limit = 2.75;
+  params.traffic_light_filter.treat_amber_light_as_red_light = true;
+  filter_->set_parameters(params);
+
+  // Even if it's NOT stoppable (ego at 0m, velocity 10m/s, stop at 5m),
+  // it should be rejected because it's treated as red.
+  auto points = create_trajectory(0.0, 10.0, 10.0);
+
+  EXPECT_FALSE(filter_->is_feasible(points))
+    << "Should return false for amber light when treat_amber_light_as_red_light is true";
 }

@@ -15,6 +15,7 @@
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
 
 #include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <tl_expected/expected.hpp>
 #include <rclcpp/logger.hpp>
@@ -88,6 +89,10 @@ TrafficLightFilter::get_stop_lines(const lanelet::Lanelets & lanelets) const
       }
     }
   }
+  if (params_.traffic_light_filter.treat_amber_light_as_red_light) {
+    red_stop_lines.insert(red_stop_lines.end(), amber_stop_lines.begin(), amber_stop_lines.end());
+    amber_stop_lines.clear();
+  }
   return {red_stop_lines, amber_stop_lines};
 }
 
@@ -135,27 +140,30 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   }
   for (const auto & amber_stop_line : amber_stop_lines) {
     auto distance_to_stop_line = 0.0;
-    bool crosses_amber_stop_line = false;
-    boost::geometry::for_each_segment(trajectory_ls, [&](const auto & segment) {
-      if (crosses_amber_stop_line) {
-        return;
-      }  // NOOP if already found the crossing point
+    std::optional<double> amber_stop_line_crossing_time;
+    for (size_t i = 0; i + 1 < trajectory.size(); ++i) {
       lanelet::BasicPoints2d intersection_points;
-      const lanelet::BasicLineString2d segment_ls{segment.first, segment.second};
-      boost::geometry::intersection(segment_ls, amber_stop_line, intersection_points);
+      const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
+      const auto segment_length = static_cast<double>(boost::geometry::length(segment));
+      boost::geometry::intersection(segment, amber_stop_line, intersection_points);
       if (!intersection_points.empty()) {
-        crosses_amber_stop_line = true;
-        distance_to_stop_line +=
-          boost::geometry::distance(segment.first, intersection_points.front());
-      } else {
-        distance_to_stop_line += boost::geometry::length(segment);
+        const auto distance_to_intersection =
+          boost::geometry::distance(segment.front(), intersection_points.front());
+        distance_to_stop_line += distance_to_intersection;
+        const auto ratio = distance_to_intersection / segment_length;
+        amber_stop_line_crossing_time = interpolation::lerp(
+          rclcpp::Duration(trajectory[i].time_from_start).seconds(),
+          rclcpp::Duration(trajectory[i].time_from_start).seconds(), ratio);
+        break;
       }
-    });
+      distance_to_stop_line += segment_length;
+    }
     const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
     const auto current_acceleration = trajectory.front().acceleration_mps2;
     if (
-      crosses_amber_stop_line &&
-      !can_pass_amber_light(distance_to_stop_line, current_velocity, current_acceleration)) {
+      amber_stop_line_crossing_time && !can_pass_amber_light(
+                                         distance_to_stop_line, current_velocity,
+                                         current_acceleration, *amber_stop_line_crossing_time)) {
       return tl::make_unexpected("crosses amber light");  // Reject trajectory (cross amber light)
     }
   }
@@ -164,33 +172,27 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
 
 bool TrafficLightFilter::can_pass_amber_light(
   const double distance_to_stop_line, const double current_velocity,
-  const double current_acceleration)
+  const double current_acceleration, const double time_to_cross_stop_line)
 {
-  const double max_acc = params_.traffic_light_filter.max_accel;
-  const double max_jerk = params_.traffic_light_filter.max_jerk;
+  // ensure negative decel and jerk limit for the calc_judge_line_dist_with_jerk_limit function
+  const double decel_limit = -std::abs(params_.traffic_light_filter.deceleration_limit);
+  const double jerk_limit = -std::abs(params_.traffic_light_filter.jerk_limit);
   const double delay_response_time = params_.traffic_light_filter.delay_response_time;
-  const double amber_lamp_period = params_.traffic_light_filter.amber_lamp_period;
-  const double amber_light_stop_velocity = params_.traffic_light_filter.amber_light_stop_velocity;
-  const bool enable_pass_judge = params_.traffic_light_filter.enable_pass_judge;
-
-  const double reachable_distance = current_velocity * amber_lamp_period;
-
   const double distance_for_ego_to_stop =
     boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
-      current_velocity, current_acceleration, max_acc, max_jerk, delay_response_time);
+      current_velocity, current_acceleration, decel_limit, jerk_limit, delay_response_time);
 
-  const bool distance_stoppable = distance_for_ego_to_stop < distance_to_stop_line;
-  const bool slow_velocity = current_velocity < amber_light_stop_velocity;
-  const bool stoppable = distance_stoppable || slow_velocity;
-  const bool reachable = distance_to_stop_line < reachable_distance;
-  const bool can_pass = enable_pass_judge && !stoppable && reachable;
+  const bool can_stop = distance_for_ego_to_stop <= distance_to_stop_line;
+  const bool can_pass_in_time =
+    time_to_cross_stop_line <= params_.traffic_light_filter.crossing_time_limit;
+  const bool can_pass = !can_stop && can_pass_in_time;
 
   if (!can_pass) {
     auto tmp_clock = rclcpp::Clock();
     RCLCPP_WARN_THROTTLE(
       *logger_, tmp_clock, 1000,
-      "cannot pass the amber light (can stop ? %d can pass before the light turns red ? %d)",
-      stoppable, !reachable);
+      "cannot pass the amber light (can stop ? %d can pass in time ? %d)", can_stop,
+      !can_pass_in_time);
     return false;
   }
   return true;

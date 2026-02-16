@@ -43,7 +43,7 @@ public:
   /// @brief return true if ego can safely pass an amber traffic light
   [[nodiscard]] bool can_pass_amber_light(
     const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration);
+    const double current_acceleration, const double time_to_cross_stop_line);
 
 private:
   /// @brief return the red and amber stop lines related to the given lanelets

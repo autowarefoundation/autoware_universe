@@ -2,36 +2,31 @@ traffic_rule_filter:
   filter_names:
     type: string_array
     default_value: []
-    description: list of filter names.
+    description: list of filter names
     read_only: false
   traffic_light_filter:
-    max_accel:
+    deceleration_limit:
       type: double
       default_value: -2.8
-      description: maximum acceleration for stop decision.
+      description: trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
       read_only: false
-    max_jerk:
+    jerk_limit:
       type: double
       default_value: -5.0
-      description: maximum jerk for stop decision.
+      description: trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
       read_only: false
     delay_response_time:
       type: double
       default_value: 0.5
-      description: delay response time for stop decision.
+      description: delay response time used to estimate the minimum ego stopping distance
       read_only: false
-    amber_lamp_period:
+    crossing_time_limit:
       type: double
       default_value: 2.75
-      description: amber lamp period.
+      description: trajectories crossing an amber light are rejected if they cannot cross before this time
       read_only: false
-    amber_light_stop_velocity:
-      type: double
-      default_value: 1.0
-      description: velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns amber.
-      read_only: false
-    enable_pass_judge:
+    treat_amber_light_as_red_light:
       type: bool
       default_value: true
-      description: enable pass judge for amber light.
+      description: when true, amber lights are handled like red lights
       read_only: false
