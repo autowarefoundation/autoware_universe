@@ -28,14 +28,38 @@
 #include <string>
 #include <vector>
 
+#ifdef EXPORT_TEST_PLOT_FIGURE
+namespace
+{
+std::string to_snake_case(const std::string & str)
+{
+  std::string result;
+  for (size_t i = 0; i < str.size(); ++i) {
+    if (std::isupper(str[i])) {
+      if (i > 0 && std::islower(str[i - 1])) {
+        result += '_';
+      }
+      result += std::tolower(str[i]);
+    } else {
+      result += str[i];
+    }
+  }
+  return result;
+}
+}  // namespace
+#endif
+
 namespace autoware::boundary_departure_checker
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
-void save_figure(
-  [[maybe_unused]] const std::string & filename, [[maybe_unused]] const std::string & sub_dir)
+void save_figure(const std::string & sub_dir)
 {
-  auto plt = pyplot::import();
+  auto plt = autoware::pyplot::import();
   const std::string file_path = __FILE__;
+
+  const auto * test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+  std::string filename =
+    test_info ? to_snake_case(std::string(test_info->name())) + ".png" : "unknown_test.png";
 
   size_t pos = file_path.rfind(TEST_PACKAGE_NAME);
   if (pos != std::string::npos) {
