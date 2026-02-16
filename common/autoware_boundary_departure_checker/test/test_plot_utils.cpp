@@ -17,12 +17,7 @@
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
-#include <autoware/pyplot/patches.hpp>
-#include <autoware/pyplot/pyplot.hpp>
-
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
 
 #include <filesystem>
 #include <string>
