@@ -15,7 +15,6 @@
 #ifndef EXPERIMENTAL__MANAGER_HPP_
 #define EXPERIMENTAL__MANAGER_HPP_
 
-#include "autoware/behavior_velocity_blind_spot_module/parameter.hpp"
 #include "scene.hpp"
 
 #include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>

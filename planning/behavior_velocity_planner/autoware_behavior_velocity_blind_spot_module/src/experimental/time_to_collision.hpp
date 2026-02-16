@@ -16,8 +16,7 @@
 #define EXPERIMENTAL__TIME_TO_COLLISION_HPP_
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
-
-#include <autoware_internal_planning_msgs/msg/safety_factor.hpp>
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
 
 #include <utility>
 #include <vector>
@@ -25,66 +24,51 @@
 namespace autoware::behavior_velocity_planner::experimental
 {
 
-struct FuturePosition
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using Trajectory = autoware::experimental::trajectory::Trajectory<PathPointWithLaneId>;
+
+struct FuturePose
 {
-  const autoware_internal_planning_msgs::msg::PathPointWithLaneId position;
+  const geometry_msgs::msg::Pose pose;
   const double duration;
+};
+
+struct TimeInterval
+{
+  double start;
+  double end;
 };
 
 /**
  * @brief calculate ego vehicle's future position & duration from current position
  */
-std::vector<FuturePosition> calculate_future_profile(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const double minimum_default_velocity, const double time_to_restart,
+std::vector<FuturePose> calculate_future_profile(
+  const Trajectory & path, const double minimum_default_velocity, const double time_to_restart,
   const PlannerData & planner_data, const lanelet::Id lane_id);
 
 /**
- * @brief compute the time interval in which the `future_positions` enter the `line1` and exit the
- * `line2` considering footprint
+ * @brief compute the time interval for ego to pass from `entry_line` to `exit_line`
  */
-std::optional<std::pair<double, double>> compute_time_interval_for_passing_line(
-  const std::vector<FuturePosition> & future_positions,
-  const autoware_utils_geometry::LinearRing2d & footprint, const lanelet::ConstLineString3d & line1,
-  const lanelet::ConstLineString3d & line2);
+std::optional<TimeInterval> compute_passage_time_interval(
+  const std::vector<FuturePose> & future_profile,
+  const autoware_utils_geometry::LinearRing2d & footprint,
+  const lanelet::ConstLineString3d & entry_line, const lanelet::ConstLineString3d & exit_line);
 
 /**
- * @brief compute the time interval in which the `object` along the predicted path enters the
- * `line1`(or `entry_line` instead) and exits the `line2` considering footprint
+ * @brief compute the time interval for `object` to pass from `line1` (or `entry_line` instead) to
+ * `line2` along every predicted path considering footprint
  */
-std::vector<std::tuple<double, double, autoware_perception_msgs::msg::PredictedPath>>
-compute_time_interval_for_passing_line(
+std::vector<std::optional<TimeInterval>> compute_passage_time_intervals(
   const autoware_perception_msgs::msg::PredictedObject & object,
   const lanelet::ConstLineString3d & line1, const lanelet::ConstLineString3d & entry_line,
   const lanelet::ConstLineString3d & line2);
-
-struct UnsafeObject
-{
-  UnsafeObject(
-    const autoware_perception_msgs::msg::PredictedObject & object_, const double critical_time_,
-    const autoware_perception_msgs::msg::PredictedPath & predicted_path_,
-    const std::pair<double, double> & object_passage_interval_)
-  : object(object_),
-    critical_time(critical_time_),
-    predicted_path(predicted_path_),
-    object_passage_interval(object_passage_interval_)
-  {
-  }
-  autoware_perception_msgs::msg::PredictedObject object;
-  double critical_time;
-  autoware_perception_msgs::msg::PredictedPath predicted_path;
-  std::pair<double, double> object_passage_interval;
-
-  [[nodiscard]] autoware_internal_planning_msgs::msg::SafetyFactor to_safety_factor() const;
-};
 
 /**
  * @brief return the most critical time for collision if collision is detected
  */
 std::optional<double> get_unsafe_time_if_critical(
-  const std::pair<double, double> & ego_passage_interval,
-  const std::pair<double, double> & object_passage_interval, const double ttc_start_margin,
-  const double ttc_end_margin);
+  const TimeInterval & ego_passage_interval, const TimeInterval & object_passage_interval,
+  const double ttc_start_margin, const double ttc_end_margin);
 
 }  // namespace autoware::behavior_velocity_planner::experimental
 
