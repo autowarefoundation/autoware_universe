@@ -44,7 +44,7 @@ parameters:
 processes:
   - name: undistort
     trigger_conditions:
-      -and:
+      - and:
         - on_input: pointcloud
         - or:
             - on_input: twist
