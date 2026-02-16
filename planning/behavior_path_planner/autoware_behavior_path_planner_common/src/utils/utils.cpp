@@ -988,8 +988,6 @@ std::optional<double> getSignedDistanceFromBoundary(
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
   if (!combined_lane_opt.has_value()) {
     // if lanelets is empty, return nullopt
-    RCLCPP_WARN(
-      rclcpp::get_logger("behavior_path_planner").get_child("utils"), "input lanelets is empty.");
     return std::nullopt;
   }
   const auto combined_lane = combined_lane_opt.value();
