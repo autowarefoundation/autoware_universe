@@ -249,7 +249,7 @@ auto check_shift_behavior(
   if (!combine_lanelet_opt.has_value()) {
     return std::make_pair(Behavior::NONE, 0.0);
   }
-  const auto combine_lanelet = combine_lanelet_opt.value();
+  const auto & combine_lanelet = combine_lanelet_opt.value();
   const auto nearest_idx =
     autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(points, ego_pose);
   {
@@ -514,7 +514,7 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
   if (!combine_lanelet_opt.has_value()) {
     return;
   }
-  const auto combine_lanelet = combine_lanelet_opt.value();
+  const auto & combine_lanelet = combine_lanelet_opt.value();
 
   const autoware_utils_geometry::Polygon2d combine_lanelet_boost = [&]() {
     autoware_utils_geometry::Polygon2d poly;
@@ -626,7 +626,7 @@ auto get_previous_polygons_with_lane_recursively(
       autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
         target_lanes, left_offset, -1.0 * right_offset);
     if (expand_lanelets_opt.has_value()) {
-      const auto expand_lanelets = expand_lanelets_opt.value();
+      const auto & expand_lanelets = expand_lanelets_opt.value();
       const auto polygon = lanelet::utils::getPolygonFromArcLength(
         expand_lanelets, total_length - s2, total_length - s1);
       ret.emplace_back(polygon.basicPolygon(), target_lanes);
@@ -645,7 +645,7 @@ auto get_previous_polygons_with_lane_recursively(
           autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
             target_lanes, left_offset, -1.0 * right_offset);
         if (expand_lanelets_opt.has_value()) {
-          const auto expand_lanelets = expand_lanelets_opt.value();
+          const auto & expand_lanelets = expand_lanelets_opt.value();
           const auto polygon = lanelet::utils::getPolygonFromArcLength(
             expand_lanelets, total_length - s2, total_length - s1);
           ret.emplace_back(polygon.basicPolygon(), target_lanes);
@@ -665,7 +665,7 @@ auto get_previous_polygons_with_lane_recursively(
           autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
             pushed_lanes, left_offset, -1.0 * right_offset);
         if (expand_lanelets_opt.has_value()) {
-          const auto expand_lanelets = expand_lanelets_opt.value();
+          const auto & expand_lanelets = expand_lanelets_opt.value();
           const auto polygon = lanelet::utils::getPolygonFromArcLength(
             expand_lanelets, total_length - s2, total_length - s1);
           ret.emplace_back(polygon.basicPolygon(), pushed_lanes);

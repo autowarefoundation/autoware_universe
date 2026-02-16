@@ -229,7 +229,7 @@ void set_right_turn_target_lanelets(
   if (!combined_turn_lls_opt.has_value()) {
     return;
   }
-  const auto combined_turn_lls = combined_turn_lls_opt.value();
+  const auto & combined_turn_lls = combined_turn_lls_opt.value();
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
   const auto candidates = lanelet_map_ptr->laneletLayer.search(
     boost::geometry::return_envelope<lanelet::BoundingBox2d>(
@@ -434,7 +434,7 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
       const auto combine_ll_opt =
         autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_ll.lanelets);
       if (combine_ll_opt.has_value()) {
-        const auto combine_ll = combine_ll_opt.value();
+        const auto & combine_ll = combine_ll_opt.value();
         marker_array.markers.push_back(create_polygon_marker(
           combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
         marker_array.markers.push_back(create_point_marker(

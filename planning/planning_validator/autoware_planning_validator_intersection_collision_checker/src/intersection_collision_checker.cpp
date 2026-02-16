@@ -474,7 +474,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
   if (!combine_lanelet_opt.has_value()) {
     return std::nullopt;
   }
-  const auto combine_lanelet = combine_lanelet_opt.value();
+  const auto & combine_lanelet = combine_lanelet_opt.value();
 
   get_points_within(
     filtered_point_cloud, combine_lanelet.polygon2d().basicPolygon(), points_within);
