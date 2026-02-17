@@ -311,9 +311,9 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
   check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception_objects");
   check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
   check(acceleration_subscriber_.latest_timestamp(), no_timeout, "acceleration");
+  check(operation_mode_subscriber_.latest_timestamp(), no_timeout, "operation_mode");
   check(
-    operation_mode_subscriber_.latest_timestamp(), no_timeout, "operation_mode");
-  check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
+    occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
   if (enable_traffic_signal_timeout_) {
     check(
       traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
