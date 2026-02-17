@@ -232,6 +232,18 @@ void LidarCenterPointNode::pointCloudCallback(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
   }
 
+  if (!det_boxes3d.empty() && !class_names_.empty()) {
+    double entropy_sum = 0.0;
+    for (const auto & box3d : det_boxes3d) {
+      entropy_sum += box3d.entropy;
+    }
+    const double entropy_mean_sum = entropy_sum / static_cast<double>(det_boxes3d.size());
+    diagnostics_centerpoint_trt_->add_key_value(
+      "bbox_entropy_mean_sum", entropy_mean_sum);
+  } else {
+    diagnostics_centerpoint_trt_->add_key_value("bbox_entropy_mean_sum", 0.0);
+  }
+
   std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
   raw_objects.reserve(det_boxes3d.size());
   for (const auto & box3d : det_boxes3d) {
