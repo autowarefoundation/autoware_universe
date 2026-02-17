@@ -65,7 +65,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
     declare_parameter<bool>("enable_control_cmd_horizon_pub", false);
 
   diag_updater_->setHardwareID("trajectory_follower_node");
-  diag_updater_->add("cyclic_message_timeout", this, &Controller::check_cyclic_message_timeout);
+  diag_updater_->add("incoming_message_timeout", this, &Controller::check_cyclic_message_timeout);
 
   const auto lateral_controller_mode =
     getLateralControllerMode(declare_parameter<std::string>("lateral_controller_mode"));
