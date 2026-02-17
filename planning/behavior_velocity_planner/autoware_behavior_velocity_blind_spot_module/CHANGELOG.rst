@@ -2,6 +2,15 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(blind_spot): not enable blindspot in neighbouring same turn direction lanes (`#11813 <https://github.com/autowarefoundation/autoware_universe/issues/11813>`_)
+  * fix(blind_spot): not enable blindspot in neighbouring same turn direction lanes
+  * remove unrelated change
+  ---------
+* Contributors: Ryohsuke Mitsudome, Zulfaqar Azmi
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
