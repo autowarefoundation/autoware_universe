@@ -46,8 +46,8 @@ enum class DepartureType {
   CRITICAL_DEPARTURE,
 };
 
-enum class AbnormalityType {
-  NORMAL,
+enum class FootprintType {
+  NORMAL = 0,
   LOCALIZATION,
   LONGITUDINAL,
   STEERING_STUCK,
@@ -60,12 +60,12 @@ enum class SideKey { LEFT, RIGHT };
 constexpr std::array<SideKey, 2> g_side_keys = {SideKey::LEFT, SideKey::RIGHT};
 
 template <typename T>
-struct Abnormalities
+struct FootprintMap
 {
-  std::unordered_map<AbnormalityType, T> data;
-  T & operator[](const AbnormalityType key) { return data[key]; }
+  std::unordered_map<FootprintType, T> data;
+  T & operator[](const FootprintType key) { return data[key]; }
 
-  const T & operator[](const AbnormalityType key) const
+  const T & operator[](const FootprintType key) const
   {
     const auto it = data.find(key);
     if (it != data.end()) {
@@ -98,7 +98,7 @@ struct Side
 struct ProjectionToBound
 {
   std::optional<DepartureType> departure_type_opt;
-  std::optional<AbnormalityType> abnormality_type_opt;
+  std::optional<FootprintType> footprint_type_opt;
 
   Point2d pt_on_ego;    // orig
   Point2d pt_on_bound;  // proj
@@ -183,7 +183,7 @@ using EgoSides = std::vector<EgoSide>;
 struct DeparturePoint
 {
   DepartureType departure_type{DepartureType::NONE};
-  AbnormalityType abnormality_type{AbnormalityType::NORMAL};
+  FootprintType footprint_type{FootprintType::NORMAL};
   Point2d point;
   double th_point_merge_distance_m{2.0};
   double lat_dist_to_bound{1000.0};
@@ -211,12 +211,13 @@ using Footprints = std::vector<Footprint>;
 
 using ProjectionsToBound = std::vector<ProjectionToBound>;
 
-struct AbnormalitiesData
+struct DepartureData
 {
-  Abnormalities<EgoSides> footprints_sides;
-  Abnormalities<Footprints> footprints;
+  FootprintMap<Footprints> footprints;
+  FootprintMap<EgoSides> footprints_sides;
+  FootprintMap<Side<ProjectionsToBound>> projections_to_bound;
+
   BoundarySideWithIdx boundary_segments;
-  Abnormalities<Side<ProjectionsToBound>> projections_to_bound;
   Side<ProjectionsToBound> closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
   DeparturePoints critical_departure_points;

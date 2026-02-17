@@ -69,9 +69,6 @@ public:
     auto wrapped = [this, callback](
                      typename SpecT::Service::Request::SharedPtr request,
                      typename SpecT::Service::Response::SharedPtr response) {
-#ifdef ROS_DISTRO_GALACTIC
-      using rosidl_generator_traits::to_yaml;
-#endif
       // If the response has status, convert it from the exception.
       interface_->log(ServiceLog::SERVER_REQUEST, SpecType::name, to_yaml(*request));
       if constexpr (!has_status_type<typename SpecT::Service::Response>::value) {

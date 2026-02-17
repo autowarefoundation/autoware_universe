@@ -19,17 +19,12 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/geometry.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2/utils.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <iostream>
 #include <memory>
