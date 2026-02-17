@@ -2,4 +2,4 @@
   ros__parameters:
     ranked_generator_name_prefixes:
       - "DiffusionPlanner_"
-      - "MinimumRuleBasedPlanner_"
+      - "MinimumRuleBasedPlanner"
