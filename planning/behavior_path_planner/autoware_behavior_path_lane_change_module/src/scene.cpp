@@ -24,10 +24,12 @@
 #include "autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_frenet_planner/structures.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -140,6 +142,8 @@ void NormalLaneChange::update_lanes(const bool is_approved)
     });
 
   *common_data_ptr_->lanes_polygon_ptr = create_lanes_polygon(common_data_ptr_);
+  common_data_ptr_->no_lane_change_lines =
+    utils::lane_change::get_no_lane_change_lines(common_data_ptr_->lanes_ptr->current, direction_);
 }
 
 void NormalLaneChange::update_transient_data(const bool is_approved)
@@ -210,6 +214,11 @@ void NormalLaneChange::update_transient_data(const bool is_approved)
     route_handler_ptr, ego_lane, transient_data.current_footprint);
   transient_data.in_turn_direction_lane =
     utils::lane_change::is_within_turn_direction_lanes(ego_lane, transient_data.current_footprint);
+
+  transient_data.interval_dist_no_lane_change_lines =
+    utils::lane_change::get_interval_dist_no_lane_change_lines(
+      common_data_ptr_->no_lane_change_lines, common_data_ptr_->current_lanes_path,
+      common_data_ptr_->get_ego_pose());
 
   update_dist_from_intersection();
 
@@ -282,14 +291,14 @@ std::pair<bool, bool> NormalLaneChange::getSafePath(LaneChangePath & safe_path) 
   return {true, found_safe_path};
 }
 
-bool NormalLaneChange::isLaneChangeRequired()
+std::optional<std::string> NormalLaneChange::isLaneChangeRequired()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (
     !common_data_ptr_ || !common_data_ptr_->is_data_available() ||
     !common_data_ptr_->is_lanes_available()) {
-    return false;
+    return {"Insufficient data for lane change decision."};
   }
 
   const auto & current_lanes = common_data_ptr_->lanes_ptr->current;
@@ -300,15 +309,20 @@ bool NormalLaneChange::isLaneChangeRequired()
   const auto max_prepare_length = calculation::calc_maximum_prepare_length(common_data_ptr_);
 
   if (ego_dist_to_target_start > max_prepare_length) {
-    return false;
+    return {"Ego is far from target lane start."};
   }
 
   if (is_near_regulatory_element()) {
-    RCLCPP_DEBUG(logger_, "Ego is close to regulatory element, don't run LC module");
-    return false;
+    return {"Ego is close to regulatory element."};
   }
 
-  return true;
+  if (
+    is_near_terminal_end() && planner_data_ && planner_data_->operation_mode &&
+    planner_data_->operation_mode->mode != OperationModeState::AUTONOMOUS) {
+    return {"Ego is in MANUAL Mode and near terminal end, don't run LC module."};
+  }
+
+  return std::nullopt;
 }
 
 bool NormalLaneChange::is_near_regulatory_element() const
@@ -645,11 +659,12 @@ void NormalLaneChange::insert_stop_point_on_current_lanes(
 PathWithLaneId NormalLaneChange::getReferencePath() const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-  lanelet::ConstLanelet closest_lanelet;
-  if (!lanelet::utils::query::getClosestLanelet(
-        get_target_lanes(), getEgoPose(), &closest_lanelet)) {
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(get_target_lanes(), getEgoPose());
+  if (!closest_lanelet_opt) {
     return prev_module_output_.reference_path;
   }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
   auto reference_path = utils::getCenterLinePathFromLanelet(closest_lanelet, planner_data_);
   if (reference_path.points.empty()) {
     return prev_module_output_.reference_path;

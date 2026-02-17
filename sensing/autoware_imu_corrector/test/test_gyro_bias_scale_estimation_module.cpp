@@ -68,6 +68,8 @@ protected:
     node_options.append_parameter_override("ekf_angle.measurement_noise_r_angle", 0.00005);
     node_options.append_parameter_override("ekf_angle.min_covariance_angle", 1e-11);
     node_options.append_parameter_override("ekf_angle.decay_coefficient", 0.99999998);
+    node_options.append_parameter_override("ekf_angle.samples_in_bounds_to_init", 20);
+    node_options.append_parameter_override("ekf_angle.max_reinitialization_retries", 5);
 
     // IMU scale injection
     node_options.append_parameter_override("scale_imu_injection.modify_imu_scale", false);

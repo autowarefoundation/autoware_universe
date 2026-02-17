@@ -29,11 +29,11 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 // for the svg mapper
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -768,11 +768,13 @@ bool is_before_terminal(
 
 double calc_angle_to_lanelet_segment(const lanelet::ConstLanelets & lanelets, const Pose & pose)
 {
-  lanelet::ConstLanelet closest_lanelet;
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanelets, pose);
 
-  if (!lanelet::utils::query::getClosestLanelet(lanelets, pose, &closest_lanelet)) {
+  if (!closest_lanelet_opt) {
     return autoware_utils::deg2rad(180);
   }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
   const auto closest_pose = autoware::experimental::lanelet2_utils::get_closest_center_pose(
     closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(pose));
   return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, pose));
@@ -1253,6 +1255,118 @@ void trim_preferred_after_alternative(
   }
 
   base_lanes.erase(first_pref_after_alt_it, base_lanes.end());
+}
+
+std::vector<lanelet::ConstLineString3d> get_no_lane_change_lines(
+  const lanelet::ConstLanelets & target_lanes, const Direction direction)
+{
+  std::vector<lanelet::ConstLineString3d> no_lane_change_lines;
+  no_lane_change_lines.reserve(target_lanes.size());
+
+  for (const auto & ll : target_lanes) {
+    const auto & ls = (direction == Direction::LEFT) ? ll.leftBound() : ll.rightBound();
+
+    // 1. Check if the physical line is solid
+    const bool is_solid =
+      (ls.attributeOr(lanelet::AttributeName::Subtype, "") == lanelet::AttributeValueString::Solid);
+
+    // 2. Check for explicit lane_change permission tags
+    const std::string lane_change_val = ls.attributeOr("lane_change", "");
+
+    const bool explicit_no = (lane_change_val == "no");
+    const bool explicit_yes = (lane_change_val == "yes");
+
+    if ((is_solid && !explicit_yes) || explicit_no) {
+      no_lane_change_lines.push_back(ls);
+    }
+  }
+
+  return no_lane_change_lines;
+}
+
+std::vector<std::pair<double, double>> get_interval_dist_no_lane_change_lines(
+  const std::vector<lanelet::ConstLineString3d> & no_lane_change_lines,
+  const PathWithLaneId & centerline_path, const Pose & ego_pose)
+{
+  std::vector<std::pair<double, double>> interval;
+
+  for (const auto & line : no_lane_change_lines) {
+    const auto & start = line.front();
+
+    const auto dist_front = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(start.x(), start.y(), start.z()));
+
+    const auto & back = line.back();
+    const auto dist_back = autoware::motion_utils::calcSignedArcLength(
+      centerline_path.points, ego_pose.position,
+      autoware_utils::create_point(back.x(), back.y(), back.z()));
+
+    if (dist_front <= dist_back) {
+      interval.emplace_back(dist_front, dist_back);
+    } else {
+      interval.emplace_back(dist_back, dist_front);
+    }
+  }
+
+  return interval;
+}
+
+bool is_intersecting_no_lane_change_lines(
+  const CommonDataPtr & common_data_ptr, const PhaseInfo lc_length,
+  const std::vector<PathPointWithLaneId> & lane_changing_path)
+{
+  const auto & intervals = common_data_ptr->transient_data.interval_dist_no_lane_change_lines;
+  const auto & lines = common_data_ptr->no_lane_change_lines;
+  const auto buffer = common_data_ptr->lc_param_ptr->lane_change_finish_judge_buffer;
+
+  // intervals are sorted in ascending order
+  if (intervals.empty() || lc_length.prepare >= intervals.back().second) {
+    return false;
+  }
+
+  const auto prepare_length = lc_length.prepare;
+  const auto total_length = lc_length.sum();
+  for (const auto & zip : ranges::views::zip(intervals, lines)) {
+    const auto & interval = std::get<0>(zip);
+    const auto [interval_start, interval_end] = interval;
+
+    const auto interval_upper_bound = interval_end + buffer;
+    if (prepare_length >= interval_upper_bound) {
+      continue;
+    }
+
+    const auto interval_lower_bound = interval_start - buffer;
+    // intervals are sorted in ascending order
+    if (total_length <= interval_lower_bound) {
+      return false;
+    }
+
+    const auto & line = std::get<1>(zip);
+
+    bool is_intersecting =
+      ranges::any_of(ranges::views::sliding(lane_changing_path, 2), [&](const auto & path_segment) {
+        const auto & path_p1 = path_segment[0].point.pose.position;
+        const auto & path_p2 = path_segment[1].point.pose.position;
+
+        for (size_t i = 0; i + 1 < line.size(); ++i) {
+          const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(line[i]);
+          const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(line[i + 1]);
+
+          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value()) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+
+    if (is_intersecting) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace autoware::behavior_path_planner::utils::lane_change
