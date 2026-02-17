@@ -145,7 +145,7 @@ Giving the longitudinal controller information about steer convergence allows it
   - Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
     1. Both commands have been received.
     2. The last received commands are not older than defined by `timeout_thr_sec`.
-- `incoming_message_timeout_sec`: duration in second for monitoring incoming trajectory messages via diagnostic updater (default: 0.9)
+- `cyclic_message_timeout_thr_sec`: duration in second for monitoring incoming trajectory messages via diagnostic updater (default: 0.9)
   - The diagnostic updater will report ERROR status if:
     1. No trajectory message has been received yet.
     2. The elapsed time since the last trajectory message exceeds this threshold.
