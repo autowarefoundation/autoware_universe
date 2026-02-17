@@ -139,7 +139,6 @@ The node monitors the reception timestamps of mandatory input topics and reports
 | Parameter                       | Default | Description                                                                                                    |
 | :------------------------------ | :------ | :------------------------------------------------------------------------------------------------------------- |
 | `cyclic_timeout`                | 0.90 s  | Timeout for high-frequency topics (perception, odometry, occupancy_grid)                                       |
-| `persistent_timeout`            | 86400 s | Timeout for topics that are only required once at startup (scenario, route, map, acceleration, operation_mode) |
 | `enable_traffic_signal_timeout` | false   | Enable timeout checking for the traffic signal topic                                                           |
 
 Each topic status is reported as one of:
