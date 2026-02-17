@@ -136,10 +136,10 @@ The Planner Manager's responsibilities include:
 
 The node monitors the reception timestamps of mandatory input topics and reports their status via `/diagnostics`. Each topic is checked against a configurable timeout threshold every planning cycle.
 
-| Parameter                       | Default | Description                                                                                                    |
-| :------------------------------ | :------ | :------------------------------------------------------------------------------------------------------------- |
-| `cyclic_timeout`                | 0.90 s  | Timeout for high-frequency topics (perception, odometry, occupancy_grid)                                       |
-| `enable_traffic_signal_timeout` | false   | Enable timeout checking for the traffic signal topic                                                           |
+| Parameter                       | Default | Description                                                              |
+| :------------------------------ | :------ | :----------------------------------------------------------------------- |
+| `cyclic_timeout`                | 0.90 s  | Timeout for high-frequency topics (perception, odometry, occupancy_grid) |
+| `enable_traffic_signal_timeout` | false   | Enable timeout checking for the traffic signal topic                     |
 
 Each topic status is reported as one of:
 
