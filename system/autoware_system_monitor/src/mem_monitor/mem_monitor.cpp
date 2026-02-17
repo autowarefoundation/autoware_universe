@@ -38,12 +38,11 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   warning_available_size_()
 {
   // Define warning_available_size_
-  int warning_margin = declare_parameter<int>("warning_margin", 0);
+  int warning_margin = declare_parameter<int>("warning_margin", 0) * 1024 * 1024;
   if (warning_margin < 0) {
     warning_margin = 0;
   }
-  warning_available_size_ =
-    error_available_size_ + static_cast<size_t>(warning_margin) * 1024 * 1024;
+  warning_available_size_ = error_available_size_ + warning_margin;
 
   gethostname(hostname_, sizeof(hostname_));
   updater_.setHardwareID(hostname_);

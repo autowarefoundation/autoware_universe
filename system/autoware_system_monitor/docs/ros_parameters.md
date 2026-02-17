@@ -54,8 +54,8 @@ mem_monitor:
 
 | Name           | Type | Unit | Default |                                                                Notes                                                                 |
 | :------------- | :--: | :--: | :-----: | :----------------------------------------------------------------------------------------------------------------------------------: |
-| available_size | int  | byte |  1024   |                  Generates error when physical memory usage reaches a specified value defined by `available_size`.                   |
-| warning_margin | int  | byte |    0    | Generates warning when physical memory usage reaches a specified value defined by addition of `available_size` and `warning_margin`. |
+| available_size | int  | MiB |  1024   |                  Generates error when physical memory usage reaches a specified value defined by `available_size`.                   |
+| warning_margin | int  | MiB |    0    | Generates warning when physical memory usage reaches a specified value defined by addition of `available_size` and `warning_margin`. |
 
 ## <u>Net Monitor</u>
 
