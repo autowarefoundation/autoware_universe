@@ -324,13 +324,13 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
       };
 
     check_timeout(
-      perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception_objects");
-    check_timeout(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
+      perception_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "perception_objects");
+    check_timeout(velocity_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "odometry");
     check_timeout(
-      occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
+      occupancy_grid_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
     if (enable_traffic_signal_timeout_) {
       check_timeout(
-        traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
+        traffic_signals_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "traffic_signal");
     }
   }
 
