@@ -5,6 +5,13 @@
 
   <node pkg="autoware_pose_estimator_arbiter" exec="autoware_pose_estimator_arbiter_node" output="both">
     <param name="pose_sources" value="$(var pose_sources)"/>
+    <!-- modify lidar_marker_instance_names value following the lidar system that uses lidar_marker_localizer -->
+    <!-- It must correspond to the description in "launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml" -->
+    <param name="lidar_marker_instance_names" value="[
+      /localization/pose_estimator/lidar_marker_localizer/top_left,
+      /localization/pose_estimator/lidar_marker_localizer/top_right
+    ]"
+    />
 
     <!-- ndt -->
     <remap from="~/input/ndt/pointcloud" to="$(var input_pointcloud)"/>
