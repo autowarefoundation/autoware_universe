@@ -150,7 +150,7 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
       declare_parameter<bool>("enable_traffic_signal_timeout", false);
     diagnostics_message_timeout_ =
       std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
-        this, "behavior_path_planner_incoming_message_timeout");
+        this, "incoming_message_timeout");
   }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
