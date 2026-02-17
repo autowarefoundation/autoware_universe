@@ -2,6 +2,29 @@
 Changelog for package autoware_traffic_light_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(traffic_light_classifier): add under exposure detection (`#11818 <https://github.com/autowarefoundation/autoware_universe/issues/11818>`_)
+  * add under exposure detection
+  * update parameter
+  * add test for under exposure
+  * style(pre-commit): autofix
+  * change diagnostics to distinguish over and under exposure
+  * change parameter
+  * style(pre-commit): autofix
+  * change default value
+  * fix required
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(autoware_traffic_light_classifier): remove cudnn dependency (`#11899 <https://github.com/autowarefoundation/autoware_universe/issues/11899>`_)
+  * chore(autoware_traffic_light_classifier): remove cudnn dependency
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: add missing ament_index_cpp dependency (`#11875 <https://github.com/autowarefoundation/autoware_universe/issues/11875>`_)
+* Contributors: Amadeusz Szymko, Masaki Baba, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 
