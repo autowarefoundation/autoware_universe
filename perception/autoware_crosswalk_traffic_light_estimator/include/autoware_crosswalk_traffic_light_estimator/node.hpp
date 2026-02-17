@@ -22,6 +22,7 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+
 #include <lanelet2_core/Attribute.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/LineStringOrPolygon.h>

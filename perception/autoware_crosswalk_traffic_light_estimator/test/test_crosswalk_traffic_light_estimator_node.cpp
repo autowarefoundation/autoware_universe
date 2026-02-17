@@ -21,13 +21,13 @@
 #include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+
+#include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Point.h>
-
-#include <gtest/gtest.h>
 
 #include <chrono>
 #include <memory>
@@ -60,8 +60,7 @@ protected:
     executor_->add_node(test_node_);
 
     map_pub_ = test_node_->create_publisher<LaneletMapBin>(
-      "/crosswalk_traffic_light_estimator/input/vector_map",
-      rclcpp::QoS(1).transient_local());
+      "/crosswalk_traffic_light_estimator/input/vector_map", rclcpp::QoS(1).transient_local());
     signal_pub_ = test_node_->create_publisher<TrafficLightGroupArray>(
       "/crosswalk_traffic_light_estimator/input/classified/traffic_signals", rclcpp::QoS(1));
 
