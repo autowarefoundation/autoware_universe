@@ -3,8 +3,8 @@
     traffic_light_signal_timeout: 1.0
 
     # timeout checking
+    # The timeout means the time between source timestamp and current time.
     cyclic_timeout: 0.90
-    persistent_timeout: 86400.0  # 24 hours
     enable_traffic_signal_timeout: false
 
     planning_hz: 10.0

@@ -146,8 +146,6 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   // Timeout handling
   {
     cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout", 0.90);
-    persistent_message_timeout_ =
-      declare_parameter<double>("persistent_timeout", 24.0 * 60.0 * 60.0);
     enable_traffic_signal_timeout_ =
       declare_parameter<bool>("enable_traffic_signal_timeout", false);
     diagnostics_message_timeout_ =
@@ -284,34 +282,38 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
   diagnostics_message_timeout_->clear();
   DataReadyStatus status = DataReadyStatus::SUCCESS;
 
-  const auto check = [&](const std::optional<rclcpp::Time> & ts, double timeout,
-                         const std::string & name) {
-    if (!ts.has_value()) {
-      RCLCPP_INFO_SKIPFIRST_THROTTLE(
-        get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
-      diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
-      status = DataReadyStatus::NOT_RECEIVED;
-      return;
-    }
-    if ((now - ts.value()).seconds() > timeout) {
-      diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
-      if (status == DataReadyStatus::SUCCESS) {
-        status = DataReadyStatus::TIMEOUT;
+  const auto check =
+    [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
+      if (!ts.has_value()) {
+        RCLCPP_INFO_SKIPFIRST_THROTTLE(
+          get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+        diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+        status = DataReadyStatus::NOT_RECEIVED;
+        return;
       }
-      return;
-    }
-    diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
-  };
+      if ((now - ts.value()).seconds() > timeout) {
+        diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
+        if (status == DataReadyStatus::SUCCESS) {
+          status = DataReadyStatus::TIMEOUT;
+        }
+        return;
+      }
+      diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
+    };
 
-  check(scenario_subscriber_.latest_timestamp(), persistent_message_timeout_, "scenario");
-  check(route_subscriber_.latest_timestamp(), persistent_message_timeout_, "route");
-  check(vector_map_subscriber_.latest_timestamp(), persistent_message_timeout_, "map");
-  check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception");
+  // no_timeout is used for not checking timeout for a message,
+  // but checking if it is received or not.
+  const double no_timeout = std::numeric_limits<double>::max();
+
+  check(scenario_subscriber_.latest_timestamp(), no_timeout, "scenario");
+  check(route_subscriber_.latest_timestamp(), no_timeout, "route");
+  check(vector_map_subscriber_.latest_timestamp(), no_timeout, "vector_map");
+  check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception_objects");
   check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
-  check(acceleration_subscriber_.latest_timestamp(), persistent_message_timeout_, "acceleration");
+  check(acceleration_subscriber_.latest_timestamp(), no_timeout, "acceleration");
   check(
-    operation_mode_subscriber_.latest_timestamp(), persistent_message_timeout_, "operation_mode");
-  check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid");
+    operation_mode_subscriber_.latest_timestamp(), no_timeout, "operation_mode");
+  check(occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
   if (enable_traffic_signal_timeout_) {
     check(
       traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
