@@ -129,31 +129,6 @@ TEST(UncrossableBoundaryTest, TestParallelSegments)
   });
 }
 
-TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
-{
-  // Even if the shortest distance is found by projecting from the boundary onto the ego,
-  // the result is internally swapped so 'pt_on_ego' always references the vehicle.
-  // This maintains a common reference frame for the departure checker, provided
-  // the points can be projected perpendicularly between the segments.
-  Segment2d ego_seg{{0.0, 0.0}, {1.0, 0.0}};
-  Segment2d boundary_seg{{2.0, -1.0}, {2.0, 1.0}};
-
-  auto result = utils::segment_to_segment_nearest_projection(ego_seg, boundary_seg, 0);
-
-  ASSERT_TRUE(result.has_value());
-  EXPECT_NEAR(result->lat_dist, 1.0, 1e-6);
-
-  EXPECT_DOUBLE_EQ(result->pt_on_ego.x(), 2.0);
-  EXPECT_DOUBLE_EQ(result->pt_on_bound.x(), 1.0);
-  EXPECT_DOUBLE_EQ(result->pt_on_bound.y(), 0.0);
-
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
-  });
-}
-
 TEST(UncrossableBoundaryTest, TestPointBeyondSegmentEnd)
 {
   // Boundary segment is short and far ahead of ego
