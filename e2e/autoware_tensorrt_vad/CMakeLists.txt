@@ -64,13 +64,16 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   endif()
 
   # CUDA architecture settings
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  # Generate both binary and PTX for sm_90 for forward compatibility with newer architectures (e.g., Blackwell)
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_90,code=sm_90")
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_90,code=compute_90")
+  if(CUDA_VERSION VERSION_LESS "13.0")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+  else()  # CUDA 13.0 renamed SM101 to SM110
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+  endif()
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/networks/preprocess/multi_camera_preprocess_kernel.cu

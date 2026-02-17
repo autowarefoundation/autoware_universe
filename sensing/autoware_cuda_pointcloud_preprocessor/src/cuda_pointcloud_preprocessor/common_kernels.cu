@@ -65,8 +65,17 @@ __global__ void cropBoxKernel(
       const float & max_x = crop_box_parameters.max_x;
       const float & max_y = crop_box_parameters.max_y;
       const float & max_z = crop_box_parameters.max_z;
-      passed_crop_box_mask &=
-        (x <= min_x || x >= max_x) || (y <= min_y || y >= max_y) || (z <= min_z || z >= max_z);
+      const bool negative = crop_box_parameters.negative;
+
+      // Check if point is inside the box
+      const bool point_is_inside =
+        (x > min_x && x < max_x) && (y > min_y && y < max_y) && (z > min_z && z < max_z);
+
+      // If negative mode (negative == true): remove points within the box → preserve points outside
+      // If positive mode (negative == false): remove points outside the box → preserve points
+      // inside
+      const bool should_preserve = negative ? !point_is_inside : point_is_inside;
+      passed_crop_box_mask &= should_preserve;
     }
 
     output_crop_mask[idx] = passed_crop_box_mask;

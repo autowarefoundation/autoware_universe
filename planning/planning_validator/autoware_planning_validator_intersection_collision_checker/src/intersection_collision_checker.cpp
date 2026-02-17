@@ -16,8 +16,8 @@
 
 #include "autoware/planning_validator_intersection_collision_checker/utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/transform/transforms.hpp>
@@ -469,7 +469,13 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
   std::optional<PCDObject> pcd_object = std::nullopt;
 
   PointCloud::Ptr points_within(new PointCloud);
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(target_lanelet.lanelets);
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanelet.lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    return std::nullopt;
+  }
+  const auto & combine_lanelet = combine_lanelet_opt.value();
+
   get_points_within(
     filtered_point_cloud, combine_lanelet.polygon2d().basicPolygon(), points_within);
 
@@ -482,13 +488,14 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
 
   const auto & vel_params = params_.icc_parameters.pointcloud.velocity_estimation;
 
-  const auto overlap_arc_coord =
-    lanelet::utils::getArcCoordinates(target_lanelet.lanelets, target_lanelet.overlap_point);
+  const auto overlap_arc_coord = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+    target_lanelet.lanelets, target_lanelet.overlap_point);
   auto min_arc_length = std::numeric_limits<double>::max();
   for (const auto & p : *clustered_points) {
     geometry_msgs::msg::Pose p_geom;
     p_geom.position = autoware_utils::create_point(p.x, p.y, p.z);
-    const auto arc_coord = lanelet::utils::getArcCoordinates(target_lanelet.lanelets, p_geom);
+    const auto arc_coord =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanelet.lanelets, p_geom);
     const auto arc_length_to_overlap = overlap_arc_coord.length - arc_coord.length;
     if (
       arc_length_to_overlap < std::numeric_limits<double>::epsilon() ||

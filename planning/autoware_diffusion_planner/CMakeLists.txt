@@ -55,7 +55,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
-    src/conversion/ego.cpp
     src/postprocessing/postprocessing_utils.cpp
     src/preprocessing/lane_segments.cpp
     src/preprocessing/preprocessing_utils.cpp
@@ -86,7 +85,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ament_add_ros_isolated_gtest(test_diffusion_planner
       test/agent_test.cpp
       test/lanelet_test.cpp
-      test/ego_test.cpp
       test/lane_segments_test.cpp
       test/pre_processing_utils_test.cpp
       test/postprocessing_utils_test.cpp

@@ -18,20 +18,14 @@
 
 #include "autoware_utils/geometry/geometry.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <tf2/LinearMath/Matrix3x3.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/utils.hpp>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 
 #include <algorithm>
 #include <vector>

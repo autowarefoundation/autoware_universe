@@ -19,12 +19,20 @@
 #include "autoware/qos_utils/qos_compatibility.hpp"
 #include "autoware_utils_diagnostics/diagnostics_interface.hpp"
 
+#include <autoware/landmark_manager/landmark_manager.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/set_bool.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -33,24 +41,6 @@
 #include <mutex>
 #include <string>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
-#include <autoware/landmark_manager/landmark_manager.hpp>
-
-#include <geometry_msgs/msg/pose_array.hpp>
-
-#include <pcl/common/transforms.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
 
 namespace autoware::lidar_marker_localizer
 {
