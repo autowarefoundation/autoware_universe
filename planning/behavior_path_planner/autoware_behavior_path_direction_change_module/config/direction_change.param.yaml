@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    direction_change:
+      # ========================================
+      # General parameters
+      # Module-level feature toggles and settings
+      # ========================================
+      enable_cusp_detection: true  # Enable cusp point detection
+      enable_reverse_following: true  # Enable reverse lane following
+      publish_debug_marker: false  # Publish debug markers for visualization
+      th_arrived_distance: 0.5  # [m] If ego within this distance of route goal, do not activate (align with arrival_check / th_arrived_distance)
+
+      # ========================================
+      # Cusp detection parameters
+      # Detection of direction change points in path
+      # ========================================
+      cusp_detection_angle_threshold_deg: 90.0  # [deg] Angle threshold to detect cusp point
+      cusp_detection_distance_threshold: 2.0  # [m] Distance threshold to detect approaching cusp
+      cusp_detection_distance_start_approaching: 10.0  # [m] Distance to start approaching cusp (transition to APPROACHING_CUSP)
+
+      # ========================================
+      # State transition parameters
+      # Vehicle stop detection and state transitions
+      # ========================================
+      stop_velocity_threshold: 0.5  # [m/s] Velocity threshold to determine vehicle has stopped
+      th_stopped_time: 0.090  # [s] Duration velocity must stay below stop_velocity_threshold before direction switch at cusp
+
+      # ========================================
+      # Reverse behavior parameters
+      # Speed limits and path generation for reverse motion
+      # ========================================
+      reverse_initial_speed: 0.5  # [m/s] Upper speed limit for backward_slow_speed
+      reverse_speed_limit: 2.0  # [m/s] Upper speed limit for backward_cruise_speed (clamped by reference path speed)
+      reverse_path_densify_max_yaw_step_deg: 5.0  # [deg] Maximum yaw angle step for reverse path densification
+      reverse_path_densify_max_distance_step: 0.5  # [m] Maximum distance step for reverse path densification
+

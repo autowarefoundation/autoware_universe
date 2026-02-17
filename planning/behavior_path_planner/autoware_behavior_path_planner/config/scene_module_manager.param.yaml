@@ -20,6 +20,7 @@
       - "lane_change_right"
       - "external_request_lane_change_left"
       - "external_request_lane_change_right"
+      - "direction_change" # newly added
     slot3:
       - "goal_planner"
     slot4:
@@ -78,4 +79,10 @@
     sampling_planner:
       enable_rtc: false
       enable_simultaneous_execution_as_approved_module: false
+      enable_simultaneous_execution_as_candidate_module: false
+    
+    # newly added
+    direction_change:
+      enable_rtc: false
+      enable_simultaneous_execution_as_approved_module: true
       enable_simultaneous_execution_as_candidate_module: false

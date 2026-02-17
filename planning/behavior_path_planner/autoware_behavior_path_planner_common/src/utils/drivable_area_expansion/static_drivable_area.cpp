@@ -823,6 +823,23 @@ void generateDrivableArea(
     return;
   }
 
+  // Check if this is a K-turn environment
+  const bool is_k_turn = isKTurnEnvironment(lanes, planner_data);
+
+  if (is_k_turn) {
+    // For K-turn environment, use simplified drivable area generation
+    generateDrivableAreaForKTurn(path, lanes, planner_data);
+
+    // Apply expansion if enabled
+    const auto & expansion_params = planner_data->drivable_area_expansion_parameters;
+    if (expansion_params.enabled) {
+      autoware::behavior_path_planner::drivable_area_expansion::expand_drivable_area(
+        path, planner_data);
+    }
+    return;
+  }
+
+  // Standard drivable area generation for normal cases
   path.left_bound.clear();
   path.right_bound.clear();
 
@@ -1827,4 +1844,80 @@ lanelet::ConstLanelets combineLanelets(
 
   return combined_lanes;
 }
+
+bool isKTurnEnvironment(const std::vector<DrivableLanes> & lanes,
+                        const std::shared_ptr<const PlannerData> planner_data)
+{
+  if (!planner_data || !planner_data->route_handler) {
+    return false;
+  }
+
+  // Check if any lanelet has direction_change_lane tag set to "yes"
+  for (const auto & drivable_lane : lanes) {
+    const auto lanelets = utils::transformToLanelets({drivable_lane});
+    for (const auto & lanelet : lanelets) {
+      const std::string direction_change_lane = lanelet.attributeOr("direction_change_lane", "none");
+      if (direction_change_lane == "yes") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void generateDrivableAreaForKTurn(
+  PathWithLaneId & path, const std::vector<DrivableLanes> & lanes,
+  const std::shared_ptr<const PlannerData> planner_data)
+{
+  (void)planner_data;  // Suppress unused parameter warning
+
+  if (path.points.empty()) {
+    return;
+  }
+
+  path.left_bound.clear();
+  path.right_bound.clear();
+
+  // For K-turn environment, simply use all left/right boundaries as drivable area
+  // without considering overlaps or complex processing
+
+  // Convert drivable lanes to geometry points for bounds
+  std::vector<geometry_msgs::msg::Point> left_bound_points;
+  std::vector<geometry_msgs::msg::Point> right_bound_points;
+
+  for (const auto & drivable_lane : lanes) {
+    // Add left lane boundary points
+    const auto left_bound = drivable_lane.left_lane.leftBound3d();
+    for (const auto & point : left_bound) {
+      left_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+    }
+
+    // Add right lane boundary points
+    const auto right_bound = drivable_lane.right_lane.rightBound3d();
+    for (const auto & point : right_bound) {
+      right_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+    }
+
+    // Add middle lane boundaries if any
+    for (const auto & middle_lane : drivable_lane.middle_lanes) {
+      const auto middle_left_bound = middle_lane.leftBound3d();
+      const auto middle_right_bound = middle_lane.rightBound3d();
+
+      for (const auto & point : middle_left_bound) {
+        left_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+      }
+      for (const auto & point : middle_right_bound) {
+        right_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+      }
+    }
+  }
+
+  // Remove duplicates
+  left_bound_points = autoware::motion_utils::removeOverlapPoints(left_bound_points);
+  right_bound_points = autoware::motion_utils::removeOverlapPoints(right_bound_points);
+
+  path.left_bound = left_bound_points;
+  path.right_bound = right_bound_points;
+}
+
 }  // namespace autoware::behavior_path_planner::utils
