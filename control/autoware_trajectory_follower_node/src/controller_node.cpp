@@ -143,7 +143,7 @@ Controller::LongitudinalControllerMode Controller::getLongitudinalControllerMode
 
 void Controller::check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  const auto traj_timestamp = sub_ref_path_.latest_timestamp();
+  const auto traj_timestamp = sub_ref_path_.last_taken_data_timestamp();
 
   if (!traj_timestamp) {
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
