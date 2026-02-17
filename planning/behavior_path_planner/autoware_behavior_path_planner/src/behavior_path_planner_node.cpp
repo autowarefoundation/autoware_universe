@@ -275,48 +275,63 @@ void BehaviorPathPlannerNode::takeData()
   }
 }
 
-// check if mandatory data is ready (not timed out)
+// check if mandatory data is ready and check if cyclic data is not timed out.
 BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
   const rclcpp::Time & now)
 {
   diagnostics_message_timeout_->clear();
   DataReadyStatus status = DataReadyStatus::SUCCESS;
 
-  const auto check =
-    [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
-      if (!ts.has_value()) {
+  // 1: Check if mandatory data has been received at least once.
+  {
+    const auto check_received = [&](const auto & ptr, const std::string & name) {
+      if (!ptr) {
         RCLCPP_INFO_SKIPFIRST_THROTTLE(
           get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
         diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
         status = DataReadyStatus::NOT_RECEIVED;
         return;
       }
-      if ((now - ts.value()).seconds() > timeout) {
-        diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
-        if (status == DataReadyStatus::SUCCESS) {
-          status = DataReadyStatus::TIMEOUT;
-        }
-        return;
-      }
       diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
     };
 
-  // no_timeout is used for not checking timeout for a message,
-  // but checking if it is received or not.
-  const double no_timeout = std::numeric_limits<double>::max();
+    check_received(route_ptr_, "route");
+    check_received(map_ptr_, "vector_map");
+    check_received(current_scenario_, "scenario");
+    check_received(planner_data_->self_acceleration, "acceleration");
+    check_received(planner_data_->operation_mode, "operation_mode");
+  }
 
-  check(scenario_subscriber_.latest_timestamp(), no_timeout, "scenario");
-  check(route_subscriber_.latest_timestamp(), no_timeout, "route");
-  check(vector_map_subscriber_.latest_timestamp(), no_timeout, "vector_map");
-  check(perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception_objects");
-  check(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
-  check(acceleration_subscriber_.latest_timestamp(), no_timeout, "acceleration");
-  check(operation_mode_subscriber_.latest_timestamp(), no_timeout, "operation_mode");
-  check(
-    occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
-  if (enable_traffic_signal_timeout_) {
-    check(
-      traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
+  // Step 2: Check if cyclic data is not timed out instead of `topic_state_monitor`.
+  {
+    const auto check_timeout =
+      [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
+        if (!ts.has_value()) {
+          RCLCPP_INFO_SKIPFIRST_THROTTLE(
+            get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
+          diagnostics_message_timeout_->add_key_value(name, std::string("not received"));
+          status = DataReadyStatus::NOT_RECEIVED;
+          return;
+        }
+        if ((now - ts.value()).seconds() > timeout) {
+          diagnostics_message_timeout_->add_key_value(name, std::string("timeout"));
+          if (status == DataReadyStatus::SUCCESS) {
+            status = DataReadyStatus::TIMEOUT;
+          }
+          return;
+        }
+        diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
+      };
+
+    check_timeout(
+      perception_subscriber_.latest_timestamp(), cyclic_message_timeout_, "perception_objects");
+    check_timeout(velocity_subscriber_.latest_timestamp(), cyclic_message_timeout_, "odometry");
+    check_timeout(
+      occupancy_grid_subscriber_.latest_timestamp(), cyclic_message_timeout_, "occupancy_grid_map");
+    if (enable_traffic_signal_timeout_) {
+      check_timeout(
+        traffic_signals_subscriber_.latest_timestamp(), cyclic_message_timeout_, "traffic_signal");
+    }
   }
 
   if (status != DataReadyStatus::SUCCESS) {
