@@ -238,8 +238,7 @@ void LidarCenterPointNode::pointCloudCallback(
       entropy_sum += box3d.entropy;
     }
     const double entropy_mean_sum = entropy_sum / static_cast<double>(det_boxes3d.size());
-    diagnostics_centerpoint_trt_->add_key_value(
-      "bbox_entropy_mean_sum", entropy_mean_sum);
+    diagnostics_centerpoint_trt_->add_key_value("bbox_entropy_mean_sum", entropy_mean_sum);
   } else {
     diagnostics_centerpoint_trt_->add_key_value("bbox_entropy_mean_sum", 0.0);
   }
