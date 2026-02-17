@@ -18,7 +18,7 @@
 #include "time_to_collision.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
 #include <range/v3/all.hpp>
 
@@ -183,7 +183,11 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(
     if (road_and_blind_lanelets_opt) {
       const auto & [road_lanelets, blind_side_lanelets_before_turning] =
         road_and_blind_lanelets_opt.value();
-      road_lanelets_before_turning_merged_ = lanelet::utils::combineLaneletsShape(road_lanelets);
+      const auto road_lanelets_merged_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(road_lanelets);
+      if (road_lanelets_merged_opt.has_value()) {
+        road_lanelets_before_turning_merged_ = road_lanelets_merged_opt.value();
+      }
       blind_side_lanelets_before_turning_ = blind_side_lanelets_before_turning;
     }
   }
