@@ -19,6 +19,7 @@
 #include "autoware/interpolation/spherical_linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
+#include "rclcpp/duration.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -30,7 +31,9 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <utility>
+#include <vector>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
@@ -46,7 +49,7 @@ using geometry_msgs::msg::Quaternion;
 /**
  * @brief check if trajectory is invalid or not
  */
-bool isValidTrajectory(const Trajectory & traj);
+bool isValidTrajectory(const Trajectory & traj, const bool use_temporal_trajectory = false);
 
 /**
  * @brief calculate distance to stopline from current vehicle position where velocity is 0
@@ -116,10 +119,48 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPoint(
       points.at(i).acceleration_mps2, points.at(i + 1).acceleration_mps2, interpolate_ratio);
     interpolated_point.heading_rate_rps = autoware::interpolation::lerp(
       points.at(i).heading_rate_rps, points.at(i + 1).heading_rate_rps, interpolate_ratio);
+    const double t0 = rclcpp::Duration(points.at(i).time_from_start).seconds();
+    const double t1 = rclcpp::Duration(points.at(i + 1).time_from_start).seconds();
+    const double interpolated_time = autoware::interpolation::lerp(t0, t1, interpolate_ratio);
+    interpolated_point.time_from_start = rclcpp::Duration::from_seconds(interpolated_time);
   }
 
   return std::make_pair(interpolated_point, seg_idx);
 }
+
+/**
+ * @brief apply linear interpolation to trajectory point at specified trajectory time
+ * @param [in] points trajectory points (time_from_start must be strictly increasing)
+ * @param [in] target_time target time_from_start [s]
+ * @return interpolated trajectory point and source segment index
+ */
+std::pair<TrajectoryPoint, size_t> lerpTrajectoryPointByTime(
+  const std::vector<TrajectoryPoint> & points, const double target_time);
+
+/**
+ * @brief estimate the trajectory time corresponding to the current pose within a bounded time
+ * window
+ * @param [in] points trajectory points (time_from_start must be strictly increasing)
+ * @param [in] pose current pose
+ * @param [in] max_dist nearest-search distance threshold
+ * @param [in] max_yaw nearest-search yaw threshold
+ * @param [in] min_time_window_sec lower bound of search window [s]
+ * @param [in] max_time_window_sec upper bound of search window [s]
+ * @return estimated trajectory time if a candidate exists in the window
+ */
+std::optional<double> estimateTrajectoryTimeFromPose(
+  const std::vector<TrajectoryPoint> & points, const Pose & pose, const double max_dist,
+  const double max_yaw, const double min_time_window_sec = -std::numeric_limits<double>::infinity(),
+  const double max_time_window_sec = std::numeric_limits<double>::infinity());
+
+/**
+ * @brief estimate a local time step around the target trajectory time
+ * @param [in] points trajectory points
+ * @param [in] target_time target trajectory time [s]
+ * @return local time step [s]
+ */
+double estimateLocalTrajectoryTimeStep(
+  const std::vector<TrajectoryPoint> & points, const double target_time);
 
 /**
  * @brief limit variable whose differential is within a certain value

@@ -1,4 +1,8 @@
 /**:
   ros__parameters:
+    # common trajectory reference mode for controllers
+    # spatial: distance-based tracking (current behavior)
+    # temporal: time-step-based tracking
+    trajectory_reference_mode: "spatial"
     ctrl_period: 0.03
     timeout_thr_sec: 0.5
