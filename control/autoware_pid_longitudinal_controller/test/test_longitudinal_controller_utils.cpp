@@ -26,7 +26,9 @@
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
+#include <cmath>
 #include <limits>
+#include <vector>
 
 namespace longitudinal_utils =
   ::autoware::motion::control::pid_longitudinal_controller::longitudinal_utils;
@@ -456,6 +458,118 @@ TEST(TestLongitudinalControllerUtils, lerpTrajectoryPoint)
   EXPECT_NEAR(result.first.pose.position.z, pose.position.z, abs_err);
   EXPECT_NEAR(result.first.longitudinal_velocity_mps, 15.0, abs_err);
   EXPECT_NEAR(result.first.acceleration_mps2, 15.0, abs_err);
+}
+
+TEST(TestLongitudinalControllerUtils, lerpTrajectoryPointByTimeStopHold)
+{
+  using autoware_planning_msgs::msg::TrajectoryPoint;
+  std::vector<TrajectoryPoint> points;
+
+  TrajectoryPoint p;
+  p.pose.position.x = 0.0;
+  p.longitudinal_velocity_mps = 0.0;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.0);
+  points.push_back(p);
+
+  p.time_from_start = rclcpp::Duration::from_seconds(0.1);
+  points.push_back(p);
+
+  p.time_from_start = rclcpp::Duration::from_seconds(0.2);
+  points.push_back(p);
+
+  p.pose.position.x = 0.2;
+  p.longitudinal_velocity_mps = 1.0;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.3);
+  points.push_back(p);
+
+  const auto stop_hold = longitudinal_utils::lerpTrajectoryPointByTime(points, 0.15);
+  EXPECT_EQ(stop_hold.second, 1U);
+  EXPECT_DOUBLE_EQ(rclcpp::Duration(stop_hold.first.time_from_start).seconds(), 0.15);
+  EXPECT_DOUBLE_EQ(stop_hold.first.pose.position.x, 0.0);
+  EXPECT_DOUBLE_EQ(stop_hold.first.longitudinal_velocity_mps, 0.0);
+}
+
+TEST(TestLongitudinalControllerUtils, lerpTrajectoryPointByTimeRestartIsSmooth)
+{
+  using autoware_planning_msgs::msg::TrajectoryPoint;
+  std::vector<TrajectoryPoint> points;
+
+  TrajectoryPoint p;
+  p.pose.position.x = 0.0;
+  p.longitudinal_velocity_mps = 0.0;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.0);
+  points.push_back(p);
+
+  p.time_from_start = rclcpp::Duration::from_seconds(0.1);
+  points.push_back(p);
+
+  p.pose.position.x = 0.1;
+  p.longitudinal_velocity_mps = 0.5;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.2);
+  points.push_back(p);
+
+  p.pose.position.x = 0.3;
+  p.longitudinal_velocity_mps = 1.0;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.3);
+  points.push_back(p);
+
+  const auto early_restart = longitudinal_utils::lerpTrajectoryPointByTime(points, 0.15);
+  EXPECT_EQ(early_restart.second, 1U);
+  EXPECT_DOUBLE_EQ(rclcpp::Duration(early_restart.first.time_from_start).seconds(), 0.15);
+  EXPECT_NEAR(early_restart.first.pose.position.x, 0.05, 1e-12);
+  EXPECT_NEAR(early_restart.first.longitudinal_velocity_mps, 0.25, 1e-12);
+
+  const auto late_restart = longitudinal_utils::lerpTrajectoryPointByTime(points, 0.25);
+  EXPECT_EQ(late_restart.second, 2U);
+  EXPECT_DOUBLE_EQ(rclcpp::Duration(late_restart.first.time_from_start).seconds(), 0.25);
+  EXPECT_NEAR(late_restart.first.pose.position.x, 0.2, 1e-12);
+  EXPECT_NEAR(late_restart.first.longitudinal_velocity_mps, 0.75, 1e-12);
+
+  EXPECT_LT(
+    early_restart.first.longitudinal_velocity_mps, late_restart.first.longitudinal_velocity_mps);
+}
+
+TEST(TestLongitudinalControllerUtils, estimateTrajectoryTimeFromPoseWithinWindow)
+{
+  using autoware_planning_msgs::msg::TrajectoryPoint;
+  std::vector<TrajectoryPoint> points;
+
+  for (size_t i = 0; i < 4; ++i) {
+    TrajectoryPoint p;
+    p.pose.position.x = static_cast<double>(i);
+    p.pose.orientation.w = 1.0;
+    p.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i));
+    points.push_back(p);
+  }
+
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = 2.1;
+  pose.orientation.w = 1.0;
+
+  const auto estimated_time =
+    longitudinal_utils::estimateTrajectoryTimeFromPose(points, pose, 10.0, M_PI, 1.8, 2.2);
+  ASSERT_TRUE(estimated_time.has_value());
+  EXPECT_GE(*estimated_time, 1.8);
+  EXPECT_LE(*estimated_time, 2.2);
+}
+
+TEST(TestLongitudinalControllerUtils, estimateLocalTrajectoryTimeStep)
+{
+  using autoware_planning_msgs::msg::TrajectoryPoint;
+  std::vector<TrajectoryPoint> points;
+
+  TrajectoryPoint p;
+  p.time_from_start = rclcpp::Duration::from_seconds(0.1);
+  points.push_back(p);
+  p.time_from_start = rclcpp::Duration::from_seconds(0.3);
+  points.push_back(p);
+  p.time_from_start = rclcpp::Duration::from_seconds(0.8);
+  points.push_back(p);
+
+  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.0), 0.2);
+  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.2), 0.2);
+  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.5), 0.5);
+  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 1.0), 0.5);
 }
 
 TEST(TestLongitudinalControllerUtils, applyDiffLimitFilter)

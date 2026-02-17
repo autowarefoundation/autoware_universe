@@ -4,6 +4,8 @@
     traj_resample_dist: 0.1         # path resampling interval [m]
     use_steer_prediction: false     # flag for using steer prediction (do not use steer measurement)
     use_delayed_initial_state: true # flag to use x0_delayed as initial state for predicted trajectory
+    # NOTE: trajectory_reference_mode is now set at trajectory_follower_node level
+    # This default file is for MPC-specific parameters only
 
     # -- path smoothing --
     enable_path_smoothing: false   # flag for path smoothing
