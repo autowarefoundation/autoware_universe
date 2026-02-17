@@ -1,10 +1,10 @@
 import json
-import re
 import subprocess
 import urllib
 from pathlib import Path, PurePosixPath
-from urllib.parse import urlparse
+from urllib.parse import quote, unquote, urlparse, urlsplit
 
+import lxml.html
 from tabulate import tabulate
 
 # This file is for defining macros for mkdocs-macros plugin
@@ -80,27 +80,7 @@ DOCS_MANAGED_SUFFIXES = (
     ".webp",
 )
 
-INLINE_LINK_PATTERN = re.compile(r"(?P<prefix>!?\[[^\]]+\]\()(?P<target>[^)\n]+)(?P<suffix>\))")
-REFERENCE_LINK_PATTERN = re.compile(
-    r"^(?P<prefix>\s{0,3}\[[^\]]+\]:\s*)(?P<target>\S+(?:\s+\"[^\"]*\")?)(?P<suffix>\s*)$"
-)
-
-
-def split_markdown_link_target(target):
-    trimmed = target.strip()
-    if not trimmed:
-        return "", ""
-
-    # Support markdown angle-bracket links: [label](<path with spaces>)
-    if trimmed.startswith("<"):
-        end = trimmed.find(">")
-        if end != -1:
-            return trimmed[1:end], trimmed[end + 1 :]
-
-    parts = trimmed.split(maxsplit=1)
-    destination = parts[0]
-    suffix = f" {parts[1]}" if len(parts) > 1 else ""
-    return destination, suffix
+_PAGE_SOURCE_BY_URL = {}
 
 
 def is_external_or_anchor_link(link):
@@ -112,102 +92,7 @@ def is_docs_managed_link(link_path):
     return link_path.lower().endswith(DOCS_MANAGED_SUFFIXES)
 
 
-def to_commit_pinned_repo_link(link_target, page_src_path, repo_root, repo_url, commit):
-    destination, suffix = split_markdown_link_target(link_target)
-    if not destination or is_external_or_anchor_link(destination):
-        return link_target
-
-    path_part, has_fragment, fragment = destination.partition("#")
-    if not path_part or is_docs_managed_link(path_part):
-        return link_target
-
-    resolved_path = (repo_root / Path(page_src_path).parent / path_part).resolve()
-    try:
-        repo_relative_path = resolved_path.relative_to(repo_root)
-    except ValueError:
-        return link_target
-
-    is_directory_link = path_part.endswith("/") or resolved_path.is_dir()
-    git_endpoint = "tree" if is_directory_link else "blob"
-    normalized_repo_url = repo_url[:-4] if repo_url.endswith(".git") else repo_url
-
-    converted = f"{normalized_repo_url}/{git_endpoint}/{commit}/{PurePosixPath(repo_relative_path).as_posix()}"
-    if has_fragment:
-        converted += f"#{fragment}"
-    return f"{converted}{suffix}"
-
-
-def rewrite_non_doc_links_to_commit_pinned(markdown, page_src_path, repo_root, repo_url, commit):
-    in_fence = False
-    fence_marker = None
-    output_lines = []
-
-    for line in markdown.splitlines(keepends=True):
-        stripped = line.lstrip()
-        starts_fence = stripped.startswith("```") or stripped.startswith("~~~")
-        if starts_fence:
-            current_marker = "```" if stripped.startswith("```") else "~~~"
-            if not in_fence:
-                in_fence = True
-                fence_marker = current_marker
-            elif current_marker == fence_marker:
-                in_fence = False
-                fence_marker = None
-            output_lines.append(line)
-            continue
-
-        if in_fence:
-            output_lines.append(line)
-            continue
-
-        def inline_replacer(match):
-            updated_target = to_commit_pinned_repo_link(
-                link_target=match.group("target"),
-                page_src_path=page_src_path,
-                repo_root=repo_root,
-                repo_url=repo_url,
-                commit=commit,
-            )
-            return f"{match.group('prefix')}{updated_target}{match.group('suffix')}"
-
-        line = INLINE_LINK_PATTERN.sub(inline_replacer, line)
-
-        def reference_replacer(match):
-            updated_target = to_commit_pinned_repo_link(
-                link_target=match.group("target"),
-                page_src_path=page_src_path,
-                repo_root=repo_root,
-                repo_url=repo_url,
-                commit=commit,
-            )
-            return f"{match.group('prefix')}{updated_target}{match.group('suffix')}"
-
-        line = REFERENCE_LINK_PATTERN.sub(reference_replacer, line)
-        output_lines.append(line)
-
-    return "".join(output_lines)
-
-
-def define_env(env):
-    @env.macro
-    def json_to_markdown(json_schema_file_path):
-        with open(json_schema_file_path) as f:
-            data = json.load(f)
-            return format_json(data)
-
-    @env.macro
-    def drawio(image_path):
-        image_url = urllib.parse.quote(f"{env.conf['site_url']}{image_path}", "")
-        return f"https://app.diagrams.net/?lightbox=1#U{image_url}"
-
-
-def on_post_page_macros(env):
-    git_info = env.variables["git"]
-    repo_url = env.conf.get("repo_url")
-    if not repo_url:
-        raise RuntimeError("repo_url is not configured; cannot generate commit-pinned links.")
-
-    repo_root = Path(git_info["root_dir"]).resolve()
+def resolve_git_head_commit(repo_root):
     try:
         commit = (
             subprocess.run(
@@ -224,11 +109,132 @@ def on_post_page_macros(env):
 
     if not commit:
         raise RuntimeError("git HEAD commit is empty; cannot generate commit-pinned links.")
+    return commit
 
-    env.markdown = rewrite_non_doc_links_to_commit_pinned(
-        markdown=env.markdown,
-        page_src_path=env.page.file.src_path,
-        repo_root=repo_root,
-        repo_url=repo_url,
-        commit=commit,
+
+def register_page_source(page_url, page_src_path):
+    normalized = page_url.lstrip("/")
+    _PAGE_SOURCE_BY_URL[normalized] = page_src_path
+    if normalized.endswith("/"):
+        _PAGE_SOURCE_BY_URL[normalized.rstrip("/")] = page_src_path
+
+
+def page_url_candidates_from_html(site_dir, html_path):
+    relative = html_path.relative_to(site_dir).as_posix()
+    if relative == "index.html":
+        return ("", "/", "index.html")
+    if relative.endswith("/index.html"):
+        base = relative[: -len("index.html")]
+        return (base, base.rstrip("/"), base.lstrip("/"), base.lstrip("/").rstrip("/"))
+    return (relative, relative.lstrip("/"))
+
+
+def to_commit_pinned_href(href, page_src_path, html_path, site_dir, repo_root, repo_url, commit):
+    if not href or is_external_or_anchor_link(href):
+        return href
+
+    parsed = urlsplit(href)
+    path_part = unquote(parsed.path)
+    if not path_part or is_docs_managed_link(path_part):
+        return href
+
+    site_target_path = (html_path.parent / path_part).resolve()
+    try:
+        site_target_path.relative_to(site_dir)
+        if site_target_path.exists():
+            return href
+    except ValueError:
+        pass
+
+    resolved_path = (repo_root / Path(page_src_path).parent / path_part).resolve()
+    try:
+        repo_relative_path = resolved_path.relative_to(repo_root)
+    except ValueError:
+        return href
+
+    if not resolved_path.exists():
+        return href
+
+    is_directory_link = path_part.endswith("/") or resolved_path.is_dir()
+    git_endpoint = "tree" if is_directory_link else "blob"
+    normalized_repo_url = repo_url[:-4] if repo_url.endswith(".git") else repo_url
+
+    converted = (
+        f"{normalized_repo_url}/{git_endpoint}/{commit}/"
+        f"{quote(PurePosixPath(repo_relative_path).as_posix(), safe='/')}"
     )
+    if parsed.query:
+        converted += f"?{parsed.query}"
+    if parsed.fragment:
+        converted += f"#{parsed.fragment}"
+    return converted
+
+
+def rewrite_html_links_to_commit_pinned(html_path, site_dir, repo_root, repo_url, commit):
+    page_src_path = None
+    for url_key in page_url_candidates_from_html(site_dir, html_path):
+        if url_key in _PAGE_SOURCE_BY_URL:
+            page_src_path = _PAGE_SOURCE_BY_URL[url_key]
+            break
+    if not page_src_path:
+        return
+
+    document = lxml.html.parse(str(html_path))
+    changed = False
+    for anchor in document.iter("a"):
+        href = anchor.get("href")
+        rewritten = to_commit_pinned_href(
+            href=href,
+            page_src_path=page_src_path,
+            html_path=html_path,
+            site_dir=site_dir,
+            repo_root=repo_root,
+            repo_url=repo_url,
+            commit=commit,
+        )
+        if rewritten != href:
+            anchor.set("href", rewritten)
+            changed = True
+
+    if changed:
+        doctype = document.docinfo.doctype or "<!DOCTYPE html>"
+        html_path.write_text(
+            lxml.html.tostring(document, encoding="unicode", method="html", doctype=doctype),
+            encoding="utf-8",
+        )
+
+
+def define_env(env):
+    @env.macro
+    def json_to_markdown(json_schema_file_path):
+        with open(json_schema_file_path) as f:
+            data = json.load(f)
+            return format_json(data)
+
+    @env.macro
+    def drawio(image_path):
+        image_url = urllib.parse.quote(f"{env.conf['site_url']}{image_path}", "")
+        return f"https://app.diagrams.net/?lightbox=1#U{image_url}"
+
+
+def on_post_page_macros(env):
+    register_page_source(env.page.file.url, env.page.file.src_path)
+
+
+def on_post_build(env):
+    repo_url = env.conf.get("repo_url")
+    if not repo_url:
+        raise RuntimeError("repo_url is not configured; cannot generate commit-pinned links.")
+
+    repo_root = Path(env.variables["git"]["root_dir"]).resolve()
+    site_dir = Path(env.conf["site_dir"]).resolve()
+    commit = resolve_git_head_commit(repo_root)
+
+    for html_path in site_dir.rglob("*.html"):
+        rewrite_html_links_to_commit_pinned(
+            html_path=html_path,
+            site_dir=site_dir,
+            repo_root=repo_root,
+            repo_url=repo_url,
+            commit=commit,
+        )
