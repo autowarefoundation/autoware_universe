@@ -184,6 +184,11 @@ private:
   void set_up_params();
 
   /**
+   * @brief Load TensorRT model. Throws on failure.
+   */
+  void load_model();
+
+  /**
    * @brief Timer callback for periodic processing and publishing.
    */
   void on_timer();
