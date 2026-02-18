@@ -304,7 +304,7 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
 
   // Step 2: Check if cyclic data is not timed out instead of `topic_state_monitor`.
   {
-    const auto check_timeout =
+    const auto update_timeout_diagnostics =
       [&](const std::optional<rclcpp::Time> & ts, double timeout, const std::string & name) {
         if (!ts.has_value()) {
           RCLCPP_INFO_SKIPFIRST_THROTTLE(
