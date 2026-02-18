@@ -2,6 +2,31 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_planning_evaluator): sort predicted paths (`#12034 <https://github.com/autowarefoundation/autoware_universe/issues/12034>`_)
+  fix predicted path sorting bug
+* refactor(evaluator): migrate deprecated getClosestLanelet() (`#11987 <https://github.com/autowarefoundation/autoware_universe/issues/11987>`_)
+* fix(autoware_planning_evaluator): a pet bug (`#11950 <https://github.com/autowarefoundation/autoware_universe/issues/11950>`_)
+  fix pet bug
+* chore(planning_evaluator): on the worst only (`#11932 <https://github.com/autowarefoundation/autoware_universe/issues/11932>`_)
+  on the worst only
+* feat(autoware_planning_evaluator): new obstacle metrics (`#11761 <https://github.com/autowarefoundation/autoware_universe/issues/11761>`_)
+  * tmp save
+  * remove some draft code
+  * add new implements
+  * polish code, need to update readme
+  * pre-commit
+  * update readme
+  * fix cppcheck
+  * fix unit test bug, and add test cases for ttc, drac.
+  * cry to fix ci building error
+  * refactor code
+  ---------
+* docs(planning_evaluator): revise general terminology (`#11833 <https://github.com/autowarefoundation/autoware_universe/issues/11833>`_)
+* Contributors: Kem (TiankuiXian), Mamoru Sobue, Ryohsuke Mitsudome, Zulfaqar Azmi
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

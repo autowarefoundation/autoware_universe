@@ -2,6 +2,28 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(cuda_polar_voxel_outlier_filter): replace cub::TransformInputIterator with thrust::transform_iterator (`#12069 <https://github.com/autowarefoundation/autoware_universe/issues/12069>`_)
+  * fix(cuda_polar_voxel_outlier_filter): replace cub::TransformInputIterator with thrust::transform_iterator
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_cuda_pointcloud_preprocessor): update nvcc flags (`#12059 <https://github.com/autowarefoundation/autoware_universe/issues/12059>`_)
+* feat: add negative option for cropbox filtering; aligning with CPU cropbox filter (`#11766 <https://github.com/autowarefoundation/autoware_universe/issues/11766>`_)
+  * feat: add negative option for cropbox filtering; aligning with CPU cropbox filter
+  * change the internal process of negative to also boolean; simplify the logics
+  * change the internal process of negative to also boolean; simplify the logics
+  * Apply suggestion from @mojomex
+  fix true/false
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+  * precommit
+  ---------
+  Co-authored-by: Max Schmeller <6088931+mojomex@users.noreply.github.com>
+* fix(agnocast): build on jazzy, remove from ground_segmentation_cuda (`#11960 <https://github.com/autowarefoundation/autoware_universe/issues/11960>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, Yuxuan Liu
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
