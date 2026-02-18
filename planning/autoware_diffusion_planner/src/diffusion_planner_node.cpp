@@ -51,6 +51,8 @@
 
 namespace autoware::diffusion_planner
 {
+using diagnostic_msgs::msg::DiagnosticStatus;
+
 DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 : Node("diffusion_planner", options), generator_uuid_(autoware_utils_uuid::generate_uuid())
 {
@@ -71,22 +73,23 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   turn_indicator_manager_.set_hold_duration(
     rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
   turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
-  utils::check_weight_version(params_.args_path);
-  normalization_map_ = utils::load_normalization_stats(params_.args_path);
 
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
-  diagnostics_inference_->update_level_and_message(
-    diagnostic_msgs::msg::DiagnosticStatus::WARN, "Loading model weights");
-  diagnostics_inference_->publish(get_clock()->now());
-  tensorrt_inference_ = std::make_unique<TensorrtInference>(
-    params_.model_path, params_.plugins_path, params_.batch_size);
-  diagnostics_inference_->update_level_and_message(
-    diagnostic_msgs::msg::DiagnosticStatus::OK, "Model weights loaded");
-  diagnostics_inference_->publish(get_clock()->now());
-
-  if (params_.build_only) {
-    RCLCPP_INFO(get_logger(), "Build only mode enabled. Exiting after loading model.");
-    std::exit(EXIT_SUCCESS);
+  try {
+    load_model();
+    if (params_.build_only) {
+      RCLCPP_INFO(get_logger(), "Build only mode enabled. Exiting after loading model.");
+      std::exit(EXIT_SUCCESS);
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Inference will be disabled.");
+    tensorrt_inference_.reset();
+    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
+    diagnostics_inference_->publish(get_clock()->now());
+    if (params_.build_only) {
+      RCLCPP_ERROR(get_logger(), "Build only mode: exiting due to model load failure.");
+      std::exit(EXIT_FAILURE);
+    }
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
@@ -141,15 +144,29 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("debug_params.publish_debug_route", true);
 }
 
+void DiffusionPlanner::load_model()
+{
+  utils::check_weight_version(params_.args_path);
+  normalization_map_ = utils::load_normalization_stats(params_.args_path);
+  diagnostics_inference_->update_level_and_message(DiagnosticStatus::WARN, "Loading model");
+  diagnostics_inference_->publish(get_clock()->now());
+  tensorrt_inference_ = std::make_unique<TensorrtInference>(
+    params_.model_path, params_.plugins_path, params_.batch_size);
+  diagnostics_inference_->update_level_and_message(DiagnosticStatus::OK, "Model loaded");
+  diagnostics_inference_->publish(get_clock()->now());
+}
+
 SetParametersResult DiffusionPlanner::on_parameter(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
   {
     DiffusionPlannerParams temp_params = params_;
+    const auto previous_args_path = params_.args_path;
     const auto previous_model_path = params_.model_path;
     const auto previous_batch_size = params_.batch_size;
     update_param<std::string>(parameters, "onnx_model_path", temp_params.model_path);
+    update_param<std::string>(parameters, "args_path", temp_params.args_path);
     update_param<bool>(
       parameters, "ignore_unknown_neighbors", temp_params.ignore_unknown_neighbors);
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
@@ -168,6 +185,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "turn_indicator_hold_duration", temp_params.turn_indicator_hold_duration);
     update_param<bool>(parameters, "shift_x", temp_params.shift_x);
+    const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_path_changed = temp_params.model_path != previous_model_path;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     params_ = temp_params;
@@ -175,15 +193,17 @@ SetParametersResult DiffusionPlanner::on_parameter(
       rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
     turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
 
-    if ((model_path_changed || batch_size_changed) && tensorrt_inference_) {
-      diagnostics_inference_->update_level_and_message(
-        diagnostic_msgs::msg::DiagnosticStatus::WARN, "Loading model weights");
-      diagnostics_inference_->publish(get_clock()->now());
-      tensorrt_inference_ = std::make_unique<TensorrtInference>(
-        params_.model_path, params_.plugins_path, params_.batch_size);
-      diagnostics_inference_->update_level_and_message(
-        diagnostic_msgs::msg::DiagnosticStatus::OK, "Model weights loaded");
-      diagnostics_inference_->publish(get_clock()->now());
+    if (args_path_changed || model_path_changed || batch_size_changed) {
+      try {
+        load_model();
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Failed to reload model.");
+        tensorrt_inference_.reset();
+        SetParametersResult result;
+        result.successful = false;
+        result.reason = e.what();
+        return result;
+      }
     }
   }
 
@@ -516,12 +536,20 @@ void DiffusionPlanner::on_timer()
   diagnostics_inference_->clear();
 
   const rclcpp::Time current_time(get_clock()->now());
+  if (!tensorrt_inference_) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
+      "Model not loaded. Inference is disabled. Check onnx_model_path and args_path parameters.");
+    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, "Model not loaded");
+    diagnostics_inference_->publish(current_time);
+    return;
+  }
+
   if (!lane_segment_context_) {
     RCLCPP_INFO_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Waiting for map data...");
-    diagnostics_inference_->update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Map data not loaded");
+    diagnostics_inference_->update_level_and_message(DiagnosticStatus::WARN, "Map data not loaded");
     diagnostics_inference_->publish(current_time);
     return;
   }
@@ -533,7 +561,7 @@ void DiffusionPlanner::on_timer()
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "No input data available for inference");
     diagnostics_inference_->update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "No input data available for inference");
+      DiagnosticStatus::WARN, "No input data available for inference");
     diagnostics_inference_->publish(current_time);
     return;
   }
@@ -575,7 +603,7 @@ void DiffusionPlanner::on_timer()
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Input data contains invalid values");
     diagnostics_inference_->update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Input data contains invalid values");
+      DiagnosticStatus::WARN, "Input data contains invalid values");
     diagnostics_inference_->publish(current_time);
     return;
   }
@@ -587,7 +615,7 @@ void DiffusionPlanner::on_timer()
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "Inference failed: " << inference_result.error_msg);
     diagnostics_inference_->update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::ERROR, inference_result.error_msg);
+      DiagnosticStatus::ERROR, inference_result.error_msg);
     diagnostics_inference_->publish(frame_time);
     return;
   }
