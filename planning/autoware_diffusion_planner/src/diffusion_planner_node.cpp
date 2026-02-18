@@ -77,16 +77,19 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
   try {
     load_model();
+    if (params_.build_only) {
+      RCLCPP_INFO(get_logger(), "Build only mode enabled. Exiting after loading model.");
+      std::exit(EXIT_SUCCESS);
+    }
   } catch (const std::exception & e) {
     RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Inference will be disabled.");
     tensorrt_inference_.reset();
     diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
     diagnostics_inference_->publish(get_clock()->now());
-  }
-
-  if (params_.build_only) {
-    RCLCPP_INFO(get_logger(), "Build only mode enabled. Exiting after loading model.");
-    std::exit(EXIT_SUCCESS);
+    if (params_.build_only) {
+      RCLCPP_ERROR(get_logger(), "Build only mode: exiting due to model load failure.");
+      std::exit(EXIT_FAILURE);
+    }
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
