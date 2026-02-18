@@ -284,7 +284,7 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
 
   // 1: Check if mandatory data has been received at least once.
   {
-    const auto check_received = [&](const auto & ptr, const std::string & name) {
+    const auto update_reception_diagnostics = [&](const auto & ptr, const std::string & name) {
       if (!ptr) {
         RCLCPP_INFO_SKIPFIRST_THROTTLE(
           get_logger(), *get_clock(), 5000, "waiting for %s", name.c_str());
@@ -295,11 +295,11 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
       diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
     };
 
-    check_received(route_ptr_, "route");
-    check_received(map_ptr_, "vector_map");
-    check_received(current_scenario_, "scenario");
-    check_received(planner_data_->self_acceleration, "acceleration");
-    check_received(planner_data_->operation_mode, "operation_mode");
+    update_reception_diagnostics(route_ptr_, "route");
+    update_reception_diagnostics(map_ptr_, "vector_map");
+    update_reception_diagnostics(current_scenario_, "scenario");
+    update_reception_diagnostics(planner_data_->self_acceleration, "acceleration");
+    update_reception_diagnostics(planner_data_->operation_mode, "operation_mode");
   }
 
   // Step 2: Check if cyclic data is not timed out instead of `topic_state_monitor`.
