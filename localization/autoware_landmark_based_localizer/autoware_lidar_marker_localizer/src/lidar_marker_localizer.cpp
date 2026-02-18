@@ -602,16 +602,16 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
         continue;
       }
 
-      // Check if average intensity exceeds threshold (to reject false positives from high-intensity surfaces)
+      // Check if average intensity exceeds threshold (to reject false positives from high-intensity
+      // surfaces)
       if (param_.max_average_intensity_threshold > 0.0 && valid_bin_count > 0) {
         const double average_intensity_value = sum_intensity / static_cast<double>(valid_bin_count);
         if (average_intensity_value >= param_.max_average_intensity_threshold) {
           RCLCPP_DEBUG_STREAM_THROTTLE(
             this->get_logger(), *this->get_clock(), 1000,
-            "[detect_landmarks] Skipping pattern match at bin " << i
-                                                                << " due to high average intensity: "
-                                                                << average_intensity_value
-                                                                << " >= " << param_.max_average_intensity_threshold);
+            "[detect_landmarks] Skipping pattern match at bin "
+              << i << " due to high average intensity: " << average_intensity_value
+              << " >= " << param_.max_average_intensity_threshold);
           continue;  // Skip this pattern match
         }
       }
