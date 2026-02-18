@@ -2,6 +2,18 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_simple_object_merger): make the merger parallel  (`#11832 <https://github.com/autowarefoundation/autoware_universe/issues/11832>`_)
+  * refactor(object_merger): improve timestamp handling in onTimer method
+  - Updated the onTimer method in SimpleDetectedObjectMergerNode and SimpleTrackedObjectMergerNode to handle cases where no valid input is available, ensuring a proper timestamp is set for output objects.
+  - Added checks to skip null object data and publish an empty output if no valid input is found, enhancing robustness.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

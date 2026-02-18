@@ -2,6 +2,18 @@
 Changelog for package autoware_lidar_frnet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lidar_frnet): update nvcc flags (`#12050 <https://github.com/autowarefoundation/autoware_universe/issues/12050>`_)
+* chore(autoware_lidar_frnet): remove cudnn dependency (`#11888 <https://github.com/autowarefoundation/autoware_universe/issues/11888>`_)
+* chore: add maintainer of PTv3, FRNet, and CalibrationStatusClassifier (`#11945 <https://github.com/autowarefoundation/autoware_universe/issues/11945>`_)
+  * chore: update `autoware_ptv3` maintainer
+  * chore: update `autoware_lidar_frnet` maintainer
+  * chore: update `autoware_calibration_status_classifier` maintainer
+  ---------
+* Contributors: Amadeusz Szymko, Manato Hirabayashi, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
