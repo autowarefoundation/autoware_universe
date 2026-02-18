@@ -14,14 +14,7 @@
         "target_ids": {
           "type": "array",
           "description": "List of target marker IDs to be detected.",
-          "default": [
-            "0000",
-            "0001",
-            "0002",
-            "0003",
-            "0004",
-            "0005"
-          ]
+          "default": ["0000", "0001", "0002", "0003", "0004", "0005"]
         },
         "queue_size_for_output_pose": {
           "type": "number",
@@ -48,19 +41,7 @@
         "intensity_pattern": {
           "type": "array",
           "description": "A sequence of high/low intensity to perform pattern matching. 1: high intensity (positive match), 0: not consider, -1: low intensity (negative match)",
-          "default": [
-            -1,
-            -1,
-            0,
-            1,
-            1,
-            1,
-            1,
-            1,
-            0,
-            -1,
-            -1
-          ]
+          "default": [-1, -1, 0, 1, 1, 1, 1, 1, 0, -1, -1]
         },
         "match_intensity_difference_threshold": {
           "type": "number",
@@ -147,42 +128,9 @@
           "type": "array",
           "description": "Output covariance in the base_link coordinate.",
           "default": [
-            0.04,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.04,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.01,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.00007569,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.00007569,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.00030625
+            0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.00007569, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.00007569, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.00030625
           ]
         },
         "enable_save_log": {
@@ -250,14 +198,10 @@
           "$ref": "#/definitions/lidar_marker_localizer"
         }
       },
-      "required": [
-        "ros__parameters"
-      ],
+      "required": ["ros__parameters"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "/**"
-  ],
+  "required": ["/**"],
   "additionalProperties": false
 }
