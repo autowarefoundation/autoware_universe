@@ -98,8 +98,7 @@ private:
   // Core
   geometry_msgs::msg::PoseWithCovariance convertPoseWithCovariance();
   TrackedObjects convertRadarTrackToTrackedObjects(
-    const RadarTracks::ConstSharedPtr & radar_data,
-    const Odometry::ConstSharedPtr & odometry_data);
+    const RadarTracks::ConstSharedPtr & radar_data, const Odometry::ConstSharedPtr & odometry_data);
   DetectedObjects convertTrackedObjectsToDetectedObjects(TrackedObjects & objects);
   geometry_msgs::msg::Vector3 compensateVelocitySensorPosition(
     const radar_msgs::msg::RadarTrack & radar_track);

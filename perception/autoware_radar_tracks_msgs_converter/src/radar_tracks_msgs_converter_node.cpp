@@ -227,8 +227,7 @@ bool RadarTracksMsgsConverterNode::isStaticObject(
 }
 
 TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects(
-  const RadarTracks::ConstSharedPtr & radar_data,
-  const Odometry::ConstSharedPtr & odometry_data)
+  const RadarTracks::ConstSharedPtr & radar_data, const Odometry::ConstSharedPtr & odometry_data)
 {
   TrackedObjects tracked_objects;
   tracked_objects.header = radar_data->header;
@@ -278,8 +277,7 @@ TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects(
     // kinematics setting
     TrackedObjectKinematics kinematics;
     kinematics.orientation_availability = TrackedObjectKinematics::AVAILABLE;
-    kinematics.is_stationary =
-      isStaticObject(radar_track, compensated_velocity, odometry_data);
+    kinematics.is_stationary = isStaticObject(radar_track, compensated_velocity, odometry_data);
     kinematics.pose_with_covariance.pose = transformed_pose_stamped.pose;
     kinematics.pose_with_covariance.covariance = convertPoseCovarianceMatrix(radar_track);
     // velocity of object is defined in the object coordinate
