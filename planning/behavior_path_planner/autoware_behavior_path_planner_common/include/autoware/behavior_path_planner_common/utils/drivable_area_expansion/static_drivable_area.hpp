@@ -162,8 +162,8 @@ std::vector<DrivableLanes> combineDrivableLanes(
  * @param [in] planner_data planner data with route handler
  * @return true if K-turn environment is detected
  */
-bool isKTurnEnvironment(const std::vector<DrivableLanes> & lanes,
-                        const std::shared_ptr<const PlannerData> planner_data);
+bool isKTurnEnvironment(
+  const std::vector<DrivableLanes> & lanes, const std::shared_ptr<const PlannerData> planner_data);
 
 /**
  * @brief Generate simplified drivable area for K-turn environment

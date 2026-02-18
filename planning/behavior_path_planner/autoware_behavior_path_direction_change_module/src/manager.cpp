@@ -44,8 +44,7 @@ void DirectionChangeModuleManager::init(rclcpp::Node * node)
   // State transition parameters
   p.cusp_detection_distance_start_approaching =
     node->declare_parameter<double>(ns + "cusp_detection_distance_start_approaching");
-  p.stop_velocity_threshold =
-    node->declare_parameter<double>(ns + "stop_velocity_threshold");
+  p.stop_velocity_threshold = node->declare_parameter<double>(ns + "stop_velocity_threshold");
   p.th_stopped_time = node->declare_parameter<double>(ns + "th_stopped_time");
 
   // Reverse lane following parameters
@@ -87,4 +86,3 @@ void DirectionChangeModuleManager::updateModuleParams(
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_path_planner::DirectionChangeModuleManager,
   autoware::behavior_path_planner::SceneModuleManagerInterface)
-

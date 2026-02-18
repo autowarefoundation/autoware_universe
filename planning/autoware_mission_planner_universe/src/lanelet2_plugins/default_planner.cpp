@@ -41,6 +41,7 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace autoware::mission_planner_universe::lanelet2

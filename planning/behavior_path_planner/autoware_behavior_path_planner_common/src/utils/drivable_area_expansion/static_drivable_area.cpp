@@ -1845,8 +1845,8 @@ lanelet::ConstLanelets combineLanelets(
   return combined_lanes;
 }
 
-bool isKTurnEnvironment(const std::vector<DrivableLanes> & lanes,
-                        const std::shared_ptr<const PlannerData> planner_data)
+bool isKTurnEnvironment(
+  const std::vector<DrivableLanes> & lanes, const std::shared_ptr<const PlannerData> planner_data)
 {
   if (!planner_data || !planner_data->route_handler) {
     return false;
@@ -1856,7 +1856,8 @@ bool isKTurnEnvironment(const std::vector<DrivableLanes> & lanes,
   for (const auto & drivable_lane : lanes) {
     const auto lanelets = utils::transformToLanelets({drivable_lane});
     for (const auto & lanelet : lanelets) {
-      const std::string direction_change_lane = lanelet.attributeOr("direction_change_lane", "none");
+      const std::string direction_change_lane =
+        lanelet.attributeOr("direction_change_lane", "none");
       if (direction_change_lane == "yes") {
         return true;
       }

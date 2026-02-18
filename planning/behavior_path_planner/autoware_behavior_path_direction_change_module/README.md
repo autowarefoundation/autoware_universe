@@ -22,6 +22,7 @@ This module is automatically registered as a plugin in the behavior path planner
 ## Usage
 
 The module activates automatically when:
+
 - **A `direction_change_lane` attribute is set to `"yes"` in the lanelet map** (required)
 - The path is within lanelets containing this tag
 
@@ -30,12 +31,13 @@ The module activates automatically when:
 **Important**: This module only activates when lanelets in the path have the `direction_change_lane` attribute set to `"yes"` in the Lanelet2 map. Without this, the module will not activate.
 
 To enable the module:
+
 1. Add the `direction_change_lane` attribute to relevant lanelets in your Lanelet2 map
 2. Set the attribute value to `"yes"` (e.g., `direction_change_lane: "yes"`)
 
 The module modifies the path by:
+
 - Checking for `direction_change_lane: "yes"` in lanelets along the path
 - Detecting cusp points based on configurable angle thresholds
 - Reversing path point orientations (yaw angles) at cusp points to indicate reverse segments
 - Processing the entire path in batch mode (all at once)
-

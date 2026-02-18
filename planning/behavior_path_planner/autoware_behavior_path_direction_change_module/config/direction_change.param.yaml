@@ -33,4 +33,3 @@
       reverse_speed_limit: 2.0  # [m/s] Upper speed limit for backward_cruise_speed (clamped by reference path speed)
       reverse_path_densify_max_yaw_step_deg: 5.0  # [deg] Maximum yaw angle step for reverse path densification
       reverse_path_densify_max_distance_step: 0.5  # [m] Maximum distance step for reverse path densification
-

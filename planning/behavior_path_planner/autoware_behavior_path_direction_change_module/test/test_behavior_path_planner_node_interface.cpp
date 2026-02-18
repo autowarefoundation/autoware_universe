@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
 #include <rclcpp/rclcpp.hpp>
+
+#include <gtest/gtest.h>
 
 // This is a placeholder test file
 // Add your specific tests here
 
 TEST(TestDirectionChangeModule, BasicTest)
 {
-  // TODO: Add test cases
+  // TODO(shin.sato): Add test cases
   EXPECT_TRUE(true);
 }
 
@@ -32,4 +33,3 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return result;
 }
-
