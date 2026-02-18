@@ -673,10 +673,9 @@ lanelet::ConstLanelets generateExpandedLanelets(
       lanes, left_extend_offset, right_extend_offset);
   if (expand_lanelets_opt.has_value()) {
     return *expand_lanelets_opt;
-  } else {
-    RCLCPP_WARN(get_logger(), "Failed to expand lanelets, return original lanelets");
-    return lanes;
   }
+
+  return lanes;
 }
 
 rclcpp::Logger getLogger(const std::string & type)
