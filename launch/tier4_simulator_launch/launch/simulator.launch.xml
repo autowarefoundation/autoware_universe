@@ -1,5 +1,6 @@
 <launch>
   <!-- Parameter files -->
+  <arg name="launch_fault_injection" default="false"/>
   <arg name="fault_injection_param_path"/>
   <arg name="fault_injection_input_diagnostics" default="/diagnostics"/>
   <arg name="fault_injection_output_diagnostics" default="/diagnostics/fault_injection"/>
