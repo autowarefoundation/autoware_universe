@@ -22,7 +22,7 @@ runs:
         python --version
       shell: bash
 
-    - name: Install PyYAML 
+    - name: Install PyYAML
       run: |
         sudo apt-get -yqq update
         sudo apt-get -yqq install python3-yaml
