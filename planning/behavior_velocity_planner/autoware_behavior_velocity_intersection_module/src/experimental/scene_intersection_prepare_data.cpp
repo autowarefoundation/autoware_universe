@@ -18,11 +18,11 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for to_bg2d
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>  // for planning_utils::
 #include <autoware/interpolation/spline_interpolation_points_2d.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -435,7 +435,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     const auto & p1 = centerline[(centerline.size() - 2)];
     const auto & p2 = centerline.back();
     return autoware_utils_geometry::calc_azimuth_angle(
-      lanelet::utils::conversion::toGeomMsgPt(p1), lanelet::utils::conversion::toGeomMsgPt(p2));
+      autoware::experimental::lanelet2_utils::to_ros(p1),
+      autoware::experimental::lanelet2_utils::to_ros(p2));
   };
   const double merging_angle_diff = autoware_utils_math::normalize_radian(
     compute_lane_end_azimuth(assigned_lanelet) - compute_lane_end_azimuth(first_attention_lane));

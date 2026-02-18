@@ -99,7 +99,7 @@ perception/autoware_shape_estimation/** kcolak@leodrive.ai lei.gu@tier4.jp masak
 perception/autoware_simpl_prediction/** kotaro.uetake@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_simple_object_merger/** masaki.baba.2@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_tensorrt_bevdet/** cynthia.liu@autocore.ai yliuhb@connect.ust.hk
-perception/autoware_tensorrt_bevformer/** dhinesh.panneerselvam@multicorewareinc.com naveen.sathiyaseelan@multicorewareinc.com rahul.sundar@multicorewareinc.com ramaseshan.subramanian@multicorewareinc.com selventhiran@multicorewareinc.com
+perception/autoware_tensorrt_bevformer/** dhinesh.panneerselvam@multicorewareinc.com kokseang.tan@tier4.jp naveen.sathiyaseelan@multicorewareinc.com rahul.sundar@multicorewareinc.com ramaseshan.subramanian@multicorewareinc.com selventhiran@multicorewareinc.com
 perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_tensorrt_common/** amadeusz.szymko.2@tier4.jp dan.umeda@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp
 perception/autoware_tensorrt_plugins/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp
