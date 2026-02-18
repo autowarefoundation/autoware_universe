@@ -141,7 +141,7 @@ private:
   std::mutex mutex_pd_;       // mutex for planner_data_
   std::mutex mutex_manager_;  // mutex for bt_manager_ or planner_manager_
 
-  // timeout checking
+  // timeout monitoring
   double cyclic_message_timeout_;      // seconds
   bool enable_traffic_signal_timeout_;
   std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_message_timeout_;
