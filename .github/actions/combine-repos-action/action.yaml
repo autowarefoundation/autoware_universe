@@ -17,7 +17,9 @@ runs:
   steps:
     - name: Display Python version
       run: |
-        python3 --version
+        sudo apt-get -yqq update
+        sudo apt-get -yqq install python-is-python3
+        python --version
       shell: bash
 
     - name: Install PyYAML 
