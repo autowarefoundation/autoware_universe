@@ -18,11 +18,11 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
     # CasADi Model
     # set up states & controls
     eY = SX.sym("eY")
-    eψ = SX.sym("eψ")
+    ePsi = SX.sym("ePsi")
 
     x = vertcat(
         eY,
-        eψ,
+        ePsi,
     )
 
     s_sym = SX.sym("s")  # symbolic independent variable
@@ -58,23 +58,23 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
 
     # xdot
     eYdot = SX.sym("eYdot")
-    eψdot = SX.sym("eψdot")
+    ePsidot = SX.sym("ePsidot")
 
     xdot = vertcat(
         eYdot,
-        eψdot,
+        ePsidot,
     )
 
     beta = atan(lr * tan(delta) / (lf + lr))
     kappa = cos(beta) * tan(delta) / (lf + lr)
 
     # dynamics
-    deY_ds = tan(eψ + beta) * (1 - kappa_ref_s * eY)
-    deψ_ds = kappa * (1 - kappa_ref_s * eY) / cos(eψ) - kappa_ref_s
+    deY_ds = tan(ePsi + beta) * (1 - kappa_ref_s * eY)
+    dePsi_ds = kappa * (1 - kappa_ref_s * eY) / cos(ePsi) - kappa_ref_s
 
     f_expl = vertcat(
         deY_ds,
-        deψ_ds,
+        dePsi_ds,
     )
 
     # MPT-style hard inequality per circle:
@@ -84,19 +84,19 @@ def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
     #   lb_i <= C_mat * x + C_vec <= ub_i
     #
     # Therefore our h(x,p) should be:
-    #   h_i = cos(beta_i)*(eY + lon_i*eψ) + lon_i*sin(beta_i)
+    #   h_i = cos(beta_i)*(eY + lon_i*ePsi) + lon_i*sin(beta_i)
     # and bounds are simply lh=lb_i, uh=ub_i.
     # Bounds (lb/ub) are provided per-stage via lh/uh.
     if n_circles > 0:
         h_expr = []
         for i in range(n_circles):
-            h_expr.append(cos_beta[i] * (eY + lon_offset[i] * eψ) + lon_offset[i] * sin_beta[i])
+            h_expr.append(cos_beta[i] * (eY + lon_offset[i] * ePsi) + lon_offset[i] * sin_beta[i])
         model.con_h_expr = vertcat(*h_expr)
 
     # Model bounds
     model.eY_min = -1.5  # width of the track [m]
     model.eY_max = 1.5  # width of the track [m]
-    # NOTE: Don't over-bound yaw error (eψ) with a tight box constraint; rely on cost + input bounds.
+    # NOTE: Don't over-bound yaw error (ePsi) with a tight box constraint; rely on cost + input bounds.
 
     # input bounds
     model.delta_min = -0.7  # minimum steering angle [rad]
