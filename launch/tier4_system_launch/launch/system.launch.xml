@@ -128,18 +128,20 @@
     </group>
 
     <!-- Diagnostic Graph Aggregator -->
-    <let name="diag_graph_input_topic" value="/diagnostics"/>
-    <let name="diag_graph_input_topic" value="$(var fault_injection_output_diagnostics)" if="$(var launch_fault_injection)"/>
-    <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
-      <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
-      <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
-      <arg name="graph_vars" value="$(var diagnostic_graph_aggregator_graph_vars)"/>
-      <arg name="~/diagnostics" value="$(var diag_graph_input_topic)"/>
-      <arg name="~/struct" value="$(var diag_struct_topic)"/>
-      <arg name="~/status" value="$(var diag_status_topic)"/>
-      <arg name="~/reset" value="$(var diag_reset_srv)"/>
-      <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
-    </include>
+    <group>
+      <let name="diag_graph_input_topic" value="/diagnostics"/>
+      <let name="diag_graph_input_topic" value="$(var fault_injection_output_diagnostics)" if="$(var launch_fault_injection)"/>
+      <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
+        <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
+        <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
+        <arg name="graph_vars" value="$(var diagnostic_graph_aggregator_graph_vars)"/>
+        <arg name="~/diagnostics" value="$(var diag_graph_input_topic)"/>
+        <arg name="~/struct" value="$(var diag_struct_topic)"/>
+        <arg name="~/status" value="$(var diag_status_topic)"/>
+        <arg name="~/reset" value="$(var diag_reset_srv)"/>
+        <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
+      </include>
+    </group>
 
     <!-- Hazard Status Converter -->
     <group>
