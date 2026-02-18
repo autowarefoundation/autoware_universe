@@ -126,14 +126,17 @@ TEST_F(SimpleTrajectoryRankerTest, BasicRankingTest)
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("a")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[0].score, 2.0);
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("b")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[1].score, 1.0);
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("c")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[2].score, 0.0);
 }
 
 TEST_F(SimpleTrajectoryRankerTest, PrefixRankingTest)
@@ -176,14 +179,17 @@ TEST_F(SimpleTrajectoryRankerTest, PrefixRankingTest)
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[0].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("PrefixA_1")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[0].score, 2.0);
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[1].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("PrefixB_1")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[1].score, 1.0);
   EXPECT_EQ(
     autoware_utils_uuid::to_hex_string(
       output_msg->scored_candidate_trajectories[2].candidate_trajectory.generator_id),
     autoware_utils_uuid::to_hex_string(get_uuid_from_string_id("Unranked")));
+  EXPECT_DOUBLE_EQ(output_msg->scored_candidate_trajectories[2].score, 0.0);
 }
 
 TEST_F(SimpleTrajectoryRankerTest, EmptyInputTest)

@@ -81,8 +81,10 @@ void SimpleTrajectoryRanker::trajectories_callback(
     bool matched = false;
     const auto generator_name_it = uuid_to_name.find(generator_id_str);
     if (generator_name_it != uuid_to_name.end()) {
-      for (const auto & prefix : ranked_generator_name_prefixes_) {
+      for (size_t i = 0; i < ranked_generator_name_prefixes_.size(); ++i) {
+        const auto & prefix = ranked_generator_name_prefixes_[i];
         if (generator_name_it->second.rfind(prefix, 0) == 0) {
+          scored_trajectory.score = static_cast<double>(ranked_generator_name_prefixes_.size() - i);
           trajectories_per_prefix[prefix].push_back(scored_trajectory);
           matched = true;
           break;
