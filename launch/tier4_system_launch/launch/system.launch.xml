@@ -27,7 +27,7 @@
   <arg name="diagnostic_graph_aggregator_graph_path"/>
   <arg name="diagnostic_graph_aggregator_graph_vars" default=""/>
   <arg name="launch_fault_injection" default="false"/>
-  <arg name="diag_graph_input_topic" default="/diagnostics"/>
+  <arg name="fault_injection_output_diagnostics" default="/diagnostics/fault_injection"/>
   <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
   <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
   <arg name="diag_reset_srv" default="/diagnostics_graph/reset"/>
