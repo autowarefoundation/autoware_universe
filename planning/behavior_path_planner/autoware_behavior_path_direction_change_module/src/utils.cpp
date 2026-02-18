@@ -37,9 +37,6 @@
 #include <sstream>
 #include <vector>
 
-// Debug flag - comment out to disable all debug prints
-#define DEBUG_DIRECTION_CHANGE_MODULE
-
 namespace autoware::behavior_path_planner
 {
 
@@ -48,9 +45,6 @@ std::vector<size_t> detectCuspPoints(
 {
   std::vector<size_t> cusp_indices;
   if (path.points.size() < 2) {
-    #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-    // Note: No logger available in this utility function, so debug prints are minimal
-    #endif
     return cusp_indices;
   }
 
@@ -71,25 +65,14 @@ std::vector<size_t> detectCuspPoints(
     // If angle change exceeds threshold, mark as cusp point
     if (std::abs(angle_diff) > angle_threshold_rad) {
       cusp_indices.push_back(i);
-      #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-      // Note: No logger available in this utility function
-      #endif
     }
   }
-
-  #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-  // Note: No logger available in this utility function, debug info logged in calling function
-  #endif
-
   return cusp_indices;
 }
 
 void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> & cusp_indices)
 {
   if (path->points.empty() || cusp_indices.empty()) {
-    #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-    // Note: No logger available in this utility function
-    #endif
     return;
   }
 
@@ -106,9 +89,6 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
     while (cusp_idx < cusp_indices.size() && i > cusp_indices[cusp_idx]) {
         is_reversed = !is_reversed;  // Toggle at each cusp passed
       ++cusp_idx;
-      #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-      // Note: No logger available in this utility function, debug info logged in calling function
-      #endif
     }
 
     if (is_reversed) {
@@ -117,17 +97,9 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
       yaw = autoware_utils::normalize_radian(yaw + M_PI);
       path->points[i].point.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
       ++reversed_point_count;
-      #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-      // Note: No logger available in this utility function, detailed debug info logged in calling function
-      #endif
     }
   }
   
-  #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-  // Note: No logger available in this utility function, summary logged in calling function
-  // Reversed point count: reversed_point_count
-  #endif
-
   // TODO: Future enhancement - velocity reversal for full compatibility with downstream modules
   //       Some downstream modules (e.g., motion_velocity_planner) use isDrivingForwardWithTwist()
   //       which checks velocity signs first. For full compatibility, consider also reversing
@@ -296,21 +268,11 @@ bool checkLaneContinuitySafety(
   // This should be implemented before production use
   
   if (!route_handler || path.points.empty() || cusp_indices.empty()) {
-    #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-    // Note: No logger available in this utility function
-    #endif
     return true;  // No cusps or no route handler, assume safe
   }
 
-  // Placeholder: Full implementation needed
+  // TODO: Full implementation needed
   // This is a critical safety check and must be implemented
-  // Note: Logger warning removed as this function doesn't have access to logger
-  // Warning will be logged in plan() if check fails
-
-  #ifdef DEBUG_DIRECTION_CHANGE_MODULE
-  // Note: No logger available in this utility function
-  // Safety check: cusp_count=%zu (odd=%s), result=SAFE (placeholder)
-  #endif
 
   return true;  // Placeholder: assume safe for now
 }
