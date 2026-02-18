@@ -21,8 +21,11 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
-#include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/Forward.h>
+#include <lanelet2_core/LaneletMap.h>
+
+#include <memory>
+#include <vector>
 
 namespace autoware::route_handler
 {
@@ -41,14 +44,14 @@ using geometry_msgs::msg::Pose;
  * @param [in] angle_threshold_deg Maximum angle difference to consider as cusp (degrees)
  * @return Vector of cusp point indices in the path
  */
-std::vector<size_t> detectCuspPoints(
-  const PathWithLaneId & path, const double angle_threshold_deg);
+std::vector<size_t> detectCuspPoints(const PathWithLaneId & path, const double angle_threshold_deg);
 
 /**
  * @brief Reverses path point orientations (yaw angles) at cusp points to indicate reverse direction
  * @param [in,out] path Path to modify with reversed orientations
  * @param [in] cusp_indices Indices where cusp points are located
- * @details Reverses yaw (adds π radians) for points after odd-numbered cusps to indicate reverse segments
+ * @details Reverses yaw (adds π radians) for points after odd-numbered cusps to indicate reverse
+ * segments
  */
 void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> & cusp_indices);
 
@@ -67,7 +70,8 @@ std::vector<size_t> detectLaneBoundaries(const PathWithLaneId & path);
  *        the planner manager resamples the final path with output_path_interval.
  * @param [in] path Current path with lane_ids (used only to discover which lane_ids have the tag)
  * @param [in] route_handler Route handler to get centerline from map
- * @return PathWithLaneId Full centerline of direction_change lanelets in path order, or empty if none
+ * @return PathWithLaneId Full centerline of direction_change lanelets in path order, or empty if
+ * none
  */
 PathWithLaneId getReferencePathFromDirectionChangeLanelets(
   const PathWithLaneId & path,
@@ -86,7 +90,8 @@ bool hasDirectionChangeAreaTag(const lanelet::ConstLanelet & lanelet);
  * @param [in] cusp_indices Detected cusp point indices
  * @param [in] route_handler Route handler to access lanelet map
  * @return True if safe (no fatal condition), false if fatal condition detected
- * @details Checks if odd number of cusps (reverse exit) conflicts with next lane without direction_change_lane tag
+ * @details Checks if odd number of cusps (reverse exit) conflicts with next lane without
+ * direction_change_lane tag
  * @note This is a critical safety check to prevent fatal conditions where vehicle exits
  *       in reverse but next lane expects forward motion (Autoware default)
  */
@@ -94,14 +99,12 @@ bool checkLaneContinuitySafety(
   const PathWithLaneId & path, const std::vector<size_t> & cusp_indices,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler);
 
-
 void densifyPathByYawAndDistance(
   std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & points,
-  const double max_yaw_step_rad,   // 例: 5 deg = 0.087 rad
-  const double max_dist_step       // 例: 0.5 m
+  const double max_yaw_step_rad,  // 例: 5 deg = 0.087 rad
+  const double max_dist_step      // 例: 0.5 m
 );
 
 }  // namespace autoware::behavior_path_planner
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__UTILS_HPP_
-

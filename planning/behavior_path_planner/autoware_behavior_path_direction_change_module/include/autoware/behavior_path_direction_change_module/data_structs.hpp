@@ -33,23 +33,28 @@ struct DirectionChangeParameters
   double cusp_detection_angle_threshold_deg;
 
   // State transition parameters
-  double cusp_detection_distance_start_approaching;  // [m] Distance to start approaching cusp (transition to APPROACHING_CUSP)
+  double cusp_detection_distance_start_approaching;  // [m] Distance to start approaching cusp
+                                                     // (transition to APPROACHING_CUSP)
   double stop_velocity_threshold;  // [m/s] Velocity threshold to determine vehicle has stopped
-  double th_stopped_time;  // [s] Duration velocity must stay below stop_velocity_threshold before direction switch at cusp
+  double th_stopped_time;  // [s] Duration velocity must stay below stop_velocity_threshold before
+                           // direction switch at cusp
 
   // Direction change parameters
   double reverse_initial_speed;
   double reverse_speed_limit;
 
   // Path densification parameters
-  double reverse_path_densify_max_yaw_step_deg;  // [deg] Maximum yaw angle step for reverse path densification
-  double reverse_path_densify_max_distance_step;  // [m] Maximum distance step for reverse path densification
+  double reverse_path_densify_max_yaw_step_deg;   // [deg] Maximum yaw angle step for reverse path
+                                                  // densification
+  double reverse_path_densify_max_distance_step;  // [m] Maximum distance step for reverse path
+                                                  // densification
 
   // General parameters
   bool enable_cusp_detection;
   bool enable_reverse_following;
   bool publish_debug_marker;
-  double th_arrived_distance;  // [m] If ego is within this distance of route goal, do not activate (avoid re-entry after completion)
+  double th_arrived_distance;  // [m] If ego is within this distance of route goal, do not activate
+                               // (avoid re-entry after completion)
 };
 
 struct DirectionChangeDebugData
@@ -61,4 +66,3 @@ struct DirectionChangeDebugData
 
 }  // namespace autoware::behavior_path_planner
 #endif  // AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__DATA_STRUCTS_HPP_
-

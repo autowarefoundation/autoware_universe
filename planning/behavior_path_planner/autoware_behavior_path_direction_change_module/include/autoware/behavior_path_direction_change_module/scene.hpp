@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__SCENE_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__SCENE_HPP_
 
-#include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_direction_change_module/data_structs.hpp"
+#include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -35,12 +35,12 @@ using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 // State for tracking which path segment to publish
 enum class PathSegmentState {
-  IDLE = 0,              // Module is idle/inactive
-  FORWARD_FOLLOWING,     // Following path in forward direction
-  APPROACHING_CUSP,      // Approaching a cusp point
-  AT_CUSP,               // At a cusp point
-  REVERSE_FOLLOWING,     // Following path in reverse direction
-  COMPLETED              // Module has completed processing
+  IDLE = 0,           // Module is idle/inactive
+  FORWARD_FOLLOWING,  // Following path in forward direction
+  APPROACHING_CUSP,   // Approaching a cusp point
+  AT_CUSP,            // At a cusp point
+  REVERSE_FOLLOWING,  // Following path in reverse direction
+  COMPLETED           // Module has completed processing
 };
 
 class DirectionChangeModule : public SceneModuleInterface
@@ -85,7 +85,8 @@ private:
 
   // Helper functions
   bool shouldActivateModule() const;
-  /// Push current odometry and return true if velocity has been below stop_velocity_threshold for at least th_stopped_time
+  /// Push current odometry and return true if velocity has been below stop_velocity_threshold for
+  /// at least th_stopped_time
   bool isSustainedStoppedForDirectionSwitch();
 
   // Member variables
@@ -99,7 +100,8 @@ private:
   // Path segment state tracking for separate forward/backward publishing (multi-cusp)
   PathSegmentState current_segment_state_{PathSegmentState::FORWARD_FOLLOWING};
   size_t current_segment_index_{0};  // Segment index (0 = first forward, 1 = first reverse, ...)
-  geometry_msgs::msg::Point first_cusp_position_;  // Position of current segment end (cusp) for debug/log
+  geometry_msgs::msg::Point
+    first_cusp_position_;  // Position of current segment end (cusp) for debug/log
   bool has_valid_cusp_{false};
 
   // Sustained stop: buffer (timestamp, velocity) for direction switch at cusp
@@ -110,10 +112,10 @@ private:
   void setDebugMarkersVisualization() const;
 
   // Publisher for processed path with reversed orientations
-  rclcpp::Publisher<autoware_internal_planning_msgs::msg::PathWithLaneId>::SharedPtr path_publisher_;
+  rclcpp::Publisher<autoware_internal_planning_msgs::msg::PathWithLaneId>::SharedPtr
+    path_publisher_;
 };
 
 }  // namespace autoware::behavior_path_planner
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__SCENE_HPP_
-

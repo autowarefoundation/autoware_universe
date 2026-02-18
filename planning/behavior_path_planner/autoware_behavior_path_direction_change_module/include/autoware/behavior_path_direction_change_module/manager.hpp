@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__MANAGER_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__MANAGER_HPP_
 
-#include "autoware/behavior_path_planner_common/interface/scene_module_manager_interface.hpp"
 #include "autoware/behavior_path_direction_change_module/scene.hpp"
+#include "autoware/behavior_path_planner_common/interface/scene_module_manager_interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -31,10 +31,7 @@ namespace autoware::behavior_path_planner
 class DirectionChangeModuleManager : public SceneModuleManagerInterface
 {
 public:
-  DirectionChangeModuleManager()
-  : SceneModuleManagerInterface{"direction_change"}
-  {
-  }
+  DirectionChangeModuleManager() : SceneModuleManagerInterface{"direction_change"} {}
 
   void init(rclcpp::Node * node) override;
 
@@ -54,4 +51,3 @@ private:
 }  // namespace autoware::behavior_path_planner
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__MANAGER_HPP_
-

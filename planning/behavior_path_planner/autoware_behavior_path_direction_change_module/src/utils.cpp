@@ -15,33 +15,31 @@
 #include "autoware/behavior_path_direction_change_module/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-
-#include <autoware/route_handler/route_handler.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/Forward.h>
-
 #include <rclcpp/rclcpp.hpp>
 
-#include <limits>
-
-#include <tf2/utils.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <lanelet2_core/Forward.h>
+#include <lanelet2_core/LaneletMap.h>
+#include <tf2/utils.h>
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <memory>
 #include <set>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
 
-std::vector<size_t> detectCuspPoints(
-  const PathWithLaneId & path, const double angle_threshold_deg)
+std::vector<size_t> detectCuspPoints(const PathWithLaneId & path, const double angle_threshold_deg)
 {
   std::vector<size_t> cusp_indices;
   if (path.points.size() < 2) {
@@ -80,14 +78,14 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
   // Complexity: O(n + m) where n = path points, m = cusp indices
   // Pattern: Before first cusp: original, After first cusp: reversed, After second: original, etc.
   // Toggle orientation at each cusp: original → reversed → original → reversed → ...
-  size_t cusp_idx = 0;  // Current cusp index pointer
-  bool is_reversed = false;  // Current reversal state
+  size_t cusp_idx = 0;              // Current cusp index pointer
+  bool is_reversed = false;         // Current reversal state
   size_t reversed_point_count = 0;  // Count points with reversed orientation
 
   for (size_t i = 0; i < path->points.size(); ++i) {
     // Check if we've passed any new cusp points
     while (cusp_idx < cusp_indices.size() && i > cusp_indices[cusp_idx]) {
-        is_reversed = !is_reversed;  // Toggle at each cusp passed
+      is_reversed = !is_reversed;  // Toggle at each cusp passed
       ++cusp_idx;
     }
 
@@ -99,15 +97,18 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
       ++reversed_point_count;
     }
   }
-  
-  // TODO: Future enhancement - velocity reversal for full compatibility with downstream modules
+
+  // TODO(shin.sato): Future enhancement - velocity reversal for full compatibility with downstream
+  // modules
   //       Some downstream modules (e.g., motion_velocity_planner) use isDrivingForwardWithTwist()
   //       which checks velocity signs first. For full compatibility, consider also reversing
   //       velocity signs (negative for reverse segments) in addition to orientation reversal.
-  //       This would ensure compatibility with both geometry-based and velocity-based direction detection.
-  //       
+  //       This would ensure compatibility with both geometry-based and velocity-based direction
+  //       detection.
+  //
   //       Implementation suggestion:
-  //       void applyVelocityReversal(PathWithLaneId * path, const std::vector<size_t> & cusp_indices)
+  //       void applyVelocityReversal(PathWithLaneId * path, const std::vector<size_t> &
+  //       cusp_indices)
   //       {
   //         for (size_t i = 0; i < path->points.size(); ++i) {
   //           bool is_reversed = false;
@@ -115,7 +116,7 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
   //             if (i > cusp_idx) { is_reversed = !is_reversed; }
   //           }
   //           if (is_reversed) {
-  //             path->points[i].point.longitudinal_velocity_mps = 
+  //             path->points[i].point.longitudinal_velocity_mps =
   //               -std::abs(path->points[i].point.longitudinal_velocity_mps);
   //           }
   //         }
@@ -125,15 +126,15 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
 std::vector<size_t> detectLaneBoundaries(const PathWithLaneId & path)
 {
   std::vector<size_t> lane_boundary_indices;
-  
-  // TODO: Implementation postponed
+
+  // TODO(shin.sato): Implementation postponed
   // This method should detect lane transitions by:
   // 1. Tracking lane_ids in path points
   // 2. Finding indices where lane_id changes
   // 3. Returning vector of transition point indices
-  // 
+  //
   // For now, return empty vector (placeholder)
-  
+
   if (path.points.size() < 2) {
     return lane_boundary_indices;
   }
@@ -144,17 +145,17 @@ std::vector<size_t> detectLaneBoundaries(const PathWithLaneId & path)
   for (size_t i = 1; i < path.points.size(); ++i) {
     const auto & prev_lane_ids = path.points[i - 1].lane_ids;
     const auto & curr_lane_ids = path.points[i].lane_ids;
-    
+
     // Quick check: if sizes differ, definitely a boundary
     if (prev_lane_ids.size() != curr_lane_ids.size()) {
       lane_boundary_indices.push_back(i);
       continue;
     }
-    
+
     // Use set for efficient lookup (O(n) instead of O(n²))
     std::set<int64_t> prev_set(prev_lane_ids.begin(), prev_lane_ids.end());
     std::set<int64_t> curr_set(curr_lane_ids.begin(), curr_lane_ids.end());
-    
+
     // If sets differ, it's a lane boundary
     if (prev_set != curr_set) {
       lane_boundary_indices.push_back(i);
@@ -200,8 +201,8 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
       return out;
     }
   }
-  const auto raw_path = route_handler->getCenterLinePath(
-    lanelet_sequence, 0.0, std::numeric_limits<double>::max());
+  const auto raw_path =
+    route_handler->getCenterLinePath(lanelet_sequence, 0.0, std::numeric_limits<double>::max());
   if (raw_path.points.empty()) {
     return out;
   }
@@ -218,8 +219,8 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
       const size_t goal_idx = goal_idx_opt;
       out.points.resize(goal_idx + 1);
       // if (!out.points.empty()) {
-        out.points.back().point.pose = goal_pose;
-        out.points.back().point.longitudinal_velocity_mps = 0.0;
+      out.points.back().point.pose = goal_pose;
+      out.points.back().point.longitudinal_velocity_mps = 0.0;
       //}
     }
   } catch (...) {
@@ -239,15 +240,15 @@ bool checkLaneContinuitySafety(
   const PathWithLaneId & path, const std::vector<size_t> & cusp_indices,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler)
 {
-  // TODO: Implementation placeholder for critical safety check
-  // 
+  // TODO(shin.sato): Implementation placeholder for critical safety check
+  //
   // Safety Check: Lane Continuity with Reverse Exit
-  // 
+  //
   // Problem Scenario:
   // - Odd number of cusps means vehicle exits current lane in REVERSE mode
   // - If next lane doesn't have turn_area tag, Autoware defaults to FORWARD following
   // - This creates a FATAL condition: vehicle reversing but system expects forward motion
-  // 
+  //
   // Algorithm:
   // 1. Count number of cusps in current lane (before lane boundary)
   // 2. If odd number of cusps:
@@ -257,21 +258,21 @@ bool checkLaneContinuitySafety(
   //    d. If next lane has tag → Safe (can continue reverse, return true)
   // 3. If even number of cusps:
   //    a. Vehicle exits in FORWARD mode → Safe (return true)
-  // 
+  //
   // Implementation Steps:
   // - Use detectLaneBoundaries() to find lane transition points
   // - Count cusps before each lane boundary
   // - Check turn_area tag for next lane after boundary
   // - Return false if fatal condition detected, true otherwise
-  // 
+  //
   // For now, return true (assume safe) until full implementation
   // This should be implemented before production use
-  
+
   if (!route_handler || path.points.empty() || cusp_indices.empty()) {
     return true;  // No cusps or no route handler, assume safe
   }
 
-  // TODO: Full implementation needed
+  // TODO(shin.sato): Full implementation needed
   // This is a critical safety check and must be implemented
 
   return true;  // Placeholder: assume safe for now
@@ -279,14 +280,14 @@ bool checkLaneContinuitySafety(
 
 void densifyPathByYawAndDistance(
   std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & points,
-  const double max_yaw_step_rad,   // 例: 5 deg = 0.087 rad
-  const double max_dist_step       // 例: 0.5 m
+  const double max_yaw_step_rad,  // 例: 5 deg = 0.087 rad
+  const double max_dist_step      // 例: 0.5 m
 )
 {
   if (points.size() < 2) return;
 
   std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> dense;
-  dense.reserve(points.size() * 2); // 適当に多めに確保
+  dense.reserve(points.size() * 2);  // 適当に多めに確保
 
   for (size_t i = 0; i + 1 < points.size(); ++i) {
     const auto & p0 = points[i].point;
@@ -309,9 +310,9 @@ void densifyPathByYawAndDistance(
     double dyaw = autoware_utils::normalize_radian(yaw1 - yaw0);
 
     // 分割数を計算
-    int Nyaw  = static_cast<int>(std::ceil(std::fabs(dyaw) / max_yaw_step_rad));
+    int Nyaw = static_cast<int>(std::ceil(std::fabs(dyaw) / max_yaw_step_rad));
     int Ndist = static_cast<int>(std::ceil(dist / max_dist_step));
-    int N     = std::max(Nyaw, Ndist);
+    int N = std::max(Nyaw, Ndist);
 
     if (N <= 1) {
       continue;  // 補間不要
@@ -346,4 +347,3 @@ void densifyPathByYawAndDistance(
 }
 
 }  // namespace autoware::behavior_path_planner
-
