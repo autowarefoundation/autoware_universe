@@ -11,15 +11,15 @@ jobs:
       fail-fast: false
       matrix:
         rosdistro: [humble, jazzy]
-        
+
         include:
           # ROS distribution specific configurations
           - rosdistro: humble
             container: ghcr.io/autowarefoundation/autoware:universe-devel-cuda
-          
+
           - rosdistro: jazzy
             container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64-cuda
-    
+
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
