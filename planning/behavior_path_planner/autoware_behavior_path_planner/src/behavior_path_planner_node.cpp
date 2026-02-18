@@ -323,16 +323,16 @@ BehaviorPathPlannerNode::DataReadyStatus BehaviorPathPlannerNode::isDataReady(
         diagnostics_message_timeout_->add_key_value(name, std::string("OK"));
       };
 
-    check_timeout(
+    update_timeout_diagnostics(
       perception_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
       "perception_objects");
-    check_timeout(
+    update_timeout_diagnostics(
       velocity_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_, "odometry");
-    check_timeout(
+    update_timeout_diagnostics(
       occupancy_grid_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
       "occupancy_grid_map");
     if (enable_traffic_signal_timeout_) {
-      check_timeout(
+      update_timeout_diagnostics(
         traffic_signals_subscriber_.last_taken_data_timestamp(), cyclic_message_timeout_,
         "traffic_signal");
     }
