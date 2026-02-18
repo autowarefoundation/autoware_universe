@@ -194,7 +194,8 @@ SetParametersResult DiffusionPlanner::on_parameter(
       try {
         load_model();
       } catch (const std::exception & e) {
-        RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Rejecting parameter change.");
+        RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Failed to reload model.");
+        tensorrt_inference_.reset();
         params_.args_path = previous_args_path;
         params_.model_path = previous_model_path;
         params_.batch_size = previous_batch_size;
