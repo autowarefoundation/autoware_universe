@@ -196,10 +196,10 @@ SetParametersResult DiffusionPlanner::on_parameter(
       } catch (const std::exception & e) {
         RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Failed to reload model.");
         tensorrt_inference_.reset();
-        SetParametersResult reject_result;
-        reject_result.successful = false;
-        reject_result.reason = e.what();
-        return reject_result;
+        SetParametersResult result;
+        result.successful = false;
+        result.reason = e.what();
+        return result;
       }
     }
   }
