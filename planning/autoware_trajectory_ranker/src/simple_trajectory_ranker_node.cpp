@@ -16,7 +16,6 @@
 
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
-#include <rclcpp/logging.hpp>
 
 #include <memory>
 #include <string>
@@ -60,6 +59,7 @@ void SimpleTrajectoryRanker::trajectories_callback(
 
   // Create map from UUID to generator name
   std::unordered_map<std::string, std::string> uuid_to_name;
+  uuid_to_name.reserve(msg->generator_info.size());
   for (const auto & info : msg->generator_info) {
     uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
   }
@@ -79,10 +79,10 @@ void SimpleTrajectoryRanker::trajectories_callback(
     scored_trajectory.score = 0.0;
 
     bool matched = false;
-    if (uuid_to_name.count(generator_id_str)) {
-      const auto & generator_name = uuid_to_name[generator_id_str];
+    const auto generator_name_it = uuid_to_name.find(generator_id_str);
+    if (generator_name_it != uuid_to_name.end()) {
       for (const auto & prefix : ranked_generator_name_prefixes_) {
-        if (generator_name.rfind(prefix, 0) == 0) {
+        if (generator_name_it->second.rfind(prefix, 0) == 0) {
           trajectories_per_prefix[prefix].push_back(scored_trajectory);
           matched = true;
           break;
