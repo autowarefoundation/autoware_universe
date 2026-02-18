@@ -13,40 +13,40 @@ jobs:
         rosdistro: [humble, jazzy]
         cuda: [false, true]
         arch: [amd64, arm64]
-        
+
         # Exclude unsupported combinations (if any)
         # Example: exclude jazzy arm64 cuda if not yet supported
         # exclude:
         #   - rosdistro: jazzy
         #     arch: arm64
         #     cuda: true
-        
+
         include:
           # ROS distribution specific configurations
           - rosdistro: humble
             container-base: ghcr.io/autowarefoundation/autoware:universe-devel
-          
+
           - rosdistro: jazzy
             container-base: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
-          
+
           # CUDA variant configurations
           - cuda: true
             container-suffix: -cuda
             cache-suffix: cuda
-          
+
           - cuda: false
             container-suffix: ""
             cache-suffix: nocuda
-          
+
           # Architecture specific configurations
           - arch: amd64
             runner: "['self-hosted', 'Linux', 'X64']"
             build-pre-command: ""
-          
+
           - arch: arm64
             runner: "['ubuntu-22.04-arm']"
-            build-pre-command: "taskset --cpu-list 0-6"
-    
+            build-pre-command: taskset --cpu-list 0-6
+
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
