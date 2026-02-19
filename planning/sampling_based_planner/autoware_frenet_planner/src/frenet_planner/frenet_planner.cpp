@@ -141,7 +141,7 @@ void calculateCartesian(
 
     // Calculate curvatures
     for (size_t i = 1; i < path.yaws.size(); ++i) {
-      const auto dyaw = autoware_utils_math::wrap_angle(path.yaws[i] - path.yaws[i - 1]);
+      const auto dyaw = autoware_utils_math::normalize_radian(path.yaws[i] - path.yaws[i - 1]);
       path.curvatures.push_back(dyaw / (path.lengths[i] - path.lengths[i - 1]));
     }
     path.curvatures.push_back(path.curvatures.back());
@@ -160,7 +160,7 @@ void calculateCartesian(
     d_yaws.reserve(trajectory.yaws.size());
     for (size_t i = 0; i + 1 < trajectory.yaws.size(); ++i)
       d_yaws.push_back(
-        autoware_utils_math::wrap_angle(trajectory.yaws[i + 1] - trajectory.yaws[i]));
+        autoware_utils_math::normalize_radian(trajectory.yaws[i + 1] - trajectory.yaws[i]));
     d_yaws.push_back(0.0);
     // Calculate curvatures
     for (size_t i = 1; i < trajectory.yaws.size(); ++i) {
