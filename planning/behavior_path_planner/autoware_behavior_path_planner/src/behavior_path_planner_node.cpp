@@ -352,6 +352,7 @@ void BehaviorPathPlannerNode::run()
   takeData();
 
   const auto data_ready_status = isDataReady(stamp);
+  // `DataReadyStatus::TIMEOUT` is not handled intentionally as the reason in "NOTE" below
   if (data_ready_status == DataReadyStatus::NOT_RECEIVED) {
     /*
      * NOTE:
