@@ -7,12 +7,12 @@
 
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
-
-  <author email="takamasa.horibe@tier4.jp">Takamasa Horibe</author>
-  <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
-  <author email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</author>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
 
   <license>Apache License 2.0</license>
+
+  <author email="takamasa.horibe@tier4.jp">Takamasa Horibe</author>
+  <author email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

@@ -9,9 +9,9 @@
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
 
-  <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>
-
   <license>Apache License 2.0</license>
+
+  <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
