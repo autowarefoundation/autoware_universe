@@ -357,7 +357,7 @@ void BehaviorPathPlannerNode::run()
      * NOTE:
      * To preserve the existing logic of the run() callback, 
      * the run() callback will return early when mandatory data not received.
-     * There is controversy about the behavior when data is timed out. It will be disscussed in the future.
+     * There is controversy about the behavior when data is timed out. It will be discussed in the future.
      */
     diagnostics_message_timeout_->publish(stamp);
     return;
