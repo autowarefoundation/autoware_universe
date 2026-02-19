@@ -17,6 +17,8 @@
 #include "autoware/trajectory_safety_filter/filter_context.hpp"
 #include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
 
+#include <autoware_utils_uuid/uuid_helper.hpp>
+
 #include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -28,6 +30,36 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+
+namespace
+{
+// for error diagnostic. Will be removed once node is combined.
+std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
+{
+  std::unordered_map<std::string, std::string> uuid_to_name;
+  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
+  for (const auto & info : candidate_trajectories.generator_info) {
+    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
+  }
+  return uuid_to_name;
+}
+
+bool has_diffusion_planner_trajectory(
+  const std::unordered_map<std::string, std::string> & uuid_to_name_map,
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories)
+{
+  return std::any_of(
+    trajectories.candidate_trajectories.cbegin(), trajectories.candidate_trajectories.cend(),
+    [&uuid_to_name_map](
+      const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
+      const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+      const auto generator_name_it = uuid_to_name_map.find(generator_id_str);
+      return generator_name_it != uuid_to_name_map.end() &&
+             generator_name_it->second.rfind("Diffusion", 0) == 0;
+    });
+}
+}  // namespace
 
 namespace autoware::trajectory_safety_filter
 {
@@ -88,8 +120,10 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
     return;
   }
 
+  diagnostics_interface_ptr_->clear();
+
   // Create output message for filtered trajectories
-  auto filtered_msg = std::make_shared<CandidateTrajectories>();
+  auto filtered_msg = std::make_unique<CandidateTrajectories>();
 
   // Process and filter trajectories
   for (const auto & trajectory : msg->candidate_trajectories) {
@@ -103,6 +137,7 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
       if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
         is_feasible = false;
         RCLCPP_WARN(get_logger(), "Not feasible: %s", res.error().c_str());
+        diagnostics_interface_ptr_->add_key_value(plugin->get_name(), res.error());
       }
     }
 
@@ -129,6 +164,7 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
     }
   }
 
+  update_diagnostic(*filtered_msg);
   pub_trajectories_->publish(*filtered_msg);
 }
 
@@ -197,6 +233,24 @@ void TrajectorySafetyFilter::unload_metric(const std::string & name)
     plugins_.erase(it, plugins_.end());
     RCLCPP_INFO_STREAM(get_logger(), "The scene plugin '" << name << "' is unloaded.");
   }
+}
+
+void TrajectorySafetyFilter::update_diagnostic(const CandidateTrajectories & filtered_trajectories)
+{
+  const auto uuid_to_name_map = get_generator_uuid_to_name_map(filtered_trajectories);
+  if (filtered_trajectories.candidate_trajectories.empty()) {
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
+  } else if (has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "All diffusion planner trajectories are infeasible");
+  } else {
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+  }
+
+  diagnostics_interface_ptr_->publish(this->get_clock()->now());
 }
 
 bool TrajectorySafetyFilter::validate_trajectory_basics(
