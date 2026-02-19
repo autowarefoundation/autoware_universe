@@ -9,10 +9,10 @@
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
 
+  <license>Apache License 2.0</license>
+
   <author email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</author>
   <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
-
-  <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
