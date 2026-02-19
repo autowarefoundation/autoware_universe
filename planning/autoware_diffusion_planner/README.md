@@ -189,14 +189,15 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
 ## Outputs
 
-| Topic                        | Message Type                                              | Description                                |
-| ---------------------------- | --------------------------------------------------------- | ------------------------------------------ |
-| `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
-| `~/output/trajectories`      | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
-| `~/output/predicted_objects` | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
-| `~/output/turn_indicators`   | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command             |
-| `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
-| `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray                        | Route debug markers                        |
+| Topic                           | Message Type                                              | Description                                                |
+| ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| `~/output/trajectory`           | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle                     |
+| `~/output/trajectories`         | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories                            |
+| `~/output/predicted_objects`    | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects                 |
+| `~/output/turn_indicators`      | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command                             |
+| `~/output/debug/traffic_signal` | autoware_perception_msgs/msg/TrafficLightGroup            | First traffic light on route (ego forward) for RViz/ad_api |
+| `~/debug/lane_marker`           | visualization_msgs/msg/MarkerArray                        | Lane debug markers                                         |
+| `~/debug/route_marker`          | visualization_msgs/msg/MarkerArray                        | Route debug markers                                        |
 
 ---
 
