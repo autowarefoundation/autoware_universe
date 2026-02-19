@@ -5,14 +5,13 @@
   <version>0.50.0</version>
   <description>The autoware_behavior_path_side_shift_module package</description>
 
-  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
-  <maintainer email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
-  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
-  <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
-  <maintainer email="tomohito.ando@tier4.jp">Tomohito Ando</maintainer>
+  <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
 
   <license>Apache License 2.0</license>
+
+  <author email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
