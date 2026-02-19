@@ -147,7 +147,7 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   {
     cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout", 0.90);
     enable_traffic_signal_timeout_ =
-      declare_parameter<bool>("enable_traffic_signal_timeout", false);
+      declare_parameter<bool>("enable_traffic_signal_timeout");
     diagnostics_message_timeout_ =
       std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
         this, "incoming_message_timeout");
