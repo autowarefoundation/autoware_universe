@@ -37,7 +37,7 @@ In addition to the individual algorithms previously mentioned, this node uses th
 
 ### Core Parameters
 
-{{ json_to_markdown("sensing/autoware_cuda_pointcloud_preprocessor/schema/cuda_pointcloud_preprocessor.schema.schema.json") }}
+{{ json_to_markdown("sensing/autoware_cuda_pointcloud_preprocessor/schema/cuda_pointcloud_preprocessor.schema.json") }}
 
 ## Assumptions / Known limits
 
