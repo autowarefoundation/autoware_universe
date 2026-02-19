@@ -56,8 +56,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
 
   const double ctrl_period = declare_parameter<double>("ctrl_period");
   timeout_thr_sec_ = declare_parameter<double>("timeout_thr_sec");
-  cyclic_message_timeout_thr_sec_ =
-    declare_parameter<double>("cyclic_message_timeout_thr_sec", 0.9);
+  cyclic_message_timeout_thr_sec_ = declare_parameter<double>("cyclic_message_timeout_thr_sec");
   // NOTE: It is possible that using control_horizon could be expected to enhance performance,
   // but it is not a formal interface topic, only an experimental one.
   // So it is disabled by default.
