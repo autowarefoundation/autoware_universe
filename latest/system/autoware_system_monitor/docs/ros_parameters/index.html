@@ -23388,23 +23388,30 @@
 <th align="center">Type</th>
 <th align="center">Unit</th>
 <th align="center">Default</th>
-<th align="left">Notes</th>
+<th align="center">Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="left">usage_warn</td>
-<td align="center">float</td>
-<td align="center">%(1e-2)</td>
-<td align="center">0.95</td>
-<td align="left">Generates warning when physical memory usage reaches a specified value or higher.</td>
+<td align="left">available_size</td>
+<td align="center">int</td>
+<td align="center">MiB</td>
+<td align="center">1024</td>
+<td align="center">Generates error when physical memory usage reaches a specified value defined by <code>available_size</code>.</td>
 </tr>
 <tr>
-<td align="left">usage_error</td>
-<td align="center">float</td>
-<td align="center">%(1e-2)</td>
-<td align="center">0.99</td>
-<td align="left">Generates error when physical memory usage reaches a specified value or higher.</td>
+<td align="left">warning_margin</td>
+<td align="center">int</td>
+<td align="center">MiB</td>
+<td align="center">0</td>
+<td align="center">Generates warning when physical memory usage reaches a specified value defined by addition of <code>available_size</code> and <code>warning_margin</code>.</td>
+</tr>
+<tr>
+<td align="left">swap_error_threshold</td>
+<td align="center">int</td>
+<td align="center">MiB</td>
+<td align="center">1024</td>
+<td align="center">Generates error when swap usage reaches a specified value or higher.</td>
 </tr>
 </tbody>
 </table>
