@@ -41,7 +41,14 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
         "Memory available size to generate error [MiB]. Cannot be changed after "
         "initialization.")) *
     1024 * 1024),
-  warning_available_size_(0)
+  warning_available_size_(0),
+  swap_error_threshold_(
+    declare_parameter<int>(
+      "swap_error_threshold", 1024,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Swap usage size to generate error [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024)
 {
   // Define warning_available_size_
   int warning_margin = declare_parameter<int>(
@@ -170,18 +177,23 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     ++index;
   }
 
-  /*
-   * To realize diagnostic logic, level is decided by the metric defined by (mem_available -
-   * swap_used). Considering when the metric is negative (i.e., swap_used > mem_available),
-   * `swap_used` is always added to the thresholds to avoid confusion.
-   */
-  int level;
-  if (mem_available < (error_available_size_ + swap_used)) {
+  // Logic for determining the diagnostic status level based on available memory and swap usage
+  int level = DiagStatus::OK;
+  if (mem_available < error_available_size_) {
     level = DiagStatus::ERROR;
-  } else if (mem_available < (warning_available_size_ + swap_used)) {
+  } else if (mem_available < warning_available_size_) {
     level = DiagStatus::WARN;
-  } else {
-    level = DiagStatus::OK;
+  }
+
+  // Swap usage checking
+  if (swap_used > 0) {
+    if (level == DiagStatus::OK) {
+      level = DiagStatus::WARN;
+    }
+
+    if (swap_used > swap_error_threshold_) {
+      level = DiagStatus::ERROR;
+    }
   }
 
   stat.summary(level, usage_dict_.at(level));
