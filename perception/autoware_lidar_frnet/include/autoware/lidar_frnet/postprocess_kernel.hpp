@@ -32,7 +32,8 @@ public:
 
   /// @brief Fill output clouds with segmentation results (dispatches to templated implementation)
   /// @param points_xyzi Compact point buffer from preprocess (num_points * 4: x, y, z, intensity)
-  /// @param cloud_compact Compact copy of input points for indices [0, num_points_after_projection);
+  /// @param cloud_compact Compact copy of input points for indices [0,
+  /// num_points_after_projection);
   ///        can be nullptr
   cudaError_t fillCloud_launch(
     const float * points_xyzi, const void * cloud_compact,

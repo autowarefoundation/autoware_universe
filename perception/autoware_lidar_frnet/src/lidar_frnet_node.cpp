@@ -72,8 +72,7 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
   const auto num_points_profile = declare_parameter<std::vector<int64_t>>("num_points");
   max_output_points_ = static_cast<size_t>(num_points_profile.at(2));
   const auto network_params = utils::NetworkParams(
-    class_names, num_points_profile,
-    declare_parameter<std::vector<int64_t>>("num_unique_coors"),
+    class_names, num_points_profile, declare_parameter<std::vector<int64_t>>("num_unique_coors"),
     declare_parameter<double>("fov_up_deg"), declare_parameter<double>("fov_down_deg"),
     declare_parameter<int64_t>("frustum_width"), declare_parameter<uint16_t>("frustum_height"),
     declare_parameter<int64_t>("interpolation_width"),
@@ -170,8 +169,8 @@ void LidarFRNetNode::cloudCallback(
   if (crop_box_enabled_ && tf_buffer_) {
     geometry_msgs::msg::TransformStamped tf;
     try {
-      tf = tf_buffer_->lookupTransform(
-        crop_reference_frame_, msg->header.frame_id, msg->header.stamp);
+      tf =
+        tf_buffer_->lookupTransform(crop_reference_frame_, msg->header.frame_id, msg->header.stamp);
     } catch (const tf2::TransformException & ex) {
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), 1000, "Ego crop box: TF lookup failed: %s", ex.what());
@@ -304,14 +303,12 @@ void LidarFRNetNode::publishEgoCropBoxDebug()
   if (!crop_box_enabled_) {
     return;
   }
-  const bool has_polygon_sub =
-    ego_crop_box_polygon_pub_->get_subscription_count() +
-      ego_crop_box_polygon_pub_->get_intra_process_subscription_count() >
-    0;
-  const bool has_marker_sub =
-    ego_crop_box_marker_pub_->get_subscription_count() +
-      ego_crop_box_marker_pub_->get_intra_process_subscription_count() >
-    0;
+  const bool has_polygon_sub = ego_crop_box_polygon_pub_->get_subscription_count() +
+                                 ego_crop_box_polygon_pub_->get_intra_process_subscription_count() >
+                               0;
+  const bool has_marker_sub = ego_crop_box_marker_pub_->get_subscription_count() +
+                                ego_crop_box_marker_pub_->get_intra_process_subscription_count() >
+                              0;
   if (!has_polygon_sub && !has_marker_sub) {
     return;
   }

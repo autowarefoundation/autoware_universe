@@ -56,7 +56,8 @@ inline std::unique_ptr<cuda_blackboard::CudaPointCloud2> generatePointCloudMessa
 
   const auto input_num_points = msg_in.width * msg_in.height;
   const auto num_points = max_num_points > 0 ? max_num_points : input_num_points;
-  cloud_msg_ptr->data = cuda_blackboard::make_unique<std::uint8_t[]>(num_points * layout.point_step);
+  cloud_msg_ptr->data =
+    cuda_blackboard::make_unique<std::uint8_t[]>(num_points * layout.point_step);
 
   cloud_msg_ptr->fields = layout.fields;
   cloud_msg_ptr->point_step = layout.point_step;

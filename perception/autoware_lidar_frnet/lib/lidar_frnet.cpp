@@ -197,9 +197,8 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
     coors_d_.get(), coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get(),
     cloud_compact_d_.get()));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  CHECK_CUDA_ERROR(
-    cudaMemcpy(&num_points_after_projection_, num_points_d_.get(), sizeof(uint32_t),
-               cudaMemcpyDeviceToHost));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    &num_points_after_projection_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(preprocess_ptr_->interpolatePoints_launch(
     proj_idxs_d_.get(), proj_2d_d_.get(), num_points_d_.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d_.get()));
@@ -275,8 +274,8 @@ bool LidarFRNet::postprocess(
 
   if (active_comm.seg) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_seg_out.data.get(), seg_data_d_.get(),
-      sizeof(OutputSegmentationPointType) * num_points, cudaMemcpyDeviceToDevice, stream_));
+      cloud_seg_out.data.get(), seg_data_d_.get(), sizeof(OutputSegmentationPointType) * num_points,
+      cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     cloud_seg_out.width = num_points;
     cloud_seg_out.height = 1;

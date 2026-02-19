@@ -38,7 +38,7 @@ __constant__ utils::FieldOfView const_fov;
 __constant__ utils::Dims2d const_interpolation;
 __constant__ utils::Dims2d const_frustum;
 __constant__ bool const_crop_box_enabled;
-__constant__ float const_crop_box_bounds[6];  // [min_x, min_y, min_z, max_x, max_y, max_z]
+__constant__ float const_crop_box_bounds[6];          // [min_x, min_y, min_z, max_x, max_y, max_z]
 __constant__ float const_crop_box_sensor_to_ref[12];  // row-major 3x3 R then tx, ty, tz
 
 PreprocessCuda::PreprocessCuda(const utils::NetworkParams & params, cudaStream_t stream)
@@ -248,8 +248,7 @@ cudaError_t PreprocessCuda::projectPoints_launch_impl(
 
   projectPoints_kernel<<<block, threads, 0, stream_>>>(
     cloud, num_points, output_num_points, output_points, output_coors, output_coors_keys,
-    output_proj_idxs, output_proj_2d,
-    static_cast<PointT *>(output_cloud_compact));
+    output_proj_idxs, output_proj_2d, static_cast<PointT *>(output_cloud_compact));
 
   return cudaGetLastError();
 }

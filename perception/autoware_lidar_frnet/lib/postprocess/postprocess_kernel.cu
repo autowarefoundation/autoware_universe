@@ -188,9 +188,9 @@ cudaError_t PostprocessCuda::fillCloud_launch_impl(
   dim3 threads(utils::kernel_1d_size);
 
   fill_cloud_kernel<<<block, threads, 0, stream_>>>(
-    points_xyzi, cloud_compact, num_points_after_projection, seg_logit, num_points,
-    active_comm.seg, active_comm.viz, active_comm.filtered, output_num_points_filtered,
-    output_cloud_seg, output_cloud_viz, output_cloud_filtered);
+    points_xyzi, cloud_compact, num_points_after_projection, seg_logit, num_points, active_comm.seg,
+    active_comm.viz, active_comm.filtered, output_num_points_filtered, output_cloud_seg,
+    output_cloud_viz, output_cloud_filtered);
 
   return cudaGetLastError();
 }
@@ -214,11 +214,11 @@ template cudaError_t PostprocessCuda::fillCloud_launch_impl<InputPointTypeXYZIRC
   OutputVisualizationPointType *, InputPointTypeXYZIRCAEDT *);
 
 cudaError_t PostprocessCuda::fillCloud_launch(
-  const float * points_xyzi, const void * cloud_compact,
-  const uint32_t num_points_after_projection, const float * seg_logit, const uint32_t num_points,
-  InputFormat format, const utils::ActiveComm & active_comm,
-  uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
-  OutputVisualizationPointType * output_cloud_viz, void * output_cloud_filtered)
+  const float * points_xyzi, const void * cloud_compact, const uint32_t num_points_after_projection,
+  const float * seg_logit, const uint32_t num_points, InputFormat format,
+  const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
+  OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
+  void * output_cloud_filtered)
 {
   switch (format) {
     case InputFormat::XYZIRCAEDT:
@@ -243,7 +243,8 @@ cudaError_t PostprocessCuda::fillCloud_launch(
       return fillCloud_launch_impl(
         points_xyzi, static_cast<const InputPointTypeXYZI *>(cloud_compact),
         num_points_after_projection, seg_logit, num_points, active_comm, output_num_points_filtered,
-        output_cloud_seg, output_cloud_viz, static_cast<InputPointTypeXYZI *>(output_cloud_filtered));
+        output_cloud_seg, output_cloud_viz,
+        static_cast<InputPointTypeXYZI *>(output_cloud_filtered));
     default:
       return cudaErrorInvalidValue;
   }

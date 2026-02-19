@@ -32,7 +32,6 @@
 
 #include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
 #include <visualization_msgs/msg/marker.hpp>
 
 #include <tf2_ros/transform_listener.h>
@@ -53,7 +52,8 @@ public:
   void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  /** \brief Debug: publish ego crop box as polygon/marker when subscribed; only if crop box enabled */
+  /** \brief Debug: publish ego crop box as polygon/marker when subscribed; only if crop box enabled
+   */
   void publishEgoCropBoxDebug();
 
 private:
