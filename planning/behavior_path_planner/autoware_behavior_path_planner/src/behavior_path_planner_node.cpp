@@ -358,7 +358,8 @@ void BehaviorPathPlannerNode::run()
      * To preserve the existing logic of the run() callback,
      * the run() callback will return early when mandatory data not received.
 <<<<<<< HEAD
-     * There is controversy about the behavior when data is timed out. It will be discussed in the future.
+     * There is controversy about the behavior when data is timed out. It will be discussed in the
+future.
 =======
      * There is controversy about the behavior when data is timed out. It will be disscussed in the
      * future.
