@@ -142,8 +142,8 @@ LaneSegmentContext::get_first_traffic_light_on_route(
       result.traffic_light_group_id = static_cast<int64_t>(segment.traffic_light_id);
       autoware_perception_msgs::msg::TrafficLightElement unknown_element;
       unknown_element.color = TrafficLightElement::UNKNOWN;
-      unknown_element.shape = TrafficLightElement::CIRCLE;
-      unknown_element.status = TrafficLightElement::SOLID_ON;
+      unknown_element.shape = TrafficLightElement::UNKNOWN;
+      unknown_element.status = TrafficLightElement::UNKNOWN;
       unknown_element.confidence = 0.0f;
       result.elements = {unknown_element};
       result.predictions.clear();
