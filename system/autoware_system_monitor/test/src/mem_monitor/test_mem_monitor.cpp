@@ -38,7 +38,7 @@ class TestMemMonitor : public MemMonitor
   friend class MemMonitorTestSuite;
 
 public:
-  TestMemMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+  TestMemMonitor(const std::string & /*node_name*/, const rclcpp::NodeOptions & options)
   : MemMonitor(options)
   {
   }
@@ -64,7 +64,7 @@ public:
 
   bool findDiagStatus(const std::string & name, DiagStatus & status)  // NOLINT
   {
-    for (int i = 0; i < array_.status.size(); ++i) {
+    for (size_t i = 0; i < array_.status.size(); ++i) {
       if (removePrefix(array_.status[i].name) == name) {
         status = array_.status[i];
         return true;
@@ -170,12 +170,10 @@ protected:
 
 TEST_F(MemMonitorTestSuite, usageWarnTest)
 {
-  // Verify normal behavior
-  {
-    DiagStatus status;
-    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
-  }
+  // Get baseline level (may be WARN if swap is in use)
+  DiagStatus baseline_status;
+  ASSERT_TRUE(waitForDiagStatus("Memory Usage", baseline_status));
+  ASSERT_NE(baseline_status.level, DiagStatus::ERROR);
 
   // Verify warning
   {
@@ -187,25 +185,23 @@ TEST_F(MemMonitorTestSuite, usageWarnTest)
     ASSERT_EQ(status.level, DiagStatus::WARN);
   }
 
-  // Verify normal behavior
+  // Verify return to baseline
   {
     // Change back to normal
     monitor_->changeUsageWarn(0);
 
     DiagStatus status;
     ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
+    ASSERT_EQ(status.level, baseline_status.level);
   }
 }
 
 TEST_F(MemMonitorTestSuite, usageErrorTest)
 {
-  // Verify normal behavior
-  {
-    DiagStatus status;
-    ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
-  }
+  // Get baseline level (may be WARN if swap is in use)
+  DiagStatus baseline_status;
+  ASSERT_TRUE(waitForDiagStatus("Memory Usage", baseline_status));
+  ASSERT_NE(baseline_status.level, DiagStatus::ERROR);
 
   // Verify error
   {
@@ -217,14 +213,14 @@ TEST_F(MemMonitorTestSuite, usageErrorTest)
     ASSERT_EQ(status.level, DiagStatus::ERROR);
   }
 
-  // Verify normal behavior
+  // Verify return to baseline
   {
     // Change back to normal
     monitor_->changeUsageError(0);
 
     DiagStatus status;
     ASSERT_TRUE(waitForDiagStatus("Memory Usage", status));
-    ASSERT_EQ(status.level, DiagStatus::OK);
+    ASSERT_EQ(status.level, baseline_status.level);
   }
 }
 
