@@ -130,6 +130,10 @@ bool has_collision_between_shifted_path_footprints_and_objects(
   const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
   const double shift_length, const double th_min_shift_length)
 {
+  if(shift_length < th_min_shift_length) {
+    return false;
+  }
+
   const auto & pts = ego_path.points;
   return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
     const auto vehicle_footprint = autoware_utils::transform_vector(
@@ -138,7 +142,7 @@ bool has_collision_between_shifted_path_footprints_and_objects(
 
     const auto check_shifted_path = [&](const auto & obj) {
       const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
-      if (obj_speed < th_stopped_obj_vel && shift_length < th_min_shift_length) {
+      if (obj_speed < th_stopped_obj_vel) {
         return false;
       }
       const auto obj_polygon = autoware_utils::to_polygon2d(obj);
