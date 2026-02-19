@@ -23034,6 +23034,15 @@
 </li>
 </ul>
 </li>
+<li><code>cyclic_message_timeout_thr_sec</code>: duration in second for monitoring incoming trajectory messages via diagnostic updater (default: 0.9)<ul>
+<li>The diagnostic updater will report ERROR status if:<ol>
+<li>No trajectory message has been received yet.</li>
+<li>The elapsed time since the last trajectory message exceeds this threshold.</li>
+</ol>
+</li>
+<li>This parameter helps monitor the health of the trajectory input stream.</li>
+</ul>
+</li>
 <li><code>lateral_controller_mode</code>: <code>mpc</code> or <code>pure_pursuit</code><ul>
 <li>(currently there is only <code>PID</code> for longitudinal controller)</li>
 </ul>
