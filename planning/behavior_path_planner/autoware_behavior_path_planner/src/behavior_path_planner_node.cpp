@@ -145,7 +145,7 @@ BehaviorPathPlannerNode::BehaviorPathPlannerNode(const rclcpp::NodeOptions & nod
   }
   // Timeout handling
   {
-    cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout", 0.90);
+    cyclic_message_timeout_ = declare_parameter<double>("cyclic_timeout");
     enable_traffic_signal_timeout_ =
       declare_parameter<bool>("enable_traffic_signal_timeout");
     diagnostics_message_timeout_ =
