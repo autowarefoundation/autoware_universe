@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -23024,6 +23024,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#simple-trajectory-ranker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simple Trajectory Ranker
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple Trajectory Ranker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-output_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input / Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23260,6 +23321,57 @@
 <li><strong>evaluation.score_weight</strong>: Weight for each metric in final score calculation</li>
 <li><strong>evaluation.time_decay_weight.s0-s5</strong>: Temporal weights for metrics (s0=first metric, s1=second, etc.)</li>
 </ul>
+<h2 id="simple-trajectory-ranker">Simple Trajectory Ranker<a class="headerlink" href="#simple-trajectory-ranker" title="Permanent link">#</a></h2>
+<p>The <code>SimpleTrajectoryRanker</code> is a lightweight alternative to the main trajectory ranker. It ranks trajectory candidates based on a prioritized list of generator name prefixes rather than complex geometric or physical metrics.</p>
+<h3 id="logic">Logic<a class="headerlink" href="#logic" title="Permanent link">#</a></h3>
+<p>The node matches the generator name of each candidate trajectory (retrieved from <code>generator_info</code> using the <code>generator_id</code>) against a user-defined list of prefixes in <code>ranked_generator_name_prefixes</code>.</p>
+<h3 id="scoring">Scoring<a class="headerlink" href="#scoring" title="Permanent link">#</a></h3>
+<p>Scores are assigned based on the inverse of the rank of the matching prefix:</p>
+<ul>
+<li>If there are <span class="arithmatex">\(N\)</span> ranked prefixes, a trajectory matching the first prefix gets a score of <span class="arithmatex">\(N\)</span>.</li>
+<li>A trajectory matching the second prefix gets a score of <span class="arithmatex">\(N-1\)</span>, and so on.</li>
+<li>Trajectories that do not match any prefix, or whose generator info is missing, are assigned a score of <code>0.0</code>.</li>
+</ul>
+<p>The output list is ordered by these scores (highest score first), followed by unranked trajectories which maintain their original relative order.</p>
+<h3 id="input-output_1">Input / Output<a class="headerlink" href="#input-output_1" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/candidate_trajectories</code></td>
+<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
+<td>Candidate trajectories</td>
+</tr>
+<tr>
+<td><code>~/output/scored_trajectories</code></td>
+<td><code>autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories</code></td>
+<td>Scored candidate trajectories</td>
+</tr>
+</tbody>
+</table>
+<h3 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ranked_generator_name_prefixes</code></td>
+<td><code>std::vector&lt;std::string&gt;</code></td>
+<td>Ordered list of generator name prefixes for prioritizing</td>
+</tr>
+</tbody>
+</table>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
 <h3 id="basic-launch">Basic Launch<a class="headerlink" href="#basic-launch" title="Permanent link">#</a></h3>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_trajectory_ranker<span class="w"> </span>trajectory_ranker.launch.xml
