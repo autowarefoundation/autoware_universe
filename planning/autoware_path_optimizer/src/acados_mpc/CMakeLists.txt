@@ -91,12 +91,21 @@ if(NOT EXISTS "${T_RENDERER_OUTPUT}")
         )
         set(t_renderer_target build_t_renderer)
     else()
-        message(FATAL_ERROR "t_renderer cannot be built from source.\n"
-            "Please ensure:\n"
-            "  1. Rust toolchain is installed and up to date (rustup update stable)\n"
-            "  2. cargo is available in PATH\n"
-            "  3. tera_renderer source is available at: ${TERA_RENDERER_SOURCE_DIR}\n"
-            "     (This should be imported via 'vcs import src < autoware.repos')")
+        # Report why the cargo build path was not taken
+        set(T_REASON "")
+        if(NOT CARGO_EXECUTABLE)
+            set(T_REASON "${T_REASON}  - cargo not found in PATH (install Rust e.g. via rustup)\n")
+        endif()
+        if(NOT EXISTS "${TERA_RENDERER_SOURCE_DIR}/Cargo.toml")
+            set(T_REASON "${T_REASON}  - tera_renderer source missing at ${TERA_RENDERER_SOURCE_DIR}\n"
+                "    (run: vcs import src < autoware.repos --recursive)\n")
+        endif()
+        if(NOT EXISTS "${T_RENDERER_BUILT}")
+            set(T_REASON "${T_REASON}  - no pre-built binary at ${T_RENDERER_BUILT}\n")
+        endif()
+        message(FATAL_ERROR "t_renderer could not be built or found. Reasons:\n${T_REASON}"
+            "Fix by: (1) ensuring cargo is in PATH and Rust is up to date (rustup update stable), "
+            "(2) importing tera_renderer via vcs, or (3) building t_renderer elsewhere and placing it at ${T_RENDERER_BUILT}")
         add_custom_target(build_t_renderer
             COMMENT "t_renderer cannot be built"
         )
