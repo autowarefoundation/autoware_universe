@@ -178,25 +178,7 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     ++index;
   }
 
-  // Logic for determining the diagnostic status level based on available memory and swap usage
-  int level = DiagStatus::OK;
-  if (mem_available < error_available_size_) {
-    level = DiagStatus::ERROR;
-  } else if (mem_available < warning_available_size_) {
-    level = DiagStatus::WARN;
-  }
-
-  // Swap usage checking
-  if (swap_used > 0) {
-    if (level == DiagStatus::OK) {
-      level = DiagStatus::WARN;
-    }
-
-    if (swap_used > swap_error_threshold_) {
-      level = DiagStatus::ERROR;
-    }
-  }
-
+  const uint8_t level = determineDiagnosticLevel(mem_available, swap_used);
   stat.summary(level, usage_dict_.at(level));
 
   publishMemoryStatus(usage);
@@ -268,6 +250,29 @@ std::string MemMonitor::toHumanReadable(const std::string & str)
   }
   const char * format = (count >= 3 || (size > 0 && size < 10)) ? "{:.1f}{}" : "{:.0f}{}";
   return fmt::format(format, size, units[count]);
+}
+
+uint8_t MemMonitor::determineDiagnosticLevel(size_t mem_available, size_t swap_used)
+{
+  uint8_t level = DiagStatus::OK;
+  if (mem_available < error_available_size_) {
+    level = DiagStatus::ERROR;
+  } else if (mem_available < warning_available_size_) {
+    level = DiagStatus::WARN;
+  }
+
+  // Swap usage checking
+  if (swap_used > 0) {
+    if (level == DiagStatus::OK) {
+      level = DiagStatus::WARN;
+    }
+
+    if (swap_used > swap_error_threshold_) {
+      level = DiagStatus::ERROR;
+    }
+  }
+
+  return level;
 }
 
 void MemMonitor::publishMemoryStatus(float usage)
