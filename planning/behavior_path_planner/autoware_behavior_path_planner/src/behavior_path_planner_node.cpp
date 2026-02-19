@@ -355,9 +355,14 @@ void BehaviorPathPlannerNode::run()
   if (data_ready_status == DataReadyStatus::NOT_RECEIVED) {
     /*
      * NOTE:
-     * To preserve the existing logic of the run() callback, 
+     * To preserve the existing logic of the run() callback,
      * the run() callback will return early when mandatory data not received.
+<<<<<<< HEAD
      * There is controversy about the behavior when data is timed out. It will be discussed in the future.
+=======
+     * There is controversy about the behavior when data is timed out. It will be disscussed in the
+     * future.
+>>>>>>> a1fa0ec74d22e78cb8cf68bcbb4b339bb691c6f7
      */
     diagnostics_message_timeout_->publish(stamp);
     return;
