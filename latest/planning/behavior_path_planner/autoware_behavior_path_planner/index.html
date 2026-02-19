@@ -22940,6 +22940,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#input-message-timeout-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input Message Timeout Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -23357,6 +23368,12 @@
 <td align="left">The path the module is about to take. To be executed as soon as external approval is obtained</td>
 <td><code>volatile</code></td>
 </tr>
+<tr>
+<td align="left">/diagnostics</td>
+<td align="left"><code>diagnostic_msgs::msg::DiagnosticArray</code></td>
+<td align="left">Diagnostics information for input message timeout detection</td>
+<td><code>volatile</code></td>
+</tr>
 </tbody>
 </table>
 <h3 id="debug">Debug<a class="headerlink" href="#debug" title="Permanent link">#</a></h3>
@@ -23417,6 +23434,40 @@
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For specific information about which topics are being subscribed to and published, refer to <a href="https://github.com/autowarefoundation/autoware_universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/launch/behavior_path_planner.launch.xml#L36-L49">behavior_path_planner.xml</a>.</p>
+</div>
+<h3 id="input-message-timeout-detection">Input Message Timeout Detection<a class="headerlink" href="#input-message-timeout-detection" title="Permanent link">#</a></h3>
+<p>The node monitors the reception timestamps of mandatory input topics and reports their status via <code>/diagnostics</code>. Each topic is checked against a configurable timeout threshold every planning cycle.</p>
+<table>
+<thead>
+<tr>
+<th align="left">Parameter</th>
+<th align="left">Default</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>cyclic_timeout</code></td>
+<td align="left">0.90 s</td>
+<td align="left">Timeout for high-frequency topics (perception, odometry, occupancy_grid)</td>
+</tr>
+<tr>
+<td align="left"><code>enable_traffic_signal_timeout</code></td>
+<td align="left">false</td>
+<td align="left">Enable timeout checking for the traffic signal topic</td>
+</tr>
+</tbody>
+</table>
+<p>Each topic status is reported as one of:</p>
+<ul>
+<li><strong><code>not received</code></strong>: The topic has never been received since the node started.</li>
+<li><strong><code>timeout</code></strong>: The topic was received before, but the latest timestamp exceeds the threshold.</li>
+<li><strong><code>OK</code></strong>: The topic is received within the threshold.</li>
+</ul>
+<p>If any mandatory topic is not ready, planning is skipped and a diagnostic ERROR is published.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since the node performs its own timeout detection internally, using <a href="../../../system/autoware_topic_state_monitor/"><code>topic_state_monitor</code></a> for the input topics of this node is not recommended to avoid redundant monitoring.</p>
 </div>
 <h2 id="how-to-enable-or-disable-modules">How to Enable or Disable Modules<a class="headerlink" href="#how-to-enable-or-disable-modules" title="Permanent link">#</a></h2>
 <p>Enabling and disabling the modules in the Behavior Path Planner is primarily managed through two key files: <code>default_preset.yaml</code> and <code>behavior_path_planner.launch.xml</code>.</p>
