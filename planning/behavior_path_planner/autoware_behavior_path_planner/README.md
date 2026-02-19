@@ -114,6 +114,7 @@ The Planner Manager's responsibilities include:
 | ~/output/hazard_lights_cmd    | `autoware_vehicle_msgs::msg::HazardLightsCommand`      | Hazard lights command                                                                         | `volatile`        |
 | ~/output/modified_goal        | `autoware_planning_msgs::msg::PoseWithUuidStamped`     | Output modified goal commands                                                                 | `transient_local` |
 | ~/output/reroute_availability | `tier4_planning_msgs::msg::RerouteAvailability`        | The path the module is about to take. To be executed as soon as external approval is obtained | `volatile`        |
+| /diagnostics                  | `diagnostic_msgs::msg::DiagnosticArray`                | Diagnostics information for input message timeout detection                                   | `volatile`        |
 
 ### Debug
 
@@ -130,6 +131,27 @@ The Planner Manager's responsibilities include:
 !!! note
 
     For specific information about which topics are being subscribed to and published, refer to [behavior_path_planner.xml](https://github.com/autowarefoundation/autoware_universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/launch/behavior_path_planner.launch.xml#L36-L49).
+
+### Input Message Timeout Detection
+
+The node monitors the reception timestamps of mandatory input topics and reports their status via `/diagnostics`. Each topic is checked against a configurable timeout threshold every planning cycle.
+
+| Parameter                       | Default | Description                                                              |
+| :------------------------------ | :------ | :----------------------------------------------------------------------- |
+| `cyclic_timeout`                | 0.90 s  | Timeout for high-frequency topics (perception, odometry, occupancy_grid) |
+| `enable_traffic_signal_timeout` | false   | Enable timeout checking for the traffic signal topic                     |
+
+Each topic status is reported as one of:
+
+- **`not received`**: The topic has never been received since the node started.
+- **`timeout`**: The topic was received before, but the latest timestamp exceeds the threshold.
+- **`OK`**: The topic is received within the threshold.
+
+If any mandatory topic is not ready, planning is skipped and a diagnostic ERROR is published.
+
+!!! note
+
+    Since the node performs its own timeout detection internally, using [`topic_state_monitor`](../../../system/autoware_topic_state_monitor/README.md) for the input topics of this node is not recommended to avoid redundant monitoring.
 
 ## How to Enable or Disable Modules
 

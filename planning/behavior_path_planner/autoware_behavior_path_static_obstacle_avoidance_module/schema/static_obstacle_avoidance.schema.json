@@ -893,6 +893,19 @@
               "required": ["policy"],
               "additionalProperties": false
             },
+            "avoidance_for_close_vehicle": {
+              "type": "object",
+              "properties": {
+                "policy": {
+                  "type": "string",
+                  "enum": ["auto", "manual", "ignore"],
+                  "description": "Ego behavior policy for close vehicle (stopped ego with insufficient avoidance distance). 'auto': avoid automatically in RTC AUTO mode. 'manual': generate candidate path and wait for operator approval. 'ignore': never avoid.",
+                  "default": "ignore"
+                }
+              },
+              "required": ["policy"],
+              "additionalProperties": false
+            },
             "intersection": {
               "type": "object",
               "properties": {
@@ -935,6 +948,7 @@
             "merging_vehicle",
             "parked_vehicle",
             "avoidance_for_ambiguous_vehicle",
+            "avoidance_for_close_vehicle",
             "intersection",
             "freespace"
           ],
