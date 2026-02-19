@@ -138,16 +138,19 @@ Giving the longitudinal controller information about steer convergence allows it
 - `autoware_control_msgs/Control`: message containing both lateral and longitudinal commands.
 - `autoware_control_msgs/ControlHorizon`: message containing both lateral and longitudinal horizon commands. this is NOT published by default. by using this, the performance of vehicle control may be improved, and by turning the default on, it can be used as an experimental topic.
 
-#### Parameter
+#### Parameters
 
-- `ctrl_period`: control commands publishing period
+##### Summary
+
+{{ json_to_markdown("control/autoware_trajectory_follower_node/schema/trajectory_follower_node.schema.json") }}
+{{ json_to_markdown("control/autoware_trajectory_follower_node/schema/simple_trajectory_follower.schema.json") }}
+
+##### Parameter Details
+
 - `timeout_thr_sec`: duration in second after which input messages are discarded.
-  - Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
-    1. Both commands have been received.
-    2. The last received commands are not older than defined by `timeout_thr_sec`.
-- `lateral_controller_mode`: `mpc` or `pure_pursuit`
-  - (currently there is only `PID` for longitudinal controller)
-- `enable_control_cmd_horizon_pub`: publish `ControlHorizon` or not (default: false)
+- Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
+  1. Both commands have been received.
+  2. The last received commands are not older than defined by `timeout_thr_sec`.
 
 ## Debugging
 
