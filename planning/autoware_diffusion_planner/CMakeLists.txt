@@ -99,6 +99,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner
+      autoware_lanelet2_extension
+      autoware_map_msgs
+      autoware_perception_msgs
       autoware_test_utils
     )
   endif()

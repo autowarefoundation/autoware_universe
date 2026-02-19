@@ -118,6 +118,42 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   return selected_indices;
 }
 
+autoware_perception_msgs::msg::TrafficLightGroup
+LaneSegmentContext::get_first_traffic_light_on_route(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
+{
+  autoware_perception_msgs::msg::TrafficLightGroup result;
+  result.traffic_light_group_id = 0;
+
+  const std::vector<int64_t> segment_indices =
+    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+
+  for (const int64_t segment_idx : segment_indices) {
+    const LaneSegment & segment = lanelet_map_.lane_segments[segment_idx];
+    if (segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+      continue;
+    }
+
+    const auto it = traffic_light_id_map.find(segment.traffic_light_id);
+    if (it != traffic_light_id_map.end()) {
+      result = it->second.signal;
+    } else {
+      result.traffic_light_group_id = static_cast<int64_t>(segment.traffic_light_id);
+      autoware_perception_msgs::msg::TrafficLightElement unknown_element;
+      unknown_element.color = TrafficLightElement::UNKNOWN;
+      unknown_element.shape = TrafficLightElement::UNKNOWN;
+      unknown_element.status = TrafficLightElement::UNKNOWN;
+      unknown_element.confidence = 0.0f;
+      result.elements = {unknown_element};
+      result.predictions.clear();
+    }
+    return result;
+  }
+
+  return result;
+}
+
 std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
   const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y,
   const int64_t max_segments) const

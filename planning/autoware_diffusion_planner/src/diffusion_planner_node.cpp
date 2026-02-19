@@ -65,6 +65,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
   pub_turn_indicators_ =
     this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
+  pub_traffic_signal_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
+    "~/output/debug/traffic_signal", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -447,6 +449,25 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
   return input_data_map;
 }
 
+void DiffusionPlanner::publish_first_traffic_light_on_route(
+  const FrameContext & frame_context) const
+{
+  const geometry_msgs::msg::Pose & pose_center =
+    params_.shift_x
+      ? utils::shift_x(
+          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+      : frame_context.ego_kinematic_state.pose.pose;
+
+  const double center_x = pose_center.position.x;
+  const double center_y = pose_center.position.y;
+  const double center_z = pose_center.position.z;
+
+  const auto msg = lane_segment_context_->get_first_traffic_light_on_route(
+    *route_ptr_, center_x, center_y, center_z, traffic_light_id_map_);
+
+  pub_traffic_signal_->publish(msg);
+}
+
 void DiffusionPlanner::publish_debug_markers(
   const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform,
   const rclcpp::Time & timestamp) const
@@ -570,6 +591,8 @@ void DiffusionPlanner::on_timer()
   InputDataMap input_data_map = create_input_data(*frame_context);
 
   publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);
+
+  publish_first_traffic_light_on_route(*frame_context);
 
   // Calculate and record metrics for diagnostics using the proper logic
   const int64_t batch_idx = 0;

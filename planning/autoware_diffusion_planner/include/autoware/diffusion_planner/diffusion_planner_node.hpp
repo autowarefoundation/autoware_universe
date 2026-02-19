@@ -41,6 +41,7 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_signal.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -214,6 +215,12 @@ private:
     const rclcpp::Time & timestamp) const;
 
   /**
+   * @brief Publish the first traffic light on the route (from ego forward) for debug.
+   * @param frame_context Context of the current frame (ego pose).
+   */
+  void publish_first_traffic_light_on_route(const FrameContext & frame_context) const;
+
+  /**
    * @brief Publish model predictions.
    * @param predictions Output from the model.
    * @param frame_context Context of the current frame.
@@ -271,6 +278,8 @@ private:
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_lane_marker_{nullptr};
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_route_marker_{nullptr};
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_{nullptr};
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
+    pub_traffic_signal_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
