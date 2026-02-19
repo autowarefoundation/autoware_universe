@@ -46,27 +46,7 @@ else()
   set(TRT_AVAIL OFF)
 endif()
 
-# set flags for CUDNN availability
-option(CUDNN_AVAIL "CUDNN available" OFF)
-# try to find the CUDNN module
-find_library(CUDNN_LIBRARY
-NAMES libcudnn.so${__cudnn_ver_suffix} libcudnn${__cudnn_ver_suffix}.dylib ${__cudnn_lib_win_name}
-PATHS $ENV{LD_LIBRARY_PATH} ${__libpath_cudart} ${CUDNN_ROOT_DIR} ${PC_CUDNN_LIBRARY_DIRS} ${CMAKE_INSTALL_PREFIX}
-PATH_SUFFIXES lib lib64 bin
-DOC "CUDNN library."
-)
-if(CUDNN_LIBRARY)
-  if(CUDA_VERBOSE)
-    message(STATUS "CUDNN is available!")
-    message(STATUS "CUDNN_LIBRARY: ${CUDNN_LIBRARY}")
-  endif()
-  set(CUDNN_AVAIL ON)
-else()
-  message("CUDNN is NOT Available")
-  set(CUDNN_AVAIL OFF)
-endif()
-
-if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
+if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
@@ -84,16 +64,18 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/calibration_status_classifier.cpp
   )
 
-  # cSpell:ignore expt gencode
+  # cSpell:ignore expt
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  # NOTE(amadeuszsz): PTX support for newer GPUs until we can compile directly
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
-  # TODO(amadeuszsz): enable when the driver supports it
-  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  if(CUDA_VERSION VERSION_LESS "13.0")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+  else()  # CUDA 13.0 renamed SM101 to SM110
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+  endif()
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/preprocess/preprocess_cuda.cu
@@ -109,7 +91,6 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
     ${CUDA_curand_LIBRARY}
-    ${CUDNN_LIBRARY}
     ${PROJECT_NAME}_cuda_lib
   )
 
@@ -147,6 +128,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_ros REQUIRED)
+    ament_auto_find_test_dependencies()
+
     find_package(OpenCV REQUIRED)
     find_package(ZLIB REQUIRED)
 
@@ -160,6 +145,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_preprocessing
       OpenCV
@@ -180,6 +166,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_model_inference
       OpenCV
@@ -200,6 +187,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
       ${PROJECT_NAME}_lib
       gtest
       gtest_main
+      ament_index_cpp::ament_index_cpp
     )
     ament_target_dependencies(test_calibration_status_classifier
       OpenCV

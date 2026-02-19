@@ -2,6 +2,19 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator_rear_collision_checker): use autoware_utils_geometry type (`#11940 <https://github.com/autowarefoundation/autoware_universe/issues/11940>`_)
+* docs(rear_collision_checker): revise sentence from README. (`#11837 <https://github.com/autowarefoundation/autoware_universe/issues/11837>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Zulfaqar Azmi
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor: fix leftover dependent autoware_utils from updating vehicle_info_utils (`#11734 <https://github.com/autowarefoundation/autoware_universe/issues/11734>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

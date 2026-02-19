@@ -79,13 +79,29 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
 
 void SimpleDetectedObjectMergerNode::onTimer()
 {
-  if (!isDataReady()) {
-    return;
+  rclcpp::Time latest_stamp{0, 0, this->get_clock()->get_clock_type()};
+  bool has_valid_input = false;
+
+  for (size_t i = 0; i < input_topic_size_; i++) {
+    if (objects_data_.at(i)) {
+      const auto & stamp = objects_data_.at(i)->header.stamp;
+      if (!has_valid_input || rclcpp::Time(stamp) > latest_stamp) {
+        latest_stamp = stamp;
+        has_valid_input = true;
+      }
+    }
   }
 
   DetectedObjects output_objects;
-  output_objects.header = objects_data_.at(0)->header;
   output_objects.header.frame_id = node_param_.new_frame_id;
+
+  if (!has_valid_input) {
+    output_objects.header.stamp = this->now();
+    pub_objects_->publish(output_objects);
+    return;
+  }
+
+  output_objects.header.stamp = latest_stamp;
 
   constexpr double throttle_interval = 3.0;  // seconds
   const rclcpp::Time now = this->now();
@@ -96,8 +112,12 @@ void SimpleDetectedObjectMergerNode::onTimer()
   }
 
   for (size_t i = 0; i < input_topic_size_; i++) {
-    double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
-                       rclcpp::Time(objects_data_.at(0)->header.stamp).seconds();
+    if (!objects_data_.at(i)) {
+      continue;
+    }
+
+    double time_diff =
+      rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() - latest_stamp.seconds();
     if (std::abs(time_diff) < node_param_.timeout_threshold) {
       DetectedObjects::SharedPtr transformed_objects;
       if (node_param_.new_frame_id == objects_data_.at(i)->header.frame_id) {

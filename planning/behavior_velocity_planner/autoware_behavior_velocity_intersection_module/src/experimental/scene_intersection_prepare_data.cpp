@@ -18,11 +18,11 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for to_bg2d
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>  // for planning_utils::
 #include <autoware/interpolation/spline_interpolation_points_2d.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -34,6 +34,7 @@
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
 #include <list>
@@ -434,7 +435,8 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     const auto & p1 = centerline[(centerline.size() - 2)];
     const auto & p2 = centerline.back();
     return autoware_utils_geometry::calc_azimuth_angle(
-      lanelet::utils::conversion::toGeomMsgPt(p1), lanelet::utils::conversion::toGeomMsgPt(p2));
+      autoware::experimental::lanelet2_utils::to_ros(p1),
+      autoware::experimental::lanelet2_utils::to_ros(p2));
   };
   const double merging_angle_diff = autoware_utils_math::normalize_radian(
     compute_lane_end_azimuth(assigned_lanelet) - compute_lane_end_azimuth(first_attention_lane));
@@ -685,8 +687,9 @@ IntersectionLanelets IntersectionModule::generateObjectiveLanelets(
       if (inserted.second) detection_and_preceding_lanelets.push_back(ll);
       // get preceding lanelets without ego_lanelets
       // to prevent the detection area from including the ego lanes and its' preceding lanes.
-      const auto lanelet_sequences = lanelet::utils::query::getPrecedingLaneletSequences(
-        routing_graph_ptr, ll, length, ego_lanelets);
+      const auto lanelet_sequences =
+        autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
+          ll, routing_graph_ptr, length, ego_lanelets);
       for (const auto & ls : lanelet_sequences) {
         for (const auto & l : ls) {
           const auto & inner_inserted = detection_ids.insert(l.id());
@@ -854,7 +857,7 @@ std::vector<lanelet::ConstLineString3d> IntersectionModule::generateDetectionLan
   const double curvature_calculation_ds =
     planner_param_.occlusion.attention_lane_curvature_calculation_ds;
 
-  using lanelet::utils::getCenterlineWithOffset;
+  using autoware::experimental::lanelet2_utils::get_centerline_with_offset;
 
   // (0) remove curved
   lanelet::ConstLanelets detection_lanelets;
@@ -901,10 +904,10 @@ std::vector<lanelet::ConstLineString3d> IntersectionModule::generateDetectionLan
     for (int i = 0; i < static_cast<int>(width / resolution); ++i) {
       const double offset = resolution * i - width / 2;
       detection_divisions.push_back(
-        getCenterlineWithOffset(merged_lanelet, offset, resolution).invert());
+        get_centerline_with_offset(merged_lanelet, offset, resolution).invert());
     }
     detection_divisions.push_back(
-      getCenterlineWithOffset(merged_lanelet, width / 2, resolution).invert());
+      get_centerline_with_offset(merged_lanelet, width / 2, resolution).invert());
   }
   return detection_divisions;
 }

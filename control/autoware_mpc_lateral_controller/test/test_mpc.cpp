@@ -29,12 +29,7 @@
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-
-#ifdef ROS_DISTRO_GALACTIC
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#else
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#endif
 
 #include <memory>
 #include <string>

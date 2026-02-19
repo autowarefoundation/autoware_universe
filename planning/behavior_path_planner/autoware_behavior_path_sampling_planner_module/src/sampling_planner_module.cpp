@@ -14,6 +14,8 @@
 
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_module.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
+
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -595,8 +597,16 @@ BehaviorModuleOutput SamplingPlannerModule::plan()
 
   soft_constraints_input.ego_arc = lanelet::utils::getArcCoordinates(current_lanes, ego_pose);
   soft_constraints_input.goal_arc = lanelet::utils::getArcCoordinates(current_lanes, goal_pose);
-  lanelet::ConstLanelet closest_lanelet_to_goal;
-  lanelet::utils::query::getClosestLanelet(current_lanes, goal_pose, &closest_lanelet_to_goal);
+  const auto closest_lanelet_to_goal_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(current_lanes, goal_pose);
+
+  if (!closest_lanelet_to_goal_opt) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("behavior_path_planner").get_child("utils"),
+      "failed to find closest lanelet to goal!!!");
+    return getPreviousModuleOutput();
+  }
+  const auto & closest_lanelet_to_goal = closest_lanelet_to_goal_opt.value();
   soft_constraints_input.closest_lanelets_to_goal = {closest_lanelet_to_goal};
 
   debug_data_.footprints.clear();
@@ -789,8 +799,8 @@ void pushUniqueVector(T & base_vector, const T & additional_vector)
 bool SamplingPlannerModule::isEndPointsConnected(
   const lanelet::ConstLanelet & left_lane, const lanelet::ConstLanelet & right_lane) const
 {
-  const auto & left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
-  const auto & right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
+  const auto left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
+  const auto right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
 
   constexpr double epsilon = 1e-5;
   return (right_back_point_2d - left_back_point_2d).norm() < epsilon;
