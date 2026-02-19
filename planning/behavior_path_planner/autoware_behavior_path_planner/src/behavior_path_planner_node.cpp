@@ -353,6 +353,12 @@ void BehaviorPathPlannerNode::run()
 
   const auto data_ready_status = isDataReady(stamp);
   if (data_ready_status == DataReadyStatus::NOT_RECEIVED) {
+    /*
+     * NOTE:
+     * To preserve the existing logic of the run() callback, 
+     * the run() callback will return early when mandatory data not received.
+     * There is controversy about the behavior when data is timed out. It will be disscussed in the future.
+     */
     diagnostics_message_timeout_->publish(stamp);
     return;
   }
