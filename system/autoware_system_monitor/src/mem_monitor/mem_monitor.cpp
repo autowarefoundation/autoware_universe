@@ -34,11 +34,22 @@ namespace bp = boost::process;
 MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
 : Node("mem_monitor", options),
   updater_(this),
-  error_available_size_(declare_parameter<int>("available_size", 1024) * 1024 * 1024),
-  warning_available_size_()
+  error_available_size_(
+    declare_parameter<int>(
+      "available_size", 1024,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Memory available size to generate error [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024),
+  warning_available_size_(0)
 {
   // Define warning_available_size_
-  int warning_margin = declare_parameter<int>("warning_margin", 0) * 1024 * 1024;
+  int warning_margin = declare_parameter<int>(
+                         "warning_margin", 0,
+                         rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+                           "Warning margin with error threshold [MiB] to generate Warn [MiB]. Cannot be changed after "
+                           "initialization.")) *
+                       1024 * 1024;
   if (warning_margin < 0) {
     warning_margin = 0;
   }
@@ -153,7 +164,8 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       stat.add(fmt::format("{} buff/cache", list[0]), toHumanReadable(list[5]));
       stat.add(fmt::format("{} available", list[0]), toHumanReadable(list[6]));
     } else {
-      // Do nothing for swap and total
+      // Swap (index 2) and Total (index 3) do not have their specific entry.
+      // So do nothing here.
     }
     ++index;
   }
