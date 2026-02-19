@@ -53,6 +53,6 @@ bool PullOutPlannerBase::isPullOutPathCollided(
   return utils::has_collision_between_shifted_path_footprints_and_objects(
     collision_check_section_path.value(), vehicle_footprint_, pull_out_lane_stop_objects,
     collision_check_margin_, parameters_.th_stopped_velocity, shift_length,
-    parameters_.th_rejected_shift_length);
+    parameters_.minimum_shift_length);
 };
 }  // namespace autoware::behavior_path_planner

@@ -1457,7 +1457,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
 
     const double shift_length =
       std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
-    if (shift_length < parameters_.th_rejected_shift_length) {
+    if (shift_length < parameters_.minimum_shift_length) {
       RCLCPP_DEBUG(
         rclcpp::get_logger("ClothoidPullOut"),
         "Shift length too short %.2f m. Continuing to next candidate.", shift_length);
