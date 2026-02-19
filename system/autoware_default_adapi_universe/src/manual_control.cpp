@@ -118,18 +118,11 @@ void ManualControlNode::on_select_mode(
       res->status.success = true;
       break;
     case ManualControlMode::ACCELERATION:
-      disable_all_commands();
-      // TODO(isamu-takagi): Uncomment when supporting.
-      // enable_common_commands();
-      // enable_acceleration_commands();
-      update_mode_status(ManualControlMode::DISABLED);
-      res->status.success = false;
-      res->status.message = "The selected control mode is not supported.";
-      break;
     case ManualControlMode::VELOCITY:
       disable_all_commands();
       // TODO(isamu-takagi): Uncomment when supporting.
       // enable_common_commands();
+      // enable_acceleration_commands();
       // enable_velocity_commands();
       update_mode_status(ManualControlMode::DISABLED);
       res->status.success = false;
