@@ -161,6 +161,11 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
   }
 
   {
+    const std::string ns = "avoidance.target_filtering.avoidance_for_close_vehicle.";
+    update_param<std::string>(parameters, ns + "policy", p->policy_close_distance_avoidance);
+  }
+
+  {
     const std::string ns = "avoidance.target_filtering.intersection.";
     update_param<double>(parameters, ns + "yaw_deviation", p->object_check_yaw_deviation);
   }

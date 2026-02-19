@@ -184,6 +184,16 @@ private:
   void set_up_params();
 
   /**
+   * @brief Load TensorRT model and normalization statistics.
+   *
+   * Updates the normalization_map_ and tensorrt_inference_ member variables.
+   *
+   * @throws std::runtime_error if args_path or model_path are invalid, if the
+   *         model version is incompatible, or if TensorRT engine setup fails.
+   */
+  void load_model();
+
+  /**
    * @brief Timer callback for periodic processing and publishing.
    */
   void on_timer();

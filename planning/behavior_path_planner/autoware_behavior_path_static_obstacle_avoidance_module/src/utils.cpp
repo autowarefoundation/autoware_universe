@@ -24,6 +24,7 @@
 #include <Eigen/Dense>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
