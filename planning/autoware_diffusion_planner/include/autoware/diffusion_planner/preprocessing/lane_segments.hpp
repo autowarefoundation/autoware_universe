@@ -120,7 +120,7 @@ public:
    *         empty (traffic_light_group_id=0, elements empty) if no traffic light on route.
    */
   autoware_perception_msgs::msg::TrafficLightGroup get_first_traffic_light_on_route(
-    const LaneletRoute & route, double center_x, double center_y, double center_z,
+    const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const;
 
   /**

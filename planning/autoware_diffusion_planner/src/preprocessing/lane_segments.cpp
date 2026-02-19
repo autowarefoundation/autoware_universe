@@ -125,8 +125,6 @@ LaneSegmentContext::get_first_traffic_light_on_route(
 {
   autoware_perception_msgs::msg::TrafficLightGroup result;
   result.traffic_light_group_id = 0;
-  result.elements.clear();
-  result.predictions.clear();
 
   const std::vector<int64_t> segment_indices =
     select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
