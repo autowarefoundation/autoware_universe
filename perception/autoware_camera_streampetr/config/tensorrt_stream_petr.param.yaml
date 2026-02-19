@@ -9,7 +9,7 @@
       input_image_height: 480
       input_image_width: 640
       num_proposals: 5400
-      rois_number: 6
+      rois_number: 5
     post_process_params: # These are post-processing parameters to improve the predictions.
       confidence_threshold: [0.36, 0.39, 0.38, 0.41, 0.43]  # Per-class thresholds: [CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN]
       circle_nms_dist_threshold: 0.0   # turn off circle NMS by setting 0.0, otherwise set to around 0.5
