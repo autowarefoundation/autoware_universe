@@ -1568,6 +1568,10 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
   }
 
   const auto shift_line = avoid_data_.new_shift_line.back();
+  bool is_close_distance_avoidance = shift_line.object.info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+  if (is_close_distance_avoidance) {
+    return parameters_->policy_close_distance_avoidance == "manual";
+  }
   if (is_return_shift(
         shift_line.start_shift_length, shift_line.end_shift_length,
         parameters_->lateral_small_shift_threshold)) {
@@ -1952,6 +1956,12 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
   }
 
   if (helper_->isShifted()) {
+    return;
+  }
+
+  if (data.stop_target_object.value().info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE) {
+    utils::static_obstacle_avoidance::insertDecelPoint(
+      getEgoPosition(), 0.0, 0.0, shifted_path.path, stop_pose_);
     return;
   }
 
