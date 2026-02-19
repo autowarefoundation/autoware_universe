@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>autoware_radar_objects_adapter - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#autoware_radar_objects_adapter" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              autoware_radar_objects_adapter
             
           </span>
         </div>
@@ -15968,7 +15968,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_pointcloud_preprocessor
   
 
     
@@ -16024,7 +16024,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_voxel_grid_downsample_filter
   
 
     
@@ -22871,6 +22871,75 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#radarobjectsadapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RadarObjectsAdapter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RadarObjectsAdapter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parameter-classification_remap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameter: classification_remap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22889,27 +22958,168 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>sensing/autoware_radar_objects_adapter/README.md</code></p>
-<p><em>KeyError</em>: 'description'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 37, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
-    params.extend(extract_parameter_info(v["properties"], k + "."))
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
-    param["Description"] = v["description"]
-KeyError: 'description'
-</code></pre></div></div>
+<div><h1 id="autoware_radar_objects_adapter">autoware_radar_objects_adapter<a class="headerlink" href="#autoware_radar_objects_adapter" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>This package converts <code>autoware_sensing_msgs::msg::RadarObjects</code> into <code>autoware_perception_msgs::msg::DetectedObjects</code>, acting as a simple integration of radars into the perception pipeline.</p>
+<h2 id="radarobjectsadapter">RadarObjectsAdapter<a class="headerlink" href="#radarobjectsadapter" title="Permanent link">#</a></h2>
+<p>A node that converts radar objects from the sensing definition into a perception friendly format with no filtering involved.</p>
+<h3 id="parameter-classification_remap">Parameter: classification_remap<a class="headerlink" href="#parameter-classification_remap" title="Permanent link">#</a></h3>
+<p>This parameter allows remapping of classification labels from <code>autoware_sensing_msgs::msg::RadarClassification</code> to <code>autoware_perception_msgs::msg::ObjectClassification</code>. It should be provided as a flat list of strings, where each pair of strings represents an input label and the corresponding output label.</p>
+<p>For example, the current default configuration remaps <code>MOTORCYCLE</code> and <code>BICYCLE</code> from radar classification to <code>CAR</code> in the perception classification, while keeping other labels unchanged.</p>
+<p><strong>Note</strong>: If multiple radar labels are remapped to the same perception label, multiple probabilities may appear for that label.
+This does not violate any logic in Autoware but may be worth monitoring.</p>
+<h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
+<h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~/input/objects</td>
+<td>autoware_sensing_msgs::msg::RadarObjects</td>
+<td>Input radar objects as defined in sensing.</td>
+</tr>
+<tr>
+<td>~/input/radar_info</td>
+<td>autoware_sensing_msgs::msg::RadarInfo</td>
+<td>Input radar info.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~/output/objects</td>
+<td>autoware_perception_msgs::msg::DetectedObjects</td>
+<td>Output radar objects in the perception format.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default_position_z</td>
+<td>float</td>
+<td>The default z-coordinate in meters of the position of radar objects in the case the radar does not provide it.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>default_velocity_z</td>
+<td>float</td>
+<td>The default z-coordinate in meters per second of the velocity of radar objects in the case the radar does not provide it.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>default_acceleration_z</td>
+<td>float</td>
+<td>The default z-coordinate in meters per squared second of the acceleration of radar objects in the case the radar does not provide it.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>default_size_x</td>
+<td>float</td>
+<td>The default x-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>default_size_y</td>
+<td>float</td>
+<td>The default y-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>default_size_z</td>
+<td>float</td>
+<td>The default z-coordinate in meters of the size of radar objects in the case the radar does not provide it.</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.UNKNOWN</td>
+<td>string</td>
+<td>Radar class to map to UNKNOWN label.</td>
+<td>UNKNOWN</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.CAR</td>
+<td>string</td>
+<td>Radar class to map to CAR label.</td>
+<td>CAR</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.TRUCK</td>
+<td>string</td>
+<td>Radar class to map to TRUCK label.</td>
+<td>TRUCK</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.MOTORCYCLE</td>
+<td>string</td>
+<td>Radar tends to misclassify far cars as MOTORCYCLE; default=CAR</td>
+<td>CAR</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.BICYCLE</td>
+<td>string</td>
+<td>Radar tends to misclassify far cars as BICYCLE; default=CAR</td>
+<td>CAR</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.PEDESTRIAN</td>
+<td>string</td>
+<td>Radar class to map to PEDESTRIAN label.</td>
+<td>PEDESTRIAN</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.ANIMAL</td>
+<td>string</td>
+<td>Radar class to map to ANIMAL label.</td>
+<td>ANIMAL</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>classification_remap.HAZARD</td>
+<td>string</td>
+<td>HAZARD is not a valid Perception label; fallback=UNKNOWN</td>
+<td>UNKNOWN</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table></div>
 
 
 

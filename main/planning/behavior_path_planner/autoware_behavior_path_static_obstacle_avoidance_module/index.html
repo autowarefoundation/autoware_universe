@@ -15972,7 +15972,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_pointcloud_preprocessor
   
 
     
@@ -16028,7 +16028,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_voxel_grid_downsample_filter
   
 
     
@@ -24920,6 +24920,13 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>string</td>
 <td>Ego behavior policy for adjacent lane stop vehicle.</td>
 <td>auto</td>
+<td>['auto', 'manual', 'ignore']</td>
+</tr>
+<tr>
+<td>avoidance_for_close_vehicle.policy</td>
+<td>string</td>
+<td>Ego behavior policy for close vehicle (stopped ego with insufficient avoidance distance). 'auto': avoid automatically in RTC AUTO mode. 'manual': generate candidate path and wait for operator approval. 'ignore': never avoid.</td>
+<td>ignore</td>
 <td>['auto', 'manual', 'ignore']</td>
 </tr>
 <tr>

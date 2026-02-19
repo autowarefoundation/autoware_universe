@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>autoware_radar_tracks_noise_filter - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#autoware_radar_tracks_noise_filter" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              autoware_radar_tracks_noise_filter
             
           </span>
         </div>
@@ -15968,7 +15968,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_pointcloud_preprocessor
   
 
     
@@ -16024,7 +16024,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    cuda_voxel_grid_downsample_filter
   
 
     
@@ -22871,6 +22871,58 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22889,9 +22941,78 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>sensing/autoware_radar_tracks_noise_filter/README.md</code></p>
-<p><em>FileNotFoundError</em>: [Errno 2] No such file or directory: 'sensing/autoware_radar_tracks_noise_filter/schema/</p></div>
+<div><h1 id="autoware_radar_tracks_noise_filter">autoware_radar_tracks_noise_filter<a class="headerlink" href="#autoware_radar_tracks_noise_filter" title="Permanent link">#</a></h1>
+<p>This package contains a radar object filter module for <code>radar_msgs/msg/RadarTrack</code>.
+This package can filter noise objects in RadarTracks.</p>
+<h2 id="algorithm">Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">#</a></h2>
+<p>The core algorithm of this package is <code>RadarTrackCrossingNoiseFilterNode::isNoise()</code> function.
+See the function and the parameters for details.</p>
+<ul>
+<li>Y-axis threshold</li>
+</ul>
+<p>Radar can detect x-axis velocity as doppler velocity, but cannot detect y-axis velocity.
+Some radar can estimate y-axis velocity inside the device, but it sometimes lack precision.
+In y-axis threshold filter, if y-axis velocity of RadarTrack is more than <code>velocity_y_threshold</code>, it treats as noise objects.</p>
+<h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/input/tracks</code></td>
+<td>radar_msgs/msg/RadarTracks.msg</td>
+<td>3D detected tracks.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/output/noise_tracks</code></td>
+<td>radar_msgs/msg/RadarTracks.msg</td>
+<td>Noise objects</td>
+</tr>
+<tr>
+<td><code>~/output/filtered_tracks</code></td>
+<td>radar_msgs/msg/RadarTracks.msg</td>
+<td>Filtered objects</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>velocity_y_threshold</td>
+<td>float</td>
+<td>If the y-axis velocity of a RadarTrack exceeds <code>velocity_y_threshold</code>, it is treated as a noise object.</td>
+<td>7</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
