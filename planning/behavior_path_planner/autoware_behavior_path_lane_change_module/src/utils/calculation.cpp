@@ -16,6 +16,7 @@
 #include <autoware/behavior_path_lane_change_module/utils/calculation.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 

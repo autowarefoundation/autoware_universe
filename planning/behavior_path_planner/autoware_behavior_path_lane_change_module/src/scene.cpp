@@ -29,6 +29,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_frenet_planner/structures.hpp>
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -774,8 +775,8 @@ lanelet::ConstLanelets NormalLaneChange::get_lane_change_lanes(
   }
 
   const auto forward_length = std::invoke([&]() {
-    const auto front_pose =
-      utils::to_geom_msg_pose(lane_change_lane->centerline().front(), *lane_change_lane);
+    const auto front_pose = utils::to_geom_msg_pose(
+      lane_change_lane->centerline().front().basicPoint(), *lane_change_lane);
     const auto signed_distance = utils::getSignedDistance(front_pose, getEgoPose(), current_lanes);
     const auto forward_path_length = planner_data_->parameters.forward_path_length;
     return forward_path_length + std::max(signed_distance, 0.0);
