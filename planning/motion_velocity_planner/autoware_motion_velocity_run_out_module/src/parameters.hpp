@@ -132,6 +132,12 @@ struct Parameters
   // object parameters
   std::vector<std::string> objects_target_labels;
   std::vector<ObjectParameters> object_parameters_per_label;
+  double
+    objects_uncertain_mode_detection_duration_threshold;  // [s] conservative mode is used towards
+                                                          // objects that are detected for a
+                                                          // duration shorter than this threshold
+  double objects_uncertain_mode_min_velocity;  // [m/s] minimum velocity used along the predicted
+                                               // path of an object when using the uncertain mode
 
   struct
   {
@@ -214,6 +220,10 @@ struct Parameters
       *std::max_element(all_object_labels.begin(), all_object_labels.end()) + 1);
     objects_target_labels =
       getOrDeclareParameter<std::vector<std::string>>(node, ns + ".objects.target_labels");
+    objects_uncertain_mode_detection_duration_threshold = getOrDeclareParameter<double>(
+      node, ns + ".objects.uncertain_mode.detection_duration_threshold");
+    objects_uncertain_mode_min_velocity =
+      getOrDeclareParameter<double>(node, ns + ".objects.uncertain_mode.minimum_velocity");
     for (const auto label : all_object_labels) {
       object_parameters_per_label[label].ignore_if_on_ego_trajectory =
         get_object_parameter<bool>(node, ns, label, ".ignore.if_on_ego_trajectory");
