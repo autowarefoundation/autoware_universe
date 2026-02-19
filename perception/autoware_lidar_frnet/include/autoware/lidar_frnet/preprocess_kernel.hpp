@@ -47,15 +47,21 @@ class PreprocessCuda
 public:
   PreprocessCuda(const utils::NetworkParams & params, cudaStream_t stream);
 
+  /// @brief Set per-frame transform sensor → reference (12 floats: row-major 3x3 R then tx,ty,tz).
+  /// Call before projectPoints_launch when crop box is enabled.
+  void setCropBoxTransform(const float * T_sensor_to_ref_12);
+
   void generateUniqueCoors(
     const uint32_t num_points, const int64_t * coors, const int64_t * coors_keys,
     uint32_t & output_num_unique_coors, int64_t * output_voxel_coors, int64_t * output_inverse_map);
 
   /// @brief Project points to 2D frustum coordinates (dispatches to templated implementation)
+  /// @param output_cloud_compact Optional buffer for compact copy of input points (for filtered
+  /// output); can be nullptr
   cudaError_t projectPoints_launch(
     const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
     float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-    uint32_t * output_proj_idxs, uint64_t * output_proj_2d);
+    uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact = nullptr);
 
   cudaError_t interpolatePoints_launch(
     uint32_t * proj_idxs, uint64_t * proj_2d, uint32_t * output_num_points, float * output_points,
@@ -67,7 +73,7 @@ private:
   cudaError_t projectPoints_launch_impl(
     const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
     float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-    uint32_t * output_proj_idxs, uint64_t * output_proj_2d);
+    uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact);
 
   const utils::Dims2d interpolation_;
   cudaStream_t stream_;

@@ -16,6 +16,7 @@
 #define AUTOWARE__LIDAR_FRNET__UTILS_HPP_
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -145,14 +146,17 @@ struct NetworkParams
     const std::vector<std::string> & class_names, const std::vector<int64_t> & num_points,
     const std::vector<int64_t> & num_unique_coors, const double fov_up_deg,
     const double fov_down_deg, const int64_t frustum_width, const int64_t frustum_height,
-    const int64_t interpolation_width, const int64_t interpolation_height)
+    const int64_t interpolation_width, const int64_t interpolation_height,
+    bool crop_box_enabled = false, std::array<float, 6> crop_box_bounds = {})
   : class_names(class_names),
     num_points_profile(num_points),
     num_unique_coors_profile(num_unique_coors),
     num_classes(class_names.size()),
     fov(fov_up_deg, fov_down_deg),
     frustum(frustum_width, frustum_height),
-    interpolation(interpolation_width, interpolation_height)
+    interpolation(interpolation_width, interpolation_height),
+    crop_box_enabled(crop_box_enabled),
+    crop_box_bounds(crop_box_bounds)
   {
   }
   const std::vector<std::string> class_names;
@@ -162,6 +166,8 @@ struct NetworkParams
   const FieldOfView fov;
   const Dims2d frustum;
   const Dims2d interpolation;
+  const bool crop_box_enabled;
+  const std::array<float, 6> crop_box_bounds;  // [min_x, min_y, min_z, max_x, max_y, max_z]
 };
 
 struct DiagnosticParams

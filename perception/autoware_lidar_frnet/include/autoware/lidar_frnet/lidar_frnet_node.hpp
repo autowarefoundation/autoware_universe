@@ -30,10 +30,14 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/buffer.hpp>
 
+#include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <visualization_msgs/msg/marker.hpp>
 
 #include <tf2_ros/transform_listener.h>
 
+#include <array>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -48,6 +52,9 @@ public:
 
   void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
+
+  /** \brief Debug: publish ego crop box as polygon/marker when subscribed; only if crop box enabled */
+  void publishEgoCropBoxDebug();
 
 private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
@@ -79,16 +86,18 @@ private:
   std::optional<double> last_processing_time_ms_;
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
 
-  // TF and crop box gating
+  // TF for per-frame sensor → reference when crop box enabled
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-  rclcpp::TimerBase::SharedPtr tf_timer_;
-  std::atomic<bool> tf_ready_;
   std::optional<std::string> sensor_frame_id_;
   std::string crop_reference_frame_;
   std::array<float, 6> crop_box_bounds_;
-  std::array<float, 6> crop_box_bounds_sensor_;
   bool crop_box_enabled_;
+  size_t max_output_points_{0};  // max points for seg/viz allocation (num_points profile max)
+
+  // Debug: ego crop box preview (only published when subscribed)
+  rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr ego_crop_box_polygon_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr ego_crop_box_marker_pub_;
 };
 
 }  // namespace autoware::lidar_frnet

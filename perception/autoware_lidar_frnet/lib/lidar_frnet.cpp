@@ -106,7 +106,8 @@ bool LidarFRNet::process(
   cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
   cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
   cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
-  std::unordered_map<std::string, double> & proc_timing)
+  std::unordered_map<std::string, double> & proc_timing,
+  const std::array<float, 12> * crop_sensor_to_ref)
 {
   stop_watch_ptr_->toc("processing/inner", true);
   std::call_once(init_cloud_, [this, &cloud_in]() {
@@ -142,6 +143,10 @@ bool LidarFRNet::process(
     cudaMemcpyDeviceToDevice, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
+  if (crop_sensor_to_ref != nullptr) {
+    preprocess_ptr_->setCropBoxTransform(crop_sensor_to_ref->data());
+  }
+
   if (!preprocess(input_num_points)) {
     RCLCPP_ERROR(logger_, "Preprocess failed.");
     return false;
@@ -158,7 +163,9 @@ bool LidarFRNet::process(
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postprocess(input_num_points, active_comm, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
+  if (!postprocess(
+        num_points_, num_points_after_projection_, active_comm, cloud_seg_out, cloud_viz_out,
+        cloud_filtered)) {
     RCLCPP_ERROR(logger_, "Postprocess failed.");
     return false;
   }
@@ -187,7 +194,12 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(
     cloud_in_d_.get(), input_num_points, input_format_, num_points_d_.get(), points_d_.get(),
-    coors_d_.get(), coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get()));
+    coors_d_.get(), coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get(),
+    cloud_compact_d_.get()));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  CHECK_CUDA_ERROR(
+    cudaMemcpy(&num_points_after_projection_, num_points_d_.get(), sizeof(uint32_t),
+               cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(preprocess_ptr_->interpolatePoints_launch(
     proj_idxs_d_.get(), proj_2d_d_.get(), num_points_d_.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d_.get()));
@@ -196,6 +208,7 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(
     cudaMemcpy(&num_points, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
+  num_points_ = num_points;
 
   if (
     num_points < network_params_.num_points_profile.min ||
@@ -241,8 +254,8 @@ bool LidarFRNet::inference()
 }
 
 bool LidarFRNet::postprocess(
-  const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-  cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+  const uint32_t num_points, const uint32_t num_points_after_projection,
+  const utils::ActiveComm & active_comm, cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
   cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
   cuda_blackboard::CudaPointCloud2 & cloud_filtered)
 {
@@ -255,22 +268,29 @@ bool LidarFRNet::postprocess(
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(postprocess_ptr_->fillCloud_launch(
-    cloud_in_d_.get(), seg_logit_d_.get(), input_num_points, input_format_, active_comm,
-    num_points_filtered_d_.get(), seg_data_d_.get(), viz_data_d_.get(), cloud_filtered_d_.get()));
+    points_d_.get(), cloud_compact_d_.get(), num_points_after_projection, seg_logit_d_.get(),
+    num_points, input_format_, active_comm, num_points_filtered_d_.get(), seg_data_d_.get(),
+    viz_data_d_.get(), cloud_filtered_d_.get()));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (active_comm.seg) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       cloud_seg_out.data.get(), seg_data_d_.get(),
-      sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+      sizeof(OutputSegmentationPointType) * num_points, cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_seg_out.width = num_points;
+    cloud_seg_out.height = 1;
+    cloud_seg_out.row_step = num_points * cloud_seg_out.point_step;
   }
 
   if (active_comm.viz) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       cloud_viz_out.data.get(), viz_data_d_.get(),
-      sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+      sizeof(OutputVisualizationPointType) * num_points, cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_viz_out.width = num_points;
+    cloud_viz_out.height = 1;
+    cloud_viz_out.row_step = num_points * cloud_viz_out.point_step;
   }
 
   if (active_comm.filtered) {
@@ -295,6 +315,7 @@ void LidarFRNet::initTensors()
   const auto max_input_buffer_size = network_params_.num_points_profile.max * max_point_step;
 
   cloud_in_d_ = cuda_utils::make_unique<std::uint8_t[]>(max_input_buffer_size);
+  cloud_compact_d_ = cuda_utils::make_unique<std::uint8_t[]>(max_input_buffer_size);
   coors_keys_d_ = cuda_utils::make_unique<int64_t[]>(network_params_.num_points_profile.max);
   num_points_d_ = cuda_utils::make_unique<uint32_t[]>(1);
   proj_idxs_d_ = cuda_utils::make_unique<uint32_t[]>(
