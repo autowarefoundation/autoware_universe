@@ -1,0 +1,24 @@
+/**:
+  ros__parameters:
+    map_partial_load: true
+    map_fetch_range: 10000.0 # in [m]
+    map_refetch_threshold: 0.9
+
+    preprocess_params:
+      voxel_size_xy: 0.25 # in [m]
+      voxel_size_z: 4.0 # in [m]
+      pcd_x_range_min: -50.0 # in [m]
+      pcd_x_range_max: 50.0 # in [m]
+      pcd_y_range_min: -50.0 # in [m]
+      pcd_y_range_max: 50.0 # in [m]
+      pcd_z_range_min: -3.0 # in [m]
+      pcd_z_range_max: 25.0 # in [m]
+      map_downsample_resolution: 2.0 # in [m]
+
+    # allow delay between the input pointcloud and odometry topics
+    input_topic_delay_tolerance_ms: 300 # in [ms]
+
+    use_soft_bayesian_update: false
+
+    debug:
+      publish_input_points: false
