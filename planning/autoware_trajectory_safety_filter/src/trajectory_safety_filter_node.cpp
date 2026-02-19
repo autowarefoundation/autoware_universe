@@ -98,15 +98,15 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
     }
 
     // Apply each filter to the trajectory
-    bool is_safe = true;
+    bool is_feasible = true;
     for (const auto & plugin : plugins_) {
       if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
-        is_safe = false;
+        is_feasible = false;
         RCLCPP_WARN(get_logger(), "Not feasible: %s", res.error().c_str());
       }
     }
 
-    if (is_safe) filtered_msg->candidate_trajectories.push_back(trajectory);
+    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
   }
 
   // Also filter generator_info to match kept trajectories
