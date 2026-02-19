@@ -331,7 +331,7 @@ public:
 
   bool isEnoughPrepareDistance(const double prepare_distance) const
   {
-    if (isVehicleStopped()) {
+    if (isVehicleStopped() && parameters_->policy_close_distance_avoidance != "ignore") {
       return true;  // too slow to prepare
     }
 
@@ -387,7 +387,10 @@ public:
     }
 
     if (object.info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE) {
-      return std::make_pair(false, true);
+      if (parameters_->policy_close_distance_avoidance == "manual") {
+        return std::make_pair(false, true);
+      }
+      return std::make_pair(true, false);
     }
 
     // if the object is NOT ambiguous, this module doesn't wait operator approval if RTC is running

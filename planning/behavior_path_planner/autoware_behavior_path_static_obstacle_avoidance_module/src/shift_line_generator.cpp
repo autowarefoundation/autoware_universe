@@ -180,7 +180,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     // prepare distance is not enough. unavoidable.
     if (avoidance_distance < 1e-3) {
       object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
-      if (helper_->isVehicleStopped()) {
+      if (helper_->isVehicleStopped() && parameters_->policy_close_distance_avoidance != "ignore") {
         object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
         return std::make_pair(desire_shift_length, object.longitudinal);
       }
@@ -207,7 +207,8 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     if (!isBestEffort(parameters_->policy_deceleration)) {
       if (avoidance_distance < helper_->getMinAvoidanceDistance(avoiding_shift) + LON_DIST_BUFFER) {
         object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
-        if (helper_->isVehicleStopped()) {
+        if (
+          helper_->isVehicleStopped() && parameters_->policy_close_distance_avoidance != "ignore") {
           object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
           return std::make_pair(desire_shift_length, object.longitudinal);
         }
@@ -224,7 +225,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
 
     if (std::abs(feasible_relative_shift_length) < parameters_->lateral_execution_threshold) {
       object.info = ObjectInfo::INSUFFICIENT_LONGITUDINAL_DISTANCE;
-      if (helper_->isVehicleStopped()) {
+      if (helper_->isVehicleStopped() && parameters_->policy_close_distance_avoidance != "ignore") {
         object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
         return std::make_pair(desire_shift_length, object.longitudinal);
       }
@@ -238,7 +239,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
     if (
       avoidance_distance <
       helper_->getMinAvoidanceDistance(feasible_shift_length) + LON_DIST_BUFFER) {
-      if (helper_->isVehicleStopped()) {
+      if (helper_->isVehicleStopped() && parameters_->policy_close_distance_avoidance != "ignore") {
         object.info = ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
         return std::make_pair(desire_shift_length, object.longitudinal);
       }
