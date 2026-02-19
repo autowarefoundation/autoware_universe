@@ -100,8 +100,9 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
     // Apply each filter to the trajectory
     bool is_safe = true;
     for (const auto & plugin : plugins_) {
-      if (auto err = plugin->validate(trajectory.points, context)) {
+      if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
         is_safe = false;
+        RCLCPP_WARN(get_logger(), "Not feasible: %s", res.error().c_str());
       }
     }
 

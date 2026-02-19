@@ -44,7 +44,7 @@ class OutOfLaneFilter : public SafetyFilterInterface
 public:
   OutOfLaneFilter();
 
-  std::optional<std::string> validate(
+  tl::expected<void, std::string> is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) final;
 
   void set_parameters(const std::unordered_map<std::string, std::any> & params) override;
