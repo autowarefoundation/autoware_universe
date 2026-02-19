@@ -52,12 +52,10 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
   using Label = autoware_perception_msgs::msg::ObjectClassification;
   const uint8_t label = getHighestProbLabel();
 
-  if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
-    bicycle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == Label::PEDESTRIAN) {
+  if (label == Label::PEDESTRIAN) {
     pedestrian_tracker_.getTrackedObject(time, object, to_publish);
   } else {
-    // If the label is others, use the bicycle tracker as a fallback
+    // Use the bicycle tracker for BICYCLE, MOTORCYCLE, and as a fallback for others
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
   }
   object.uuid = object_.uuid;
