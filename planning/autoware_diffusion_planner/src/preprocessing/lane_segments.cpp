@@ -118,7 +118,8 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   return selected_indices;
 }
 
-autoware_perception_msgs::msg::TrafficLightGroup LaneSegmentContext::get_first_traffic_light_on_route(
+autoware_perception_msgs::msg::TrafficLightGroup
+LaneSegmentContext::get_first_traffic_light_on_route(
   const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
   const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
 {

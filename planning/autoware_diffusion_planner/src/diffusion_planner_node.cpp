@@ -65,9 +65,8 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
   pub_turn_indicators_ =
     this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
-  pub_traffic_signal_ =
-    this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
-      "~/output/debug/traffic_signal", 1);
+  pub_traffic_signal_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
+    "~/output/debug/traffic_signal", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -450,7 +449,8 @@ InputDataMap DiffusionPlanner::create_input_data(const FrameContext & frame_cont
   return input_data_map;
 }
 
-void DiffusionPlanner::publish_first_traffic_light_on_route(const FrameContext & frame_context) const
+void DiffusionPlanner::publish_first_traffic_light_on_route(
+  const FrameContext & frame_context) const
 {
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x

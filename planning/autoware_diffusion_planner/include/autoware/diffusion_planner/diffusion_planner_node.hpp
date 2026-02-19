@@ -213,7 +213,7 @@ private:
   void publish_debug_markers(
     const InputDataMap & input_data_map, const Eigen::Matrix4d & ego_to_map_transform,
     const rclcpp::Time & timestamp) const;
-  
+
   /**
    * @brief Publish the first traffic light on the route (from ego forward) for debug.
    * @param frame_context Context of the current frame (ego pose).
