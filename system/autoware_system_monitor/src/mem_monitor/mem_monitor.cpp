@@ -44,12 +44,13 @@ MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
   warning_available_size_(0)
 {
   // Define warning_available_size_
-  int warning_margin = declare_parameter<int>(
-                         "warning_margin", 0,
-                         rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
-                           "Warning margin with error threshold [MiB] to generate Warn [MiB]. Cannot be changed after "
-                           "initialization.")) *
-                       1024 * 1024;
+  int warning_margin =
+    declare_parameter<int>(
+      "warning_margin", 0,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Warning margin with error threshold [MiB] to generate Warn [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024;
   if (warning_margin < 0) {
     warning_margin = 0;
   }
