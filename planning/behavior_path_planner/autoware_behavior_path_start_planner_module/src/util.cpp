@@ -269,4 +269,42 @@ void set_lane_ids_to_path_point(
   point.lane_ids = get_lane_ids_from_pose(point.point.pose, road_lanes, previous_lane_ids);
 }
 
+std::pair<double, double> calc_start_and_end_shift_length(
+  const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose)
+{
+  double start_shift_length =
+    lanelet::utils::getArcCoordinates(pull_out_lanes, start_pose).distance;
+  double finish_shift_length = lanelet::utils::getArcCoordinates(pull_out_lanes, end_pose).distance;
+  return {start_shift_length, finish_shift_length};
+}
+
+bool has_collision_between_shifted_path_footprints_and_objects(
+  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
+  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
+  const double shift_length, const double th_min_shift_length, const bool enable_back)
+{
+  if (shift_length < th_min_shift_length) {
+    return false;
+  }
+
+  const auto & pts = ego_path.points;
+  return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
+    const auto vehicle_footprint = autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(pt.point.pose));
+    const auto & objects = dynamic_objects.objects;
+
+    const auto check_shifted_path = [&](const auto & obj) {
+      const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
+      if (obj_speed < th_stopped_obj_vel && !enable_back) {
+        return false;
+      }
+      const auto obj_polygon = autoware_utils::to_polygon2d(obj);
+      const double distance = boost::geometry::distance(obj_polygon, vehicle_footprint);
+      return distance < margin;
+    };
+
+    return std::any_of(objects.cbegin(), objects.cend(), check_shifted_path);
+  });
+}
+
 }  // namespace autoware::behavior_path_planner::start_planner_utils
