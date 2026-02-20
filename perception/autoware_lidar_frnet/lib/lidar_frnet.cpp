@@ -39,12 +39,8 @@ namespace autoware::lidar_frnet
 
 LidarFRNet::LidarFRNet(
   const TrtCommonConfig & trt_config, const utils::NetworkParams & network_params,
-  const utils::PreprocessingParams & preprocessing_params,
   const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger)
-: logger_(logger),
-  network_params_(network_params),
-  preprocessing_params_(preprocessing_params),
-  postprocessing_params_(postprocessing_params)
+: logger_(logger), network_params_(network_params), postprocessing_params_(postprocessing_params)
 {
   auto profile_dims = std::make_unique<std::vector<ProfileDims>>(std::initializer_list<ProfileDims>{
     ProfileDims(
@@ -74,7 +70,7 @@ LidarFRNet::LidarFRNet(
   }
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  preprocess_ptr_ = std::make_unique<PreprocessCuda>(preprocessing_params, stream_);
+  preprocess_ptr_ = std::make_unique<PreprocessCuda>(network_params, stream_);
   postprocess_ptr_ = std::make_unique<PostprocessCuda>(postprocessing_params, stream_);
 
   initTensors();
@@ -83,18 +79,48 @@ LidarFRNet::LidarFRNet(
   stop_watch_ptr_->tic("processing/inner");
 }
 
+InputFormat LidarFRNet::detectInputFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
+{
+  const auto & fields = cloud.fields;
+  const auto num_fields = fields.size();
+
+  // Check from largest to smallest format, requiring exact field count match
+  if (num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
+    return InputFormat::XYZIRCAEDT;
+  }
+  if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
+    return InputFormat::XYZIRADRT;
+  }
+  if (num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields)) {
+    return InputFormat::XYZIRC;
+  }
+  if (num_fields == 4 && point_types::is_data_layout_compatible_with_point_xyzi(fields)) {
+    return InputFormat::XYZI;
+  }
+
+  return InputFormat::UNKNOWN;
+}
+
 bool LidarFRNet::process(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
   cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
   cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
   cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
-  std::unordered_map<std::string, double> & proc_timing)
+  std::unordered_map<std::string, double> & proc_timing,
+  const std::array<float, 12> * crop_sensor_to_ref)
 {
   stop_watch_ptr_->toc("processing/inner", true);
-  std::call_once(init_cloud_, [&cloud_in]() {
-    if (!point_types::is_data_layout_compatible_with_point_xyzirc(cloud_in->fields)) {
-      throw std::runtime_error("Unsupported point cloud type. Expected XYZIRC type.");
+  std::call_once(init_cloud_, [this, &cloud_in]() {
+    input_format_ = detectInputFormat(*cloud_in);
+    if (input_format_ == InputFormat::UNKNOWN) {
+      throw std::runtime_error(
+        "Unsupported point cloud type. Expected one of: XYZIRCAEDT (10 fields), "
+        "XYZIRADRT (9 fields), XYZIRC (6 fields), or XYZI (4 fields).");
     }
+    input_point_step_ = get_point_step(input_format_);
+    RCLCPP_INFO(
+      logger_, "Detected input format with %zu fields and point step %zu bytes",
+      get_num_fields(input_format_), input_point_step_);
   });
 
   const auto input_num_points = cloud_in->width * cloud_in->height;
@@ -110,11 +136,16 @@ bool LidarFRNet::process(
     return false;
   }
 
-  cuda_utils::clear_async(cloud_in_d_.get(), network_params_.num_points_profile.max, stream_);
+  const auto max_buffer_size = network_params_.num_points_profile.max * input_point_step_;
+  cuda_utils::clear_async(cloud_in_d_.get(), max_buffer_size, stream_);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_in_d_.get(), cloud_in->data.get(), sizeof(InputPointType) * input_num_points,
+    cloud_in_d_.get(), cloud_in->data.get(), input_point_step_ * input_num_points,
     cudaMemcpyDeviceToDevice, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  if (crop_sensor_to_ref != nullptr) {
+    preprocess_ptr_->setCropBoxTransform(crop_sensor_to_ref->data());
+  }
 
   if (!preprocess(input_num_points)) {
     RCLCPP_ERROR(logger_, "Preprocess failed.");
@@ -132,7 +163,9 @@ bool LidarFRNet::process(
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postprocess(input_num_points, active_comm, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
+  if (!postprocess(
+        num_points_, num_points_after_projection_, active_comm, cloud_seg_out, cloud_viz_out,
+        cloud_filtered)) {
     RCLCPP_ERROR(logger_, "Postprocess failed.");
     return false;
   }
@@ -148,11 +181,9 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   cuda_utils::clear_async(coors_keys_d_.get(), network_params_.num_points_profile.max, stream_);
   cuda_utils::clear_async(num_points_d_.get(), 1, stream_);
   cuda_utils::clear_async(
-    proj_idxs_d_.get(),
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h, stream_);
+    proj_idxs_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h, stream_);
   cuda_utils::clear_async(
-    proj_2d_d_.get(), preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h,
-    stream_);
+    proj_2d_d_.get(), network_params_.interpolation.w * network_params_.interpolation.h, stream_);
   cuda_utils::clear_async(points_d_.get(), network_params_.num_points_profile.max * 4, stream_);
   cuda_utils::clear_async(coors_d_.get(), network_params_.num_points_profile.max * 3, stream_);
   cuda_utils::clear_async(
@@ -162,8 +193,12 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(
-    cloud_in_d_.get(), input_num_points, num_points_d_.get(), points_d_.get(), coors_d_.get(),
-    coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get()));
+    cloud_in_d_.get(), input_num_points, input_format_, num_points_d_.get(), points_d_.get(),
+    coors_d_.get(), coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get(),
+    cloud_compact_d_.get()));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    &num_points_after_projection_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
   CHECK_CUDA_ERROR(preprocess_ptr_->interpolatePoints_launch(
     proj_idxs_d_.get(), proj_2d_d_.get(), num_points_d_.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d_.get()));
@@ -172,6 +207,7 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(
     cudaMemcpy(&num_points, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
+  num_points_ = num_points;
 
   if (
     num_points < network_params_.num_points_profile.min ||
@@ -217,35 +253,43 @@ bool LidarFRNet::inference()
 }
 
 bool LidarFRNet::postprocess(
-  const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-  cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+  const uint32_t num_points, const uint32_t num_points_after_projection,
+  const utils::ActiveComm & active_comm, cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
   cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
   cuda_blackboard::CudaPointCloud2 & cloud_filtered)
 {
   cuda_utils::clear_async(seg_data_d_.get(), network_params_.num_points_profile.max, stream_);
   cuda_utils::clear_async(viz_data_d_.get(), network_params_.num_points_profile.max, stream_);
-  cuda_utils::clear_async(cloud_filtered_d_.get(), network_params_.num_points_profile.max, stream_);
+  const auto max_filtered_buffer_size = network_params_.num_points_profile.max * input_point_step_;
+  cuda_utils::clear_async(cloud_filtered_d_.get(), max_filtered_buffer_size, stream_);
   cuda_utils::clear_async(num_points_filtered_d_.get(), 1, stream_);
   uint32_t num_points_filtered{0};
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(postprocess_ptr_->fillCloud_launch(
-    cloud_in_d_.get(), seg_logit_d_.get(), input_num_points, active_comm,
-    num_points_filtered_d_.get(), seg_data_d_.get(), viz_data_d_.get(), cloud_filtered_d_.get()));
+    points_d_.get(), cloud_compact_d_.get(), num_points_after_projection, seg_logit_d_.get(),
+    num_points, input_format_, active_comm, num_points_filtered_d_.get(), seg_data_d_.get(),
+    viz_data_d_.get(), cloud_filtered_d_.get()));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (active_comm.seg) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_seg_out.data.get(), seg_data_d_.get(),
-      sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+      cloud_seg_out.data.get(), seg_data_d_.get(), sizeof(OutputSegmentationPointType) * num_points,
+      cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_seg_out.width = num_points;
+    cloud_seg_out.height = 1;
+    cloud_seg_out.row_step = num_points * cloud_seg_out.point_step;
   }
 
   if (active_comm.viz) {
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       cloud_viz_out.data.get(), viz_data_d_.get(),
-      sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToDevice, stream_));
+      sizeof(OutputVisualizationPointType) * num_points, cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_viz_out.width = num_points;
+    cloud_viz_out.height = 1;
+    cloud_viz_out.row_step = num_points * cloud_viz_out.point_step;
   }
 
   if (active_comm.filtered) {
@@ -254,8 +298,8 @@ bool LidarFRNet::postprocess(
       stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      cloud_filtered.data.get(), cloud_filtered_d_.get(),
-      sizeof(InputPointType) * num_points_filtered, cudaMemcpyDeviceToDevice, stream_));
+      cloud_filtered.data.get(), cloud_filtered_d_.get(), input_point_step_ * num_points_filtered,
+      cudaMemcpyDeviceToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     cloud_filtered.width = num_points_filtered;
     cloud_filtered.row_step = num_points_filtered * cloud_filtered.point_step;
@@ -265,19 +309,23 @@ bool LidarFRNet::postprocess(
 
 void LidarFRNet::initTensors()
 {
-  cloud_in_d_ = cuda_utils::make_unique<InputPointType[]>(network_params_.num_points_profile.max);
+  // Use max size for largest supported point type (XYZIRCAEDT)
+  const auto max_point_step = sizeof(InputPointTypeXYZIRCAEDT);
+  const auto max_input_buffer_size = network_params_.num_points_profile.max * max_point_step;
+
+  cloud_in_d_ = cuda_utils::make_unique<std::uint8_t[]>(max_input_buffer_size);
+  cloud_compact_d_ = cuda_utils::make_unique<std::uint8_t[]>(max_input_buffer_size);
   coors_keys_d_ = cuda_utils::make_unique<int64_t[]>(network_params_.num_points_profile.max);
   num_points_d_ = cuda_utils::make_unique<uint32_t[]>(1);
   proj_idxs_d_ = cuda_utils::make_unique<uint32_t[]>(
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
+    network_params_.interpolation.w * network_params_.interpolation.h);
   proj_2d_d_ = cuda_utils::make_unique<uint64_t[]>(
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
+    network_params_.interpolation.w * network_params_.interpolation.h);
   seg_data_d_ =
     cuda_utils::make_unique<OutputSegmentationPointType[]>(network_params_.num_points_profile.max);
   viz_data_d_ =
     cuda_utils::make_unique<OutputVisualizationPointType[]>(network_params_.num_points_profile.max);
-  cloud_filtered_d_ =
-    cuda_utils::make_unique<InputPointType[]>(network_params_.num_points_profile.max);
+  cloud_filtered_d_ = cuda_utils::make_unique<std::uint8_t[]>(max_input_buffer_size);
   num_points_filtered_d_ = cuda_utils::make_unique<uint32_t[]>(1);
 
   points_d_ = cuda_utils::make_unique<float[]>(network_params_.num_points_profile.max * 4);

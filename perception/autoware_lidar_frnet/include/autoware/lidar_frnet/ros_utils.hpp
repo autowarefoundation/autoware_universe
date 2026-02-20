@@ -44,28 +44,27 @@ struct PointCloudLayout
  *
  * @param msg_in Input message
  * @param layout Layout for output message
+ * @param max_num_points Optional capacity (if > 0, allocates this many points; actual size set by
+ *        pipeline); when 0, uses msg_in.width * msg_in.height
  * @return std::unique_ptr<cuda_blackboard::CudaPointCloud2> Initialized message
  */
 inline std::unique_ptr<cuda_blackboard::CudaPointCloud2> generatePointCloudMessageFromInput(
-  const cuda_blackboard::CudaPointCloud2 & msg_in, const PointCloudLayout & layout)
+  const cuda_blackboard::CudaPointCloud2 & msg_in, const PointCloudLayout & layout,
+  size_t max_num_points = 0)
 {
   auto cloud_msg_ptr = std::make_unique<cuda_blackboard::CudaPointCloud2>();
 
-  // Allocate memory based on input message size
-  const auto num_points = msg_in.width * msg_in.height;
+  const auto input_num_points = msg_in.width * msg_in.height;
+  const auto num_points = max_num_points > 0 ? max_num_points : input_num_points;
   cloud_msg_ptr->data =
     cuda_blackboard::make_unique<std::uint8_t[]>(num_points * layout.point_step);
 
-  // Set metadata from layout
   cloud_msg_ptr->fields = layout.fields;
   cloud_msg_ptr->point_step = layout.point_step;
-
-  // Set metadata from input message
   cloud_msg_ptr->header = msg_in.header;
-  cloud_msg_ptr->height = msg_in.height;
-  cloud_msg_ptr->width = msg_in.width;
+  cloud_msg_ptr->height = max_num_points > 0 ? 1 : msg_in.height;
+  cloud_msg_ptr->width = max_num_points > 0 ? static_cast<uint32_t>(max_num_points) : msg_in.width;
   cloud_msg_ptr->row_step = layout.point_step * num_points;
-
   cloud_msg_ptr->is_bigendian = msg_in.is_bigendian;
   cloud_msg_ptr->is_dense = msg_in.is_dense;
 
@@ -95,6 +94,16 @@ inline PointCloudLayout generateVisualizationPointCloudLayout()
   return layout;
 }
 
+/// @brief Generate filtered point cloud layout from input message fields (preserves input format)
+inline PointCloudLayout generateFilteredPointCloudLayoutFromInput(
+  const cuda_blackboard::CudaPointCloud2 & msg_in)
+{
+  auto fields = msg_in.fields;
+  PointCloudLayout layout(fields, msg_in.point_step);
+  return layout;
+}
+
+/// @brief Generate filtered point cloud layout for default XYZIRC format (legacy)
 inline PointCloudLayout generateFilteredPointCloudLayout()
 {
   sensor_msgs::msg::PointCloud2 msg;

@@ -30,13 +30,27 @@ class PostprocessCuda
 public:
   PostprocessCuda(const utils::PostprocessingParams & params, cudaStream_t stream);
 
+  /// @brief Fill output clouds with segmentation results (dispatches to templated implementation)
+  /// @param points_xyzi Compact point buffer from preprocess (num_points * 4: x, y, z, intensity)
+  /// @param cloud_compact Compact copy of input points for indices [0,
+  /// num_points_after_projection);
+  ///        can be nullptr
   cudaError_t fillCloud_launch(
-    const InputPointType * cloud, const float * seg_logit, const int32_t num_points,
-    const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
-    OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
-    InputPointType * output_cloud_filtered);
+    const float * points_xyzi, const void * cloud_compact,
+    const uint32_t num_points_after_projection, const float * seg_logit, const uint32_t num_points,
+    InputFormat format, const utils::ActiveComm & active_comm,
+    uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
+    OutputVisualizationPointType * output_cloud_viz, void * output_cloud_filtered);
 
 private:
+  template <typename PointT>
+  cudaError_t fillCloud_launch_impl(
+    const float * points_xyzi, const PointT * cloud_compact,
+    const uint32_t num_points_after_projection, const float * seg_logit, const uint32_t num_points,
+    const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
+    OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
+    PointT * output_cloud_filtered);
+
   cudaStream_t stream_;
 };
 
