@@ -4,54 +4,63 @@
 
 message(STATUS "Using acados from workspace: ${ACADOS_WORKSPACE_DIR}")
 
-# Build acados in workspace if not already built
-get_filename_component(ACADOS_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/acados_install" ABSOLUTE)
-get_filename_component(ACADOS_BUILD_DIR "${CMAKE_BINARY_DIR}/acados_build" ABSOLUTE)
+get_filename_component(UNIVERSE_EXTERNAL_DIR "${ACADOS_WORKSPACE_DIR}/.." ABSOLUTE)
+set(ACADOS_PREBUILT_INSTALL_DIR "${UNIVERSE_EXTERNAL_DIR}/acados_install")
+set(ACADOS_SOURCE_DIR "${ACADOS_WORKSPACE_DIR}")
+
+# Prefer pre-built acados (e.g. from ansible role ansible/roles/acados) when present
+if(EXISTS "${ACADOS_PREBUILT_INSTALL_DIR}/lib/libacados.a")
+    message(STATUS "Using pre-built acados from ${ACADOS_PREBUILT_INSTALL_DIR}")
+    set(ACADOS_INSTALL_PREFIX "${ACADOS_PREBUILT_INSTALL_DIR}")
+    add_custom_target(acados_prebuilt COMMENT "Using pre-built acados from setup")
+    set(acados_target acados_prebuilt)
+else()
+    # Build acados in workspace if not already built
+    get_filename_component(ACADOS_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/acados_install" ABSOLUTE)
+    get_filename_component(ACADOS_BUILD_DIR "${CMAKE_BINARY_DIR}/acados_build" ABSOLUTE)
+    file(MAKE_DIRECTORY ${ACADOS_INSTALL_PREFIX}/include)
+    file(MAKE_DIRECTORY ${ACADOS_INSTALL_PREFIX}/lib)
+    # Configure and build acados from workspace source
+    # Note: jobserver warnings from acados's internal build are harmless - they occur because
+    # acados's Makefiles call make recursively without the '+' prefix. This doesn't affect functionality.
+    add_custom_target(acados_build
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${ACADOS_BUILD_DIR}
+        COMMAND ${CMAKE_COMMAND} -S ${ACADOS_WORKSPACE_DIR} -B ${ACADOS_BUILD_DIR}
+            -DCMAKE_INSTALL_PREFIX=${ACADOS_INSTALL_PREFIX}
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DACADOS_WITH_QPOASES=ON
+            -DBUILD_SHARED_LIBS=ON
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        COMMAND ${CMAKE_COMMAND} --build ${ACADOS_BUILD_DIR} --config ${CMAKE_BUILD_TYPE}
+        COMMAND ${CMAKE_COMMAND} --build ${ACADOS_BUILD_DIR} --config ${CMAKE_BUILD_TYPE} --target install
+        WORKING_DIRECTORY ${ACADOS_WORKSPACE_DIR}
+        COMMENT "Building acados from workspace source..."
+    )
+    set(acados_target acados_build)
+endif()
 
 set(ACADOS_INCLUDE_DIR "${ACADOS_INSTALL_PREFIX}/include")
 set(ACADOS_LIB_DIR "${ACADOS_INSTALL_PREFIX}/lib")
-set(ACADOS_SOURCE_DIR "${ACADOS_WORKSPACE_DIR}")
 
-file(MAKE_DIRECTORY ${ACADOS_INCLUDE_DIR})
-file(MAKE_DIRECTORY ${ACADOS_LIB_DIR})
-
-# Configure and build acados from workspace source
-# Note: jobserver warnings from acados's internal build are harmless - they occur because
-# acados's Makefiles call make recursively without the '+' prefix. This doesn't affect functionality.
-add_custom_target(acados_build
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${ACADOS_BUILD_DIR}
-    COMMAND ${CMAKE_COMMAND} -S ${ACADOS_WORKSPACE_DIR} -B ${ACADOS_BUILD_DIR}
-        -DCMAKE_INSTALL_PREFIX=${ACADOS_INSTALL_PREFIX}
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DACADOS_WITH_QPOASES=ON
-        -DBUILD_SHARED_LIBS=OFF
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-    COMMAND ${CMAKE_COMMAND} --build ${ACADOS_BUILD_DIR} --config ${CMAKE_BUILD_TYPE}
-    COMMAND ${CMAKE_COMMAND} --build ${ACADOS_BUILD_DIR} --config ${CMAKE_BUILD_TYPE} --target install
-    WORKING_DIRECTORY ${ACADOS_WORKSPACE_DIR}
-    COMMENT "Building acados from workspace source..."
-)
-set(acados_target acados_build)
-
-# --- Define Imported Targets ---
+# --- Define Imported Targets (idempotent for reconfigures) ---
 # 1. Standard components (Usually direct in /lib)
 foreach(lib acados blasfeo hpipm)
-    add_library(${lib} STATIC IMPORTED GLOBAL)
-    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ACADOS_LIB_DIR}/lib${lib}.a")
+    if(NOT TARGET ${lib})
+        add_library(${lib} STATIC IMPORTED GLOBAL)
+        set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ACADOS_LIB_DIR}/lib${lib}.a")
+    endif()
     add_dependencies(${lib} ${acados_target})
 endforeach()
 
 # 2. qpoases - Flexible Path Handling
-add_library(qpoases STATIC IMPORTED GLOBAL)
-
-# Check three common locations where acados puts this file
 set(QPOASES_PATH_1 "${ACADOS_LIB_DIR}/libqpOASES_e.a")
 set(QPOASES_PATH_2 "${ACADOS_LIB_DIR}/libqpoases.a")
 set(QPOASES_PATH_3 "${ACADOS_LIB_DIR}/qpoases/libqpoases.a")
 set(QPOASES_PATH_4 "${ACADOS_INSTALL_PREFIX}/external/qpoases/lib/libqpoases.a")
-
-# We use the one we found in the install log as the primary choice
-set_target_properties(qpoases PROPERTIES IMPORTED_LOCATION "${QPOASES_PATH_1}")
+if(NOT TARGET qpoases)
+    add_library(qpoases STATIC IMPORTED GLOBAL)
+    set_target_properties(qpoases PROPERTIES IMPORTED_LOCATION "${QPOASES_PATH_1}")
+endif()
 add_dependencies(qpoases ${acados_target})
 
 # --- Build t_renderer from source ---
