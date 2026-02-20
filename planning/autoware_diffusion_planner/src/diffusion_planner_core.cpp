@@ -69,15 +69,14 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     effective_objects = std::make_shared<TrackedObjects>(empty_object_list);
   }
 
-  if (
-    !effective_objects || !ego_kinematic_state || !ego_acceleration || !route_ptr ||
-    !turn_indicators) {
+  if (!effective_objects || !ego_kinematic_state || !ego_acceleration || !turn_indicators) {
     return std::nullopt;
   }
 
-  // Update route pointer if provided
-  if (route_ptr) {
-    route_ptr_ = route_ptr;
+  // Update route
+  route_ptr_ = route_ptr;
+  if (!route_ptr_) {
+    return std::nullopt;
   }
 
   Odometry kinematic_state = *ego_kinematic_state;
