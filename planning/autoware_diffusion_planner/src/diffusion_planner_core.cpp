@@ -42,6 +42,7 @@ DiffusionPlannerCore::DiffusionPlannerCore(
 
 void DiffusionPlannerCore::load_model()
 {
+  tensorrt_inference_.reset();
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
   tensorrt_inference_ = std::make_unique<TensorrtInference>(

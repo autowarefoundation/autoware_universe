@@ -23,6 +23,7 @@
 
 #include <Eigen/Dense>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
