@@ -17,7 +17,6 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -1320,8 +1319,6 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
   using autoware_utils::pose2transform;
   using autoware_utils::transform_vector;
   using lanelet::utils::to2D;
-  using lanelet::utils::conversion::toGeomMsgPt;
-  using lanelet::utils::conversion::toLaneletPoint;
 
   const auto & route_handler = planner_data->route_handler;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
@@ -1333,9 +1330,11 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
 
   std::sort(polygons.begin(), polygons.end(), [&ego_pose](const auto & a, const auto & b) {
     const double a_distance = boost::geometry::distance(
-      to2D(a).basicPolygon(), to2D(toLaneletPoint(ego_pose.position)).basicPoint());
+      to2D(a).basicPolygon(),
+      to2D(experimental::lanelet2_utils::from_ros(ego_pose.position)).basicPoint());
     const double b_distance = boost::geometry::distance(
-      to2D(b).basicPolygon(), to2D(toLaneletPoint(ego_pose.position)).basicPoint());
+      to2D(b).basicPolygon(),
+      to2D(experimental::lanelet2_utils::from_ros(ego_pose.position)).basicPoint());
     return a_distance < b_distance;
   });
 
@@ -1402,14 +1401,15 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
     std::vector<lanelet::ConstPoint3d> ret;
     for (size_t i = 1; i < bound.size(); ++i) {
       const auto intersect = autoware_utils::intersect(
-        ego_pose.position, p_offset.position, toGeomMsgPt(bound.at(i - 1)),
-        toGeomMsgPt(bound.at(i)));
+        ego_pose.position, p_offset.position, experimental::lanelet2_utils::to_ros(bound.at(i - 1)),
+        experimental::lanelet2_utils::to_ros(bound.at(i)));
 
       ret.push_back(bound.at(i - 1));
 
       if (intersect.has_value()) {
         ret.emplace_back(
-          lanelet::InvalId, intersect.value().x, intersect.value().y, toGeomMsgPt(bound.at(i)).z);
+          lanelet::InvalId, intersect.value().x, intersect.value().y,
+          experimental::lanelet2_utils::to_ros(bound.at(i)).z);
         break;
       }
     }
@@ -1504,7 +1504,7 @@ std::vector<geometry_msgs::msg::Point> postProcess(
                            const lanelet::ConstLineString3d & points,
                            std::vector<geometry_msgs::msg::Point> & bound) {
     for (const auto & bound_p : points) {
-      const auto cp = lanelet::utils::conversion::toGeomMsgPt(bound_p);
+      const auto cp = experimental::lanelet2_utils::to_ros(bound_p);
       if (bound.empty() || autoware_utils::calc_distance2d(cp, bound.back()) > overlap_threshold) {
         bound.push_back(cp);
       }
@@ -1656,7 +1656,7 @@ std::vector<geometry_msgs::msg::Point> calcBound(
   const auto to_ros_point = [](const std::vector<lanelet::ConstPoint3d> & bound) {
     std::vector<Point> ret{};
     std::for_each(bound.begin(), bound.end(), [&](const auto & p) {
-      ret.push_back(lanelet::utils::conversion::toGeomMsgPt(p));
+      ret.push_back(experimental::lanelet2_utils::to_ros(p));
     });
     return ret;
   };
