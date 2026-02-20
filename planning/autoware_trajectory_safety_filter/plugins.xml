@@ -12,4 +12,10 @@
       Filters trajectories based on Time To Collision (TTC) with predicted objects
     </description>
   </class>
+  <class type="autoware::trajectory_safety_filter::plugin::UncrossableBoundaryDepartureFilter"
+         base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
+    <description>
+      Filters trajectories that cross uncrossable boundaries
+    </description>
+  </class>
 </library>

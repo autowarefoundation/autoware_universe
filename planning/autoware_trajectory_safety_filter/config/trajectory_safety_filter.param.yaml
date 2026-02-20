@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    filter_names: ["autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"]
+    filter_names: ["autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter", "autoware::trajectory_safety_filter::plugin::UncrossableBoundaryDepartureFilter"]
     # available filter: "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"
 
     out_of_lane:

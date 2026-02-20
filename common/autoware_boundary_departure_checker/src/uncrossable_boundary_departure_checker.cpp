@@ -297,6 +297,12 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryDepartureChecker::ge
     trimmed_pred_traj, *vehicle_info_ptr_, curr_pose_with_cov, param_);
   const auto & footprint_type_order = footprint_manager_->get_footprint_type_order();
 
+  if (
+    generated_footprints.empty() || footprint_type_order.empty() ||
+    generated_footprints.at(footprint_type_order.front()).empty()) {
+    return tl::make_unexpected("Failed to generate any footprints for abnormalities");
+  }
+
   if (generated_footprints.empty() || footprint_type_order.empty()) {
     return tl::make_unexpected("Failed to generate any footprints");
   }

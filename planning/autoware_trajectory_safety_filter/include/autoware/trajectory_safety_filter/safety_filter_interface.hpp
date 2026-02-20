@@ -38,10 +38,7 @@ class SafetyFilterInterface
 {
 public:
   explicit SafetyFilterInterface(std::string name) : name_(std::move(name)) {}
-  SafetyFilterInterface(std::string name, const VehicleInfo & vehicle_info)
-  : name_(std::move(name)), vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info))
-  {
-  }
+
   virtual ~SafetyFilterInterface() = default;
   SafetyFilterInterface(const SafetyFilterInterface &) = delete;
   SafetyFilterInterface & operator=(const SafetyFilterInterface &) = delete;
@@ -60,7 +57,7 @@ public:
     vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
   }
 
-  std::string get_name() const { return name_; }
+  [[nodiscard]] std::string get_name() const { return name_; }
 
 protected:
   std::string name_;

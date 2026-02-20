@@ -46,7 +46,7 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
   }
 
   sub_map_ = create_subscription<LaneletMapBin>(
-    "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
+    "/map/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectorySafetyFilter::map_callback, this, std::placeholders::_1));
 
   sub_trajectories_ = create_subscription<CandidateTrajectories>(
