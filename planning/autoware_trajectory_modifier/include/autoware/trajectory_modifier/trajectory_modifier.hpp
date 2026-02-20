@@ -19,8 +19,10 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
+#include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
+#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
@@ -51,16 +53,16 @@ public:
 
 private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
-  void set_up_params();
   void initialize_modifiers();
+  void load_plugin(const std::string & name);
+  void unload_plugin(const std::string & name);
   void reset_previous_data();
   bool initialized_modifiers_{false};
 
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters);
+  std::unique_ptr<trajectory_modifier_params::ParamListener> param_listener_;
+  trajectory_modifier_params::Params params_;
 
-  std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> modifier_plugins_;
-  std::shared_ptr<plugin::StopPointFixer> stop_point_fixer_ptr_;
+  void update_params();
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
@@ -79,9 +81,10 @@ private:
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
-  TrajectoryModifierParams params_;
+  pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
+  std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
+
   TrajectoryModifierData data_;
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };
 
 }  // namespace autoware::trajectory_modifier

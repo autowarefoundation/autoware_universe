@@ -1,0 +1,22 @@
+trajectory_modifier_params:
+  use_stop_point_fixer:
+    type: bool
+    default_value: false
+    description: Enable the use of stop point fixer
+    read_only: false
+
+  stop_point_fixer:
+    velocity_threshold_mps:
+      type: double
+      default_value: 0.1
+      description: Velocity threshold below which ego vehicle is considered stationary [m/s]
+      read_only: false
+      validation:
+        gt_eq<>: [0.0]
+    min_distance_threshold_m:
+      type: double
+      default_value: 1.0
+      description: Minimum distance threshold to trigger trajectory replacement [m]
+      read_only: false
+      validation:
+        gt_eq<>: [0.0]

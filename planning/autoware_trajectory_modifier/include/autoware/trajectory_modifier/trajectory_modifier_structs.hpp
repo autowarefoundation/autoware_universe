@@ -22,11 +22,6 @@ namespace autoware::trajectory_modifier
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-struct TrajectoryModifierParams
-{
-  bool use_stop_point_fixer{true};
-};
-
 struct TrajectoryModifierData
 {
   Odometry current_odometry;

@@ -4,9 +4,19 @@
   <arg name="input_odometry" default="/localization/kinematic_state"/>
   <arg name="input_acceleration" default="/localization/acceleration"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
+  <arg name="launch_stop_point_fixer" default="true"/>
+  <arg name="launch_modules_list_end" default="&quot;&quot;]"/>
+  <arg name="trajectory_modifier_launch_modules" default="["/>
+  <let
+    name="trajectory_modifier_launch_modules"
+    value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + 'autoware::trajectory_modifier::plugin::StopPointFixer, '&quot;)"
+    if="$(var launch_stop_point_fixer)"
+  />
+  <let name="trajectory_modifier_launch_modules" value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
 
   <node pkg="autoware_trajectory_modifier" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" output="screen">
     <param from="$(var trajectory_modifier_param_path)"/>
+    <param name="launch_modules" value="$(var trajectory_modifier_launch_modules)"/>
     <remap from="~/input/candidate_trajectories" to="$(var input_candidate_trajectories)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<library path="autoware_trajectory_modifier_plugins">
+  <class type="autoware::trajectory_modifier::plugin::StopPointFixer"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Modifies the stop point of a trajectory to align with the obstacle stop point
+    </description>
+  </class>
+</library>
