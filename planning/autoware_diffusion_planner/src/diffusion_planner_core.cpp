@@ -73,8 +73,8 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     return std::nullopt;
   }
 
-  // Update route
-  route_ptr_ = route_ptr;
+  // Update route: use new route if provided, otherwise keep existing route
+  route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
   if (!route_ptr_) {
     return std::nullopt;
   }
