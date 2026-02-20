@@ -17,20 +17,16 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
-#include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 #include "autoware/diffusion_planner/utils/arg_reader.hpp"
 
 #include <Eigen/Dense>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
-#include <builtin_interfaces/msg/duration.hpp>
-#include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -52,9 +48,7 @@ using autoware::diffusion_planner::AgentData;
 using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
-using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
-using builtin_interfaces::msg::Time;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using preprocess::TrafficSignalStamped;

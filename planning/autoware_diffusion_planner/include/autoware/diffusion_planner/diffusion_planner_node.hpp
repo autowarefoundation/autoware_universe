@@ -15,16 +15,9 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_NODE_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_NODE_HPP_
 
-#include "autoware/diffusion_planner/conversion/agent.hpp"
-#include "autoware/diffusion_planner/conversion/lanelet.hpp"
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
-#include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
-#include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
-#include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
-#include "autoware/diffusion_planner/utils/arg_reader.hpp"
 
-#include <Eigen/Dense>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
@@ -32,8 +25,6 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <builtin_interfaces/msg/duration.hpp>
-#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 #include <rclcpp/timer.hpp>
@@ -41,63 +32,28 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
-#include <autoware_perception_msgs/msg/traffic_signal.hpp>
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
-#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
-#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <std_msgs/msg/color_rgba.hpp>
-#include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <Eigen/src/Core/Matrix.h>
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
-#include <lanelet2_traffic_rules/TrafficRules.h>
-
-#include <deque>
-#include <map>
 #include <memory>
-#include <optional>
 #include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
-using autoware::diffusion_planner::AgentData;
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_perception_msgs::msg::TrackedObjects;
-using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
-using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
-using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
-using geometry_msgs::msg::AccelWithCovarianceStamped;
-using nav_msgs::msg::Odometry;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
-using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
 using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_utils_diagnostics::DiagnosticsInterface;
-using builtin_interfaces::msg::Duration;
-using builtin_interfaces::msg::Time;
-using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
-using preprocess::TrafficSignalStamped;
 using rcl_interfaces::msg::SetParametersResult;
-using std_msgs::msg::ColorRGBA;
 using unique_identifier_msgs::msg::UUID;
-using utils::NormalizationMap;
-using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
 struct DiffusionPlannerDebugParams
