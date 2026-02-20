@@ -14,6 +14,7 @@
 
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_module.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 
 #include <algorithm>
@@ -162,8 +163,8 @@ SamplingPlannerModule::SamplingPlannerModule(
       [[maybe_unused]] const SoftConstraintsInputs & input_data) -> double {
       if (path.poses.empty()) return 0.0;
       const auto & last_pose = path.poses.back();
-      const auto path_point_arc =
-        lanelet::utils::getArcCoordinates(input_data.closest_lanelets_to_goal, last_pose);
+      const auto path_point_arc = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+        input_data.closest_lanelets_to_goal, last_pose);
       const double lateral_distance_to_center_lane = std::abs(path_point_arc.distance);
       const double max_target_lateral_positions = *std::max_element(
         internal_params_->sampling.target_lateral_positions.begin(),
@@ -595,8 +596,10 @@ BehaviorModuleOutput SamplingPlannerModule::plan()
   soft_constraints_input.reference_path = reference_path_ptr;
   soft_constraints_input.prev_module_path = prev_module_path;
 
-  soft_constraints_input.ego_arc = lanelet::utils::getArcCoordinates(current_lanes, ego_pose);
-  soft_constraints_input.goal_arc = lanelet::utils::getArcCoordinates(current_lanes, goal_pose);
+  soft_constraints_input.ego_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, ego_pose);
+  soft_constraints_input.goal_arc =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, goal_pose);
   const auto closest_lanelet_to_goal_opt =
     experimental::lanelet2_utils::get_closest_lanelet(current_lanes, goal_pose);
 
