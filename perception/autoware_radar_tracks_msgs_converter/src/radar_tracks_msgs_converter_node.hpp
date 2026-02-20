@@ -29,6 +29,7 @@
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -70,7 +71,8 @@ private:
   void onRadarTracks(const RadarTracks::ConstSharedPtr msg);
   void onTwist(const Odometry::ConstSharedPtr msg);
 
-  // Data Buffer
+  // Data Buffer (protected by mutex_ for thread safety)
+  mutable std::mutex mutex_;
   RadarTracks::ConstSharedPtr radar_data_{};
   Odometry::ConstSharedPtr odometry_data_{};
   geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_;
@@ -95,16 +97,19 @@ private:
 
   // Core
   geometry_msgs::msg::PoseWithCovariance convertPoseWithCovariance();
-  TrackedObjects convertRadarTrackToTrackedObjects();
+  TrackedObjects convertRadarTrackToTrackedObjects(
+    const RadarTracks::ConstSharedPtr & radar_data, const Odometry::ConstSharedPtr & odometry_data);
   DetectedObjects convertTrackedObjectsToDetectedObjects(TrackedObjects & objects);
   geometry_msgs::msg::Vector3 compensateVelocitySensorPosition(
     const radar_msgs::msg::RadarTrack & radar_track);
   geometry_msgs::msg::Vector3 compensateVelocityEgoMotion(
     const geometry_msgs::msg::Vector3 & velocity_in,
-    const geometry_msgs::msg::Point & position_from_veh);
+    const geometry_msgs::msg::Point & position_from_veh,
+    const Odometry::ConstSharedPtr & odometry_data);
   bool isStaticObject(
     const radar_msgs::msg::RadarTrack & radar_track,
-    const geometry_msgs::msg::Vector3 & compensated_velocity);
+    const geometry_msgs::msg::Vector3 & compensated_velocity,
+    const Odometry::ConstSharedPtr & odometry_data);
   std::array<double, 36> convertPoseCovarianceMatrix(
     const radar_msgs::msg::RadarTrack & radar_track);
   std::array<double, 36> convertTwistCovarianceMatrix(

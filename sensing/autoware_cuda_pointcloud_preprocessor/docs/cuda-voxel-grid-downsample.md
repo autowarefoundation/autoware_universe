@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This node is a CUDA accelerated version of the `FasterVoxelGridDownsampleFilter` available in [autoware_cuda_pointcloud_preprocessor](../../autoware_pointcloud_preprocessor).
+This node is a CUDA accelerated version of the `FasterVoxelGridDownsampleFilter` available in [autoware_cuda_pointcloud_preprocessor](../../autoware_pointcloud_preprocessor/README.md).
 
 ## Inner-workings / Algorithms
 
@@ -28,7 +28,7 @@ This node reimplements of the function of `autoware::pointcloud_preprocessor::Fa
 
 ### Core Parameters
 
-{{ json_to_markdown("sensing/autoware_cuda_pointcloud_preprocessor/schema/cuda_voxel_grid_downsample_filter.schema.schema.json") }}
+{{ json_to_markdown("sensing/autoware_cuda_pointcloud_preprocessor/schema/cuda_voxel_grid_downsample_filter.schema.json") }}
 
 ## Assumptions / Known limits
 
