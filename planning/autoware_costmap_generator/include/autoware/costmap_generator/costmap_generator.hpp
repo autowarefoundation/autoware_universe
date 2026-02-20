@@ -49,7 +49,6 @@
 #include "autoware/costmap_generator/utils/points_to_costmap.hpp"
 #include "costmap_generator_node_parameters.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/processing_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -65,6 +64,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <grid_map_msgs/msg/grid_map.h>
+#include <lanelet2_core/LaneletMap.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <tf2_ros/buffer.h>

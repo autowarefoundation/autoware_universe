@@ -2,6 +2,14 @@
 Changelog for package autoware_smart_mpc_trajectory_follower
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(smart_mpc_trajectory_follower): remove cmake pip install command (`#12037 <https://github.com/autowarefoundation/autoware_universe/issues/12037>`_)
+* chore: reflect the move of the description packages (`#11969 <https://github.com/autowarefoundation/autoware_universe/issues/11969>`_)
+* fix(smart_mpc_trajectory_follower): python3-torch into exec_depend with condition (`#11942 <https://github.com/autowarefoundation/autoware_universe/issues/11942>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

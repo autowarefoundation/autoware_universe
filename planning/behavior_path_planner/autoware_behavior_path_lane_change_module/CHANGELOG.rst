@@ -2,6 +2,50 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(lane_change): fix incorrect activation of lane change module (`#12039 <https://github.com/autowarefoundation/autoware_universe/issues/12039>`_)
+  * refactor code to get lc target lane, ignore lanes behind ego
+  * check if current lanes has front lane before extending
+  * Apply suggestion from @zulfaqar-azmi-t4
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * use adjacentLeft/Right to get target lane for intersection lanes
+  ---------
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+* fix(lane_change): revise intersection to no lane change line check (`#12060 <https://github.com/autowarefoundation/autoware_universe/issues/12060>`_)
+  * fix(lane_change): revise intersection to no lane change line check
+  * fix: address PR comments
+  * fix: if interval is in between, we also check
+  ---------
+* fix(lane_change): validate linestring tag for all path candidates (`#11941 <https://github.com/autowarefoundation/autoware_universe/issues/11941>`_)
+  * fix(lane_change): validate linestring tag for all path candidates
+  * fix: use distance based (there's gdb)
+  * fix: use distance-based evaluation
+  * fix: remove gdb
+  * fix: remove unnecessary code
+  * fix: use half length
+  * docs: docstring
+  * fix: spell check
+  ---------
+* refactor(lane_change, static_obstacle_avoidance): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet (`#12010 <https://github.com/autowarefoundation/autoware_universe/issues/12010>`_)
+* feat: manual lane change handeling (`#11273 <https://github.com/autowarefoundation/autoware_universe/issues/11273>`_)
+  manual lane change
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+* fix(lane_change): print debug info for lanes (`#11964 <https://github.com/autowarefoundation/autoware_universe/issues/11964>`_)
+  * fix(lane_change): print debug info for lanes
+  * fix failed test
+  ---------
+* docs(lane_change): revise collision check explanation (`#11845 <https://github.com/autowarefoundation/autoware_universe/issues/11845>`_)
+* fix(lane_change): removed preferred lanes from current lanes (`#11772 <https://github.com/autowarefoundation/autoware_universe/issues/11772>`_)
+  * fix(lane_change): removed preferred lanes from current lanes
+  * search for preferred after alternative
+  * fix precommit
+  * rename function
+  * fix test failure
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, Yuxuan Liu, Zulfaqar Azmi, mkquda
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

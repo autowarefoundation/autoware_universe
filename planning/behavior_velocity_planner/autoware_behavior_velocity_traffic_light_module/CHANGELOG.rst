@@ -2,6 +2,45 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(autoware_behavior_velocity_traffic_light_module): support arrow-aware passing judgment on yellow signal (`#11704 <https://github.com/autowarefoundation/autoware_universe/issues/11704>`_)
+  * feat: arrow yellow pass
+  * ref: change comment out
+  * style(pre-commit): autofix
+  * docs: add description for yellow pass
+  * style(pre-commit): autofix
+  * ref: cleaned up the code
+  * ref: change param name
+  * style(pre-commit): autofix
+  * ref: add private variable
+  * style(pre-commit): autofix
+  * chore: change variable name
+  * feat: test module
+  * style(pre-commit): autofix
+  * chore: add variable comment out
+  * chore: rename nongreen variable
+  * fix: transition logic doesn't handle the case
+  * chore: add comment about yellow signal
+  * chore: use the helper method
+  * style(pre-commit): autofix
+  * fix: lint error
+  * ref: improve code health
+  * style(pre-commit): autofix
+  * fix: comment & test coverage
+  * style(pre-commit): autofix
+  * ref: change default-initialized properly
+  * Update planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/test/test_traffic_light_module.cpp
+  * fix: change reference to “lanelet2_utils”
+  * ref: use any_of for readability
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Shumpei Wakabayashi <42209144+shmpwk@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, toki-1441
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

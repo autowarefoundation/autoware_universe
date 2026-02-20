@@ -16,6 +16,7 @@
 #define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTER_CONTEXT_HPP_
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -35,6 +36,7 @@ namespace autoware::trajectory_safety_filter
 struct FilterContext
 {
   nav_msgs::msg::Odometry::ConstSharedPtr odometry;
+  geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr acceleration;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map;
   autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr predicted_objects;
 };

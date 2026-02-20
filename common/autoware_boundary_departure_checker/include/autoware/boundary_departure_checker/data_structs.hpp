@@ -60,7 +60,7 @@ enum class SideKey { LEFT, RIGHT };
 constexpr std::array<SideKey, 2> g_side_keys = {SideKey::LEFT, SideKey::RIGHT};
 
 template <typename T>
-struct Abnormalities
+struct FootprintMap
 {
   std::unordered_map<FootprintType, T> data;
   T & operator[](const FootprintType key) { return data[key]; }
@@ -211,12 +211,13 @@ using Footprints = std::vector<Footprint>;
 
 using ProjectionsToBound = std::vector<ProjectionToBound>;
 
-struct AbnormalitiesData
+struct DepartureData
 {
-  Abnormalities<EgoSides> footprints_sides;
-  Abnormalities<Footprints> footprints;
+  FootprintMap<Footprints> footprints;
+  FootprintMap<EgoSides> footprints_sides;
+  FootprintMap<Side<ProjectionsToBound>> projections_to_bound;
+
   BoundarySideWithIdx boundary_segments;
-  Abnormalities<Side<ProjectionsToBound>> projections_to_bound;
   Side<ProjectionsToBound> closest_projections_to_bound;
   Side<DeparturePoints> departure_points;
   DeparturePoints critical_departure_points;

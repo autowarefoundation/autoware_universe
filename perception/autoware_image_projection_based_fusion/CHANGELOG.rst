@@ -2,6 +2,64 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lidar_centerpoint): add distance-based confidence thresholds to CenterPoint (`#12026 <https://github.com/autowarefoundation/autoware_universe/issues/12026>`_)
+  * Add temp
+  * Add score_threshold_upper and score_thresholds to CenterPoint postprocessing
+  * Fix naming errors
+  * Revert changes in roi_cluster_fusion_pipeline
+  * Revert changes in roi_cluster_fusion markdown
+  * Revert changes in image_projection_based_fusion
+  * Update score_threshold configs in pointpainting_fusion
+  * Remove unnecessary comments
+  * Update float class_score_threshold to const float
+  * Update autoware_lidar_centerpoint readme
+  * Remove param_version from configs
+  * Return postprocessing of boxes if label == -1
+  * Add the checking of score_upper_bounds greater than 0
+  * Update score_threshold values to class-wise distance
+  * Fix pointpainting class-wise distance thresholds
+  * Update centerpoint params in README by json_to_markdown
+  * Update docstring comment in centerpoint postprocess
+  * style(pre-commit): autofix
+  * Rename configs to detection_score_thresholds with distance_bin_upper_limits and min_confidence_scores
+  * Update schema docstring
+  * Resolve missing distance_bin_upper_limits\_ in CenterPointConfig
+  * Update pointpainting ml package schema
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_image_projection_based_fusion): update nvcc flags (`#12048 <https://github.com/autowarefoundation/autoware_universe/issues/12048>`_)
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* chore: use local default config files instead of autoware_launch and fix arg propagation chain (`#12031 <https://github.com/autowarefoundation/autoware_universe/issues/12031>`_)
+  * use local default config files instead of autoware_launch
+  * update tier4_perception_launch to drill down the param path
+  * add propagation chains for sync_param_path, irregular_object_detector_param_path and change default for sync_param_path, ogm_outlier_filter_param_path
+  * append ogm_outlier_filter.param.yaml propagation chain
+  * style(pre-commit): autofix
+  * Revert "style(pre-commit): autofix"
+  This reverts commit b34af00301c6c292c0068951552f6630042afac3.
+  * Revert "append ogm_outlier_filter.param.yaml propagation chain"
+  This reverts commit 0e44926d6b51a46868a0a8ff280565c643f3e515.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(image_projection_based_fusion): add conditional include for jazzy (`#11921 <https://github.com/autowarefoundation/autoware_universe/issues/11921>`_)
+* chore(autoware_image_projection_based_fusion): remove cudnn dependency (`#11891 <https://github.com/autowarefoundation/autoware_universe/issues/11891>`_)
+* fix(roi_cluster_fusion): separate IoU threashold for each class (`#11828 <https://github.com/autowarefoundation/autoware_universe/issues/11828>`_)
+  * fix(roi_cluster_fusion): separate iou_threshold for each class
+  * fix: remove unknown_iou_threshold
+  * fix build error
+  * refactor
+  * docs
+  * style(pre-commit): autofix
+  * docs
+  * fix: change to highest prob label
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, Kok Seang Tan, Mete Fatih Cırıt, Ryohsuke Mitsudome, Taeseung Sohn, badai nguyen
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

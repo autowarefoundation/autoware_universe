@@ -2,6 +2,20 @@
 Changelog for package autoware_occupancy_grid_map_outlier_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(occupancy_grid_map_outlier_filter): fix funcArgNamesDifferent (`#11979 <https://github.com/autowarefoundation/autoware_universe/issues/11979>`_)
+* fix(occupancy_grid_map_outlier_filter): fix funcArgNamesDifferent (`#11980 <https://github.com/autowarefoundation/autoware_universe/issues/11980>`_)
+  * fix(occupancy_grid_map_outlier_filter): fix funcArgNamesDifferent
+  * rename both parameter and argument
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(occupancy_grid_map_outlier_filter): fix funcArgNamesDifferent (`#11978 <https://github.com/autowarefoundation/autoware_universe/issues/11978>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
 0.49.0 (2025-12-30)
 -------------------
 

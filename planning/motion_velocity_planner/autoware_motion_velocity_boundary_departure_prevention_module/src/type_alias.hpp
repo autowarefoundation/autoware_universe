@@ -90,10 +90,10 @@ using autoware_utils_geometry::Point2d;          // NOLINT
 using autoware_utils_system::StopWatch;          // NOLINT
 using vehicle_info_utils::VehicleInfo;           // NOLINT
 
-using boundary_departure_checker::Abnormalities;                        // NOLINT
 using boundary_departure_checker::DeparturePoint;                       // NOLINT
 using boundary_departure_checker::DeparturePoints;                      // NOLINT
 using boundary_departure_checker::DepartureType;                        // NOLINT
+using boundary_departure_checker::FootprintMap;                         // NOLINT
 using boundary_departure_checker::FootprintMargin;                      // NOLINT
 using boundary_departure_checker::FootprintType;                        // NOLINT
 using boundary_departure_checker::ProjectionToBound;                    // NOLINT
@@ -102,8 +102,8 @@ using boundary_departure_checker::SideKey;                              // NOLIN
 using boundary_departure_checker::UncrossableBoundaryDepartureChecker;  // NOLINT
 
 using boundary_departure_checker::AbnormalitiesConfigs;
-using boundary_departure_checker::AbnormalitiesData;
 using boundary_departure_checker::AbnormalityConfig;
+using boundary_departure_checker::DepartureData;
 using boundary_departure_checker::LocalizationConfig;
 using boundary_departure_checker::LongitudinalConfig;
 using boundary_departure_checker::NormalConfig;

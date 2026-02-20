@@ -31,12 +31,14 @@ class SensorReceivedNoData(Exception):
 
 
 class GenericMeasurement(object):
+
     def __init__(self, data, frame):
         self.data = data
         self.frame = frame
 
 
 class CallBack(object):
+
     def __init__(self, tag, sensor, data_provider):
         self._tag = tag
         self._data_provider = data_provider
@@ -125,10 +127,13 @@ class SensorWrapper(object):
     """Wrapper for managing CARLA sensors attached to a vehicle."""
 
     def __init__(self, agent):
-        """Initialize sensor wrapper.
+        """
+        Initialize sensor wrapper.
 
         Args:
+        ----
             agent: Agent instance containing sensor configuration
+
         """
         self._agent = agent
         self._sensors_list = []  # Instance variable, not class variable
@@ -137,14 +142,18 @@ class SensorWrapper(object):
         return self._agent()
 
     def setup_sensors(self, vehicle, debug_mode=False):
-        """Create and attach sensors defined via sensor configuration.
+        """
+        Create and attach sensors defined via sensor configuration.
 
         Args:
+        ----
             vehicle: CARLA vehicle actor to attach sensors to
             debug_mode: Enable debug logging (unused)
 
-        Raises:
+        Raises
+        ------
             RuntimeError: If sensor spawning fails critically
+
         """
         bp_library = CarlaDataProvider.get_world().get_blueprint_library()
 
@@ -158,12 +167,15 @@ class SensorWrapper(object):
         CarlaDataProvider.get_world().tick()
 
     def _setup_single_sensor(self, bp_library, sensor_spec, vehicle):
-        """Set up a single sensor from specification.
+        """
+        Set up a single sensor from specification.
 
         Args:
+        ----
             bp_library: CARLA blueprint library
             sensor_spec: Sensor specification dictionary
             vehicle: Vehicle to attach sensor to
+
         """
         try:
             sensor_type = sensor_spec["type"]
@@ -201,15 +213,19 @@ class SensorWrapper(object):
             logging.error(f"Failed to setup sensor '{sensor_spec.get('id', 'unknown')}': {e}")
 
     def _configure_sensor_blueprint(self, bp, sensor_type, sensor_spec):
-        """Configure sensor-specific blueprint attributes.
+        """
+        Configure sensor-specific blueprint attributes.
 
         Args:
+        ----
             bp: CARLA blueprint to configure
             sensor_type: Type of sensor
             sensor_spec: Sensor specification dictionary
 
-        Returns:
+        Returns
+        -------
             bool: True if configuration succeeded, False to skip sensor
+
         """
         if sensor_type.startswith("sensor.camera"):
             self._configure_camera_attributes(bp, sensor_spec)
@@ -252,13 +268,17 @@ class SensorWrapper(object):
             bp.set_attribute(f"noise_gyro_stddev_{axis}", str(0.0))
 
     def _create_sensor_transform(self, spawn_point):
-        """Create CARLA transform from spawn point dictionary.
+        """
+        Create CARLA transform from spawn point dictionary.
 
         Args:
+        ----
             spawn_point: Dictionary with x, y, z, pitch, roll, yaw
 
-        Returns:
+        Returns
+        -------
             carla.Transform: Sensor transform
+
         """
         location = carla.Location(x=spawn_point["x"], y=spawn_point["y"], z=spawn_point["z"])
         rotation = carla.Rotation(
@@ -267,10 +287,12 @@ class SensorWrapper(object):
         return carla.Transform(location, rotation)
 
     def cleanup(self):
-        """Cleanup sensors robustly.
+        """
+        Cleanup sensors robustly.
 
-        Stops and destroys all spawned sensors, continuing even if individual
-        sensors fail to clean up. This prevents resource leaks.
+        Stops and destroys all spawned sensors, continuing even if individual sensors fail to clean
+        up. This prevents resource leaks.
+
         """
         cleanup_errors = []
 
@@ -288,12 +310,15 @@ class SensorWrapper(object):
             logging.warning(error)
 
     def _cleanup_single_sensor(self, sensor, index, error_list):
-        """Clean up a single sensor, collecting errors without raising.
+        """
+        Clean up a single sensor, collecting errors without raising.
 
         Args:
+        ----
             sensor: Sensor actor to clean up
             index: Sensor index for error reporting
             error_list: List to append error messages to
+
         """
         try:
             sensor.stop()

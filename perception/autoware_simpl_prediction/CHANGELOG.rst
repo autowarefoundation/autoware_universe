@@ -2,6 +2,12 @@
 Changelog for package autoware_simpl_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_simpl_prediction): remove cudnn dependency (`#11893 <https://github.com/autowarefoundation/autoware_universe/issues/11893>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
