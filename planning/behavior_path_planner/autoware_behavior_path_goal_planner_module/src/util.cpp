@@ -251,16 +251,26 @@ lanelet::ConstLanelets generateBetweenEgoAndExpandedPullOverLanes(
 
   // ==========================================================================================
   // NOTE: the point which is on the right side of a directed line has negative distance
-  // getExpandedLanelet(1.0, -2.0) expands a lanelet by 1.0 to the left and by 2.0 to the right
+  // get_dirty_expanded_lanelet(1.0, -2.0) expands a lanelet by 1.0 to the left and by 2.0 to the
+  // right
   // ==========================================================================================
   const double ego_offset_to_closer_boundary =
     getOffsetToLanesBoundary(pull_over_lanes, ego_front_pose, left_side);
-  return left_side ? lanelet::utils::getExpandedLanelets(
-                       pull_over_lanes, outer_road_offset,
-                       ego_offset_to_closer_boundary - inner_road_offset)
-                   : lanelet::utils::getExpandedLanelets(
-                       pull_over_lanes, ego_offset_to_closer_boundary + inner_road_offset,
-                       -outer_road_offset);
+
+  std::optional<lanelet::ConstLanelets> expand_lanelets_opt;
+  if (left_side) {
+    expand_lanelets_opt = autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      pull_over_lanes, outer_road_offset, ego_offset_to_closer_boundary - inner_road_offset);
+  } else {
+    expand_lanelets_opt = autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      pull_over_lanes, ego_offset_to_closer_boundary + inner_road_offset, -outer_road_offset);
+  }
+
+  if (expand_lanelets_opt.has_value()) {
+    return expand_lanelets_opt.value();
+  } else {
+    return pull_over_lanes;
+  }
 }
 
 std::optional<Polygon2d> generateObjectExtractionPolygon(

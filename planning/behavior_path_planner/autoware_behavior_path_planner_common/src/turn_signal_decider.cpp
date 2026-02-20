@@ -17,12 +17,12 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/hatched_road_markings.hpp>
 #include <autoware/motion_utils/constants.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -248,10 +248,13 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     } while (route_handler.getNextLaneletWithinRoute(current_lane, &current_lane) &&
              current_lane.attributeOr("turn_direction", std::string("none")) == lane_attribute);
 
-    if (!combined_lane_elems.empty()) {
+    const auto combined_lanelet_opt =
+      autoware::experimental::lanelet2_utils::combine_lanelets_shape(combined_lane_elems);
+    // confirmed by combined_lanelet_opt that combined_lane_elems is not empty
+    if (combined_lanelet_opt.has_value()) {
       // store combined lane and its front lane
       const auto & combined_and_first = std::pair<lanelet::ConstLanelet, lanelet::ConstLanelet>(
-        lanelet::utils::combineLaneletsShape(combined_lane_elems), combined_lane_elems.front());
+        *combined_lanelet_opt, combined_lane_elems.front());
       combined_and_front_vec.push_back(combined_and_first);
     }
   }
