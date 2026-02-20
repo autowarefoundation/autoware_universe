@@ -38,8 +38,8 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 namespace
@@ -1016,18 +1016,13 @@ PathWithLaneId StaticObstacleAvoidanceModule::extendBackwardLength(
 }
 
 auto StaticObstacleAvoidanceModule::getTurnSignal(
-  const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path) -> TurnSignalInfo
+  const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path,
+  const ShiftLineArray & shift_lines) const -> std::pair<TurnSignalInfo, std::optional<std::string>>
 {
   using autoware::motion_utils::calcSignedArcLength;
 
   const auto is_ignore_signal = [this](const UUID & uuid) {
     return ignore_signal_ids_.find(to_hex_string(uuid)) != ignore_signal_ids_.end();
-  };
-
-  const auto update_ignore_signal = [this](const UUID & uuid, const bool is_ignore) {
-    if (is_ignore) {
-      ignore_signal_ids_.insert(to_hex_string(uuid));
-    }
   };
 
   const auto is_large_deviation = [this](const auto & path) {
@@ -1038,43 +1033,19 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
     return std::abs(lateral_deviation) > threshold;
   };
 
-  auto shift_lines = path_shifter_.getShiftLines();
-  auto selected_spline_shift_path = spline_shift_path;
-  auto selected_linear_shift_path = linear_shift_path;
-  if (parameters_->enable_signalling_during_yield && avoid_data_.yield_required) {
-    if (avoid_data_.candidate_path.path.points.empty()) {
-      return getPreviousModuleOutput().turn_signal_info;
-    }
-
-    selected_spline_shift_path = avoid_data_.candidate_path;
-    selected_linear_shift_path = avoid_data_.candidate_path;
-
-    shift_lines.clear();
-    for (const auto & al : avoid_data_.safe_shift_line) {
-      shift_lines.push_back(al);
-    }
-  }
-
-  const auto & ref_points = path_shifter_.getReferencePath().points;
-  if (ref_points.empty()) {
-    return getPreviousModuleOutput().turn_signal_info;
-  }
-
-  const size_t ego_idx = planner_data_->findEgoIndex(ref_points);
-
   std::vector<ShiftLine> shift_lines_after_ego;
   for (const auto & s : shift_lines) {
-    if (s.end_idx >= ego_idx) {
+    if (s.end_idx >= planner_data_->findEgoIndex(spline_shift_path.path.points)) {
       shift_lines_after_ego.push_back(s);
     }
   }
 
   if (shift_lines_after_ego.empty()) {
-    return getPreviousModuleOutput().turn_signal_info;
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
-  if (is_large_deviation(selected_spline_shift_path.path)) {
-    return getPreviousModuleOutput().turn_signal_info;
+  if (is_large_deviation(spline_shift_path.path)) {
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
   const auto target_shift_line = [&]() {
@@ -1097,14 +1068,17 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
       }
 
       // different side shift
+      const auto & points = path_shifter_.getReferencePath().points;
+      const size_t idx = planner_data_->findEgoIndex(points);
+
       // output turn signal for near shift line.
-      if (calcSignedArcLength(ref_points, ego_idx, s1.start_idx) > 0.0) {
+      if (calcSignedArcLength(points, idx, s1.start_idx) > 0.0) {
         return s1;
       }
 
       // output turn signal for far shift line.
       if (
-        calcSignedArcLength(ref_points, ego_idx, s2.start_idx) <
+        calcSignedArcLength(points, idx, s2.start_idx) <
         getEgoSpeed() * parameters_->max_prepare_time) {
         return s2;
       }
@@ -1117,7 +1091,7 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   }();
 
   if (is_ignore_signal(target_shift_line.id)) {
-    return getPreviousModuleOutput().turn_signal_info;
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
@@ -1126,17 +1100,30 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   constexpr bool egos_lane_is_shifted = true;
 
   const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
-    selected_linear_shift_path, target_shift_line, avoid_data_.current_lanelets,
-    helper_->getEgoShift(), is_driving_forward, egos_lane_is_shifted);
+    linear_shift_path, target_shift_line, avoid_data_.current_lanelets, helper_->getEgoShift(),
+    is_driving_forward, egos_lane_is_shifted);
 
-  update_ignore_signal(target_shift_line.id, is_ignore);
+  const std::optional<std::string> new_ignore_id =
+    is_ignore ? std::optional<std::string>{to_hex_string(target_shift_line.id)} : std::nullopt;
 
-  const auto current_seg_idx =
-    planner_data_->findEgoSegmentIndex(selected_spline_shift_path.path.points);
-  return planner_data_->turn_signal_decider.overwrite_turn_signal(
-    selected_spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
-    planner_data_->parameters.ego_nearest_dist_threshold,
-    planner_data_->parameters.ego_nearest_yaw_threshold);
+  const auto current_seg_idx = planner_data_->findEgoSegmentIndex(spline_shift_path.path.points);
+  return {
+    planner_data_->turn_signal_decider.overwrite_turn_signal(
+      spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
+      planner_data_->parameters.ego_nearest_dist_threshold,
+      planner_data_->parameters.ego_nearest_yaw_threshold),
+    new_ignore_id};
+}
+
+auto StaticObstacleAvoidanceModule::computeTurnSignalFromShifter(
+  PathShifter & shifter, const PathWithLaneId & reference_path) const
+  -> std::pair<TurnSignalInfo, std::optional<std::string>>
+{
+  ShiftedPath spline_path = utils::static_obstacle_avoidance::toShiftedPath(reference_path);
+  ShiftedPath linear_path = utils::static_obstacle_avoidance::toShiftedPath(reference_path);
+  shifter.generate(&spline_path, true, SHIFT_TYPE::SPLINE);
+  shifter.generate(&linear_path, true, SHIFT_TYPE::LINEAR);
+  return getTurnSignal(spline_path, linear_path, shifter.getShiftLines());
 }
 
 BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
@@ -1186,7 +1173,12 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
 
   // turn signal
   {
-    output.turn_signal_info = getTurnSignal(spline_shift_path, linear_shift_path);
+    auto [turn_signal, new_ignore_id] =
+      getTurnSignal(spline_shift_path, linear_shift_path, path_shifter_.getShiftLines());
+    if (new_ignore_id) {
+      ignore_signal_ids_.insert(*new_ignore_id);
+    }
+    output.turn_signal_info = turn_signal;
   }
 
   // sparse resampling for computational cost
@@ -1316,12 +1308,35 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::planWaitingApproval()
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   BehaviorModuleOutput out = plan();
 
-  const bool is_no_shift_lines =
-    !(parameters_->enable_signalling_during_yield && avoid_data_.yield_required)
-      ? path_shifter_.getShiftLines().empty()
-      : avoid_data_.safe_shift_line.empty();
-  if (is_no_shift_lines) {
-    out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+  if (path_shifter_.getShiftLines().empty()) {
+    const auto & candidate_shift_lines = avoid_data_.safe_shift_line;
+    const auto & turn_signal_policy = parameters_->policy_candidate_path_turn_signal;
+
+    // Determine whether to compute turn signal from candidate shift lines.
+    // "none"             : never output turn signal for candidate paths.
+    // "stopped_candidate": output turn signal only when vehicle is stopped (current default).
+    // "all_candidate"    : always output turn signal when candidate path exists.
+    const bool should_output_candidate_turn_signal = [&]() {
+      const bool has_candidates = !candidate_shift_lines.empty();
+      const bool always_signal = turn_signal_policy == "all_candidate";
+      const bool signal_when_stopped =
+        turn_signal_policy == "stopped_candidate" && helper_->isVehicleStopped();
+      return has_candidates && (always_signal || signal_when_stopped);
+    }();
+
+    if (should_output_candidate_turn_signal) {
+      // Compute turn signal from candidate shift lines before approval.
+      auto candidate_shifter = path_shifter_;
+      addNewShiftLines(candidate_shifter, candidate_shift_lines);
+      auto [turn_signal, new_ignore_id] =
+        computeTurnSignalFromShifter(candidate_shifter, avoid_data_.reference_path);
+      if (new_ignore_id) {
+        ignore_signal_ids_.insert(*new_ignore_id);
+      }
+      out.turn_signal_info = turn_signal;
+    } else {
+      out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    }
   }
 
   path_candidate_ = std::make_shared<PathWithLaneId>(planCandidate().path_candidate);
