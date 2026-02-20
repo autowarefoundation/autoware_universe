@@ -167,7 +167,7 @@ bool path_footprint_exceeds_target_lane_bound(
 
   const auto combined_target_lane_opt =
     autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanes);
-  if (!combined_target_lane_opt.has_value()) {
+  if (!combined_target_lane_opt) {
     // empty target_lanes -> no boundary
     return false;
   }
@@ -672,7 +672,7 @@ lanelet::ConstLanelets generateExpandedLanelets(
   const auto expand_lanelets_opt =
     autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
       lanes, left_extend_offset, right_extend_offset);
-  if (expand_lanelets_opt.has_value()) {
+  if (expand_lanelets_opt) {
     return *expand_lanelets_opt;
   }
 
@@ -1461,7 +1461,7 @@ bool is_intersecting_no_lane_change_lines(
           const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(line[i]);
           const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(line[i + 1]);
 
-          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value()) {
+          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2)) {
             return true;
           }
         }
