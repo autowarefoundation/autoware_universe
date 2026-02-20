@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This node is a CUDA accelerated version of the `PolarVoxelOutlierFilter` available in [autoware_cuda_pointcloud_preprocessor](../../autoware_pointcloud_preprocessor).
+This node is a CUDA accelerated version of the `PolarVoxelOutlierFilter` available in [autoware_cuda_pointcloud_preprocessor](../../autoware_pointcloud_preprocessor/README.md).
 
 ## Inner-workings / Algorithms
 

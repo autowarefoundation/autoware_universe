@@ -21,7 +21,6 @@
 #include <autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/roundabout.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -357,22 +356,9 @@ private:
     });
   };
 
-  inline bool isNearEndOfShift(
+  bool isNearEndOfShift(
     const double start_shift_length, const double end_shift_length, const Point & ego_pos,
-    const lanelet::ConstLanelets & original_lanes, const double threshold) const
-  {
-    using boost::geometry::within;
-    using lanelet::utils::to2D;
-    using lanelet::utils::conversion::toLaneletPoint;
-
-    if (!isReturnShift(start_shift_length, end_shift_length, threshold)) {
-      return false;
-    }
-
-    return std::any_of(original_lanes.begin(), original_lanes.end(), [&ego_pos](const auto & lane) {
-      return within(to2D(toLaneletPoint(ego_pos)), lane.polygon2d().basicPolygon());
-    });
-  };
+    const lanelet::ConstLanelets & original_lanes, const double threshold) const;
 
   geometry_msgs::msg::Quaternion calc_orientation(const Point & src_point, const Point & dst_point);
 

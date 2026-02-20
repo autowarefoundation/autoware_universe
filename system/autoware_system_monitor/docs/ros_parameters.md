@@ -52,10 +52,11 @@ hdd_monitor:
 
 mem_monitor:
 
-| Name        | Type  |  Unit   | Default | Notes                                                                             |
-| :---------- | :---: | :-----: | :-----: | :-------------------------------------------------------------------------------- |
-| usage_warn  | float | %(1e-2) |  0.95   | Generates warning when physical memory usage reaches a specified value or higher. |
-| usage_error | float | %(1e-2) |  0.99   | Generates error when physical memory usage reaches a specified value or higher.   |
+| Name                 | Type | Unit | Default |                                                                Notes                                                                 |
+| :------------------- | :--: | :--: | :-----: | :----------------------------------------------------------------------------------------------------------------------------------: |
+| available_size       | int  | MiB  |  1024   |                  Generates error when physical memory usage reaches a specified value defined by `available_size`.                   |
+| warning_margin       | int  | MiB  |    0    | Generates warning when physical memory usage reaches a specified value defined by addition of `available_size` and `warning_margin`. |
+| swap_error_threshold | int  | MiB  |  1024   |                                 Generates error when swap usage reaches a specified value or higher.                                 |
 
 ## <u>Net Monitor</u>
 
