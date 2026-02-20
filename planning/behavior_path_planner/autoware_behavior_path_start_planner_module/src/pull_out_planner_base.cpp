@@ -50,9 +50,9 @@ bool PullOutPlannerBase::isPullOutPathCollided(
 
   const auto shift_length =
     std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
-  return utils::has_collision_between_shifted_path_footprints_and_objects(
+  return autoware::behavior_path_planner::start_planner_utils::has_collision_between_shifted_path_footprints_and_objects(
     collision_check_section_path.value(), vehicle_footprint_, pull_out_lane_stop_objects,
     collision_check_margin_, parameters_.th_stopped_velocity, shift_length,
-    parameters_.minimum_shift_length);
+    parameters_.minimum_shift_length, parameters_.enable_back);
 };
 }  // namespace autoware::behavior_path_planner
