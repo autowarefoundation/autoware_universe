@@ -153,7 +153,7 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
         const auto ratio = distance_to_intersection / segment_length;
         amber_stop_line_crossing_time = interpolation::lerp(
           rclcpp::Duration(trajectory[i].time_from_start).seconds(),
-          rclcpp::Duration(trajectory[i].time_from_start).seconds(), ratio);
+          rclcpp::Duration(trajectory[i + 1].time_from_start).seconds(), ratio);
         break;
       }
       distance_to_stop_line += segment_length;
