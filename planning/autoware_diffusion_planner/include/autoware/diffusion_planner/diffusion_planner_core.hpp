@@ -206,6 +206,13 @@ public:
    */
   int64_t get_previous_turn_indicator_report() const;
 
+  /**
+   * @brief Get current route pointer.
+   *
+   * @return Shared pointer to current route
+   */
+  const LaneletRoute::ConstSharedPtr & get_route() const { return route_ptr_; }
+
 private:
   // Parameters
   DiffusionPlannerParams params_;
