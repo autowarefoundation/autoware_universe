@@ -17,6 +17,7 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
+#include "autoware/diffusion_planner/diffusion_planner_core.hpp"
 #include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
@@ -98,35 +99,6 @@ using unique_identifier_msgs::msg::UUID;
 using utils::NormalizationMap;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
-
-struct FrameContext
-{
-  nav_msgs::msg::Odometry ego_kinematic_state;
-  geometry_msgs::msg::AccelWithCovarianceStamped ego_acceleration;
-  Eigen::Matrix4d ego_to_map_transform;
-  std::vector<AgentHistory> ego_centric_neighbor_histories;
-  rclcpp::Time frame_time;
-};
-
-struct DiffusionPlannerParams
-{
-  std::string model_path;
-  std::string args_path;
-  std::string plugins_path;
-  bool build_only;
-  double planning_frequency_hz;
-  bool ignore_neighbors;
-  bool ignore_unknown_neighbors;
-  bool predict_neighbor_trajectory;
-  double traffic_light_group_msg_timeout_seconds;
-  int batch_size;
-  std::vector<double> temperature_list;
-  int64_t velocity_smoothing_window;
-  double stopping_threshold;
-  float turn_indicator_keep_offset;
-  double turn_indicator_hold_duration;
-  bool shift_x;
-};
 
 struct DiffusionPlannerDebugParams
 {
@@ -236,37 +208,13 @@ private:
    */
   SetParametersResult on_parameter(const std::vector<rclcpp::Parameter> & parameters);
 
-  /**
-   * @brief Prepare input data for inference.
-   * @return FrameContext containing preprocessed data.
-   */
-  std::optional<FrameContext> create_frame_context();
-
-  /**
-   * @brief Build model input tensors from frame context.
-   * @param frame_context Preprocessed frame context.
-   * @return Map of input data for the model.
-   */
-  InputDataMap create_input_data(const FrameContext & frame_context);
-
-  // Inference engine
-  std::unique_ptr<TensorrtInference> tensorrt_inference_{nullptr};
-
-  // history data
-  std::deque<nav_msgs::msg::Odometry> ego_history_;
-  std::deque<TurnIndicatorsReport> turn_indicators_history_;
-  AgentData agent_data_;
-  std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
+  // Core logic instance
+  std::unique_ptr<DiffusionPlannerCore> core_;
 
   // Node parameters
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   DiffusionPlannerParams params_;
   DiffusionPlannerDebugParams debug_params_;
-  NormalizationMap normalization_map_;
-
-  // Lanelet map
-  LaneletRoute::ConstSharedPtr route_ptr_;
-  std::unique_ptr<preprocess::LaneSegmentContext> lane_segment_context_;
 
   // Node elements
   rclcpp::TimerBase::SharedPtr timer_;
