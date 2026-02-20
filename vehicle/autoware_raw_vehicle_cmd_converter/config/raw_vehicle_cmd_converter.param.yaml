@@ -13,6 +13,9 @@
     max_brake: 0.8
     max_steer: 10.0
     min_steer: -10.0
+    steer_offset: 0.0
+    steer_offset_updatable_range: 0.0 # [rad]
+    parameter_updatable_velocity: 0.0 # [m/s]
     steer_pid:
       kp: 150.0
       ki: 15.0
