@@ -98,6 +98,15 @@ void set_lane_ids_to_path_point(
 
 std::pair<double, double> calc_start_and_end_shift_length(
   const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose);
+
+/**
+ * @brief Check collision between ego path footprints and objects considering shift length.
+ * @return Has collision or not
+ */
+bool has_collision_between_shifted_path_footprints_and_objects(
+  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
+  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
+  const double shift_length, const double th_min_shift_length, const bool enable_back);
 }  // namespace autoware::behavior_path_planner::start_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__UTIL_HPP_
