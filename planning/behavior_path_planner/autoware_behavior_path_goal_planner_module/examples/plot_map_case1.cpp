@@ -25,6 +25,7 @@
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp>
 #include <autoware/behavior_path_planner_common/utils/path_utils.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
@@ -321,7 +322,8 @@ std::vector<PullOverPath> selectPullOverPaths(
     // get road lanes which is at least backward_length[m] behind the goal
     const auto road_lanes = getExtendedCurrentLanesFromPath(
       upstream_module_output.path, planner_data, backward_length, 0.0, false);
-    const auto goal_pose_length = lanelet::utils::getArcCoordinates(road_lanes, goal_pose).length;
+    const auto goal_pose_length =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, goal_pose).length;
     return planner_data->route_handler->getCenterLinePath(
       road_lanes, std::max(0.0, goal_pose_length - backward_length),
       goal_pose_length + parameters.forward_goal_search_length);
@@ -470,7 +472,8 @@ std::optional<PathWithLaneId> calculate_centerline_path(
   const auto departure_check_lane =
     autoware::behavior_path_planner::goal_planner_utils::createDepartureCheckLanelet(
       pull_over_lanes, *route_handler, true);
-  const auto goal_arc_coords = lanelet::utils::getArcCoordinates(pull_over_lanes, refined_goal);
+  const auto goal_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_over_lanes, refined_goal);
   const double s_start = std::max(0.0, goal_arc_coords.length - backward_length);
   const double s_end = goal_arc_coords.length + forward_length;
   const double longitudinal_interval = use_bus_stop_area

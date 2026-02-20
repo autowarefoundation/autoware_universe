@@ -16,9 +16,9 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/drivable_area_expansion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 
@@ -993,6 +993,7 @@ std::vector<DrivableLanes> expandLanelets(
   const std::vector<DrivableLanes> & drivable_lanes, const double left_bound_offset,
   const double right_bound_offset, const std::vector<std::string> & types_to_skip)
 {
+  using autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelet;
   if (left_bound_offset == 0.0 && right_bound_offset == 0.0) return drivable_lanes;
 
   std::vector<DrivableLanes> expanded_drivable_lanes{};
@@ -1011,16 +1012,20 @@ std::vector<DrivableLanes> expandLanelets(
     const double r_offset = r_skip ? 0.0 : -right_bound_offset;
 
     DrivableLanes expanded_lanes;
+    std::optional<lanelet::ConstLanelet> expanded_left_lane_opt;
+    std::optional<lanelet::ConstLanelet> expanded_right_lane_opt;
     if (lanes.left_lane.id() == lanes.right_lane.id()) {
-      expanded_lanes.left_lane =
-        lanelet::utils::getExpandedLanelet(lanes.left_lane, l_offset, r_offset);
-      expanded_lanes.right_lane =
-        lanelet::utils::getExpandedLanelet(lanes.right_lane, l_offset, r_offset);
+      expanded_left_lane_opt = get_dirty_expanded_lanelet(lanes.left_lane, l_offset, r_offset);
+      expanded_right_lane_opt = get_dirty_expanded_lanelet(lanes.right_lane, l_offset, r_offset);
     } else {
-      expanded_lanes.left_lane = lanelet::utils::getExpandedLanelet(lanes.left_lane, l_offset, 0.0);
-      expanded_lanes.right_lane =
-        lanelet::utils::getExpandedLanelet(lanes.right_lane, 0.0, r_offset);
+      expanded_left_lane_opt = get_dirty_expanded_lanelet(lanes.left_lane, l_offset, 0.0);
+      expanded_right_lane_opt = get_dirty_expanded_lanelet(lanes.right_lane, 0.0, r_offset);
     }
+    expanded_lanes.left_lane =
+      expanded_left_lane_opt.has_value() ? expanded_left_lane_opt.value() : lanes.left_lane;
+    expanded_lanes.right_lane =
+      expanded_right_lane_opt.has_value() ? expanded_right_lane_opt.value() : lanes.right_lane;
+
     expanded_lanes.middle_lanes = lanes.middle_lanes;
     expanded_drivable_lanes.push_back(expanded_lanes);
   }
