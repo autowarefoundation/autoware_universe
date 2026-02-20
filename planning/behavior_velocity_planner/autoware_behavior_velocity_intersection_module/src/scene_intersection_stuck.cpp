@@ -16,6 +16,7 @@
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -411,9 +412,9 @@ bool IntersectionModule::checkYieldStuckVehicleInIntersection(
       continue;
     }
     for (const auto & yield_stuck_detect_lanelet : yield_stuck_detect_lanelets) {
-      const bool is_in_lanelet = lanelet::utils::isInLanelet(
-        object.kinematics.initial_pose_with_covariance.pose, yield_stuck_detect_lanelet);
-      if (is_in_lanelet) {
+      const bool is_inside_lanelet = autoware::experimental::lanelet2_utils::is_in_lanelet(
+        yield_stuck_detect_lanelet, object.kinematics.initial_pose_with_covariance.pose);
+      if (is_inside_lanelet) {
         debug_data_.yield_stuck_targets.objects.push_back(object);
         return true;
       }

@@ -613,7 +613,7 @@ std::optional<size_t> RoundaboutModule::checkAngleForTargetLanelets(
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
     const auto & ll = target_lanelets.at(i);
-    if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
+    if (!autoware::experimental::lanelet2_utils::is_in_lanelet(ll, pose, dist_margin)) {
       continue;
     }
     const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
