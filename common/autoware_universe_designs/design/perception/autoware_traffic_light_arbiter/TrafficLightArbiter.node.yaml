@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightArbiter.node
@@ -32,11 +32,11 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     default: config/traffic_light_arbiter.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

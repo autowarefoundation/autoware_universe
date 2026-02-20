@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: PoseInitializer.node
@@ -27,11 +27,11 @@ outputs:
     remap_target: /localization/initialize
 
 # parameters
-parameter_files:
+param_files:
   - name: config_file
     default: config/pose_initializer.param.yaml
 
-parameters:
+param_values:
   - name: ekf_enabled
     default: false
   - name: gnss_enabled

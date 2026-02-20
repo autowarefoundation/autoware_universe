@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: RadarObjectTracker.node
@@ -35,7 +35,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: tracker_setting_path
     default: config/default_tracker.param.yaml
   - name: data_association_matrix_path
@@ -44,7 +44,7 @@ parameter_files:
     default: config/radar_object_tracker.param.yaml
     allow_substs: true
 
-parameters: []
+param_values: []
 
 # processes
 processes:

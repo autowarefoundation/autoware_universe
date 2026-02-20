@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: MultiObjectTracker.node
@@ -55,7 +55,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: tracker_setting_path
     default: config/multi_object_tracker_node.param.yaml
   - name: data_association_matrix_path
@@ -63,7 +63,7 @@ parameter_files:
   - name: input_channels_path
     default: config/input_channels.param.yaml
 
-parameters:
+param_values:
   - name: input/detection01/channel
     type: string
     default: none

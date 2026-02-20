@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: PointPaintingFusion.node
@@ -79,7 +79,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: sync_param_path
     default: config/fusion_common.param.yaml
     schema: schema/fusion_common.schema.json
@@ -94,7 +94,7 @@ parameter_files:
   - name: class_remapper_param_path
     default: $(find-pkg-share autoware_lidar_centerpoint)/config/detection_class_remapper.param.yaml
 
-parameters:
+param_values:
   - name: rois_number
     type: int
     default: 8

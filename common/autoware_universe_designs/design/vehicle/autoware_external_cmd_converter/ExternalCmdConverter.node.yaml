@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ExternalCmdConverter.node
@@ -32,11 +32,11 @@ outputs:
     message_type: autoware_control_msgs/msg/Control
 
 # parameters
-parameter_files:
+param_files:
   - name: parameters
     default: config/external_cmd_converter.param.yaml
 
-parameters:
+param_values:
   - name: csv_path_accel_map
     type: string
     default: config/accel_map.csv

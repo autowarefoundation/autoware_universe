@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightMultiCameraFusion.node
@@ -44,11 +44,11 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     default: config/traffic_light_multi_camera_fusion.param.yaml
 
-parameters:
+param_values:
   - name: camera_namespaces
     type: array
     default: "['camera1', 'camera2']"

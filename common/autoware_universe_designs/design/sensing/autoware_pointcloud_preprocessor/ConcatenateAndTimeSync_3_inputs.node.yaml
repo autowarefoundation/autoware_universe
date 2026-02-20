@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ConcatenateAndTimeSync_3_inputs.node
@@ -9,7 +9,7 @@ override:
   inputs:
     - name: input3
       message_type: sensor_msgs/msg/PointCloud2
-  parameters:
+  param_values:
     - name: input_topics
       type: array
       default: "[${input input1}, ${input input2}, ${input input3}]"

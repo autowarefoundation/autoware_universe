@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: VehicleDoorSimulator.node
@@ -27,9 +27,9 @@ outputs:
     remap_target: ~/doors/layout
 
 # parameters
-parameter_files: []
+param_files: []
 
-parameters: []
+param_values: []
 
 # processes
 processes:

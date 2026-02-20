@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: DetectedObjectSorter.node
@@ -27,12 +27,12 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     schema: schema/object_sorter.schema.json
     default: config/detected_object_sorter.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

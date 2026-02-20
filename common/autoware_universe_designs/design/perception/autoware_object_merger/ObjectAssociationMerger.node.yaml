@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ObjectAssociationMerger.node
@@ -32,7 +32,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: data_association_matrix_path
     default: config/data_association_matrix.param.yaml
   - name: distance_threshold_list_path
@@ -40,7 +40,7 @@ parameter_files:
   - name: object_association_merger_param_path
     default: config/object_association_merger.param.yaml
 
-parameters:
+param_values:
   - name: priority_mode
     type: int
     default: 2

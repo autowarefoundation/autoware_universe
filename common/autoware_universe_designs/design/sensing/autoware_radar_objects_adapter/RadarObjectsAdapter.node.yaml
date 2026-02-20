@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 name: RadarObjectsAdapter.node
 
@@ -24,12 +24,12 @@ outputs:
     message_type: autoware_perception_msgs/msg/TrackedObjects
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     default: config/radar_objects_adapter.param.yaml
     schema: schema/radar_objects_adapter.schema.json
 
-parameters: []
+param_values: []
 
 # processes
 processes:

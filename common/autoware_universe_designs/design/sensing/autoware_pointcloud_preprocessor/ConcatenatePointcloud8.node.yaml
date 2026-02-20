@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ConcatenatePointcloud8.node
@@ -38,11 +38,11 @@ outputs:
     remap_target: output
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/concatenate_pointclouds.param.yaml
 
-parameters:
+param_values:
   - name: input_frame
     type: string
     default: base_link

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: SimpleObjectMerger_6_inputs.node
@@ -20,7 +20,7 @@ override:
     - name: object6
       message_type: autoware_perception_msgs/msg/DetectedObjects
 
-  parameters:
+  param_values:
     - name: input_topics
       type: array
       default: "[${input object1}, ${input object2}, ${input object3}, ${input object4},

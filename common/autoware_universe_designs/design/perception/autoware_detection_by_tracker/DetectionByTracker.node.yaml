@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: DetectionByTracker.node
@@ -31,12 +31,12 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: detection_by_tracker_param_path
     default: config/detection_by_tracker.param.yaml
     schema: config/detection_by_tracker.param.schema.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: VoxelBasedCompareMapFilter.node
@@ -40,12 +40,12 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: voxel_based_compare_map_filter_param_file
     default: config/voxel_based_compare_map_filter.param.yaml
     schema: schema/voxel_based_compare_map_filter.schema.json
 
-parameters:
+param_values:
   - name: input_frame
     type: string
     default: map

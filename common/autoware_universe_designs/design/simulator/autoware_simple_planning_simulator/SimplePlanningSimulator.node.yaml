@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: SimplePlanningSimulator.node
@@ -90,7 +90,7 @@ outputs:
     remap_target: input/control_mode_request
 
 # parameters
-parameter_files:
+param_files:
   - name: vehicle_info_param_file
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
   - name: vehicle_characteristics_param_file
@@ -98,7 +98,7 @@ parameter_files:
   - name: simulator_model_param_file
     default: param/simple_planning_simulator_default.param.yaml
 
-parameters:
+param_values:
   - name: simulated_frame_id
     default: base_link
   - name: origin_frame_id
