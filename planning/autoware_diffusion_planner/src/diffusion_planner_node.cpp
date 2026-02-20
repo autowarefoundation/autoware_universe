@@ -194,10 +194,10 @@ SetParametersResult DiffusionPlanner::on_parameter(
       rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
     turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
 
+    core_->update_params(params_);
+
     if (args_path_changed || model_path_changed || batch_size_changed) {
       try {
-        // Recreate core with new parameters
-        core_ = std::make_unique<DiffusionPlannerCore>(params_, vehicle_info_);
         load_model();
       } catch (const std::exception & e) {
         RCLCPP_ERROR_STREAM(get_logger(), e.what() << ". Failed to reload model.");

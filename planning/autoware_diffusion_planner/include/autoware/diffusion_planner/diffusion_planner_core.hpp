@@ -115,6 +115,13 @@ public:
   void load_model();
 
   /**
+   * @brief Update parameters without losing internal state.
+   *
+   * @param params New parameters to apply
+   */
+  void update_params(const DiffusionPlannerParams & params);
+
+  /**
    * @brief Prepare frame context for inference.
    *
    * @param ego_kinematic_state Current ego vehicle odometry

@@ -26,6 +26,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -47,6 +48,11 @@ void DiffusionPlannerCore::load_model()
     params_.model_path, params_.plugins_path, params_.batch_size);
 }
 
+void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
+{
+  params_ = params;
+}
+
 void DiffusionPlannerCore::set_map(
   const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr)
 {
@@ -62,7 +68,6 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const std::shared_ptr<const TurnIndicatorsReport> & turn_indicators,
   const LaneletRoute::ConstSharedPtr & route_ptr, const rclcpp::Time & current_time)
 {
-  // Update route FIRST, before other checks
   route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
 
   TrackedObjects empty_object_list;
@@ -325,7 +330,7 @@ int64_t DiffusionPlannerCore::count_valid_elements(
       NEIGHBOR_SHAPE[3], batch_idx);
   }
 
-  return 0;
+  throw std::invalid_argument("Unknown data_key '" + data_key + "' in count_valid_elements()");
 }
 
 int64_t DiffusionPlannerCore::get_previous_turn_indicator_report() const
