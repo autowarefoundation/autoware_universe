@@ -62,6 +62,9 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const std::shared_ptr<const TurnIndicatorsReport> & turn_indicators,
   const LaneletRoute::ConstSharedPtr & route_ptr, const rclcpp::Time & current_time)
 {
+  // Update route FIRST, before other checks
+  route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
+
   TrackedObjects empty_object_list;
   auto effective_objects = objects;
 
@@ -73,8 +76,6 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     return std::nullopt;
   }
 
-  // Update route: use new route if provided, otherwise keep existing route
-  route_ptr_ = (!route_ptr_ || route_ptr) ? route_ptr : route_ptr_;
   if (!route_ptr_) {
     return std::nullopt;
   }

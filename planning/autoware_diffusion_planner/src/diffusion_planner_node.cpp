@@ -346,36 +346,23 @@ void DiffusionPlanner::on_timer()
   auto temp_route_ptr = route_subscriber_.take_data();
   auto turn_indicators_ptr = sub_turn_indicators_.take_data();
 
-  // Use existing route if no new route is provided
-  auto route_ptr = temp_route_ptr ? temp_route_ptr : core_->get_route();
+  // Prepare frame context using core
+  const std::optional<FrameContext> frame_context = core_->create_frame_context(
+    ego_kinematic_state, ego_acceleration, objects, traffic_signals, turn_indicators_ptr,
+    temp_route_ptr, this->now());
 
-  // Check if all required input data is available
-  if (!objects || !ego_kinematic_state || !ego_acceleration || !route_ptr || !turn_indicators_ptr) {
+  if (!frame_context) {
+    // Log detailed information about missing inputs
     RCLCPP_WARN_STREAM_THROTTLE(
       get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
       "There is no input data. objects: "
         << (objects ? "true" : "false")
         << ", ego_kinematic_state: " << (ego_kinematic_state ? "true" : "false")
         << ", ego_acceleration: " << (ego_acceleration ? "true" : "false")
-        << ", route: " << (route_ptr ? "true" : "false")
+        << ", route: " << (core_->get_route() ? "true" : "false")
         << ", turn_indicators: " << (turn_indicators_ptr ? "true" : "false"));
     diagnostics_inference_->update_level_and_message(
       DiagnosticStatus::WARN, "No input data available for inference");
-    diagnostics_inference_->publish(current_time);
-    return;
-  }
-
-  // Prepare frame context using core
-  const std::optional<FrameContext> frame_context = core_->create_frame_context(
-    ego_kinematic_state, ego_acceleration, objects, traffic_signals, turn_indicators_ptr, route_ptr,
-    this->now());
-
-  if (!frame_context) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *this->get_clock(), constants::LOG_THROTTLE_INTERVAL_MS,
-      "Failed to create frame context");
-    diagnostics_inference_->update_level_and_message(
-      DiagnosticStatus::WARN, "Failed to create frame context");
     diagnostics_inference_->publish(current_time);
     return;
   }
