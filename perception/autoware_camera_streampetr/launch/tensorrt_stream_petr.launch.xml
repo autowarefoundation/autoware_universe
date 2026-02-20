@@ -10,7 +10,6 @@
   <let name="camera2_topic" value="/sensing/camera/camera2/image_rect_color"/>
   <let name="camera3_topic" value="/sensing/camera/camera3/image_rect_color"/>
   <let name="camera4_topic" value="/sensing/camera/camera4/image_rect_color"/>
-  <let name="camera5_topic" value="/sensing/camera/camera5/image_rect_color"/>
 
   <node pkg="autoware_camera_streampetr" exec="autoware_camera_streampetr_node" name="stream_petr" output="screen">
     <param from="$(var param_path)" allow_substs="true"/>
@@ -20,22 +19,18 @@
     <param name="model_params.head_path" value="$(var model_path)/simplify_pts_head_memory.onnx"/>
     <param name="model_params.position_embedding_path" value="$(var model_path)/simplify_position_embedding.onnx"/>
 
-    <remap from="~/input/kinematic_state" to="/localization/kinematic_state"/>
-
     <!-- Image of ~/input/camera_i will be the ith image in the model input -->
     <remap from="~/input/camera0/camera_info" to="/sensing/camera/camera0/camera_info"/>
     <remap from="~/input/camera1/camera_info" to="/sensing/camera/camera1/camera_info"/>
     <remap from="~/input/camera2/camera_info" to="/sensing/camera/camera2/camera_info"/>
     <remap from="~/input/camera3/camera_info" to="/sensing/camera/camera3/camera_info"/>
     <remap from="~/input/camera4/camera_info" to="/sensing/camera/camera4/camera_info"/>
-    <remap from="~/input/camera5/camera_info" to="/sensing/camera/camera5/camera_info"/>
 
     <remap from="~/input/camera0/image" to="$(var camera0_topic)"/>
     <remap from="~/input/camera1/image" to="$(var camera1_topic)"/>
     <remap from="~/input/camera2/image" to="$(var camera2_topic)"/>
     <remap from="~/input/camera3/image" to="$(var camera3_topic)"/>
     <remap from="~/input/camera4/image" to="$(var camera4_topic)"/>
-    <remap from="~/input/camera5/image" to="$(var camera5_topic)"/>
 
     <!-- Maximum allowed time difference for camera image sync in seconds-->
     <param name="max_camera_time_diff" value="0.15"/>
