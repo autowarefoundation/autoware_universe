@@ -53,23 +53,6 @@ void DiffusionPlannerCore::set_map(
   lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
 }
 
-void DiffusionPlannerCore::update_ego_history(const Odometry & kinematic_state)
-{
-  ego_history_.push_back(kinematic_state);
-  if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
-    ego_history_.pop_front();
-  }
-}
-
-void DiffusionPlannerCore::update_turn_indicators_history(
-  const TurnIndicatorsReport & turn_indicators)
-{
-  turn_indicators_history_.push_back(turn_indicators);
-  if (turn_indicators_history_.size() > static_cast<size_t>(TURN_INDICATORS_SHAPE[1])) {
-    turn_indicators_history_.pop_front();
-  }
-}
-
 std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const std::shared_ptr<const Odometry> & ego_kinematic_state,
   const std::shared_ptr<const AccelWithCovarianceStamped> & ego_acceleration,
@@ -109,10 +92,16 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
 
   // Update ego history
-  update_ego_history(kinematic_state);
+  ego_history_.push_back(kinematic_state);
+  if (ego_history_.size() > static_cast<size_t>(EGO_HISTORY_SHAPE[1])) {
+    ego_history_.pop_front();
+  }
 
   // Update turn indicators history
-  update_turn_indicators_history(*turn_indicators);
+  turn_indicators_history_.push_back(*turn_indicators);
+  if (turn_indicators_history_.size() > static_cast<size_t>(TURN_INDICATORS_SHAPE[1])) {
+    turn_indicators_history_.pop_front();
+  }
 
   // Update neighbor agent data
   agent_data_.update_histories(*effective_objects, params_.ignore_unknown_neighbors);
