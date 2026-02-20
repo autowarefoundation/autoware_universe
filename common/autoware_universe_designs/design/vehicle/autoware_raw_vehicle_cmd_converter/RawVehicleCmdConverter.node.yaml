@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: RawVehicleCmdConverter.node
@@ -42,11 +42,11 @@ outputs:
     message_type: autoware_internal_debug_msgs/msg/Float32MultiArrayStamped
 
 # parameters
-parameter_files:
+param_files:
   - name: config_file
     default: config/raw_vehicle_cmd_converter.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

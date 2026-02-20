@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightSelector.node
@@ -38,8 +38,8 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files: []
-parameters: []
+param_files: []
+param_values: []
 
 # processes
 processes:

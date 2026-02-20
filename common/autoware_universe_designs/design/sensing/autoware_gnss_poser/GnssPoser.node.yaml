@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: GnssPoser.node
@@ -42,11 +42,11 @@ outputs:
       durability: volatile
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/gnss_poser.param.yaml
 
-parameters:
+param_values:
   - name: use_gnss_ins_orientation
     default: true
 

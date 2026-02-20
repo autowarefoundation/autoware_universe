@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: DistortionCorrector.node
@@ -28,11 +28,11 @@ outputs:
     message_type: sensor_msgs/msg/PointCloud2
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/distortion_corrector_node.param.yaml
 
-parameters:
+param_values:
   - name: input_frame
     type: string
     default: base_link

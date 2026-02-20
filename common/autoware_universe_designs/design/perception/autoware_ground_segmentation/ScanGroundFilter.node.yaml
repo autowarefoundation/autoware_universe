@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ScanGroundFilter.node
@@ -32,14 +32,14 @@ outputs:
       durability: volatile
 
 # parameters
-parameter_files:
+param_files:
   - name: ground_segmentation_param_file
     schema: schema/ground_segmentation.schema.json
     default: config/scan_ground_filter.param.yaml
   - name: vehicle_info_param_file
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

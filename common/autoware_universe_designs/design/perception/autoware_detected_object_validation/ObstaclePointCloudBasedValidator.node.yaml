@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ObstaclePointCloudBasedValidator.node
@@ -30,12 +30,12 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: obstacle_pointcloud_based_validator_param_path
     default: config/obstacle_pointcloud_based_validator.param.yaml
     schema: schema/obstacle_pointcloud_based_validator.schema.json
 
-parameters: []
+param_values: []
 
 # processes
 processes:

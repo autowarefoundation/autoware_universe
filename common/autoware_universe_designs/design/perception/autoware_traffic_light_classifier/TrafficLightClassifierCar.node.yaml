@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightClassifierCar.node
@@ -27,11 +27,11 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     default: config/car_traffic_light_classifier.param.yaml
 
-parameters:
+param_values:
   - name: model_path
     type: string
     default: $(var data_path)/traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx

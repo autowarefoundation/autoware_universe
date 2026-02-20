@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: AccelBrakeMapCalibrator.node
@@ -60,11 +60,11 @@ outputs:
     message_type: std_msgs/msg/Float32MultiArray
 
 # parameters
-parameter_files:
+param_files:
   - name: accel_brake_map_calib_param
     default: config/accel_brake_map_calibrator.param.yaml
 
-parameters:
+param_values:
   - name: csv_default_map_dir
     type: string
     default: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: RvizPluginDummyObject.node
@@ -20,9 +20,9 @@ outputs:
     message_type: tier4_simulation_msgs/msg/DummyObject
 
 # parameters
-parameter_files: []
+param_files: []
 
-parameters: []
+param_values: []
 
 # processes
 processes:

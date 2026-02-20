@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: DummyPerceptionPublisher.node
@@ -38,11 +38,11 @@ outputs:
     remap_target: ~/output/debug/ground_truth_objects
 
 # parameters
-parameter_files:
+param_files:
   - name: dummy_perception_publisher_config_file
     default: config/dummy_perception_publisher.param.yaml
 
-parameters:
+param_values:
   - name: visible_range
     default: 300.0
   - name: detection_successful_rate

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: PointcloudBasedOccupancyGridMap.node
@@ -32,7 +32,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/pointcloud_based_occupancy_grid_map.param.yaml
     schema: schema/pointcloud_based_occupancy_grid_map.schema.json
@@ -40,7 +40,7 @@ parameter_files:
     default: config/binary_bayes_filter_updater.param.yaml
     schema: schema/binary_bayes_filter_updater.schema.json
 
-parameters:
+param_values:
   - name: updater_type
     type: string
     default: binary_bayes_filter

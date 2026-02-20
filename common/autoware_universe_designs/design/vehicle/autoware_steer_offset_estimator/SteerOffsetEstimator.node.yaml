@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: SteerOffsetEstimator.node
@@ -28,13 +28,13 @@ outputs:
     message_type: autoware_internal_debug_msgs/msg/Float32Stamped
 
 # parameters
-parameter_files:
+param_files:
   - name: config_file
     default: config/steer_offset_estimator.param.yaml
   - name: initial_steer_offset_param_path
     default: config/steer_offset.param.yaml
 
-parameters:
+param_values:
   - name: initial_steer_offset_param_name
     type: string
     default: steer_offset

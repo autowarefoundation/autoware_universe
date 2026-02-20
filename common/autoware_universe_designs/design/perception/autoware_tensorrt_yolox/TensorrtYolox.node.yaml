@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # cspell: ignore semseg
 
@@ -29,23 +29,23 @@ outputs:
     remap_target: ~/out/mask
 
 # parameters
-parameter_files:
+param_files:
   - name: yolox_param_path
     default: config/yolox_s_plus_opt.param.yaml
 
-parameters:
+param_values:
   - name: model_path
     type: directory
-    value: $(var data_path)/tensorrt_yolox/yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx
+    default: $(var data_path)/tensorrt_yolox/yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx
   - name: label_path
     type: directory
-    value: $(var data_path)/tensorrt_yolox/label.txt
+    default: $(var data_path)/tensorrt_yolox/label.txt
   - name: color_map_path
     type: directory
-    value: $(var data_path)/tensorrt_yolox/semseg_color_map.csv
+    default: $(var data_path)/tensorrt_yolox/semseg_color_map.csv
   - name: build_only
     type: bool
-    value: false
+    default: false
 
 # processes
 processes:

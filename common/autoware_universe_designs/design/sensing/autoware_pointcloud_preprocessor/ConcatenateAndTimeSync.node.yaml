@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ConcatenateAndTimeSync.node
@@ -33,11 +33,11 @@ outputs:
     remap_target: output_info
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/concatenate_and_time_sync_node.param.yaml
 
-parameters:
+param_values:
   - name: input_frame
     type: string
     default: base_link

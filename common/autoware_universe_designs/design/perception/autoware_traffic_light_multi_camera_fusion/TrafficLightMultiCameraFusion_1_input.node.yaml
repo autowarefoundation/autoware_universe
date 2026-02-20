@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightMultiCameraFusion_1_input.node
@@ -12,7 +12,7 @@ remove:
     - name: camera2/classification/traffic_signals
     - name: camera2/detection/rois
 override:
-  parameters:
+  param_values:
     - name: camera_namespaces
       type: array
       default: "['camera1']"

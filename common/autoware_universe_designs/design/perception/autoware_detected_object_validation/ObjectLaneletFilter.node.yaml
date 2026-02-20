@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ObjectLaneletFilter.node
@@ -35,12 +35,12 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: filtering_range_param
     default: config/object_lanelet_filter.param.yaml
     schema: schema/detected_object_lanelet_filter.schema.json
 
-parameters: []
+param_values: []
 
 # processes
 processes:

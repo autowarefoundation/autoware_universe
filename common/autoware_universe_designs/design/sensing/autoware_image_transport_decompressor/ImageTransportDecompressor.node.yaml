@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ImageTransportDecompressor.node
@@ -26,9 +26,9 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files: []
+param_files: []
 
-parameters:
+param_values:
   - name: encoding
     description: rgb8, bgr8, default(same as input)
     default: default

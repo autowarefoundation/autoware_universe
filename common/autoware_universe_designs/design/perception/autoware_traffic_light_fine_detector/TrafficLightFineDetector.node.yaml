@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightFineDetector.node
@@ -33,11 +33,11 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_path
     default: config/traffic_light_fine_detector.param.yaml
 
-parameters:
+param_values:
   - name: model_path
     type: string
     default: $(var data_path)/traffic_light_fine_detector/tlr_car_ped_yolox_s_batch_6.onnx

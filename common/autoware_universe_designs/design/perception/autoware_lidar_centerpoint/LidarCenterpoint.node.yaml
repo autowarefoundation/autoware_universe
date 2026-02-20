@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: LidarCenterpoint.node
@@ -32,7 +32,7 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: common_param_path
     default: config/centerpoint_common.param.yaml
     schema: schema/centerpoint_common.schema.json
@@ -48,7 +48,7 @@ parameter_files:
     default: config/detection_class_remapper.param.yaml
     schema: schema/detection_class_remapper.schema.json
 
-parameters:
+param_values:
   - name: build_only
     type: bool
     default: false

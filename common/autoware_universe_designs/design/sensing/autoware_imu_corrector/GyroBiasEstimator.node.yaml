@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: GyroBiasEstimator.node
@@ -31,7 +31,7 @@ outputs:
     message_type: sensor_msgs/msg/Imu
 
 # parameters
-parameter_files:
+param_files:
   - name: imu_corrector_param_file
     default: config/imu_corrector.param.yaml
   - name: gyro_scale_estimator_param_file
@@ -39,7 +39,7 @@ parameter_files:
   - name: gyro_bias_estimator_param_file
     default: config/gyro_bias_estimator.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: CropBoxFilter.node
@@ -26,11 +26,11 @@ outputs:
     remap_target: output
 
 # parameters
-parameter_files:
+param_files:
   - name: crop_box_filter_param_file
     default: config/crop_box_filter_node.param.yaml
 
-parameters:
+param_values:
   - name: input_frame
     type: string
     default: base_link

@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: TrafficLightMultiCameraFusion_4_inputs.node
@@ -26,7 +26,7 @@ override:
     - name: camera4/detection/rois
       message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
       remap_target: camera4/detection/rois
-  parameters:
+  param_values:
     - name: camera_namespaces
       type: array
       default: "['camera1', 'camera2', 'camera3', 'camera4']"

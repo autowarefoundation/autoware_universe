@@ -1,4 +1,4 @@
-autoware_system_design_format: 0.2.0
+autoware_system_design_format: 0.3.0
 
 # node information
 name: ImuCorrector.node
@@ -34,13 +34,13 @@ outputs:
       durability: transient_local
 
 # parameters
-parameter_files:
+param_files:
   - name: param_file
     default: config/imu_corrector.param.yaml
   - name: param_scale_file
     default: config/gyro_scale_estimator.param.yaml
 
-parameters: []
+param_values: []
 
 # processes
 processes:
