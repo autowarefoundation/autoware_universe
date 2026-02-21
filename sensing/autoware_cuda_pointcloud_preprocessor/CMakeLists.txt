@@ -48,6 +48,10 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
 )
 
+if(CUDA_VERSION VERSION_GREATER_EQUAL "13.0")
+  include_directories(SYSTEM ${CUDA_INCLUDE_DIRS}/cccl)
+endif()
+
 # cSpell: ignore expt
 list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 20012")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
