@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__PATH_OPTIMIZER__MPT_OPTIMIZER_HPP_
 #define AUTOWARE__PATH_OPTIMIZER__MPT_OPTIMIZER_HPP_
 
+#include "acados_interface.hpp"
 #include "autoware/interpolation/linear_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/osqp_interface/osqp_interface.hpp"
@@ -29,6 +30,10 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+
+#include <std_msgs/msg/float32_multi_array.hpp>
+#include <std_msgs/msg/multi_array_dimension.hpp>
+#include <std_msgs/msg/multi_array_layout.hpp>
 
 #include <memory>
 #include <optional>
@@ -255,6 +260,11 @@ private:
     double delta_arc_length;
     int num_points;
 
+    bool use_acados;
+    // Toggle MPT-style acados road-bound circle constraints (lh/uh on h(x,p)).
+    // When false, we still widen lh/uh to effectively disable generated constraints.
+    bool use_acados_circle_constraints;
+
     // kinematics
     double optimization_center_offset;
     double max_steer_rad;
@@ -312,6 +322,15 @@ private:
   rclcpp::Publisher<Trajectory>::SharedPtr debug_fixed_traj_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr debug_ref_traj_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr debug_mpt_traj_pub_;
+  rclcpp::Publisher<Trajectory>::SharedPtr debug_acados_mpt_traj_pub_;
+
+  // Add new publishers for spline coefficients and curvatures
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_steering_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr
+    debug_acados_optimised_steering_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_optimised_states_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_acados_optimised_states_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr debug_ref_steering_pub_;
 
   // argument
   bool enable_debug_info_;
@@ -325,6 +344,7 @@ private:
 
   StateEquationGenerator state_equation_generator_;
   std::unique_ptr<autoware::osqp_interface::OSQPInterface> osqp_solver_ptr_;
+  AcadosInterface acados_interface_{20, 1e-6};
 
   const double osqp_epsilon_ = 1.0e-3;
 
@@ -341,8 +361,9 @@ private:
 
   void updateVehicleCircles();
 
-  std::vector<ReferencePoint> calcReferencePoints(
-    const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points) const;
+  std::pair<std::vector<ReferencePoint>, autoware::interpolation::SplineInterpolationPoints2d>
+  calcReferencePoints(
+    const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points);
   void updateCurvature(
     std::vector<ReferencePoint> & ref_points,
     const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
@@ -400,6 +421,45 @@ private:
   void publishDebugTrajectories(
     const std_msgs::msg::Header & header, const std::vector<ReferencePoint> & ref_points,
     const std::vector<TrajectoryPoint> & mpt_traj_points) const;
+
+  // Helper method to build parameters for Acados solver
+  std::array<double, NP> buildParameters(
+    const std::vector<double> & knots, const std::vector<double> & curvatures) const;
+
+  // Set parameters on the AcadosInterface for all stages
+  void setParametersToSolver(
+    const std::array<double, NP> & parameters, const std::vector<ReferencePoint> & ref_points,
+    const double s0);
+
+  // Convert Acados solution to trajectory points
+  std::optional<std::vector<TrajectoryPoint>> convertAcadosSolutionToTrajectory(
+    std::vector<ReferencePoint> & ref_points, const AcadosSolution & acados_solution) const;
+
+  // Add new method to publish spline coefficients and curvatures
+  AcadosSolution runAcadosMPT(
+    const std::vector<ReferencePoint> & ref_points,
+    autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
+    const geometry_msgs::msg::Pose & ego_pose);
+
+  void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
+  void publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const;
+
+  void updateDebugDataAndPublishAcadosSteering(
+    const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
+    const std::vector<TrajectoryPoint> & acados_traj_points);
+
+  void publishAcadosTrajectory(
+    const std::vector<TrajectoryPoint> & acados_traj_points,
+    const std_msgs::msg::Header & header) const;
+
+  void publishAcadosStates(const AcadosSolution & acados_result) const;
+
+  void publishReferenceTrajectory(
+    const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const;
+
+  void publishReferenceSteeringAngles(
+    const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline) const;
+
   std::vector<TrajectoryPoint> extractFixedPoints(
     const std::vector<ReferencePoint> & ref_points) const;
 

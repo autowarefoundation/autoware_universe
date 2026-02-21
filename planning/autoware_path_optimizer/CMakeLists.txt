@@ -3,6 +3,10 @@ project(autoware_path_optimizer)
 
 include(CheckCXXCompilerFlag)
 
+# Run MPT generator script at configure time is removed because it depends on acados_template
+# which is only available at build time when building acados from source.
+# Generation is now handled by add_custom_command in src/acados_mpc/CMakeLists.txt.
+
 # NOTE: With the following option, when the compile-time and runtime CPU
 #       architectures are different, the node will die.
 # For Eigen vectorization.
@@ -34,10 +38,42 @@ ament_auto_add_library(autoware_path_optimizer SHARED
   src/utils/geometry_utils.cpp
 )
 
+target_include_directories(autoware_path_optimizer PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+# Calculate paths to external packages from parent location
+# Parent is at: src/universe/autoware_universe/planning/autoware_path_optimizer
+# External packages are at: src/universe/external/
+# Relative path: ../../../external/
+get_filename_component(UNIVERSE_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../external" ABSOLUTE)
+set(ACADOS_WORKSPACE_DIR "${UNIVERSE_EXTERNAL_DIR}/acados" CACHE INTERNAL "")
+set(TERA_RENDERER_SOURCE_DIR "${UNIVERSE_EXTERNAL_DIR}/tera_renderer" CACHE INTERNAL "")
+
+# Add acados_mpc subdir first to set up acados paths
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc)
+
 target_include_directories(autoware_path_optimizer
   SYSTEM PUBLIC
     ${EIGEN3_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/acados_c>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/blasfeo/include>
+    $<BUILD_INTERFACE:${ACADOS_INCLUDE_DIR}/hpipm/include>
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/acados>
+    $<INSTALL_INTERFACE:include/acados_c>
+    $<INSTALL_INTERFACE:include/blasfeo/include>
+    $<INSTALL_INTERFACE:include/hpipm/include>
 )
+
+# Link against acados helper library
+target_link_libraries(autoware_path_optimizer acados_interface)
+
+# Ensure package library depends on acados_interface and the generator
+add_dependencies(autoware_path_optimizer acados_interface generate_mpt ${ACADOS_TARGET})
 
 # register node
 rclcpp_components_register_node(autoware_path_optimizer
@@ -54,6 +90,15 @@ if(BUILD_TESTING)
   )
 endif()
 
+# Export acados libraries for downstream packages
+# We also need to export the include directories for the acados headers
+# Export base include directory and subdirectories needed for blasfeo/hpipm
+ament_export_include_directories(include)
+ament_export_include_directories(include/blasfeo/include)
+ament_export_include_directories(include/hpipm/include)
+ament_export_include_directories(include/acados)
+ament_export_include_directories(include/acados_c)
+
 ament_auto_package(
   INSTALL_TO_SHARE
     launch
@@ -64,4 +109,20 @@ ament_auto_package(
 install(PROGRAMS
   scripts/calculation_time_plotter.py
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install acados_interface library and headers
+install(TARGETS acados_interface
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(FILES src/acados_mpc/include/acados_interface.hpp
+  DESTINATION include
+)
+
+install(DIRECTORY src/acados_mpc/c_generated_code/
+  DESTINATION include/c_generated_code
+  FILES_MATCHING PATTERN "*.h"
 )
