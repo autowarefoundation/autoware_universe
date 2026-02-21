@@ -29,9 +29,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
@@ -2428,7 +2428,7 @@ bool GoalPlannerModule::isCrossingPossible(
   if (is_shoulder_lane) {
     Pose end_lane_pose{};
     end_lane_pose.orientation.w = 1.0;
-    end_lane_pose.position = lanelet::utils::conversion::toGeomMsgPt(end_lane.centerline().front());
+    end_lane_pose.position = experimental::lanelet2_utils::to_ros(end_lane.centerline().front());
     // NOTE: this line does not specify the /forward/backward length, so if the shoulders form a
     // loop, this returns all shoulder lanes in the loop
     end_lane_sequence = route_handler->getShoulderLaneletSequence(end_lane, end_lane_pose);
@@ -2612,7 +2612,7 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
     // generate first road lane pose
     Pose first_road_pose{};
     const auto first_road_point =
-      lanelet::utils::conversion::toGeomMsgPt(fist_road_lane.centerline().front());
+      experimental::lanelet2_utils::to_ros(fist_road_lane.centerline().front());
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       fist_road_lane,
       autoware::experimental::lanelet2_utils::from_ros(first_road_point).basicPoint());

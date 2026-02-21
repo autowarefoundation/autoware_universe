@@ -1458,8 +1458,8 @@ bool is_intersecting_no_lane_change_lines(
         const auto & path_p2 = path_segment[1].point.pose.position;
 
         for (size_t i = 0; i + 1 < line.size(); ++i) {
-          const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(line[i]);
-          const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(line[i + 1]);
+          const auto line_p1 = experimental::lanelet2_utils::to_ros(line[i]);
+          const auto line_p2 = experimental::lanelet2_utils::to_ros(line[i + 1]);
 
           if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2)) {
             return true;
