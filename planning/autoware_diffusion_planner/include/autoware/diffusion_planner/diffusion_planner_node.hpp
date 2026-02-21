@@ -83,22 +83,22 @@ struct DiffusionPlannerDebugParams
  * @section Members
  * @brief
  * - set_up_params: Initialize and declare node parameters.
+ * - load_model: Load TensorRT model via core.
  * - on_timer: Timer callback for periodic processing and publishing.
  * - on_map: Callback for receiving and processing map data.
  * - publish_debug_markers: Publish visualization markers for debugging.
  * - publish_predictions: Publish model predictions.
+ * - publish_first_traffic_light_on_route: Publish first traffic light for debug.
  * - on_parameter: Callback for dynamic parameter updates.
- * - create_frame_context: Prepare frame context for inference.
- * - create_input_data: Build model input tensors from frame context.
  *
  * @section Internal State
  * @brief
- * - agent_data_: Optional input data for inference.
- * - params_, debug_params_, normalization_map_: Node and debug parameters, normalization info.
- * - Lanelet map and routing members: route_ptr_, lane_segment_context_.
+ * - core_: Core logic instance handling inference and state management.
+ * - params_, debug_params_: Node and debug parameters.
  * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
  * - vehicle_info_: Vehicle-specific parameters.
+ * - turn_indicator_manager_: Manager for turn indicator logic.
  */
 class DiffusionPlanner : public rclcpp::Node
 {
