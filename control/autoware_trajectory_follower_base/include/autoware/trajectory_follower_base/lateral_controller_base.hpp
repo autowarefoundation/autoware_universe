@@ -40,6 +40,8 @@ public:
   virtual LateralOutput run(InputData const & input_data) = 0;
   void sync(LongitudinalSyncData const & longitudinal_sync_data);
 
+  virtual void set_steering_offset([[maybe_unused]] double offset) {}
+
 protected:
   LongitudinalSyncData longitudinal_sync_data_;
 };

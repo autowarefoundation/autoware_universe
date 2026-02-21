@@ -82,6 +82,67 @@
           "description": "max valid age of previous pose which can be used for twist calculation",
           "default": "0.5",
           "minimum": 0.0
+        },
+        "calibration": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "offset calibration mode",
+              "default": "off"
+            },
+            "error_threshold": {
+              "type": "number",
+              "description": "error threshold for offset calibration",
+              "default": "0.005",
+              "minimum": 0.0
+            },
+            "covariance_threshold": {
+              "type": "number",
+              "description": "covariance threshold for offset calibration",
+              "default": "0.00075",
+              "minimum": 0.0
+            },
+            "min_steady_duration": {
+              "type": "number",
+              "description": "min duration of continuous estimation data for offset calibration",
+              "default": "10.0",
+              "minimum": 0.0
+            },
+            "min_velocity": {
+              "type": "number",
+              "description": "min velocity to allow offset calibration",
+              "default": "1.0",
+              "minimum": 0.0
+            },
+            "max_offset_limit": {
+              "type": "number",
+              "description": "max offset limit for offset calibration",
+              "default": "0.05",
+              "minimum": 0.0
+            },
+            "min_update_interval": {
+              "type": "number",
+              "description": "min interval between offset calibration updates",
+              "default": "100.0",
+              "minimum": 0.0
+            },
+            "enable_parameter_file_overwrite": {
+              "type": "boolean",
+              "description": "enable parameter file overwrite",
+              "default": "false"
+            }
+          },
+          "required": [
+            "mode",
+            "error_threshold",
+            "covariance_threshold",
+            "min_steady_duration",
+            "min_velocity",
+            "max_offset_limit",
+            "min_update_interval",
+            "enable_parameter_file_overwrite"
+          ]
         }
       },
       "required": [
