@@ -24,6 +24,7 @@ struct Box3D
   // initializer not allowed for __shared__ variable
   int label;
   float score;
+  float entropy;
   float x;
   float y;
   float z;
