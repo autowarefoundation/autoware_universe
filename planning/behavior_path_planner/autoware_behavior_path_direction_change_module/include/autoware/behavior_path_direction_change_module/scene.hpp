@@ -24,6 +24,7 @@
 
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -103,6 +104,9 @@ private:
   geometry_msgs::msg::Point
     first_cusp_position_;  // Position of current segment end (cusp) for debug/log
   bool has_valid_cusp_{false};
+
+  // Sustained stop: timestamp when velocity first dropped below stop_velocity_threshold at cusp
+  std::optional<rclcpp::Time> cusp_stopped_since_{};
 
   // Sustained stop: buffer (timestamp, velocity) for direction switch at cusp
   std::deque<std::pair<rclcpp::Time, double>> odometry_buffer_direction_switch_{};

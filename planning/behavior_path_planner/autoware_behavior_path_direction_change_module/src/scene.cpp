@@ -114,6 +114,7 @@ void DirectionChangeModule::initVariables()
   current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
   current_segment_index_ = 0;
   odometry_buffer_direction_switch_.clear();
+  cusp_stopped_since_.reset();
   resetPathCandidate();
   resetPathReference();
 }
@@ -269,6 +270,7 @@ BehaviorModuleOutput DirectionChangeModule::plan()
 {
   // Note: updateData() is already called by SceneModuleInterface::run() before plan()
   BehaviorModuleOutput output;
+  output.reference_path = reference_path_;
 
   // Copy reference_path_ to local variable for stability
   const auto current_reference_path = reference_path_;
@@ -423,41 +425,52 @@ BehaviorModuleOutput DirectionChangeModule::plan()
               }
               break;
             case PathSegmentState::AT_CUSP: {
-              // if (isSustainedStoppedForDirectionSwitch()) {
-              //  odometry_buffer_direction_switch_.clear();
               if (vehicle_velocity < parameters_->stop_velocity_threshold) {
-                // Check if this is the last cusp and close to goal -> transition to COMPLETED
-                const bool is_next_cusp_available =
-                  (current_segment_index_ < cusp_point_indices_.size());
-                double distance_to_goal = std::numeric_limits<double>::max();
-                bool goal_available = false;
+                if (!cusp_stopped_since_.has_value()) {
+                  cusp_stopped_since_ = clock_->now();
+                }
+                const double stopped_duration =
+                  (clock_->now() - cusp_stopped_since_.value()).seconds();
+                if (stopped_duration >= parameters_->th_stopped_time) {
+                  cusp_stopped_since_.reset();
+                  // Check if this is the last cusp and close to goal -> transition to COMPLETED
+                  const bool is_next_cusp_available =
+                    (current_segment_index_ < cusp_point_indices_.size());
+                  double distance_to_goal = std::numeric_limits<double>::max();
+                  bool goal_available = false;
 
-                if (planner_data_->route_handler) {
-                  try {
-                    const auto goal_pose = planner_data_->route_handler->getGoalPose();
-                    distance_to_goal =
-                      autoware_utils::calc_distance2d(ego_pose.position, goal_pose.position);
-                    goal_available = true;
-                  } catch (...) {
-                    // Goal not available, continue with normal transition
+                  if (planner_data_->route_handler) {
+                    try {
+                      const auto goal_pose = planner_data_->route_handler->getGoalPose();
+                      distance_to_goal =
+                        autoware_utils::calc_distance2d(ego_pose.position, goal_pose.position);
+                      goal_available = true;
+                    } catch (...) {
+                      // Goal not available, continue with normal transition
+                    }
+                  }
+
+                  // Transition to COMPLETED if all conditions are met:
+                  // 1. velocity < stop_velocity_threshold for th_stopped_time
+                  // 2. no next cusp point
+                  // 3. distance to goal < th_arrived_distance
+                  if (
+                    !is_next_cusp_available && goal_available &&
+                    distance_to_goal < parameters_->th_arrived_distance) {
+                    new_state = PathSegmentState::COMPLETED;
+                    std::cout << "[DirectionChange] Transition to COMPLETED" << std::endl;
+                  } else {
+                    // Normal transition to next segment
+                    current_segment_index_++;
+                    new_state = (current_segment_index_ % 2 == 0)
+                                  ? PathSegmentState::FORWARD_FOLLOWING
+                                  : PathSegmentState::REVERSE_FOLLOWING;
                   }
                 }
-
-                // Transition to COMPLETED if all conditions are met:
-                // 1. velocity < stop_velocity_threshold (already checked)
-                // 2. no next cusp point
-                // 3. distance to goal < th_arrived_distance
-                if (
-                  !is_next_cusp_available && goal_available &&
-                  distance_to_goal < parameters_->th_arrived_distance) {
-                  new_state = PathSegmentState::COMPLETED;
-                  std::cout << "[DirectionChange] Transition to COMPLETED" << std::endl;
-                } else {
-                  // Normal transition to next segment
-                  current_segment_index_++;
-                  new_state = (current_segment_index_ % 2 == 0)
-                                ? PathSegmentState::FORWARD_FOLLOWING
-                                : PathSegmentState::REVERSE_FOLLOWING;
+              } else {
+                // Velocity exceeded threshold: reset stop timer
+                if (cusp_stopped_since_.has_value()) {
+                  cusp_stopped_since_.reset();
                 }
               }
               break;
@@ -479,6 +492,9 @@ BehaviorModuleOutput DirectionChangeModule::plan()
           std::cout << "[DirectionChange] State transition: "
                     << stateToString(current_segment_state_) << " -> " << stateToString(new_state)
                     << ", segment_index=" << current_segment_index_ << std::endl;
+          if (new_state == PathSegmentState::AT_CUSP) {
+            cusp_stopped_since_.reset();
+          }
           current_segment_state_ = new_state;
           segmentBounds(current_segment_index_, c_start, c_end);
         }
