@@ -122,4 +122,45 @@ install(FILES src/acados_mpc/include/acados_interface.hpp
 install(DIRECTORY src/acados_mpc/c_generated_code/
   DESTINATION include/c_generated_code
   FILES_MATCHING PATTERN "*.h"
+cmake_minimum_required(VERSION 3.14)
+project(autoware_path_optimizer)
+
+find_package(autoware_cmake REQUIRED)
+autoware_package()
+
+find_package(Eigen3 REQUIRED)
+find_package(acados REQUIRED)
+
+# --- acados MPC solver (builds acados_interface library + code generation) ---
+add_subdirectory(src/acados_mpc)
+
+# --- Main package library ---
+ament_auto_add_library(${PROJECT_NAME} SHARED
+  src/node.cpp
+  src/replan_checker.cpp
+  src/mpt_optimizer.cpp
+  src/state_equation_generator.cpp
+  src/debug_marker.cpp
+  src/vehicle_model/vehicle_model_interface.cpp
+  src/vehicle_model/vehicle_model_bicycle_kinematics.cpp
+  src/utils/trajectory_utils.cpp
+  src/utils/geometry_utils.cpp
 )
+
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} acados_interface)
+
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::path_optimizer::PathOptimizer"
+  EXECUTABLE path_optimizer_node
+)
+
+if(BUILD_TESTING)
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME} test/test_path_optimizer_node_interface.cpp)
+  target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME})
+endif()
+
+ament_auto_package(INSTALL_TO_SHARE launch config rviz)
+
+install(PROGRAMS scripts/calculation_time_plotter.py DESTINATION lib/${PROJECT_NAME})
+install(TARGETS acados_interface LIBRARY DESTINATION lib)
