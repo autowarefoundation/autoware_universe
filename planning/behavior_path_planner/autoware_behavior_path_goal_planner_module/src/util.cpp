@@ -20,9 +20,9 @@
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
@@ -223,9 +223,9 @@ static double getOffsetToLanesBoundary(
   // the boundary closer to ego. if left_side, take right boundary
   const auto & boundary3d = left_side ? closest_lanelet.rightBound() : closest_lanelet.leftBound();
   const auto boundary = lanelet::utils::to2D(boundary3d);
-  using lanelet::utils::conversion::toLaneletPoint;
+  using experimental::lanelet2_utils::from_ros;
   const auto arc_coords = lanelet::geometry::toArcCoordinates(
-    boundary, lanelet::utils::to2D(toLaneletPoint(target_pose.position)).basicPoint());
+    boundary, lanelet::utils::to2D(from_ros(target_pose.position)).basicPoint());
   return arc_coords.distance;
 }
 
@@ -917,7 +917,7 @@ std::optional<Pose> calcRefinedGoal(
   Pose center_pose{};
   {
     // find position
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(goal_pose.position);
     const auto segment = autoware::experimental::lanelet2_utils::get_closest_segment(
       closest_pull_over_lanelet.centerline(), lanelet_point.basicPoint());
     const auto p1 = segment.front().basicPoint();
