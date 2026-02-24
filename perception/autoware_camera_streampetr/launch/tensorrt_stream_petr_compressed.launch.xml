@@ -15,7 +15,6 @@
   <let name="camera4_topic" value="/sensing/camera/camera4/image_rect_color/compressed"/>
 
   <node pkg="autoware_camera_streampetr" exec="autoware_camera_streampetr_node" name="stream_petr" output="screen">
-
     <param from="$(var model_param_path)" allow_substs="true"/>
     <param from="$(var node_param_path)" allow_substs="true"/>
 
