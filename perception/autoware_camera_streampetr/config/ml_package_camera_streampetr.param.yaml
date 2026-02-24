@@ -1,4 +1,4 @@
-# This is just an example file, the actual model param file comes with the model onnx files 
+# This is just an example file, the actual model param file comes with the model onnx files
 # and is stored in the artifacts directory (~/autoware_data/camera_streampetr by default).
 
 /**:
