@@ -14,6 +14,7 @@ set(DETECTED_OBJECT_FEATURE_REMOVER_DEPENDENCIES
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
+  lib/convert.cpp
   src/detected_object_feature_remover_node.cpp
 )
 

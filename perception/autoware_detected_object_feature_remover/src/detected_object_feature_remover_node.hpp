@@ -15,15 +15,13 @@
 #ifndef DETECTED_OBJECT_FEATURE_REMOVER_NODE_HPP_
 #define DETECTED_OBJECT_FEATURE_REMOVER_NODE_HPP_
 
-#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware/detected_object_feature_remover/convert.hpp"
+#include <autoware_utils/ros/published_time_publisher.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
-
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 
 #include <memory>
 
@@ -40,13 +38,9 @@ public:
 private:
   rclcpp::Subscription<DetectedObjectsWithFeature>::SharedPtr sub_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_;
-  bool run_convex_hull_conversion_{false};
+  convert::ConvertParams convert_params_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
   void objectCallback(const DetectedObjectsWithFeature::ConstSharedPtr input);
-  void pclToConvexHull(
-    const pcl::PointCloud<pcl::PointXYZ> & cluster, autoware_perception_msgs::msg::Shape & shape,
-    geometry_msgs::msg::Pose & pose);
-  void convert(const DetectedObjectsWithFeature & objs_with_feature, DetectedObjects & objs);
 };
 
 }  // namespace autoware::detected_object_feature_remover
