@@ -120,7 +120,6 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
     for (const auto & plugin : plugins_) {
       if (const auto res = plugin->is_feasible(trajectory.points); !res) {
         is_feasible = false;
-        break;
         RCLCPP_DEBUG(get_logger(), "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
       }
@@ -160,7 +159,7 @@ void TrajectoryTrafficRuleFilter::update_diagnostic(
   if (filtered_trajectories.candidate_trajectories.empty()) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
+  } else if (!has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "All diffusion planner trajectories are infeasible");
