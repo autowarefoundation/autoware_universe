@@ -96,7 +96,6 @@ struct DiffusionPlannerDebugParams
  * - ROS 2 node elements: timer_, publishers, subscriptions, and time_keeper_.
  * - generator_uuid_: Unique identifier for the planner instance.
  * - vehicle_info_: Vehicle-specific parameters.
- * - turn_indicator_manager_: Manager for turn indicator logic.
  */
 class DiffusionPlanner : public rclcpp::Node
 {
