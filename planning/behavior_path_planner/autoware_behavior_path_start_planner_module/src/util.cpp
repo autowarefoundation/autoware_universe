@@ -269,4 +269,14 @@ void set_lane_ids_to_path_point(
   point.lane_ids = get_lane_ids_from_pose(point.point.pose, road_lanes, previous_lane_ids);
 }
 
+std::pair<double, double> calc_start_and_end_shift_length(
+  const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose)
+{
+  const double start_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, start_pose)
+      .distance;
+  const double finish_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, end_pose).distance;
+  return {start_shift_length, finish_shift_length};
+}
 }  // namespace autoware::behavior_path_planner::start_planner_utils
