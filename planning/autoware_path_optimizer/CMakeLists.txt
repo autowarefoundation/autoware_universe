@@ -43,10 +43,7 @@ target_include_directories(autoware_path_optimizer PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-# Calculate paths to external packages from parent location
-# Parent is at: src/universe/autoware_universe/planning/autoware_path_optimizer
-# External packages are at: src/universe/external/
-# Relative path: ../../../external/
+# Paths to universe external (acados; provisioned by ansible-playbook autoware.dev_env.setup_acados)
 get_filename_component(UNIVERSE_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../external" ABSOLUTE)
 set(ACADOS_WORKSPACE_DIR "${UNIVERSE_EXTERNAL_DIR}/acados" CACHE INTERNAL "")
 set(TERA_RENDERER_SOURCE_DIR "${UNIVERSE_EXTERNAL_DIR}/tera_renderer" CACHE INTERNAL "")
