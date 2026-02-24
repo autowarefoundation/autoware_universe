@@ -30,6 +30,10 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
     "~/debug/processing_time_detail_ms/trajectory_adapter", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      this, "trajectory_adapter");
 }
 
 void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
@@ -62,6 +66,66 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
                             .points(trajectory_itr->candidate_trajectory.points);
 
   pub_trajectory_->publish(trajectory);
+
+  publish_planning_factor(trajectory);
+}
+
+void TrajectoryAdapterNode::publish_planning_factor(const Trajectory & trajectory)
+{
+  const auto & points = trajectory.points;
+
+  constexpr double stop_keep_duration_threshold = 1.0;  // [s]
+  constexpr double stop_velocity_threshold = 1.0;       // [m/s]
+  constexpr double slowdown_accel_threshold = -0.5;     // [m/s^2]
+
+  std::optional<size_t> slowdown_start_idx;
+  std::optional<size_t> slowdown_end_idx;
+  std::optional<size_t> stop_idx;
+  rclcpp::Duration stop_start_time(0, 0);
+  bool is_valid_stop = true;
+
+  // find index
+  for (size_t i = 0; i < points.size(); ++i) {
+    // for stop
+    if (!stop_idx && points[i].longitudinal_velocity_mps <= stop_velocity_threshold) {
+      stop_idx = i;
+      stop_start_time = rclcpp::Duration(points[i].time_from_start);
+    }
+    if (stop_idx) {
+      if (
+        (rclcpp::Duration(points[i].time_from_start) - stop_start_time).seconds() <
+        stop_keep_duration_threshold) {
+        if (points[i].longitudinal_velocity_mps > stop_velocity_threshold) is_valid_stop = false;
+      }
+    }
+
+    // for slowdown
+    if (points[i].acceleration_mps2 < slowdown_accel_threshold) {
+      if (!slowdown_start_idx) slowdown_start_idx = i;
+    } else if (slowdown_start_idx && !slowdown_end_idx) {
+      slowdown_end_idx = i;
+    }
+  }
+
+  const auto start_pos = points[0].pose;
+
+  // stop planning factor
+  if (stop_idx && is_valid_stop) {
+    planning_factor_interface_->add(
+      points, start_pos, points[*stop_idx].pose, PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+  }
+
+  // slowdown planning factor
+  if (slowdown_start_idx && slowdown_end_idx) {
+    planning_factor_interface_->add(
+      points, start_pos, points[*slowdown_start_idx].pose, points[*slowdown_end_idx].pose,
+      PlanningFactor::SLOW_DOWN, autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true,
+      static_cast<double>(points[*slowdown_start_idx].longitudinal_velocity_mps),
+      static_cast<double>(points[*slowdown_end_idx].longitudinal_velocity_mps));
+  }
+
+  planning_factor_interface_->publish();
 }
 
 }  // namespace autoware::trajectory_adapter
