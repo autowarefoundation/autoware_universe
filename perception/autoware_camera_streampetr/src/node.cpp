@@ -44,7 +44,7 @@ std::vector<float> cast_to_float(const std::vector<double> & double_vector)
 
 StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 : Node("autoware_camera_streampetr", node_options),
-  logger_name_(declare_parameter<std::string>("logger_name", "camera_streampetr")),
+  logger_name_("camera_streampetr"),
   multithreading_(declare_parameter<bool>("multithreading", false)),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
