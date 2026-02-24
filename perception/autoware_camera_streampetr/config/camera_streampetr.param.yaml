@@ -7,7 +7,7 @@
     is_compressed_image: false # Whether the input images are compressed
     is_distorted_image: false # Whether the input images are distorted
     model_params:
-  
+
       trt_precision: "fp16" # TensorRT precision mode: "fp16" or "fp32"
       use_temporal: true # Can the model use temporal information or not.
 
