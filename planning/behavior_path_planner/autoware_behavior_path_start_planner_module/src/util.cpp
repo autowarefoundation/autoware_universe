@@ -289,23 +289,24 @@ bool has_collision_between_shifted_path_footprints_and_objects(
     return false;
   }
 
+  const auto & objects = dynamic_objects.objects;
+
+  std::vector<autoware_utils::Polygon2d> active_polygons;
+  active_polygons.reserve(objects.size());
+  for (const auto & obj : objects) {
+    const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
+    if (obj_speed >= th_stopped_obj_vel || enable_back) {
+      active_polygons.push_back(autoware_utils::to_polygon2d(obj));
+    }
+  }
+
   const auto & pts = ego_path.points;
   return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
     const auto vehicle_footprint = autoware_utils::transform_vector(
       local_vehicle_footprint, autoware_utils::pose2transform(pt.point.pose));
-    const auto & objects = dynamic_objects.objects;
-
-    const auto check_shifted_path = [&](const auto & obj) {
-      const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
-      if (obj_speed < th_stopped_obj_vel && !enable_back) {
-        return false;
-      }
-      const auto obj_polygon = autoware_utils::to_polygon2d(obj);
-      const double distance = boost::geometry::distance(obj_polygon, vehicle_footprint);
-      return distance < margin;
-    };
-
-    return std::any_of(objects.cbegin(), objects.cend(), check_shifted_path);
+    return std::any_of(active_polygons.cbegin(), active_polygons.cend(), [&](const auto & polygon) {
+      return boost::geometry::distance(polygon, vehicle_footprint) < margin;
+    });
   });
 }
 
