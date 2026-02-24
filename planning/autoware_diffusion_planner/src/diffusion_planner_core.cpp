@@ -14,7 +14,6 @@
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
 
-#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"

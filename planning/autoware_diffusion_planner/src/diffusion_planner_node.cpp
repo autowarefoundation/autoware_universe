@@ -15,36 +15,18 @@
 #include "autoware/diffusion_planner/diffusion_planner_node.hpp"
 
 #include "autoware/diffusion_planner/constants.hpp"
-#include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
-#include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
-#include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/marker_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
-
-#include <Eigen/src/Core/Matrix.h>
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
 #include <functional>
-#include <iostream>
-#include <limits>
-#include <map>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <string>
-#include <tuple>
-#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
