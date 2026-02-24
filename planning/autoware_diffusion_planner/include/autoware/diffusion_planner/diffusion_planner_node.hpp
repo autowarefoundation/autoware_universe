@@ -16,7 +16,6 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_NODE_HPP_
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
-#include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
@@ -87,7 +86,6 @@ struct DiffusionPlannerDebugParams
  * - on_timer: Timer callback for periodic processing and publishing.
  * - on_map: Callback for receiving and processing map data.
  * - publish_debug_markers: Publish visualization markers for debugging.
- * - publish_predictions: Publish model predictions.
  * - publish_first_traffic_light_on_route: Publish first traffic light for debug.
  * - on_parameter: Callback for dynamic parameter updates.
  *
@@ -149,15 +147,6 @@ private:
   void publish_first_traffic_light_on_route(const FrameContext & frame_context) const;
 
   /**
-   * @brief Publish model predictions.
-   * @param predictions Output from the model.
-   * @param frame_context Context of the current frame.
-   */
-  void publish_predictions(
-    const std::vector<float> & predictions, const FrameContext & frame_context,
-    const rclcpp::Time & timestamp) const;
-
-  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
@@ -207,8 +196,6 @@ private:
   VehicleInfo vehicle_info_;
 
   std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
-  postprocess::TurnIndicatorManager turn_indicator_manager_{
-    rclcpp::Duration::from_seconds(0.0), 0.0f};
 };
 
 }  // namespace autoware::diffusion_planner
