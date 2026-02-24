@@ -19,6 +19,8 @@
 #ifndef MULTI_OBJECT_TRACKER_NODE_HPP_
 #define MULTI_OBJECT_TRACKER_NODE_HPP_
 
+#include "multi_object_tracker_core.hpp"
+
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
@@ -59,47 +61,29 @@ public:
 private:
   // ROS interface
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
-
-  // debugger
-  std::unique_ptr<TrackerDebugger> debugger_;
-  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
-  bool publish_merged_objects_{false};
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
 
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
-  rclcpp::Time last_published_time_;
-  rclcpp::Time last_updated_time_;
-  double publisher_period_;
-  static constexpr double minimum_publish_interval_ratio = 0.85;
-  static constexpr double maximum_publish_interval_ratio = 1.05;
 
-  // internal states
-  std::string world_frame_id_;  // tracking frame
-  std::string ego_frame_id_;    // ego vehicle frame
-  std::unique_ptr<TrackerProcessor> processor_;
-  bool enable_delay_compensation_{false};
+  // parameters and internal state
+  MultiObjectTrackerParameters params_;
+  MultiObjectTrackerInternalState state_;
 
   // input manager
   std::unique_ptr<InputManager> input_manager_;
   std::shared_ptr<Odometry> odometry_;
-
-  size_t input_channel_size_{};
-  std::vector<types::InputChannel> input_channels_config_;
 
   // callback functions
   void onTimer();
   void onTrigger();
 
   // publish processes
-  void runProcess(const types::DynamicObjectList & detected_objects);
   void checkAndPublish(const rclcpp::Time & time);
-  void publish(const rclcpp::Time & time) const;
-  inline bool shouldTrackerPublish(const std::shared_ptr<const Tracker> tracker) const;
+  void publish(const core::PublishData & data);
 };
 
 }  // namespace autoware::multi_object_tracker
