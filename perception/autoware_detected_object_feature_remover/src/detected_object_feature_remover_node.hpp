@@ -16,8 +16,8 @@
 #define DETECTED_OBJECT_FEATURE_REMOVER_NODE_HPP_
 
 #include "autoware/detected_object_feature_remover/convert.hpp"
-#include <autoware_utils/ros/published_time_publisher.hpp>
 
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>

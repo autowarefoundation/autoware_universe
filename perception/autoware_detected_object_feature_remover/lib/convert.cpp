@@ -14,9 +14,11 @@
 
 #include "autoware/detected_object_feature_remover/convert.hpp"
 
-#include <geometry_msgs/msg/point32.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+
+#include <geometry_msgs/msg/point32.hpp>
+
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <algorithm>
