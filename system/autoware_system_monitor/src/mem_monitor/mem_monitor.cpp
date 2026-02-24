@@ -34,8 +34,35 @@ namespace bp = boost::process;
 MemMonitor::MemMonitor(const rclcpp::NodeOptions & options)
 : Node("mem_monitor", options),
   updater_(this),
-  available_size_(declare_parameter<int>("available_size", 1024) * 1024 * 1024)
+  error_available_size_(
+    declare_parameter<int>(
+      "available_size", 1024,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Memory available size to generate error [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024),
+  warning_available_size_(0),
+  swap_error_threshold_(
+    declare_parameter<int>(
+      "swap_error_threshold", 1024,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Swap usage size to generate error [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024)
 {
+  // Define warning_available_size_
+  int warning_margin =
+    declare_parameter<int>(
+      "warning_margin", 0,
+      rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
+        "Warning margin with error threshold [MiB] to generate Warn [MiB]. Cannot be changed after "
+        "initialization.")) *
+    1024 * 1024;
+  if (warning_margin < 0) {
+    warning_margin = 0;
+  }
+  warning_available_size_ = error_available_size_ + warning_margin;
+
   gethostname(hostname_, sizeof(hostname_));
   updater_.setHardwareID(hostname_);
   updater_.add("Memory Usage", this, &MemMonitor::checkUsage);
@@ -99,9 +126,8 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
   std::vector<std::string> list;
   float usage = 0.0f;
   size_t mem_total = 0;
-  size_t mem_shared = 0;
   size_t mem_available = 0;
-  size_t used_plus = 0;
+  size_t swap_used = 0;
 
   /*
    Output example of `free -tb`
@@ -124,15 +150,18 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
     // Physical memory
     if (index == 1) {
       mem_total = std::atoll(list[1].c_str());
-      mem_shared = std::atoll(list[4].c_str());
       mem_available = std::atoll(list[6].c_str());
 
       // available divided by total is available memory including calculation for buff/cache,
       // so the subtraction of this from 1 gives real usage.
       usage = 1.0f - static_cast<double>(mem_available) / mem_total;
       stat.addf(fmt::format("{} usage", list[0]), "%.2f%%", usage * 1e+2);
+    } else if (index == 2) {
+      // Swap memory
+      swap_used = std::atoll(list[2].c_str());
     }
 
+    // Add additional information for each memory type and total
     stat.add(fmt::format("{} total", list[0]), toHumanReadable(list[1]));
     stat.add(fmt::format("{} used", list[0]), toHumanReadable(list[2]));
     stat.add(fmt::format("{} free", list[0]), toHumanReadable(list[3]));
@@ -142,26 +171,14 @@ void MemMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       stat.add(fmt::format("{} shared", list[0]), toHumanReadable(list[4]));
       stat.add(fmt::format("{} buff/cache", list[0]), toHumanReadable(list[5]));
       stat.add(fmt::format("{} available", list[0]), toHumanReadable(list[6]));
-    } else if (index == 3) {
-      // Total:used + Mem:shared
-      used_plus = std::atoll(list[2].c_str()) + mem_shared;
-      double giga = static_cast<double>(used_plus) / (1024 * 1024 * 1024);
-      stat.add(fmt::format("{} used+", list[0]), fmt::format("{:.1f}{}", giga, "G"));
     } else {
-      /* nothing */
+      // Swap (index 2) and Total (index 3) do not have their specific entry.
+      // So do nothing here.
     }
     ++index;
   }
 
-  int level;
-  if (mem_total > used_plus) {
-    level = DiagStatus::OK;
-  } else if (mem_available >= available_size_) {
-    level = DiagStatus::WARN;
-  } else {
-    level = DiagStatus::ERROR;
-  }
-
+  const uint8_t level = determineDiagnosticLevel(mem_available, swap_used);
   stat.summary(level, usage_dict_.at(level));
 
   publishMemoryStatus(usage);
@@ -233,6 +250,29 @@ std::string MemMonitor::toHumanReadable(const std::string & str)
   }
   const char * format = (count >= 3 || (size > 0 && size < 10)) ? "{:.1f}{}" : "{:.0f}{}";
   return fmt::format(format, size, units[count]);
+}
+
+uint8_t MemMonitor::determineDiagnosticLevel(size_t mem_available, size_t swap_used)
+{
+  uint8_t level = DiagStatus::OK;
+  if (mem_available < error_available_size_) {
+    level = DiagStatus::ERROR;
+  } else if (mem_available < warning_available_size_) {
+    level = DiagStatus::WARN;
+  }
+
+  // Swap usage checking
+  if (swap_used > 0) {
+    if (level == DiagStatus::OK) {
+      level = DiagStatus::WARN;
+    }
+
+    if (swap_used > swap_error_threshold_) {
+      level = DiagStatus::ERROR;
+    }
+  }
+
+  return level;
 }
 
 void MemMonitor::publishMemoryStatus(float usage)

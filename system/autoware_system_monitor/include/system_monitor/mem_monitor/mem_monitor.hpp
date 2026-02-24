@@ -69,6 +69,14 @@ protected:
   std::string toHumanReadable(const std::string & str);
 
   /**
+   * @brief determine diagnostic level based on available memory and swap usage
+   * @param [in] mem_available available memory size in bytes
+   * @param [in] swap_used swap usage size in bytes
+   * @return diagnostic level (OK, WARN, or ERROR)
+   */
+  uint8_t determineDiagnosticLevel(size_t mem_available, size_t swap_used);
+
+  /**
    * @brief publish memory status
    * @param [in] usage memory usage
    */
@@ -78,7 +86,9 @@ protected:
 
   char hostname_[HOST_NAME_MAX + 1];  //!< @brief host name
 
-  size_t available_size_;  //!< @brief Memory available size to generate error
+  size_t error_available_size_;    //!< @brief Memory available size to generate error
+  size_t warning_available_size_;  //!< @brief Memory available size to generate warning
+  size_t swap_error_threshold_;    //!< @brief Swap usage size to generate error
 
   rclcpp::Publisher<tier4_external_api_msgs::msg::MemoryStatus>::SharedPtr
     pub_memory_status_;  //!< @brief publisher
@@ -86,7 +96,7 @@ protected:
   /**
    * @brief Memory usage status messages
    */
-  const std::map<int, const char *> usage_dict_ = {
+  const std::map<uint8_t, const char *> usage_dict_ = {
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "high load"}, {DiagStatus::ERROR, "very high load"}};
 };
 
