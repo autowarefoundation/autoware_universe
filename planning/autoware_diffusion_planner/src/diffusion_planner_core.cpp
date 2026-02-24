@@ -350,7 +350,9 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   // TurnIndicatorsCommand
   // TODO(sakoda): Use the first logit as the main turn indicator command.
   // There may be bugs in the current implementation.
-  const int64_t prev_report = get_previous_turn_indicator_report();
+  const int64_t prev_report = turn_indicators_history_.empty()
+                                ? TurnIndicatorsReport::DISABLE
+                                : turn_indicators_history_.back().report;
   output.turn_indicator_command =
     turn_indicator_manager_.evaluate(turn_indicator_logit, timestamp, prev_report);
 
@@ -405,12 +407,6 @@ int64_t DiffusionPlannerCore::count_valid_elements(
   }
 
   throw std::invalid_argument("Unknown data_key '" + data_key + "' in count_valid_elements()");
-}
-
-int64_t DiffusionPlannerCore::get_previous_turn_indicator_report() const
-{
-  return turn_indicators_history_.empty() ? TurnIndicatorsReport::DISABLE
-                                          : turn_indicators_history_.back().report;
 }
 
 }  // namespace autoware::diffusion_planner

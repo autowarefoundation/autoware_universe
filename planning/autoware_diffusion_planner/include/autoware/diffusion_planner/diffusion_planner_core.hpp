@@ -252,8 +252,6 @@ public:
   const LaneletRoute::ConstSharedPtr & get_route() const { return route_ptr_; }
 
 private:
-  int64_t get_previous_turn_indicator_report() const;
-
   // Parameters
   DiffusionPlannerParams params_;
   VehicleInfo vehicle_info_;
