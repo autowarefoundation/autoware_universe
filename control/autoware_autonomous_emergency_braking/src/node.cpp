@@ -32,7 +32,15 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/within.hpp>
+#include <boost/version.hpp>
+
+#if BOOST_VERSION < 107600  // Header removed in version 1.76.0 (Humble)
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
+#endif
+
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/crop_hull.h>
@@ -51,14 +59,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace
 {

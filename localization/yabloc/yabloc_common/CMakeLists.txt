@@ -58,7 +58,7 @@ target_include_directories(
   ${EIGEN3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
-target_link_libraries(${PROJECT_NAME} Geographic ${PCL_LIBRARIES} Sophus::Sophus)
+target_link_libraries(${PROJECT_NAME} ${GeographicLib_LIBRARIES} ${PCL_LIBRARIES} Sophus::Sophus)
 
 # ===================================================
 # Executables

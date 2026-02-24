@@ -41,6 +41,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_autoware_control_validator
     ${TEST_SOURCES}
   )
+  ament_target_dependencies(test_autoware_control_validator
+    ament_index_cpp
+  )
   target_link_libraries(test_autoware_control_validator autoware_control_validator_component)
 endif()
 

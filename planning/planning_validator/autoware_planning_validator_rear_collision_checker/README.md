@@ -23,7 +23,7 @@ The module operates by:
    - Maintains a per-lane tracking list to stabilize velocity estimation and reduce noise from perception flicker.
 
 4. **Calculating metrics**
-   - **Depending on the selected metric (e.g., TTC, RSS), the calculation method and decision logic differ.** The chosen metric is computed, and the result is used to determine whether there is a potential collision risk.
+   - **The calculation method and decision logic vary based on the selected collision assessment metric (e.g., Time-to-Collision).** The module calculates the chosen metric and uses the result to determine if a collision risk exists.
 
 5. **Judging collision risk**
    - Evaluates the selected metric results against predefined thresholds to determine whether a collision is likely.

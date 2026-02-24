@@ -68,6 +68,7 @@ enum class ObjectInfo {
   AMBIGUOUS_STOPPED_VEHICLE,
   PARKING_VIOLATION_VEHICLE,
   IS_ADJACENT_LANE_STOP_VEHICLE,
+  CLOSE_DISTANCE_AVOIDANCE,
 };
 
 struct ObjectParameter
@@ -124,11 +125,17 @@ struct AvoidanceParameters
   // enable avoidance for adjacent lane stop vehicle
   std::string policy_adjacent_lane_stop_vehicle{"auto"};
 
+  // policy for close distance avoidance
+  std::string policy_close_distance_avoidance{"ignore"};
+
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
 
-  // enable yield maneuver.
+  // enable yield maneuver during shifting.
   bool enable_yield_maneuver_during_shifting{false};
+
+  // enable signalling during yield maneuver.
+  bool enable_signalling_during_yield{false};
 
   // use hatched road markings for avoidance
   bool use_hatched_road_markings{false};

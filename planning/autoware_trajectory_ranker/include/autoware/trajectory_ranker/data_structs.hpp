@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
 #define AUTOWARE__TRAJECTORY_RANKER__DATA_STRUCTS_HPP_
 
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
 #include <std_msgs/msg/header.hpp>
@@ -23,6 +25,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,6 +34,7 @@ namespace autoware::trajectory_ranker
 {
 
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using std_msgs::msg::Header;
@@ -60,7 +64,8 @@ struct CoreData
     const std::shared_ptr<TrajectoryPoints> & previous_points,
     const std::shared_ptr<PredictedObjects> & objects,
     const std::shared_ptr<lanelet::ConstLanelets> & preferred_lanes, const Header & header,
-    const UUID & generator_id)
+    const UUID & generator_id,
+    const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr)
   : original{original},
     points{points},
     previous_points{previous_points},
@@ -68,7 +73,8 @@ struct CoreData
     preferred_lanes{preferred_lanes},
     tag{"__anon"},
     header{header},
-    generator_id{generator_id}
+    generator_id{generator_id},
+    trajectory_history{trajectory_history}
   {
   }
 
@@ -81,6 +87,7 @@ struct CoreData
   std::string tag;
   Header header;
   UUID generator_id;
+  std::shared_ptr<std::deque<Trajectory>> trajectory_history;
 };
 
 struct EvaluatorParameters

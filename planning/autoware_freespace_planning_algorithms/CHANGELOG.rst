@@ -2,6 +2,19 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(freespace_planning_algorithms): conform to new SerializedBagMessage (`#11882 <https://github.com/autowarefoundation/autoware_universe/issues/11882>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(freespace_planning_algorithms): reduce autoware_utils deps (`#11731 <https://github.com/autowarefoundation/autoware_universe/issues/11731>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

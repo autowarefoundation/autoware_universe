@@ -22,6 +22,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVBoxLayout>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
@@ -365,8 +366,8 @@ void TrafficLightPublishPanel::onVectorMap(const LaneletMapBin::ConstSharedPtr m
 {
   if (received_vector_map_) return;
   // NOTE: examples from autoware_lanelet2_map_visualizer/lanelet2_map_visualization_node.cpp
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map);
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
   std::vector<lanelet::TrafficLightConstPtr> tl_reg_elems =
     lanelet::utils::query::trafficLights(all_lanelets);

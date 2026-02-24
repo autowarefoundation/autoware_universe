@@ -14,9 +14,12 @@
 
 #include "aggregator.hpp"
 
+#include <yaml-cpp/yaml.h>
+
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 namespace autoware::diagnostic_graph_aggregator
 {
@@ -28,9 +31,20 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
   // Init diagnostics graph.
   {
     const auto graph_file = declare_parameter<std::string>("graph_file");
+
+    // Parse graph variables from YAML map format (e.g., "{key1: value1, key2: value2}").
+    auto variables = std::make_shared<std::unordered_map<std::string, std::string>>();
+    const auto vars_text = declare_parameter<std::string>("graph_vars", "");
+    if (!vars_text.empty()) {
+      const auto vars_yaml = YAML::Load(vars_text);
+      for (const auto & var : vars_yaml) {
+        variables->emplace(var.first.as<std::string>(), var.second.as<std::string>());
+      }
+    }
+
     std::ostringstream id;
     id << std::hex << stamp.nanoseconds();
-    graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr);
+    graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr, variables);
   }
 
   // Init plugins.

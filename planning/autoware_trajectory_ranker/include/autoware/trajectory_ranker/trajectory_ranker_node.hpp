@@ -32,6 +32,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <deque>
 #include <memory>
 
 namespace autoware::trajectory_ranker
@@ -76,6 +77,8 @@ private:
   std::shared_ptr<Evaluator> evaluator_;
 
   std::shared_ptr<TrajectoryPoints> previous_points_;
+  std::deque<autoware_planning_msgs::msg::Trajectory> trajectory_history_;
+  size_t max_history_size_{10};
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;

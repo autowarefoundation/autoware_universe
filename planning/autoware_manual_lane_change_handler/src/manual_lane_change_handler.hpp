@@ -19,6 +19,7 @@
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,6 +30,7 @@
 #include <autoware_planning_msgs/srv/set_preferred_primitive.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_external_api_msgs/srv/set_preferred_lane.hpp>
+#include <tier4_planning_msgs/msg/reroute_availability.hpp>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -94,6 +96,8 @@ private:
   rclcpp::Service<SetPreferredLane>::SharedPtr srv_set_preferred_lane;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
   rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
+  autoware_utils::InterProcessPollingSubscriber<tier4_planning_msgs::msg::RerouteAvailability>
+    sub_reroute_availability_{this, "~/input/reroute_availability"};
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Int32Stamped>::SharedPtr pub_shift_number_;

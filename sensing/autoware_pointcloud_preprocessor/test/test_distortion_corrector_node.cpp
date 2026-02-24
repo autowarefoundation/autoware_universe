@@ -445,7 +445,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithEmptyTwist)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -507,7 +508,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithoutImuInBaseLink)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -554,7 +556,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithImuInBaseLink)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -604,7 +607,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithImuInLidarFrame)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -649,7 +653,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithoutImuInBaseLink)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -699,7 +704,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithImuInBaseLink)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -748,7 +754,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithImuInLidarFrame)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -811,7 +818,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureLinearMotion)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 
   // Verify each point in the undistorted 2d point cloud with undistorted 3d point cloud
@@ -839,7 +847,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureLinearMotion)
     EXPECT_FLOAT_EQ(*test2d_iter_z, *test3d_iter_z);
   }
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -912,7 +921,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureRotationalMotion)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 
   // Verify each point in the undistorted 2D point cloud with undistorted 3D point cloud
@@ -941,7 +951,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureRotationalMotion)
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -1026,7 +1037,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudNotUpdatingAzimuthAndDist
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -1085,7 +1097,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 
@@ -1145,7 +1158,8 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
   }
 
   if (debug_) {
-    RCLCPP_INFO(node_->get_logger(), "%s", oss.str().c_str());
+    const std::string & str = oss.str();
+    RCLCPP_INFO(node_->get_logger(), "%s", str.c_str());
   }
 }
 

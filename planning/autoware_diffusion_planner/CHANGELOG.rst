@@ -2,6 +2,134 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* docs(diffusion_planner): fix README.md (`#12067 <https://github.com/autowarefoundation/autoware_universe/issues/12067>`_)
+  * Fixed README.md
+  * Apply suggestion from @Copilot
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Apply suggestion from @Copilot
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Deleted the change of `launch_traffic_light_module`
+  ---------
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+* fix(diffusion_planner): fix the stopping logic (`#12041 <https://github.com/autowarefoundation/autoware_universe/issues/12041>`_)
+  Fixed the stopping logic
+* refactor(diffusion_planner): change `ego_current_state` class to a function (`#12022 <https://github.com/autowarefoundation/autoware_universe/issues/12022>`_)
+  * Refactored `ego_current_state`
+  * Added `CreateEgoCurrentState` test
+  * Added `const`
+  * Sorted include files
+  * Removed `std::abs` from `linear_vel`
+  ---------
+* refactor(diffusion_planner): refactor `replicate_for_batch` (`#12016 <https://github.com/autowarefoundation/autoware_universe/issues/12016>`_)
+  * Fixed break lines
+  * Moved `replicate_for_batch` from diffusion_planner_node.hpp into utils.hpp
+  * Fixed comments
+  * Added `const`
+  * Applied the formatter
+  ---------
+* refactor(diffusion_planner): refactor `AgentState` (`#11946 <https://github.com/autowarefoundation/autoware_universe/issues/11946>`_)
+  * Refactored `AgentState`
+  * Fixed to use rotation_matrix_to_cos_sin
+  ---------
+* refactor(diffusion_planner): refactor the transformation to map coordinates (`#11931 <https://github.com/autowarefoundation/autoware_universe/issues/11931>`_)
+  * Refactored transform to map
+  * Fixed
+  * Added 0.0
+  ---------
+* chore(autoware_diffusion_planner): remove cudnn dependency (`#11901 <https://github.com/autowarefoundation/autoware_universe/issues/11901>`_)
+* feat(diffusion_planner): support reconfiguration `onnx_model_path` (`#11870 <https://github.com/autowarefoundation/autoware_universe/issues/11870>`_)
+  * Added tensorrt_inference.hpp/cpp
+  * Added `#include <unordered_map>`
+  * Added `num_elements`
+  * Fixed converting float to bool
+  ---------
+* refactor(diffusion_planner): refactoring of map processing (`#11869 <https://github.com/autowarefoundation/autoware_universe/issues/11869>`_)
+  * Removed `traffic_rules_ptr\_`
+  * Removed `routing_graph_ptr\_`
+  * Removed `is_map_loaded\_`
+  * Removed `remove_const`
+  * Applied `pre-commit run -a`
+  ---------
+* feat(diffusion_planner): diffusion_planner v3 (`#11849 <https://github.com/autowarefoundation/autoware_universe/issues/11849>`_)
+  * v3.0
+  * Fixed the description of `shift_x`
+  * Fixed the default value of `turn_indicator_keep_offset`
+  * Added comments to turn_indicator_manager.hpp
+  * Fixed `keep_offset` as a parameter
+  * Added `const`
+  * Added `static_cast`
+  * Added a comment
+  * Fixed types
+  ---------
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, SakodaShintaro
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* fix(diffusion_planner): traffic_light_id_map (`#11812 <https://github.com/autowarefoundation/autoware_universe/issues/11812>`_)
+  Revert https://github.com/autowarefoundation/autoware_universe/pull/11805/changes/b6058db6f9ba83df47e5c5015a1aa8ee5ba058c8
+* fix(diffusion_planner): calculate the distance with the z position (`#11808 <https://github.com/autowarefoundation/autoware_universe/issues/11808>`_)
+  Fixed to calculate the distance with the z position
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Planning and Control Component) (`#11784 <https://github.com/autowarefoundation/autoware_universe/issues/11784>`_)
+  * planning component toBinMsg replacement
+  * control component fromBinMsg replacement
+  * planning component fromBinMsg replacement
+  ---------
+* refactor(diffusion_planner): add `FrameContext` (`#11805 <https://github.com/autowarefoundation/autoware_universe/issues/11805>`_)
+  * Refactored diffusion_planner
+  * Added a comment
+  * Added a comment
+  * Replaced `autoware_utils` into `autoware_utils_debug`
+  * Moved `traffic_light_id_map` into FrameContext
+  * Fixed `do_inference_trt`
+  ---------
+* fix(diffusion_planner): route input (`#11780 <https://github.com/autowarefoundation/autoware_universe/issues/11780>`_)
+  * Fixed route input
+  * Renamed `start_inside` to `has_entered_valid_region`
+  ---------
+* fix(diffusion_planner): fix `build_only` (`#11770 <https://github.com/autowarefoundation/autoware_universe/issues/11770>`_)
+  Fixed `build_only`
+* chore(diffusion_planner): change default values (`#11757 <https://github.com/autowarefoundation/autoware_universe/issues/11757>`_)
+  * Changed the default value of `temperature` from 0.5 to 0.0
+  * Changed the default value of `stopping_threshold` from 0.0 to 0.3
+  ---------
+* fix(diffusion_planner): fix the first value of the output velocity (`#11692 <https://github.com/autowarefoundation/autoware_universe/issues/11692>`_)
+  Fixed the first value of the output velocity
+* feat(diffusion_planner): diffusion_planner v2 (`#11690 <https://github.com/autowarefoundation/autoware_universe/issues/11690>`_)
+  * Fixed for v2
+  * Applied cpplint
+  * Fixed to v2.0
+  * Fixed as cpplint
+  * Fixed the model path
+  * Fixed ConvertLaneletManyInterpolationPoints
+  * Fixed ConvertToLaneSegments
+  * Updated a comment
+  * Updated README.md
+  * Removed trailing spaces
+  * Added specific notations
+  * Fixed the position of `ego_history\_` and `turn_indicators_history\_`
+  * Added checking `centerline.size() < 2`
+  * Added a comment
+  * Applied `pre-commit run -a`
+  * Added turn_indicators into the input/output table of README.md
+  * Applied `pre-commit run -a`
+  ---------
+* docs(diffusion_planner): add `How to use` (`#11685 <https://github.com/autowarefoundation/autoware_universe/issues/11685>`_)
+  * Added `How to use`
+  * Added Note
+  * Applied pre-commit
+  ---------
+* fix(diffusion_planner): fix `process_traffic_signals` (`#11662 <https://github.com/autowarefoundation/autoware_universe/issues/11662>`_)
+  * Fixed process_traffic_signals
+  * Fixed buffer size
+  * Added `#include <vector>`
+  * Added `#include <vector>`
+  ---------
+* Contributors: Ryohsuke Mitsudome, SakodaShintaro, Sarun MUKDAPITAK
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

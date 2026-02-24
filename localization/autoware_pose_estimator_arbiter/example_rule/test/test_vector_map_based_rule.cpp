@@ -14,7 +14,7 @@
 
 #include "switch_rule/vector_map_based_rule.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 
@@ -73,8 +73,7 @@ TEST_F(VectorMapBasedRuleMockNode, vectorMapBasedRule)
     lanelet_map->add(create_polygon3d());
 
     using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
-    HADMapBin msg;
-    lanelet::utils::conversion::toBinMsg(lanelet_map, &msg);
+    HADMapBin msg = autoware::experimental::lanelet2_utils::to_autoware_map_msgs(lanelet_map);
 
     // Set
     shared_data_->vector_map.set_and_invoke(std::make_shared<const HADMapBin>(msg));

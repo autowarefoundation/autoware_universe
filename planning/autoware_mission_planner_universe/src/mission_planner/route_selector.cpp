@@ -15,6 +15,7 @@
 #include "route_selector.hpp"
 
 #include <autoware/mission_planner_universe/service_utils.hpp>
+#include <autoware/qos_utils/qos_compatibility.hpp>
 
 #include <array>
 #include <memory>
@@ -90,7 +91,7 @@ RouteSelector::RouteSelector(const rclcpp::NodeOptions & options)
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
-  const auto service_qos = rmw_qos_profile_services_default;
+  const auto service_qos = AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE();
   const auto durable_qos = rclcpp::QoS(1).transient_local();
 
   // Init main route interface.

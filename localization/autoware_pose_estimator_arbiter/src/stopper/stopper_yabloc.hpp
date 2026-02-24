@@ -16,6 +16,8 @@
 #define STOPPER__STOPPER_YABLOC_HPP_
 #include "stopper/base_stopper.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
@@ -41,7 +43,7 @@ public:
     // Prepare suspend service server
     using namespace std::literals::chrono_literals;
     enable_service_client_ = node->create_client<SetBool>(
-      "~/yabloc_trigger_srv", rmw_qos_profile_services_default, service_callback_group_);
+      "~/yabloc_trigger_srv", AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE(), service_callback_group_);
     while (!enable_service_client_->wait_for_service(1s) && rclcpp::ok()) {
       RCLCPP_INFO(
         node->get_logger(), "Waiting for service : %s", enable_service_client_->get_service_name());

@@ -19,17 +19,12 @@
 #include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/optional.hpp>
 
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <cmath>
@@ -259,7 +254,15 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
     std::bind(
       &OccupancyGridMapOutlierFilterComponent::onOccupancyGridMapAndPointCloud2, this,
       std::placeholders::_1, std::placeholders::_2));
-  pointcloud_pub_ = create_publisher<PointCloud2>("~/output/pointcloud", rclcpp::SensorDataQoS());
+
+  /**
+   * To avoid data loss and simplify the operation, the hard coded QoS setting as Reliable is used
+   * for the publisher of obstacle_segmentation/pointcloud. If there is a clear distinction between
+   * data collection and autonomous driving modes, PublisherOptions with
+   * QosOverridingOptions::with_default_policies should be good options instead of hard-coding QoS
+   * setting.
+   */
+  pointcloud_pub_ = create_publisher<PointCloud2>("~/output/pointcloud", rclcpp::QoS{5}.reliable());
 
   /* Radius search 2d filter */
   if (use_radius_search_2d_filter) {
@@ -547,9 +550,10 @@ void OccupancyGridMapOutlierFilterComponent::Debugger::publishLowConfidence(
 }
 
 void OccupancyGridMapOutlierFilterComponent::Debugger::transformToBaseLink(
-  const PointCloud2 & ros_input, [[maybe_unused]] const Header & header, PointCloud2 & output)
+  const PointCloud2 & pointcloud_input, [[maybe_unused]] const Header & header,
+  PointCloud2 & output)
 {
-  transformPointcloud(ros_input, *(node_.tf2_), node_.base_link_frame_, output);
+  transformPointcloud(pointcloud_input, *(node_.tf2_), node_.base_link_frame_, output);
 }
 
 }  // namespace autoware::occupancy_grid_map_outlier_filter

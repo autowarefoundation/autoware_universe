@@ -22,7 +22,10 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
 #include <Eigen/Dense>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -149,8 +152,8 @@ Polygon2d createOneStepPolygon(
 bool isEndPointsConnected(
   const lanelet::ConstLanelet & left_lane, const lanelet::ConstLanelet & right_lane)
 {
-  const auto & left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
-  const auto & right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
+  const auto left_back_point_2d = right_lane.leftBound2d().back().basicPoint();
+  const auto right_back_point_2d = left_lane.rightBound2d().back().basicPoint();
 
   constexpr double epsilon = 1e-5;
   return (right_back_point_2d - left_back_point_2d).norm() < epsilon;
@@ -303,8 +306,7 @@ bool isWithinIntersection(
   const auto & polygon = *polygon_opt;
 
   return boost::geometry::within(
-    lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-      .basicPoint(),
+    lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition())).basicPoint(),
     lanelet::utils::to2D(polygon.basicPolygon()));
 }
 
@@ -319,18 +321,17 @@ bool isWithinFreespace(
   std::sort(polygons.begin(), polygons.end(), [&object](const auto & a, const auto & b) {
     const double a_distance = boost::geometry::distance(
       lanelet::utils::to2D(a).basicPolygon(),
-      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+      lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
         .basicPoint());
     const double b_distance = boost::geometry::distance(
       lanelet::utils::to2D(b).basicPolygon(),
-      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+      lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
         .basicPoint());
     return a_distance < b_distance;
   });
 
   return boost::geometry::within(
-    lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-      .basicPoint(),
+    lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition())).basicPoint(),
     lanelet::utils::to2D(polygons.front().basicPolygon()));
 }
 
@@ -343,7 +344,7 @@ bool isWithinFreespace(
 bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> & route_handler)
 {
   if (boost::geometry::within(
-        lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+        lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
           .basicPoint(),
         object.overhang_lanelet.polygon2d().basicPolygon())) {
     return true;
@@ -353,7 +354,7 @@ bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> 
   lanelet::ConstLanelets prev_lanelet;
   if (route_handler->getPreviousLaneletsWithinRoute(object.overhang_lanelet, &prev_lanelet)) {
     if (boost::geometry::within(
-          lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+          lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
             .basicPoint(),
           prev_lanelet.front().polygon2d().basicPolygon())) {
       return true;
@@ -364,7 +365,7 @@ bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> 
   lanelet::ConstLanelet next_lanelet;
   if (route_handler->getNextLaneletWithinRoute(object.overhang_lanelet, &next_lanelet)) {
     if (boost::geometry::within(
-          lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+          lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
             .basicPoint(),
           next_lanelet.polygon2d().basicPolygon())) {
       return true;
@@ -372,7 +373,7 @@ bool isOnEgoLane(const ObjectData & object, const std::shared_ptr<RouteHandler> 
   } else {
     for (const auto & lane : route_handler->getNextLanelets(object.overhang_lanelet)) {
       if (boost::geometry::within(
-            lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+            lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object.getPosition()))
               .basicPoint(),
             lane.polygon2d().basicPolygon())) {
         return true;
@@ -433,10 +434,10 @@ double getShiftableRatio(
   const ObjectData & object, const std::shared_ptr<RouteHandler> & route_handler,
   const std::shared_ptr<AvoidanceParameters> & parameters)
 {
+  using experimental::lanelet2_utils::from_ros;
   using lanelet::geometry::distance2d;
   using lanelet::geometry::toArcCoordinates;
   using lanelet::utils::to2D;
-  using lanelet::utils::conversion::toLaneletPoint;
 
   const auto centerline_pos =
     autoware::experimental::lanelet2_utils::get_closest_center_pose(
@@ -465,7 +466,7 @@ double getShiftableRatio(
 
     const auto center_to_left_boundary = distance2d(
       to2D(most_left_lanelet.leftBound().basicLineString()),
-      to2D(toLaneletPoint(centerline_pos)).basicPoint());
+      to2D(from_ros(centerline_pos)).basicPoint());
 
     double object_shiftable_distance =
       center_to_left_boundary - 0.5 * object.object.shape.dimensions.y;
@@ -475,7 +476,7 @@ double getShiftableRatio(
     if (sub_type == "road_shoulder") {
       // assuming it's parked vehicle if its CoG is within road shoulder lanelet.
       if (boost::geometry::within(
-            to2D(toLaneletPoint(object.getPosition())).basicPoint(),
+            to2D(from_ros(object.getPosition())).basicPoint(),
             most_left_lanelet.polygon2d().basicPolygon())) {
         return true;
       }
@@ -486,7 +487,7 @@ double getShiftableRatio(
 
     const auto arc_coordinates = toArcCoordinates(
       to2D(object.overhang_lanelet.centerline().basicLineString()),
-      to2D(toLaneletPoint(object.getPosition())).basicPoint());
+      to2D(from_ros(object.getPosition())).basicPoint());
     const auto shiftable_ratio = arc_coordinates.distance / object_shiftable_distance;
     return shiftable_ratio;
   }
@@ -512,7 +513,7 @@ double getShiftableRatio(
 
     const auto center_to_right_boundary = distance2d(
       to2D(most_right_lanelet.rightBound().basicLineString()),
-      to2D(toLaneletPoint(centerline_pos)).basicPoint());
+      to2D(from_ros(centerline_pos)).basicPoint());
 
     double object_shiftable_distance =
       center_to_right_boundary - 0.5 * object.object.shape.dimensions.y;
@@ -522,7 +523,7 @@ double getShiftableRatio(
     if (sub_type == "road_shoulder") {
       // assuming it's parked vehicle if its CoG is within road shoulder lanelet.
       if (boost::geometry::within(
-            to2D(toLaneletPoint(object.getPosition())).basicPoint(),
+            to2D(from_ros(object.getPosition())).basicPoint(),
             most_right_lanelet.polygon2d().basicPolygon())) {
         return true;
       }
@@ -533,7 +534,7 @@ double getShiftableRatio(
 
     const auto arc_coordinates = toArcCoordinates(
       to2D(object.overhang_lanelet.centerline().basicLineString()),
-      to2D(toLaneletPoint(object.getPosition())).basicPoint());
+      to2D(from_ros(object.getPosition())).basicPoint());
     const auto shiftable_ratio = -1.0 * arc_coordinates.distance / object_shiftable_distance;
     return shiftable_ratio;
   }
@@ -548,8 +549,9 @@ double getShiftableRatio(
  */
 double getDistanceToCenterline(const ObjectData & object, const AvoidancePlanningData & data)
 {
-  const double to_centerline =
-    lanelet::utils::getArcCoordinates(data.current_lanelets, object.getPose()).distance;
+  const double to_centerline = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                 data.current_lanelets, object.getPose())
+                                 .distance;
   return to_centerline;
 }
 
@@ -663,7 +665,6 @@ bool isParkedVehicle(
   using lanelet::geometry::distance2d;
   using lanelet::geometry::toArcCoordinates;
   using lanelet::utils::to2D;
-  using lanelet::utils::conversion::toLaneletPoint;
 
   if (object.is_within_intersection) {
     return false;
@@ -1046,8 +1047,9 @@ bool isSatisfiedWithNonVehicleCondition(
   }
 
   // Object is on center line -> ignore.
-  object.to_centerline =
-    lanelet::utils::getArcCoordinates(data.current_lanelets, object.getPose()).distance;
+  object.to_centerline = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                           data.current_lanelets, object.getPose())
+                           .distance;
   if (std::abs(object.to_centerline) < parameters->threshold_distance_object_is_on_center) {
     object.info = ObjectInfo::TOO_NEAR_TO_CENTERLINE;
     return false;
@@ -1394,8 +1396,13 @@ bool isWithinLanes(
     concat_lanelets.push_back(next_lanelet);
   }
 
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(concat_lanelets);
-
+  // concat_lanelets is already confirmed to have at least one lanelet (nearest lanelet)
+  const auto combine_lanelet_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(concat_lanelets);
+  if (!combine_lanelet_opt.has_value()) {
+    return false;
+  }
+  const auto & combine_lanelet = combine_lanelet_opt.value();
   return boost::geometry::within(vehicle_baselink_line, combine_lanelet.polygon2d().basicPolygon());
 }
 
@@ -1756,7 +1763,8 @@ lanelet::ConstLanelets getExtendLanes(
   while (rclcpp::ok()) {
     const double lane_length =
       lanelet::geometry::length2d(lanelet::LaneletSequence(extend_lanelets));
-    const auto arc_coordinates = lanelet::utils::getArcCoordinates(extend_lanelets, ego_pose);
+    const auto arc_coordinates =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(extend_lanelets, ego_pose);
     const auto forward_length = lane_length - arc_coordinates.length;
 
     if (forward_length > planner_data->parameters.forward_path_length) {
@@ -2543,12 +2551,13 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
     return ret;
   }();
 
-  lanelet::ConstLanelet closest_lanelet;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
-  if (!lanelet::utils::query::getClosestLanelet(
-        data.current_lanelets, ego_pose, &closest_lanelet)) {
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(data.current_lanelets, ego_pose);
+  if (!closest_lanelet_opt) {
     return {};
   }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   const auto is_moving = [&parameters](const auto & object) {
     const auto & object_twist = object.kinematics.initial_twist_with_covariance.twist;

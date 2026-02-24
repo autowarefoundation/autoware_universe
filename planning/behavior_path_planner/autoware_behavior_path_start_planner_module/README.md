@@ -249,7 +249,7 @@ This ordering is beneficial when the priority is to minimize the backward distan
 
 ### 2. Collision detection with dynamic obstacles
 
-- **Applying RSS in Dynamic Collision Detection**: Collision detection is based on the RSS (Responsibility-Sensitive Safety) model to evaluate if a safe distance is maintained. See [safety check feature explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
+- Using Safe Braking Distances for Collision Assessment: The module uses a safe braking distance model to determine if the ego vehicle is maintaining enough space from other dynamic objects. See [safety check feature explanation](../autoware_behavior_path_planner_common/docs/behavior_path_planner_safety_check.md)
 
 - **Collision check performed range**: Safety checks for collisions with dynamic objects are conducted within the defined boundaries between the start and end points of each maneuver, ensuring the ego vehicle does not impede or hinder the progress of dynamic objects that come from behind it.
 
@@ -446,18 +446,18 @@ Parameters under `target_filtering` are related to filtering target objects for 
 
 Parameters under `safety_check_params` define the configuration for safety check.
 
-| Name                                           | Unit | Type   | Description                                                                               | Default value |
-| :--------------------------------------------- | :--- | :----- | :---------------------------------------------------------------------------------------- | :------------ |
-| enable_safety_check                            | -    | bool   | Flag to enable safety check                                                               | true          |
-| check_all_predicted_path                       | -    | bool   | Flag to check all predicted paths                                                         | true          |
-| publish_debug_marker                           | -    | bool   | Flag to publish debug markers                                                             | false         |
-| rss_params.rear_vehicle_reaction_time          | [s]  | double | Reaction time for rear vehicles                                                           | 2.0           |
-| rss_params.rear_vehicle_safety_time_margin     | [s]  | double | Safety time margin for rear vehicles                                                      | 1.0           |
-| rss_params.lateral_distance_max_threshold      | [m]  | double | Maximum lateral distance threshold                                                        | 2.0           |
-| rss_params.longitudinal_distance_min_threshold | [m]  | double | Minimum longitudinal distance threshold                                                   | 3.0           |
-| rss_params.longitudinal_velocity_delta_time    | [s]  | double | Delta time for longitudinal velocity                                                      | 0.8           |
-| hysteresis_factor_expand_rate                  | -    | double | Rate to expand/shrink the hysteresis factor                                               | 1.0           |
-| collision_check_yaw_diff_threshold             | -    | double | Maximum yaw difference between ego and object when executing rss-based collision checking | 1.578         |
+| Name                                           | Unit | Type   | Description                                                                       | Default value |
+| :--------------------------------------------- | :--- | :----- | :-------------------------------------------------------------------------------- | :------------ |
+| enable_safety_check                            | -    | bool   | Flag to enable safety check                                                       | true          |
+| check_all_predicted_path                       | -    | bool   | Flag to check all predicted paths                                                 | true          |
+| publish_debug_marker                           | -    | bool   | Flag to publish debug markers                                                     | false         |
+| rss_params.rear_vehicle_reaction_time          | [s]  | double | Reaction time for rear vehicles                                                   | 2.0           |
+| rss_params.rear_vehicle_safety_time_margin     | [s]  | double | Safety time margin for rear vehicles                                              | 1.0           |
+| rss_params.lateral_distance_max_threshold      | [m]  | double | Maximum lateral distance threshold                                                | 2.0           |
+| rss_params.longitudinal_distance_min_threshold | [m]  | double | Minimum longitudinal distance threshold                                           | 3.0           |
+| rss_params.longitudinal_velocity_delta_time    | [s]  | double | Delta time for longitudinal velocity                                              | 0.8           |
+| hysteresis_factor_expand_rate                  | -    | double | Rate to expand/shrink the hysteresis factor                                       | 1.0           |
+| collision_check_yaw_diff_threshold             | -    | double | Maximum yaw difference between ego and object when executing collision assessment | 1.578         |
 
 ## **Path Generation**
 

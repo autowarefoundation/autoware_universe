@@ -118,10 +118,10 @@ void retrievePathsBackward(
   const std::vector<size_t> & visited_indices, std::vector<std::vector<size_t>> & paths);
 
 /**
- * @brief find the index of the first point where vehicle footprint intersects with the given
+ * @brief find the index of the last point where vehicle footprint intersects with the given
  * polygon
  */
-std::optional<size_t> getFirstPointInsidePolygonByFootprint(
+std::optional<size_t> getLastPointOutsidePolygonByFootprint(
   const lanelet::CompoundPolygon3d & polygon, const InterpolatedPathInfo & interpolated_path_info,
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 

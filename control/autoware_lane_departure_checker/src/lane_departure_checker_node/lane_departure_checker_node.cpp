@@ -14,8 +14,8 @@
 
 #include "autoware/lane_departure_checker/lane_departure_checker_node.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/topology.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -72,8 +72,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
 
     for (const auto & primitive : route_ptr->segments.front().primitives) {
       const auto lane_id = primitive.id;
-      for (const auto & lanelet_sequence : lanelet::utils::query::getPrecedingLaneletSequences(
-             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+      for (const auto & lanelet_sequence :
+           autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
+             lanelet_map->laneletLayer.get(lane_id), routing_graph, extension_length)) {
         for (const auto & preceding_lanelet : lanelet_sequence) {
           route_lanelets[preceding_lanelet.id()] = preceding_lanelet;
         }
@@ -94,8 +95,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
 
     for (const auto & primitive : route_ptr->segments.back().primitives) {
       const auto lane_id = primitive.id;
-      for (const auto & lanelet_sequence : lanelet::utils::query::getSucceedingLaneletSequences(
-             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+      for (const auto & lanelet_sequence :
+           autoware::experimental::lanelet2_utils::get_succeeding_lanelet_sequences(
+             lanelet_map->laneletLayer.get(lane_id), routing_graph, extension_length)) {
         for (const auto & succeeding_lanelet : lanelet_sequence) {
           route_lanelets[succeeding_lanelet.id()] = succeeding_lanelet;
         }
@@ -244,9 +246,15 @@ void LaneDepartureCheckerNode::onTimer()
 
   const auto lanelet_map_bin_msg = sub_lanelet_map_bin_.take_data();
   if (lanelet_map_bin_msg) {
-    lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::utils::conversion::fromBinMsg(
-      *lanelet_map_bin_msg, lanelet_map_, &traffic_rules_, &routing_graph_);
+    lanelet_map_ = autoware::experimental::lanelet2_utils::remove_const(
+      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*lanelet_map_bin_msg));
+
+    auto routing_graph_and_traffic_rules =
+      autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+        lanelet_map_);
+    routing_graph_ =
+      autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+    traffic_rules_ = routing_graph_and_traffic_rules.second;
 
     // get all shoulder lanes
     lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_);

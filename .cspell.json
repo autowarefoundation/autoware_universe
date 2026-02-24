@@ -5,5 +5,14 @@
     "perception/autoware_shape_estimation/resource/**"
   ],
   "ignoreRegExpList": [],
-  "words": ["dltype", "tvmgen", "fromarray", "soblin", "brkay54", "libtensorrt", "TRTBEV"]
+  "words": [
+    "dltype",
+    "tvmgen",
+    "fromarray",
+    "soblin",
+    "brkay54",
+    "libtensorrt",
+    "TRTBEV",
+    "CUDA_HOSTDEV"
+  ]
 }

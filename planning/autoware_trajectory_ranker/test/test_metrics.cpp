@@ -20,6 +20,7 @@
 #include "autoware/trajectory_ranker/metrics/longitudinal_jerk_metric.hpp"
 #include "autoware/trajectory_ranker/metrics/steering_consistency_metric.hpp"
 #include "autoware/trajectory_ranker/metrics/time_to_collision_metric.hpp"
+#include "autoware/trajectory_ranker/metrics/trajectory_consistency_metric.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -27,6 +28,7 @@
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -232,6 +234,115 @@ TEST_F(TestMetrics, MetricWithEmptyTrajectory)
 
   // Should handle empty trajectory gracefully
   EXPECT_NO_THROW(metric.evaluate(empty_result, 100.0));
+}
+
+TEST_F(TestMetrics, TrajectoryConsistencyMetric)
+{
+  TrajectoryConsistency metric;
+  metric.init(vehicle_info_, 0.1);
+  metric.set_index(0);
+
+  EXPECT_EQ(metric.name(), "TrajectoryConsistency");
+  EXPECT_TRUE(metric.is_deviation());
+
+  // Create trajectory history with multiple trajectories
+  auto trajectory_history = std::make_shared<std::deque<autoware_planning_msgs::msg::Trajectory>>();
+
+  // Add historical trajectories
+  for (size_t hist_idx = 0; hist_idx < 5; ++hist_idx) {
+    autoware_planning_msgs::msg::Trajectory traj;
+    traj.header.stamp = rclcpp::Time(static_cast<int64_t>(hist_idx * 1e8));  // 0.1s intervals
+
+    for (size_t i = 0; i < 30; ++i) {
+      autoware_planning_msgs::msg::TrajectoryPoint pt;
+      pt.pose.position.x = static_cast<double>(i) * 1.0;
+      pt.pose.position.y = 0.0 + (hist_idx * 0.1);  // Slight lateral offset per history
+      pt.pose.position.z = 0.0;
+      pt.pose.orientation.w = 1.0;
+      pt.longitudinal_velocity_mps = 5.0;
+      pt.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i) * 0.2);
+      traj.points.push_back(pt);
+    }
+    trajectory_history->push_back(traj);
+  }
+
+  // Create current trajectory
+  auto current_points = std::make_shared<TrajectoryPoints>();
+  for (size_t i = 0; i < 30; ++i) {
+    TrajectoryPoint pt;
+    pt.pose.position.x = static_cast<double>(i) * 1.0;
+    pt.pose.position.y = 0.0;
+    pt.pose.position.z = 0.0;
+    pt.pose.orientation.w = 1.0;
+    pt.longitudinal_velocity_mps = 5.0;
+    pt.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i) * 0.2);
+    current_points->push_back(pt);
+  }
+
+  // Setup test data with trajectory history
+  auto objects = std::make_shared<PredictedObjects>();
+  auto lanes = std::make_shared<lanelet::ConstLanelets>();
+  std_msgs::msg::Header header;
+  header.stamp = rclcpp::Time(static_cast<int64_t>(5 * 1e8));  // Current time
+  unique_identifier_msgs::msg::UUID uuid;
+
+  auto core_data = std::make_shared<CoreData>(
+    current_points, current_points, nullptr, objects, lanes, header, uuid, trajectory_history);
+
+  auto result = std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 7);
+
+  // Test evaluation with trajectory history
+  EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+
+  // Verify that points exist and metric was computed
+  ASSERT_TRUE(result->points());
+  EXPECT_GT(result->points()->size(), 0u);
+
+  // Verify the computed score is in valid range [0.0, 1.0]
+  const float score = result->score(0);
+  EXPECT_GE(score, 0.0f);
+  EXPECT_LE(score, 1.0f);
+}
+
+TEST_F(TestMetrics, TrajectoryConsistencyWithEmptyHistory)
+{
+  TrajectoryConsistency metric;
+  metric.init(vehicle_info_, 0.1);
+  metric.set_index(0);
+
+  // Create result without trajectory history
+  auto points = std::make_shared<TrajectoryPoints>();
+  for (size_t i = 0; i < 20; ++i) {
+    TrajectoryPoint pt;
+    pt.pose.position.x = static_cast<double>(i) * 1.0;
+    pt.pose.position.y = 0.0;
+    pt.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i) * 0.2);
+    points->push_back(pt);
+  }
+
+  auto objects = std::make_shared<PredictedObjects>();
+  auto lanes = std::make_shared<lanelet::ConstLanelets>();
+  auto empty_history = std::make_shared<std::deque<autoware_planning_msgs::msg::Trajectory>>();
+
+  std_msgs::msg::Header header;
+  header.stamp = rclcpp::Time(0);
+  unique_identifier_msgs::msg::UUID uuid;
+
+  auto core_data = std::make_shared<CoreData>(
+    points, points, nullptr, objects, lanes, header, uuid, empty_history);
+
+  auto result = std::make_shared<autoware::trajectory_ranker::DataInterface>(core_data, 7);
+
+  // Should handle empty history gracefully (returns zero metric)
+  EXPECT_NO_THROW(metric.evaluate(result, 1.0));
+
+  // Verify that points exist
+  ASSERT_TRUE(result->points());
+  EXPECT_GT(result->points()->size(), 0u);
+
+  // Metric value should be zero when history is empty (less than 2 points)
+  const float score = result->score(0);
+  EXPECT_FLOAT_EQ(score, 0.0f);
 }
 
 }  // namespace autoware::trajectory_ranker::metrics

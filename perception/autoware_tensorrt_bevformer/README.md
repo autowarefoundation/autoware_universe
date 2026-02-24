@@ -44,7 +44,6 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 
 - **TensorRT** 10.8.0.43
 - **CUDA** 12.4
-- **cuDNN** 8.9.2
 
 ### Trained Model
 

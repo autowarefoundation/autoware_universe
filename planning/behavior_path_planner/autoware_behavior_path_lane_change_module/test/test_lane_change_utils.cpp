@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "autoware/behavior_path_lane_change_module/structs/data.hpp"
+#include "autoware/behavior_path_lane_change_module/utils/utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -107,4 +108,25 @@ TEST(BehaviorPathPlanningLaneChangeUtilsTest, TESTLateralAccelerationMap)
     EXPECT_NEAR(min_acc, 0.315, epsilon);
     EXPECT_NEAR(max_acc, 0.50, epsilon);
   }
+}
+
+TEST(BehaviorPathPlanningLaneChangeUtilsTest, testExcludeLanelets)
+{
+  const auto create_lane = [](lanelet::Id id) {
+    lanelet::Lanelet ll(id, lanelet::LineString3d{}, lanelet::LineString3d{});
+    return lanelet::ConstLanelet{ll};
+  };
+  lanelet::ConstLanelets alternative{
+    create_lane(1), create_lane(2), create_lane(3), create_lane(4)};
+  lanelet::ConstLanelets preferred{create_lane(1), create_lane(2), create_lane(4)};
+
+  // | P1 | P2 | A3 | P4 |
+  // we want  to remove any preferred lanes after A3
+  autoware::behavior_path_planner::utils::lane_change::trim_preferred_after_alternative(
+    alternative, preferred);
+
+  ASSERT_EQ(alternative.size(), 3u);
+  EXPECT_EQ(alternative[0].id(), 1);
+  EXPECT_EQ(alternative[1].id(), 2);
+  EXPECT_EQ(alternative[2].id(), 3);
 }

@@ -14,6 +14,8 @@
 
 #include "footprint.hpp"
 
+#include "autoware/vehicle_info_utils/vehicle_info.hpp"
+
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -39,12 +41,23 @@ autoware_utils::Polygon2d make_base_footprint(const PlannerParam & p, const bool
   const auto rear_offset = ignore_offset ? 0.0 : p.extra_rear_offset;
   const auto right_offset = ignore_offset ? 0.0 : p.extra_right_offset;
   const auto left_offset = ignore_offset ? 0.0 : p.extra_left_offset;
-  base_footprint.outer() = {
-    {p.front_offset + front_offset, p.left_offset + left_offset},
-    {p.front_offset + front_offset, p.right_offset - right_offset},
-    {p.rear_offset - rear_offset, p.right_offset - right_offset},
-    {p.rear_offset - rear_offset, p.left_offset + left_offset}};
-  boost::geometry::correct(base_footprint);
+
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info;
+  vehicle_info.rear_overhang_m = p.rear_offset;
+  vehicle_info.front_overhang_m = p.front_offset;
+  vehicle_info.wheel_base_m = 0.0;
+  vehicle_info.left_overhang_m = p.left_offset;
+  vehicle_info.right_overhang_m = p.right_offset;
+  vehicle_info.wheel_tread_m = 0.0;
+
+  auto lat_margin = (right_offset + left_offset) / 2;
+  auto ring_footprint =
+    vehicle_info.createFootprint(lat_margin, lat_margin, lat_margin, front_offset, rear_offset);
+  // remove center point
+  ring_footprint.erase(ring_footprint.begin() + 5);
+  ring_footprint.erase(ring_footprint.begin() + 2);
+
+  base_footprint.outer() = ring_footprint;
   return base_footprint;
 }
 
@@ -86,10 +99,19 @@ std::vector<lanelet::BasicPolygon2d> calculate_trajectory_footprints(
       arc_length +=
         autoware_utils::calc_distance2d(trajectory_point, ego_data.trajectory_points[i + 1]);
     }
-    lanelet::BasicPolygons2d cut_result;
-    boost::geometry::difference(trajectory_footprint, cut_polygon, cut_result);
-    trajectory_footprints.push_back(
-      cut_result.empty() ? lanelet::BasicPolygon2d() : cut_result.front());
+    autoware_utils::Polygon2d trajectory_footprint_bg;
+    boost::geometry::convert(trajectory_footprint, trajectory_footprint_bg);
+
+    autoware_utils::MultiPolygon2d cut_result;
+    boost::geometry::difference(trajectory_footprint_bg, cut_polygon, cut_result);
+
+    lanelet::BasicPolygon2d result;
+
+    if (!cut_result.empty()) {
+      boost::geometry::convert(cut_result.front().outer(), result);
+    }
+
+    trajectory_footprints.push_back(result);
   }
   return trajectory_footprints;
 }

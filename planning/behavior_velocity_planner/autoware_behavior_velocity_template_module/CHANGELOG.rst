@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_template_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(behavior_velocity_template_module): migrate to new interface (`#11705 <https://github.com/autowarefoundation/autoware_universe/issues/11705>`_)
+  remove original implementation
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

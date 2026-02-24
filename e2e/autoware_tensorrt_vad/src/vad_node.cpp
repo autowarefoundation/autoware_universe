@@ -21,7 +21,11 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
-#include <cv_bridge/cv_bridge.h>
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
+#endif
 
 #include <algorithm>
 #include <limits>
@@ -397,15 +401,6 @@ void VadNode::load_classification_config(const ClassificationConfig & params)
   }
 }
 
-void VadNode::load_map_configuration(VadConfig & config)
-{
-  load_classification_config(
-    {this->get_parameter("model_params.map_class_names").as_string_array(),
-     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
-     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
-     "load_map_configuration"});
-}
-
 void VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
@@ -416,15 +411,6 @@ void VadNode::load_map_configuration_with_model_params(
      "load_map_configuration_with_model_params"});
 }
 
-void VadNode::load_object_configuration(VadConfig & config)
-{
-  load_classification_config(
-    {this->get_parameter("model_params.object_class_names").as_string_array(),
-     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
-     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
-     "load_object_configuration"});
-}
-
 void VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
@@ -433,27 +419,6 @@ void VadNode::load_object_configuration_with_model_params(
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
      "load_object_configuration_with_model_params"});
-}
-
-void VadNode::load_image_normalization(VadConfig & config)
-{
-  const auto image_mean =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
-  const auto image_std =
-    this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
-
-  const std::size_t mean_entries =
-    std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
-  const std::size_t std_entries =
-    std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
-
-  for (std::size_t i = 0; i < mean_entries; ++i) {
-    config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
-  }
-
-  for (std::size_t i = 0; i < std_entries; ++i) {
-    config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
-  }
 }
 
 void VadNode::load_network_configurations(VadConfig & config)

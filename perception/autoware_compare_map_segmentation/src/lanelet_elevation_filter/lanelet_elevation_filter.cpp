@@ -14,7 +14,7 @@
 
 #include "lanelet_elevation_filter.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <visualization_msgs/msg/marker.hpp>
 
@@ -37,8 +37,8 @@ void LaneletElevationFilter::setLaneletMap(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr & map_msg)
 {
   try {
-    lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_);
+    lanelet_map_ = autoware::experimental::lanelet2_utils::remove_const(
+      autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
 
     initializeGridFromMap();
     map_initialized_ = true;

@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    trajectory_consistency:
+      time_horizon: 2.0  # Time horizon in seconds for consistency evaluation

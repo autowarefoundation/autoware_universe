@@ -74,7 +74,7 @@ bool check_input_map(const std::unordered_map<std::string, std::vector<float>> &
   return true;
 }
 
-Eigen::Matrix4d pose_to_matrix4f(const geometry_msgs::msg::Pose & pose)
+Eigen::Matrix4d pose_to_matrix4d(const geometry_msgs::msg::Pose & pose)
 {
   // Extract position
   double x = pose.position.x;
@@ -103,9 +103,44 @@ std::pair<float, float> rotation_matrix_to_cos_sin(const Eigen::Matrix3d & rotat
   return {std::cos(yaw), std::sin(yaw)};
 }
 
+geometry_msgs::msg::Pose shift_x(const geometry_msgs::msg::Pose & pose, const double shift_length)
+{
+  // Rotation matrix (3x3)
+  Eigen::Matrix3d R = quaternion_to_matrix(pose.orientation);
+
+  // Shift along the x-axis in the local frame
+  Eigen::Vector3d shift_local(shift_length, 0.0, 0.0);
+
+  // Transform shift to the global frame
+  Eigen::Vector3d shift_global = R * shift_local;
+
+  // Create new pose
+  geometry_msgs::msg::Pose shifted_pose = pose;
+  shifted_pose.position.x += shift_global.x();
+  shifted_pose.position.y += shift_global.y();
+  shifted_pose.position.z += shift_global.z();
+
+  return shifted_pose;
+}
+
 Eigen::Matrix4d inverse(const Eigen::Matrix4d & mat)
 {
   return Eigen::Isometry3d(mat).inverse().matrix();
+}
+
+std::vector<float> replicate_for_batch(const std::vector<float> & single_data, const int batch_size)
+{
+  const size_t single_size = single_data.size();
+  const size_t total_size = static_cast<size_t>(batch_size) * single_size;
+
+  std::vector<float> batch_data;
+  batch_data.reserve(total_size);
+
+  for (int i = 0; i < batch_size; ++i) {
+    batch_data.insert(batch_data.end(), single_data.begin(), single_data.end());
+  }
+
+  return batch_data;
 }
 
 }  // namespace autoware::diffusion_planner::utils

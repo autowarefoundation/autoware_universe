@@ -16,7 +16,7 @@
 #include "rule_helper/pcd_occupancy.hpp"
 #include "rule_helper/pose_estimator_area.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 
@@ -63,8 +63,7 @@ TEST_F(RuleHelperMockNode, poseEstimatorArea)
 
   using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using Point = geometry_msgs::msg::Point;
-  HADMapBin msg;
-  lanelet::utils::conversion::toBinMsg(lanelet_map, &msg);
+  HADMapBin msg = autoware::experimental::lanelet2_utils::to_autoware_map_msgs(lanelet_map);
 
   autoware::pose_estimator_arbiter::rule_helper::PoseEstimatorArea pose_estimator_area(&(*node));
   pose_estimator_area.init(std::make_shared<HADMapBin>(msg));

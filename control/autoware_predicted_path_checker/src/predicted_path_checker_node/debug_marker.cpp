@@ -15,15 +15,11 @@
 #include "autoware/predicted_path_checker/debug_marker.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <memory>
 #include <vector>

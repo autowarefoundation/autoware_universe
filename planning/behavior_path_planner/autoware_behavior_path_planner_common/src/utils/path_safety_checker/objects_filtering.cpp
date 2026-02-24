@@ -81,7 +81,7 @@ bool isCentroidWithinLanelet(
 {
   const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
   if (!boost::geometry::within(
-        lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object_pose.position))
+        lanelet::utils::to2D(experimental::lanelet2_utils::from_ros(object_pose.position))
           .basicPoint(),
         lanelet.polygon2d().basicPolygon())) {
     return false;

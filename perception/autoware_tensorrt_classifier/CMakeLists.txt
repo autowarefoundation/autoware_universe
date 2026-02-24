@@ -10,12 +10,11 @@ autoware_package()
 add_compile_options(-Wno-deprecated-declarations)
 
 find_package(CUDA)
-find_package(CUDNN)
 find_package(TENSORRT)
 find_package(OpenCV REQUIRED)
 
-if(NOT (${CUDA_FOUND} AND ${CUDNN_FOUND} AND ${TENSORRT_FOUND}))
-  message(WARNING "cuda, cudnn, tensorrt libraries are not found")
+if(NOT (${CUDA_FOUND} AND ${TENSORRT_FOUND}))
+  message(WARNING "cuda, tensorrt libraries are not found")
   return()
 endif()
 
@@ -27,6 +26,17 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   OpenCV
 )
+
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+if(CUDA_VERSION VERSION_LESS "13.0")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+else()  # CUDA 13.0 renamed SM101 to SM110
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+endif()
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
 
 cuda_add_library(${PROJECT_NAME}_gpu_preprocess
   SHARED
@@ -64,8 +74,6 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_dependencies(CUDA)
-ament_export_dependencies(cudnn_cmake_module)
-ament_export_dependencies(CUDNN)
 ament_export_dependencies(tensorrt_cmake_module)
 ament_export_dependencies(TENSORRT)
 

@@ -10,13 +10,26 @@
       target_pull_out_acc_mps2: 1.0   # [m/s²] Target acceleration during pull-out
       set_engage_speed: false         # Set minimum speed during engage
 
-      # Speed limiting
-      max_speed_mps: 13.88             # [m/s] Maximum allowed speed (30 km/h default)
+      # Speed limiting (uses external_velocity_limit topic to set max speed)
       limit_speed: true               # Enable speed limiting
 
       # Lateral acceleration limiting
       max_lateral_accel_mps2: 1.5     # [m/s²] Maximum lateral acceleration
-      limit_lateral_acceleration: false  # Enable lateral acceleration limiting
+      limit_lateral_acceleration: false  # Enable lateral acceleration limiting, should be launched with velocity smoother
+      min_limited_speed_mps: 3.0        # [m/s] Minimum speed when applying lateral acceleration limit
 
       # Velocity smoothing
       smooth_velocities: false        # Enable jerk-filtered velocity smoothing
+
+      # Continuous jerk smoother settings
+      # Note: Kinematic limits (max_accel, min_decel, max_jerk, min_jerk) are loaded
+      # from the common namespace (limit.max_acc, limit.min_acc, limit.max_jerk, limit.min_jerk)
+      # Note: max_velocity uses max_speed_mps from parent namespace
+      continuous_jerk_smoother:
+        # QP optimization weights
+        jerk_weight: 100.0                     # Weight for jerk minimization (smoothness)
+        over_v_weight: 1000.0               # Weight for velocity limit violation (slack)
+        over_a_weight: 30.0                 # Weight for acceleration limit violation (slack)
+        over_j_weight: 10.0                  # Weight for jerk limit violation (slack)
+        velocity_tracking_weight: 1.0        # Weight for tracking reference velocity from input trajectory
+        accel_tracking_weight: 300.0         # Weight for tracking reference acceleration from input trajectory

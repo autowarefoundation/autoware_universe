@@ -18,7 +18,7 @@ This package is a default implementation AD API.
 
 ## Interface
 
-- [Autoware AD API](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/)
+- [Autoware AD API](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/)
 - [Parameters](./document/parameters.md)
 - [Diagnostics](./document/diagnostics.md)
 

@@ -151,7 +151,8 @@ void BirdEyeViewController::handleMouseEvent(rviz_common::ViewportMouseEvent & e
 
 void BirdEyeViewController::orientCamera()
 {
-  camera_->setOrientation(
+  auto camera_parent = getCameraParent(camera_);
+  camera_parent->setOrientation(
     Ogre::Quaternion(Ogre::Radian(angle_property_->getFloat()), Ogre::Vector3::UNIT_Z));
 }
 

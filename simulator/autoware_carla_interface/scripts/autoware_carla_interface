@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+# Entry point script for autoware_carla_interface
+import sys
+
+from autoware_carla_interface.carla_autoware import main
+
+if __name__ == "__main__":
+    sys.exit(main())

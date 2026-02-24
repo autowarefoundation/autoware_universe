@@ -77,6 +77,8 @@ void OutOfLaneModule::init(rclcpp::Node & node, const std::string & module_name)
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/" + ns_ + "/trajectory", 1);
   processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
 }
@@ -461,9 +463,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");
-  const auto is_stopping = previous_slowdown_pose_.has_value();
+  const auto has_prev_avoidance_decision = previous_slowdown_pose_.has_value();
   out_of_lane::calculate_collisions_to_avoid(
-    out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
+    out_of_lane_data, ego_data.trajectory_points, params_, has_prev_avoidance_decision);
   const auto calculate_times_us = stopwatch.toc("calculate_times");
 
   const auto is_already_overlapping =

@@ -201,6 +201,10 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "obstacle_slow_down");
 
+  // debug publisher
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/obstacle_slow_down/trajectory", 1);
+
   // time keeper
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(processing_time_detail_pub_);
 }
@@ -825,7 +829,8 @@ std::vector<SlowdownInterval> ObstacleSlowDownModule::plan_slow_down(
         slow_down_traj_points, planner_data->current_odometry.pose.pose,
         slow_down_traj_points.at(*slow_down_start_idx).pose,
         slow_down_traj_points.at(*slow_down_end_idx).pose, PlanningFactor::SLOW_DOWN,
-        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel);
+        safety_factor_array, planner_data->is_driving_forward, stable_slow_down_vel,
+        stable_slow_down_vel);
     }
 
     // add debug virtual wall

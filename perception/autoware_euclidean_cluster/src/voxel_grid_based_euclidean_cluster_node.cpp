@@ -62,11 +62,10 @@ void VoxelGridBasedEuclideanClusterNode::onPointCloud(
 {
   stop_watch_ptr_->toc("processing_time", true);
 
-  // convert ros to pcl
-  if (input_msg->data.empty()) {
-    // NOTE: prevent pcl log spam
-    RCLCPP_WARN_STREAM_THROTTLE(
-      this->get_logger(), *this->get_clock(), 1000, "Empty sensor points!");
+  // check for empty point cloud and return early
+  if (input_msg->data.empty() || input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    return;
   }
   // cluster and build output msg
   tier4_perception_msgs::msg::DetectedObjectsWithFeature output;

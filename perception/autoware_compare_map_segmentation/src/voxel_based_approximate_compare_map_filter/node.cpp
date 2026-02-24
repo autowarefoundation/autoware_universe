@@ -33,8 +33,12 @@ bool VoxelBasedApproximateStaticMapLoader::is_close_to_map(
   if (voxel_map_ptr_ == nullptr) {
     return false;
   }
-  const int index =
-    voxel_grid_.getCentroidIndexAt(voxel_grid_.getGridCoordinates(point.x, point.y, point.z));
+  const Eigen::Vector3i grid_coordinates =
+    voxel_grid_.getGridCoordinates(point.x, point.y, point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int index = voxel_grid_.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
   if (index == -1) {
     return false;
   } else {

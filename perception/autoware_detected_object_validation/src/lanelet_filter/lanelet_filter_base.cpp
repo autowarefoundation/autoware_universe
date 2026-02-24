@@ -15,7 +15,6 @@
 #include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_lanelet2_extension/utility/message_conversion.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
@@ -323,8 +322,8 @@ void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg)
 {
   lanelet_frame_id_ = map_msg->header.frame_id;
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
 }
 
 template <typename ObjsMsgType, typename ObjMsgType>

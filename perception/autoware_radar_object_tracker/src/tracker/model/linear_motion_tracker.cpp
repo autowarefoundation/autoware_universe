@@ -25,27 +25,21 @@
 #include "autoware_utils_geometry/msg/covariance.hpp"
 #include "autoware_utils_math/unit_conversion.hpp"
 
-#include <tf2/LinearMath/Matrix3x3.hpp>
-#include <tf2/LinearMath/Quaternion.hpp>
-#include <tf2/utils.hpp>
-
-#include <bits/stdc++.h>
-
-#include <string>
-#include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/utils.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <bits/stdc++.h>
 #include <yaml-cpp/yaml.h>
+
+#include <string>
+#include <vector>
 
 namespace autoware::radar_object_tracker
 {

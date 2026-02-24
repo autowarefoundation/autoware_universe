@@ -18,6 +18,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 using namespace autoware::diagnostic_graph_aggregator;  // NOLINT(build/namespaces)
 
 TEST(GraphLoad, RootNotFound)
@@ -48,6 +52,18 @@ TEST(GraphLoad, FieldNotFound)
 TEST(GraphLoad, UnknownSubstitution)
 {
   EXPECT_THROW(Graph(resource("graph-load/unknown-substitution.yaml")), UnknownSubstitution);
+}
+
+TEST(GraphLoad, UnknownVariable)
+{
+  EXPECT_THROW(Graph(resource("graph-load/unknown-variable.yaml")), UnknownVariable);
+}
+
+TEST(GraphLoad, VariableSubstitution)
+{
+  auto variables = std::make_shared<std::unordered_map<std::string, std::string>>();
+  variables->emplace("test_dir", resource("graph-load/variable-test").string());
+  EXPECT_NO_THROW(Graph(resource("graph-load/variable-substitution.yaml"), "", nullptr, variables));
 }
 
 TEST(GraphLoad, UnknownLogic)

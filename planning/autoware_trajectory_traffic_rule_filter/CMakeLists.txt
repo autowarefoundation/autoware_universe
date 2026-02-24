@@ -44,3 +44,16 @@ ament_auto_package(
   launch
   config
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+
+  ament_add_gtest(test_traffic_light_filter
+    test/test_traffic_light_filter.cpp
+  )
+  target_link_libraries(test_traffic_light_filter
+    autoware_trajectory_traffic_rule_filter_plugins
+    ${PROJECT_NAME}
+  )
+endif()

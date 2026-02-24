@@ -41,11 +41,6 @@
           "description": "The first grid size [m], applied only for elevation_grid_mode. A large value enhances the prediction stability for ground surface. suitable for rough surface or multiple lidar configuration.",
           "default": 0.1
         },
-        "grid_mode_switch_radius": {
-          "type": "number",
-          "description": "The distance where grid division mode change from by distance to by vertical angle [m], applied only for elevation_grid_mode",
-          "default": 20.0
-        },
         "gnd_grid_buffer_size": {
           "type": "integer",
           "description": "Number of grids using to estimate local ground slope, applied only for elevation_grid_mode",
@@ -106,7 +101,6 @@
         "split_height_distance",
         "non_ground_height_threshold",
         "grid_size_m",
-        "grid_mode_switch_radius",
         "gnd_grid_buffer_size",
         "detection_range_z_max",
         "elevation_grid_mode",

@@ -21,6 +21,8 @@
 
 #include <cuda_runtime.h>
 
+#include <cstdint>
+
 class CudaPointCloud2 : public sensor_msgs::msg::PointCloud2
 {
 public:

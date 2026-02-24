@@ -125,15 +125,6 @@ void throwCublasError(
 }
 
 // break-pointable
-void throwCudnnError(
-  const char * file, const char * function, int line, int status, const char * msg)
-{
-  CudnnError error(file, function, line, status, msg);
-  error.log(gLogError);
-  throw error;
-}
-
-// break-pointable
 void throwPluginError(
   char const * file, char const * function, int line, int status, char const * msg)
 {

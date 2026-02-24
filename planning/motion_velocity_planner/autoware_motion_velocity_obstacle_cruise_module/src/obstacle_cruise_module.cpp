@@ -116,6 +116,10 @@ void ObstacleCruiseModule::init(rclcpp::Node & node, const std::string & module_
   // time keeper
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(processing_time_detail_pub_);
 
+  // debug publisher
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/obstacle_cruise/trajectory", 1);
+
   // cruise planner
   cruise_planner_ = create_cruise_planner(node);
 }

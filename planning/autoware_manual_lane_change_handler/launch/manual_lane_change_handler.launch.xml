@@ -6,5 +6,6 @@
     <param from="$(var manual_lane_change_handler_param_path)"/>
     <remap from="~/input/vector_map" to="$(var map_topic_name)"/>
     <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/reroute_availability" to="/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available"/>
   </node>
 </launch>

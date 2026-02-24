@@ -22,6 +22,7 @@
 #include <tf2_ros/buffer.h>
 
 #include <string>
+#include <utility>
 
 namespace autoware::multi_object_tracker
 {
@@ -44,6 +45,11 @@ bool get2dPrecisionRecallGIoU(
 
 bool convertConvexHullToBoundingBox(
   const types::DynamicObject & input_object, types::DynamicObject & output_object);
+
+std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
+
+double get3dGeneralizedIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object);
 
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker

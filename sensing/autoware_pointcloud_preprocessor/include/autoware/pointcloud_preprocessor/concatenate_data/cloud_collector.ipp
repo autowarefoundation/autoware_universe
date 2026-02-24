@@ -169,7 +169,8 @@ void CloudCollector<MsgTraits>::show_debug_message()
 
   log_stream << "]\n";
 
-  RCLCPP_INFO(ros2_parent_node_->get_logger(), "%s", log_stream.str().c_str());
+  const std::string & str = log_stream.str();
+  RCLCPP_INFO(ros2_parent_node_->get_logger(), "%s", str.c_str());
 }
 
 template <typename MsgTraits>

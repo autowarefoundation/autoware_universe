@@ -20,10 +20,11 @@ ros2 service call /planning/mission_planning/manual_lane_change_handler/set_pref
 
 ### Subscriptions
 
-| Name                               | Type                                    | Description           |
-| ---------------------------------- | --------------------------------------- | --------------------- |
-| `input/odometry`                   | nav_msgs/msg/Odometry                   | vehicle odometry      |
-| `/planning/mission_planning/route` | autoware_planning_msgs/msg/LaneletRoute | current lanelet route |
+| Name                                                                                                           | Type                                        | Description                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `input/odometry`                                                                                               | nav_msgs/msg/Odometry                       | vehicle odometry                                                                                                                                      |
+| `/planning/mission_planning/route`                                                                             | autoware_planning_msgs/msg/LaneletRoute     | current lanelet route                                                                                                                                 |
+| `/planning/scenario_planning/lane_driving/behavior_planning/behavior_path_planner/output/is_reroute_available` | tier4_planning_msgs/msg/RerouteAvailability | Availability to reroute generally published by the behavior_path_planner. The `set_preferred_lane` service will be denied when this topic is `false`. |
 
 ### Publications
 
@@ -54,6 +55,7 @@ Based on certain criteria, shifting may be rejected, as in the following cases:
 
 1. Left or Right shift is not available due to no lane being present to shift to
 2. The next segment is a turn or the very last lane - this is to ensure that we can navigate the enter path and end up at the goal
+3. The reroute availability provided by the behavior_path_planner is `false`
 
 ```plantuml
 @startuml

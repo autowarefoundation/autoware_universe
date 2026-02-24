@@ -158,31 +158,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const FootprintMargin & margin = {0.0, 0.0});
 
 /**
- * @brief Generate vehicle footprints with adjustments based on abnormality type.
- *
- * This function creates different footprint shapes depending on the specified abnormality:
- * - For LONGITUDINAL, it lengthens the footprint based on vehicle speed.
- * - For STEERING, it widens the footprint to account for outward movement during turning.
- * - For LOCALIZATION, it applies extra margins to cover possible pose errors.
- * - For NORMAL, it only applies the provided uncertainty margin without any adjustment.
- *
- * The appropriate configuration is selected from the parameter set. This helps simulate
- * how the ego vehicle might occupy space under different uncertainty sources.
- *
- * @param abnormality_type        Type of abnormality (e.g. NORMAL, LOCALIZATION, etc.).
- * @param uncertainty_fp_margin   Margin based on pose uncertainty.
- * @param ego_pred_traj           Predicted trajectory of the ego vehicle.
- * @param current_steering        Current steering report, used for steering-based expansion.
- * @param vehicle_info            Vehicle dimensions and geometry.
- * @param param                   Parameter accessor with abnormality-specific settings.
- * @return List of footprints adapted to the given abnormality type.
- */
-std::vector<LinearRing2d> create_ego_footprints(
-  const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
-  const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
-  const VehicleInfo & vehicle_info, const Param & param);
-
-/**
  * @brief Extract left and right side segments from a 2D vehicle footprint polygon.
  *
  * This function returns the left and right side edges of a given vehicle footprint polygon.
@@ -345,7 +320,7 @@ ProjectionToBound find_closest_segment(
  * @param ego_sides_from_footprints List of left/right segments derived from ego footprint polygons.
  * @return Closest projections to boundaries, separated by side.
  */
-ProjectionsToBound get_closest_boundary_segments_from_side(
+Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
   const TrajectoryPoints & ego_pred_traj, const BoundarySideWithIdx & boundaries,
   const EgoSides & ego_sides_from_footprints);
 
@@ -353,7 +328,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
  * @brief Generate filtered and sorted departure points from lateral projections to road
  * boundaries.
  *
- * This function creates `DeparturePoint` instances from a list of `ClosestProjectionToBound`
+ * This function creates `DeparturePoint` instances from a list of `ProjectionToBound`
  * by adjusting their longitudinal position with `lon_offset_m`, and applying hysteresis
  * threshold.
  *
@@ -371,7 +346,7 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
  * @return Filtered, sorted `DeparturePoints` with only relevant departure markers.
  */
 DeparturePoints get_departure_points(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const ProjectionsToBound & projections_to_bound,
   const std::vector<double> & pred_traj_idx_to_ref_traj_lon_dist,
   const double th_point_merge_distance_m);
 
@@ -424,6 +399,11 @@ double calc_judge_line_dist_with_jerk_limit(
 
 std::optional<double> calc_signed_lateral_distance_to_boundary(
   const lanelet::ConstLineString3d & boundary, const Pose & reference_pose);
+
+std::optional<std::pair<double, double>> is_point_shifted(
+  const autoware::boundary_departure_checker::Pose & prev_iter_pt,
+  const autoware::boundary_departure_checker::Pose & curr_iter_pt, const double th_shift_m,
+  const double th_yaw_diff_rad);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_

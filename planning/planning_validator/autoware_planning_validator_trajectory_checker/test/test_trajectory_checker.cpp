@@ -81,11 +81,12 @@ public:
     context_->data->set_current_trajectory(std::make_shared<Trajectory>(trajectory));
   }
 
-  void set_ego_pose(const geometry_msgs::msg::Pose & pose)
+  void set_ego_pose(const geometry_msgs::msg::Pose & pose, const double ego_speed)
   {
     nav_msgs::msg::Odometry odom;
     odom.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
     odom.pose.pose = pose;
+    odom.twist.twist.linear.x = ego_speed;
     context_->data->current_kinematics = std::make_shared<nav_msgs::msg::Odometry>(odom);
   }
 
@@ -387,7 +388,7 @@ TEST_F(TestTrajectoryChecker, checkTrajectoryShiftFunction)
 
   const auto ego_pose =
     autoware_utils::calc_offset_pose(base_traj.points.front().pose, 2.5, 0.0, 0.0, 0.0);
-  set_ego_pose(ego_pose);
+  set_ego_pose(ego_pose, 1.0);
 
   // valid case
   {

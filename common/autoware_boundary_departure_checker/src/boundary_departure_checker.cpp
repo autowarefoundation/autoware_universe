@@ -358,4 +358,35 @@ bool BoundaryDepartureChecker::willCrossBoundary(
   }
   return false;
 }
+
+SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
+  const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
+  const double max_search_length, const std::vector<std::string> & boundary_types_to_detect) const
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  const auto has_types =
+    [](const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types) {
+      constexpr auto no_type = "";
+      const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
+      return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
+    };
+
+  SegmentRtree uncrossable_segments_in_range;
+  LineString2d line;
+  const auto ego_p = Point2d{ego_point.x, ego_point.y};
+  for (const auto & ls : lanelet_map.lineStringLayer) {
+    if (has_types(ls, boundary_types_to_detect)) {
+      line.clear();
+      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
+      for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
+        const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
+        if (boost::geometry::distance(segment, ego_p) < max_search_length) {
+          uncrossable_segments_in_range.insert(segment);
+        }
+      }
+    }
+  }
+  return uncrossable_segments_in_range;
+}
 }  // namespace autoware::boundary_departure_checker

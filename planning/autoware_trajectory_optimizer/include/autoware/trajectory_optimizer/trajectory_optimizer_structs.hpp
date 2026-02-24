@@ -43,9 +43,9 @@ struct TrajectoryOptimizerParams
   bool use_akima_spline_interpolation{false};
   bool use_eb_smoother{false};
   bool use_qp_smoother{false};
-  bool fix_invalid_points{false};
-  bool optimize_velocity{false};
-  bool extend_trajectory_backward{false};
+  bool use_trajectory_point_fixer{false};
+  bool use_velocity_optimizer{false};
+  bool use_trajectory_extender{false};
   bool use_kinematic_feasibility_enforcer{false};
   bool use_mpt_optimizer{false};
 };

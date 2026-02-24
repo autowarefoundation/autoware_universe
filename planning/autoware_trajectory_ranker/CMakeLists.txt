@@ -19,6 +19,10 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/utils.cpp
 )
 
+ament_auto_add_library(simple_trajectory_ranker_node SHARED
+  src/simple_trajectory_ranker_node.cpp
+)
+
 target_link_libraries(${PROJECT_NAME}
   trajectory_ranker_parameters
 )
@@ -32,6 +36,11 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
+rclcpp_components_register_node(simple_trajectory_ranker_node
+  PLUGIN "autoware::trajectory_ranker::SimpleTrajectoryRanker"
+  EXECUTABLE simple_trajectory_ranker
+)
+
 ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
   src/metrics/lateral_acceleration_metric.cpp
   src/metrics/longitudinal_jerk_metric.cpp
@@ -39,6 +48,7 @@ ament_auto_add_library(autoware_trajectory_ranker_plugins SHARED
   src/metrics/distance_metric.cpp
   src/metrics/lateral_deviation_metric.cpp
   src/metrics/steering_consistency_metric.cpp
+  src/metrics/trajectory_consistency_metric.cpp
   src/metrics/metrics_utils.cpp
 )
 
@@ -78,6 +88,13 @@ if(BUILD_TESTING)
   target_link_libraries(test_metrics
     ${PROJECT_NAME}
     autoware_trajectory_ranker_plugins
+  )
+
+  ament_add_gtest(test_simple_trajectory_ranker_node
+    test/simple_trajectory_ranker_node_test.cpp
+  )
+  target_link_libraries(test_simple_trajectory_ranker_node
+    simple_trajectory_ranker_node
   )
 endif()
 

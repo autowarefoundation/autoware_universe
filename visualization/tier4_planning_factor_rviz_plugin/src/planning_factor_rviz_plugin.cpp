@@ -19,7 +19,9 @@
 #include <autoware_utils/math/trigonometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
+#include <memory>
 #include <string>
+#include <thread>
 
 namespace autoware::rviz_plugins
 {
@@ -148,9 +150,77 @@ visualization_msgs::msg::MarkerArray createTargetMarker(
 }
 }  // namespace
 
+// Definition of static member variables
+std::mutex PlanningFactorRvizPlugin::s_mutex_;
+std::optional<double> PlanningFactorRvizPlugin::s_baselink2front_;
+bool PlanningFactorRvizPlugin::s_request_started_{false};
+
+void PlanningFactorRvizPlugin::start_vehicle_info_request()
+{
+  {
+    std::lock_guard<std::mutex> lock(s_mutex_);
+    if (s_request_started_ || s_baselink2front_.has_value()) {
+      return;
+    }
+    s_request_started_ = true;
+  }
+
+  // Start a detached thread to handle service call
+  std::thread([]() {
+    try {
+      if (!rclcpp::ok()) {
+        return;
+      }
+
+      auto node = std::make_shared<rclcpp::Node>("planning_factor_rviz_plugin_vehicle_info_node");
+      auto client = node->create_client<rcl_interfaces::srv::GetParameters>(
+        "/adapi/node/vehicle_info/get_parameters");
+
+      // Wait for service to be ready
+      while (rclcpp::ok() && !client->wait_for_service(std::chrono::seconds(1))) {
+        RCLCPP_WARN_ONCE(
+          rclcpp::get_logger("PlanningFactorRvizPlugin"), "Waiting for vehicle_info service...");
+      }
+
+      if (!rclcpp::ok()) {
+        return;
+      }
+
+      // Send request
+      auto request = std::make_shared<rcl_interfaces::srv::GetParameters::Request>();
+      request->names = {"wheel_base", "front_overhang"};
+      auto future = client->async_send_request(request);
+
+      // Wait for response
+      if (
+        rclcpp::spin_until_future_complete(node, future, std::chrono::seconds(10)) ==
+        rclcpp::FutureReturnCode::SUCCESS) {
+        const auto & response = future.get();
+        if (response->values.size() >= 2) {
+          const double wheel_base = response->values[0].double_value;
+          const double front_overhang = response->values[1].double_value;
+          std::lock_guard<std::mutex> lock(s_mutex_);
+          s_baselink2front_ = wheel_base + front_overhang;
+        }
+      }
+    } catch (...) {
+      // Ignore exceptions during shutdown
+    }
+  }).detach();
+}
+
 void PlanningFactorRvizPlugin::processMessage(
   const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
 {
+  // Get cached baselink2front value
+  double baselink2front = 0.0;
+  {
+    std::lock_guard<std::mutex> lock(s_mutex_);
+    if (s_baselink2front_.has_value()) {
+      baselink2front = s_baselink2front_.value();
+    }
+  }
+
   size_t i = 0L;
   for (const auto & factor : msg->factors) {
     const auto text = factor.module + (factor.detail.empty() ? "" : " (" + factor.detail + ")");
@@ -159,7 +229,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createStopVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
+            control_point.pose, text, msg->header.stamp, i++, baselink2front);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
@@ -167,7 +237,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
+            control_point.pose, text, msg->header.stamp, i++, baselink2front);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
@@ -175,7 +245,7 @@ void PlanningFactorRvizPlugin::processMessage(
       case autoware_internal_planning_msgs::msg::PlanningFactor::UNKNOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
-            control_point.pose, text, msg->header.stamp, i++, baselink2front_);
+            control_point.pose, text, msg->header.stamp, i++, baselink2front);
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;

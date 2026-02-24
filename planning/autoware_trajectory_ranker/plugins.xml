@@ -47,4 +47,12 @@
       Evaluates steering consistency and smoothness
     </description>
   </class>
+
+  <!-- Trajectory Consistency Metric -->
+  <class type="autoware::trajectory_ranker::metrics::TrajectoryConsistency"
+         base_class_type="autoware::trajectory_ranker::metrics::MetricInterface">
+    <description>
+      Evaluates trajectory endpoint consistency (lateral variance in ego frame)
+    </description>
+  </class>
 </library>

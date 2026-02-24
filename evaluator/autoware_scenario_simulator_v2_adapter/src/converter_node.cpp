@@ -14,8 +14,15 @@
 
 #include "autoware/scenario_simulator_v2_adapter/converter_node.hpp"
 
+#include <rcl_interfaces/msg/list_parameters_result.hpp>
+
+#include <algorithm>
+#include <map>
 #include <regex>
+#include <set>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::scenario_simulator_v2_adapter
@@ -50,8 +57,18 @@ MetricConverter::MetricConverter(const rclcpp::NodeOptions & node_options)
   }
 
   // diagnostics subscription
-  diagnostics_sub_ = create_subscription<DiagnosticArray>(
-    "/diagnostics", 10, std::bind(&MetricConverter::onDiagnostics, this, std::placeholders::_1));
+  try {
+    auto diagnostic_aggregation_maps = loadDiagnosticConfig();
+    const std::function<void(const DiagnosticArray::ConstSharedPtr)> fn =
+      [this, diagnostic_aggregation_maps](const DiagnosticArray::ConstSharedPtr msg) {
+        onDiagnostics(msg, diagnostic_aggregation_maps);
+      };
+    diagnostics_sub_ = create_subscription<DiagnosticArray>("/diagnostics", 10, fn);
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(
+      get_logger(), "Failed to load diagnostic config, continuing without aggregation: %s",
+      e.what());
+  }
 }
 
 void MetricConverter::onMetrics(
@@ -64,7 +81,9 @@ void MetricConverter::onMetrics(
   }
 }
 
-void MetricConverter::onDiagnostics(const DiagnosticArray::ConstSharedPtr diagnostics_msg)
+void MetricConverter::onDiagnostics(
+  const DiagnosticArray::ConstSharedPtr diagnostics_msg,
+  const std::unordered_map<std::string, DiagnosticAggregationMap> & diagnostic_aggregation_maps)
 {
   for (const auto & status : diagnostics_msg->status) {
     std::string diag_name = "/diagnostics/" + status.name;
@@ -74,6 +93,22 @@ void MetricConverter::onDiagnostics(const DiagnosticArray::ConstSharedPtr diagno
     }
     const auto valid_topic_name = removeInvalidTopicString(diag_name);
     getPublisher(valid_topic_name)->publish(createUserDefinedValue(status));
+
+    // Check if the diagnostic is in any of the aggregation lists
+    for (const auto & [group_name, diagnostic_aggregation_map] : diagnostic_aggregation_maps) {
+      if (
+        diagnostic_aggregation_map.aggregation_list.find(valid_topic_name) !=
+        diagnostic_aggregation_map.aggregation_list.end()) {
+        getPublisher(diagnostic_aggregation_map.output_topic_name)
+          ->publish(createUserDefinedValue(status));
+
+        if (status.level == DiagnosticStatus::ERROR) {
+          RCLCPP_WARN(
+            get_logger(), "Diagnostic '%s' is in error (group: %s)", valid_topic_name.c_str(),
+            group_name.c_str());
+        }
+      }
+    }
   }
 }
 
@@ -100,6 +135,142 @@ rclcpp::Publisher<UserDefinedValue>::SharedPtr MetricConverter::getPublisher(
     params_pub_[topic_name] = create_publisher<UserDefinedValue>(topic_name, 1);
   }
   return params_pub_.at(topic_name);
+}
+
+std::unordered_map<std::string, DiagnosticAggregationMap> MetricConverter::loadDiagnosticConfig()
+{
+  // 1. collect diagnostic groups from parameters
+  auto groups = collectDiagnosticGroupsFromParams();
+
+  // 2. validate and filter incomplete groups
+  validateAndFilterGroups(groups);
+
+  if (groups.empty()) {
+    return groups;
+  }
+
+  // 3. create reverse lookup map: output_topic_name -> group_name
+  auto topic_to_group = createTopicToGroupMap(groups);
+
+  // 4. expand nested group references recursively
+  for (auto & [group_name, map] : groups) {
+    std::set<std::string> visited;
+    map.aggregation_list =
+      expandAggregationList(group_name, map.aggregation_list, groups, topic_to_group, visited);
+  }
+
+  return groups;
+}
+
+std::unordered_map<std::string, DiagnosticAggregationMap>
+MetricConverter::collectDiagnosticGroupsFromParams()
+{
+  std::unordered_map<std::string, DiagnosticAggregationMap> result;
+
+  // format: diagnostic_groups.{group_name}.{field_name}
+  const std::string prefix = "diagnostic_groups.";
+  auto param_overrides = get_node_parameters_interface()->get_parameter_overrides();
+
+  for (const auto & [param_name, param_value] : param_overrides) {
+    if (param_name.find(prefix) != 0) {
+      continue;
+    }
+
+    // example: "diagnostic_groups.overall_diagnostics.output_topic_name"
+    //        -> group_name = "overall_diagnostics", field_name = "output_topic_name"
+    std::string suffix = param_name.substr(prefix.length());
+    size_t dot_pos = suffix.find('.');
+    if (dot_pos == std::string::npos) {
+      continue;
+    }
+    std::string group_name = suffix.substr(0, dot_pos);
+    std::string field_name = suffix.substr(dot_pos + 1);
+
+    try {
+      if (field_name == "output_topic_name") {
+        result[group_name].output_topic_name = param_value.get<std::string>();
+      } else if (field_name == "aggregation_list") {
+        auto vec = param_value.get<std::vector<std::string>>();
+        result[group_name].aggregation_list.insert(vec.begin(), vec.end());
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(
+        get_logger(), "Failed to parse parameter '%s' for group '%s': %s. Skipping this parameter.",
+        param_name.c_str(), group_name.c_str(), e.what());
+    }
+  }
+
+  return result;
+}
+
+void MetricConverter::validateAndFilterGroups(
+  std::unordered_map<std::string, DiagnosticAggregationMap> & groups)
+{
+  for (auto it = groups.begin(); it != groups.end();) {
+    const std::string & group_name = it->first;
+    const DiagnosticAggregationMap & map = it->second;
+
+    if (map.output_topic_name.empty()) {
+      RCLCPP_WARN(
+        get_logger(), "Diagnostic group '%s' is missing 'output_topic_name'. Skipping.",
+        group_name.c_str());
+      it = groups.erase(it);
+    } else if (map.aggregation_list.empty()) {
+      RCLCPP_WARN(
+        get_logger(), "Diagnostic group '%s' has empty 'aggregation_list'. Skipping.",
+        group_name.c_str());
+      it = groups.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+std::unordered_map<std::string, std::string> MetricConverter::createTopicToGroupMap(
+  const std::unordered_map<std::string, DiagnosticAggregationMap> & groups)
+{
+  std::unordered_map<std::string, std::string> topic_to_group;
+  for (const auto & [group_name, map] : groups) {
+    topic_to_group[map.output_topic_name] = group_name;
+  }
+  return topic_to_group;
+}
+
+std::unordered_set<std::string> MetricConverter::expandAggregationList(
+  const std::string & group_name, const std::unordered_set<std::string> & aggregation_list,
+  const std::unordered_map<std::string, DiagnosticAggregationMap> & diagnostic_aggregation_maps,
+  const std::unordered_map<std::string, std::string> & output_topic_to_group_name,
+  std::set<std::string> & visited)
+{
+  // detect circular dependencies to prevent infinite recursion
+  if (visited.find(group_name) != visited.end()) {
+    RCLCPP_WARN(get_logger(), "Circular dependency detected for group: %s", group_name.c_str());
+    return aggregation_list;
+  }
+
+  visited.insert(group_name);
+
+  std::unordered_set<std::string> expanded_list;
+
+  for (const auto & topic : aggregation_list) {
+    // check if topic matches any group's output_topic_name using reverse lookup map
+    auto it = output_topic_to_group_name.find(topic);
+    if (it != output_topic_to_group_name.end()) {
+      // found a group reference, recursively expand it
+      const std::string & nested_group_name = it->second;
+      const auto & nested_map = diagnostic_aggregation_maps.at(nested_group_name);
+      auto expanded_nested = expandAggregationList(
+        nested_group_name, nested_map.aggregation_list, diagnostic_aggregation_maps,
+        output_topic_to_group_name, visited);
+      expanded_list.insert(expanded_nested.begin(), expanded_nested.end());
+    } else {
+      // not a group reference, just add the topic as-is
+      expanded_list.insert(topic);
+    }
+  }
+
+  visited.erase(group_name);  // allow same group in different branches
+  return expanded_list;
 }
 }  // namespace autoware::scenario_simulator_v2_adapter
 

@@ -27,8 +27,8 @@
 #include <utility>
 #include <vector>
 
-#define FMT_HEADER_ONLY
-#include <fmt/format.h>
+// Removed fmt dependency due to fmt v9 std::byte compatibility issue
+// Using standard string concatenation instead
 
 namespace autoware::velodyne_monitor
 {
@@ -222,7 +222,7 @@ bool VelodyneMonitor::requestGET(
   }
 
   if (res.status_code() != web::http::status_codes::OK) {
-    err_msg = fmt::format("{}: {}", res.status_code(), res.reason_phrase().c_str());
+    err_msg = std::to_string(res.status_code()) + ": " + res.reason_phrase().c_str();
     return false;
   }
 

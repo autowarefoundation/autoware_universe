@@ -18,20 +18,14 @@
 
 #include "autoware_utils/geometry/geometry.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <tf2/LinearMath/Matrix3x3.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/utils.hpp>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <Eigen/Core>
-#include <Eigen/Geometry>
 
 #include <algorithm>
 #include <vector>
@@ -366,7 +360,7 @@ bool correctWithReferenceShapeAndPose(
   Eigen::Affine3d base2obj_transform;
   tf2::fromMsg(pose, base2obj_transform);
 
-  Eigen::Vector3d local_c1;
+  Eigen::Vector3d local_c1 = Eigen::Vector3d::Zero();
   Eigen::Vector3d ref_center = Eigen::Vector3d(ref_pose.position.x, ref_pose.position.y, 0.0);
   // local points
   std::vector<Eigen::Vector3d> v_points;

@@ -61,10 +61,18 @@ inline constexpr int64_t LINE_TYPE_RIGHT_START = LINE_TYPE_LEFT_START + LINE_TYP
 inline constexpr int64_t SEGMENT_POINT_DIM = LINE_TYPE_RIGHT_START + LINE_TYPE_NUM;
 
 inline constexpr int64_t INPUT_T = 30;
-inline constexpr int64_t OUTPUT_T = 80;  // Output timestamp number
-inline constexpr int64_t POSE_DIM = 4;   // x, y, cos(yaw), sin(yaw)
+inline constexpr int64_t INPUT_T_WITH_CURRENT = INPUT_T + 1;  // Including current time step
+inline constexpr int64_t OUTPUT_T = 80;                       // Output timestamp number
+inline constexpr int64_t POSE_DIM = 4;                        // x, y, cos(yaw), sin(yaw)
 inline constexpr std::array<int64_t, 4> OUTPUT_SHAPE = {1, MAX_NUM_AGENTS, OUTPUT_T, POSE_DIM};
-inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, 4};
+
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_NONE = 0;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_DISABLE = 1;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_ENABLE_LEFT = 2;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_ENABLE_RIGHT = 3;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_KEEP = 4;
+inline constexpr int64_t TURN_INDICATOR_OUTPUT_DIM = 5;
+inline constexpr std::array<int64_t, 2> TURN_INDICATOR_LOGIT_SHAPE = {1, TURN_INDICATOR_OUTPUT_DIM};
 
 inline constexpr std::array<int64_t, 4> SAMPLED_TRAJECTORIES_SHAPE = {
   1, MAX_NUM_AGENTS, OUTPUT_T + 1, POSE_DIM};

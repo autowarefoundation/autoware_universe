@@ -60,17 +60,12 @@
 #else
 #include <cv_bridge/cv_bridge.h>  // for ROS 2 Humble or older
 #endif
+#include <autoware_utils_geometry/geometry.hpp>
 #include <tf2/LinearMath/Transform.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>
 #include <limits>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
-
-#include <autoware_utils_geometry/geometry.hpp>
 
 ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
 : rclcpp::Node("ar_tag_based_localizer", options), cam_info_received_(false)

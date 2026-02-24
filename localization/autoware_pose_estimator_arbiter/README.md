@@ -33,7 +33,7 @@ Also, even if both can be activated at the same time, the Kalman Filter may be a
 ### Supporting pose_estimators
 
 - [ndt_scan_matcher](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ndt_scan_matcher)
-- [eagleye](https://autowarefoundation.github.io/autoware-documentation/main/how-to-guides/integrating-autoware/launch-autoware/localization/eagleye/)
+- [eagleye](https://autowarefoundation.github.io/autoware-documentation/main/tutorials/integrating-autoware/launch-autoware/localization/eagleye/)
 - [yabloc](https://github.com/autowarefoundation/autoware_universe/tree/main/localization/yabloc)
 - [landmark_based_localizer](https://github.com/autowarefoundation/autoware_universe/tree/main/localization/autoware_landmark_based_localizer)
 
