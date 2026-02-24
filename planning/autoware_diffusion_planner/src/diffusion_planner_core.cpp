@@ -313,6 +313,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
 
     if (params_.shift_x) {
       for (auto & point : trajectory.points) {
+        // TODO(sakoda): front and rear overhang should be considered for more accurate shifting.
         point.pose = utils::shift_x(point.pose, -vehicle_info_.wheel_base_m / 2.0);
       }
     }
