@@ -48,18 +48,18 @@ std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
   return uuid_to_name;
 }
 
-bool has_diffusion_planner_trajectory(
-  const std::unordered_map<std::string, std::string> & uuid_to_name_map,
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories)
+bool has_trajectory_from_generator(
+  const std::unordered_map<std::string, std::string> & uuid_to_generator_name_map,
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories,
+  const std::string & generator_name_prefix)
 {
   return std::any_of(
     trajectories.candidate_trajectories.cbegin(), trajectories.candidate_trajectories.cend(),
-    [&uuid_to_name_map](
-      const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
+    [&](const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
       const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
-      const auto generator_name_it = uuid_to_name_map.find(generator_id_str);
-      return generator_name_it != uuid_to_name_map.end() &&
-             generator_name_it->second.rfind("Diffusion", 0) == 0;
+      const auto generator_name_it = uuid_to_generator_name_map.find(generator_id_str);
+      return generator_name_it != uuid_to_generator_name_map.end() &&
+             generator_name_it->second.rfind(generator_name_prefix, 0) == 0;
     });
 }
 }  // namespace
@@ -159,7 +159,7 @@ void TrajectoryTrafficRuleFilter::update_diagnostic(
   if (filtered_trajectories.candidate_trajectories.empty()) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (!has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
+  } else if (!has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion")) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "All diffusion planner trajectories are infeasible");
