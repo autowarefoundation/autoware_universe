@@ -26,7 +26,6 @@
 
 #include "boost/lexical_cast.hpp"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
