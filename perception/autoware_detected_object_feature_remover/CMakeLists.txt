@@ -28,14 +28,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
-  find_package(ament_cmake_ros REQUIRED)
-  # run node unit testings with ROS_DOMAIN_ID isolation
-  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_node
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_${PROJECT_NAME}
     test/test_detected_object_feature_remover_node.cpp
   )
-  target_include_directories(test_${PROJECT_NAME}_node PRIVATE src)
-  target_link_libraries(test_${PROJECT_NAME}_node ${${PROJECT_NAME}_LIBRARIES})
-  ament_target_dependencies(test_${PROJECT_NAME}_node
+  target_link_libraries(test_${PROJECT_NAME} ${${PROJECT_NAME}_LIBRARIES})
+  ament_target_dependencies(test_${PROJECT_NAME}
     ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS}
     ${${PROJECT_NAME}_FOUND_TEST_DEPENDS}
   )
