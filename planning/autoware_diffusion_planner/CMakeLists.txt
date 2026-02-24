@@ -52,6 +52,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   # Add your component library
   ament_auto_add_library(autoware_diffusion_planner_component SHARED
+    src/diffusion_planner_core.cpp
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
