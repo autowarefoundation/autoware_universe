@@ -331,8 +331,16 @@ void DiffusionPlanner::on_timer()
   }
   const auto & [predictions, turn_indicator_logit] = inference_result.outputs.value();
 
-  const auto planner_output = core_->create_planner_output(
-    predictions, turn_indicator_logit, *frame_context, frame_time, generator_uuid_);
+  PlannerOutput planner_output;
+  try {
+    planner_output = core_->create_planner_output(
+      predictions, turn_indicator_logit, *frame_context, frame_time, generator_uuid_);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(get_logger(), "Postprocessing failed: " << e.what());
+    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
+    diagnostics_inference_->publish(frame_time);
+    return;
+  }
 
   pub_trajectory_->publish(planner_output.trajectory);
   pub_trajectories_->publish(planner_output.candidate_trajectories);
