@@ -330,7 +330,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
                                         .points(trajectory.points);
 
     std_msgs::msg::String generator_name_msg;
-    generator_name_msg.data = "DiffusionPlanner_batch_" + std::to_string(i);
+    generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
 
     const auto generator_info =
       autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
