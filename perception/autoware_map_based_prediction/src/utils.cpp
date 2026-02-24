@@ -414,9 +414,9 @@ LaneletsData getCurrentLanelets(
     object.kinematics.pose_with_covariance.pose.position.y);
 
   // nearest lanelet
-  // std::vector<std::pair<double, lanelet::Lanelet>> surrounding_lanelets =
-  //   lanelet::geometry::findNearest(lanelet_map_ptr->laneletLayer, search_point, 10);
-
+  // NOTE: Search for nearest lanelets considering 3D distances.
+  // Because lanelet::geometry::findNearest considers only 2D space, it increases computation
+  // costs when lanelets are overlapped in 3D space.
   const std::vector<std::pair<double, lanelet::ConstLanelet>> surrounding_lanelets =
     experimental::lanelet2_utils::find_nearest(
       lanelet_map_ptr->laneletLayer, object.kinematics.pose_with_covariance.pose, 10);
