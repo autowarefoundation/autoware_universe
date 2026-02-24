@@ -5,7 +5,6 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(PCL REQUIRED COMPONENTS common)
-find_package(pcl_conversions REQUIRED)
 find_package(OpenCV REQUIRED)
 
 set(DETECTED_OBJECT_FEATURE_REMOVER_DEPENDENCIES
