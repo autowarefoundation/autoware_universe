@@ -67,6 +67,22 @@ using utils::NormalizationMap;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
 using AgentPoses = std::vector<std::vector<std::vector<Eigen::Matrix4d>>>;
 
+struct VehicleSpec
+{
+  double wheel_base;
+  double vehicle_length;
+  double vehicle_width;
+  double base_link_to_center;
+
+  explicit VehicleSpec(const VehicleInfo & info)
+  : wheel_base(info.wheel_base_m),
+    vehicle_length(info.front_overhang_m + info.wheel_base_m + info.rear_overhang_m),
+    vehicle_width(info.left_overhang_m + info.wheel_tread_m + info.right_overhang_m),
+    base_link_to_center((info.front_overhang_m + info.wheel_base_m - info.rear_overhang_m) / 2.0)
+  {
+  }
+};
+
 struct PlannerOutput
 {
   Trajectory trajectory;
@@ -254,7 +270,7 @@ public:
 private:
   // Parameters
   DiffusionPlannerParams params_;
-  VehicleInfo vehicle_info_;
+  VehicleSpec vehicle_spec_;
   NormalizationMap normalization_map_;
 
   // Inference engine
