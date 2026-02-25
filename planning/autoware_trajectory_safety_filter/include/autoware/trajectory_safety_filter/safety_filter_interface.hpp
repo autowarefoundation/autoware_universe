@@ -17,15 +17,15 @@
 
 #include "autoware/trajectory_safety_filter/filter_context.hpp"
 
+#include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <rclcpp/node.hpp>
 #include <tl_expected/expected.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
-#include <any>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -39,10 +39,7 @@ class SafetyFilterInterface
 {
 public:
   explicit SafetyFilterInterface(std::string name) : name_(std::move(name)) {}
-  SafetyFilterInterface(std::string name, const VehicleInfo & vehicle_info)
-  : name_(std::move(name)), vehicle_info_ptr_(std::make_shared<VehicleInfo>(vehicle_info))
-  {
-  }
+
   virtual ~SafetyFilterInterface() = default;
   SafetyFilterInterface(const SafetyFilterInterface &) = delete;
   SafetyFilterInterface & operator=(const SafetyFilterInterface &) = delete;
@@ -53,8 +50,7 @@ public:
   virtual tl::expected<void, std::string> is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) = 0;
 
-  // Set parameters directly (for testing and runtime configuration)
-  virtual void set_parameters(const std::unordered_map<std::string, std::any> & params) = 0;
+  virtual void set_parameters(rclcpp::Node & node) = 0;
 
   // Set vehicle info
   virtual void set_vehicle_info(const VehicleInfo & vehicle_info)

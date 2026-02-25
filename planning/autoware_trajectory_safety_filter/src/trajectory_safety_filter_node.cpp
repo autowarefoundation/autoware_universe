@@ -189,31 +189,8 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       }
     }
 
-    // Load parameters from ROS and pass to plugin
-    std::unordered_map<std::string, std::any> params;
-    const auto all_params = listener_->get_params();
-
-    // Determine parameter prefix based on plugin name
-    if (name.find("OutOfLaneFilter") != std::string::npos) {
-      params["out_of_lane.time"] = all_params.out_of_lane.time;
-      params["out_of_lane.min_value"] = all_params.out_of_lane.min_value;
-    } else if (name.find("CollisionFilter") != std::string::npos) {
-      params["collision.time"] = all_params.collision.time;
-      params["collision.min_value"] = all_params.collision.min_value;
-    } else if (name.find("VehicleConstraintFilter") != std::string::npos) {
-      params["vehicle_constraint.max_speed"] = all_params.vehicle_constraint.max_speed;
-      params["vehicle_constraint.max_acceleration"] =
-        all_params.vehicle_constraint.max_acceleration;
-      params["vehicle_constraint.max_deceleration"] =
-        all_params.vehicle_constraint.max_deceleration;
-      params["vehicle_constraint.max_steering_angle"] =
-        all_params.vehicle_constraint.max_steering_angle;
-      params["vehicle_constraint.max_steering_rate"] =
-        all_params.vehicle_constraint.max_steering_rate;
-    }
-
     plugin->set_vehicle_info(vehicle_info_);
-    plugin->set_parameters(params);
+    plugin->set_parameters(*this);
 
     plugins_.push_back(plugin);
 

@@ -243,22 +243,11 @@ bool CollisionFilter::check_collision(
   return ttc >= 0.0 && ttc < params_.min_ttc;
 }
 
-void CollisionFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
+void CollisionFilter::set_parameters(rclcpp::Node & node)
 {
-  auto get_value = [&params](const std::string & key, auto & value) {
-    auto it = params.find(key);
-    if (it != params.end()) {
-      try {
-        value = std::any_cast<std::decay_t<decltype(value)>>(it->second);
-      } catch (const std::bad_any_cast &) {
-        // Keep default value if cast fails
-      }
-    }
-  };
-
-  // Map from parameter structure
-  get_value("time", params_.max_check_time);
-  get_value("min_value", params_.min_ttc);
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+  params_.max_check_time = get_or_declare_parameter<double>(node, "collision.time");
+  params_.min_ttc = get_or_declare_parameter<double>(node, "collision.min_value");
 }
 
 tl::expected<void, std::string> CollisionFilter::is_feasible(

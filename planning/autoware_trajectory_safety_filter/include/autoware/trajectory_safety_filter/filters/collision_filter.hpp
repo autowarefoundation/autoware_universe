@@ -23,10 +23,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
-#include <any>
-#include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
@@ -47,7 +44,7 @@ public:
   tl::expected<void, std::string> is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) final;
 
-  void set_parameters(const std::unordered_map<std::string, std::any> & params) override;
+  void set_parameters(rclcpp::Node & node) final;
 
 private:
   CollisionParams params_;
