@@ -170,7 +170,7 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
         return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
       case TrackerType::BIG_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
-      case TrackerType::UNKNOWN:
+      case TrackerType::POLYGON:
         return std::make_shared<PolygonTracker>(
           time, object, config_.enable_unknown_object_velocity_estimation,
           config_.enable_unknown_object_motion_output);

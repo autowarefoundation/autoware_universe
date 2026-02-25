@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
@@ -53,7 +49,7 @@ enum class TrackerType {
   NORMAL_VEHICLE = 22,
   BIG_VEHICLE = 23,
   VEHICLE = 24,
-  UNKNOWN = 30,
+  POLYGON = 30,
 };
 
 class Tracker
@@ -170,7 +166,7 @@ public:
 
 protected:
   types::DynamicObject object_;
-  TrackerType tracker_type_{TrackerType::UNKNOWN};
+  TrackerType tracker_type_{TrackerType::POLYGON};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

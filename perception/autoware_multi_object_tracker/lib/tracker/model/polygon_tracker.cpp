@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/tracker/model/polygon_tracker.hpp"
@@ -40,7 +41,7 @@ PolygonTracker::PolygonTracker(
   enable_velocity_estimation_(enable_velocity_estimation),
   enable_motion_output_(enable_motion_output)
 {
-  tracker_type_ = TrackerType::UNKNOWN;
+  tracker_type_ = TrackerType::POLYGON;
 
   if (enable_velocity_estimation_) {
     // Set motion model parameters
