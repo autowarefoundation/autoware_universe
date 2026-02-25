@@ -1806,15 +1806,17 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
       parameters_->minimum_shift_length;
     const auto is_parameterize_threshold_ok =
       parameters_->th_distance_to_middle_of_the_road < parameters_->minimum_shift_length;
-    const auto is_need_blinker = needToPrepareBlinkerBeforeStartDrivingForward();
+    const auto is_need_blinker = !status_.first_engaged_and_driving_forward_time ||
+                                 needToPrepareBlinkerBeforeStartDrivingForward();
     return is_shift_ok && !parameters_->enable_back && is_parameterize_threshold_ok &&
            is_need_blinker;
   });
 
   if (enable_in_centerline) {
     auto prev_turn_signal = getPreviousModuleOutput().turn_signal_info;
-    prev_turn_signal.turn_signal.command =
-      autoware_vehicle_msgs::msg::TurnIndicatorsCommand::ENABLE_RIGHT;
+    prev_turn_signal.turn_signal.command = parameters_->turn_signal_on_centerline_start == "LEFT"
+                                             ? TurnIndicatorsCommand::ENABLE_LEFT
+                                             : TurnIndicatorsCommand::ENABLE_RIGHT;
     return prev_turn_signal;
   }
 
