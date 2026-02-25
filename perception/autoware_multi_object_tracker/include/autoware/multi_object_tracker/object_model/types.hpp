@@ -50,7 +50,6 @@ constexpr int NUM_LABELS = 8;
 struct InputChannel
 {
   uint index;               // index of the channel
-  std::string input_topic;  // topic name of the detection, e.g. "/detection/lidar"
   std::string long_name = "Detected Object";  // full name of the detection
   std::string short_name = "DET";             // abbreviation of the name
   bool is_spawn_enabled = true;               // enable spawn of the object

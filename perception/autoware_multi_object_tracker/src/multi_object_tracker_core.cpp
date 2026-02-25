@@ -51,7 +51,7 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize input manager
   input_manager = std::make_unique<InputManager>(odometry, node.get_logger(), node.get_clock());
-  input_manager->init(params.input_channels_config);
+  input_manager->init(params.input_channels_config, params.input_topics);
   input_manager->setTriggerFunction(trigger_function);
 
   // Initialize processor

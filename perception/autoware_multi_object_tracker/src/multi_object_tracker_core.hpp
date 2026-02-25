@@ -55,6 +55,7 @@ struct MultiObjectTrackerParameters
   bool publish_merged_objects;
 
   std::vector<types::InputChannel> input_channels_config;
+  std::vector<std::string> input_topics;
 
   std::vector<int64_t> can_assign_matrix;
   std::vector<double> max_dist_matrix;

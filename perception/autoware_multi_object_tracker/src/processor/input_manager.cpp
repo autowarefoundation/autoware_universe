@@ -245,7 +245,9 @@ InputManager::InputManager(
   latest_exported_object_time_ = clock_->now() - rclcpp::Duration::from_seconds(3.0);
 }
 
-void InputManager::init(const std::vector<types::InputChannel> & input_channels)
+void InputManager::init(
+  const std::vector<types::InputChannel> & input_channels,
+  const std::vector<std::string> & input_topics)
 {
   // Check input sizes
   input_size_ = input_channels.size();
@@ -265,7 +267,7 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
 
     RCLCPP_INFO(
       logger_, "InputManager::init Initializing %s input stream from %s",
-      input_channels[i].long_name.c_str(), input_channels[i].input_topic.c_str());
+      input_channels[i].long_name.c_str(), input_topics[i].c_str());
   }
 
   // Check if any spawn enabled input streams

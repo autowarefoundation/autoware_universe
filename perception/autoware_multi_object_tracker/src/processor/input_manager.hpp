@@ -91,7 +91,9 @@ class InputManager
 public:
   InputManager(
     std::shared_ptr<Odometry> odometry, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock);
-  void init(const std::vector<types::InputChannel> & input_channels);
+  void init(
+    const std::vector<types::InputChannel> & input_channels,
+    const std::vector<std::string> & input_topics);
 
   void setTriggerFunction(std::function<void()> func_trigger) { func_trigger_ = func_trigger; }
   void onTrigger(const uint & index) const;
