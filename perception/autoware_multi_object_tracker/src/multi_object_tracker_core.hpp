@@ -102,6 +102,9 @@ void process_objects(
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger, const rclcpp::Logger & logger);
 
+std::optional<ObjectsList> get_objects(
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
+
 void process_parameters(MultiObjectTrackerParameters & params);
 
 bool should_publish(

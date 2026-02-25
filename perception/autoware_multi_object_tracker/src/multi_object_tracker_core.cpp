@@ -61,6 +61,17 @@ void MultiObjectTrackerInternalState::init(
 namespace core
 {
 
+std::optional<ObjectsList> get_objects(
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
+{
+  ObjectsList objects_list;
+  const bool is_objects_ready = state.input_manager->getObjects(current_time, objects_list);
+  if (!is_objects_ready) {
+    return std::nullopt;
+  }
+  return objects_list;
+}
+
 void process_parameters(MultiObjectTrackerParameters & params)
 {
   using Label = autoware_perception_msgs::msg::ObjectClassification;
