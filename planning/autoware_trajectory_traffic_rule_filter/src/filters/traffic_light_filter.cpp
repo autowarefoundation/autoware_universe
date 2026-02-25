@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
 
-#include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <tl_expected/expected.hpp>
 #include <rclcpp/logger.hpp>
@@ -172,30 +172,20 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
 
 bool TrafficLightFilter::can_pass_amber_light(
   const double distance_to_stop_line, const double current_velocity,
-  const double current_acceleration, const double time_to_cross_stop_line)
+  const double current_acceleration, const double time_to_cross_stop_line) const
 {
-  // ensure negative decel and jerk limit for the calc_judge_line_dist_with_jerk_limit function
-  const double decel_limit = -std::abs(params_.traffic_light_filter.deceleration_limit);
-  const double jerk_limit = -std::abs(params_.traffic_light_filter.jerk_limit);
+  const double decel_limit = params_.traffic_light_filter.deceleration_limit;
+  const double jerk_limit = params_.traffic_light_filter.jerk_limit;
   const double delay_response_time = params_.traffic_light_filter.delay_response_time;
-  const double distance_for_ego_to_stop =
-    boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
-      current_velocity, current_acceleration, decel_limit, jerk_limit, delay_response_time);
+  const auto distance_for_ego_to_stop = motion_utils::calculate_stop_distance(
+    current_velocity, current_acceleration, decel_limit, jerk_limit, delay_response_time);
 
-  const bool can_stop = distance_for_ego_to_stop <= distance_to_stop_line;
+  const bool can_stop =
+    distance_for_ego_to_stop.has_value() && *distance_for_ego_to_stop <= distance_to_stop_line;
   const bool can_pass_in_time =
     time_to_cross_stop_line <= params_.traffic_light_filter.crossing_time_limit;
   const bool can_pass = !can_stop && can_pass_in_time;
-
-  if (!can_pass) {
-    auto tmp_clock = rclcpp::Clock();
-    RCLCPP_WARN_THROTTLE(
-      *logger_, tmp_clock, 1000,
-      "cannot pass the amber light (can stop ? %d can pass in time ? %d)", can_stop,
-      !can_pass_in_time);
-    return false;
-  }
-  return true;
+  return can_pass;
 }
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 

@@ -18,11 +18,14 @@ The package uses a plugin architecture that allows for flexible and extensible t
 
 #### TrafficLightFilter
 
-- Validates trajectory compliance with traffic signals
-- Monitors traffic light states from perception system
+- Validates trajectory compliance with traffic signals.
+- Monitors traffic light states from the perception system.
+- **Limitation**: Currently, only circle light signals (RED, AMBER) are handled; arrow signals are ignored by this filter.
 - Reject trajectories when:
-  - they cross a red traffic light;
-  - they cross an amber traffic light and it is determined that either 1) ego can stop at the stop line without breaking the deceleration/jerk limits or 2) ego cannot cross the stop line within the `crossing_time_limit`.
+  - the vehicle's footprint (front-end extension) crosses a red traffic light stop line.
+  - the vehicle's footprint crosses an amber traffic light stop line and it is determined that either:
+    1. ego can safely stop at the stop line without breaking the deceleration/jerk limits, considering a `delay_response_time`.
+    2. ego's `base_link` point cannot cross the stop line within the `crossing_time_limit`.
 
 ## Interface
 
@@ -65,10 +68,10 @@ The active filters are specified in `config/trajectory_traffic_rule_filter.param
 
 #### Traffic Light Filter parameters
 
-| Name                                                  | Type   | Description                                                                                                    | Default Value |
-| ----------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- | ------------- |
-| `traffic_light_filter.deceleration_limit`             | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit | 2.8           |
-| `traffic_light_filter.jerk_limit`                     | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit | 5.0           |
-| `traffic_light_filter.delay_response_time`            | double | Delay response time used to estimate the minimum ego stopping distance                                         | 0.5           |
-| `traffic_light_filter.crossing_time_limit`            | double | Trajectories crossing an amber light are rejected if they cannot cross before this time                        | 2.75          |
-| `traffic_light_filter.treat_amber_light_as_red_light` | bool   | When true, amber lights are handled like red lights                                                            | true          |
+| Name                                                  | Type   | Description                                                                                                                                                        | Default Value |
+| ----------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `traffic_light_filter.deceleration_limit`             | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit                                                     | 2.8           |
+| `traffic_light_filter.jerk_limit`                     | double | Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit                                                     | 5.0           |
+| `traffic_light_filter.delay_response_time`            | double | Delay response time (reaction time) used to estimate the minimum ego stopping distance from its current state                                                      | 0.5           |
+| `traffic_light_filter.crossing_time_limit`            | double | Trajectories crossing an amber light are rejected if they cannot cross (reach the stop line with `base_link`) before this time                                     | 2.75          |
+| `traffic_light_filter.treat_amber_light_as_red_light` | bool   | When true, amber lights are handled like red lights (using vehicle footprint crossing). If false, amber lights use the `base_link` crossing logic described above. | true          |

@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ public:
   /// @brief return true if ego can safely pass an amber traffic light
   [[nodiscard]] bool can_pass_amber_light(
     const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration, const double time_to_cross_stop_line);
+    const double current_acceleration, const double time_to_cross_stop_line) const;
 
 private:
   /// @brief return the red and amber stop lines related to the given lanelets
