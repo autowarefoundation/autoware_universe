@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -273,30 +273,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   // Initialize state
-  // Odometry manager
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
-  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
-    get_node_base_interface(), get_node_timers_interface());
-  tf_buffer_->setCreateTimerInterface(cti);
-
-  state_.odometry = std::make_shared<Odometry>(
-    get_logger(), get_clock(), tf_buffer_,
-    params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
-
-  // Initialize input manager
-  state_.input_manager = std::make_unique<InputManager>(state_.odometry, get_logger(), get_clock());
-  state_.input_manager->init(
-    params_.input_channels_config);  // Initialize input manager, set subscriptions
-  state_.input_manager->setTriggerFunction(
-    std::bind(&MultiObjectTracker::onTrigger, this));  // Set trigger function
-
-  // Initialize processor
-  state_.processor = std::make_unique<TrackerProcessor>(
-    params_.processor_config, params_.associator_config, params_.input_channels_config);
-
-  state_.last_published_time = this->now();
-  state_.last_updated_time = this->now();
-
+  state_.init(params_, *this, std::bind(&MultiObjectTracker::onTrigger, this));
 
   // Create subscriptions
   const size_t input_size = params_.input_channels_config.size();
@@ -351,8 +328,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   debugger_ = std::make_unique<TrackerDebugger>(
     get_logger(), get_clock(), params_.world_frame_id, params_.input_channels_config);
   debugger_->init(*this);
-  published_time_publisher_ =
-    std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (params_.publish_processing_time_detail) {
     detailed_processing_time_publisher_ =
@@ -381,7 +357,8 @@ void MultiObjectTracker::onTrigger()
 
   // run process for each DynamicObject
   for (const auto & objects_data : objects_list) {
-    core::process_objects(objects_data, current_time, params_, state_, *debugger_, get_logger(), time_keeper_);
+    core::process_objects(
+      objects_data, current_time, params_, state_, *debugger_, get_logger(), time_keeper_);
   }
   // process end
   debugger_->endMeasurementTime(this->now());
@@ -418,8 +395,8 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 
   const auto tf_base_to_world = state_.odometry->getTransform(time);
 
-  auto output =
-    core::get_output(time, current_time, tf_base_to_world, params_, state_, *debugger_, get_logger(), time_keeper_);
+  auto output = core::get_output(
+    time, current_time, tf_base_to_world, params_, state_, *debugger_, get_logger(), time_keeper_);
 
   publish(output);
 }

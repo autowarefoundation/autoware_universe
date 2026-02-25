@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@
 #ifndef MULTI_OBJECT_TRACKER_NODE_HPP_
 #define MULTI_OBJECT_TRACKER_NODE_HPP_
 
-#include "multi_object_tracker_core.hpp"
-
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "debugger/debugger.hpp"
+#include "multi_object_tracker_core.hpp"
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
@@ -61,7 +60,7 @@ public:
 private:
   // ROS interface
   std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
-  sub_objects_array_{};
+    sub_objects_array_{};
 
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
@@ -71,9 +70,6 @@ private:
 
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
-
-  // tf
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
   // parameters and internal state
   MultiObjectTrackerParameters params_;

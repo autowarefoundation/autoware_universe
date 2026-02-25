@@ -1,9 +1,26 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "multi_object_tracker_core.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
 
-#include <unordered_map>
+#include <tf2_ros/create_timer_ros.h>
+
+#include <functional>
 #include <memory>
+#include <unordered_map>
 
 namespace autoware::multi_object_tracker
 {
@@ -15,15 +32,39 @@ MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
 {
 }
 
+void MultiObjectTrackerInternalState::init(
+  const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+  const std::function<void()> & trigger_function)
+{
+  tf_buffer = std::make_shared<tf2_ros::Buffer>(node.get_clock());
+  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
+    node.get_node_base_interface(), node.get_node_timers_interface());
+  tf_buffer->setCreateTimerInterface(cti);
+
+  odometry = std::make_shared<Odometry>(
+    node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
+    params.enable_odometry_uncertainty);
+
+  // Initialize input manager
+  input_manager = std::make_unique<InputManager>(odometry, node.get_logger(), node.get_clock());
+  input_manager->init(params.input_channels_config);
+  input_manager->setTriggerFunction(trigger_function);
+
+  // Initialize processor
+  processor = std::make_unique<TrackerProcessor>(
+    params.processor_config, params.associator_config, params.input_channels_config);
+
+  last_published_time = node.now();
+  last_updated_time = node.now();
+}
+
 namespace core
 {
 
 void process_objects(
-  const types::DynamicObjectList & objects,
-  const rclcpp::Time & current_time,
+  const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
   [[maybe_unused]] const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
   const rclcpp::Logger & logger,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
@@ -65,27 +106,26 @@ void process_objects(
 
   /* spawn new tracker */
   state.processor->spawn(objects, reverse_assignment);
-  
+
   state.last_updated_time = current_time;
 }
 
 bool should_publish(
-  const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params,
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state)
 {
   if (state.last_updated_time.nanoseconds() == 0) {
     state.last_updated_time = current_time;
   }
-  
+
   // ensure minimum interval: room for the next process(prediction)
   static constexpr double minimum_publish_interval_ratio = 0.85;
   static constexpr double maximum_publish_interval_ratio = 1.05;
-  
+
   const double publisher_period = 1.0 / params.publish_rate;
   const double minimum_publish_interval = publisher_period * minimum_publish_interval_ratio;
   const auto elapsed_time = (current_time - state.last_published_time).seconds();
-  
+
   if (elapsed_time < minimum_publish_interval) {
     return false;
   }
@@ -101,21 +141,16 @@ bool should_publish(
   return should_publish;
 }
 
-void prune_objects(
-  const rclcpp::Time & time,
-  MultiObjectTrackerInternalState & state)
+void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state)
 {
-    state.processor->prune(time);
+  state.processor->prune(time);
 }
 
 PublishData get_output(
-  const rclcpp::Time & publish_time,
-  const rclcpp::Time & current_time,
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const std::optional<geometry_msgs::msg::Transform> & tf_base_to_world,
-  const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger,
-  const rclcpp::Logger & logger,
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger, const rclcpp::Logger & logger,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -148,7 +183,7 @@ PublishData get_output(
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
     if (time_keeper)
       st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper);
-      
+
     debugger.endPublishTime(current_time, publish_time);
 
     // Update the diagnostic values
@@ -162,9 +197,9 @@ PublishData get_output(
       output.tentative_objects = tentative_output_msg;
     }
   }
-  
+
   state.last_published_time = current_time;
-  
+
   return output;
 }
 
