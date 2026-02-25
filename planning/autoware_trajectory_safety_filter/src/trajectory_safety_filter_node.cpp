@@ -241,7 +241,7 @@ void TrajectorySafetyFilter::update_diagnostic(const CandidateTrajectories & fil
   if (filtered_trajectories.candidate_trajectories.empty()) {
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
+  } else if (!has_diffusion_planner_trajectory(uuid_to_name_map, filtered_trajectories)) {
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "All diffusion planner trajectories are infeasible");
