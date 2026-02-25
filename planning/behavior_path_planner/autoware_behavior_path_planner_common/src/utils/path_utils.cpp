@@ -21,7 +21,6 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>
 
@@ -215,7 +214,7 @@ PathWithLaneId convertWayPointsToPathWithLaneId(
     // put the lane that contain waypoints in lane_ids.
     bool is_in_lanes = false;
     for (const auto & lane : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lane)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, point.point.pose)) {
         point.lane_ids.push_back(lane.id());
         is_in_lanes = true;
       }

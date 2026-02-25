@@ -28,7 +28,6 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware_bezier_sampler/bezier_sampling.hpp"
 #include "autoware_frenet_planner/frenet_planner.hpp"
-#include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_sampler_common/constraints/footprint.hpp"
 #include "autoware_sampler_common/constraints/hard_constraint.hpp"
 #include "autoware_sampler_common/constraints/soft_constraint.hpp"

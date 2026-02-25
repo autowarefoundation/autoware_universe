@@ -31,8 +31,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_frenet_planner/structures.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -1598,14 +1596,14 @@ bool NormalLaneChange::isValidPath(const PathWithLaneId & path) const
 
   // check path points are in any lanelets
   for (const auto & point : path.points) {
-    bool is_in_lanelet = false;
+    bool is_inside_lanelet = false;
     for (const auto & lanelet : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lanelet)) {
-        is_in_lanelet = true;
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lanelet, point.point.pose)) {
+        is_inside_lanelet = true;
         break;
       }
     }
-    if (!is_in_lanelet) {
+    if (!is_inside_lanelet) {
       return false;
     }
   }

@@ -20,7 +20,6 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 
@@ -506,7 +505,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
     for (const auto & p : path.points) {
       for (const auto & lane : lanes) {
         if (
-          lanelet::utils::isInLanelet(p.point.pose, lane) &&
+          autoware::experimental::lanelet2_utils::is_in_lanelet(lane, p.point.pose) &&
           std::find(path_lane_ids.begin(), path_lane_ids.end(), lane.id()) == path_lane_ids.end()) {
           path_lane_ids.push_back(lane.id());
         }
