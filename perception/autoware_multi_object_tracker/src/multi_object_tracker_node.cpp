@@ -28,10 +28,12 @@
 #include <boost/optional.hpp>
 
 #include <array>
+#include <iomanip>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -58,20 +60,20 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // define input channel parameters
   std::array<std::string, types::max_channel_size> input_channels;
-  {
-    input_channels.at(0) = declare_parameter<std::string>("input/detection01/channel");
-    input_channels.at(1) = declare_parameter<std::string>("input/detection02/channel");
-    input_channels.at(2) = declare_parameter<std::string>("input/detection03/channel");
-    input_channels.at(3) = declare_parameter<std::string>("input/detection04/channel");
-    input_channels.at(4) = declare_parameter<std::string>("input/detection05/channel");
-    input_channels.at(5) = declare_parameter<std::string>("input/detection06/channel");
-    input_channels.at(6) = declare_parameter<std::string>("input/detection07/channel");
-    input_channels.at(7) = declare_parameter<std::string>("input/detection08/channel");
-    input_channels.at(8) = declare_parameter<std::string>("input/detection09/channel");
-    input_channels.at(9) = declare_parameter<std::string>("input/detection10/channel");
-    input_channels.at(10) = declare_parameter<std::string>("input/detection11/channel");
-    input_channels.at(11) = declare_parameter<std::string>("input/detection12/channel");
+  input_channels.at(0) = declare_parameter<std::string>("input/detection01/channel");
+  input_channels.at(1) = declare_parameter<std::string>("input/detection02/channel");
+  input_channels.at(2) = declare_parameter<std::string>("input/detection03/channel");
+  input_channels.at(3) = declare_parameter<std::string>("input/detection04/channel");
+  input_channels.at(4) = declare_parameter<std::string>("input/detection05/channel");
+  input_channels.at(5) = declare_parameter<std::string>("input/detection06/channel");
+  input_channels.at(6) = declare_parameter<std::string>("input/detection07/channel");
+  input_channels.at(7) = declare_parameter<std::string>("input/detection08/channel");
+  input_channels.at(8) = declare_parameter<std::string>("input/detection09/channel");
+  input_channels.at(9) = declare_parameter<std::string>("input/detection10/channel");
+  input_channels.at(10) = declare_parameter<std::string>("input/detection11/channel");
+  input_channels.at(11) = declare_parameter<std::string>("input/detection12/channel");
 
+  {
     // parse input channels
     for (size_t i = 0; i < types::max_channel_size; i++) {
       const std::string & input_channel = input_channels.at(i);
@@ -191,9 +193,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
 
     const auto & index = input_channel.index;
-    std::string input_channel_topic =
-      (index < 10) ? "~/input/detection0" + std::to_string(index + 1) + "/objects"
-                   : "~/input/detection" + std::to_string(index + 1) + "/objects";
+    std::ostringstream oss;
+    oss << "~/input/detection" << std::setfill('0') << std::setw(2) << (index + 1) << "/objects";
+    std::string input_channel_topic = oss.str();
 
     std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
       func = std::bind(
