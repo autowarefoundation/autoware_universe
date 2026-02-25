@@ -98,7 +98,6 @@ protected:
   ~EvalTest() override
   {
     rclcpp::shutdown();
-    google::ShutdownGoogleLogging();
   }
 
   void publishEgoTF(const double time = 0.0)
