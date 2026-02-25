@@ -41,16 +41,22 @@ VehicleTracker::VehicleTracker(
 : Tracker(time, object), logger_(rclcpp::get_logger("VehicleTracker")), object_model_(object_model)
 {
   // set tracker type based on object model
-  if (object_model.type == object_model::ObjectModelType::NormalVehicle) {
-    tracker_type_ = TrackerType::NORMAL_VEHICLE;
-  } else if (object_model.type == object_model::ObjectModelType::BigVehicle) {
-    tracker_type_ = TrackerType::BIG_VEHICLE;
-  } else if (object_model.type == object_model::ObjectModelType::Bicycle) {
-    tracker_type_ = TrackerType::BICYCLE;
-  } else {
-    // not supported object model type
-    RCLCPP_ERROR(logger_, "Unsupported object model type: %d", static_cast<int>(object_model.type));
-    tracker_type_ = TrackerType::UNKNOWN;
+  switch (object_model.type) {
+    case object_model::ObjectModelType::GeneralVehicle:
+      tracker_type_ = TrackerType::GENERAL_VEHICLE;
+      break;
+    case object_model::ObjectModelType::NormalVehicle:
+      tracker_type_ = TrackerType::NORMAL_VEHICLE;
+      break;
+    case object_model::ObjectModelType::BigVehicle:
+      tracker_type_ = TrackerType::BIG_VEHICLE;
+      break;
+    case object_model::ObjectModelType::Bicycle:
+      tracker_type_ = TrackerType::BICYCLE;
+      break;
+    default:
+      RCLCPP_ERROR(logger_, "VehicleTracker: Unsupported object model type: %d", static_cast<int>(object_model.type));
+      break;
   }
 
   // velocity deviation threshold
