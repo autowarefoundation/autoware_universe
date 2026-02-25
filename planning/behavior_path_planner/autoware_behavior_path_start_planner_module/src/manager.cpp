@@ -104,6 +104,7 @@ void StartPlannerModuleManager::updateModuleParams(
       p->shift_collision_check_distance_from_end);
     update_param<double>(
       parameters, ns + "minimum_shift_pull_out_distance", p->minimum_shift_pull_out_distance);
+    update_param<double>(parameters, ns + "minimum_shift_length", p->minimum_shift_length);
     update_param<int>(
       parameters, ns + "lateral_acceleration_sampling_num", p->lateral_acceleration_sampling_num);
     update_param<double>(parameters, ns + "lateral_jerk", p->lateral_jerk);
