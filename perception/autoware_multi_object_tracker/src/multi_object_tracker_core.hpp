@@ -41,6 +41,7 @@
 
 namespace autoware::multi_object_tracker
 {
+using ObjectsList = std::vector<types::DynamicObjectList>;
 
 struct MultiObjectTrackerParameters
 {

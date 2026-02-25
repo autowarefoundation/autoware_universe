@@ -91,6 +91,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
   };
 
+  // Set the tracker map for processor config
   params.processor_config.tracker_map.insert(
     std::make_pair(Label::CAR, getTrackerType(params.tracker_type_map.at("car_tracker"))));
   params.processor_config.tracker_map.insert(
@@ -110,75 +111,71 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.processor_config.tracker_map.insert(
     std::make_pair(Label::UNKNOWN, TrackerType::UNKNOWN));  // Default for unknown objects
 
+  // Set the pruning thresholds for processor config
   for (size_t i = 0; i < params.pruning_giou_thresholds.size(); ++i) {
     const auto label = static_cast<LabelType>(i);
     params.processor_config.pruning_giou_thresholds[label] = params.pruning_giou_thresholds.at(i);
   }
-
   for (size_t i = 0; i < params.pruning_distance_thresholds.size(); ++i) {
     const auto label = static_cast<LabelType>(i);
     params.processor_config.pruning_distance_thresholds[label] =
       params.pruning_distance_thresholds.at(i);
   }
 
-  {
-    auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
-      const int label_num = types::NUM_LABELS;
-      if (vector.size() != label_num * label_num) {
-        throw std::runtime_error("Invalid can_assign_matrix size");
-      }
-      std::vector<int> converted_vector(vector.begin(), vector.end());
-      // Use row-major mapping to match the YAML layout
-      using RowMajorMatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-      Eigen::Map<RowMajorMatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
-
-      // Convert to column-major (Eigen's default) for consistency
-      return Eigen::MatrixXi(matrix_tmp);
-    };
-    auto initializeMatrixDouble = [](const std::vector<double> & vector) {
-      const int label_num = types::NUM_LABELS;
-      if (vector.size() != label_num * label_num) {
-        throw std::runtime_error("Invalid association matrix configuration size");
-      }
-      // Use row-major mapping to match the YAML layout
-      using RowMajorMatrixXd =
-        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-      Eigen::Map<const RowMajorMatrixXd> matrix_tmp(vector.data(), label_num, label_num);
-
-      // Convert to column-major (Eigen's default) for consistency
-      return Eigen::MatrixXd(matrix_tmp);
-    };
-    Eigen::MatrixXi can_assign_matrix = initializeMatrixInt(params.can_assign_matrix);
-    params.associator_config.max_dist_matrix = initializeMatrixDouble(params.max_dist_matrix);
-    params.associator_config.max_area_matrix = initializeMatrixDouble(params.max_area_matrix);
-    params.associator_config.min_area_matrix = initializeMatrixDouble(params.min_area_matrix);
-    params.associator_config.min_iou_matrix = initializeMatrixDouble(params.min_iou_matrix);
-
-    // pre-process
-    const int label_num = params.associator_config.max_dist_matrix.rows();
-    for (int i = 0; i < label_num; i++) {
-      for (int j = 0; j < label_num; j++) {
-        params.associator_config.max_dist_matrix(i, j) =
-          params.associator_config.max_dist_matrix(i, j) *
-          params.associator_config.max_dist_matrix(i, j);
-      }
+  // Initialize association matrices
+  auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
+    const int label_num = types::NUM_LABELS;
+    if (vector.size() != label_num * label_num) {
+      throw std::runtime_error("Invalid can_assign_matrix size");
     }
+    std::vector<int> converted_vector(vector.begin(), vector.end());
+    // Use row-major mapping to match the YAML layout
+    using RowMajorMatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+    Eigen::Map<RowMajorMatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
 
-    // Set the tracker map for associator config
-    {
-      params.associator_config.can_assign_map.clear();
-      for (const auto & [label, tracker_type] : params.processor_config.tracker_map) {
-        params.associator_config.can_assign_map[tracker_type].fill(false);
-      }
-      // can_assign_map : tracker_type that can be assigned to each measurement label
-      // relationship is given by tracker_map and can_assign_matrix
-      for (int i = 0; i < can_assign_matrix.rows(); ++i) {
-        for (int j = 0; j < can_assign_matrix.cols(); ++j) {
-          if (can_assign_matrix(i, j) == 1) {
-            const auto tracker_type = params.processor_config.tracker_map.at(i);
-            params.associator_config.can_assign_map[tracker_type][j] = true;
-          }
-        }
+    // Convert to column-major (Eigen's default) for consistency
+    return Eigen::MatrixXi(matrix_tmp);
+  };
+  auto initializeMatrixDouble = [](const std::vector<double> & vector) {
+    const int label_num = types::NUM_LABELS;
+    if (vector.size() != label_num * label_num) {
+      throw std::runtime_error("Invalid association matrix configuration size");
+    }
+    // Use row-major mapping to match the YAML layout
+    using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+    Eigen::Map<const RowMajorMatrixXd> matrix_tmp(vector.data(), label_num, label_num);
+
+    // Convert to column-major (Eigen's default) for consistency
+    return Eigen::MatrixXd(matrix_tmp);
+  };
+  Eigen::MatrixXi can_assign_matrix = initializeMatrixInt(params.can_assign_matrix);
+  params.associator_config.max_dist_matrix = initializeMatrixDouble(params.max_dist_matrix);
+  params.associator_config.max_area_matrix = initializeMatrixDouble(params.max_area_matrix);
+  params.associator_config.min_area_matrix = initializeMatrixDouble(params.min_area_matrix);
+  params.associator_config.min_iou_matrix = initializeMatrixDouble(params.min_iou_matrix);
+
+  // pre-process
+  const int label_num = params.associator_config.max_dist_matrix.rows();
+  for (int i = 0; i < label_num; i++) {
+    for (int j = 0; j < label_num; j++) {
+      params.associator_config.max_dist_matrix(i, j) =
+        params.associator_config.max_dist_matrix(i, j) *
+        params.associator_config.max_dist_matrix(i, j);
+    }
+  }
+
+  // Set the tracker map for associator config
+  params.associator_config.can_assign_map.clear();
+  for (const auto & [label, tracker_type] : params.processor_config.tracker_map) {
+    params.associator_config.can_assign_map[tracker_type].fill(false);
+  }
+  // can_assign_map : tracker_type that can be assigned to each measurement label
+  // relationship is given by tracker_map and can_assign_matrix
+  for (int i = 0; i < can_assign_matrix.rows(); ++i) {
+    for (int j = 0; j < can_assign_matrix.cols(); ++j) {
+      if (can_assign_matrix(i, j) == 1) {
+        const auto tracker_type = params.processor_config.tracker_map.at(i);
+        params.associator_config.can_assign_map[tracker_type][j] = true;
       }
     }
   }
