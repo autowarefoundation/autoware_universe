@@ -86,6 +86,8 @@ void TrackerDebugger::loadParameters(rclcpp::Node & node)
     debug_settings_.publish_debug_markers = false;
     debug_settings_.diagnostics_warn_delay = 0.5;
     debug_settings_.diagnostics_error_delay = 1.0;
+    debug_settings_.diagnostics_warn_extrapolation = 0.5;
+    debug_settings_.diagnostics_error_extrapolation = 1.0;
   }
 }
 

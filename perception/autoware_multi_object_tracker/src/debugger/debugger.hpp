@@ -66,13 +66,13 @@ private:
   // Debug settings
   struct DEBUG_SETTINGS
   {
-    bool publish_processing_time;
-    bool publish_tentative_objects;
-    bool publish_debug_markers;
-    double diagnostics_warn_delay;
-    double diagnostics_error_delay;
-    double diagnostics_warn_extrapolation;
-    double diagnostics_error_extrapolation;
+    bool publish_processing_time = false;
+    bool publish_tentative_objects = false;
+    bool publish_debug_markers = false;
+    double diagnostics_warn_delay = 0.5;
+    double diagnostics_error_delay = 1.0;
+    double diagnostics_warn_extrapolation = 0.5;
+    double diagnostics_error_extrapolation = 1.0;
   } debug_settings_;
 
   // Diagnostic values
