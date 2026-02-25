@@ -21,6 +21,7 @@
 
 #include <lanelet2_core/Forward.h>
 
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -31,7 +32,7 @@ class TrafficLightFilter : public TrafficRuleFilterInterface
 public:
   TrafficLightFilter();
 
-  bool is_feasible(const TrajectoryPoints & trajectory_points) override;
+  tl::expected<void, std::string> is_feasible(const TrajectoryPoints & trajectory_points) override;
   void set_traffic_lights(
     const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
     override;

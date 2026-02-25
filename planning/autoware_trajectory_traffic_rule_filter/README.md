@@ -33,6 +33,17 @@ The package uses a plugin architecture that allows for flexible and extensible t
 | Input     | `~/input/lanelet2_map`            | `autoware_map_msgs::msg::LaneletMapBin`                       | Lanelet2 map containing traffic rule info            |
 | Input     | `~/input/traffic_signals`         | `autoware_perception_msgs::msg::TrafficLightGroupArray`       | Current traffic light states                         |
 | Output    | `~/output/candidate_trajectories` | `autoware_internal_planning_msgs::msg::CandidateTrajectories` | Filtered trajectories that comply with traffic rules |
+| Output    | `/diagnostics`                    | `diagnostic_msgs::msg::DiagnosticArray`                       | Diagnostic status of the filtering process           |
+
+### Diagnostics
+
+The node publishes diagnostic information to monitor the status of the trajectory filtering process.
+
+| Level   | Message                                             | Condition                                                                                                |
+| ------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `OK`    | ""                                                  | At least one trajectory is feasible, including at least one from a diffusion-based planner if present.   |
+| `WARN`  | "All diffusion planner trajectories are infeasible" | Feasible trajectories exist, but all trajectories from generators named "Diffusion\*" were filtered out. |
+| `ERROR` | "No feasible trajectories found"                    | All input candidate trajectories were filtered out by the active plugins.                                |
 
 ### Parameters
 

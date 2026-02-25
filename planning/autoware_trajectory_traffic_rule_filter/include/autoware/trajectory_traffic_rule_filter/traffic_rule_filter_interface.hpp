@@ -16,6 +16,7 @@
 #define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAFFIC_RULE_FILTER_INTERFACE_HPP_
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -45,7 +46,8 @@ public:
   TrafficRuleFilterInterface(TrafficRuleFilterInterface &&) = delete;
   TrafficRuleFilterInterface & operator=(TrafficRuleFilterInterface &&) = delete;
 
-  virtual bool is_feasible(const TrajectoryPoints & trajectory_points) = 0;
+  virtual tl::expected<void, std::string> is_feasible(
+    const TrajectoryPoints & trajectory_points) = 0;
   std::string get_name() const { return name_; }
 
   virtual void set_vehicle_info(const VehicleInfo & vehicle_info)

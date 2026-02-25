@@ -19,6 +19,7 @@
 
 #include <autoware_trajectory_traffic_rule_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -32,9 +33,7 @@
 #include <lanelet2_routing/Forward.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
-#include <map>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -57,6 +56,7 @@ private:
 
   void load_metric(const std::string & name);
   void unload_metric(const std::string & name);
+  void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
 
   lanelet::ConstLanelets get_lanelets_from_trajectory(
     const TrajectoryPoints & trajectory_points) const;
@@ -82,6 +82,8 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+  autoware_utils_diagnostics::DiagnosticsInterface diagnostics_interface_{
+    this, "trajectory_traffic_rule_filter"};
 };
 
 }  // namespace autoware::trajectory_traffic_rule_filter
