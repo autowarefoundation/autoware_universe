@@ -59,6 +59,7 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
       get_or_declare_parameter<double>(node, ns + "shift_collision_check_distance_from_end");
     p.minimum_shift_pull_out_distance =
       get_or_declare_parameter<double>(node, ns + "minimum_shift_pull_out_distance");
+    p.minimum_shift_length = get_or_declare_parameter<double>(node, ns + "minimum_shift_length");
     p.lateral_acceleration_sampling_num =
       get_or_declare_parameter<int>(node, ns + "lateral_acceleration_sampling_num");
     p.lateral_jerk = get_or_declare_parameter<double>(node, ns + "lateral_jerk");

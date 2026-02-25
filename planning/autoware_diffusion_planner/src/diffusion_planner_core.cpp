@@ -14,12 +14,14 @@
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
 
-#include "autoware/diffusion_planner/constants.hpp"
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
+
+#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
+#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -36,7 +38,11 @@ namespace autoware::diffusion_planner
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
-: params_(params), vehicle_info_(vehicle_info)
+: params_(params),
+  vehicle_spec_(vehicle_info),
+  turn_indicator_manager_(
+    rclcpp::Duration::from_seconds(params.turn_indicator_hold_duration),
+    params.turn_indicator_keep_offset)
 {
 }
 
@@ -52,6 +58,9 @@ void DiffusionPlannerCore::load_model()
 void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
 {
   params_ = params;
+  turn_indicator_manager_.set_hold_duration(
+    rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
+  turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
 }
 
 void DiffusionPlannerCore::set_map(
@@ -89,7 +98,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   Odometry kinematic_state = *ego_kinematic_state;
   if (params_.shift_x) {
     kinematic_state.pose.pose =
-      utils::shift_x(kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0);
+      utils::shift_x(kinematic_state.pose.pose, vehicle_spec_.base_link_to_center);
   }
 
   // Get transforms
@@ -146,7 +155,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
       ? utils::shift_x(
-          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+          frame_context.ego_kinematic_state.pose.pose, vehicle_spec_.base_link_to_center)
       : frame_context.ego_kinematic_state.pose.pose;
   const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_center);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
@@ -165,7 +174,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   {
     const auto ego_current_state = preprocess::create_ego_current_state(
       frame_context.ego_kinematic_state, frame_context.ego_acceleration,
-      static_cast<float>(vehicle_info_.wheel_base_m));
+      static_cast<float>(vehicle_spec_.wheel_base));
     input_data_map["ego_current_state"] =
       utils::replicate_for_batch(ego_current_state, params_.batch_size);
   }
@@ -248,12 +257,10 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 
   // ego shape
   {
-    const float wheel_base = static_cast<float>(vehicle_info_.wheel_base_m);
-    const float vehicle_length = static_cast<float>(
-      vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m + vehicle_info_.rear_overhang_m);
-    const float vehicle_width = static_cast<float>(
-      vehicle_info_.left_overhang_m + vehicle_info_.wheel_tread_m + vehicle_info_.right_overhang_m);
-    std::vector<float> single_ego_shape = {wheel_base, vehicle_length, vehicle_width};
+    const std::vector<float> single_ego_shape = {
+      static_cast<float>(vehicle_spec_.wheel_base),
+      static_cast<float>(vehicle_spec_.vehicle_length),
+      static_cast<float>(vehicle_spec_.vehicle_width)};
     input_data_map["ego_shape"] = utils::replicate_for_batch(single_ego_shape, params_.batch_size);
   }
 
@@ -284,6 +291,71 @@ TensorrtInference::InferenceResult DiffusionPlannerCore::run_inference(
   return tensorrt_inference_->infer(input_data_map);
 }
 
+PlannerOutput DiffusionPlannerCore::create_planner_output(
+  const std::vector<float> & predictions, const std::vector<float> & turn_indicator_logit,
+  const FrameContext & frame_context, const rclcpp::Time & timestamp, const UUID & generator_uuid)
+{
+  const auto agent_poses =
+    postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
+
+  const bool enable_force_stop =
+    frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
+
+  PlannerOutput output;
+
+  // Trajectory and CandidateTrajectories
+  for (int i = 0; i < params_.batch_size; i++) {
+    auto trajectory = postprocess::create_ego_trajectory(
+      agent_poses, timestamp, frame_context.ego_kinematic_state.pose.pose.position, i,
+      params_.velocity_smoothing_window, enable_force_stop, params_.stopping_threshold);
+
+    if (params_.shift_x) {
+      for (auto & point : trajectory.points) {
+        point.pose = utils::shift_x(point.pose, -vehicle_spec_.base_link_to_center);
+      }
+    }
+
+    if (i == 0) {
+      // Use the first trajectory as the main output trajectory
+      output.trajectory = trajectory;
+    }
+
+    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
+                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
+                                        .header(trajectory.header)
+                                        .generator_id(generator_uuid)
+                                        .points(trajectory.points);
+
+    std_msgs::msg::String generator_name_msg;
+    generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
+
+    const auto generator_info =
+      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
+        .generator_id(generator_uuid)
+        .generator_name(generator_name_msg);
+
+    output.candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
+    output.candidate_trajectories.generator_info.push_back(generator_info);
+  }
+
+  // PredictedObjects
+  // Use the first prediction as the main predicted objects
+  constexpr int64_t batch_idx = 0;
+  output.predicted_objects = postprocess::create_predicted_objects(
+    agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
+
+  // TurnIndicatorsCommand
+  // TODO(sakoda): Use the first logit as the main turn indicator command.
+  // There may be bugs in the current implementation.
+  const int64_t prev_report = turn_indicators_history_.empty()
+                                ? TurnIndicatorsReport::DISABLE
+                                : turn_indicators_history_.back().report;
+  output.turn_indicator_command =
+    turn_indicator_manager_.evaluate(turn_indicator_logit, timestamp, prev_report);
+
+  return output;
+}
+
 autoware_perception_msgs::msg::TrafficLightGroup
 DiffusionPlannerCore::get_first_traffic_light_on_route(const FrameContext & frame_context) const
 {
@@ -294,7 +366,7 @@ DiffusionPlannerCore::get_first_traffic_light_on_route(const FrameContext & fram
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
       ? utils::shift_x(
-          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+          frame_context.ego_kinematic_state.pose.pose, vehicle_spec_.base_link_to_center)
       : frame_context.ego_kinematic_state.pose.pose;
 
   const double center_x = pose_center.position.x;
@@ -332,12 +404,6 @@ int64_t DiffusionPlannerCore::count_valid_elements(
   }
 
   throw std::invalid_argument("Unknown data_key '" + data_key + "' in count_valid_elements()");
-}
-
-int64_t DiffusionPlannerCore::get_previous_turn_indicator_report() const
-{
-  return turn_indicators_history_.empty() ? TurnIndicatorsReport::DISABLE
-                                          : turn_indicators_history_.back().report;
 }
 
 }  // namespace autoware::diffusion_planner

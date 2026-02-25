@@ -15,38 +15,18 @@
 #include "autoware/diffusion_planner/diffusion_planner_node.hpp"
 
 #include "autoware/diffusion_planner/constants.hpp"
-#include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
-#include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
-#include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/marker_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
-#include <autoware_internal_planning_msgs/msg/generator_info.hpp>
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
-
-#include <Eigen/src/Core/Matrix.h>
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
 #include <functional>
-#include <iostream>
-#include <limits>
-#include <map>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <string>
-#include <tuple>
-#include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
@@ -76,10 +56,6 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 
   // Create core instance
   core_ = std::make_unique<DiffusionPlannerCore>(params_, vehicle_info_);
-
-  turn_indicator_manager_.set_hold_duration(
-    rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
-  turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
 
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
   try {
@@ -190,10 +166,6 @@ SetParametersResult DiffusionPlanner::on_parameter(
     const bool model_path_changed = temp_params.model_path != previous_model_path;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     params_ = temp_params;
-    turn_indicator_manager_.set_hold_duration(
-      rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
-    turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
-
     core_->update_params(params_);
 
     if (args_path_changed || model_path_changed || batch_size_changed) {
@@ -251,64 +223,6 @@ void DiffusionPlanner::publish_debug_markers(
       std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), timestamp, lifetime,
       {0.1, 0.1, 0.7, 0.8}, "map", true);
     pub_lane_marker_->publish(lane_markers);
-  }
-}
-
-void DiffusionPlanner::publish_predictions(
-  const std::vector<float> & predictions, const FrameContext & frame_context,
-  const rclcpp::Time & timestamp) const
-{
-  CandidateTrajectories candidate_trajectories;
-
-  // when ego is moving, enable force stop
-  const bool enable_force_stop =
-    frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
-
-  // Parse predictions once: [batch][agent][timestep] -> pose
-  const auto agent_poses =
-    postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
-
-  for (int i = 0; i < params_.batch_size; i++) {
-    Trajectory trajectory = postprocess::create_ego_trajectory(
-      agent_poses, timestamp, frame_context.ego_kinematic_state.pose.pose.position, i,
-      params_.velocity_smoothing_window, enable_force_stop, params_.stopping_threshold);
-    if (params_.shift_x) {
-      // center to base_link
-      for (auto & point : trajectory.points) {
-        point.pose = utils::shift_x(point.pose, -vehicle_info_.wheel_base_m / 2.0);
-      }
-    }
-    if (i == 0) {
-      pub_trajectory_->publish(trajectory);
-    }
-
-    const auto candidate_trajectory = autoware_internal_planning_msgs::build<
-                                        autoware_internal_planning_msgs::msg::CandidateTrajectory>()
-                                        .header(trajectory.header)
-                                        .generator_id(generator_uuid_)
-                                        .points(trajectory.points);
-
-    std_msgs::msg::String generator_name_msg;
-    generator_name_msg.data = "DiffusionPlanner_batch_" + std::to_string(i);
-
-    const auto generator_info =
-      autoware_internal_planning_msgs::build<autoware_internal_planning_msgs::msg::GeneratorInfo>()
-        .generator_id(generator_uuid_)
-        .generator_name(generator_name_msg);
-
-    candidate_trajectories.candidate_trajectories.push_back(candidate_trajectory);
-    candidate_trajectories.generator_info.push_back(generator_info);
-  }
-
-  pub_trajectories_->publish(candidate_trajectories);
-
-  // Other agents prediction
-  if (params_.predict_neighbor_trajectory) {
-    // Use batch 0 for neighbor predictions
-    constexpr int64_t batch_idx = 0;
-    auto predicted_objects = postprocess::create_predicted_objects(
-      agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
-    pub_objects_->publish(predicted_objects);
   }
 }
 
@@ -417,13 +331,23 @@ void DiffusionPlanner::on_timer()
   }
   const auto & [predictions, turn_indicator_logit] = inference_result.outputs.value();
 
-  publish_predictions(predictions, *frame_context, frame_time);
+  PlannerOutput planner_output;
+  try {
+    planner_output = core_->create_planner_output(
+      predictions, turn_indicator_logit, *frame_context, frame_time, generator_uuid_);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(get_logger(), "Postprocessing failed: " << e.what());
+    diagnostics_inference_->update_level_and_message(DiagnosticStatus::ERROR, e.what());
+    diagnostics_inference_->publish(frame_time);
+    return;
+  }
 
-  // Get previous turn indicator report from core's history
-  const int64_t prev_report = core_->get_previous_turn_indicator_report();
-  const auto turn_indicator_command =
-    turn_indicator_manager_.evaluate(turn_indicator_logit, frame_time, prev_report);
-  pub_turn_indicators_->publish(turn_indicator_command);
+  pub_trajectory_->publish(planner_output.trajectory);
+  pub_trajectories_->publish(planner_output.candidate_trajectories);
+  if (params_.predict_neighbor_trajectory) {
+    pub_objects_->publish(planner_output.predicted_objects);
+  }
+  pub_turn_indicators_->publish(planner_output.turn_indicator_command);
 
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
