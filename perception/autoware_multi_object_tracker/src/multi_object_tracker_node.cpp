@@ -14,33 +14,32 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include <csignal>
-#include <vector>
-#include <string>
-#include <memory>
-
 #include "multi_object_tracker_node.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
-#include <autoware_perception_msgs/msg/object_classification.hpp>
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+
+#include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <boost/optional.hpp>
 
 #include <tf2_ros/create_timer_interface.h>
 #include <tf2_ros/create_timer_ros.h>
 
+#include <csignal>
 #include <iterator>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace autoware::multi_object_tracker
 {
@@ -57,12 +56,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.ego_frame_id = declare_parameter<std::string>("ego_frame_id");
   params_.enable_delay_compensation = declare_parameter<bool>("enable_delay_compensation");
   params_.enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
-  params_.publish_processing_time_detail = declare_parameter<bool>("publish_processing_time_detail");
+  params_.publish_processing_time_detail =
+    declare_parameter<bool>("publish_processing_time_detail");
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
-
-  // Odometry manager
-  state_.odometry =
-    std::make_shared<Odometry>(*this, params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
 
   // ROS interface - Input channels
   // define input channel parameters
@@ -128,11 +124,172 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     params_.input_channels_config.push_back(input_channel_config);
   }
 
+  // Parameters for processor
+  {
+    // convert string to TrackerType
+    static const std::unordered_map<std::string, TrackerType> TRACKER_TYPE_MAP = {
+      {"multi_vehicle_tracker", TrackerType::MULTIPLE_VEHICLE},
+      {"pedestrian_and_bicycle_tracker", TrackerType::PEDESTRIAN_AND_BICYCLE},
+      {"normal_vehicle_tracker", TrackerType::NORMAL_VEHICLE},
+      {"pedestrian_tracker", TrackerType::PEDESTRIAN},
+      {"big_vehicle_tracker", TrackerType::BIG_VEHICLE},
+      {"bicycle_tracker", TrackerType::BICYCLE},
+      {"pass_through_tracker", TrackerType::PASS_THROUGH}};
+    auto getTrackerType = [](const std::string & tracker_name) -> TrackerType {
+      auto it = TRACKER_TYPE_MAP.find(tracker_name);
+      return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
+    };
+
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::CAR, getTrackerType(this->declare_parameter<std::string>("car_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::TRUCK, getTrackerType(this->declare_parameter<std::string>("truck_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::BUS, getTrackerType(this->declare_parameter<std::string>("bus_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::TRAILER, getTrackerType(this->declare_parameter<std::string>("trailer_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::PEDESTRIAN,
+        getTrackerType(this->declare_parameter<std::string>("pedestrian_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::BICYCLE, getTrackerType(this->declare_parameter<std::string>("bicycle_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(
+        Label::MOTORCYCLE,
+        getTrackerType(this->declare_parameter<std::string>("motorcycle_tracker"))));
+    params_.processor_config.tracker_map.insert(
+      std::make_pair(Label::UNKNOWN, TrackerType::UNKNOWN));  // Default for unknown objects
+
+    // Declare parameters
+    params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
+    params_.processor_config.min_known_object_removal_iou =
+      declare_parameter<double>("min_known_object_removal_iou");
+    params_.processor_config.min_unknown_object_removal_iou =
+      declare_parameter<double>("min_unknown_object_removal_iou");
+
+    // Declare parameters for generalized IoU threshold
+    std::vector<double> pruning_giou_thresholds =
+      declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
+    for (size_t i = 0; i < pruning_giou_thresholds.size(); ++i) {
+      const auto label = static_cast<LabelType>(i);
+      params_.processor_config.pruning_giou_thresholds[label] = pruning_giou_thresholds.at(i);
+    }
+    params_.processor_config.pruning_static_object_speed =
+      declare_parameter<double>("pruning_static_object_speed");
+    params_.processor_config.pruning_moving_object_speed =
+      declare_parameter<double>("pruning_moving_object_speed");
+    params_.processor_config.pruning_static_iou_threshold =
+      declare_parameter<double>("pruning_static_iou_threshold");
+
+    // Declare parameters for overlap distance threshold
+    std::vector<double> pruning_distance_threshold_list =
+      declare_parameter<std::vector<double>>("pruning_distance_thresholds");
+    for (size_t i = 0; i < pruning_distance_threshold_list.size(); ++i) {
+      const auto label = static_cast<LabelType>(i);
+      params_.processor_config.pruning_distance_thresholds[label] =
+        pruning_distance_threshold_list[i];
+    }
+
+    params_.processor_config.enable_unknown_object_velocity_estimation =
+      declare_parameter<bool>("enable_unknown_object_velocity_estimation");
+    params_.processor_config.enable_unknown_object_motion_output =
+      declare_parameter<bool>("enable_unknown_object_motion_output");
+  }
+
+  {
+    auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
+      const int label_num = types::NUM_LABELS;
+      if (vector.size() != label_num * label_num) {
+        throw std::runtime_error("Invalid can_assign_matrix size");
+      }
+      std::vector<int> converted_vector(vector.begin(), vector.end());
+      // Use row-major mapping to match the YAML layout
+      using RowMajorMatrixXi = Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+      Eigen::Map<RowMajorMatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
+
+      // Convert to column-major (Eigen's default) for consistency
+      return Eigen::MatrixXi(matrix_tmp);
+    };
+    auto initializeMatrixDouble = [](const std::vector<double> & vector) {
+      const int label_num = types::NUM_LABELS;
+      if (vector.size() != label_num * label_num) {
+        throw std::runtime_error("Invalid association matrix configuration size");
+      }
+      // Use row-major mapping to match the YAML layout
+      using RowMajorMatrixXd =
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+      Eigen::Map<const RowMajorMatrixXd> matrix_tmp(vector.data(), label_num, label_num);
+
+      // Convert to column-major (Eigen's default) for consistency
+      return Eigen::MatrixXd(matrix_tmp);
+    };
+    Eigen::MatrixXi can_assign_matrix =
+      initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));
+    params_.associator_config.max_dist_matrix =
+      initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_dist_matrix"));
+    params_.associator_config.max_area_matrix =
+      initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_area_matrix"));
+    params_.associator_config.min_area_matrix =
+      initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
+    params_.associator_config.min_iou_matrix =
+      initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
+
+    // pre-process
+    const int label_num = params_.associator_config.max_dist_matrix.rows();
+    for (int i = 0; i < label_num; i++) {
+      for (int j = 0; j < label_num; j++) {
+        params_.associator_config.max_dist_matrix(i, j) =
+          params_.associator_config.max_dist_matrix(i, j) *
+          params_.associator_config.max_dist_matrix(i, j);
+      }
+    }
+    // Set the unknown-unknown association GIoU threshold
+    params_.associator_config.unknown_association_giou_threshold =
+      declare_parameter<double>("unknown_association_giou_threshold");
+
+    // Set the tracker map for associator config
+    {
+      params_.associator_config.can_assign_map.clear();
+      for (const auto & [label, tracker_type] : params_.processor_config.tracker_map) {
+        params_.associator_config.can_assign_map[tracker_type].fill(false);
+      }
+      // can_assign_map : tracker_type that can be assigned to each measurement label
+      // relationship is given by tracker_map and can_assign_matrix
+      for (int i = 0; i < can_assign_matrix.rows(); ++i) {
+        for (int j = 0; j < can_assign_matrix.cols(); ++j) {
+          if (can_assign_matrix(i, j) == 1) {
+            const auto tracker_type = params_.processor_config.tracker_map.at(i);
+            params_.associator_config.can_assign_map[tracker_type][j] = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Initialize state
+  // Odometry manager
+  state_.odometry = std::make_shared<Odometry>(
+    *this, params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
+
   // Initialize input manager
   state_.input_manager = std::make_unique<InputManager>(state_.odometry, get_logger(), get_clock());
-  state_.input_manager->init(params_.input_channels_config);  // Initialize input manager, set subscriptions
+  state_.input_manager->init(
+    params_.input_channels_config);  // Initialize input manager, set subscriptions
   state_.input_manager->setTriggerFunction(
     std::bind(&MultiObjectTracker::onTrigger, this));  // Set trigger function
+
+  // Initialize processor
+  state_.processor = std::make_unique<TrackerProcessor>(
+    params_.processor_config, params_.associator_config, params_.input_channels_config);
+
+  state_.last_published_time = this->now();
+  state_.last_updated_time = this->now();
 
   // Create subscriptions
   const size_t input_size = params_.input_channels_config.size();
@@ -144,7 +301,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       channel.long_name.c_str(), channel.input_topic.c_str());
 
     std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
-      func = std::bind(&InputManager::onMessage, state_.input_manager.get(), i, std::placeholders::_1);
+      func =
+        std::bind(&InputManager::onMessage, state_.input_manager.get(), i, std::placeholders::_1);
 
     sub_objects_array_.at(i) = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
       channel.input_topic, rclcpp::QoS{1}, func);
@@ -182,161 +340,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       this, get_clock(), timer_period, std::bind(&MultiObjectTracker::onTimer, this));
   }
 
-  // Initialize processor
-  {
-    // Parameters for processor
-    {
-      // convert string to TrackerType
-      static const std::unordered_map<std::string, TrackerType> TRACKER_TYPE_MAP = {
-        {"multi_vehicle_tracker", TrackerType::MULTIPLE_VEHICLE},
-        {"pedestrian_and_bicycle_tracker", TrackerType::PEDESTRIAN_AND_BICYCLE},
-        {"normal_vehicle_tracker", TrackerType::NORMAL_VEHICLE},
-        {"pedestrian_tracker", TrackerType::PEDESTRIAN},
-        {"big_vehicle_tracker", TrackerType::BIG_VEHICLE},
-        {"bicycle_tracker", TrackerType::BICYCLE},
-        {"pass_through_tracker", TrackerType::PASS_THROUGH}};
-      auto getTrackerType = [](const std::string & tracker_name) -> TrackerType {
-        auto it = TRACKER_TYPE_MAP.find(tracker_name);
-        return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
-      };
-
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::CAR, getTrackerType(this->declare_parameter<std::string>("car_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::TRUCK, getTrackerType(this->declare_parameter<std::string>("truck_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::BUS, getTrackerType(this->declare_parameter<std::string>("bus_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::TRAILER, getTrackerType(this->declare_parameter<std::string>("trailer_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::PEDESTRIAN,
-          getTrackerType(this->declare_parameter<std::string>("pedestrian_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::BICYCLE, getTrackerType(this->declare_parameter<std::string>("bicycle_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(
-          Label::MOTORCYCLE,
-          getTrackerType(this->declare_parameter<std::string>("motorcycle_tracker"))));
-      params_.processor_config.tracker_map.insert(
-        std::make_pair(Label::UNKNOWN, TrackerType::UNKNOWN));  // Default for unknown objects
-
-      // Declare parameters
-      params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
-      params_.processor_config.min_known_object_removal_iou =
-        declare_parameter<double>("min_known_object_removal_iou");
-      params_.processor_config.min_unknown_object_removal_iou =
-        declare_parameter<double>("min_unknown_object_removal_iou");
-
-      // Declare parameters for generalized IoU threshold
-      std::vector<double> pruning_giou_thresholds =
-        declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
-      for (size_t i = 0; i < pruning_giou_thresholds.size(); ++i) {
-        const auto label = static_cast<LabelType>(i);
-        params_.processor_config.pruning_giou_thresholds[label] = pruning_giou_thresholds.at(i);
-      }
-      params_.processor_config.pruning_static_object_speed = declare_parameter<double>("pruning_static_object_speed");
-      params_.processor_config.pruning_moving_object_speed = declare_parameter<double>("pruning_moving_object_speed");
-      params_.processor_config.pruning_static_iou_threshold =
-        declare_parameter<double>("pruning_static_iou_threshold");
-
-      // Declare parameters for overlap distance threshold
-      std::vector<double> pruning_distance_threshold_list =
-        declare_parameter<std::vector<double>>("pruning_distance_thresholds");
-      for (size_t i = 0; i < pruning_distance_threshold_list.size(); ++i) {
-        const auto label = static_cast<LabelType>(i);
-        params_.processor_config.pruning_distance_thresholds[label] = pruning_distance_threshold_list[i];
-      }
-
-      params_.processor_config.enable_unknown_object_velocity_estimation =
-        declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-      params_.processor_config.enable_unknown_object_motion_output =
-        declare_parameter<bool>("enable_unknown_object_motion_output");
-    }
-
-    {
-      auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
-        const int label_num = types::NUM_LABELS;
-        if (vector.size() != label_num * label_num) {
-          throw std::runtime_error("Invalid can_assign_matrix size");
-        }
-        std::vector<int> converted_vector(vector.begin(), vector.end());
-        // Use row-major mapping to match the YAML layout
-        using RowMajorMatrixXi =
-          Eigen::Matrix<int, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-        Eigen::Map<RowMajorMatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
-
-        // Convert to column-major (Eigen's default) for consistency
-        return Eigen::MatrixXi(matrix_tmp);
-      };
-      auto initializeMatrixDouble = [](const std::vector<double> & vector) {
-        const int label_num = types::NUM_LABELS;
-        if (vector.size() != label_num * label_num) {
-          throw std::runtime_error("Invalid association matrix configuration size");
-        }
-        // Use row-major mapping to match the YAML layout
-        using RowMajorMatrixXd =
-          Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-        Eigen::Map<const RowMajorMatrixXd> matrix_tmp(vector.data(), label_num, label_num);
-
-        // Convert to column-major (Eigen's default) for consistency
-        return Eigen::MatrixXd(matrix_tmp);
-      };
-      Eigen::MatrixXi can_assign_matrix =
-        initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));
-      params_.associator_config.max_dist_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_dist_matrix"));
-      params_.associator_config.max_area_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_area_matrix"));
-      params_.associator_config.min_area_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
-      params_.associator_config.min_iou_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
-
-      // pre-process
-      const int label_num = params_.associator_config.max_dist_matrix.rows();
-      for (int i = 0; i < label_num; i++) {
-        for (int j = 0; j < label_num; j++) {
-          params_.associator_config.max_dist_matrix(i, j) =
-            params_.associator_config.max_dist_matrix(i, j) * params_.associator_config.max_dist_matrix(i, j);
-        }
-      }
-      // Set the unknown-unknown association GIoU threshold
-      params_.associator_config.unknown_association_giou_threshold =
-        declare_parameter<double>("unknown_association_giou_threshold");
-
-      // Set the tracker map for associator config
-      {
-        params_.associator_config.can_assign_map.clear();
-        for (const auto & [label, tracker_type] : params_.processor_config.tracker_map) {
-          params_.associator_config.can_assign_map[tracker_type].fill(false);
-        }
-        // can_assign_map : tracker_type that can be assigned to each measurement label
-        // relationship is given by tracker_map and can_assign_matrix
-        for (int i = 0; i < can_assign_matrix.rows(); ++i) {
-          for (int j = 0; j < can_assign_matrix.cols(); ++j) {
-            if (can_assign_matrix(i, j) == 1) {
-              const auto tracker_type = params_.processor_config.tracker_map.at(i);
-              params_.associator_config.can_assign_map[tracker_type][j] = true;
-            }
-          }
-        }
-      }
-    }
-
-    // Initialize processor with parameters
-    state_.processor =
-      std::make_unique<TrackerProcessor>(params_.processor_config, params_.associator_config, params_.input_channels_config);
-  }
-
   // Debugger
-  state_.debugger = std::make_unique<TrackerDebugger>(*this, params_.world_frame_id, params_.input_channels_config);
-  state_.published_time_publisher = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
+  state_.debugger =
+    std::make_unique<TrackerDebugger>(*this, params_.world_frame_id, params_.input_channels_config);
+  state_.published_time_publisher =
+    std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (params_.publish_processing_time_detail) {
     detailed_processing_time_publisher_ =
@@ -346,9 +354,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
     state_.processor->setTimeKeeper(state_.time_keeper);
   }
-  
-  state_.last_published_time = this->now();
-  state_.last_updated_time = this->now();
 }
 
 void MultiObjectTracker::onTrigger()
@@ -365,18 +370,18 @@ void MultiObjectTracker::onTrigger()
   // process start
   const rclcpp::Time latest_time(objects_list.back().header.stamp);
   state_.debugger->startMeasurementTime(this->now(), latest_time);
-  
+
   // run process for each DynamicObject
   for (const auto & objects_data : objects_list) {
     // Get ego pose at the measurement time
     const rclcpp::Time measurement_time =
       rclcpp::Time(objects_data.header.stamp, current_time.get_clock_type());
-      
+
     std::optional<geometry_msgs::msg::Pose> ego_pose;
     if (const auto odometry_info = state_.odometry->getOdometryFromTf(measurement_time)) {
       ego_pose = odometry_info->pose.pose;
     }
-    
+
     core::process_objects(objects_data, current_time, ego_pose, params_, state_, get_logger());
   }
   // process end
@@ -395,7 +400,7 @@ void MultiObjectTracker::onTimer()
   if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
 
   const rclcpp::Time current_time = this->now();
-  
+
   if (core::should_publish(current_time, params_, state_)) {
     checkAndPublish(state_.last_published_time);
   }
@@ -411,11 +416,12 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 
   // Publish
   const rclcpp::Time current_time = this->now();
-  
+
   const auto tf_base_to_world = state_.odometry->getTransform(time);
-  
-  auto output = core::get_output(time, current_time, tf_base_to_world, params_, state_, get_logger());
-  
+
+  auto output =
+    core::get_output(time, current_time, tf_base_to_world, params_, state_, get_logger());
+
   publish(output);
 }
 
@@ -436,8 +442,9 @@ void MultiObjectTracker::publish(const core::PublishData & data)
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
     if (state_.time_keeper)
       st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *state_.time_keeper);
-    
-    state_.published_time_publisher->publish_if_subscribed(tracked_objects_pub_, data.tracked_objects.header.stamp);
+
+    state_.published_time_publisher->publish_if_subscribed(
+      tracked_objects_pub_, data.tracked_objects.header.stamp);
 
     if (data.tentative_objects) {
       state_.debugger->publishTentativeObjects(*data.tentative_objects);
