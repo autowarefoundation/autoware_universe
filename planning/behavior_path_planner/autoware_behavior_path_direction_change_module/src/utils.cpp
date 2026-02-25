@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -280,20 +280,18 @@ bool checkLaneContinuitySafety(
 
 void densifyPathByYawAndDistance(
   std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & points,
-  const double max_yaw_step_rad,  // 例: 5 deg = 0.087 rad
-  const double max_dist_step      // 例: 0.5 m
-)
+  const double max_yaw_step_rad, const double max_dist_step)
 {
   if (points.size() < 2) return;
 
   std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> dense;
-  dense.reserve(points.size() * 2);  // 適当に多めに確保
+  dense.reserve(points.size() * 2);
 
   for (size_t i = 0; i + 1 < points.size(); ++i) {
     const auto & p0 = points[i].point;
     const auto & p1 = points[i + 1].point;
 
-    // 元の点 p0 は必ず追加
+    // Always add point p0.
     dense.push_back(points[i]);
 
     const double x0 = p0.pose.position.x;
@@ -309,21 +307,21 @@ void densifyPathByYawAndDistance(
     const double yaw1 = tf2::getYaw(p1.pose.orientation);
     double dyaw = autoware_utils::normalize_radian(yaw1 - yaw0);
 
-    // 分割数を計算
+    // Calculate the number of segments
     int Nyaw = static_cast<int>(std::ceil(std::fabs(dyaw) / max_yaw_step_rad));
     int Ndist = static_cast<int>(std::ceil(dist / max_dist_step));
     int N = std::max(Nyaw, Ndist);
 
     if (N <= 1) {
-      continue;  // 補間不要
+      continue;  // Interpolation is not necessary.
     }
 
-    // 中間点を N-1 個挿入（0<k<N）
+    // Insert N-1 intermediate points (0<k<N)
     for (int k = 1; k < N; ++k) {
       double r = static_cast<double>(k) / static_cast<double>(N);
 
       autoware_internal_planning_msgs::msg::PathPointWithLaneId mid;
-      mid = points[i];  // lane_ids などをコピーしておく
+      mid = points[i];  // Copy lane_ids etc.
 
       auto & mp = mid.point;
       mp.pose.position.x = x0 + (x1 - x0) * r;
@@ -333,14 +331,14 @@ void densifyPathByYawAndDistance(
       double yaw_mid = autoware_utils::normalize_radian(yaw0 + dyaw * r);
       mp.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw_mid);
 
-      // 速度や他フィールドはここでは弄らない（後で DirectionChange が上書き）
-      // lane_ids は p0 のものを流用（mid.lane_ids = points[i].lane_ids;）
+      // Speed and other fields are not modified here (later DirectionChange will overwrite them)
+      // Use lane_ids from p0 (mid.lane_ids = points[i].lane_ids;)
 
       dense.push_back(mid);
     }
   }
 
-  // 最後の点を忘れず追加
+  // Don't forget to add the last point.
   dense.push_back(points.back());
 
   points.swap(dense);

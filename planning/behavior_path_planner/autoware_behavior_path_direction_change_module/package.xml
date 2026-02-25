@@ -5,7 +5,9 @@
   <version>0.46.0</version>
   <description>The autoware_behavior_path_direction_change_module package - handles direction changes by detecting cusp points and reversing path orientations</description>
 
-  <maintainer email="maintainer@example.com">Maintainer</maintainer>
+  <maintainer email="takeshi.miura@tier4.jp">Maintainer</maintainer>
+  <maintainer email="teja.emmey@tier4.jp">Maintainer</maintainer>
+  <maintainer email="shin.sato@tier4.jp">Maintainer</maintainer>
 
   <license>Apache License 2.0</license>
 
