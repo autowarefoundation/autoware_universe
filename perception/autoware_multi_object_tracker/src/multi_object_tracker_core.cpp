@@ -79,6 +79,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
   // convert string to TrackerType
   static const std::unordered_map<std::string, TrackerType> TRACKER_TYPE_MAP = {
     {"multi_vehicle_tracker", TrackerType::MULTIPLE_VEHICLE},
+    {"general_vehicle_tracker", TrackerType::GENERAL_VEHICLE},
     {"pedestrian_and_bicycle_tracker", TrackerType::PEDESTRIAN_AND_BICYCLE},
     {"normal_vehicle_tracker", TrackerType::NORMAL_VEHICLE},
     {"pedestrian_tracker", TrackerType::PEDESTRIAN},
