@@ -26,9 +26,7 @@ namespace autoware::multi_object_tracker
 TrackerDebugger::TrackerDebugger(
   rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & frame_id,
   const std::vector<types::InputChannel> & channels_config)
-: logger_(logger),
-  clock_(clock),
-  object_debugger_(frame_id, channels_config)
+: logger_(logger), clock_(clock), object_debugger_(frame_id, channels_config)
 {
   // initialize timestamps
   const rclcpp::Time now = clock_->now();

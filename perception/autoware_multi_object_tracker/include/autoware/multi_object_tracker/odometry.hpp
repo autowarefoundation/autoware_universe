@@ -38,9 +38,8 @@ class Odometry
 public:
   Odometry(
     rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer,
-    const std::string & world_frame_id, const std::string & ego_frame_id,
-    bool enable_odometry_uncertainty = false);
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string & world_frame_id,
+    const std::string & ego_frame_id, bool enable_odometry_uncertainty = false);
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
     const std::string & source_frame_id, const rclcpp::Time & time) const;
