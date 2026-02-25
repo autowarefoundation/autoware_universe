@@ -15,7 +15,7 @@
       head_path: "$(var model_path)/simplify_pts_head_memory.onnx" # Path to the detection head onnx file, relative to the model_param_path
       position_embedding_path: "$(var model_path)/simplify_position_embedding.onnx" # Path to the position embedding onnx file, relative to the model_param_path
 
-      backbone_engine_path: ""   # Path to the tensorRT engine file for the backbone. If empty, the path will be set to bachbone_path with .engine extension, and the engine will be built if it does not exist.
+      backbone_engine_path: ""   # Path to the tensorRT engine file for the backbone. If empty, the path will be set to backbone_path with .engine extension, and the engine will be built if it does not exist.
       head_engine_path: ""       # Path to the tensorRT engine file for the head. If empty, the path will be set to head_path with .engine extension, and the engine will be built if it does not exist.
       position_embedding_engine_path: "" # Path to the tensorRT engine file for the position embedding. If empty, the path will be set to position_embedding_path with .engine extension, and the engine will be built if it does not exist.
 
