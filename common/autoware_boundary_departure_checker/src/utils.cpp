@@ -420,8 +420,8 @@ UncrossableBoundRTree build_uncrossable_boundaries_rtree(
   return {segments.begin(), segments.end()};
 }
 
-tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment_projection(
-  const Point2d & p, const Segment2d & segment, const bool swap_points)
+tl::expected<std::pair<Point2d, double>, std::string> point_to_segment_projection(
+  const Point2d & p, const Segment2d & segment)
 {
   const auto & p1 = segment.first;
   const auto & p2 = segment.second;
@@ -429,26 +429,16 @@ tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment
   const Point2d p2_vec = {p2.x() - p1.x(), p2.y() - p1.y()};
   const Point2d p_vec = {p.x() - p1.x(), p.y() - p1.y()};
 
-  const auto result = [&swap_points](
-                        const Point2d & orig,
-                        const Point2d & proj) -> std::tuple<Point2d, Point2d, double> {
-    return swap_points ? std::make_tuple(proj, orig, boost::geometry::distance(proj, orig))
-                       : std::make_tuple(orig, proj, boost::geometry::distance(orig, proj));
-  };
-
   const auto c1 = boost::geometry::dot_product(p_vec, p2_vec);
   if (c1 < 0.0) return tl::make_unexpected("Point before segment start");
-  if (c1 == 0.0) return result(p, p1);
 
   const auto c2 = boost::geometry::dot_product(p2_vec, p2_vec);
   if (c1 > c2) return tl::make_unexpected("Point after segment end");
 
-  if (c1 == c2) return result(p, p2);
-
   const auto projection = p1 + (p2_vec * c1 / c2);
   const auto projection_point = Point2d{projection.x(), projection.y()};
 
-  return result(p, projection_point);
+  return std::make_pair(projection_point, boost::geometry::distance(p, projection_point));
 }
 
 tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projection(
@@ -467,29 +457,28 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
 
   ProjectionsToBound projections;
   projections.reserve(4);
-  constexpr bool swap_result = true;
-  if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg, swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    constexpr auto lon_offset = 0.0;
+    projections.emplace_back(ego_f, proj, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(ego_b, lane_seg, swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(ego_b, lane_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(ego_b, ego_f);
+    projections.emplace_back(ego_b, proj, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(lane_pt1, ego_seg, !swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(lane_pt1, ego_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(proj, ego_f);
+    projections.emplace_back(proj, lane_pt1, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(lane_pt2, ego_seg, !swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(lane_pt2, ego_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(proj, ego_f);
+    projections.emplace_back(proj, lane_pt2, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (projections.empty())
