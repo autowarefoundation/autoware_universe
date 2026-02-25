@@ -17,6 +17,7 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/inference/tensorrt_inference.hpp"
+#include "autoware/diffusion_planner/postprocessing/turn_indicator_manager.hpp"
 #include "autoware/diffusion_planner/preprocessing/lane_segments.hpp"
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 #include "autoware/diffusion_planner/utils/arg_reader.hpp"
@@ -25,12 +26,16 @@
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/time.hpp>
 
+#include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -47,14 +52,28 @@ namespace autoware::diffusion_planner
 
 using autoware::diffusion_planner::AgentData;
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_internal_planning_msgs::msg::CandidateTrajectories;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_planning_msgs::msg::Trajectory;
+using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using preprocess::TrafficSignalStamped;
+using unique_identifier_msgs::msg::UUID;
 using utils::NormalizationMap;
 using InputDataMap = std::unordered_map<std::string, std::vector<float>>;
+using AgentPoses = std::vector<std::vector<std::vector<Eigen::Matrix4d>>>;
+
+struct PlannerOutput
+{
+  Trajectory trajectory;
+  CandidateTrajectories candidate_trajectories;
+  PredictedObjects predicted_objects;
+  TurnIndicatorsCommand turn_indicator_command;
+};
 
 struct FrameContext
 {
@@ -189,6 +208,24 @@ public:
   TensorrtInference::InferenceResult run_inference(const InputDataMap & input_data_map);
 
   /**
+   * @brief Create all planner output messages from raw inference outputs.
+   *
+   * Parses raw predictions, creates ego trajectory (batch 0), candidate trajectories
+   * for all batches, predicted objects for neighbor agents, and turn indicator command.
+   *
+   * @param predictions Raw model output predictions.
+   * @param turn_indicator_logit Logits for turn indicator classes.
+   * @param frame_context Context of the current frame.
+   * @param timestamp The ROS time stamp for the messages.
+   * @param generator_uuid The unique identifier for the planner instance.
+   * @return PlannerOutput containing all output messages.
+   */
+  PlannerOutput create_planner_output(
+    const std::vector<float> & predictions, const std::vector<float> & turn_indicator_logit,
+    const FrameContext & frame_context, const rclcpp::Time & timestamp,
+    const UUID & generator_uuid);
+
+  /**
    * @brief Get the first traffic light on the route for debugging.
    *
    * @param frame_context Context of the current frame
@@ -208,13 +245,6 @@ public:
     const InputDataMap & input_data_map, const std::string & data_key) const;
 
   /**
-   * @brief Get the previous turn indicator report from history.
-   *
-   * @return Previous turn indicator report value
-   */
-  int64_t get_previous_turn_indicator_report() const;
-
-  /**
    * @brief Get current route pointer.
    *
    * @return Shared pointer to current route
@@ -229,6 +259,9 @@ private:
 
   // Inference engine
   std::unique_ptr<TensorrtInference> tensorrt_inference_{nullptr};
+
+  // Postprocessing
+  postprocess::TurnIndicatorManager turn_indicator_manager_;
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;
