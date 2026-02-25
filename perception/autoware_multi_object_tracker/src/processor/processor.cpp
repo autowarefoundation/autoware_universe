@@ -171,15 +171,19 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
       case TrackerType::BIG_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
       case TrackerType::UNKNOWN:
-        return std::make_shared<UnknownTracker>(time, object, config_.enable_unknown_object_velocity_estimation, config_.enable_unknown_object_motion_output);
+        return std::make_shared<PolygonTracker>(
+          time, object, config_.enable_unknown_object_velocity_estimation,
+          config_.enable_unknown_object_motion_output);
       case TrackerType::PASS_THROUGH:
         return std::make_shared<PassThroughTracker>(time, object);
       default:
-        return std::make_shared<UnknownTracker>(time, object, config_.enable_unknown_object_velocity_estimation, config_.enable_unknown_object_motion_output);
+        return std::make_shared<PolygonTracker>(
+          time, object, config_.enable_unknown_object_velocity_estimation,
+          config_.enable_unknown_object_motion_output);
     }
   }
-  // If no specific tracker type is found, return an UnknownTracker
-  return std::make_shared<UnknownTracker>(
+  // If no specific tracker type is found, return an PolygonTracker
+  return std::make_shared<PolygonTracker>(
     time, object, config_.enable_unknown_object_velocity_estimation,
     config_.enable_unknown_object_motion_output);
 }
