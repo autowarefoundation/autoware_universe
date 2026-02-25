@@ -345,13 +345,16 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
 
   // TurnIndicatorsCommand
-  // TODO(sakoda): Use the first logit as the main turn indicator command.
-  // There may be bugs in the current implementation.
+  // Use the first batch's logit as the main turn indicator command.
+  constexpr int64_t turn_indicator_batch_idx = 0;
+  const std::vector<float> first_turn_indicator_logit(
+    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * turn_indicator_batch_idx,
+    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (turn_indicator_batch_idx + 1));
   const int64_t prev_report = turn_indicators_history_.empty()
                                 ? TurnIndicatorsReport::DISABLE
                                 : turn_indicators_history_.back().report;
   output.turn_indicator_command =
-    turn_indicator_manager_.evaluate(turn_indicator_logit, timestamp, prev_report);
+    turn_indicator_manager_.evaluate(first_turn_indicator_logit, timestamp, prev_report);
 
   return output;
 }
