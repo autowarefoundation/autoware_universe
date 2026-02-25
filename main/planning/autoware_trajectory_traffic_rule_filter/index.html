@@ -22919,6 +22919,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23008,6 +23019,40 @@
 <td><code>~/output/candidate_trajectories</code></td>
 <td><code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code></td>
 <td>Filtered trajectories that comply with traffic rules</td>
+</tr>
+<tr>
+<td>Output</td>
+<td><code>/diagnostics</code></td>
+<td><code>diagnostic_msgs::msg::DiagnosticArray</code></td>
+<td>Diagnostic status of the filtering process</td>
+</tr>
+</tbody>
+</table>
+<h3 id="diagnostics">Diagnostics<a class="headerlink" href="#diagnostics" title="Permanent link">#</a></h3>
+<p>The node publishes diagnostic information to monitor the status of the trajectory filtering process.</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Message</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OK</code></td>
+<td>""</td>
+<td>At least one trajectory is feasible, including at least one from a diffusion-based planner if present.</td>
+</tr>
+<tr>
+<td><code>WARN</code></td>
+<td>"All diffusion planner trajectories are infeasible"</td>
+<td>Feasible trajectories exist, but all trajectories from generators named "Diffusion*" were filtered out.</td>
+</tr>
+<tr>
+<td><code>ERROR</code></td>
+<td>"No feasible trajectories found"</td>
+<td>All input candidate trajectories were filtered out by the active plugins.</td>
 </tr>
 </tbody>
 </table>
