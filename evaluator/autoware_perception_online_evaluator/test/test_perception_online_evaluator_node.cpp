@@ -95,10 +95,7 @@ protected:
     uuid_ = generate_uuid();
   }
 
-  ~EvalTest() override
-  {
-    rclcpp::shutdown();
-  }
+  ~EvalTest() override { rclcpp::shutdown(); }
 
   void publishEgoTF(const double time = 0.0)
   {
