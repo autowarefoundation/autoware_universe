@@ -21,17 +21,23 @@ namespace core
 void process_objects(
   const types::DynamicObjectList & objects,
   const rclcpp::Time & current_time,
-  const std::optional<geometry_msgs::msg::Pose> & ego_pose,
   [[maybe_unused]] const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger)
+  TrackerDebugger & debugger,
+  const rclcpp::Logger & logger,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state.time_keeper);
+  if (time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper);
 
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
     rclcpp::Time(objects.header.stamp, current_time.get_clock_type());
+
+  std::optional<geometry_msgs::msg::Pose> ego_pose;
+  if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {
+    ego_pose = odometry_info->pose.pose;
+  }
 
   if (!ego_pose) {
     RCLCPP_WARN(
@@ -47,7 +53,7 @@ void process_objects(
   state.processor->associate(objects, direct_assignment, reverse_assignment);
 
   // Collect debug information - tracker list, existence probabilities, association results
-  state.debugger->collectObjectInfo(
+  debugger.collectObjectInfo(
     measurement_time, state.processor->getListTracker(), objects, direct_assignment,
     reverse_assignment);
 
@@ -108,12 +114,14 @@ PublishData get_output(
   const std::optional<geometry_msgs::msg::Transform> & tf_base_to_world,
   const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger)
+  TrackerDebugger & debugger,
+  const rclcpp::Logger & logger,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state.time_keeper);
+  if (time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper);
 
-  state.debugger->startPublishTime(current_time);
+  debugger.startPublishTime(current_time);
 
   PublishData output;
 
@@ -138,16 +146,16 @@ PublishData get_output(
   // Debug messages handling
   {
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
-    if (state.time_keeper)
-      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *state.time_keeper);
+    if (time_keeper)
+      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper);
       
-    state.debugger->endPublishTime(current_time, publish_time);
+    debugger.endPublishTime(current_time, publish_time);
 
     // Update the diagnostic values
     const double min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
-    state.debugger->updateDiagnosticValues(min_extrapolation_time, output.tracked_objects.objects.size());
+    debugger.updateDiagnosticValues(min_extrapolation_time, output.tracked_objects.objects.size());
 
-    if (state.debugger->shouldPublishTentativeObjects()) {
+    if (debugger.shouldPublishTentativeObjects()) {
       autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
       tentative_output_msg.header.frame_id = params.world_frame_id;
       state.processor->getTentativeObjects(object_time, tentative_output_msg);

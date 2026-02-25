@@ -41,9 +41,6 @@ struct MultiObjectTrackerParameters
 struct MultiObjectTrackerInternalState
 {
   std::unique_ptr<TrackerProcessor> processor;
-  std::unique_ptr<TrackerDebugger> debugger;
-  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher;
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper;
   std::unique_ptr<InputManager> input_manager;
   std::shared_ptr<Odometry> odometry;
   
@@ -66,10 +63,11 @@ struct PublishData
 void process_objects(
   const types::DynamicObjectList & objects,
   const rclcpp::Time & current_time,
-  const std::optional<geometry_msgs::msg::Pose> & ego_pose,
   const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger);
+  TrackerDebugger & debugger,
+  const rclcpp::Logger & logger,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
 
 bool should_publish(
   const rclcpp::Time & current_time,
@@ -82,7 +80,9 @@ PublishData get_output(
   const std::optional<geometry_msgs::msg::Transform> & tf_base_to_world,
   const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger);
+  TrackerDebugger & debugger,
+  const rclcpp::Logger & logger,
+  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
 
 void prune_objects(
   const rclcpp::Time & time,

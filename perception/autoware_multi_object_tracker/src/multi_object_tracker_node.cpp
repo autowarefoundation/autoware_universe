@@ -274,8 +274,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Initialize state
   // Odometry manager
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
+  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
+    get_node_base_interface(), get_node_timers_interface());
+  tf_buffer_->setCreateTimerInterface(cti);
+
   state_.odometry = std::make_shared<Odometry>(
-    *this, params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
+    get_logger(), get_clock(), tf_buffer_,
+    params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
 
   // Initialize input manager
   state_.input_manager = std::make_unique<InputManager>(state_.odometry, get_logger(), get_clock());
@@ -290,6 +296,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   state_.last_published_time = this->now();
   state_.last_updated_time = this->now();
+
 
   // Create subscriptions
   const size_t input_size = params_.input_channels_config.size();
@@ -340,26 +347,27 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       this, get_clock(), timer_period, std::bind(&MultiObjectTracker::onTimer, this));
   }
 
-  // Debugger
-  state_.debugger =
-    std::make_unique<TrackerDebugger>(*this, params_.world_frame_id, params_.input_channels_config);
-  state_.published_time_publisher =
+  // Debugger initialization
+  debugger_ = std::make_unique<TrackerDebugger>(
+    get_logger(), get_clock(), params_.world_frame_id, params_.input_channels_config);
+  debugger_->init(*this);
+  published_time_publisher_ =
     std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   if (params_.publish_processing_time_detail) {
     detailed_processing_time_publisher_ =
       this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    state_.time_keeper =
+    time_keeper_ =
       std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
-    state_.processor->setTimeKeeper(state_.time_keeper);
+    state_.processor->setTimeKeeper(time_keeper_);
   }
 }
 
 void MultiObjectTracker::onTrigger()
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
   // get objects from the input manager and run process
@@ -369,23 +377,14 @@ void MultiObjectTracker::onTrigger()
 
   // process start
   const rclcpp::Time latest_time(objects_list.back().header.stamp);
-  state_.debugger->startMeasurementTime(this->now(), latest_time);
+  debugger_->startMeasurementTime(this->now(), latest_time);
 
   // run process for each DynamicObject
   for (const auto & objects_data : objects_list) {
-    // Get ego pose at the measurement time
-    const rclcpp::Time measurement_time =
-      rclcpp::Time(objects_data.header.stamp, current_time.get_clock_type());
-
-    std::optional<geometry_msgs::msg::Pose> ego_pose;
-    if (const auto odometry_info = state_.odometry->getOdometryFromTf(measurement_time)) {
-      ego_pose = odometry_info->pose.pose;
-    }
-
-    core::process_objects(objects_data, current_time, ego_pose, params_, state_, get_logger());
+    core::process_objects(objects_data, current_time, params_, state_, *debugger_, get_logger(), time_keeper_);
   }
   // process end
-  state_.debugger->endMeasurementTime(this->now());
+  debugger_->endMeasurementTime(this->now());
 
   // Publish without delay compensation
   if (!publish_timer_) {
@@ -397,7 +396,7 @@ void MultiObjectTracker::onTrigger()
 void MultiObjectTracker::onTimer()
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
 
@@ -409,7 +408,7 @@ void MultiObjectTracker::onTimer()
 void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   /* tracker pruning*/
   core::prune_objects(time, state_);
@@ -420,7 +419,7 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
   const auto tf_base_to_world = state_.odometry->getTransform(time);
 
   auto output =
-    core::get_output(time, current_time, tf_base_to_world, params_, state_, get_logger());
+    core::get_output(time, current_time, tf_base_to_world, params_, state_, *debugger_, get_logger(), time_keeper_);
 
   publish(output);
 }
@@ -428,7 +427,7 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 void MultiObjectTracker::publish(const core::PublishData & data)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   // Publish
   tracked_objects_pub_->publish(data.tracked_objects);
@@ -440,16 +439,16 @@ void MultiObjectTracker::publish(const core::PublishData & data)
   // Publish debug messages
   {
     std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
-    if (state_.time_keeper)
-      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *state_.time_keeper);
+    if (time_keeper_)
+      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper_);
 
-    state_.published_time_publisher->publish_if_subscribed(
+    published_time_publisher_->publish_if_subscribed(
       tracked_objects_pub_, data.tracked_objects.header.stamp);
 
     if (data.tentative_objects) {
-      state_.debugger->publishTentativeObjects(*data.tentative_objects);
+      debugger_->publishTentativeObjects(*data.tentative_objects);
     }
-    state_.debugger->publishObjectsMarkers();
+    debugger_->publishObjectsMarkers();
   }
 }
 

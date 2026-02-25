@@ -26,6 +26,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -36,7 +37,9 @@ class Odometry
 {
 public:
   Odometry(
-    rclcpp::Node & node, const std::string & world_frame_id, const std::string & ego_frame_id,
+    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer,
+    const std::string & world_frame_id, const std::string & ego_frame_id,
     bool enable_odometry_uncertainty = false);
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
@@ -49,12 +52,13 @@ public:
     const types::DynamicObjectList & input_objects) const;
 
 private:
-  rclcpp::Node & node_;
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
   // frame id
   std::string ego_frame_id_;    // ego vehicle frame
   std::string world_frame_id_;  // absolute/relative ground frame
   // tf
-  tf2_ros::Buffer tf_buffer_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
 public:

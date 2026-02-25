@@ -72,9 +72,17 @@ private:
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
 
+  // tf
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+
   // parameters and internal state
   MultiObjectTrackerParameters params_;
   MultiObjectTrackerInternalState state_;
+
+  // debugger
+  std::unique_ptr<TrackerDebugger> debugger_;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
+  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
 
   // callback functions
   void onTimer();

@@ -45,8 +45,10 @@ class TrackerDebugger
 {
 public:
   TrackerDebugger(
-    rclcpp::Node & node, const std::string & frame_id,
+    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & frame_id,
     const std::vector<types::InputChannel> & channels_config);
+
+  void init(rclcpp::Node & node);
 
 private:
   // Timing check utilities
@@ -81,13 +83,14 @@ private:
   } diagnostic_values_;
 
   // ROS node, publishers
-  rclcpp::Node & node_;
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     debug_tentative_objects_pub_;
   std::unique_ptr<autoware_utils_debug::DebugPublisher> processing_time_publisher_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_objects_markers_pub_;
 
-  diagnostic_updater::Updater diagnostic_updater_;
+  std::unique_ptr<diagnostic_updater::Updater> diagnostic_updater_;
   // Object debugger
   TrackerObjectDebugger object_debugger_;
   // Time measurement
@@ -101,8 +104,8 @@ private:
   rclcpp::Time last_non_warning_timestamp_;
 
   // Configuration
-  void setupDiagnostics();
-  void loadParameters();
+  void setupDiagnostics(rclcpp::Node & node);
+  void loadParameters(rclcpp::Node & node);
 
 public:
   // Single update method for all diagnostic values
