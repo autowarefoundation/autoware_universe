@@ -22,7 +22,6 @@
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
-#include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -101,8 +100,7 @@ struct PublishData
 void process_objects(
   const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
+  TrackerDebugger & debugger, const rclcpp::Logger & logger);
 
 void process_parameters(MultiObjectTrackerParameters & params);
 
@@ -110,12 +108,10 @@ bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state);
 
-PublishData get_output(
+void get_output(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const std::optional<geometry_msgs::msg::Transform> & tf_base_to_world,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
+  const rclcpp::Logger & logger, PublishData & output);
 
 void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state);
 

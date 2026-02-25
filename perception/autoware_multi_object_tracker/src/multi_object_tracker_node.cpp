@@ -218,7 +218,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   ////// callback timer
   if (params_.enable_delay_compensation) {
-    // const double publisher_period = 1.0 / params_.publish_rate;    // [s]
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(params_.publish_rate * timer_multiplier).period();
     publish_timer_ = rclcpp::create_timer(
@@ -258,8 +257,10 @@ void MultiObjectTracker::onTrigger()
 
   // run process for each DynamicObject
   for (const auto & objects_data : objects_list) {
-    core::process_objects(
-      objects_data, current_time, params_, state_, *debugger_, get_logger(), time_keeper_);
+    std::unique_ptr<ScopedTimeTrack> st_process_objects_ptr;
+    if (time_keeper_)
+      st_process_objects_ptr = std::make_unique<ScopedTimeTrack>("process_objects", *time_keeper_);
+    core::process_objects(objects_data, current_time, params_, state_, *debugger_, get_logger());
   }
   // process end
   debugger_->endMeasurementTime(this->now());
@@ -294,10 +295,37 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
   // Publish
   const rclcpp::Time current_time = this->now();
 
-  const auto tf_base_to_world = state_.odometry->getTransform(time);
+  debugger_->startPublishTime(current_time);
+  core::PublishData output;
+  {
+    std::unique_ptr<ScopedTimeTrack> st_get_output_ptr;
+    if (time_keeper_)
+      st_get_output_ptr = std::make_unique<ScopedTimeTrack>("get_output", *time_keeper_);
 
-  auto output = core::get_output(
-    time, current_time, tf_base_to_world, params_, state_, *debugger_, get_logger(), time_keeper_);
+    core::get_output(time, current_time, params_, state_, get_logger(), output);
+  }
+
+  debugger_->endPublishTime(current_time, time);
+
+  // Debug messages handling
+  {
+    std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
+    if (time_keeper_)
+      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper_);
+
+    // Update the diagnostic values
+    const double min_extrapolation_time = (time - state_.last_updated_time).seconds();
+    debugger_->updateDiagnosticValues(
+      min_extrapolation_time, output.tracked_objects.objects.size());
+
+    if (debugger_->shouldPublishTentativeObjects()) {
+      const rclcpp::Time object_time = params_.enable_delay_compensation ? current_time : time;
+      autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
+      tentative_output_msg.header.frame_id = params_.world_frame_id;
+      state_.processor->getTentativeObjects(object_time, tentative_output_msg);
+      output.tentative_objects = tentative_output_msg;
+    }
+  }
 
   publish(output);
 }

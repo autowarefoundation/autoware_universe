@@ -14,8 +14,6 @@
 
 #include "multi_object_tracker_core.hpp"
 
-#include <autoware_utils_debug/time_keeper.hpp>
-
 #include <tf2_ros/create_timer_ros.h>
 
 #include <functional>
@@ -28,8 +26,6 @@
 
 namespace autoware::multi_object_tracker
 {
-
-using autoware_utils_debug::ScopedTimeTrack;
 
 MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
 : last_published_time(0, 0, RCL_ROS_TIME), last_updated_time(0, 0, RCL_ROS_TIME)
@@ -181,12 +177,8 @@ void process_objects(
   const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
   [[maybe_unused]] const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
-  const rclcpp::Logger & logger,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+  const rclcpp::Logger & logger)
 {
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper);
-
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
     rclcpp::Time(objects.header.stamp, current_time.get_clock_type());
@@ -262,26 +254,18 @@ void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & 
   state.processor->prune(time);
 }
 
-PublishData get_output(
+void get_output(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const std::optional<geometry_msgs::msg::Transform> & tf_base_to_world,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger,
-  const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper)
+  const rclcpp::Logger & logger, PublishData & output)
 {
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper);
-
-  debugger.startPublishTime(current_time);
-
-  PublishData output;
-
   // Create output msg
   output.tracked_objects.header.frame_id = params.world_frame_id;
   const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
   state.processor->getTrackedObjects(object_time, output.tracked_objects);
 
   if (params.publish_merged_objects) {
+    const auto tf_base_to_world = state.odometry->getTransform(publish_time);
     if (tf_base_to_world) {
       autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
       state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
@@ -294,29 +278,9 @@ PublishData get_output(
     }
   }
 
-  // Debug messages handling
-  {
-    std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
-    if (time_keeper)
-      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper);
-
-    debugger.endPublishTime(current_time, publish_time);
-
-    // Update the diagnostic values
-    const double min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
-    debugger.updateDiagnosticValues(min_extrapolation_time, output.tracked_objects.objects.size());
-
-    if (debugger.shouldPublishTentativeObjects()) {
-      autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
-      tentative_output_msg.header.frame_id = params.world_frame_id;
-      state.processor->getTentativeObjects(object_time, tentative_output_msg);
-      output.tentative_objects = tentative_output_msg;
-    }
-  }
-
   state.last_published_time = current_time;
 
-  return output;
+  return;
 }
 
 }  // namespace core
