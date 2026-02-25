@@ -95,8 +95,7 @@ private:
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  std::unique_ptr<DiagnosticsInterface> diagnostics_interface_ptr_ =
-    std::make_unique<DiagnosticsInterface>(this, "trajectory_safety_filter");
+  DiagnosticsInterface diagnostics_interface_{this, "trajectory_safety_filter"};
 };
 
 }  // namespace autoware::trajectory_safety_filter
