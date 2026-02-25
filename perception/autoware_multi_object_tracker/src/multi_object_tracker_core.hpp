@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
@@ -32,7 +31,10 @@
 #include <geometry_msgs/msg/transform.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
+#include <tf2_ros/buffer.h>
+
 #include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -43,6 +45,7 @@ namespace autoware::multi_object_tracker
 
 struct MultiObjectTrackerParameters
 {
+  // Given parameters
   double publish_rate;
   std::string world_frame_id;
   std::string ego_frame_id;
@@ -52,6 +55,17 @@ struct MultiObjectTrackerParameters
   bool publish_merged_objects;
 
   std::vector<types::InputChannel> input_channels_config;
+
+  std::vector<int64_t> can_assign_matrix;
+  std::vector<double> max_dist_matrix;
+  std::vector<double> max_area_matrix;
+  std::vector<double> min_area_matrix;
+  std::vector<double> min_iou_matrix;
+  std::map<std::string, std::string> tracker_type_map;
+  std::vector<double> pruning_giou_thresholds;
+  std::vector<double> pruning_distance_thresholds;
+
+  // Induced parameters
   TrackerProcessorConfig processor_config;
   AssociatorConfig associator_config;
 };
@@ -89,6 +103,8 @@ void process_objects(
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger, const rclcpp::Logger & logger,
   const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper);
+
+void process_parameters(MultiObjectTrackerParameters & params);
 
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
