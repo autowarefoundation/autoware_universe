@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_trajectory_dummy_concatenator</name>
+  <version>0.1.0</version>
+  <description>Trajectory concatenator with diffusion planner override support for e2e experiments</description>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_uuid</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>std_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

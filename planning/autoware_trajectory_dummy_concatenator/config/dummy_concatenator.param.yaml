@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    duration_time: 0.2 # [s]
+    blocked_generator_name_prefix: "DiffusionPlanner"

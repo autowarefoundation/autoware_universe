@@ -1,0 +1,11 @@
+dummy_concatenator:
+  duration_time:
+    type: double
+    default_value: 0.2
+    description: Duration time [s] to keep a trajectory in the buffer before discarding it.
+    read_only: false
+  blocked_generator_name_prefix:
+    type: string
+    default_value: DiffusionPlanner
+    description: Generator name prefix to block when override is enabled. DiffusionPlanner uses names like 'DiffusionPlanner_batch_N'.
+    read_only: false

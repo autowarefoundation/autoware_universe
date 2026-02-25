@@ -1,0 +1,61 @@
+/**:
+  ros__parameters:
+    # generate_parameter_library parameters
+    planning_frequency_hz: 10.0
+
+    path_planning:
+      path_length:
+        backward: 5.0
+        forward: 300.0
+
+      smooth_goal_connection:
+        search_radius_range: 7.5
+        pre_goal_offset: 1.0
+
+      ego_nearest_lanelet:
+        dist_threshold: 3.0
+        yaw_threshold: 1.046
+
+      path_shift:
+        enable: true
+        minimum_shift_length: 0.5
+        minimum_shift_yaw: 0.349 # 20 deg
+        minimum_shift_distance: 5.0
+        min_speed_for_curvature: 2.77  # [m/s] 10 km/h
+        lateral_accel_limit: 1.0      # [m/s^2]
+
+      waypoint_group:
+        separation_threshold: 1.0
+        interval_margin_ratio: 10.0
+
+      output:
+        delta_arc_length: 0.5
+
+    velocity_smoother:
+      nearest_dist_threshold_m: 1.5
+      nearest_yaw_threshold_deg: 60.0
+      target_pull_out_speed_mps: 0.25
+      target_pull_out_acc_mps2: 0.5
+      max_speed_mps: 13.88
+      max_lateral_accel_mps2: 1.5
+      set_engage_speed: true
+      limit_speed: true
+      limit_lateral_acceleration: false
+      smooth_velocities: true
+      stop_dist_to_prohibit_engage: 0.5
+
+    post_resample:
+      max_trajectory_length: 300.0
+      min_trajectory_length: 30.0
+      resample_time: 10.0
+      dense_resample_dt: 0.1
+      dense_min_interval_distance: 0.1
+      sparse_resample_dt: 0.1
+      sparse_min_interval_distance: 1.0
+
+    debug:
+      enable_path: true
+      enable_shifted_trajectory: true
+      enable_optimizer_trajectory: true
+      enable_modifier_trajectory: true
+      enable_output_trajectory: true

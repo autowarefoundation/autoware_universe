@@ -1,0 +1,161 @@
+minimum_rule_based_planner:
+  planning_frequency_hz:
+    type: double
+    default_value: 10.0
+    validation:
+      gt<>: [0.0]
+
+  path_planning:
+    waypoint_group:
+      separation_threshold:
+        type: double
+        default_value: 1.0
+        description: maximum distance between waypoints to belong to same group [m]
+
+      interval_margin_ratio:
+        type: double
+        default_value: 10.0
+        description: ratio to expand interval bound of group according to lateral distance
+
+    smooth_goal_connection:
+      search_radius_range:
+        type: double
+        default_value: 7.5
+        description: search radius range for smooth goal connection [m]
+
+      pre_goal_offset:
+        type: double
+        default_value: 1.0
+        description: offset before goal for smooth connection [m]
+
+    # Parameters for lanelet matching (different from EB smoother's ego_nearest_* params)
+    ego_nearest_lanelet:
+      dist_threshold:
+        type: double
+        default_value: 3.0
+        description: distance threshold for ego nearest lanelet search [m]
+
+      yaw_threshold:
+        type: double
+        default_value: 1.046
+        description: yaw threshold for ego nearest lanelet search [rad]
+
+    path_length:
+      backward:
+        type: double
+        default_value: 5.0
+        validation:
+          gt<>: [0.0]
+
+      forward:
+        type: double
+        default_value: 100.0
+        validation:
+          gt<>: [0.0]
+
+    output:
+      delta_arc_length:
+        type: double
+        default_value: 0.5
+        description: delta arc length for output trajectory [m]
+        validation:
+          gt<>: [0.0]
+
+    # Path Shift to Ego Parameters
+    path_shift:
+      enable:
+        type: bool
+        default_value: true
+        description: enable path shifting from ego position to centerline
+
+      minimum_shift_length:
+        type: double
+        default_value: 0.1
+        description: lateral offset threshold to trigger path shifting [m]
+
+      minimum_shift_yaw:
+        type: double
+        default_value: 0.1
+        description: yaw deviation threshold to trigger path shifting [rad]
+
+      minimum_shift_distance:
+        type: double
+        default_value: 5.0
+        description: floor for shift distance ahead of ego [m]
+
+      min_speed_for_curvature:
+        type: double
+        default_value: 2.77
+        description: lower bound on ego speed used to compute initial curvature kappa0 = yaw_rate / speed [m/s]
+        validation:
+          gt<>: [0.0]
+
+      lateral_accel_limit:
+        type: double
+        default_value: 0.5
+        description: allowed lateral acceleration budget for the shift polynomial (comfort/safety limit) [m/s^2]
+        validation:
+          gt<>: [0.0]
+
+  debug:
+    enable_path:
+      type: bool
+      default_value: true
+      description: publish debug path_with_lane_id
+
+    enable_output_trajectory:
+      type: bool
+      default_value: true
+      description: publish debug final output trajectory
+
+    enable_shifted_trajectory:
+      type: bool
+      default_value: true
+      description: publish debug shifted trajectory
+
+    enable_optimizer_trajectory:
+      type: bool
+      default_value: true
+      description: publish debug optimizer module trajectories
+
+    enable_modifier_trajectory:
+      type: bool
+      default_value: true
+      description: publish debug modifier module trajectories
+
+  # Post-optimization resample parameters
+  post_resample:
+    max_trajectory_length:
+      type: double
+      default_value: 300.0
+      description: max trajectory length for post-optimization resampling [m]
+
+    min_trajectory_length:
+      type: double
+      default_value: 30.0
+      description: min trajectory length for post-optimization resampling [m]
+
+    resample_time:
+      type: double
+      default_value: 10.0
+      description: resample total time for dense sampling after optimization [s]
+
+    dense_resample_dt:
+      type: double
+      default_value: 0.1
+      description: resample time interval for dense sampling after optimization [s]
+
+    dense_min_interval_distance:
+      type: double
+      default_value: 0.1
+      description: minimum points-interval length for dense sampling after optimization [m]
+
+    sparse_resample_dt:
+      type: double
+      default_value: 0.1
+      description: resample time interval for sparse sampling after optimization [s]
+
+    sparse_min_interval_distance:
+      type: double
+      default_value: 1.0
+      description: minimum points-interval length for sparse sampling after optimization [m]
