@@ -3,6 +3,8 @@
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/odometry.hpp"
+#include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 #include "debugger/debugger.hpp"
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -42,6 +44,8 @@ struct MultiObjectTrackerInternalState
   std::unique_ptr<TrackerDebugger> debugger;
   std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper;
+  std::unique_ptr<InputManager> input_manager;
+  std::shared_ptr<Odometry> odometry;
   
   rclcpp::Time last_published_time;
   rclcpp::Time last_updated_time;

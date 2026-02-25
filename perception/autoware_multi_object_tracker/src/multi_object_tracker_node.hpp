@@ -60,6 +60,9 @@ public:
 
 private:
   // ROS interface
+  std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
+  sub_objects_array_{};
+
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
 
@@ -72,10 +75,6 @@ private:
   // parameters and internal state
   MultiObjectTrackerParameters params_;
   MultiObjectTrackerInternalState state_;
-
-  // input manager
-  std::unique_ptr<InputManager> input_manager_;
-  std::shared_ptr<Odometry> odometry_;
 
   // callback functions
   void onTimer();

@@ -61,7 +61,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
 
   // Odometry manager
-  odometry_ =
+  state_.odometry =
     std::make_shared<Odometry>(*this, params_.world_frame_id, params_.ego_frame_id, params_.enable_odometry_uncertainty);
 
   // ROS interface - Input channels
@@ -129,10 +129,26 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   // Initialize input manager
-  input_manager_ = std::make_unique<InputManager>(*this, odometry_);
-  input_manager_->init(params_.input_channels_config);  // Initialize input manager, set subscriptions
-  input_manager_->setTriggerFunction(
+  state_.input_manager = std::make_unique<InputManager>(state_.odometry, get_logger(), get_clock());
+  state_.input_manager->init(params_.input_channels_config);  // Initialize input manager, set subscriptions
+  state_.input_manager->setTriggerFunction(
     std::bind(&MultiObjectTracker::onTrigger, this));  // Set trigger function
+
+  // Create subscriptions
+  const size_t input_size = params_.input_channels_config.size();
+  sub_objects_array_.resize(input_size);
+  for (size_t i = 0; i < input_size; i++) {
+    const auto & channel = params_.input_channels_config[i];
+    RCLCPP_INFO(
+      get_logger(), "MultiObjectTracker::init Initializing %s input stream from %s",
+      channel.long_name.c_str(), channel.input_topic.c_str());
+
+    std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
+      func = std::bind(&InputManager::onMessage, state_.input_manager.get(), i, std::placeholders::_1);
+
+    sub_objects_array_.at(i) = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
+      channel.input_topic, rclcpp::QoS{1}, func);
+  }
 
   // ROS interface - Publisher
   tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
@@ -343,7 +359,7 @@ void MultiObjectTracker::onTrigger()
   const rclcpp::Time current_time = this->now();
   // get objects from the input manager and run process
   ObjectsList objects_list;
-  const bool is_objects_ready = input_manager_->getObjects(current_time, objects_list);
+  const bool is_objects_ready = state_.input_manager->getObjects(current_time, objects_list);
   if (!is_objects_ready) return;
 
   // process start
@@ -357,7 +373,7 @@ void MultiObjectTracker::onTrigger()
       rclcpp::Time(objects_data.header.stamp, current_time.get_clock_type());
       
     std::optional<geometry_msgs::msg::Pose> ego_pose;
-    if (const auto odometry_info = odometry_->getOdometryFromTf(measurement_time)) {
+    if (const auto odometry_info = state_.odometry->getOdometryFromTf(measurement_time)) {
       ego_pose = odometry_info->pose.pose;
     }
     
@@ -396,7 +412,7 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
   // Publish
   const rclcpp::Time current_time = this->now();
   
-  const auto tf_base_to_world = odometry_->getTransform(time);
+  const auto tf_base_to_world = state_.odometry->getTransform(time);
   
   auto output = core::get_output(time, current_time, tf_base_to_world, params_, state_, get_logger());
   
