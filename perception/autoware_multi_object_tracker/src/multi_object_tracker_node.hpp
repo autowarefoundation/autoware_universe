@@ -82,8 +82,10 @@ private:
   void onTrigger();
 
   // publish processes
-  void checkAndPublish(const rclcpp::Time & time);
-  void publish(const core::PublishData & data);
+  void publish(const rclcpp::Time & time);
+  void publishOptional(
+    const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+    const size_t tracked_objects_size);
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -265,33 +265,42 @@ void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & 
   state.processor->prune(time);
 }
 
-void get_output(
+autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger, PublishData & output)
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state)
 {
-  // Create output msg
-  output.tracked_objects.header.frame_id = params.world_frame_id;
+  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
+  tracked_objects.header.frame_id = params.world_frame_id;
   const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
-  state.processor->getTrackedObjects(object_time, output.tracked_objects);
-
-  if (params.publish_merged_objects) {
-    const auto tf_base_to_world = state.odometry->getTransform(publish_time);
-    if (tf_base_to_world) {
-      autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
-      state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
-      merged_output_msg.header.frame_id = params.ego_frame_id;
-      output.merged_objects = merged_output_msg;
-    } else {
-      RCLCPP_WARN(
-        logger, "No odometry information available at the publishing time: %.9f",
-        publish_time.seconds());
-    }
-  }
+  state.processor->getTrackedObjects(object_time, tracked_objects);
 
   state.last_published_time = current_time;
 
-  return;
+  return tracked_objects;
+}
+
+std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  const rclcpp::Logger & logger)
+{
+  if (!params.publish_merged_objects) {
+    return std::nullopt;
+  }
+
+  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
+  const auto tf_base_to_world = state.odometry->getTransform(publish_time);
+  if (tf_base_to_world) {
+    autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
+    state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
+    merged_output_msg.header.frame_id = params.ego_frame_id;
+    return merged_output_msg;
+  }
+
+  RCLCPP_WARN(
+    logger, "No odometry information available at the publishing time: %.9f",
+    publish_time.seconds());
+  return std::nullopt;
 }
 
 }  // namespace core

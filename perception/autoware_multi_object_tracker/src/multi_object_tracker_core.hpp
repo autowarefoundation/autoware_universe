@@ -90,13 +90,6 @@ struct MultiObjectTrackerInternalState
 namespace core
 {
 
-struct PublishData
-{
-  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
-  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
-  std::optional<autoware_perception_msgs::msg::TrackedObjects> tentative_objects;
-};
-
 void process_objects(
   const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
@@ -111,10 +104,14 @@ bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state);
 
-void get_output(
+autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state);
+
+std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger, PublishData & output);
+  const rclcpp::Logger & logger);
 
 void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state);
 
