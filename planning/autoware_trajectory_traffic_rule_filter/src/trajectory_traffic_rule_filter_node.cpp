@@ -98,8 +98,8 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  constexpr auto log_throttle_ms = 5000;
   if (!lanelet_map_ptr_) {
-    const auto log_throttle_ms = 5000;
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), log_throttle_ms, "waiting for lanelet_map");
     return;
   }
@@ -120,7 +120,8 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
     for (const auto & plugin : plugins_) {
       if (const auto res = plugin->is_feasible(trajectory.points); !res) {
         is_feasible = false;
-        RCLCPP_DEBUG(get_logger(), "Not feasible: %s", res.error().c_str());
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), log_throttle_ms, "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
       }
     }
