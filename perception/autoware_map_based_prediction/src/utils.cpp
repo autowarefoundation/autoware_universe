@@ -16,6 +16,7 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
@@ -241,7 +242,7 @@ PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
 }
 
 double calculateLocalLikelihood(
-  const lanelet::Lanelet & current_lanelet, const TrackedObject & object,
+  const lanelet::ConstLanelet & current_lanelet, const TrackedObject & object,
   const double sigma_lateral_offset, const double sigma_yaw_angle_deg)
 {
   const auto & obj_point = object.kinematics.pose_with_covariance.pose.position;
@@ -311,7 +312,7 @@ bool isDuplicated(
 }
 
 bool checkCloseLaneletCondition(
-  const std::pair<double, lanelet::Lanelet> & lanelet, const TrackedObject & object,
+  const std::pair<double, lanelet::ConstLanelet> & lanelet, const TrackedObject & object,
   const std::unordered_map<std::string, std::deque<RoadUser>> & road_users_history,
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet)
@@ -413,8 +414,12 @@ LaneletsData getCurrentLanelets(
     object.kinematics.pose_with_covariance.pose.position.y);
 
   // nearest lanelet
-  std::vector<std::pair<double, lanelet::Lanelet>> surrounding_lanelets =
-    lanelet::geometry::findNearest(lanelet_map_ptr->laneletLayer, search_point, 10);
+  // NOTE: Search for nearest lanelets considering 3D distances.
+  // Because lanelet::geometry::findNearest considers only 2D space, it increases computation
+  // costs when lanelets are overlapped in 3D space.
+  const std::vector<std::pair<double, lanelet::ConstLanelet>> surrounding_lanelets =
+    experimental::lanelet2_utils::find_nearest(
+      lanelet_map_ptr->laneletLayer, object.kinematics.pose_with_covariance.pose, 10);
 
   {  // Step 1. Search same directional lanelets
     // No Closest Lanelets
@@ -423,7 +428,7 @@ LaneletsData getCurrentLanelets(
     }
 
     LaneletsData object_lanelets;
-    std::optional<std::pair<double, lanelet::Lanelet>> closest_lanelet{std::nullopt};
+    std::optional<std::pair<double, lanelet::ConstLanelet>> closest_lanelet{std::nullopt};
     for (const auto & lanelet : surrounding_lanelets) {
       // Check if the close lanelets meet the necessary condition for start lanelets and
       // Check if similar lanelet is inside the object lanelet
@@ -445,8 +450,9 @@ LaneletsData getCurrentLanelets(
       constexpr double epsilon = 1e-3;
       if (lanelet.first < epsilon) {
         const auto object_lanelet = LaneletData{
-          lanelet.second, utils::calculateLocalLikelihood(
-                            lanelet.second, object, sigma_lateral_offset, sigma_yaw_angle_deg)};
+          experimental::lanelet2_utils::remove_const(lanelet.second),
+          utils::calculateLocalLikelihood(
+            lanelet.second, object, sigma_lateral_offset, sigma_yaw_angle_deg)};
         object_lanelets.push_back(object_lanelet);
       }
     }
@@ -456,7 +462,7 @@ LaneletsData getCurrentLanelets(
     }
     if (closest_lanelet) {
       return LaneletsData{LaneletData{
-        closest_lanelet->second,
+        experimental::lanelet2_utils::remove_const(closest_lanelet->second),
         utils::calculateLocalLikelihood(
           closest_lanelet->second, object, sigma_lateral_offset, sigma_yaw_angle_deg)}};
     }
