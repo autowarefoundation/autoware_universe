@@ -89,8 +89,7 @@ void InputStream::onMessage(
       // convert convex hull to bounding box
       if (!shapes::convertConvexHullToBoundingBox(object, object)) {
         RCLCPP_WARN(
-          logger_,
-          "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
+          logger_, "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
           channel_.long_name.c_str());
         continue;
       }
@@ -183,8 +182,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
     // threshold, the system time may have been reset. Reset the latest measurement time
     latest_measurement_time_ = objects_time;
     RCLCPP_WARN(
-      logger_,
-      "InputManager::updateTimingStatus %s: Resetting the latest measurement time to %f",
+      logger_, "InputManager::updateTimingStatus %s: Resetting the latest measurement time to %f",
       channel_.long_name.c_str(), objects_time.seconds());
   } else {
     // Update only if the object time is newer than the latest measurement time
@@ -245,9 +243,7 @@ InputManager::InputManager(
   latest_exported_object_time_ = clock_->now() - rclcpp::Duration::from_seconds(3.0);
 }
 
-void InputManager::init(
-  const std::vector<types::InputChannel> & input_channels,
-  const std::vector<std::string> & input_topics)
+void InputManager::init(const std::vector<types::InputChannel> & input_channels)
 {
   // Check input sizes
   input_size_ = input_channels.size();
@@ -266,8 +262,8 @@ void InputManager::init(
     is_any_spawn_enabled |= input_streams_.at(i)->isSpawnEnabled();
 
     RCLCPP_INFO(
-      logger_, "InputManager::init Initializing %s input stream from %s",
-      input_channels[i].long_name.c_str(), input_topics[i].c_str());
+      logger_, "InputManager::init Initializing %s input stream index %lu",
+      input_channels[i].long_name.c_str(), i);
   }
 
   // Check if any spawn enabled input streams

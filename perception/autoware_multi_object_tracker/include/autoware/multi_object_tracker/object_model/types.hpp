@@ -49,7 +49,8 @@ constexpr int NUM_LABELS = 8;
 // channel configuration
 struct InputChannel
 {
-  uint index;               // index of the channel
+  uint index;                                 // index of the channel
+  bool is_enabled = true;                     // enable the channel
   std::string long_name = "Detected Object";  // full name of the detection
   std::string short_name = "DET";             // abbreviation of the name
   bool is_spawn_enabled = true;               // enable spawn of the object

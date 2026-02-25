@@ -57,50 +57,43 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
 
   // define input channel parameters
+  std::array<std::string, types::max_channel_size> input_channels;
   {
-    std::array<std::string, types::max_channel_size> input_channels;
-    std::array<std::string, types::max_channel_size> input_channel_topics;
-
     input_channels.at(0) = declare_parameter<std::string>("input/detection01/channel");
-    input_channel_topics.at(0) = declare_parameter<std::string>("input/detection01/objects");
     input_channels.at(1) = declare_parameter<std::string>("input/detection02/channel");
-    input_channel_topics.at(1) = declare_parameter<std::string>("input/detection02/objects");
     input_channels.at(2) = declare_parameter<std::string>("input/detection03/channel");
-    input_channel_topics.at(2) = declare_parameter<std::string>("input/detection03/objects");
     input_channels.at(3) = declare_parameter<std::string>("input/detection04/channel");
-    input_channel_topics.at(3) = declare_parameter<std::string>("input/detection04/objects");
     input_channels.at(4) = declare_parameter<std::string>("input/detection05/channel");
-    input_channel_topics.at(4) = declare_parameter<std::string>("input/detection05/objects");
     input_channels.at(5) = declare_parameter<std::string>("input/detection06/channel");
-    input_channel_topics.at(5) = declare_parameter<std::string>("input/detection06/objects");
     input_channels.at(6) = declare_parameter<std::string>("input/detection07/channel");
-    input_channel_topics.at(6) = declare_parameter<std::string>("input/detection07/objects");
     input_channels.at(7) = declare_parameter<std::string>("input/detection08/channel");
-    input_channel_topics.at(7) = declare_parameter<std::string>("input/detection08/objects");
     input_channels.at(8) = declare_parameter<std::string>("input/detection09/channel");
-    input_channel_topics.at(8) = declare_parameter<std::string>("input/detection09/objects");
     input_channels.at(9) = declare_parameter<std::string>("input/detection10/channel");
-    input_channel_topics.at(9) = declare_parameter<std::string>("input/detection10/objects");
     input_channels.at(10) = declare_parameter<std::string>("input/detection11/channel");
-    input_channel_topics.at(10) = declare_parameter<std::string>("input/detection11/objects");
     input_channels.at(11) = declare_parameter<std::string>("input/detection12/channel");
-    input_channel_topics.at(11) = declare_parameter<std::string>("input/detection12/objects");
 
     // parse input channels
-    uint channel_index = 0;
     for (size_t i = 0; i < types::max_channel_size; i++) {
       const std::string & input_channel = input_channels.at(i);
-      const std::string & input_channel_topic = input_channel_topics.at(i);
+
+      types::InputChannel input_channel_config;
+      input_channel_config.index = static_cast<uint>(i);
+
       if (input_channel.empty() || input_channel == "none") {
+        input_channel_config.is_enabled = false;
+        input_channel_config.is_spawn_enabled = false;
+        input_channel_config.trust_existence_probability = false;
+        input_channel_config.trust_extension = false;
+        input_channel_config.trust_classification = false;
+        input_channel_config.trust_orientation = false;
+        input_channel_config.long_name = "none";
+        input_channel_config.short_name = "none";
+        params_.input_channels_config.push_back(input_channel_config);
         continue;
       }
 
-      types::InputChannel input_channel_config;
-      input_channel_config.index = channel_index;
-      channel_index++;
+      input_channel_config.is_enabled = true;
 
-      // topic name
-      params_.input_topics.push_back(input_channel_topic);
       const std::string input_channel_config_name = "input_channels." + input_channel;
       // required parameter, but can set a default value
       input_channel_config.is_spawn_enabled =
@@ -191,20 +184,25 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   ////// Create subscriptions and publishers
   // subscriptions
-  const size_t input_size = params_.input_channels_config.size();
-  sub_objects_array_.resize(input_size);
-  for (size_t i = 0; i < input_size; i++) {
-    const auto & channel = params_.input_channels_config[i];
-    RCLCPP_INFO(
-      get_logger(), "MultiObjectTracker::init Initializing %s input stream from %s",
-      channel.long_name.c_str(), params_.input_topics[i].c_str());
+  sub_objects_array_.resize(types::max_channel_size);
+  for (const auto & input_channel : params_.input_channels_config) {
+    if (!input_channel.is_enabled) {
+      continue;
+    }
+
+    const auto & index = input_channel.index;
+    std::string input_channel_topic =
+      (index < 10) ? "~/input/detection0" + std::to_string(index + 1) + "/objects"
+                   : "~/input/detection" + std::to_string(index + 1) + "/objects";
 
     std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
-      func =
-        std::bind(&InputManager::onMessage, state_.input_manager.get(), i, std::placeholders::_1);
+      func = std::bind(
+        &InputManager::onMessage, state_.input_manager.get(), input_channel.index,
+        std::placeholders::_1);
 
-    sub_objects_array_.at(i) = create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-      params_.input_topics[i], rclcpp::QoS{1}, func);
+    sub_objects_array_.at(index) =
+      create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
+        input_channel_topic, rclcpp::QoS{1}, func);
   }
 
   // publishers
