@@ -96,7 +96,7 @@ PredictedObjectKinematics convertToPredictedKinematics(
 PredictedObject convertToPredictedObject(const TrackedObject & tracked_object);
 
 double calculateLocalLikelihood(
-  const lanelet::Lanelet & current_lanelet, const TrackedObject & object,
+  const lanelet::ConstLanelet & current_lanelet, const TrackedObject & object,
   const double sigma_lateral_offset, const double sigma_yaw_angle_deg);
 
 bool isDuplicated(
@@ -107,7 +107,7 @@ bool isDuplicated(
   const PredictedPath & predicted_path, const std::vector<PredictedPath> & predicted_paths);
 
 bool checkCloseLaneletCondition(
-  const std::pair<double, lanelet::Lanelet> & lanelet, const TrackedObject & object,
+  const std::pair<double, lanelet::ConstLanelet> & lanelet, const TrackedObject & object,
   const std::unordered_map<std::string, std::deque<RoadUser>> & road_users_history,
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet);
