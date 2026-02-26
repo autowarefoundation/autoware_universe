@@ -39,7 +39,7 @@ namespace autoware::diffusion_planner
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
 : params_(params),
-  vehicle_info_(vehicle_info),
+  vehicle_spec_(vehicle_info),
   turn_indicator_manager_(
     rclcpp::Duration::from_seconds(params.turn_indicator_hold_duration),
     params.turn_indicator_keep_offset)
@@ -98,7 +98,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   Odometry kinematic_state = *ego_kinematic_state;
   if (params_.shift_x) {
     kinematic_state.pose.pose =
-      utils::shift_x(kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0);
+      utils::shift_x(kinematic_state.pose.pose, vehicle_spec_.base_link_to_center);
   }
 
   // Get transforms
@@ -155,7 +155,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
       ? utils::shift_x(
-          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+          frame_context.ego_kinematic_state.pose.pose, vehicle_spec_.base_link_to_center)
       : frame_context.ego_kinematic_state.pose.pose;
   const Eigen::Matrix4d ego_to_map_transform = utils::pose_to_matrix4d(pose_center);
   const Eigen::Matrix4d map_to_ego_transform = utils::inverse(ego_to_map_transform);
@@ -174,7 +174,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   {
     const auto ego_current_state = preprocess::create_ego_current_state(
       frame_context.ego_kinematic_state, frame_context.ego_acceleration,
-      static_cast<float>(vehicle_info_.wheel_base_m));
+      static_cast<float>(vehicle_spec_.wheel_base));
     input_data_map["ego_current_state"] =
       utils::replicate_for_batch(ego_current_state, params_.batch_size);
   }
@@ -257,12 +257,10 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 
   // ego shape
   {
-    const float wheel_base = static_cast<float>(vehicle_info_.wheel_base_m);
-    const float vehicle_length = static_cast<float>(
-      vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m + vehicle_info_.rear_overhang_m);
-    const float vehicle_width = static_cast<float>(
-      vehicle_info_.left_overhang_m + vehicle_info_.wheel_tread_m + vehicle_info_.right_overhang_m);
-    std::vector<float> single_ego_shape = {wheel_base, vehicle_length, vehicle_width};
+    const std::vector<float> single_ego_shape = {
+      static_cast<float>(vehicle_spec_.wheel_base),
+      static_cast<float>(vehicle_spec_.vehicle_length),
+      static_cast<float>(vehicle_spec_.vehicle_width)};
     input_data_map["ego_shape"] = utils::replicate_for_batch(single_ego_shape, params_.batch_size);
   }
 
@@ -313,8 +311,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
 
     if (params_.shift_x) {
       for (auto & point : trajectory.points) {
-        // TODO(sakoda): front and rear overhang should be considered for more accurate shifting.
-        point.pose = utils::shift_x(point.pose, -vehicle_info_.wheel_base_m / 2.0);
+        point.pose = utils::shift_x(point.pose, -vehicle_spec_.base_link_to_center);
       }
     }
 
@@ -348,13 +345,16 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
 
   // TurnIndicatorsCommand
-  // TODO(sakoda): Use the first logit as the main turn indicator command.
-  // There may be bugs in the current implementation.
+  // Use the first batch's logit as the main turn indicator command.
+  constexpr int64_t turn_indicator_batch_idx = 0;
+  const std::vector<float> first_turn_indicator_logit(
+    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * turn_indicator_batch_idx,
+    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (turn_indicator_batch_idx + 1));
   const int64_t prev_report = turn_indicators_history_.empty()
                                 ? TurnIndicatorsReport::DISABLE
                                 : turn_indicators_history_.back().report;
   output.turn_indicator_command =
-    turn_indicator_manager_.evaluate(turn_indicator_logit, timestamp, prev_report);
+    turn_indicator_manager_.evaluate(first_turn_indicator_logit, timestamp, prev_report);
 
   return output;
 }
@@ -369,7 +369,7 @@ DiffusionPlannerCore::get_first_traffic_light_on_route(const FrameContext & fram
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
       ? utils::shift_x(
-          frame_context.ego_kinematic_state.pose.pose, vehicle_info_.wheel_base_m / 2.0)
+          frame_context.ego_kinematic_state.pose.pose, vehicle_spec_.base_link_to_center)
       : frame_context.ego_kinematic_state.pose.pose;
 
   const double center_x = pose_center.position.x;

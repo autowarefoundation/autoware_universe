@@ -25,6 +25,7 @@
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_test_utils</depend>
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils_debug</depend>
   <depend>autoware_utils_rclcpp</depend>
@@ -34,7 +35,9 @@
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>tl_expected</depend>
 
+  <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 
