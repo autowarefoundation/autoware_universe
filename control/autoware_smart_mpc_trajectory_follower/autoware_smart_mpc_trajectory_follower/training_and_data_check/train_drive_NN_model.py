@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Class for training neural nets from driving data."""
+
 from autoware_smart_mpc_trajectory_follower.scripts import drive_functions
 from autoware_smart_mpc_trajectory_follower.training_and_data_check import (
     train_drive_NN_model_with_memory,
