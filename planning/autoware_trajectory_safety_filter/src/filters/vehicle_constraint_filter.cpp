@@ -64,9 +64,9 @@ double to_steering_angle(const TrajectoryPoint & point, const VehicleInfo & vehi
 }
 
 /**
- * @brief Convert two TrajectoryPoints to steering angle rate (rad/s)
+ * @brief Convert two TrajectoryPoints to steering rate (rad/s)
  */
-double to_steering_angle_rate(
+double to_steering_rate(
   const TrajectoryPoint & prev_point, const TrajectoryPoint & curr_point,
   const VehicleInfo & vehicle_info)
 {
@@ -101,7 +101,7 @@ void VehicleConstraintFilter::set_parameters(
   get_value("max_acceleration", params_.max_acceleration);
   get_value("max_deceleration", params_.max_deceleration);
   get_value("max_steering_angle", params_.max_steering_angle);
-  get_value("max_steering_angle_rate", params_.max_steering_angle_rate);
+  get_value("max_steering_rate", params_.max_steering_rate);
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
@@ -164,19 +164,18 @@ VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_angle(
   }
 
   return tl::make_unexpected(
-    "Trajectory violates constraint steering_angle: " + std::to_string(params_.max_steering_angle));
+    "Trajectory violates constraint steering angle: " + std::to_string(params_.max_steering_angle));
 }
 
-VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_angle_rate(
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_rate(
   const TrajectoryPoints & traj_points) const
 {
-  if (is_steering_angle_rate_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_angle_rate)) {
+  if (is_steering_rate_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_rate)) {
     return {};
   }
 
   return tl::make_unexpected(
-    "Trajectory violates constraint steering_angle_rate: " +
-    std::to_string(params_.max_steering_angle_rate));
+    "Trajectory violates constraint steering rate: " + std::to_string(params_.max_steering_rate));
 }
 
 // --- Helper functions for constraint checks ---
@@ -226,14 +225,12 @@ bool is_steering_angle_ok(
   return true;
 }
 
-bool is_steering_angle_rate_ok(
-  const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info,
-  double max_steering_angle_rate)
+bool is_steering_rate_ok(
+  const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_rate)
 {
   for (size_t i = 1; i < traj_points.size(); ++i) {
-    double steering_angle_rate =
-      to_steering_angle_rate(traj_points[i - 1], traj_points[i], vehicle_info);
-    if (steering_angle_rate > max_steering_angle_rate) {
+    double steering_rate = to_steering_rate(traj_points[i - 1], traj_points[i], vehicle_info);
+    if (steering_rate > max_steering_rate) {
       return false;
     }
   }

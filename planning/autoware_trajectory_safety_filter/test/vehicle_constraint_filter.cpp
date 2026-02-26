@@ -53,7 +53,7 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
      {"max_acceleration", 2.0},
      {"max_deceleration", 2.0},
      {"max_steering_angle", 0.5},
-     {"max_steering_angle_rate", 0.1}});
+     {"max_steering_rate", 0.1}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -146,19 +146,19 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleExceedsMax)
   EXPECT_FALSE(result.has_value());
 }
 
-TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleRateExceedsMax)
+TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
 {
-  // Create a trajectory that exceeds max steering angle rate
+  // Create a trajectory that exceeds max steering rate
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
-    create_trajectory_point(1.0, 1.0, 0.0, 5.0, 1.0, 1.0),   // Exceeds max steering angle rate
-    create_trajectory_point(2.0, 2.0, 0.0, 5.0, 3.0, 2.0)};  // Exceeds max steering angle rate
+    create_trajectory_point(1.0, 1.0, 0.0, 5.0, 1.0, 1.0),   // Exceeds max steering rate
+    create_trajectory_point(2.0, 2.0, 0.0, 5.0, 3.0, 2.0)};  // Exceeds max steering rate
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_steering_angle_rate", 0.1}});
+  filter.set_parameters({{"max_steering_rate", 0.1}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -167,9 +167,9 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleRateExceedsMax)
   EXPECT_FALSE(result.has_value());
 }
 
-// --- check_velocity(...) tests ---
+// --- is_velocity_ok(...) tests ---
 
-TEST(CheckVelocityFunctionTest, TrueWhenAllVelocitiesBelowMax)
+TEST(IsVelocityOkTest, TrueWhenAllVelocitiesBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
@@ -180,7 +180,7 @@ TEST(CheckVelocityFunctionTest, TrueWhenAllVelocitiesBelowMax)
   EXPECT_TRUE(is_velocity_ok(traj_points, max_velocity));
 }
 
-TEST(CheckVelocityFunctionTest, FalseWhenAnyVelocityAboveMax)
+TEST(IsVelocityOkTest, FalseWhenAnyVelocityAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
@@ -191,9 +191,9 @@ TEST(CheckVelocityFunctionTest, FalseWhenAnyVelocityAboveMax)
   EXPECT_FALSE(is_velocity_ok(traj_points, max_velocity));
 }
 
-// --- check_acceleration(...) tests ---
+// --- is_acceleration_ok(...) tests ---
 
-TEST(CheckAccelerationFunctionTest, TrueWhenAllAccelerationsBelowMax)
+TEST(IsAccelerationOkTest, TrueWhenAllAccelerationsBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -204,7 +204,7 @@ TEST(CheckAccelerationFunctionTest, TrueWhenAllAccelerationsBelowMax)
   EXPECT_TRUE(is_acceleration_ok(traj_points, max_acceleration));
 }
 
-TEST(CheckAccelerationFunctionTest, FalseWhenAnyAccelerationAboveMax)
+TEST(IsAccelerationOkTest, FalseWhenAnyAccelerationAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -215,9 +215,9 @@ TEST(CheckAccelerationFunctionTest, FalseWhenAnyAccelerationAboveMax)
   EXPECT_FALSE(is_acceleration_ok(traj_points, max_acceleration));
 }
 
-// --- check_deceleration(...) tests ---
+// --- is_deceleration_ok(...) tests ---
 
-TEST(CheckDecelerationFunctionTest, TrueWhenAllDecelerationsBelowMax)
+TEST(IsDecelerationOkTest, TrueWhenAllDecelerationsBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 3.0, 0.0, 0.0),
@@ -228,7 +228,7 @@ TEST(CheckDecelerationFunctionTest, TrueWhenAllDecelerationsBelowMax)
   EXPECT_TRUE(is_deceleration_ok(traj_points, max_deceleration));
 }
 
-TEST(CheckDecelerationFunctionTest, FalseWhenAnyDecelerationAboveMax)
+TEST(IsDecelerationOkTest, FalseWhenAnyDecelerationAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
@@ -239,9 +239,9 @@ TEST(CheckDecelerationFunctionTest, FalseWhenAnyDecelerationAboveMax)
   EXPECT_FALSE(is_deceleration_ok(traj_points, max_deceleration));
 }
 
-// --- check_steering_angle(...) tests ---
+// --- is_steering_angle_ok(...) tests ---
 
-TEST(CheckSteeringAngleFunctionTest, TrueWhenAllSteeringAnglesBelowMax)
+TEST(IsSteeringAngleOkTest, TrueWhenAllSteeringAnglesBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
@@ -254,7 +254,7 @@ TEST(CheckSteeringAngleFunctionTest, TrueWhenAllSteeringAnglesBelowMax)
   EXPECT_TRUE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
 }
 
-TEST(CheckSteeringAngleFunctionTest, FalseWhenAnySteeringAngleAboveMax)
+TEST(IsSteeringAngleOkTest, FalseWhenAnySteeringAngleAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
@@ -267,31 +267,31 @@ TEST(CheckSteeringAngleFunctionTest, FalseWhenAnySteeringAngleAboveMax)
   EXPECT_FALSE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
 }
 
-// --- check_steering_angle_rate(...) tests ---
+// --- is_steering_rate_ok(...) tests ---
 
-TEST(CheckSteeringAngleRateFunctionTest, TrueWhenAllSteeringAngleRatesBelowMax)
+TEST(IsSteeringRateOkTest, TrueWhenAllSteeringRatesBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 1.0, 0.0, 5.0, 0.08, 1.0),
     create_trajectory_point(2.0, 2.0, 0.0, 5.0, 0.16, 2.0)};
-  VehicleInfo vehicle_info;              // Fill in with appropriate values
-  vehicle_info.wheel_base_m = 2.5;       // Example wheelbase
-  double max_steering_angle_rate = 0.1;  // rad/s
+  VehicleInfo vehicle_info;         // Fill in with appropriate values
+  vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
+  double max_steering_rate = 0.1;   // rad/s
 
-  EXPECT_TRUE(is_steering_angle_rate_ok(traj_points, vehicle_info, max_steering_angle_rate));
+  EXPECT_TRUE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
 }
 
-TEST(CheckSteeringAngleRateFunctionTest, FalseWhenAnySteeringAngleRateAboveMax)
+TEST(IsSteeringRateOkTest, FalseWhenAnySteeringRateAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 1.0, 0.0, 5.0, 1.0, 1.0),
     create_trajectory_point(2.0, 2.0, 0.0, 5.0, 3.0, 2.0)};
-  VehicleInfo vehicle_info;              // Fill in with appropriate values
-  vehicle_info.wheel_base_m = 2.5;       // Example wheelbase
-  double max_steering_angle_rate = 0.1;  // rad/s
+  VehicleInfo vehicle_info;         // Fill in with appropriate values
+  vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
+  double max_steering_rate = 0.1;   // rad/s
 
-  EXPECT_FALSE(is_steering_angle_rate_ok(traj_points, vehicle_info, max_steering_angle_rate));
+  EXPECT_FALSE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
 }
 }  // namespace autoware::trajectory_safety_filter::plugin::testing

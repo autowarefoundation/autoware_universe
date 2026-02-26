@@ -43,7 +43,7 @@ private:
   result_t check_acceleration(const TrajectoryPoints & traj_points) const;
   result_t check_deceleration(const TrajectoryPoints & traj_points) const;
   result_t check_steering_angle(const TrajectoryPoints & traj_points) const;
-  result_t check_steering_angle_rate(const TrajectoryPoints & traj_points) const;
+  result_t check_steering_rate(const TrajectoryPoints & traj_points) const;
 
   using Checker = result_t (VehicleConstraintFilter::*)(const TrajectoryPoints &) const;
 
@@ -52,16 +52,16 @@ private:
     &VehicleConstraintFilter::check_acceleration,
     &VehicleConstraintFilter::check_deceleration,
     &VehicleConstraintFilter::check_steering_angle,
-    &VehicleConstraintFilter::check_steering_angle_rate,
+    &VehicleConstraintFilter::check_steering_rate,
   }};  //!< Array of checker functions
 
   struct Params
   {
-    double max_velocity = 10.0;            //!< m/s
-    double max_acceleration = 2.0;         //!< m/s^2
-    double max_deceleration = 2.0;         //!< m/s^2 (positive value, but represents deceleration)
-    double max_steering_angle = 0.5;       //!< rad
-    double max_steering_angle_rate = 0.1;  //!< rad/s
+    double max_velocity = 16.7;       //!< m/s
+    double max_acceleration = 5.0;    //!< m/s^2
+    double max_deceleration = 5.0;    //!< m/s^2 (positive but represents deceleration)
+    double max_steering_angle = 0.8;  //!< rad
+    double max_steering_rate = 0.3;   //!< rad/s
   };
 
   Params params_;  //!< Parameters for this filter
@@ -110,16 +110,15 @@ bool is_steering_angle_ok(
   double max_steering_angle);
 
 /**
- * @brief Check if the trajectory respects the maximum steering angle rate constraint.
+ * @brief Check if the trajectory respects the maximum steering rate constraint.
  *
  * @param traj_points Vector of trajectory points to check
- * @param vehicle_info Vehicle information needed to calculate steering angle rate
- * @param max_steering_angle_rate Maximum allowed rate of change of steering angle (rad/s)
- * @return Return true if the trajectory respects the steering angle rate constraint, false
+ * @param vehicle_info Vehicle information needed to calculate steering rate
+ * @param max_steering_rate Maximum allowed steering rate (rad/s)
+ * @return Return true if the trajectory respects the steering rate constraint, false
  * otherwise
  */
-bool is_steering_angle_rate_ok(
-  const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info,
-  double max_steering_angle_rate);
+bool is_steering_rate_ok(
+  const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_rate);
 }  // namespace autoware::trajectory_safety_filter::plugin
 #endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__VEHICLE_CONSTRAINT_FILTER_HPP_

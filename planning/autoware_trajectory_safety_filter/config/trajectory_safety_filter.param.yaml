@@ -20,8 +20,8 @@
       min_value: 2.0
 
     vehicle_constraint:
-      max_velocity: 10.0 # m/s
-      max_acceleration: 2.0 # m/s^2
-      max_deceleration: 2.0 # m/s^2 (positive value, but represents deceleration)
-      max_steering_angle: 0.5 # rad
-      max_steering_angle_rate: 0.1 # rad/s
+      max_velocity: 16.7 # m/s
+      max_acceleration: 5.0 # m/s^2
+      max_deceleration: 5.0 # m/s^2 (positive but represents deceleration)
+      max_steering_angle: 0.8 # rad
+      max_steering_rate: 0.3 # rad/s
