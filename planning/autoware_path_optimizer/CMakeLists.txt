@@ -51,3 +51,4 @@ ament_auto_package(INSTALL_TO_SHARE launch config rviz)
 
 install(PROGRAMS scripts/calculation_time_plotter.py DESTINATION lib/${PROJECT_NAME})
 install(TARGETS acados_interface LIBRARY DESTINATION lib)
+install(FILES src/acados_mpc/include/acados_interface.hpp DESTINATION include/autoware/path_optimizer)
