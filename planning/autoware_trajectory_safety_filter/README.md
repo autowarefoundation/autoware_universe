@@ -13,7 +13,7 @@ Checks applied to each trajectory:
 - Data validity: removes trajectories that contain NaNs, non‑finite numbers, inconsistent timestamps, or are too short.
 - Lane adherence: removes trajectories that will exit all lanelets within the configured look‑ahead time.
 - Collision risk: removes trajectories whose estimated time‑to‑collision with any predicted object falls below threshold in the look‑ahead time.
-- Vehicle constraint: removes trajectories that violates vehicle constraints, such as maximum velocity, acceleration, and deceleration.
+- Vehicle constraint: removes trajectories that violates vehicle constraints, such as maximum speed, acceleration, and deceleration.
 
 After these checks, the remaining trajectories, along with their original `generator_info`, are published.
 
@@ -38,7 +38,7 @@ After these checks, the remaining trajectories, along with their original `gener
 | `out_of_lane.min_value`                 | double       | 0.0     | Minimum distance [m] from lane boundary                                       |
 | `collision.time`                        | double       | 3.0     | Look-ahead time [s] for collision search                                      |
 | `collision.min_value`                   | double       | 2.0     | Minimum acceptable time to collision [s]                                      |
-| `vehicle_constraint.max_velocity`       | double       | 16.7    | Maximum allowed velocity [m/s]                                                |
+| `vehicle_constraint.max_speed`          | double       | 16.7    | Maximum allowed speed [m/s]                                                   |
 | `vehicle_constraint.max_acceleration`   | double       | 5.0     | Maximum allowed acceleration [m/s^2]                                          |
 | `vehicle_constraint.max_deceleration`   | double       | 5.0     | Maximum allowed deceleration; positive but represents deceleration [m/s^s]    |
 | `vehicle_constraint.max_steering_angle` | double       | 0.8     | Maximum allowed steering angle [rad]                                          |

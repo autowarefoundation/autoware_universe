@@ -37,9 +37,9 @@ double to_seconds(const builtin_interfaces::msg::Duration & duration)
 }
 
 /**
- * @brief Convert TrajectoryPoint to velocity (m/s)
+ * @brief Convert TrajectoryPoint to speed (m/s)
  */
-double to_velocity(const TrajectoryPoint & point)
+double to_speed(const TrajectoryPoint & point)
 {
   return std::sqrt(
     point.longitudinal_velocity_mps * point.longitudinal_velocity_mps +
@@ -51,10 +51,10 @@ double to_velocity(const TrajectoryPoint & point)
  */
 double to_acceleration(const TrajectoryPoint & prev_point, const TrajectoryPoint & curr_point)
 {
-  double prev_vel = to_velocity(prev_point);
-  double curr_vel = to_velocity(curr_point);
+  double prev_speed = to_speed(prev_point);
+  double curr_speed = to_speed(curr_point);
   double dt = to_seconds(curr_point.time_from_start) - to_seconds(prev_point.time_from_start);
-  return dt > 0 ? (curr_vel - prev_vel) / dt : 0.0;
+  return dt > 0 ? (curr_speed - prev_speed) / dt : 0.0;
 }
 
 /**
@@ -113,7 +113,7 @@ void VehicleConstraintFilter::set_parameters(
   };
 
   // Update parameters if provided, otherwise keep defaults
-  set_value("vehicle_constraint.max_velocity", params_.max_velocity);
+  set_value("vehicle_constraint.max_speed", params_.max_speed);
   set_value("vehicle_constraint.max_acceleration", params_.max_acceleration);
   set_value("vehicle_constraint.max_deceleration", params_.max_deceleration);
   set_value("vehicle_constraint.max_steering_angle", params_.max_steering_angle);
@@ -139,15 +139,15 @@ VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
   return {};
 }
 
-VehicleConstraintFilter::result_t VehicleConstraintFilter::check_velocity(
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_speed(
   const TrajectoryPoints & traj_points) const
 {
-  if (is_velocity_ok(traj_points, params_.max_velocity)) {
+  if (is_speed_ok(traj_points, params_.max_speed)) {
     return {};
   }
 
   return tl::make_unexpected(
-    "Trajectory violates constraint velocity: " + std::to_string(params_.max_velocity));
+    "Trajectory violates constraint speed: " + std::to_string(params_.max_speed));
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::check_acceleration(
@@ -196,11 +196,11 @@ VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_rate(
 
 // --- Helper functions for constraint checks ---
 
-bool is_velocity_ok(const TrajectoryPoints & traj_points, double max_velocity)
+bool is_speed_ok(const TrajectoryPoints & traj_points, double max_speed)
 {
   for (const auto & point : traj_points) {
-    double vel = to_velocity(point);
-    if (vel > max_velocity) {
+    double speed = to_speed(point);
+    if (speed > max_speed) {
       return false;
     }
   }

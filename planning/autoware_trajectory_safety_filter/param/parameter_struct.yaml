@@ -30,10 +30,10 @@ safety_filter:
       read_only: false
 
   vehicle_constraint:
-    max_velocity:
+    max_speed:
       type: double
       default_value: 16.7
-      description: Maximum allowed velocity (m/s)
+      description: Maximum allowed speed (m/s)
       read_only: false
     max_acceleration:
       type: double

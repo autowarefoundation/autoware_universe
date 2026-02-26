@@ -51,7 +51,7 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
 
   VehicleConstraintFilter filter;
   filter.set_parameters(
-    {{"vehicle_constraint.max_velocity", 10.0},
+    {{"vehicle_constraint.max_speed", 10.0},
      {"vehicle_constraint.max_acceleration", 2.0},
      {"vehicle_constraint.max_deceleration", 2.0},
      {"vehicle_constraint.max_steering_angle", 0.5},
@@ -64,19 +64,19 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
   EXPECT_TRUE(result.has_value());
 }
 
-TEST(VehicleConstraintFilterTest, InfeasibleWhenVelocityExceedsMax)
+TEST(VehicleConstraintFilterTest, InfeasibleWhenSpeedExceedsMax)
 {
-  // Create a trajectory that exceeds max velocity
+  // Create a trajectory that exceeds max speed
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 1.0, 0.0, 6.0, 0.0, 1.0),
-    create_trajectory_point(2.0, 2.0, 0.0, 11.0, 0.0, 2.0)};  // Last point exceeds max velocity
+    create_trajectory_point(2.0, 2.0, 0.0, 11.0, 0.0, 2.0)};  // Last point exceeds max speed
 
   VehicleInfo vehicle_info;
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"vehicle_constraint.max_velocity", 10.0}});
+  filter.set_parameters({{"vehicle_constraint.max_speed", 10.0}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -170,28 +170,28 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
   EXPECT_FALSE(result.has_value());
 }
 
-// --- is_velocity_ok(...) tests ---
+// --- is_speed_ok(...) tests ---
 
-TEST(IsVelocityOkTest, TrueWhenAllVelocitiesBelowMax)
+TEST(IsSpeedOkTest, TrueWhenAllSpeedsBelowMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 1.0, 0.0, 6.0, 0.0, 1.0),
     create_trajectory_point(2.0, 2.0, 0.0, 7.0, 0.0, 2.0)};
-  double max_velocity = 10.0;  // m/s
+  double max_speed = 10.0;  // m/s
 
-  EXPECT_TRUE(is_velocity_ok(traj_points, max_velocity));
+  EXPECT_TRUE(is_speed_ok(traj_points, max_speed));
 }
 
-TEST(IsVelocityOkTest, FalseWhenAnyVelocityAboveMax)
+TEST(IsSpeedOkTest, FalseWhenAnySpeedAboveMax)
 {
   TrajectoryPoints traj_points = {
     create_trajectory_point(0.0, 0.0, 0.0, 5.0, 0.0, 0.0),
     create_trajectory_point(1.0, 1.0, 0.0, 6.0, 0.0, 1.0),
     create_trajectory_point(2.0, 2.0, 0.0, 11.0, 0.0, 2.0)};
-  double max_velocity = 10.0;  // m/s
+  double max_speed = 10.0;  // m/s
 
-  EXPECT_FALSE(is_velocity_ok(traj_points, max_velocity));
+  EXPECT_FALSE(is_speed_ok(traj_points, max_speed));
 }
 
 // --- is_acceleration_ok(...) tests ---

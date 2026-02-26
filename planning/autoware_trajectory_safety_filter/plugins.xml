@@ -15,7 +15,7 @@
   <class type="autoware::trajectory_safety_filter::plugin::VehicleConstraintFilter"
     base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
     <description>
-      Filters trajectories that violate vehicle constraints such as maximum velocity, acceleration, and steering angle rate
+      Filters trajectories that violate vehicle constraints such as maximum speed, acceleration, and steering angle
     </description>
   </class>
 </library>

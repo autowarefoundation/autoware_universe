@@ -164,7 +164,7 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       params["collision.time"] = all_params.collision.time;
       params["collision.min_value"] = all_params.collision.min_value;
     } else if (name.find("VehicleConstraintFilter") != std::string::npos) {
-      params["vehicle_constraint.max_velocity"] = all_params.vehicle_constraint.max_velocity;
+      params["vehicle_constraint.max_speed"] = all_params.vehicle_constraint.max_speed;
       params["vehicle_constraint.max_acceleration"] =
         all_params.vehicle_constraint.max_acceleration;
       params["vehicle_constraint.max_deceleration"] =
