@@ -77,12 +77,6 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
     load_metric(filter);
   }
 
-  listener_->setUserCallback([this](const traffic_rule_filter::Params & params) {
-    for (const auto & plugin : plugins_) {
-      plugin->set_parameters(params);
-    }
-  });
-
   debug_processing_time_detail_pub_ =
     this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
       "~/debug/processing_time_detail_ms", 1);

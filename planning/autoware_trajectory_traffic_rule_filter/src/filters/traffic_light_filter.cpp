@@ -17,8 +17,9 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <tl_expected/expected.hpp>
 #include <rclcpp/logger.hpp>
+#include <rclcpp/logging.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/for_each.hpp>
@@ -29,6 +30,7 @@
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/LineString.h>
 
+#include <ctime>
 #include <string>
 #include <utility>
 #include <vector>
@@ -99,10 +101,6 @@ TrafficLightFilter::get_stop_lines(const lanelet::Lanelets & lanelets) const
 tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   const TrajectoryPoints & trajectory_points)
 {
-  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty() || !vehicle_info_ptr_) {
-    return {};  // Allow if no data available
-  }
-
   TrajectoryPoints trajectory;
   lanelet::BasicLineString2d trajectory_ls;
   for (const auto & p : trajectory_points) {
@@ -117,6 +115,11 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
     trajectory.push_back(p);
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
+
+  if (!lanelet_map_ || !traffic_lights_ || trajectory_ls.size() < 2 || !vehicle_info_ptr_) {
+    return tl::make_unexpected("No data available");  // Reject if no data available
+  }
+
   if (vehicle_info_ptr_->max_longitudinal_offset_m > 0.0) {
     // extend the trajectory linestring by the vehicle's longitudinal offset
     const lanelet::BasicSegment2d last_segment(

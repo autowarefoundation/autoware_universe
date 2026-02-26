@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
-#include "test_utils.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 
