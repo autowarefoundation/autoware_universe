@@ -89,7 +89,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
   auto getTrackerType = [&params](const std::string & tracker_key) -> TrackerType {
     auto tracker_name_it = params.tracker_type_map.find(tracker_key);
     if (tracker_name_it == params.tracker_type_map.end()) {
-      return TrackerType::UNKNOWN;
+      return TrackerType::POLYGON;
     }
     const std::string & tracker_name = tracker_name_it->second;
     auto it = TRACKER_TYPE_MAP.find(tracker_name);
