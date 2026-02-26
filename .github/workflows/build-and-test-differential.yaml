@@ -33,7 +33,7 @@ on:
         required: true
 
 concurrency:
-  group: build-and-test-differential-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: build-and-test-differential${{ inputs.container-suffix }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
