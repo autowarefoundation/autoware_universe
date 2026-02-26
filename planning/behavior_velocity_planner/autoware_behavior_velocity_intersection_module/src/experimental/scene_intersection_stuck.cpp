@@ -18,7 +18,6 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
@@ -237,8 +236,8 @@ bool IntersectionModule::isTargetYieldStuckVehicleType(
 bool IntersectionModule::checkStuckVehicleInIntersection(
   const PathLanelets & path_lanelets, const PlannerData & planner_data) const
 {
+  using autoware::experimental::lanelet2_utils::get_polygon_from_arc_length;
   using lanelet::geometry::length3d;
-  using lanelet::utils::getPolygonFromArcLength;
   using lanelet::utils::to2D;
 
   const bool stuck_detection_direction = [&]() {
@@ -268,12 +267,12 @@ bool IntersectionModule::checkStuckVehicleInIntersection(
       std::min(stuck_vehicle_detect_dist, length3d(path_lanelets.next.value()));
     target_polygon_length += next_arc_length;
   }
-  const auto target_polygon =
-    to2D(getPolygonFromArcLength(targets, 0, target_polygon_length)).basicPolygon();
+  const auto target_polygon_opt = get_polygon_from_arc_length(targets, 0, target_polygon_length);
 
-  if (target_polygon.empty()) {
+  if (!target_polygon_opt.has_value()) {
     return false;
   }
+  const auto & target_polygon = to2D(target_polygon_opt.value()).basicPolygon();
 
   for (const auto & p : target_polygon) {
     stuck_vehicle_detect_area.outer().emplace_back(p.x(), p.y());
