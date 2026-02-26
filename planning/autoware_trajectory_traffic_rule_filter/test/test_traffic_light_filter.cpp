@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
+#include "test_utils.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 
@@ -49,35 +50,7 @@ protected:
   // Helper to create a simple straight lanelet map with a traffic light
   void create_and_set_map(lanelet::Id light_id, double stop_line_x)
   {
-    // 1. Create Stop Line
-    lanelet::Point3d sl1(lanelet::utils::getId(), stop_line_x, -5, 0);
-    lanelet::Point3d sl2(lanelet::utils::getId(), stop_line_x, 5, 0);
-    lanelet::LineString3d stop_line(lanelet::utils::getId(), {sl1, sl2});
-
-    // 2. Create Traffic Light Shape (Dummy visual)
-    lanelet::Point3d light_pt(lanelet::utils::getId(), stop_line_x + 5, 5, 5);
-    lanelet::LineString3d light_shape(lanelet::utils::getId(), {light_pt});
-
-    // 3. Create Regulatory Element
-    auto traffic_light_re =
-      lanelet::TrafficLight::make(light_id, lanelet::AttributeMap(), {light_shape}, stop_line);
-
-    // 4. Create Lanelet Boundaries
-    lanelet::Point3d l1(lanelet::utils::getId(), 0, -5, 0);
-    lanelet::Point3d l2(lanelet::utils::getId(), 20, -5, 0);
-    lanelet::Point3d r1(lanelet::utils::getId(), 0, 5, 0);
-    lanelet::Point3d r2(lanelet::utils::getId(), 20, 5, 0);
-
-    lanelet::LineString3d left(lanelet::utils::getId(), {l1, l2});
-    lanelet::LineString3d right(lanelet::utils::getId(), {r1, r2});
-
-    // 5. Create Lanelet and add RE
-    lanelet::Lanelet lanelet(lanelet::utils::getId(), left, right);
-    lanelet.addRegulatoryElement(traffic_light_re);
-
-    // 6. Create and Set Map
-    std::shared_ptr<lanelet::LaneletMap> map = lanelet::utils::createMap({lanelet});
-    filter_->set_lanelet_map(map, nullptr, nullptr);
+    filter_->set_lanelet_map(utils::create_map(light_id, stop_line_x), nullptr, nullptr);
   }
 
   // Helper to set traffic light signal
