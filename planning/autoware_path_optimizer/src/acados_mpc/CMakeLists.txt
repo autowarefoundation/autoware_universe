@@ -67,6 +67,7 @@ target_include_directories(acados_interface PUBLIC
 )
 
 target_link_libraries(acados_interface PRIVATE acados)
+target_link_directories(acados_interface PUBLIC ${ACADOS_SOURCE_DIR}/lib)
 
 set_target_properties(acados_interface PROPERTIES
   INSTALL_RPATH "${ACADOS_SOURCE_DIR}/lib"
