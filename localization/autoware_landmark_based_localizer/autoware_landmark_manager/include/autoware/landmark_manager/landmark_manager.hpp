@@ -43,6 +43,9 @@ public:
   void parse_landmarks(
     const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr & msg,
     const std::string & target_subtype);
+  void parse_landmarks(
+    const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr & msg,
+    const std::string & target_subtype, const std::vector<std::string> target_ids);
 
   [[nodiscard]] std::vector<landmark_manager::Landmark> get_landmarks() const;
 
