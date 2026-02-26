@@ -689,10 +689,10 @@ double calc_judge_line_dist_with_jerk_limit(
                                  (2.0 * max_stop_jerk);
 
   if (v2 <= 0.0) {
-    const double t2 =
-      -1.0 *
-      (acceleration + std::sqrt(acceleration * acceleration - 2.0 * max_stop_jerk * velocity)) /
-      max_stop_jerk;
+    const double t2 = -1.0 *
+                      (max_stop_acceleration +
+                       std::sqrt(acceleration * acceleration - 2.0 * max_stop_jerk * velocity)) /
+                      max_stop_jerk;
     const double x2 =
       velocity * t2 + acceleration * std::pow(t2, 2) / 2.0 + max_stop_jerk * std::pow(t2, 3) / 6.0;
     return std::max(0.0, x1 + x2);
