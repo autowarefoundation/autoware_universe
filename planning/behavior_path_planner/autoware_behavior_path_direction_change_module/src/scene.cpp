@@ -341,7 +341,7 @@ BehaviorModuleOutput DirectionChangeModule::plan()
       has_valid_cusp_ = false;
     }
 
-    // Critical Safety Check: Lane Continuity with Reverse Exit
+    /* Critical Safety Check: Lane Continuity with Reverse Exit
     const bool safety_check_passed =
       checkLaneContinuitySafety(reference_path_, cusp_point_indices_, planner_data_->route_handler);
     if (!safety_check_passed) {
@@ -349,7 +349,7 @@ BehaviorModuleOutput DirectionChangeModule::plan()
       output.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
       output.drivable_area_info = getPreviousModuleOutput().drivable_area_info;
       return output;
-    }
+    }*/
 
     if (!planner_data_ || !planner_data_->self_odometry) {
       current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
@@ -538,6 +538,7 @@ BehaviorModuleOutput DirectionChangeModule::plan()
           int64_t max_lane_id = *std::max_element(p.lane_ids.begin(), p.lane_ids.end());
           p.lane_ids = {max_lane_id};
         }
+        output.path.points.back().point.longitudinal_velocity_mps = 0.0;
       }
       std::cout << "[DirectionChange] Publishing REVERSE segment: " << output.path.points.size()
                 << " points (indices " << c_start << "-" << c_end << ")" << std::endl;

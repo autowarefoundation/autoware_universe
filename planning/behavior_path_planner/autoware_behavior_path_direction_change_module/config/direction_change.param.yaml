@@ -15,7 +15,7 @@
       # Detection of direction change points in path
       # ========================================
       cusp_detection_angle_threshold_deg: 90.0  # [deg] Angle threshold to detect cusp point
-      cusp_detection_distance_threshold: 2.0  # [m] Distance threshold to detect approaching cusp
+      cusp_detection_distance_threshold: 0.2  # [m] Distance threshold to detect approaching cusp
       cusp_detection_distance_start_approaching: 10.0  # [m] Distance to start approaching cusp (transition to APPROACHING_CUSP)
 
       # ========================================

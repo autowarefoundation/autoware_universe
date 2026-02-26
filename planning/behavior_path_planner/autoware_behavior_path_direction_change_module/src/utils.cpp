@@ -97,30 +97,6 @@ void reverseOrientationAtCusps(PathWithLaneId * path, const std::vector<size_t> 
       ++reversed_point_count;
     }
   }
-
-  // TODO(shin.sato): Future enhancement - velocity reversal for full compatibility with downstream
-  // modules
-  //       Some downstream modules (e.g., motion_velocity_planner) use isDrivingForwardWithTwist()
-  //       which checks velocity signs first. For full compatibility, consider also reversing
-  //       velocity signs (negative for reverse segments) in addition to orientation reversal.
-  //       This would ensure compatibility with both geometry-based and velocity-based direction
-  //       detection.
-  //
-  //       Implementation suggestion:
-  //       void applyVelocityReversal(PathWithLaneId * path, const std::vector<size_t> &
-  //       cusp_indices)
-  //       {
-  //         for (size_t i = 0; i < path->points.size(); ++i) {
-  //           bool is_reversed = false;
-  //           for (const auto & cusp_idx : cusp_indices) {
-  //             if (i > cusp_idx) { is_reversed = !is_reversed; }
-  //           }
-  //           if (is_reversed) {
-  //             path->points[i].point.longitudinal_velocity_mps =
-  //               -std::abs(path->points[i].point.longitudinal_velocity_mps);
-  //           }
-  //         }
-  //       }
 }
 
 std::vector<size_t> detectLaneBoundaries(const PathWithLaneId & path)
@@ -178,9 +154,9 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
     for (const auto & lane_id : pt.lane_ids) {
       try {
         const auto lanelet = route_handler->getLaneletsFromId(lane_id);
-        if (!hasDirectionChangeAreaTag(lanelet)) {
+        /*if (!hasDirectionChangeAreaTag(lanelet)) {
           continue;
-        }
+        }*/
         if (ordered_lane_ids.empty() || ordered_lane_ids.back() != lane_id) {
           ordered_lane_ids.push_back(lane_id);
         }
@@ -219,7 +195,9 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
       const size_t goal_idx = goal_idx_opt;
       out.points.resize(goal_idx + 1);
       // if (!out.points.empty()) {
-      out.points.back().point.pose = goal_pose;
+      out.points.back().point.pose.position.x = goal_pose.position.x;
+      out.points.back().point.pose.position.y = goal_pose.position.y;
+      out.points.back().point.pose.position.z = goal_pose.position.z;
       out.points.back().point.longitudinal_velocity_mps = 0.0;
       //}
     }
