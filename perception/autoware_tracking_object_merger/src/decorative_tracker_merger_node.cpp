@@ -25,8 +25,6 @@
 
 #include <boost/optional.hpp>
 
-#include <glog/logging.h>
-
 #include <chrono>
 #include <memory>
 #include <string>
@@ -93,12 +91,6 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
   tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_)
 {
-  // glog for debug
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("decorative_object_merger_node");
-    google::InstallFailureSignalHandler();
-  }
-
   // Subscriber
   sub_main_objects_ = create_subscription<TrackedObjects>(
     "input/main_object", rclcpp::QoS{1},
