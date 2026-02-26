@@ -64,8 +64,7 @@ void cut_predicted_path_footprint(
 
 /// @brief calculate the predicted path footprints of an object
 void calculate_predicted_path_footprints(
-  Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const Parameters & params);
+  Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object);
 
 /// @brief calculate the first index of a predicted path that crosses a cut line in the map data
 std::optional<size_t> get_cut_predicted_path_index(
@@ -81,7 +80,8 @@ void filter_predicted_paths(
 std::vector<Object> prepare_dynamic_objects(
   const std::vector<std::shared_ptr<motion_velocity_planner::PlannerData::Object>> & objects,
   const TrajectoryCornerFootprint & ego_trajectory,
-  const ObjectDecisionsTracker & previous_decisions, const FilteringDataPerLabel & filtering_data,
+  const ObjectDecisionsTracker & previous_decisions,
+  const ObjectDetectionTracker & detection_tracker, const FilteringDataPerLabel & filtering_data,
   const Parameters & params);
 }  // namespace autoware::motion_velocity_planner::run_out
 
