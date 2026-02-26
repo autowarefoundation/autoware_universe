@@ -86,31 +86,26 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {"bicycle_tracker", TrackerType::BICYCLE},
     {"pass_through_tracker", TrackerType::PASS_THROUGH}};
 
-  auto getTrackerType = [](const std::string & tracker_name) -> TrackerType {
+  auto getTrackerType = [&params](const std::string & tracker_key) -> TrackerType {
+    auto tracker_name_it = params.tracker_type_map.find(tracker_key);
+    if (tracker_name_it == params.tracker_type_map.end()) {
+      return TrackerType::UNKNOWN;
+    }
+    const std::string & tracker_name = tracker_name_it->second;
     auto it = TRACKER_TYPE_MAP.find(tracker_name);
     return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
   };
 
   // Set the tracker map for processor config
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::CAR, getTrackerType(params.tracker_type_map.at("car_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::TRUCK, getTrackerType(params.tracker_type_map.at("truck_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::BUS, getTrackerType(params.tracker_type_map.at("bus_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::TRAILER, getTrackerType(params.tracker_type_map.at("trailer_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(
-      Label::PEDESTRIAN, getTrackerType(params.tracker_type_map.at("pedestrian_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::BICYCLE, getTrackerType(params.tracker_type_map.at("bicycle_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(
-      Label::MOTORCYCLE, getTrackerType(params.tracker_type_map.at("motorcycle_tracker"))));
-  params.processor_config.tracker_map.insert(
-    std::make_pair(Label::UNKNOWN, TrackerType::UNKNOWN));  // Default for unknown objects
-
+  params.processor_config.tracker_map = {
+    {Label::CAR, getTrackerType("car_tracker")},
+    {Label::TRUCK, getTrackerType("truck_tracker")},
+    {Label::BUS, getTrackerType("bus_tracker")},
+    {Label::TRAILER, getTrackerType("trailer_tracker")},
+    {Label::PEDESTRIAN, getTrackerType("pedestrian_tracker")},
+    {Label::BICYCLE, getTrackerType("bicycle_tracker")},
+    {Label::MOTORCYCLE, getTrackerType("motorcycle_tracker")},
+    {Label::UNKNOWN, TrackerType::UNKNOWN}};
   // Set the pruning thresholds for processor config
   for (size_t i = 0; i < params.pruning_giou_thresholds.size(); ++i) {
     const auto label = static_cast<LabelType>(i);
