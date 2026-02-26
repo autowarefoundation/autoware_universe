@@ -177,7 +177,7 @@ TEST(CheckVelocityFunctionTest, TrueWhenAllVelocitiesBelowMax)
     create_trajectory_point(2.0, 2.0, 0.0, 7.0, 0.0, 2.0)};
   double max_velocity = 10.0;  // m/s
 
-  EXPECT_TRUE(check_velocity(traj_points, max_velocity));
+  EXPECT_TRUE(is_velocity_ok(traj_points, max_velocity));
 }
 
 TEST(CheckVelocityFunctionTest, FalseWhenAnyVelocityAboveMax)
@@ -188,7 +188,7 @@ TEST(CheckVelocityFunctionTest, FalseWhenAnyVelocityAboveMax)
     create_trajectory_point(2.0, 2.0, 0.0, 11.0, 0.0, 2.0)};
   double max_velocity = 10.0;  // m/s
 
-  EXPECT_FALSE(check_velocity(traj_points, max_velocity));
+  EXPECT_FALSE(is_velocity_ok(traj_points, max_velocity));
 }
 
 // --- check_acceleration(...) tests ---
@@ -201,7 +201,7 @@ TEST(CheckAccelerationFunctionTest, TrueWhenAllAccelerationsBelowMax)
     create_trajectory_point(2.0, 2.0, 0.0, 2.0, 0.0, 2.0)};
   double max_acceleration = 2.0;  // m/s^2
 
-  EXPECT_TRUE(check_acceleration(traj_points, max_acceleration));
+  EXPECT_TRUE(is_acceleration_ok(traj_points, max_acceleration));
 }
 
 TEST(CheckAccelerationFunctionTest, FalseWhenAnyAccelerationAboveMax)
@@ -212,7 +212,7 @@ TEST(CheckAccelerationFunctionTest, FalseWhenAnyAccelerationAboveMax)
     create_trajectory_point(2.0, 2.0, 0.0, 3.5, 0.0, 2.0)};
   double max_acceleration = 2.0;  // m/s^2
 
-  EXPECT_FALSE(check_acceleration(traj_points, max_acceleration));
+  EXPECT_FALSE(is_acceleration_ok(traj_points, max_acceleration));
 }
 
 // --- check_deceleration(...) tests ---
@@ -225,7 +225,7 @@ TEST(CheckDecelerationFunctionTest, TrueWhenAllDecelerationsBelowMax)
     create_trajectory_point(2.0, 2.0, 0.0, 1.0, 0.0, 2.0)};
   double max_deceleration = 2.0;  // m/s^2
 
-  EXPECT_TRUE(check_deceleration(traj_points, max_deceleration));
+  EXPECT_TRUE(is_deceleration_ok(traj_points, max_deceleration));
 }
 
 TEST(CheckDecelerationFunctionTest, FalseWhenAnyDecelerationAboveMax)
@@ -236,7 +236,7 @@ TEST(CheckDecelerationFunctionTest, FalseWhenAnyDecelerationAboveMax)
     create_trajectory_point(2.0, 2.0, 0.0, 0.0, 0.0, 2.0)};
   double max_deceleration = 2.0;  // m/s^2
 
-  EXPECT_FALSE(check_deceleration(traj_points, max_deceleration));
+  EXPECT_FALSE(is_deceleration_ok(traj_points, max_deceleration));
 }
 
 // --- check_steering_angle(...) tests ---
@@ -251,7 +251,7 @@ TEST(CheckSteeringAngleFunctionTest, TrueWhenAllSteeringAnglesBelowMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_angle = 0.5;  // rad
 
-  EXPECT_TRUE(check_steering_angle(traj_points, vehicle_info, max_steering_angle));
+  EXPECT_TRUE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
 }
 
 TEST(CheckSteeringAngleFunctionTest, FalseWhenAnySteeringAngleAboveMax)
@@ -264,7 +264,7 @@ TEST(CheckSteeringAngleFunctionTest, FalseWhenAnySteeringAngleAboveMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
   double max_steering_angle = 0.5;  // rad
 
-  EXPECT_FALSE(check_steering_angle(traj_points, vehicle_info, max_steering_angle));
+  EXPECT_FALSE(is_steering_angle_ok(traj_points, vehicle_info, max_steering_angle));
 }
 
 // --- check_steering_angle_rate(...) tests ---
@@ -279,7 +279,7 @@ TEST(CheckSteeringAngleRateFunctionTest, TrueWhenAllSteeringAngleRatesBelowMax)
   vehicle_info.wheel_base_m = 2.5;       // Example wheelbase
   double max_steering_angle_rate = 0.1;  // rad/s
 
-  EXPECT_TRUE(check_steering_angle_rate(traj_points, vehicle_info, max_steering_angle_rate));
+  EXPECT_TRUE(is_steering_angle_rate_ok(traj_points, vehicle_info, max_steering_angle_rate));
 }
 
 TEST(CheckSteeringAngleRateFunctionTest, FalseWhenAnySteeringAngleRateAboveMax)
@@ -292,6 +292,6 @@ TEST(CheckSteeringAngleRateFunctionTest, FalseWhenAnySteeringAngleRateAboveMax)
   vehicle_info.wheel_base_m = 2.5;       // Example wheelbase
   double max_steering_angle_rate = 0.1;  // rad/s
 
-  EXPECT_FALSE(check_steering_angle_rate(traj_points, vehicle_info, max_steering_angle_rate));
+  EXPECT_FALSE(is_steering_angle_rate_ok(traj_points, vehicle_info, max_steering_angle_rate));
 }
 }  // namespace autoware::trajectory_safety_filter::plugin::testing

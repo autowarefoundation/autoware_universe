@@ -16,8 +16,10 @@
 
 #include <builtin_interfaces/msg/duration.hpp>
 
+#include <array>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::trajectory_safety_filter::plugin
 {
@@ -102,32 +104,84 @@ void VehicleConstraintFilter::set_parameters(
   get_value("max_steering_angle_rate", params_.max_steering_angle_rate);
 }
 
-tl::expected<void, std::string> VehicleConstraintFilter::is_feasible(
+VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext &)
 {
   if (!vehicle_info_ptr_) {
     return tl::make_unexpected("Vehicle info not set");
   }
 
-  // NOTE: Feasibility decision logic might be more complex in the future, but for now we just check
-  // all constraints and return false if any are violated
-  bool is_feasible =
-    check_velocity(traj_points, params_.max_velocity) &&
-    check_acceleration(traj_points, params_.max_acceleration) &&
-    check_deceleration(traj_points, params_.max_deceleration) &&
-    check_steering_angle(traj_points, *vehicle_info_ptr_, params_.max_steering_angle) &&
-    check_steering_angle_rate(traj_points, *vehicle_info_ptr_, params_.max_steering_angle_rate);
-
-  if (!is_feasible) {
-    return tl::make_unexpected("Trajectory violates vehicle constraints");
+  // NOTE: Feasibility decision logic might be more complex in the future, but for now we just
+  // check all constraints and return false if any are violated
+  for (const auto & checker : checkers_) {
+    const auto result = (this->*checker)(traj_points);
+    if (!result) {
+      return result;
+    }
   }
 
   return {};
 }
 
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_velocity(
+  const TrajectoryPoints & traj_points) const
+{
+  if (is_velocity_ok(traj_points, params_.max_velocity)) {
+    return {};
+  }
+
+  return tl::make_unexpected(
+    "Trajectory violates constraint velocity: " + std::to_string(params_.max_velocity));
+}
+
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_acceleration(
+  const TrajectoryPoints & traj_points) const
+{
+  if (is_acceleration_ok(traj_points, params_.max_acceleration)) {
+    return {};
+  }
+
+  return tl::make_unexpected(
+    "Trajectory violates constraint acceleration: " + std::to_string(params_.max_acceleration));
+}
+
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_deceleration(
+  const TrajectoryPoints & traj_points) const
+{
+  if (is_deceleration_ok(traj_points, params_.max_deceleration)) {
+    return {};
+  }
+
+  return tl::make_unexpected(
+    "Trajectory violates constraint deceleration: " + std::to_string(params_.max_deceleration));
+}
+
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_angle(
+  const TrajectoryPoints & traj_points) const
+{
+  if (is_steering_angle_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_angle)) {
+    return {};
+  }
+
+  return tl::make_unexpected(
+    "Trajectory violates constraint steering_angle: " + std::to_string(params_.max_steering_angle));
+}
+
+VehicleConstraintFilter::result_t VehicleConstraintFilter::check_steering_angle_rate(
+  const TrajectoryPoints & traj_points) const
+{
+  if (is_steering_angle_rate_ok(traj_points, *vehicle_info_ptr_, params_.max_steering_angle_rate)) {
+    return {};
+  }
+
+  return tl::make_unexpected(
+    "Trajectory violates constraint steering_angle_rate: " +
+    std::to_string(params_.max_steering_angle_rate));
+}
+
 // --- Helper functions for constraint checks ---
 
-bool check_velocity(const TrajectoryPoints & traj_points, double max_velocity)
+bool is_velocity_ok(const TrajectoryPoints & traj_points, double max_velocity)
 {
   for (const auto & point : traj_points) {
     double vel = to_velocity(point);
@@ -138,7 +192,7 @@ bool check_velocity(const TrajectoryPoints & traj_points, double max_velocity)
   return true;
 }
 
-bool check_acceleration(const TrajectoryPoints & traj_points, double max_acceleration)
+bool is_acceleration_ok(const TrajectoryPoints & traj_points, double max_acceleration)
 {
   for (size_t i = 1; i < traj_points.size(); ++i) {
     double acc = to_acceleration(traj_points[i - 1], traj_points[i]);
@@ -149,7 +203,7 @@ bool check_acceleration(const TrajectoryPoints & traj_points, double max_acceler
   return true;
 }
 
-bool check_deceleration(const TrajectoryPoints & traj_points, double max_deceleration)
+bool is_deceleration_ok(const TrajectoryPoints & traj_points, double max_deceleration)
 {
   for (size_t i = 1; i < traj_points.size(); ++i) {
     double dec = to_acceleration(traj_points[i - 1], traj_points[i]);
@@ -160,7 +214,7 @@ bool check_deceleration(const TrajectoryPoints & traj_points, double max_deceler
   return true;
 }
 
-bool check_steering_angle(
+bool is_steering_angle_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_angle)
 {
   for (const auto & point : traj_points) {
@@ -172,7 +226,7 @@ bool check_steering_angle(
   return true;
 }
 
-bool check_steering_angle_rate(
+bool is_steering_angle_rate_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info,
   double max_steering_angle_rate)
 {
