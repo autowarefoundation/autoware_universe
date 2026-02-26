@@ -2,6 +2,13 @@
 Changelog for package autoware_lane_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(lanelet2_extension): deprecate some functions in query (2) (`#11998 <https://github.com/autowarefoundation/autoware_universe/issues/11998>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

@@ -2,6 +2,18 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning_validator): reset last_valid_trajectory when receiving new route   (`#11836 <https://github.com/autowarefoundation/autoware_universe/issues/11836>`_)
+  * fix(planning_validator): reset last_valid_trajectory when receiving new route
+  * skip check_traject_shift when ego stops
+  * fix unit test failure
+  * use ivehicle_stop_checker
+  ---------
+  Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

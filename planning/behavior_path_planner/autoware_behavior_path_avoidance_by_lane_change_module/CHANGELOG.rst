@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_path_avoidance_by_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(behavior_path_planner): fix funcArgNamesDifferent (`#11981 <https://github.com/autowarefoundation/autoware_universe/issues/11981>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
 0.49.0 (2025-12-30)
 -------------------
 

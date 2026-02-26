@@ -18,11 +18,12 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
 #include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -89,6 +90,34 @@ std::optional<lanelet::Polygon3d> getPolygonByPoint(
     }
   }
   return std::nullopt;
+}
+
+geometry_msgs::msg::Pose to_geom_msg_pose(
+  const lanelet::BasicPoint3d & src_point, const lanelet::ConstLanelet & target_lane)
+{
+  const auto point = experimental::lanelet2_utils::to_ros(src_point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
+  geometry_msgs::msg::Pose pose;
+  pose.position = point;
+  tf2::Quaternion quat;
+  quat.setRPY(0, 0, yaw);
+  pose.orientation = tf2::toMsg(quat);
+  return pose;
+}
+
+geometry_msgs::msg::Pose to_geom_msg_pose(
+  const lanelet::BasicPoint2d & src_point, const lanelet::ConstLanelet & target_lane)
+{
+  const auto point = experimental::lanelet2_utils::to_ros(src_point);
+  const auto yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
+    target_lane, autoware::experimental::lanelet2_utils::from_ros(point).basicPoint());
+  geometry_msgs::msg::Pose pose;
+  pose.position = point;
+  tf2::Quaternion quat;
+  quat.setRPY(0, 0, yaw);
+  pose.orientation = tf2::toMsg(quat);
+  return pose;
 }
 
 double l2Norm(const Vector3 vector)
@@ -401,7 +430,7 @@ bool set_goal(
 const Pose refineGoal(const Pose & goal, const lanelet::ConstLanelet & goal_lanelet)
 {
   // return goal;
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal.position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(goal.position);
   const double distance = boost::geometry::distance(
     goal_lanelet.polygon2d().basicPolygon(), lanelet::utils::to2D(lanelet_point).basicPoint());
   if (distance < std::numeric_limits<double>::epsilon()) {
@@ -509,9 +538,10 @@ bool isEgoOutOfRoute(
     closest_road_lane.id() == goal_lane.id() &&
     isInLaneletWithYawThreshold(self_pose, goal_lane, yaw_threshold)) {
     constexpr double buffer = 1.0;
-    const auto ego_arc_coord = lanelet::utils::getArcCoordinates({goal_lane}, self_pose);
-    const auto goal_arc_coord =
-      lanelet::utils::getArcCoordinates({goal_lane}, route_handler->getGoalPose());
+    const auto ego_arc_coord =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lane}, self_pose);
+    const auto goal_arc_coord = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      {goal_lane}, route_handler->getGoalPose());
     if (ego_arc_coord.length > goal_arc_coord.length + buffer) {
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("behavior_path_planner").get_child("util"), "ego pose is beyond goal");
@@ -547,7 +577,13 @@ bool isEgoWithinOriginalLane(
   const lanelet::ConstLanelets & current_lanes, const Pose & current_pose,
   const BehaviorPathPlannerParameters & common_param, const double outer_margin)
 {
-  const auto combined_lane = lanelet::utils::combineLaneletsShape(current_lanes);
+  const auto combined_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(current_lanes);
+  if (!combined_lane_opt.has_value()) {
+    // if current_lanes is empty, ego is out of lane.
+    return false;
+  }
+  const auto & combined_lane = combined_lane_opt.value();
   const auto lane_polygon = combined_lane.polygon2d().basicPolygon();
   return isEgoWithinOriginalLane(lane_polygon, current_pose, common_param, outer_margin);
 }
@@ -636,7 +672,8 @@ std::optional<lanelet::ConstLanelet> getLeftLanelet(
 // generate drivable area by expanding path for freespace
 double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLanelets & lanelets)
 {
-  const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
+  const auto & arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, current_pose);
   const double lanelet_length = lanelet::geometry::length3d(lanelet::LaneletSequence(lanelets));
   return lanelet_length - arc_coordinates.length;
 }
@@ -644,7 +681,8 @@ double getDistanceToEndOfLane(const Pose & current_pose, const lanelet::ConstLan
 double getDistanceToNextIntersection(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets)
 {
-  const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
+  const auto & arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, current_pose);
 
   const auto current_lanelet_opt =
     experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
@@ -792,7 +830,8 @@ std::optional<double> calc_distance_to_next_turn_direction_lane(
   }
 
   const auto distance_covered =
-    lanelet::utils::getArcCoordinates({*current_llt_itr}, current_pose).length;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates({*current_llt_itr}, current_pose)
+      .length;
   const auto remaining_dist_on_current_lane =
     lanelet::geometry::length3d(*current_llt_itr) - distance_covered;
   const auto dist_to_next_turn_direction_lane = std::accumulate(
@@ -806,7 +845,8 @@ double getDistanceToCrosswalk(
   const Pose & current_pose, const lanelet::ConstLanelets & lanelets,
   const lanelet::routing::RoutingGraphContainer & overall_graphs)
 {
-  const auto & arc_coordinates = lanelet::utils::getArcCoordinates(lanelets, current_pose);
+  const auto & arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, current_pose);
 
   const auto current_lanelet_opt =
     experimental::lanelet2_utils::get_closest_lanelet(lanelets, current_pose);
@@ -852,7 +892,7 @@ double getDistanceToCrosswalk(
             pose_point.position.x = point.x();
             pose_point.position.y = point.y();
             const lanelet::ArcCoordinates & arc_crosswalk =
-              lanelet::utils::getArcCoordinates({llt}, pose_point);
+              autoware::experimental::lanelet2_utils::get_arc_coordinates({llt}, pose_point);
 
             const double distance_to_crosswalk = arc_crosswalk.length;
             if (distance_to_crosswalk < min_distance_to_crosswalk) {
@@ -874,8 +914,10 @@ double getDistanceToCrosswalk(
 double getSignedDistance(
   const Pose & current_pose, const Pose & goal_pose, const lanelet::ConstLanelets & lanelets)
 {
-  const auto arc_current = lanelet::utils::getArcCoordinates(lanelets, current_pose);
-  const auto arc_goal = lanelet::utils::getArcCoordinates(lanelets, goal_pose);
+  const auto arc_current =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, current_pose);
+  const auto arc_goal =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, goal_pose);
 
   return arc_goal.length - arc_current.length;
 }
@@ -923,7 +965,7 @@ PathPointWithLaneId insertStopPoint(const double length, PathWithLaneId & path)
 double getSignedDistanceFromLaneBoundary(
   const lanelet::ConstLanelet & lanelet, const Point & position, bool left_side)
 {
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(position);
   const auto & boundary_line_2d = left_side ? lanelet.leftBound2d() : lanelet.rightBound2d();
   const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
     boundary_line_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
@@ -970,7 +1012,13 @@ std::optional<double> getSignedDistanceFromBoundary(
     front_corner_point = autoware_utils::transform_point(front_right, vehicle_pose);
   }
 
-  const auto combined_lane = lanelet::utils::combineLaneletsShape(lanelets);
+  const auto combined_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets);
+  if (!combined_lane_opt.has_value()) {
+    // if lanelets is empty, return nullopt
+    return std::nullopt;
+  }
+  const auto & combined_lane = combined_lane_opt.value();
   const auto & bound_line_2d = left_side ? lanelet::utils::to2D(combined_lane.leftBound3d())
                                          : lanelet::utils::to2D(combined_lane.rightBound3d());
 
@@ -988,8 +1036,8 @@ std::optional<double> getSignedDistanceFromBoundary(
     double min_distance = std::numeric_limits<double>::max();
 
     for (size_t i = 0; i < bound_line_2d.size() - 1; i++) {
-      const Point p1 = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i]);
-      const Point p2 = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i + 1]);
+      const Point p1 = experimental::lanelet2_utils::to_ros(bound_line_2d[i]);
+      const Point p2 = experimental::lanelet2_utils::to_ros(bound_line_2d[i + 1]);
 
       const Point inverse_p1 = autoware_utils::inverse_transform_point(p1, vehicle_corner_pose);
       const Point inverse_p2 = autoware_utils::inverse_transform_point(p2, vehicle_corner_pose);
@@ -1049,7 +1097,7 @@ std::optional<double> getSignedDistanceFromBoundary(
   for (size_t i = rear_lateral_distance_with_idx.value().second + 1;
        i < front_lateral_distance_with_idx.value().second; i++) {
     Pose bound_pose;
-    bound_pose.position = lanelet::utils::conversion::toGeomMsgPt(bound_line_2d[i]);
+    bound_pose.position = experimental::lanelet2_utils::to_ros(bound_line_2d[i]);
     bound_pose.orientation = vehicle_pose.orientation;
 
     const Point inverse_rear_point =
@@ -1074,15 +1122,18 @@ double getArcLengthToTargetLanelet(
   const lanelet::ConstLanelets & lanelet_sequence, const lanelet::ConstLanelet & target_lane,
   const Pose & pose)
 {
-  const auto arc_pose = lanelet::utils::getArcCoordinates(lanelet_sequence, pose);
+  const auto arc_pose =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelet_sequence, pose);
 
   const auto target_center_line = target_lane.centerline().basicLineString();
 
   const auto front_pose = to_geom_msg_pose(target_center_line.front(), target_lane);
   const auto back_pose = to_geom_msg_pose(target_center_line.back(), target_lane);
 
-  const auto arc_front = lanelet::utils::getArcCoordinates(lanelet_sequence, front_pose);
-  const auto arc_back = lanelet::utils::getArcCoordinates(lanelet_sequence, back_pose);
+  const auto arc_front =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelet_sequence, front_pose);
+  const auto arc_back =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelet_sequence, back_pose);
 
   return std::max(
     std::min(arc_front.length - arc_pose.length, arc_back.length - arc_pose.length), 0.0);
@@ -1175,7 +1226,8 @@ PathWithLaneId getCenterLinePath(
     return reference_path;
   }
 
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(lanelet_sequence, pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelet_sequence, pose);
   const double s = arc_coordinates.length;
   const double s_backward = std::max(0., s - backward_path_length);
   double s_forward = s + forward_path_length;
@@ -1187,8 +1239,8 @@ PathWithLaneId getCenterLinePath(
   }
 
   if (route_handler.isInGoalRouteSection(lanelet_sequence.back())) {
-    const auto goal_arc_coordinates =
-      lanelet::utils::getArcCoordinates(lanelet_sequence, route_handler.getGoalPose());
+    const auto goal_arc_coordinates = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+      lanelet_sequence, route_handler.getGoalPose());
     s_forward = std::clamp(s_forward, 0.0, goal_arc_coordinates.length);
   }
 
@@ -1297,6 +1349,12 @@ lanelet::ConstLanelets getCurrentLanesFromPath(
              front_lane_ids.end();
     });
   };
+
+  // if current lanes already have front lanes, return as is
+  if (have_front_lanes(current_lanes)) {
+    return current_lanes;
+  }
+
   auto extended_lanes = current_lanes;
   while (rclcpp::ok()) {
     const size_t pre_extension_size = extended_lanes.size();  // Get existing size before extension
@@ -1520,7 +1578,8 @@ std::vector<lanelet::ConstLanelets> getPrecedingLanelets(
     return {};
   }
 
-  const auto arc_length = lanelet::utils::getArcCoordinates(target_lanes, current_pose);
+  const auto arc_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, current_pose);
 
   if (arc_length.length >= backward_length) {
     return {};

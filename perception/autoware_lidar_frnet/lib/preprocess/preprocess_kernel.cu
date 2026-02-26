@@ -51,7 +51,7 @@ PreprocessCuda::PreprocessCuda(const utils::PreprocessingParams & params, cudaSt
 
 struct alignas(8) half4
 {
-  __device__ half4() = default;
+  half4() = default;
   __device__ half4(__half x, __half y, __half z, __half w) : x(x), y(y), z(z), w(w) {}
 
   __half x, y, z, w;

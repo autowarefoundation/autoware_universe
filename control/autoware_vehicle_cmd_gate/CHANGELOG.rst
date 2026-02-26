@@ -2,6 +2,14 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(vehicle_cmd_gate): fix funcArgNamesDifferent (`#11977 <https://github.com/autowarefoundation/autoware_universe/issues/11977>`_)
+  fix(vehicle_cmd_gate):
+* feat: control : fix contol packages compile error when using ros2 jazzy (`#11556 <https://github.com/autowarefoundation/autoware_universe/issues/11556>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe, 心刚
+
 0.49.0 (2025-12-30)
 -------------------
 

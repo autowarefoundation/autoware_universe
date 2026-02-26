@@ -29,6 +29,8 @@
       measurement_noise_r_angle: 0.00005
       min_covariance_angle: 1e-11
       decay_coefficient: 0.99999998
+      samples_in_bounds_to_init: 250
+      max_reinitialization_retries: 5
 
     scale_imu_injection:
       modify_imu_scale: false

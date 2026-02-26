@@ -2,6 +2,32 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(lane_change): fix incorrect activation of lane change module (`#12039 <https://github.com/autowarefoundation/autoware_universe/issues/12039>`_)
+  * refactor code to get lc target lane, ignore lanes behind ego
+  * check if current lanes has front lane before extending
+  * Apply suggestion from @zulfaqar-azmi-t4
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+  * use adjacentLeft/Right to get target lane for intersection lanes
+  ---------
+  Co-authored-by: Zulfaqar Azmi <93502286+zulfaqar-azmi-t4@users.noreply.github.com>
+* refactor(behavior_path_planner node, common, sampling_planner): replace getClosesetLanelet to handle invalid value (`#12017 <https://github.com/autowarefoundation/autoware_universe/issues/12017>`_)
+* feat(dynamic drivable area expansion): support linestring subtypes (`#11871 <https://github.com/autowarefoundation/autoware_universe/issues/11871>`_)
+* fix(behavior_path_planner_common): add missing boost includes (`#11924 <https://github.com/autowarefoundation/autoware_universe/issues/11924>`_)
+* docs(bpp): revise safety check document (`#11842 <https://github.com/autowarefoundation/autoware_universe/issues/11842>`_)
+  * docs(bpp): revise safety check document
+  * docs(bpp): additional revision
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/README.md
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  * Link  safety check to common safety check explanation
+  ---------
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+* feat(behavior_path_planner_common,turn_signal_decider): add turn_signal_path_backward_length parametor (`#11829 <https://github.com/autowarefoundation/autoware_universe/issues/11829>`_)
+  feat(turn_signal): add backward length parameter for turn signal detection
+* Contributors: Mamoru Sobue, Maxime CLEMENT, Mete Fatih Cırıt, Ryohsuke Mitsudome, Sho Iwasawa, Zulfaqar Azmi, mkquda
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

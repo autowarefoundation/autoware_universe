@@ -16,7 +16,7 @@
 
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 
@@ -64,7 +64,7 @@ std::optional<geometry_msgs::msg::Point> ObjectInfo::estimated_past_position(
     return std::nullopt;
   }
   const auto attention_lanelet = attention_lanelet_opt_.value();
-  const auto current_arc_coords = lanelet::utils::getArcCoordinates(
+  const auto current_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     {attention_lanelet}, predicted_object_.kinematics.initial_pose_with_covariance.pose);
   const auto distance = current_arc_coords.distance;
   const auto past_length =

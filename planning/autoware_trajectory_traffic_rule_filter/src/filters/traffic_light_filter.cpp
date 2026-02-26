@@ -15,6 +15,7 @@
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -24,6 +25,7 @@
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/LineString.h>
 
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -54,10 +56,11 @@ std::vector<lanelet::BasicLineString2d> TrafficLightFilter::get_red_stop_lines(
   return stop_lines;
 }
 
-bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
+tl::expected<void, std::string> TrafficLightFilter::is_feasible(
+  const TrajectoryPoints & trajectory_points)
 {
   if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty() || !vehicle_info_ptr_) {
-    return true;  // Allow if no data available
+    return {};  // Allow if no data available
   }
 
   lanelet::BasicLineString2d trajectory_ls;
@@ -81,11 +84,11 @@ bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
   for (const auto & ll : lanelet_map_->laneletLayer.search(bbox)) {
     for (const auto & stop_line : get_red_stop_lines(ll)) {
       if (boost::geometry::intersects(trajectory_ls, stop_line)) {
-        return false;
+        return tl::make_unexpected("crosses stop line of lanelet " + std::to_string(ll.id()));
       }
     }
   }
-  return true;  // Allow if no red lights found
+  return {};  // Allow if no red lights found
 }
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 

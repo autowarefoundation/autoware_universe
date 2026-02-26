@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_ranker/metrics/lateral_deviation_metric.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
@@ -50,7 +50,7 @@ void LateralDeviation::evaluate(
   }
 
   for (size_t i = 0; i < points->size(); i++) {
-    const auto arc_coordinates = lanelet::utils::getArcCoordinates(
+    const auto arc_coordinates = autoware::experimental::lanelet2_utils::get_arc_coordinates(
       *preferred_lanes, autoware_utils_geometry::get_pose(points->at(i)));
     deviations.at(i) =
       std::min(1.0f, static_cast<float>(std::abs(arc_coordinates.distance)) / max_value);

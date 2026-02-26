@@ -2,6 +2,12 @@
 Changelog for package autoware_traffic_light_recognition_marker_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(traffic_light_recognition_marker_publisher): fix functionConst (`#11982 <https://github.com/autowarefoundation/autoware_universe/issues/11982>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

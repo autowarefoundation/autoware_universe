@@ -185,12 +185,11 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
     // memcpy device to host
     det_boxes3d.resize(num_final_det_boxes3d);
-    thrust::copy(
-      thrust::device, final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
+    thrust::copy(final_det_boxes3d_d.begin(), final_det_boxes3d_d.end(), det_boxes3d.begin());
   } else {
     // memcpy device to host
     det_boxes3d.resize(num_det_boxes3d);
-    thrust::copy(thrust::device, det_boxes3d_d.begin(), det_boxes3d_d.end(), det_boxes3d.begin());
+    thrust::copy(det_boxes3d_d.begin(), det_boxes3d_d.end(), det_boxes3d.begin());
   }
 
   return cudaGetLastError();

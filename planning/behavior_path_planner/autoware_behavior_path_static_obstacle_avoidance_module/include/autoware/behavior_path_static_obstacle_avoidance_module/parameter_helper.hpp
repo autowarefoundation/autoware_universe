@@ -174,6 +174,11 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
   }
 
   {
+    const std::string ns = "avoidance.target_filtering.avoidance_for_close_vehicle.";
+    p.policy_close_distance_avoidance = get_or_declare_parameter<std::string>(*node, ns + "policy");
+  }
+
+  {
     const std::string ns = "avoidance.target_filtering.freespace.";
     p.freespace_condition_th_stopped_time =
       get_or_declare_parameter<double>(*node, ns + "condition.th_stopped_time");
@@ -333,8 +338,6 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
     p.enable_yield_maneuver = get_or_declare_parameter<bool>(*node, ns + "enable");
     p.enable_yield_maneuver_during_shifting =
       get_or_declare_parameter<bool>(*node, ns + "enable_during_shifting");
-    p.enable_signalling_during_yield =
-      get_or_declare_parameter<bool>(*node, ns + "enable_signalling_during_yield");
   }
 
   // stop
@@ -354,6 +357,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
     p.policy_lateral_margin = get_or_declare_parameter<std::string>(*node, ns + "lateral_margin");
     p.use_shorten_margin_immediately =
       get_or_declare_parameter<bool>(*node, ns + "use_shorten_margin_immediately");
+    p.policy_candidate_path_turn_signal =
+      get_or_declare_parameter<std::string>(*node, ns + "candidate_path_turn_signal");
 
     if (p.policy_approval != "per_shift_line" && p.policy_approval != "per_avoidance_maneuver") {
       throw std::domain_error("invalid policy. please select 'best_effort' or 'reliable'.");
@@ -365,6 +370,14 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
 
     if (p.policy_lateral_margin != "best_effort" && p.policy_lateral_margin != "reliable") {
       throw std::domain_error("invalid policy. please select 'best_effort' or 'reliable'.");
+    }
+
+    if (
+      p.policy_candidate_path_turn_signal != "none" &&
+      p.policy_candidate_path_turn_signal != "stopped_candidate" &&
+      p.policy_candidate_path_turn_signal != "all_candidate") {
+      throw std::domain_error(
+        "invalid policy. please select 'none', 'stopped_candidate' or 'all_candidate'.");
     }
   }
 

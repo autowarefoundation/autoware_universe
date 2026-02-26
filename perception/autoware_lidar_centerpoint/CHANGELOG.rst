@@ -2,6 +2,39 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lidar_centerpoint): add distance-based confidence thresholds to CenterPoint (`#12026 <https://github.com/autowarefoundation/autoware_universe/issues/12026>`_)
+  * Add temp
+  * Add score_threshold_upper and score_thresholds to CenterPoint postprocessing
+  * Fix naming errors
+  * Revert changes in roi_cluster_fusion_pipeline
+  * Revert changes in roi_cluster_fusion markdown
+  * Revert changes in image_projection_based_fusion
+  * Update score_threshold configs in pointpainting_fusion
+  * Remove unnecessary comments
+  * Update float class_score_threshold to const float
+  * Update autoware_lidar_centerpoint readme
+  * Remove param_version from configs
+  * Return postprocessing of boxes if label == -1
+  * Add the checking of score_upper_bounds greater than 0
+  * Update score_threshold values to class-wise distance
+  * Fix pointpainting class-wise distance thresholds
+  * Update centerpoint params in README by json_to_markdown
+  * Update docstring comment in centerpoint postprocess
+  * style(pre-commit): autofix
+  * Rename configs to detection_score_thresholds with distance_bin_upper_limits and min_confidence_scores
+  * Update schema docstring
+  * Resolve missing distance_bin_upper_limits\_ in CenterPointConfig
+  * Update pointpainting ml package schema
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_lidar_centerpoint): update nvcc flags (`#12049 <https://github.com/autowarefoundation/autoware_universe/issues/12049>`_)
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* chore(autoware_lidar_centerpoint): remove cudnn dependency (`#11885 <https://github.com/autowarefoundation/autoware_universe/issues/11885>`_)
+* Contributors: Amadeusz Szymko, Kok Seang Tan, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

@@ -24,12 +24,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
-
-#ifdef ROS_DISTRO_GALACTIC
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#else
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#endif
 
 #include <limits>
 
