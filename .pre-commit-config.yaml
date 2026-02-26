@@ -47,7 +47,7 @@ repos:
       - id: check-package-depends
 
   - repo: https://github.com/tier4/pre-commit-hooks-ros
-    rev: v0.10.0
+    rev: v0.10.2
     hooks:
       - id: flake8-ros
       - id: prettier-xacro
