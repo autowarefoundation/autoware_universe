@@ -3,33 +3,26 @@ project(autoware_path_optimizer)
 
 include(CheckCXXCompilerFlag)
 
-# NOTE: With the following option, when the compile-time and runtime CPU
-#       architectures are different, the node will die.
-# For Eigen vectorization.
-# check_cxx_compiler_flag("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-# if(COMPILER_SUPPORTS_MARCH_NATIVE)
-#   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-#   message(STATUS "Enabling MARCH NATIVE ")
-# endif()
-
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(Eigen3 REQUIRED)
 find_package(acados REQUIRED)
 
-# --- acados MPC solver (builds acados_interface library + code generation) ---
 add_subdirectory(src/acados_mpc)
 
-# Export acados include dirs so downstream packages that include our headers
-# (e.g. mpt_optimizer.hpp -> acados_interface.hpp -> c_generated_code/*.h -> acados/utils/types.h)
-# get the acados include path when compiling.
-get_target_property(ACADOS_INCLUDE_DIRS acados INTERFACE_INCLUDE_DIRECTORIES)
-if(ACADOS_INCLUDE_DIRS)
-  ament_export_include_directories(${ACADOS_INCLUDE_DIRS})
+set(ACADOS_DEPS_INCLUDE_DIRS "")
+foreach(_target acados blasfeo hpipm)
+  get_target_property(_dirs ${_target} INTERFACE_INCLUDE_DIRECTORIES)
+  if(_dirs)
+    list(APPEND ACADOS_DEPS_INCLUDE_DIRS ${_dirs})
+  endif()
+endforeach()
+list(REMOVE_DUPLICATES ACADOS_DEPS_INCLUDE_DIRS)
+if(ACADOS_DEPS_INCLUDE_DIRS)
+  ament_export_include_directories(${ACADOS_DEPS_INCLUDE_DIRS})
 endif()
 
-# --- Main package library ---
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
   src/replan_checker.cpp
