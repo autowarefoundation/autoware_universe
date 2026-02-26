@@ -21,6 +21,14 @@ find_package(acados REQUIRED)
 # --- acados MPC solver (builds acados_interface library + code generation) ---
 add_subdirectory(src/acados_mpc)
 
+# Export acados include dirs so downstream packages that include our headers
+# (e.g. mpt_optimizer.hpp -> acados_interface.hpp -> c_generated_code/*.h -> acados/utils/types.h)
+# get the acados include path when compiling.
+get_target_property(ACADOS_INCLUDE_DIRS acados INTERFACE_INCLUDE_DIRECTORIES)
+if(ACADOS_INCLUDE_DIRS)
+  ament_export_include_directories(${ACADOS_INCLUDE_DIRS})
+endif()
+
 # --- Main package library ---
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
