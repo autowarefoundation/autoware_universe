@@ -25,18 +25,51 @@
 namespace autoware::lidar_frnet
 {
 
+/**
+ * @brief CUDA postprocess: fill segmentation, visualization, and filtered clouds from network
+ *        output and optional compact input copy.
+ */
 class PostprocessCuda
 {
 public:
   PostprocessCuda(const utils::PostprocessingParams & params, cudaStream_t stream);
 
+  /**
+   * @brief Fill output clouds from segmentation logits and optional compact point copy.
+   *
+   * Dispatches to templated implementation by input format. Writes seg/viz per point; filtered
+   * cloud contains points not in filter classes (from cloud_compact or reconstructed from xyzi).
+   *
+   * @param points_xyzi Compact point buffer from preprocess (num_points * 4: x, y, z, intensity)
+   * @param cloud_compact Compact copy of input points for indices [0, num_points_raw); may be
+   *        nullptr (then filtered points are built from points_xyzi)
+   * @param num_points_raw Number of points that have valid cloud_compact entries
+   * @param seg_logit Network segmentation logits (num_points * num_classes)
+   * @param num_points Total points (after interpolation)
+   * @param format Input point format (for filtered output type)
+   * @param active_comm Which outputs to fill
+   * @param output_num_points_filtered Output: number of points written to output_cloud_filtered
+   * @param output_cloud_seg Segmentation cloud (x, y, z, class_id)
+   * @param output_cloud_viz Visualization cloud (x, y, z, rgb)
+   * @param output_cloud_filtered Filtered point cloud (input format)
+   * @return cudaError_t
+   */
   cudaError_t fillCloud_launch(
-    const InputPointType * cloud, const float * seg_logit, const int32_t num_points,
+    const float * points_xyzi, const void * cloud_compact, const uint32_t num_points_raw,
+    const float * seg_logit, const uint32_t num_points, InputFormat format,
     const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
     OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
-    InputPointType * output_cloud_filtered);
+    void * output_cloud_filtered);
 
 private:
+  /** Templated implementation for fillCloud_launch (one per input point type). */
+  template <typename PointT>
+  cudaError_t fillCloud_launch_impl(
+    const float * points_xyzi, const PointT * cloud_compact, const uint32_t num_points_raw,
+    const float * seg_logit, const uint32_t num_points, const utils::ActiveComm & active_comm,
+    uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
+    OutputVisualizationPointType * output_cloud_viz, PointT * output_cloud_filtered);
+
   cudaStream_t stream_;
 };
 

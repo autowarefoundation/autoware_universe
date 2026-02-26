@@ -1,0 +1,68 @@
+/**:
+  ros__parameters:
+    fov_up_deg: 52.6
+    fov_down_deg: -52.6
+    frustum_width: 256
+    frustum_height: 128
+    interpolation_width: 1024
+    interpolation_height: 128
+    class_names: [
+        "drivable_surface",
+        "other_flat_surface",
+        "sidewalk",
+        "manmade",
+        "vegetation",
+        "car",
+        "bus",
+        "emergency_vehicle",
+        "train",
+        "truck",
+        "tractor_unit",
+        "semi_trailer",
+        "construction_vehicle",
+        "forklift",
+        "kart",
+        "motorcycle",
+        "bicycle",
+        "pedestrian",
+        "personal_mobility",
+        "animal",
+        "pushable_pullable",  # cspell:ignore pushable_pullable
+        "traffic_cone",
+        "debris",
+        "stroller",
+        "other_stuff",
+        "noise+ghost_point",
+        "unknown",
+      ]
+    palette: [
+      255, 0, 255,    # Magenta - drivable_surface
+      139, 137, 137,  # Grey - other_flat_surface
+      75, 0, 75,      # Dark Purple - sidewalk
+      230, 230, 250,  # Lavender - manmade
+      0, 175, 0,      # Green - vegetation
+      0, 150, 245,    # Blue - car
+      255, 255, 0,    # Yellow - bus
+      199, 21, 133,   # Medium Violet Red - emergency_vehicle
+      0, 139, 139,    # Dark Cyan - train
+      160, 32, 240,   # Purple - truck
+      184, 134, 11,   # Dark Goldenrod - tractor_unit
+      135, 60, 0,     # Brown - semi_trailer
+      0, 255, 255,    # Cyan - construction_vehicle
+      128, 128, 0,    # Olive - forklift
+      124, 252, 0,    # Lawn Green - kart
+      255, 127, 0,    # Orange - motorcycle
+      255, 192, 203,  # Pink - bicycle
+      255, 0, 0,      # Red - pedestrian
+      210, 105, 30,   # Chocolate - personal_mobility
+      189, 183, 107,  # Dark Khaki - animal
+      153, 50, 204,   # Dark Orchid - pushable_pullable
+      255, 240, 150,  # Light Yellow - traffic_cone
+      70, 130, 180,   # Steel Blue - stroller
+      210, 180, 140,  # Tan - debris
+      188, 143, 143,  # Rosy Brown - other_stuff
+      64, 224, 208,   # Turquoise - noise+ghost_point
+      0, 0, 0,        # Black - unknown
+    ]
+    num_points: [5000, 60000, 120000] # [min, opt, max]
+    num_unique_coors: [3000, 30000, 60000] # [min, opt, max]
