@@ -17,8 +17,6 @@
 #include <autoware_utils_geometry/geometry.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
 
-#include <autoware_planning_msgs/autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
-
 #include <array>
 #include <string>
 #include <unordered_map>
