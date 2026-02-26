@@ -85,7 +85,7 @@ VehicleConstraintFilter::VehicleConstraintFilter()
 void VehicleConstraintFilter::set_parameters(
   const std::unordered_map<std::string, std::any> & params)
 {
-  auto get_value = [&params](const std::string & key, auto & value) {
+  auto set_value = [&params](const std::string & key, auto & value) {
     auto it = params.find(key);
     if (it != params.end()) {
       try {
@@ -97,11 +97,11 @@ void VehicleConstraintFilter::set_parameters(
   };
 
   // Update parameters if provided, otherwise keep defaults
-  get_value("max_velocity", params_.max_velocity);
-  get_value("max_acceleration", params_.max_acceleration);
-  get_value("max_deceleration", params_.max_deceleration);
-  get_value("max_steering_angle", params_.max_steering_angle);
-  get_value("max_steering_rate", params_.max_steering_rate);
+  set_value("vehicle_constraint.max_velocity", params_.max_velocity);
+  set_value("vehicle_constraint.max_acceleration", params_.max_acceleration);
+  set_value("vehicle_constraint.max_deceleration", params_.max_deceleration);
+  set_value("vehicle_constraint.max_steering_angle", params_.max_steering_angle);
+  set_value("vehicle_constraint.max_steering_rate", params_.max_steering_rate);
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
