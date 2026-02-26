@@ -25,7 +25,6 @@
 
 #include <boost/optional.hpp>
 
-#include <glog/logging.h>
 #include <tf2_ros/create_timer_interface.h>
 #include <tf2_ros/create_timer_ros.h>
 
@@ -50,12 +49,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   last_published_time_(this->now()),
   last_updated_time_(this->now())
 {
-  // glog for debug
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("multi_object_tracker");
-    google::InstallFailureSignalHandler();
-  }
-
   // Get parameters
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
