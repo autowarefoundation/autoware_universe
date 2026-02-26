@@ -14,12 +14,10 @@ jobs:
         cuda: [false, true]
         arch: [amd64, arm64]
 
-        # Exclude unsupported combinations (if any)
-        # Example: exclude jazzy arm64 cuda if not yet supported
-        # exclude:
-        #   - rosdistro: jazzy
-        #     arch: arm64
-        #     cuda: true
+        # Exclude Jazzy arm64 until autoware docker-build-and-push publishes native arm64 Jazzy images
+        exclude:
+          - rosdistro: jazzy
+            arch: arm64
 
         include:
           # ROS distribution specific configurations
