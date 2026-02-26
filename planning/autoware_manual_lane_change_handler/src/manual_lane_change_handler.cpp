@@ -312,11 +312,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
       next_segment_is_right_turn;
 
     if (current_segment_shift_not_available) {
-      std::string shift_unavailable_reason =
-        left_shift_not_available    ? "left shift not available"
-        : right_shift_not_available ? "right shift not available"
-        : next_segment_is_left_turn ? "next segment is left turn"
-                                    : "next segment is right turn";
       RCLCPP_INFO_STREAM(
         logger_, "Cannot shift on the current segment (ID: "
                    << current_segment.preferred_primitive.id << ")");
