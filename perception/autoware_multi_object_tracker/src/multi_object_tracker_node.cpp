@@ -57,19 +57,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
 
   // define input channel parameters. the channel size is defined by this array.
-  std::array<std::string, 12> input_channels;
-  input_channels.at(0) = declare_parameter<std::string>("input/detection01/channel");
-  input_channels.at(1) = declare_parameter<std::string>("input/detection02/channel");
-  input_channels.at(2) = declare_parameter<std::string>("input/detection03/channel");
-  input_channels.at(3) = declare_parameter<std::string>("input/detection04/channel");
-  input_channels.at(4) = declare_parameter<std::string>("input/detection05/channel");
-  input_channels.at(5) = declare_parameter<std::string>("input/detection06/channel");
-  input_channels.at(6) = declare_parameter<std::string>("input/detection07/channel");
-  input_channels.at(7) = declare_parameter<std::string>("input/detection08/channel");
-  input_channels.at(8) = declare_parameter<std::string>("input/detection09/channel");
-  input_channels.at(9) = declare_parameter<std::string>("input/detection10/channel");
-  input_channels.at(10) = declare_parameter<std::string>("input/detection11/channel");
-  input_channels.at(11) = declare_parameter<std::string>("input/detection12/channel");
+  constexpr size_t MAX_INPUT_CHANNELS = 12;
+  std::array<std::string, MAX_INPUT_CHANNELS> input_channels;
+  for (size_t i = 0; i < input_channels.size(); i++) {
+    std::ostringstream oss;
+    oss << "input/detection" << std::setfill('0') << std::setw(2) << (i + 1) << "/channel";
+    // channel parameters: input/detection01/channel, input/detection02/channel, ...,
+    // input/detection12/channel
+    input_channels[i] = declare_parameter<std::string>(oss.str());
+  }
 
   {
     // parse input channels
