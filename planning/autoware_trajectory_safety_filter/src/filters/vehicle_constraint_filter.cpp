@@ -14,7 +14,10 @@
 
 #include "autoware/trajectory_safety_filter/filters/vehicle_constraint_filter.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
+
+#include <autoware_planning_msgs/autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <array>
 #include <string>
@@ -55,24 +58,37 @@ double to_acceleration(const TrajectoryPoint & prev_point, const TrajectoryPoint
 }
 
 /**
- * @brief Convert TrajectoryPoint to steering angle (rad)
+ * @brief Convert TrajectoryPoints to steering angle (rad)
  */
-double to_steering_angle(const TrajectoryPoint & point, const VehicleInfo & vehicle_info)
+double to_steering_angle(
+  const TrajectoryPoint & prev_point, const TrajectoryPoint & curr_point,
+  const TrajectoryPoint & next_point, const VehicleInfo & vehicle_info)
 {
-  return std::atan2(point.lateral_velocity_mps, point.longitudinal_velocity_mps) *
-         vehicle_info.wheel_base_m;
+  const auto & prev_p = prev_point.pose.position;
+  const auto & curr_p = curr_point.pose.position;
+  const auto & next_p = next_point.pose.position;
+
+  try {
+    const double curvature = autoware_utils_geometry::calc_curvature(prev_p, curr_p, next_p);
+    return std::atan(vehicle_info.wheel_base_m * curvature);
+  } catch (...) {
+    return 0.0;  // throw exception if three points are too close
+  }
 }
 
 /**
- * @brief Convert two TrajectoryPoints to steering rate (rad/s)
+ * @brief Convert four TrajectoryPoints to steering rate (rad/s)
  */
 double to_steering_rate(
-  const TrajectoryPoint & prev_point, const TrajectoryPoint & curr_point,
+  const TrajectoryPoint & prev_prev_point, const TrajectoryPoint & prev_point,
+  const TrajectoryPoint & curr_point, const TrajectoryPoint & next_point,
   const VehicleInfo & vehicle_info)
 {
-  double prev_steering_angle = to_steering_angle(prev_point, vehicle_info);
-  double curr_steering_angle = to_steering_angle(curr_point, vehicle_info);
-  double dt = to_seconds(curr_point.time_from_start) - to_seconds(prev_point.time_from_start);
+  const double prev_steering_angle =
+    to_steering_angle(prev_prev_point, prev_point, curr_point, vehicle_info);
+  const double curr_steering_angle =
+    to_steering_angle(prev_point, curr_point, next_point, vehicle_info);
+  const double dt = to_seconds(curr_point.time_from_start) - to_seconds(prev_point.time_from_start);
   return dt > 0 ? std::abs(curr_steering_angle - prev_steering_angle) / dt : 0.0;
 }
 }  // namespace
@@ -216,8 +232,11 @@ bool is_deceleration_ok(const TrajectoryPoints & traj_points, double max_deceler
 bool is_steering_angle_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_angle)
 {
-  for (const auto & point : traj_points) {
-    double steering_angle = to_steering_angle(point, vehicle_info);
+  for (size_t i = 1; i < traj_points.size() - 1; ++i) {
+    const auto & prev_point = traj_points[i - 1];
+    const auto & curr_point = traj_points[i];
+    const auto & next_point = traj_points[i + 1];
+    double steering_angle = to_steering_angle(prev_point, curr_point, next_point, vehicle_info);
     if (std::abs(steering_angle) > max_steering_angle) {
       return false;
     }
@@ -228,8 +247,9 @@ bool is_steering_angle_ok(
 bool is_steering_rate_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_rate)
 {
-  for (size_t i = 1; i < traj_points.size(); ++i) {
-    double steering_rate = to_steering_rate(traj_points[i - 1], traj_points[i], vehicle_info);
+  for (size_t i = 2; i + 1 < traj_points.size(); ++i) {
+    double steering_rate = to_steering_rate(
+      traj_points[i - 2], traj_points[i - 1], traj_points[i], traj_points[i + 1], vehicle_info);
     if (steering_rate > max_steering_rate) {
       return false;
     }
