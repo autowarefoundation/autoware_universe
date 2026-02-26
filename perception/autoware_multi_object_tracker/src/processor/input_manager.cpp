@@ -68,8 +68,8 @@ void InputStream::onMessage(
   // Transform the objects to the world frame
   auto transformed_objects = odometry_->transformObjects(objects_with_uncertainty);
   if (!transformed_objects) {
-    RCLCPP_WARN(
-      logger_, "InputManager::onMessage %s: Failed to transform objects.",
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "InputManager::onMessage %s: Failed to transform objects.",
       channel_.long_name.c_str());
     return;
   }
