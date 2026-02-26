@@ -589,7 +589,14 @@ lanelet::BasicPolygon2d create_polygon(
     return {};
   }
 
-  const auto polygon_3d = lanelet::utils::getPolygonFromArcLength(lanes, start_dist, end_dist);
+  const auto polygon_3d_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+    lanes, start_dist, end_dist);
+
+  if (!polygon_3d_opt.has_value()) {
+    return {};
+  }
+
+  const auto & polygon_3d = polygon_3d_opt.value();
   return lanelet::utils::to2D(polygon_3d).basicPolygon();
 }
 
