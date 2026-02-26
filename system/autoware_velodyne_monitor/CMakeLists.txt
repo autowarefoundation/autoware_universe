@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_velodyne_monitor)
 
 find_package(autoware_cmake REQUIRED)
-find_package(fmt)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
