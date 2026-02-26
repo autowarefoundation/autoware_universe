@@ -42,7 +42,6 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 // constants
-constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
 constexpr int NUM_LABELS = 8;
 
@@ -58,6 +57,12 @@ struct InputChannel
   bool trust_extension = true;                // trust object extension
   bool trust_classification = true;           // trust object classification
   bool trust_orientation = true;              // trust object orientation(yaw)
+};
+
+struct ExistenceProbability
+{
+  uint channel_index;
+  float existence_probability;
 };
 
 // object model
@@ -86,7 +91,7 @@ struct DynamicObject
   // existence information
   uint channel_index;
   float existence_probability;
-  std::vector<float> existence_probabilities;
+  std::vector<ExistenceProbability> existence_probabilities;
 
   // object classification
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;

@@ -56,8 +56,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("publish_processing_time_detail");
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
 
-  // define input channel parameters
-  std::array<std::string, types::max_channel_size> input_channels;
+  // define input channel parameters. the channel size is defined by this array.
+  std::array<std::string, 12> input_channels;
   input_channels.at(0) = declare_parameter<std::string>("input/detection01/channel");
   input_channels.at(1) = declare_parameter<std::string>("input/detection02/channel");
   input_channels.at(2) = declare_parameter<std::string>("input/detection03/channel");
@@ -73,7 +73,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   {
     // parse input channels
-    for (size_t i = 0; i < types::max_channel_size; i++) {
+    for (size_t i = 0; i < input_channels.size(); i++) {
       const std::string & input_channel = input_channels.at(i);
 
       types::InputChannel input_channel_config;
@@ -184,7 +184,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   ////// Create subscriptions and publishers
   // subscriptions
-  sub_objects_array_.resize(types::max_channel_size);
+  sub_objects_array_.resize(params_.input_channels_config.size());
   for (const auto & input_channel : params_.input_channels_config) {
     if (!input_channel.is_enabled) {
       continue;
