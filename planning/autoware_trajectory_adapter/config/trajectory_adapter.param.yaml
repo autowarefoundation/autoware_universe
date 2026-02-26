@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    stop_keep_duration_threshold: 1.0  # [s]
+    stop_velocity_threshold: 1.0       # [m/s]
+    slowdown_accel_threshold: -0.5     # [m/s^2]

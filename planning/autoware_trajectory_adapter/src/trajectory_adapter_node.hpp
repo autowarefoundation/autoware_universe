@@ -16,6 +16,7 @@
 #define TRAJECTORY_ADAPTER_NODE_HPP_
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
+#include <autoware_trajectory_adapter/autoware_trajectory_adapter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -51,6 +52,9 @@ private:
 
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
+
+  std::unique_ptr<::trajectory_adapter::ParamListener> param_listener_;
+  ::trajectory_adapter::Params params_;
 };
 
 }  // namespace autoware::trajectory_adapter

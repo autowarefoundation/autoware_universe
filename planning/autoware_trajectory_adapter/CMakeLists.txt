@@ -8,8 +8,16 @@ include_directories(
   SYSTEM
 )
 
+generate_parameter_library(${PROJECT_NAME}_param
+  param/trajectory_adapter.param.yaml
+)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/trajectory_adapter_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${PROJECT_NAME}_param
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -19,5 +27,6 @@ rclcpp_components_register_node(${PROJECT_NAME}
 
 ament_auto_package(
   INSTALL_TO_SHARE
+  config
   launch
 )

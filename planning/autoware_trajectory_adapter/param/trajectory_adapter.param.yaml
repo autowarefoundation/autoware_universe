@@ -1,0 +1,24 @@
+trajectory_adapter:
+  stop_keep_duration_threshold:
+    type: double
+    default_value: 1.0
+    description: "Duration threshold to determine if a stop is valid. A stop point is considered valid only if the velocity remains below stop_velocity_threshold for at least this duration. [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+
+  stop_velocity_threshold:
+    type: double
+    default_value: 1.0
+    description: "Velocity threshold below which a trajectory point is considered as a stop point. [m/s]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+
+  slowdown_accel_threshold:
+    type: double
+    default_value: -0.5
+    description: "Acceleration threshold below which a trajectory point is considered as a slowdown point. [m/s^2]"
+    read_only: true
+    validation:
+      lt<>: [0.0]

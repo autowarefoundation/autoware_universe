@@ -2,8 +2,10 @@
 <launch>
   <arg name="input_trajectories" default="~/input/trajectories"/>
   <arg name="output_trajectory" default="~/output/trajectory"/>
+  <arg name="trajectory_adapter_param_path" default="$(find-pkg-share autoware_trajectory_adapter)/config/trajectory_adapter.param.yaml"/>
 
   <node pkg="autoware_trajectory_adapter" exec="autoware_trajectory_adapter_node" name="trajectory_adapter_node" output="screen">
+    <param from="$(var trajectory_adapter_param_path)"/>
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
   </node>

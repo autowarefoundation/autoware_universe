@@ -34,6 +34,10 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       this, "trajectory_adapter");
+
+  param_listener_ =
+    std::make_unique<::trajectory_adapter::ParamListener>(get_node_parameters_interface());
+  params_ = param_listener_->get_params();
 }
 
 void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
@@ -74,9 +78,10 @@ void TrajectoryAdapterNode::publish_planning_factor(const Trajectory & trajector
 {
   const auto & points = trajectory.points;
 
-  constexpr double stop_keep_duration_threshold = 1.0;  // [s]
-  constexpr double stop_velocity_threshold = 1.0;       // [m/s]
-  constexpr double slowdown_accel_threshold = -0.5;     // [m/s^2]
+  const auto & p = params_;
+  const double stop_keep_duration_threshold = p.stop_keep_duration_threshold;
+  const double stop_velocity_threshold = p.stop_velocity_threshold;
+  const double slowdown_accel_threshold = p.slowdown_accel_threshold;
 
   std::optional<size_t> slowdown_start_idx;
   std::optional<size_t> slowdown_end_idx;
