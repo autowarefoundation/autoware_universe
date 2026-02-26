@@ -7,8 +7,8 @@
         "autoware::trajectory_safety_filter::plugin::VehicleConstraintFilter",
       ]
     # available filters:
-    #  "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter",
-    #  "autoware::trajectory_safety_filter::plugin::CollisionFilter",
+    #  "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter"
+    #  "autoware::trajectory_safety_filter::plugin::CollisionFilter"
     #  "autoware::trajectory_safety_filter::plugin::VehicleConstraintFilter"
 
     out_of_lane:

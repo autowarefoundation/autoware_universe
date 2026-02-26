@@ -109,7 +109,7 @@ tl::expected<void, std::string> VehicleConstraintFilter::is_feasible(
     return tl::make_unexpected("Vehicle info not set");
   }
 
-  // NOTE: Feasible decision logic might be more complex in the future, but for now we just check
+  // NOTE: Feasibility decision logic might be more complex in the future, but for now we just check
   // all constraints and return false if any are violated
   bool is_feasible =
     check_velocity(traj_points, params_.max_velocity) &&
