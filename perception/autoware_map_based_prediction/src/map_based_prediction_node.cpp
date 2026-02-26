@@ -37,7 +37,6 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-#include <glog/logging.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LaneletMap.h>
@@ -364,10 +363,6 @@ void replaceObjectYawWithLaneletsYaw(
 MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_options)
 : Node("map_based_prediction", node_options)
 {
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("map_based_prediction_node");
-    google::InstallFailureSignalHandler();
-  }
   prediction_time_horizon_.vehicle = declare_parameter<double>("prediction_time_horizon.vehicle");
   prediction_time_horizon_.pedestrian =
     declare_parameter<double>("prediction_time_horizon.pedestrian");
