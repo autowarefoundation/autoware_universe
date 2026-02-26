@@ -150,15 +150,18 @@ to WARN until successive `num_frame_transition` WARNs are observed.
     // - immediate error report is required and the observed state is error
     // - Or the same state is observed multiple times
     // - Or the observed state has lower level than the current one (i.e., the state is improved)
+    // - Or the current state is STALE (Once an observation is acquired, the state should not be
+    //     STALE anymore)
     bool is_immediate_error =
       (immediate_error_report_ && std::holds_alternative<Error>(candidate_state_));
     bool observed_over_threshold =
       (get_num_observations(candidate_state_) >= num_frame_transition_);
     bool is_immediate_relax =
       (immediate_relax_state_ && get_level(candidate_state_) < current_level);
+    bool is_in_stale = std::holds_alternative<Stale>(current_state_);
 
     DiagnosticStatus_t updated_level = current_level;
-    if (is_immediate_error || observed_over_threshold || is_immediate_relax) {
+    if (is_immediate_error || observed_over_threshold || is_immediate_relax || is_in_stale) {
       updated_level = get_level(candidate_state_);
     }
 
