@@ -286,9 +286,9 @@ void densifyPathByYawAndDistance(
     double dyaw = autoware_utils::normalize_radian(yaw1 - yaw0);
 
     // Calculate the number of segments
-    int Nyaw = static_cast<int>(std::ceil(std::fabs(dyaw) / max_yaw_step_rad));
-    int Ndist = static_cast<int>(std::ceil(dist / max_dist_step));
-    int N = std::max(Nyaw, Ndist);
+    int n_yaw = static_cast<int>(std::ceil(std::fabs(dyaw) / max_yaw_step_rad));
+    int n_dist = static_cast<int>(std::ceil(dist / max_dist_step));
+    int N = std::max(n_yaw, n_dist);
 
     if (N <= 1) {
       continue;  // Interpolation is not necessary.

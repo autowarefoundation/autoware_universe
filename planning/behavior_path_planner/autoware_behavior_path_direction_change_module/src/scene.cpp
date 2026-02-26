@@ -73,11 +73,12 @@ void logDirectionChangeDebugInfo(
   {
     std::cout << "[DirectionChange] Ego state:" << std::endl;
     std::cout << std::fixed << std::setprecision(3);
-    const double ex = ego_pose.position.x;
-    const double ey = ego_pose.position.y;
-    const double eyaw = tf2::getYaw(ego_pose.orientation);
-    const double eyaw_deg = eyaw * 180.0 / M_PI;
-    std::cout << "  x=" << ex << ", y=" << ey << ", yaw=" << eyaw_deg << " deg" << std::endl;
+    const double ego_x = ego_pose.position.x;
+    const double ego_y = ego_pose.position.y;
+    const double ego_yaw = tf2::getYaw(ego_pose.orientation);
+    const double ego_yaw_deg = ego_yaw * 180.0 / M_PI;
+    std::cout << "  x=" << ego_x << ", y=" << ego_y << ", yaw=" << ego_yaw_deg << " deg"
+              << std::endl;
   }
 }
 }  // namespace
