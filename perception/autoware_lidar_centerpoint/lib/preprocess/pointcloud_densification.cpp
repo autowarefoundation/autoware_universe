@@ -15,6 +15,7 @@
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/optional.hpp>
 
@@ -23,12 +24,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 namespace
 {

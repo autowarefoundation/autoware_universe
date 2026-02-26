@@ -91,10 +91,12 @@ class carla_ros2_interface(object):
         self.tf_listener = None
 
     def _initialize_status_publishers(self):
-        """Initialize all vehicle status publishers.
+        """
+        Initialize all vehicle status publishers.
 
         Note: GNSS pose publisher is now managed via sensor registry.
         Only vehicle status publishers are created here.
+
         """
         self.pub_vel_state = self.ros2_node.create_publisher(
             VelocityReport, "/vehicle/status/velocity_status", 1
@@ -130,7 +132,8 @@ class carla_ros2_interface(object):
         mapping_file = self.param_values.get("sensor_mapping_file", "")
         if not self.sensor_loader.load_sensor_mapping(mapping_file):
             raise FileNotFoundError(
-                "Unable to locate sensor mapping YAML. Provide --ros-args -p sensor_mapping_file:=<path>"
+                "Unable to locate sensor mapping YAML. "
+                "Provide --ros-args -p sensor_mapping_file:=<path>"
             )
 
         sensor_kit_name = self._resolve_sensor_kit_name()
@@ -146,7 +149,8 @@ class carla_ros2_interface(object):
 
         if not self.sensor_configs:
             raise RuntimeError(
-                "Sensor mapping produced zero sensors. Check enabled_sensors list and calibration files."
+                "Sensor mapping produced zero sensors. "
+                "Check enabled_sensors list and calibration files."
             )
 
         self._register_sensor_configs(self.sensor_configs)
@@ -289,11 +293,13 @@ class carla_ros2_interface(object):
         return self.param_values
 
     def checkFrequency(self, sensor):
-        """Return True when publication should be throttled for the sensor.
+        """
+        Return True when publication should be throttled for the sensor.
 
-        Uses simulation time (self.timestamp) for all sensors to ensure correct
-        throttling in synchronous mode. Wall-clock timing would cause issues when
-        simulation speed differs from real-time.
+        Uses simulation time (self.timestamp) for all sensors to ensure correct throttling in
+        synchronous mode. Wall-clock timing would cause issues when simulation speed differs from
+        real-time.
+
         """
         # Use sensor registry for all sensors (including legacy ones)
         config = self.sensor_registry.get_sensor(sensor)
@@ -573,11 +579,13 @@ class carla_ros2_interface(object):
             self.logger.warning("IMU publisher not initialized")
 
     def first_order_steering(self, steer_input):
-        """First order steering model.
+        """
+        First order steering model.
 
         Gracefully handles:
         - Early control commands before first simulation tick (returns raw input)
         - Multiple commands in same CARLA tick (preserves filter state, no zero spike)
+
         """
         # Guard against control commands arriving before first sensor callback
         if self.timestamp is None:
@@ -605,9 +613,11 @@ class carla_ros2_interface(object):
         return steer_output
 
     def control_callback(self, in_cmd):
-        """Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
+        """
+        Convert and publish CARLA Ego Vehicle Control to AUTOWARE.
 
         Thread-safe: Acquires state lock when accessing shared vehicle state.
+
         """
         out_cmd = carla.VehicleControl()
         out_cmd.throttle = in_cmd.actuation.accel_cmd
@@ -627,9 +637,11 @@ class carla_ros2_interface(object):
             self.current_control = out_cmd
 
     def ego_status(self):
-        """Publish ego vehicle status.
+        """
+        Publish ego vehicle status.
 
         Thread-safe: Acquires state lock when accessing ego_actor.
+
         """
         if self.checkFrequency("status"):
             return
@@ -687,19 +699,25 @@ class carla_ros2_interface(object):
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
-        """Execute main simulation step for publishing sensor data and getting control commands.
+        """
+        Execute main simulation step for publishing sensor data and getting control commands.
 
         Thread-safe: Acquires state lock when writing timestamp and reading current_control.
-        The timestamp must be protected because control_callback reads it (via first_order_steering)
-        to calculate dt. Without protection, the ROS callback could see a partially-updated or
-        future timestamp, yielding negative/zero dt and unstable steering.
+        The timestamp must be protected because control_callback reads it (via
+        first_order_steering) to calculate dt. Without protection, the ROS callback could
+        see a partially-updated or future timestamp, yielding negative/zero dt and unstable
+        steering.
 
-        Args:
+        Args
+        ----
             input_data: Dictionary of sensor data from CARLA
             timestamp: Current simulation timestamp
 
-        Returns:
+        Returns
+        -------
             carla.VehicleControl: Current control command for the vehicle
+
+
         """
         # Update timestamp under lock to prevent race with control_callback
         with self._state_lock:
@@ -741,10 +759,12 @@ class carla_ros2_interface(object):
             return self.current_control
 
     def shutdown(self):
-        """Clean shutdown of ROS node and spin thread.
+        """
+        Clean shutdown of ROS node and spin thread.
 
-        Properly destroys publishers, stops the spin thread, and shuts down rclpy
-        to prevent process hanging and publisher leaks.
+        Properly destroys publishers, stops the spin thread, and shuts down rclpy to prevent
+        process hanging and publisher leaks.
+
         """
         # Destroy publishers first
         if self.ros_publisher_manager:

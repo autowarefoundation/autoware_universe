@@ -394,12 +394,6 @@
               "minimum": 0,
               "description": "Target acceleration during pull-out maneuver [m/s²]"
             },
-            "max_speed_mps": {
-              "type": "number",
-              "default": 8.33,
-              "minimum": 0,
-              "description": "Maximum allowed speed [m/s]"
-            },
             "max_lateral_accel_mps2": {
               "type": "number",
               "default": 1.5,
@@ -432,54 +426,11 @@
             "nearest_yaw_threshold_deg",
             "target_pull_out_speed_mps",
             "target_pull_out_acc_mps2",
-            "max_speed_mps",
             "max_lateral_accel_mps2",
             "set_engage_speed",
             "limit_speed",
             "limit_lateral_acceleration",
             "smooth_velocities"
-          ]
-        },
-        "jerk_filter_params": {
-          "type": "object",
-          "properties": {
-            "jerk_weight": {
-              "type": "number",
-              "default": 10.0,
-              "minimum": 0,
-              "description": "Weight for smoothness cost for jerk"
-            },
-            "over_v_weight": {
-              "type": "number",
-              "default": 100000.0,
-              "minimum": 0,
-              "description": "Weight for over speed limit cost"
-            },
-            "over_a_weight": {
-              "type": "number",
-              "default": 5000.0,
-              "minimum": 0,
-              "description": "Weight for over accel limit cost"
-            },
-            "over_j_weight": {
-              "type": "number",
-              "default": 2000.0,
-              "minimum": 0,
-              "description": "Weight for over jerk limit cost"
-            },
-            "jerk_filter_ds": {
-              "type": "number",
-              "default": 0.1,
-              "exclusiveMinimum": 0,
-              "description": "Resampling ds for jerk filter [m]"
-            }
-          },
-          "required": [
-            "jerk_weight",
-            "over_v_weight",
-            "over_a_weight",
-            "over_j_weight",
-            "jerk_filter_ds"
           ]
         },
         "elastic_band_params": {

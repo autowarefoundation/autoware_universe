@@ -161,6 +161,11 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
   }
 
   {
+    const std::string ns = "avoidance.target_filtering.avoidance_for_close_vehicle.";
+    update_param<std::string>(parameters, ns + "policy", p->policy_close_distance_avoidance);
+  }
+
+  {
     const std::string ns = "avoidance.target_filtering.intersection.";
     update_param<double>(parameters, ns + "yaw_deviation", p->object_check_yaw_deviation);
   }
@@ -205,6 +210,8 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     update_param<std::string>(parameters, ns + "lateral_margin", p->policy_lateral_margin);
     update_param<bool>(
       parameters, ns + "use_shorten_margin_immediately", p->use_shorten_margin_immediately);
+    update_param<std::string>(
+      parameters, ns + "candidate_path_turn_signal", p->policy_candidate_path_turn_signal);
 
     if (p->policy_approval != "per_shift_line" && p->policy_approval != "per_avoidance_maneuver") {
       RCLCPP_ERROR(
@@ -222,6 +229,16 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
       RCLCPP_ERROR(
         rclcpp::get_logger(__func__),
         "invalid lateral margin policy. Please select 'best_effort' or 'reliable'.");
+    }
+
+    if (
+      p->policy_candidate_path_turn_signal != "none" &&
+      p->policy_candidate_path_turn_signal != "stopped_candidate" &&
+      p->policy_candidate_path_turn_signal != "all_candidate") {
+      RCLCPP_ERROR(
+        rclcpp::get_logger(__func__),
+        "invalid candidate_path_turn_signal policy. Please select 'none', 'stopped_candidate' or "
+        "'all_candidate'.");
     }
   }
 

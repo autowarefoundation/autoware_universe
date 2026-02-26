@@ -2,6 +2,20 @@
 Changelog for package autoware_bevfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_bevfusion): update nvcc flags (`#12045 <https://github.com/autowarefoundation/autoware_universe/issues/12045>`_)
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* feat(BEVFusion): move cuda stream creation to the beginning of BEVFusionTRT initialization (`#11967 <https://github.com/autowarefoundation/autoware_universe/issues/11967>`_)
+  * move cuda stream init before init
+  * Remove empty lines
+  ---------
+* fix(bevfusion): suppress -Werror for precomputed_features.cpp (`#11959 <https://github.com/autowarefoundation/autoware_universe/issues/11959>`_)
+* fix(autoware_bevfusion): restore spconv in cmakelists (`#11953 <https://github.com/autowarefoundation/autoware_universe/issues/11953>`_)
+* chore(autoware_bevfusion): remove cudnn dependency (`#11887 <https://github.com/autowarefoundation/autoware_universe/issues/11887>`_)
+* Contributors: Amadeusz Szymko, Kok Seang Tan, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

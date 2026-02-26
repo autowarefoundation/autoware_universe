@@ -29,10 +29,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
@@ -389,8 +388,9 @@ void LaneParkingPlanner::normal_pullover_planning_helper(
       // priority
       path_candidates.push_back(*pull_over_path);
       // calculate closest pull over start pose for stop path
-      const double start_arc_length =
-        lanelet::utils::getArcCoordinates(current_lanelets, pull_over_path->start_pose()).length;
+      const double start_arc_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                        current_lanelets, pull_over_path->start_pose())
+                                        .length;
       if (start_arc_length < min_start_arc_length) {
         min_start_arc_length = start_arc_length;
         // closest start pose is stop point when not finding safe path
@@ -511,9 +511,9 @@ void LaneParkingPlanner::bezier_planning_helper(
 
   double min_start_arc_length = std::numeric_limits<double>::infinity();
   for (const auto & bezier_pull_over_path : path_candidates) {
-    const double start_arc_length =
-      lanelet::utils::getArcCoordinates(current_lanelets, bezier_pull_over_path.start_pose())
-        .length;
+    const double start_arc_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                      current_lanelets, bezier_pull_over_path.start_pose())
+                                      .length;
     if (start_arc_length < min_start_arc_length) {
       min_start_arc_length = start_arc_length;
       closest_start_pose = bezier_pull_over_path.start_pose();
@@ -918,8 +918,15 @@ bool GoalPlannerModule::isExecutionRequested() const
   const lanelet::ConstLanelets pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *(route_handler), left_side_parking_, parameters_.backward_goal_search_length,
     parameters_.forward_goal_search_length);
-  lanelet::ConstLanelet target_lane{};
-  lanelet::utils::query::getClosestLanelet(pull_over_lanes, goal_pose, &target_lane);
+  // const auto target_lane_opt =
+  const auto target_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(pull_over_lanes, goal_pose);
+  if (!target_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isExecutionRequested, target_lane_opt is "
+      "not handled");
+  }
+  const auto & target_lane = target_lane_opt.value();
 
   // Get the lanelet of the ego vehicle's side edge at the terminal pose of the previous module's
   // path. Check if the lane is the target lane or the neighboring lane. NOTE: This is because in
@@ -1289,7 +1296,8 @@ std::optional<PullOverPath> GoalPlannerModule::selectPullOverPath(
     // get road lanes which is at least backward_length[m] behind the goal
     const auto road_lanes = utils::getExtendedCurrentLanesFromPath(
       prev_module_output_path, planner_data_, backward_length, 0.0, false);
-    const auto goal_pose_length = lanelet::utils::getArcCoordinates(road_lanes, goal_pose).length;
+    const auto goal_pose_length =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, goal_pose).length;
     return planner_data_->route_handler->getCenterLinePath(
       road_lanes, std::max(0.0, goal_pose_length - backward_length),
       goal_pose_length + parameters_.forward_goal_search_length);
@@ -1891,7 +1899,9 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
   // otherwise, generate path to the goal_pose.
   const auto & pull_over_path_opt = context_data.pull_over_path_opt;
   const auto reference_path = std::invoke([&]() -> PathWithLaneId {
-    const auto s_current = lanelet::utils::getArcCoordinates(current_lanes, current_pose).length;
+    const auto s_current =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, current_pose)
+        .length;
     const double s_start = std::max(0.0, s_current - common_parameters.backward_path_length);
     const bool is_arc_backward =
       pull_over_path_opt.has_value() &&
@@ -1899,7 +1909,8 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     const Pose path_end_pose =
       is_arc_backward ? pull_over_path_opt.value().start_pose() : route_handler->getGoalPose();
     const double s_end = std::clamp(
-      lanelet::utils::getArcCoordinates(current_lanes, path_end_pose).length,
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, path_end_pose)
+        .length,
       s_current + std::numeric_limits<double>::epsilon(),
       s_current + common_parameters.forward_path_length);
     return route_handler->getCenterLinePath(current_lanes, s_start, s_end, true);
@@ -2149,15 +2160,22 @@ TurnSignalInfo GoalPlannerModule::calcTurnSignalInfo(const PullOverContextData &
     return {};
   }
 
-  lanelet::Lanelet closest_lanelet;
-  lanelet::utils::query::getClosestLanelet(current_lanes, current_pose, &closest_lanelet);
+  const auto closest_lanelet_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanes, current_pose);
+  if (!closest_lanelet_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::calcTurnSignalInfo, closest_lanelet_opt is "
+      "not handled");
+  }
+  const auto & closest_lanelet = closest_lanelet_opt.value();
 
   if (is_ignore_signal(closest_lanelet.id())) {
     return getPreviousModuleOutput().turn_signal_info;
   }
 
   const double current_shift_length =
-    lanelet::utils::getArcCoordinates(current_lanes, current_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, current_pose)
+      .distance;
 
   constexpr bool egos_lane_is_shifted = true;
   constexpr bool is_driving_forward = true;
@@ -2410,7 +2428,7 @@ bool GoalPlannerModule::isCrossingPossible(
   if (is_shoulder_lane) {
     Pose end_lane_pose{};
     end_lane_pose.orientation.w = 1.0;
-    end_lane_pose.position = lanelet::utils::conversion::toGeomMsgPt(end_lane.centerline().front());
+    end_lane_pose.position = experimental::lanelet2_utils::to_ros(end_lane.centerline().front());
     // NOTE: this line does not specify the /forward/backward length, so if the shoulders form a
     // loop, this returns all shoulder lanes in the loop
     end_lane_sequence = route_handler->getShoulderLaneletSequence(end_lane, end_lane_pose);
@@ -2455,11 +2473,23 @@ bool GoalPlannerModule::isCrossingPossible(
 bool GoalPlannerModule::isCrossingPossible(
   const Pose & start_pose, const Pose & end_pose, const lanelet::ConstLanelets lanes) const
 {
-  lanelet::ConstLanelet start_lane{};
-  lanelet::utils::query::getClosestLanelet(lanes, start_pose, &start_lane);
+  const auto start_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, start_pose);
+  if (!start_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isCrossingPossible, start_lane_opt is "
+      "not handled");
+  }
+  const auto & start_lane = start_lane_opt.value();
 
-  lanelet::ConstLanelet end_lane{};
-  lanelet::utils::query::getClosestLanelet(lanes, end_pose, &end_lane);
+  const auto end_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(lanes, end_pose);
+  if (!end_lane_opt) {
+    throw std::runtime_error(
+      "erroneous implementation in GoalPlannerModule::isCrossingPossible, end_lane_opt is "
+      "not handled");
+  }
+  const auto & end_lane = end_lane_opt.value();
 
   return isCrossingPossible(start_lane, end_lane);
 }
@@ -2582,7 +2612,7 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
     // generate first road lane pose
     Pose first_road_pose{};
     const auto first_road_point =
-      lanelet::utils::conversion::toGeomMsgPt(fist_road_lane.centerline().front());
+      experimental::lanelet2_utils::to_ros(fist_road_lane.centerline().front());
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       fist_road_lane,
       autoware::experimental::lanelet2_utils::from_ros(first_road_point).basicPoint());
@@ -2604,8 +2634,13 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
       pull_over_lanes, left_side_parking_, ego_pose_for_expand,
       planner_data->parameters.vehicle_info, parameters_.outer_road_detection_offset,
       parameters_.inner_road_detection_offset);
-  const auto merged_expanded_pull_over_lanes =
-    lanelet::utils::combineLaneletsShape(expanded_pull_over_lanes_between_ego);
+  const auto merged_expanded_pull_over_lanes_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(
+      expanded_pull_over_lanes_between_ego);
+  lanelet::ConstLanelet merged_expanded_pull_over_lanes{};
+  if (merged_expanded_pull_over_lanes_opt.has_value()) {
+    merged_expanded_pull_over_lanes = merged_expanded_pull_over_lanes_opt.value();
+  }
   debug_data_.expanded_pull_over_lane_between_ego = merged_expanded_pull_over_lanes;
 
   const auto filtered_objects = filterObjectsByWithinPolicy(

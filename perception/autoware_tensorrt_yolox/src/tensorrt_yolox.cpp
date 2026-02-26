@@ -16,6 +16,7 @@
 #include "autoware/cuda_utils/cuda_unique_ptr.hpp"
 
 #include <autoware/tensorrt_yolox/calibrator.hpp>
+#include <autoware/tensorrt_yolox/label.hpp>
 #include <autoware/tensorrt_yolox/preprocess.hpp>
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <experimental/filesystem>
@@ -34,77 +35,10 @@
 #include <utility>
 #include <vector>
 
+namespace autoware::tensorrt_yolox
+{
 namespace
 {
-static void trimLeft(std::string & s)
-{
-  s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) { return !isspace(ch); }));
-}
-
-static void trimRight(std::string & s)
-{
-  s.erase(find_if(s.rbegin(), s.rend(), [](int ch) { return !isspace(ch); }).base(), s.end());
-}
-
-std::string trim(std::string & s)
-{
-  trimLeft(s);
-  trimRight(s);
-  return s;
-}
-
-bool fileExists(const std::string & file_name, bool verbose)
-{
-  if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(file_name))) {
-    if (verbose) {
-      std::cout << "File does not exist : " << file_name << std::endl;
-    }
-    return false;
-  }
-  return true;
-}
-
-std::vector<std::string> loadListFromTextFile(const std::string & filename)
-{
-  assert(fileExists(filename, true));
-  std::vector<std::string> list;
-
-  std::ifstream f(filename);
-  if (!f) {
-    std::cout << "failed to open " << filename << std::endl;
-    assert(0);
-  }
-
-  std::string line;
-  while (std::getline(f, line)) {
-    if (line.empty()) {
-      continue;
-    } else {
-      list.push_back(trim(line));
-    }
-  }
-
-  return list;
-}
-
-std::vector<std::string> loadImageList(const std::string & filename, const std::string & prefix)
-{
-  std::vector<std::string> fileList = loadListFromTextFile(filename);
-  for (auto & file : fileList) {
-    if (fileExists(file, false)) {
-      continue;
-    } else {
-      std::string prefixed = prefix + file;
-      if (fileExists(prefixed, false))
-        file = prefixed;
-      else
-        std::cerr << "WARNING: couldn't find: " << prefixed << " while loading: " << filename
-                  << std::endl;
-    }
-  }
-  return fileList;
-}
-
 std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::string & filename)
 {
   std::vector<autoware::tensorrt_yolox::Colormap> seg_cmap;
@@ -152,8 +86,6 @@ std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::stri
 
 }  // anonymous namespace
 
-namespace autoware::tensorrt_yolox
-{
 TrtYoloX::TrtYoloX(
   TrtCommonConfig & trt_config, const int num_class, const float score_threshold,
   const float nms_threshold, const bool use_gpu_preprocess, const uint8_t gpu_id,

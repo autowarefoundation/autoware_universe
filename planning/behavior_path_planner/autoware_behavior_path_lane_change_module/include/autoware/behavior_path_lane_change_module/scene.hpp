@@ -109,7 +109,7 @@ public:
 
   bool isAbortState() const override;
 
-  bool isLaneChangeRequired() override;
+  std::optional<std::string> isLaneChangeRequired() final;
 
   bool isStoppedAtRedTrafficLight() const override;
 

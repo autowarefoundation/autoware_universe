@@ -17,6 +17,7 @@
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -146,12 +147,15 @@ void set_max_velocity(TrajectoryPoints & input_trajectory_array, const float max
 }
 
 void limit_lateral_acceleration(
-  TrajectoryPoints & input_trajectory_array, const double max_lateral_accel_mps2,
-  const Odometry & current_odometry)
+  TrajectoryPoints & input_trajectory_array, std::vector<double> & max_velocity_per_point,
+  const double max_lateral_accel_mps2, const double min_limited_speed_mps,
+  const Odometry & current_odometry, const bool inplace)
 {
   if (input_trajectory_array.empty()) {
     return;
   }
+
+  const size_t traj_size = input_trajectory_array.size();
 
   auto get_delta_time = [](const auto & next, const auto & current) -> double {
     return next->time_from_start.sec + next->time_from_start.nanosec * 1e-9 -
@@ -161,57 +165,79 @@ void limit_lateral_acceleration(
   const auto & current_position = current_odometry.pose.pose.position;
   motion_utils::calculate_time_from_start(input_trajectory_array, current_position);
 
-  const auto closest_index =
-    motion_utils::findNearestIndex(input_trajectory_array, current_position);
+  const auto start_index = motion_utils::findNearestIndex(input_trajectory_array, current_position);
+
+  const size_t end_index = traj_size - 1;
+
+  // Ensure we have a valid range
+  if (start_index >= traj_size || start_index > end_index) {
+    return;
+  }
+
   const auto start_itr = std::next(
     input_trajectory_array.begin(),
-    static_cast<std::vector<TrajectoryPoint>::difference_type>(closest_index));
+    static_cast<std::vector<TrajectoryPoint>::difference_type>(start_index));
 
-  for (auto itr = start_itr; itr < std::prev(input_trajectory_array.end()); ++itr) {
+  size_t current_index = start_index;
+  for (auto itr = start_itr; itr < std::prev(input_trajectory_array.end());
+       ++itr, ++current_index) {
+    const double current_speed = std::abs(itr->longitudinal_velocity_mps);
+    if (current_speed < min_limited_speed_mps) {
+      // No modification needed for low speeds
+      continue;
+    }
+
     const auto current_pose = itr->pose;
     const auto next_pose = std::next(itr)->pose;
     const auto delta_time = get_delta_time(std::next(itr), itr);
+    constexpr double epsilon_dt = 1.0e-3;
+    if (delta_time <= epsilon_dt) {
+      continue;
+    }
 
     tf2::Quaternion q_current;
     tf2::Quaternion q_next;
-    tf2::convert(current_pose.orientation, q_current);
-    tf2::convert(next_pose.orientation, q_next);
-    double delta_theta = q_current.angleShortestPath(q_next);
-    // Handle wrap-around
-    if (delta_theta > M_PI) {
-      delta_theta -= 2.0 * M_PI;
-    } else if (delta_theta < -M_PI) {
-      delta_theta += 2.0 * M_PI;
+
+    const double yaw_current = autoware_utils_geometry::get_rpy(current_pose).z;
+    const double yaw_next = autoware_utils_geometry::get_rpy(next_pose).z;
+    const double delta_yaw = autoware_utils_geometry::normalize_radian(yaw_next - yaw_current);
+    constexpr double epsilon_yaw_rate = 1.0e-5;
+    const double yaw_rate = std::max(std::abs(delta_yaw / delta_time), epsilon_yaw_rate);
+    const double lateral_acceleration = current_speed * yaw_rate;
+
+    if (lateral_acceleration < max_lateral_accel_mps2) {
+      // No modification needed
+      continue;
     }
 
-    constexpr double epsilon_yaw_rate = 1.0e-5;
-    const double yaw_rate = std::max(std::abs(delta_theta / delta_time), epsilon_yaw_rate);
-    const double current_speed = std::abs(itr->longitudinal_velocity_mps);
-    // Compute lateral acceleration
-    const double lateral_acceleration = current_speed * yaw_rate;
-    if (lateral_acceleration < max_lateral_accel_mps2) continue;
+    // Compute velocity limit based on lateral acceleration constraint
+    const double limited_velocity =
+      std::max(max_lateral_accel_mps2 / yaw_rate, min_limited_speed_mps);
 
-    itr->longitudinal_velocity_mps = static_cast<float>(max_lateral_accel_mps2 / yaw_rate);
+    // Update max velocity constraint for this point
+    max_velocity_per_point.at(current_index) =
+      std::min(max_velocity_per_point.at(current_index), limited_velocity);
+
+    // Inplace trajectory update
+    if (inplace) {
+      itr->longitudinal_velocity_mps = static_cast<float>(max_velocity_per_point.at(current_index));
+    }
   }
 
-  motion_utils::calculate_time_from_start(
-    input_trajectory_array, current_odometry.pose.pose.position);
-
-  // recalculate acceleration after velocity change
-  autoware::trajectory_optimizer::utils::recalculate_longitudinal_acceleration(
-    input_trajectory_array);
+  return;
 }
 
 void filter_velocity(
   TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
   const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
-  const std::shared_ptr<JerkFilteredSmoother> & smoother, const Odometry & current_odometry)
+  const std::shared_ptr<ContinuousJerkSmoother> & smoother, const Odometry & current_odometry,
+  const std::vector<double> & max_velocity_per_point)
 {
   if (!smoother) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
     RCLCPP_ERROR_THROTTLE(
       rclcpp::get_logger("trajectory_velocity_optimizer"), *clock, 5000,
-      "JerkFilteredSmoother is not initialized");
+      "ContinuousJerkSmoother is not initialized");
     return;
   }
 
@@ -222,26 +248,11 @@ void filter_velocity(
   const auto & initial_motion_speed = initial_motion.speed_mps;
   const auto & initial_motion_acc = initial_motion.acc_mps2;
 
-  constexpr bool enable_smooth_limit = true;
-  constexpr bool use_resampling = true;
-
-  input_trajectory = smoother->applyLateralAccelerationFilter(
-    input_trajectory, initial_motion_speed, initial_motion_acc, enable_smooth_limit,
-    use_resampling);
-
-  // Steering angle rate limit (Note: set use_resample = false since it is resampled above)
-  input_trajectory = smoother->applySteeringRateLimit(input_trajectory, false);
-  // Resample trajectory with ego-velocity based interval distance
-
-  input_trajectory = smoother->resampleTrajectory(
-    input_trajectory, initial_motion_speed, current_odometry.pose.pose, nearest_dist_threshold_m,
-    nearest_yaw_threshold_rad);
-
   const size_t traj_closest = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     input_trajectory, current_odometry.pose.pose, nearest_dist_threshold_m,
     nearest_yaw_threshold_rad);
 
-  // // Clip trajectory from closest point
+  // Clip trajectory from closest point
   TrajectoryPoints clipped;
   clipped.insert(
     clipped.end(),
@@ -249,14 +260,24 @@ void filter_velocity(
     input_trajectory.end());
   input_trajectory = clipped;
 
-  std::vector<TrajectoryPoints> debug_trajectories;
+  // Also clip the max velocity array if provided
+  std::vector<double> clipped_max_vel;
+  if (!max_velocity_per_point.empty() && max_velocity_per_point.size() > traj_closest) {
+    clipped_max_vel.insert(
+      clipped_max_vel.end(),
+      max_velocity_per_point.begin() +
+        static_cast<std::vector<double>::difference_type>(traj_closest),
+      max_velocity_per_point.end());
+  }
+
+  // Apply continuous jerk smoother with per-point velocity constraints
   if (!smoother->apply(
         initial_motion_speed, initial_motion_acc, input_trajectory, input_trajectory,
-        debug_trajectories, false)) {
+        clipped_max_vel)) {
     auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("trajectory_velocity_optimizer"), *clock, 5000,
-      "Fail to solve optimization.");
+      "Continuous jerk smoother optimization failed.");
   }
 }
 

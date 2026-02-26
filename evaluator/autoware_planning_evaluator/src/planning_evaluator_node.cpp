@@ -17,8 +17,8 @@
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
@@ -224,9 +224,14 @@ void PlanningEvaluatorNode::AddLaneletMetricMsg(const Odometry::ConstSharedPtr e
       closest_lanelets.end(), shoulder_lanelets.begin(), shoulder_lanelets.end());
     return closest_lanelets;
   }();
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(current_lanelets, ego_pose);
-  lanelet::ConstLanelet current_lane;
-  lanelet::utils::query::getClosestLanelet(current_lanelets, ego_pose, &current_lane);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
+  const auto current_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanelets, ego_pose);
+  if (!current_lane_opt) {
+    return;
+  }
+  const auto & current_lane = current_lane_opt.value();
 
   // push_back lanelet info to MetricArrayMsg
   const std::string base_name = "ego_lane_info/";

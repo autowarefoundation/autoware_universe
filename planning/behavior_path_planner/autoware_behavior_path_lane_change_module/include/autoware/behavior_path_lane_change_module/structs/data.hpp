@@ -247,6 +247,7 @@ struct TransientData
   size_t current_path_seg_idx;   // index of nearest segment to ego along current path
   double current_path_velocity;  // velocity of the current path at the ego position along the path
 
+  std::vector<std::pair<double, double>> interval_dist_no_lane_change_lines;
   double lane_change_prepare_duration{0.0};
 
   bool is_ego_near_current_terminal_start{false};
@@ -275,6 +276,8 @@ struct CommonData
   PathWithLaneId current_lanes_path;
   PathWithLaneId target_lanes_path;
   ModuleType lc_type;
+  std::vector<lanelet::ConstLineString3d> no_lane_change_lines;
+
   Direction direction;
 
   [[nodiscard]] const Pose & get_ego_pose() const { return self_odometry_ptr->pose.pose; }

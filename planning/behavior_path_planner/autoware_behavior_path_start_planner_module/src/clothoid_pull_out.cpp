@@ -28,8 +28,8 @@
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -56,7 +56,6 @@
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
 using autoware::universe_utils::normalizeRadian;
@@ -502,10 +501,12 @@ std::optional<PathWithLaneId> create_path_with_lane_id_from_clothoid_paths(
     if (!search_lanes.empty()) {
       // Find closest lanelet
       lanelet::Lanelet closest_lanelet;
-      if (lanelet::utils::query::getClosestLanelet(
-            search_lanes, path_point.point.pose, &closest_lanelet)) {
+      if (
+        const auto closest_lanelet_opt =
+          autoware::experimental::lanelet2_utils::get_closest_lanelet(
+            search_lanes, path_point.point.pose)) {
         // Get z value of closest point from lanelet centerline
-        const auto centerline = closest_lanelet.centerline();
+        const auto centerline = closest_lanelet_opt.value().centerline();
         if (!centerline.empty()) {
           double min_distance = std::numeric_limits<double>::max();
           double closest_z = all_clothoid_points[i].z;  // Default is original z value
@@ -1401,7 +1402,9 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       const auto long_offset_to_next_point =
         autoware::motion_utils::calcLongitudinalOffsetToSegment(
           cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
-      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
+      constexpr double eps = 1e-2;
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) <
+             max_long_offset + eps;
     };
 
     if (parameters_.check_clothoid_path_lane_departure && !validate_cropped_path(cropped_path)) {
@@ -1421,7 +1424,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     // STEP 5-7: Collision check
     // ===================================================================
     // Create PullOutPath for collision check
-    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose};
+    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose, {}};
 
     if (isPullOutPathCollided(
           temp_pull_out_path, planner_data,
@@ -1448,6 +1451,19 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
                                  ? start_pose
                                  : resampled_combined_path.points.front().point.pose;
     pull_out_path.end_pose = target_pose;
+    std::tie(pull_out_path.shift_length.start, pull_out_path.shift_length.end) =
+      start_planner_utils::calc_start_and_end_shift_length(
+        pull_out_lanes, pull_out_path.start_pose, pull_out_path.end_pose);
+
+    const double shift_length =
+      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
+    if (shift_length < parameters_.minimum_shift_length) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("ClothoidPullOut"),
+        "Shift length too short %.2f m. Continuing to next candidate.", shift_length);
+      planner_debug_data.conditions_evaluation.emplace_back("shift length too small");
+      continue;
+    }
 
     RCLCPP_INFO(
       rclcpp::get_logger("clothoid_pull_out"),

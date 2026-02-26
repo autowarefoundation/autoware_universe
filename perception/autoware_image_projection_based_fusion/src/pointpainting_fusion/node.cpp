@@ -96,10 +96,6 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 : FusionNode<PointCloudMsgType, RoiMsgType, DetectedObjects>("pointpainting_fusion", options)
 {
   omp_num_threads_ = this->declare_parameter<int>("omp_params.num_threads");
-  const std::vector<double> score_thresholds_double =
-    this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
-  const std::vector<float> score_thresholds(
-    score_thresholds_double.begin(), score_thresholds_double.end());
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
@@ -159,6 +155,57 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
   const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
 
+  // Distance-based score thresholds
+  const std::vector<double> distance_bin_upper_limits_double =
+    this->declare_parameter<std::vector<double>>(
+      "model_params.detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
+  // Must set at least one upper bound
+  if (distance_bin_upper_limits_double.empty()) {
+    throw std::invalid_argument("The number of upper bounds must be at least one");
+  }
+  const std::vector<float> distance_bin_upper_limits(
+    distance_bin_upper_limits_double.begin(), distance_bin_upper_limits_double.end());
+
+  // Create empty vector of thresholds for each class * number of upper bounds
+  std::vector<float> score_thresholds =
+    std::vector<float>(class_names_.size() * distance_bin_upper_limits.size(), 0.0);
+  int current_class_index = 0;
+  for (const auto & class_name : class_names_) {
+    // Construct the parameter path (e.g., "model_params.score_thresholds.CAR")
+    std::string param_path =
+      "model_params.detection_score_thresholds.min_confidence_scores." + class_name;
+
+    // Declare it. If the number of thresholds is not equal to the number of upper bounds, throw an
+    // error
+    auto class_score_thresholds =
+      this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    if (class_score_thresholds.size() != distance_bin_upper_limits.size()) {
+      throw std::invalid_argument(
+        "The number of thresholds for " + class_name +
+        " is not equal to the number of upper bounds");
+    }
+
+    // Move it to the correct position in the 1d-vector score_thresholds, where the order is number
+    // of classes * number of upper bounds
+    int current_upper_bound_index = 0;
+    for (auto class_score_threshold : class_score_thresholds) {
+      // The index is the current class index + the current upper bound index * the number of
+      // classes since score thresholds for the same class are in the same column For example, #
+      // CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      // [
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+      //  0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+      // ]
+      auto score_threshold_index =
+        current_class_index + current_upper_bound_index * class_names_.size();
+      score_thresholds[score_threshold_index] = class_score_threshold;
+      current_upper_bound_index++;
+    }
+    current_class_index++;
+  }
+
   // diagnostics parameters
   max_allowed_processing_time_ms_ =
     declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
@@ -195,8 +242,8 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     densification_world_frame_id, densification_num_past_frames);
   autoware::lidar_centerpoint::CenterPointConfig config(
     class_names_.size(), point_feature_size, cloud_capacity, max_voxel_size, pointcloud_range,
-    voxel_size, downsample_factor, encoder_in_feature_size, score_thresholds,
-    circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
+    voxel_size, downsample_factor, encoder_in_feature_size, distance_bin_upper_limits,
+    score_thresholds, circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
 
   // create detector
   detector_ptr_ = std::make_unique<image_projection_based_fusion::PointPaintingTRT>(

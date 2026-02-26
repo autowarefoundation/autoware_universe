@@ -2,6 +2,21 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(out_of_lane): clarify boolean argument name to avoid semantic ambiguity (`#12062 <https://github.com/autowarefoundation/autoware_universe/issues/12062>`_)
+  * refactor(out_of_lane): clarify boolean argument in collision avoidance calculation
+  * refactor(out_of_lane): align variable naming with avoidance decision semantics
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(lanelet2_extension): deprecate some functions in query (2) (`#11998 <https://github.com/autowarefoundation/autoware_universe/issues/11998>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(motion_velocity_out_of_lane_module): use autoware_utils_geometry types (`#11938 <https://github.com/autowarefoundation/autoware_universe/issues/11938>`_)
+* feat(motion_velocity_planner): publish debug trajectory for each module (`#11781 <https://github.com/autowarefoundation/autoware_universe/issues/11781>`_)
+* Contributors: Leon Nie, Maxime CLEMENT, Mete Fatih Cırıt, Ryohsuke Mitsudome, Sarun MUKDAPITAK
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

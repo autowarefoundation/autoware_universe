@@ -22,7 +22,6 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <utility>
@@ -40,6 +39,12 @@ struct PullOutPath
   std::vector<std::pair<double, double>> pairs_terminal_velocity_and_accel{};
   Pose start_pose{};
   Pose end_pose{};
+
+  struct
+  {
+    double start{std::numeric_limits<double>::min()};
+    double end{std::numeric_limits<double>::max()};
+  } shift_length;
 };
 
 }  // namespace autoware::behavior_path_planner

@@ -16,8 +16,8 @@
 
 #include "types.hpp"
 
+#include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
@@ -76,8 +76,9 @@ lanelet::ConstLanelets calculate_ignored_lanelets(
   // ignore lanelets directly preceding a trajectory lanelet
   constexpr auto ignore_distance = 10.0;
   for (const auto & trajectory_lanelet : trajectory_lanelets) {
-    const auto succeeding_sequences = lanelet::utils::query::getSucceedingLaneletSequences(
-      route_handler.getRoutingGraphPtr(), trajectory_lanelet, ignore_distance);
+    const auto succeeding_sequences =
+      autoware::experimental::lanelet2_utils::get_succeeding_lanelet_sequences(
+        trajectory_lanelet, route_handler.getRoutingGraphPtr(), ignore_distance);
     auto ignored_sequences =
       route_handler.getPrecedingLaneletSequence(trajectory_lanelet, ignore_distance);
     ignored_sequences.insert(

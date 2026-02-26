@@ -148,6 +148,16 @@
               "type": "number",
               "description": "Decay coefficient for EKF.",
               "default": 0.99999998
+            },
+            "samples_in_bounds_to_init": {
+              "type": "integer",
+              "description": "Number of in bounds consecutive samples to initialize EKF.",
+              "default": 250
+            },
+            "max_reinitialization_retries": {
+              "type": "integer",
+              "description": "Maximum number of reinitialization retries for EKF before triggering an error.",
+              "default": 5
             }
           },
           "required": [
@@ -155,7 +165,9 @@
             "variance_p_angle",
             "measurement_noise_r_angle",
             "min_covariance_angle",
-            "decay_coefficient"
+            "decay_coefficient",
+            "samples_in_bounds_to_init",
+            "max_reinitialization_retries"
           ]
         },
         "scale_imu_injection": {

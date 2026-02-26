@@ -18,7 +18,6 @@
 #include "map_based_prediction/data_structure.hpp"
 #include "map_based_prediction/path_generator.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -110,7 +109,7 @@ private:
   // Data
   std::unordered_map<std::string, TrackedObject> current_crosswalk_users_;
   std::unordered_set<std::string> predicted_crosswalk_users_ids_;
-  std::unordered_map<std::string, std::deque<CrosswalkUserData>> crosswalk_users_history_;
+  std::unordered_map<std::string, std::deque<CrosswalkUser>> crosswalk_users_history_;
   std::map<std::pair<std::string, lanelet::Id>, rclcpp::Time> stopped_times_against_green_;
   std::unordered_map<std::string, std::string> known_matches_;
   std::unordered_map<lanelet::Id, TrafficLightGroup> traffic_signal_id_map_;

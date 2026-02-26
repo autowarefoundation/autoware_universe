@@ -152,8 +152,8 @@ void update_departure_intervals_poses(
       autoware::motion_utils::calcInterpolatedPose(raw_ref_traj, interval.end_dist_on_traj);
     const auto & prev_pose = interval.end.pose;
     if (
-      const auto is_shifted_opt =
-        utils::is_point_shifted(prev_pose, curr_pose, th_pt_shift_dist_m, th_pt_shift_angle_rad)) {
+      const auto is_shifted_opt = boundary_departure_checker::utils::is_point_shifted(
+        prev_pose, curr_pose, th_pt_shift_dist_m, th_pt_shift_angle_rad)) {
       return true;
     }
     interval.start.pose =
@@ -277,42 +277,6 @@ void update_departure_intervals(
   merge_departure_intervals(departure_intervals);
 }
 
-CriticalDeparturePoints find_new_critical_departure_points(
-  const Side<DeparturePoints> & new_departure_points,
-  const CriticalDeparturePoints & critical_departure_points,
-  const std::vector<TrajectoryPoint> & raw_ref_traj, const double th_point_merge_distance_m)
-{
-  CriticalDeparturePoints new_critical_departure_points;
-  for (const auto side_key : g_side_keys) {
-    for (const auto & dpt_pt : new_departure_points[side_key]) {
-      if (dpt_pt.departure_type != DepartureType::CRITICAL_DEPARTURE) {
-        continue;
-      }
-
-      if (dpt_pt.can_be_removed) {
-        continue;
-      }
-
-      const auto is_near_curr_pts = std::any_of(
-        critical_departure_points.begin(), critical_departure_points.end(),
-        [&](const CriticalDeparturePoint & crit_pt) {
-          return std::abs(dpt_pt.ego_dist_on_ref_traj - crit_pt.ego_dist_on_ref_traj) <
-                 th_point_merge_distance_m;
-        });
-
-      if (is_near_curr_pts) {
-        continue;
-      }
-
-      CriticalDeparturePoint crit_pt(dpt_pt);
-      crit_pt.pose_on_current_ref_traj =
-        motion_utils::calcInterpolatedPose(raw_ref_traj, crit_pt.ego_dist_on_ref_traj);
-      new_critical_departure_points.push_back(crit_pt);
-    }
-  }
-  return new_critical_departure_points;
-}
-
 std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & ref_traj_pts,
   const DepartureIntervals & departure_intervals,
@@ -360,20 +324,5 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
   }
 
   return slowdown_intervals;
-}
-
-std::optional<std::pair<double, double>> is_point_shifted(
-  const Pose & prev_iter_pt, const Pose & curr_iter_pt, const double th_shift_m,
-  const double th_yaw_diff_rad)
-{
-  const auto curr_pt_yaw_rad = tf2::getYaw(curr_iter_pt.orientation);
-  const auto prev_pt_yaw_rad = tf2::getYaw(prev_iter_pt.orientation);
-  const auto yaw_diff_rad = std::abs(curr_pt_yaw_rad - prev_pt_yaw_rad);
-
-  const auto dist_m = autoware_utils::calc_distance2d(curr_iter_pt.position, prev_iter_pt.position);
-  if (dist_m > th_shift_m || yaw_diff_rad > th_yaw_diff_rad) {
-    return std::make_pair(dist_m, yaw_diff_rad);
-  }
-  return std::nullopt;
 }
 }  // namespace autoware::motion_velocity_planner::experimental::utils

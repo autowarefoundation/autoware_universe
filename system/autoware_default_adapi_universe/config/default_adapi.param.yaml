@@ -29,10 +29,14 @@
 /adapi/node/manual/local:
   ros__parameters:
     mode: local
+    diag_timeout_warn_duration: 1.0
+    diag_timeout_error_duration: 2.0
 
 /adapi/node/manual/remote:
   ros__parameters:
     mode: remote
+    diag_timeout_warn_duration: 1.0
+    diag_timeout_error_duration: 2.0
 
 /adapi/node/fail_safe:
   ros__parameters:

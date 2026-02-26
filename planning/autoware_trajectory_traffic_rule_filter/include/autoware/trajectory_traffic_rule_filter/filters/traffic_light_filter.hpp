@@ -17,14 +17,10 @@
 
 #include "autoware/trajectory_traffic_rule_filter/traffic_rule_filter_interface.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
-
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/Forward.h>
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -36,18 +32,17 @@ class TrafficLightFilter : public TrafficRuleFilterInterface
 public:
   TrafficLightFilter();
 
-  bool is_feasible(const TrajectoryPoints & trajectory_points) override;
+  tl::expected<void, std::string> is_feasible(const TrajectoryPoints & trajectory_points) override;
   void set_traffic_lights(
     const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
     override;
 
 private:
-  lanelet::ConstLanelets get_lanelets_from_trajectory(
-    const TrajectoryPoints & trajectory_points) const;
+  /// @brief return the stop lines with red traffic lights for the given lanelet
+  [[nodiscard]] std::vector<lanelet::BasicLineString2d> get_red_stop_lines(
+    const lanelet::ConstLanelet & lanelet) const;
 
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
-  std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
-    boundary_departure_checker_;
 };
 
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin

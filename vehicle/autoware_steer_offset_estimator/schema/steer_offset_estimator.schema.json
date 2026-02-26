@@ -9,44 +9,95 @@
         "initial_covariance": {
           "type": "number",
           "description": "steer offset is larger than tolerance",
-          "default": "1000.0"
+          "default": "1000.0",
+          "minimum": 0.0
         },
-        "steer_update_hz": {
+        "update_hz": {
           "type": "number",
           "description": "update hz of steer data",
           "default": "10.0",
           "minimum": 0.0
         },
-        "forgetting_factor": {
+        "initial_offset": {
           "type": "number",
-          "description": "weight of using previous value",
-          "default": "0.999",
+          "description": "initial steer offset value",
+          "default": "0.0"
+        },
+        "process_noise_covariance": {
+          "type": "number",
+          "description": "process noise covariance for Kalman filter",
+          "default": "0.01",
           "minimum": 0.0
         },
-        "valid_min_velocity": {
+        "measurement_noise_covariance": {
+          "type": "number",
+          "description": "measurement noise covariance for Kalman filter",
+          "default": "0.01",
+          "minimum": 0.0
+        },
+        "denominator_floor": {
+          "type": "number",
+          "description": "minimum value for denominator to avoid numerical issues",
+          "default": "1.0e-12",
+          "minimum": 0.0
+        },
+        "covariance_floor": {
+          "type": "number",
+          "description": "minimum value for covariance to avoid numerical issues",
+          "default": "1.0e-12",
+          "minimum": 0.0
+        },
+        "min_velocity": {
           "type": "number",
           "description": "velocity below this value is not used",
-          "default": "5.0",
+          "default": "1.0",
           "minimum": 0.0
         },
-        "valid_max_steer": {
+        "max_steer": {
           "type": "number",
-          "description": "steer above this value is not used",
-          "default": "0.05"
+          "description": "offset estimation is skipped if steering is above this value",
+          "default": "0.03",
+          "minimum": 0.0
         },
-        "warn_steer_offset_deg": {
+        "max_steer_rate": {
           "type": "number",
-          "description": "Warn if offset is above this value. ex. if absolute estimated offset is larger than 2.5[deg] => warning",
-          "default": "2.5"
+          "description": "offset estimation is skipped if steering rate is above this value",
+          "default": "0.02",
+          "minimum": 0.0
+        },
+        "max_ang_velocity": {
+          "type": "number",
+          "description": "offset estimation is skipped if angular velocity is above this value",
+          "default": "0.02",
+          "minimum": 0.0
+        },
+        "max_steer_buffer": {
+          "type": "number",
+          "description": "duration to keep steering values in the buffer",
+          "default": "1.0",
+          "minimum": 0.0
+        },
+        "max_pose_lag": {
+          "type": "number",
+          "description": "max valid age of previous pose which can be used for twist calculation",
+          "default": "0.5",
+          "minimum": 0.0
         }
       },
       "required": [
         "initial_covariance",
-        "steer_update_hz",
-        "forgetting_factor",
-        "valid_min_velocity",
-        "valid_max_steer",
-        "warn_steer_offset_deg"
+        "update_hz",
+        "initial_offset",
+        "process_noise_covariance",
+        "measurement_noise_covariance",
+        "denominator_floor",
+        "covariance_floor",
+        "min_velocity",
+        "max_steer",
+        "max_steer_rate",
+        "max_ang_velocity",
+        "max_steer_buffer",
+        "max_pose_lag"
       ]
     }
   },

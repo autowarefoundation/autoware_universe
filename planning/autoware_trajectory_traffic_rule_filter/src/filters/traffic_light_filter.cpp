@@ -15,53 +15,23 @@
 #include "autoware/trajectory_traffic_rule_filter/filters/traffic_light_filter.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <tl_expected/expected.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <boost/geometry.hpp>
 
+#include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/BoundingBox.h>
+#include <lanelet2_core/primitives/LineString.h>
 
-#include <algorithm>
-#include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
 {
-using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 TrafficLightFilter::TrafficLightFilter() : TrafficRuleFilterInterface("TrafficLightFilter")
 {
-  boundary_departure_checker_ =
-    std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>();
-}
-
-lanelet::ConstLanelets TrafficLightFilter::get_lanelets_from_trajectory(
-  const TrajectoryPoints & trajectory_points) const
-{
-  lanelet::ConstLanelets lanes;
-  PathWithLaneId path;
-  path.points.reserve(trajectory_points.size());
-  for (const auto & point : trajectory_points) {
-    PathPointWithLaneId path_point;
-    path_point.point.pose = point.pose;
-    path_point.point.longitudinal_velocity_mps = point.longitudinal_velocity_mps;
-    path_point.point.lateral_velocity_mps = point.lateral_velocity_mps;
-    path_point.point.heading_rate_rps = point.heading_rate_rps;
-    path.points.push_back(path_point);
-  }
-  const auto lanelet_distance_pair =
-    boundary_departure_checker_->getLaneletsFromPath(lanelet_map_, path);
-  if (lanelet_distance_pair.empty()) {
-    return lanes;
-  }
-
-  for (const auto & lanelet_distance : lanelet_distance_pair) {
-    const auto & lanelet = lanelet_distance.second;
-    lanes.push_back(lanelet);
-  }
-  return lanes;
 }
 
 void TrafficLightFilter::set_traffic_lights(
@@ -70,30 +40,55 @@ void TrafficLightFilter::set_traffic_lights(
   traffic_lights_ = traffic_lights;
 }
 
-bool TrafficLightFilter::is_feasible(const TrajectoryPoints & trajectory_points)
+std::vector<lanelet::BasicLineString2d> TrafficLightFilter::get_red_stop_lines(
+  const lanelet::ConstLanelet & lanelet) const
 {
-  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty()) {
-    return true;  // Allow if no data available
-  }
-
-  const auto lanes = get_lanelets_from_trajectory(trajectory_points);
-
-  for (const auto & lane : lanes) {
-    // Check traffic lights for this lanelet
-    for (const auto & element : lane.regulatoryElementsAs<lanelet::TrafficLight>()) {
-      // Find corresponding traffic light in received data
-      for (const auto & signal : traffic_lights_->traffic_light_groups) {
-        if (signal.traffic_light_group_id == static_cast<int64_t>(element->id())) {
-          // Check if stop is required using autoware traffic light utils
-          if (autoware::traffic_light_utils::isTrafficSignalStop(lane, signal)) {
-            return false;  // Reject trajectory if stop is required
-          }
-        }
+  std::vector<lanelet::BasicLineString2d> stop_lines;
+  for (const auto & element : lanelet.regulatoryElementsAs<lanelet::TrafficLight>()) {
+    for (const auto & signal : traffic_lights_->traffic_light_groups) {
+      if (
+        signal.traffic_light_group_id == element->id() && element->stopLine().has_value() &&
+        autoware::traffic_light_utils::isTrafficSignalStop(lanelet, signal)) {
+        stop_lines.push_back(lanelet::utils::to2D(element->stopLine()->basicLineString()));
       }
     }
   }
+  return stop_lines;
+}
 
-  return true;  // Allow if no red lights found
+tl::expected<void, std::string> TrafficLightFilter::is_feasible(
+  const TrajectoryPoints & trajectory_points)
+{
+  if (!lanelet_map_ || !traffic_lights_ || trajectory_points.empty() || !vehicle_info_ptr_) {
+    return {};  // Allow if no data available
+  }
+
+  lanelet::BasicLineString2d trajectory_ls;
+  for (const auto & p : trajectory_points) {
+    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+  }
+  if (vehicle_info_ptr_->max_longitudinal_offset_m > 0.0 && trajectory_ls.size() > 1) {
+    // extend the trajectory linestring by the vehicle's longitudinal offset
+    const lanelet::BasicSegment2d last_segment(
+      trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
+    const auto last_vector = last_segment.second - last_segment.first;
+    const auto last_length = boost::geometry::length(last_segment);
+    if (last_length > 0.0) {
+      const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
+      lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
+      trajectory_ls.emplace_back(front_vehicle_point);
+    }
+  }
+
+  const auto bbox = boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls);
+  for (const auto & ll : lanelet_map_->laneletLayer.search(bbox)) {
+    for (const auto & stop_line : get_red_stop_lines(ll)) {
+      if (boost::geometry::intersects(trajectory_ls, stop_line)) {
+        return tl::make_unexpected("crosses stop line of lanelet " + std::to_string(ll.id()));
+      }
+    }
+  }
+  return {};  // Allow if no red lights found
 }
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin
 
