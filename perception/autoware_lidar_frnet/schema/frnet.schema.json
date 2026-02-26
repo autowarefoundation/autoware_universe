@@ -10,7 +10,7 @@
         "onnx_path": {
           "type": "string",
           "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/frnet.onnx",
+          "default": "$(var model_path)/frnet_$(var sensor_model).onnx",
           "pattern": "\\.onnx$"
         },
         "trt_precision": {
@@ -19,84 +19,26 @@
           "default": "fp16",
           "enum": ["fp16", "fp32"]
         },
-        "fov_up_deg": {
+        "filter_class_confidence_threshold": {
           "type": "number",
-          "description": "LiDAR's upper elevation angle in degrees.",
-          "default": "10.0",
-          "minimum": -90.0,
-          "maximum": 90.0
+          "description": "A threshold value for the filter classes' probability. If any of the listed classes has probability greater or equal to this value, the point will be excluded from the filtered output cloud.",
+          "default": "0.05",
+          "minimum": 0.0,
+          "maximum": 1.0
         },
-        "fov_down_deg": {
-          "type": "number",
-          "description": "LiDAR's lower elevation angle in degrees.",
-          "default": "-30.0",
-          "minimum": -90.0,
-          "maximum": 90.0
-        },
-        "frustum_width": {
-          "type": "integer",
-          "description": "Width of the FRNet frustum in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "frustum_height": {
-          "type": "integer",
-          "description": "Height of the FRNet frustum in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "interpolation_width": {
-          "type": "integer",
-          "description": "Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "interpolation_height": {
-          "type": "integer",
-          "description": "Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "score_threshold": {
-          "type": "number",
-          "description": "A threshold value for the score model segmentation result. If the score is lower than this value, the point will obtain the 'unknown' class ID.",
-          "default": "0.0"
-        },
-        "excluded_class_names": {
+        "filter_classes": {
           "type": "array",
-          "description": "A list of class names to be excluded in filtered output cloud.",
-          "items": {
-            "type": "string"
-          },
-          "default": ["driveable_surface"]
-        },
-        "palette": {
-          "type": "array",
-          "description": "A sequence of RGB values for each class name. The length of the array must be 3 times the number of class names.",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "default": [
-            255, 120, 50, 255, 192, 203, 255, 255, 0, 0, 150, 245, 0, 255, 255, 255, 127, 0, 255, 0,
-            0, 255, 240, 150, 135, 60, 0, 160, 32, 240, 255, 0, 255, 139, 137, 137, 75, 0, 75, 150,
-            240, 80, 230, 230, 250, 0, 175, 0, 0, 0, 0
-          ]
+          "items": { "type": "string" },
+          "description": "A list of class names to be filtered out if their probability exceeds the threshold.",
+          "default": ["drivable_surface"],
+          "uniqueItems": true
         }
       },
       "required": [
         "onnx_path",
         "trt_precision",
-        "fov_up_deg",
-        "fov_down_deg",
-        "frustum_width",
-        "frustum_height",
-        "interpolation_width",
-        "interpolation_height",
-        "score_threshold",
-        "excluded_class_names",
-        "palette"
+        "filter_class_confidence_threshold",
+        "filter_classes"
       ],
       "additionalProperties": false
     }

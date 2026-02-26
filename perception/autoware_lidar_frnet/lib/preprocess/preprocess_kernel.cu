@@ -37,8 +37,11 @@ namespace autoware::lidar_frnet
 __constant__ utils::FieldOfView const_fov;
 __constant__ utils::Dims2d const_interpolation;
 __constant__ utils::Dims2d const_frustum;
+__constant__ bool const_crop_box_enabled;
+__constant__ float const_crop_box_bounds[6];          // [min_x, min_y, min_z, max_x, max_y, max_z]
+__constant__ float const_crop_box_sensor_to_ref[12];  // row-major 3x3 R then tx, ty, tz
 
-PreprocessCuda::PreprocessCuda(const utils::PreprocessingParams & params, cudaStream_t stream)
+PreprocessCuda::PreprocessCuda(const utils::NetworkParams & params, cudaStream_t stream)
 : interpolation_(params.interpolation), stream_(stream)
 {
   CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
@@ -47,6 +50,22 @@ PreprocessCuda::PreprocessCuda(const utils::PreprocessingParams & params, cudaSt
     const_interpolation, &params.interpolation, sizeof(utils::Dims2d), 0, cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
     const_frustum, &params.frustum, sizeof(utils::Dims2d), 0, cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
+    const_crop_box_enabled, &params.crop_box_enabled, sizeof(bool), 0, cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
+    const_crop_box_bounds, params.crop_box_bounds.data(), sizeof(float) * 6, 0,
+    cudaMemcpyHostToDevice));
+  // Identity transform (used only when crop enabled; pipeline sets real transform each frame)
+  const float identity[12] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0};
+  CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
+    const_crop_box_sensor_to_ref, identity, sizeof(float) * 12, 0, cudaMemcpyHostToDevice));
+}
+
+void PreprocessCuda::setCropBoxTransform(const float * T_sensor_to_ref_12)
+{
+  CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
+    const_crop_box_sensor_to_ref, T_sensor_to_ref_12, sizeof(float) * 12, 0,
+    cudaMemcpyHostToDevice));
 }
 
 struct alignas(8) half4
@@ -127,36 +146,89 @@ __device__ int2 project2d(const float3 point, const uint32_t scale_x, const uint
     static_cast<int32_t>(fminf(fmaxf(proj_y, 0.0f), static_cast<float>(scale_y) - 1.0f)));
 }
 
+/// @brief Trait to get intensity as float from different point types (CUDA device code)
+template <typename PointT>
+__device__ inline float get_intensity(const PointT & point);
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZI & point)
+{
+  return point.intensity;
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRC & point)
+{
+  return static_cast<float>(point.intensity);
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRADRT & point)
+{
+  return point.intensity;
+}
+
+template <>
+__device__ inline float get_intensity(const InputPointTypeXYZIRCAEDT & point)
+{
+  return static_cast<float>(point.intensity);
+}
+
+template <typename PointT>
 __global__ void projectPoints_kernel(
-  const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
+  const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-  uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d, PointT * output_cloud_compact)
 {
   uint32_t point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_points) return;
 
-  const InputPointType & point = cloud[point_idx];
+  const PointT & point = cloud[point_idx];
   const auto point3d = make_float3(point.x, point.y, point.z);
+
+  // Ego crop box in reference frame: transform point to reference, then test AABB
+  if (const_crop_box_enabled) {
+    const float px = point3d.x, py = point3d.y, pz = point3d.z;
+    const float p_ref_x = const_crop_box_sensor_to_ref[0] * px +
+                          const_crop_box_sensor_to_ref[1] * py +
+                          const_crop_box_sensor_to_ref[2] * pz + const_crop_box_sensor_to_ref[9];
+    const float p_ref_y = const_crop_box_sensor_to_ref[3] * px +
+                          const_crop_box_sensor_to_ref[4] * py +
+                          const_crop_box_sensor_to_ref[5] * pz + const_crop_box_sensor_to_ref[10];
+    const float p_ref_z = const_crop_box_sensor_to_ref[6] * px +
+                          const_crop_box_sensor_to_ref[7] * py +
+                          const_crop_box_sensor_to_ref[8] * pz + const_crop_box_sensor_to_ref[11];
+    if (
+      p_ref_x > const_crop_box_bounds[0] && p_ref_x < const_crop_box_bounds[3] &&
+      p_ref_y > const_crop_box_bounds[1] && p_ref_y < const_crop_box_bounds[4] &&
+      p_ref_z > const_crop_box_bounds[2] && p_ref_z < const_crop_box_bounds[5]) {
+      return;
+    }
+  }
+
+  const uint32_t append_idx = atomicAdd(output_num_points, 1);
+  const float intensity = get_intensity(point);
   const auto proj_point = project2d(point3d, const_interpolation.w, const_interpolation.h);
   const auto proj_coor = project2d(point3d, const_frustum.w, const_frustum.h);
   const auto proj_idx = proj_point.y * const_interpolation.w + proj_point.x;
 
-  // Writing to output arrays
-  atomicAdd(output_num_points, 1);
+  output_points[append_idx * 4 + 0] = point.x;
+  output_points[append_idx * 4 + 1] = point.y;
+  output_points[append_idx * 4 + 2] = point.z;
+  output_points[append_idx * 4 + 3] = intensity;
 
-  output_points[point_idx * 4 + 0] = point.x;
-  output_points[point_idx * 4 + 1] = point.y;
-  output_points[point_idx * 4 + 2] = point.z;
-  output_points[point_idx * 4 + 3] = point.intensity;
+  output_coors[append_idx * 3 + 0] = 0;
+  output_coors[append_idx * 3 + 1] = proj_coor.y;
+  output_coors[append_idx * 3 + 2] = proj_coor.x;
 
-  output_coors[point_idx * 3 + 0] = 0;
-  output_coors[point_idx * 3 + 1] = proj_coor.y;
-  output_coors[point_idx * 3 + 2] = proj_coor.x;
+  output_coors_keys[append_idx] = proj_coor.y * const_frustum.w + proj_coor.x;
 
-  output_coors_keys[point_idx] = proj_coor.y * const_frustum.w + proj_coor.x;
+  if (output_cloud_compact != nullptr) {
+    output_cloud_compact[append_idx] = point;
+  }
 
   // Update projection if not yet filled
-  auto point_half4 = half4(point.x, point.y, point.z, point.intensity);
+  auto point_half4 = half4(point.x, point.y, point.z, intensity);
   auto output_proj_2d_address = reinterpret_cast<unsigned long long *>(&output_proj_2d[proj_idx]);
   if (!atomicExch(&output_proj_idxs[proj_idx], 1)) {
     *output_proj_2d_address = pack_half4(point_half4);
@@ -165,19 +237,65 @@ __global__ void projectPoints_kernel(
   }
 }
 
-cudaError_t PreprocessCuda::projectPoints_launch(
-  const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
+template <typename PointT>
+cudaError_t PreprocessCuda::projectPoints_launch_impl(
+  const PointT * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-  uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact)
 {
   dim3 block(utils::divup(num_points, utils::kernel_1d_size));
   dim3 threads(utils::kernel_1d_size);
 
   projectPoints_kernel<<<block, threads, 0, stream_>>>(
     cloud, num_points, output_num_points, output_points, output_coors, output_coors_keys,
-    output_proj_idxs, output_proj_2d);
+    output_proj_idxs, output_proj_2d, static_cast<PointT *>(output_cloud_compact));
 
   return cudaGetLastError();
+}
+
+// Explicit instantiations
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZI>(
+  const InputPointTypeXYZI *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *, uint32_t *,
+  uint64_t *, void *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRC>(
+  const InputPointTypeXYZIRC *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *, void *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRADRT>(
+  const InputPointTypeXYZIRADRT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *, void *);
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRCAEDT>(
+  const InputPointTypeXYZIRCAEDT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+  uint32_t *, uint64_t *, void *);
+
+cudaError_t PreprocessCuda::projectPoints_launch(
+  const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
+  float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact)
+{
+  switch (format) {
+    case InputFormat::XYZIRCAEDT:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRCAEDT *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
+        output_cloud_compact);
+    case InputFormat::XYZIRADRT:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRADRT *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
+        output_cloud_compact);
+    case InputFormat::XYZIRC:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZIRC *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
+        output_cloud_compact);
+    case InputFormat::XYZI:
+      return projectPoints_launch_impl(
+        static_cast<const InputPointTypeXYZI *>(cloud), num_points, output_num_points,
+        output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
+        output_cloud_compact);
+    default:
+      return cudaErrorInvalidValue;
+  }
 }
 
 __global__ void interpolatePoints_kernel(
