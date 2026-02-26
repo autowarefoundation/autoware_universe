@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_path_optimizer)
 
-include(CheckCXXCompilerFlag)
-
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
@@ -22,6 +20,9 @@ list(REMOVE_DUPLICATES ACADOS_DEPS_INCLUDE_DIRS)
 if(ACADOS_DEPS_INCLUDE_DIRS)
   ament_export_include_directories(${ACADOS_DEPS_INCLUDE_DIRS})
 endif()
+
+find_package(ament_cmake_export_dependencies REQUIRED)
+ament_export_dependencies(acados)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
