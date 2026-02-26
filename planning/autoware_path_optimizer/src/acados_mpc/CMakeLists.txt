@@ -68,6 +68,11 @@ target_include_directories(acados_interface PUBLIC
 
 target_link_libraries(acados_interface PRIVATE acados)
 
+set_target_properties(acados_interface PROPERTIES
+  INSTALL_RPATH "${ACADOS_SOURCE_DIR}/lib"
+  BUILD_WITH_INSTALL_RPATH TRUE
+)
+
 # Suppress warnings on generated C code
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set_source_files_properties(${GENERATED_MPC_FILES} PROPERTIES
