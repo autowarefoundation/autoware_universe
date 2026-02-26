@@ -9529,6 +9529,8 @@
       
         
       
+        
+      
     
     
     
@@ -9591,6 +9593,34 @@
     
   
     RefineBySpeed
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docs/refine_penetration_by_static_objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RefinePenetrationByStaticObjects
   
 
     
@@ -23135,6 +23165,10 @@
 <li>Refine the paths of objects based on their current speed.</li>
 </ul>
 </li>
+<li><a href="docs/refine_penetration_by_static_objects/">RefinePenetrationByStaticObjects</a><ul>
+<li>Refine the penetrated paths of objects based on the other static objects.</li>
+</ul>
+</li>
 </ul>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
@@ -23179,7 +23213,7 @@
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">#</a></h2>
 <h3 id="launch-ros-2-node">Launch ROS 2 Node<a class="headerlink" href="#launch-ros-2-node" title="Permanent link">#</a></h3>
 <p>To use this package, you can launch it with the following command:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_predicted_path_postprocessor<span class="w"> </span>autoware_predicted_path_postprocessor.launch.xml
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>launch<span class="w"> </span>autoware_predicted_path_postprocessor<span class="w"> </span>predicted_path_postprocessor.launch.xml
 </code></pre></div>
 <h3 id="leverage-processor-in-your-codebase">Leverage Processor in Your Codebase<a class="headerlink" href="#leverage-processor-in-your-codebase" title="Permanent link">#</a></h3>
 <p>You can leverage the processor in your codebase by including the appropriate headers and using the <code>ComposableProcessor</code> class:</p>
@@ -23260,8 +23294,9 @@
 <span class="w">    </span><span class="p">}</span>
 
 <span class="w"> </span><span class="k">private</span><span class="o">:</span>
-<span class="w">    </span><span class="n">result_type</span><span class="w"> </span><span class="n">check_context</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">context</span><span class="p">)</span>
+<span class="w">    </span><span class="n">result_type</span><span class="w"> </span><span class="n">check_context</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">Context</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">context</span><span class="p">)</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">noexcept</span><span class="w"> </span><span class="k">override</span>
 <span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// Override if necessary!!</span>
 <span class="w">      </span><span class="c1">// ...Check context if it contains the required information</span>
 <span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">make_ok</span><span class="o">&lt;</span><span class="n">error_type</span><span class="o">&gt;</span><span class="p">();</span>
 <span class="w">    </span><span class="p">}</span>
@@ -23284,7 +23319,7 @@
 <span class="p">{</span>
 <span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ProcessorInterface</span><span class="o">::</span><span class="n">UniquePtr</span><span class="o">&gt;</span><span class="w"> </span><span class="n">outputs</span><span class="p">;</span>
 <span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">processor_names</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="cm">/* ... */</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="c1">// ...</span>
 <span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">"filter_by_something"</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">      </span><span class="n">outputs</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">FilterBySomething</span><span class="o">&gt;</span><span class="p">(</span><span class="n">node_ptr</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">));</span>

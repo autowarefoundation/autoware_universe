@@ -9443,6 +9443,8 @@
       
         
       
+        
+      
     
     
     
@@ -9505,6 +9507,34 @@
     
   
     RefineBySpeed
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../perception/autoware_predicted_path_postprocessor/docs/refine_penetration_by_static_objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RefinePenetrationByStaticObjects
   
 
     
@@ -25343,13 +25373,6 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>N/A</td>
 </tr>
 <tr>
-<td>yield.enable_signalling_during_yield</td>
-<td>boolean</td>
-<td>Flag to enable signalling during yield maneuver.</td>
-<td>false</td>
-<td>N/A</td>
-</tr>
-<tr>
 <td>cancel.enable</td>
 <td>boolean</td>
 <td>Flag to enable cancel maneuver.</td>
@@ -25397,6 +25420,13 @@ To solve that, this module provides a parameter for the minimum avoidance speed,
 <td>if true, module doesn't wait deceleration and outputs avoidance path by best effort margin.</td>
 <td>true</td>
 <td>N/A</td>
+</tr>
+<tr>
+<td>policy.candidate_path_turn_signal</td>
+<td>string</td>
+<td>policy for turn signal output during planWaitingApproval (candidate path). 'none': never output turn signal for candidate paths. 'stopped_candidate': output turn signal only when the vehicle is stopped and a candidate path exists (default behavior). 'all_candidate': always output turn signal whenever a candidate path exists.</td>
+<td>none</td>
+<td>['none', 'stopped_candidate', 'all_candidate']</td>
 </tr>
 <tr>
 <td>lateral.velocity</td>
