@@ -49,11 +49,11 @@ TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
 
   VehicleConstraintFilter filter;
   filter.set_parameters(
-    {{"max_velocity", 10.0},
-     {"max_acceleration", 2.0},
-     {"max_deceleration", 2.0},
-     {"max_steering_angle", 0.5},
-     {"max_steering_rate", 0.1}});
+    {{"vehicle_constraint.max_velocity", 10.0},
+     {"vehicle_constraint.max_acceleration", 2.0},
+     {"vehicle_constraint.max_deceleration", 2.0},
+     {"vehicle_constraint.max_steering_angle", 0.5},
+     {"vehicle_constraint.max_steering_rate", 0.1}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -74,7 +74,7 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenVelocityExceedsMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_velocity", 10.0}});
+  filter.set_parameters({{"vehicle_constraint.max_velocity", 10.0}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -95,7 +95,7 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenAccelerationExceedsMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_acceleration", 2.0}});
+  filter.set_parameters({{"vehicle_constraint.max_acceleration", 2.0}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -116,7 +116,7 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenDecelerationExceedsMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_deceleration", 2.0}});
+  filter.set_parameters({{"vehicle_constraint.max_deceleration", 2.0}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -137,7 +137,7 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringAngleExceedsMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_steering_angle", 0.5}});
+  filter.set_parameters({{"vehicle_constraint.max_steering_angle", 0.5}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
@@ -158,7 +158,7 @@ TEST(VehicleConstraintFilterTest, InfeasibleWhenSteeringRateExceedsMax)
   vehicle_info.wheel_base_m = 2.5;  // Example wheelbase
 
   VehicleConstraintFilter filter;
-  filter.set_parameters({{"max_steering_rate", 0.1}});
+  filter.set_parameters({{"vehicle_constraint.max_steering_rate", 0.1}});
   filter.set_vehicle_info(vehicle_info);
 
   FilterContext context;  // Empty context for now
