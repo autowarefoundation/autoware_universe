@@ -23,7 +23,6 @@
 #include <autoware/lanelet2_utils/topology.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -863,8 +862,8 @@ std::vector<lanelet::ConstLineString3d> IntersectionModule::generateDetectionLan
   lanelet::ConstLanelets detection_lanelets;
   for (const auto & detection_lanelet : occlusion_detection_lanelets) {
     // TODO(Mamoru Sobue): instead of ignoring, only trim straight part of lanelet
-    const auto fine_centerline =
-      lanelet::utils::generateFineCenterline(detection_lanelet, curvature_calculation_ds);
+    const auto fine_centerline = autoware::experimental::lanelet2_utils::get_fine_centerline(
+      detection_lanelet, curvature_calculation_ds);
     const double highest_curvature = util::getHighestCurvature(fine_centerline);
     if (highest_curvature > curvature_threshold) {
       continue;
