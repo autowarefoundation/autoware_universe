@@ -53,7 +53,7 @@ install(PROGRAMS scripts/calculation_time_plotter.py DESTINATION lib/${PROJECT_N
 install(TARGETS acados_interface LIBRARY DESTINATION lib)
 install(FILES src/acados_mpc/include/acados_interface.hpp DESTINATION include/autoware/path_optimizer)
 install(
-  DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src/acados_mpc/c_generated_code/
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc/c_generated_code/
   DESTINATION include/autoware/path_optimizer/c_generated_code
   FILES_MATCHING PATTERN "*.h"
 )
