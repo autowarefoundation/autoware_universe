@@ -170,7 +170,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       tracker_types.push_back(tracker->getTrackerType());
 
       Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
-      rtree_points.push_back(std::make_pair(p, tracker_idx));
+      rtree_points.emplace_back(p, tracker_idx);
       ++tracker_idx;
     }
     rtree_.insert(rtree_points.begin(), rtree_points.end());

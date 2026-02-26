@@ -378,7 +378,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     if (!data.is_valid) continue;
 
     Point p(data.object.pose.position.x, data.object.pose.position.y);
-    rtree_points.push_back(std::make_pair(p, i));
+    rtree_points.emplace_back(p, i);
   }
   rtree.insert(rtree_points.begin(), rtree_points.end());
 

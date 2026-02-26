@@ -475,12 +475,12 @@ LaneletsData getCurrentLanelets(
       for (const auto & left_opposite_lanelet :
            getLeftOppositeLanelets(lanelet_map_ptr, surrounding_lanelet.second)) {
         const double distance = lanelet::geometry::distance2d(left_opposite_lanelet, search_point);
-        surrounding_opposite_lanelets.push_back(std::make_pair(distance, left_opposite_lanelet));
+        surrounding_opposite_lanelets.emplace_back(distance, left_opposite_lanelet);
       }
       for (const auto & right_opposite_lanelet :
            getRightOppositeLanelets(lanelet_map_ptr, surrounding_lanelet.second)) {
         const double distance = lanelet::geometry::distance2d(right_opposite_lanelet, search_point);
-        surrounding_opposite_lanelets.push_back(std::make_pair(distance, right_opposite_lanelet));
+        surrounding_opposite_lanelets.emplace_back(distance, right_opposite_lanelet);
       }
     }
 
