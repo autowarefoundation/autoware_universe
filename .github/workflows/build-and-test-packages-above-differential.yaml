@@ -30,6 +30,10 @@ on:
       codecov-token:
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
