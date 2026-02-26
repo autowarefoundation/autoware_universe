@@ -131,11 +131,8 @@ struct AvoidanceParameters
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
 
-  // enable yield maneuver during shifting.
+  // enable yield maneuver.
   bool enable_yield_maneuver_during_shifting{false};
-
-  // enable signalling during yield maneuver.
-  bool enable_signalling_during_yield{false};
 
   // use hatched road markings for avoidance
   bool use_hatched_road_markings{false};
@@ -336,6 +333,9 @@ struct AvoidanceParameters
 
   // policy
   std::string policy_lateral_margin{"best_effort"};
+
+  // policy for turn signal output during candidate path (waiting approval)
+  std::string policy_candidate_path_turn_signal{"stopped_candidate"};
 
   // path generation method.
   std::string path_generation_method{"shift_line_base"};
