@@ -86,7 +86,7 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images = loadImageList(calibration_image_list_path, "");
+      calibration_images = load_image_list(calibration_image_list_path, "");
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};
@@ -1184,25 +1184,6 @@ int TrtYoloX::getMultitaskNum(void)
 {
   return multitask_;
 }
-
-// void TrtYoloX::getColorizedMask(
-//   const std::vector<autoware::tensorrt_yolox::Colormap> & colormap, const cv::Mat & mask,
-//   cv::Mat & cmask)
-//{
-//   int width = mask.cols;
-//   int height = mask.rows;
-//   if ((cmask.cols != mask.cols) || (cmask.rows != mask.rows)) {
-//     throw std::runtime_error("input and output image have difference size.");
-//   }
-//   for (int y = 0; y < height; y++) {
-//     for (int x = 0; x < width; x++) {
-//       unsigned char id = mask.at<unsigned char>(y, x);
-//       cmask.at<cv::Vec3b>(y, x)[0] = colormap[id].color[2];
-//       cmask.at<cv::Vec3b>(y, x)[1] = colormap[id].color[1];
-//       cmask.at<cv::Vec3b>(y, x)[2] = colormap[id].color[0];
-//     }
-//   }
-// }
 
 int TrtYoloX::getBatchSize() const
 {
