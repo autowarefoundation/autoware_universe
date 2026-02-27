@@ -135,16 +135,30 @@ AvoidanceState StaticObstacleAvoidanceModule::getCurrentModuleState(
     return AvoidanceState::RUNNING;
   }
 
+  const size_t ego_idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
+
   // If the ego is on the shift line, keep RUNNING.
   {
-    const size_t idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
     const auto within = [](const auto & line, const size_t idx) {
       return line.start_idx < idx && idx < line.end_idx;
     };
     for (const auto & shift_line : path_shifter_.getShiftLines()) {
-      if (within(shift_line, idx)) {
+      if (within(shift_line, ego_idx)) {
         return AvoidanceState::RUNNING;
       }
+    }
+  }
+
+  // If the ego finished the shift line, SUCCEED.
+  {
+    size_t last_shift_line_idx = ego_idx;
+    for (const auto & shift_line : path_shifter_.getShiftLines()) {
+      if (shift_line.end_idx > last_shift_line_idx) {
+        last_shift_line_idx = shift_line.end_idx;
+      }
+    }
+    if (last_shift_line_idx <= ego_idx) {
+      return AvoidanceState::SUCCEEDED;
     }
   }
 

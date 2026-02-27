@@ -486,11 +486,22 @@ bool TrackerProcessor::canMergeOverlappedTarget(
     }
     // both are known class, check the IoU
     // compare probability vector, prioritize lower index of the probability vector
-    std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
-    std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
+    std::vector<types::ExistenceProbability> target_existence_prob =
+      target.getExistenceProbabilityVector();
+    std::vector<types::ExistenceProbability> other_existence_prob =
+      other.getExistenceProbabilityVector();
     constexpr float prob_buffer = 0.4;
-    for (size_t i = 0; i < target_existence_prob.size(); ++i) {
-      if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+
+    for (const auto & other_prob : other_existence_prob) {
+      float target_prob_val = 0.001f;
+      for (const auto & target_prob : target_existence_prob) {
+        if (target_prob.channel_index == other_prob.channel_index) {
+          target_prob_val = target_prob.existence_probability;
+          break;
+        }
+      }
+
+      if (target_prob_val + prob_buffer < other_prob.existence_probability) {
         // if a channel probability has a large difference in higher index, remove the target
         return true;
       }
