@@ -15,6 +15,7 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <lanelet2_core/Exceptions.h>
 
@@ -24,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -168,9 +170,6 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&CrosswalkTrafficLightEstimatorNode::onMap, this, _1));
-  sub_route_ = create_subscription<LaneletRoute>(
-    "~/input/route", rclcpp::QoS{1}.transient_local(),
-    std::bind(&CrosswalkTrafficLightEstimatorNode::onRoute, this, _1));
   sub_traffic_light_array_ = create_subscription<TrafficSignalArray>(
     "~/input/classified/traffic_signals", rclcpp::QoS{1},
     std::bind(&CrosswalkTrafficLightEstimatorNode::onTrafficLightArray, this, _1));
@@ -192,7 +191,6 @@ void CrosswalkTrafficLightEstimatorNode::onMap(const LaneletMapBin::ConstSharedP
 
   routing_graph_ptr_ =
     autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
-  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
 
   const auto traffic_rules = lanelet::traffic_rules::TrafficRulesFactory::create(
     lanelet::Locations::Germany, lanelet::Participants::Vehicle);
@@ -202,41 +200,40 @@ void CrosswalkTrafficLightEstimatorNode::onMap(const LaneletMapBin::ConstSharedP
     lanelet::routing::RoutingGraph::build(*lanelet_map_ptr_, *traffic_rules);
   lanelet::routing::RoutingGraphConstPtr pedestrian_graph =
     lanelet::routing::RoutingGraph::build(*lanelet_map_ptr_, *pedestrian_rules);
-  lanelet::routing::RoutingGraphContainer overall_graphs({vehicle_graph, pedestrian_graph});
-  overall_graphs_ptr_ =
-    std::make_shared<const lanelet::routing::RoutingGraphContainer>(overall_graphs);
-  RCLCPP_DEBUG(get_logger(), "[CrosswalkTrafficLightEstimatorNode]: Map is loaded");
-}
+  const lanelet::routing::RoutingGraphContainer overall_graphs({vehicle_graph, pedestrian_graph});
+  // Build precomputed mappings: traffic light ID -> crosswalks, crosswalk -> vehicle lanelets
+  traffic_light_id_to_crosswalks_.clear();
+  crosswalk_to_vehicle_lanelets_.clear();
 
-void CrosswalkTrafficLightEstimatorNode::onRoute(const LaneletRoute::ConstSharedPtr msg)
-{
-  if (lanelet_map_ptr_ == nullptr) {
-    RCLCPP_WARN(get_logger(), "cannot set traffic light in route because don't receive map");
-    return;
-  }
+  const auto all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
+  const auto crosswalk_lanelets = lanelet::utils::query::crosswalkLanelets(all_lanelets);
 
-  lanelet::ConstLanelets route_lanelets;
-  for (const auto & segment : msg->segments) {
-    for (const auto & primitive : segment.primitives) {
-      try {
-        route_lanelets.push_back(lanelet_map_ptr_->laneletLayer.get(primitive.id));
-      } catch (const lanelet::NoSuchPrimitiveError & ex) {
-        RCLCPP_ERROR(get_logger(), "%s", ex.what());
-        return;
+  constexpr int VEHICLE_GRAPH_INDEX = 0;
+  for (const auto & crosswalk : crosswalk_lanelets) {
+    const auto traffic_light_reg_elems =
+      crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
+    if (traffic_light_reg_elems.empty()) {
+      continue;
+    }
+    const auto vehicle_lanelets = overall_graphs.conflictingInGraph(crosswalk, VEHICLE_GRAPH_INDEX);
+    if (vehicle_lanelets.empty()) {
+      continue;
+    }
+
+    crosswalk_to_vehicle_lanelets_[crosswalk.id()] = vehicle_lanelets;
+
+    std::unordered_set<lanelet::Id> added_known_color_vehicle_traffic_light_ids;
+    for (const auto & vehicle_lanelet : vehicle_lanelets) {
+      for (const auto & traffic_light :
+           vehicle_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>()) {
+        if (added_known_color_vehicle_traffic_light_ids.insert(traffic_light->id()).second) {
+          traffic_light_id_to_crosswalks_[traffic_light->id()].push_back(crosswalk);
+        }
       }
     }
   }
 
-  conflicting_crosswalks_.clear();
-
-  for (const auto & route_lanelet : route_lanelets) {
-    constexpr int PEDESTRIAN_GRAPH_ID = 1;
-    const auto conflict_lls =
-      overall_graphs_ptr_->conflictingInGraph(route_lanelet, PEDESTRIAN_GRAPH_ID);
-    for (const auto & lanelet : conflict_lls) {
-      conflicting_crosswalks_.push_back(lanelet);
-    }
-  }
+  RCLCPP_DEBUG(get_logger(), "[CrosswalkTrafficLightEstimatorNode]: Map is loaded");
 }
 
 void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
@@ -296,9 +293,32 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
       traffic_light_id_map);
   }
 
-  for (const auto & crosswalk : conflicting_crosswalks_) {
-    constexpr int VEHICLE_GRAPH_ID = 0;
-    const auto conflict_lls = overall_graphs_ptr_->conflictingInGraph(crosswalk, VEHICLE_GRAPH_ID);
+  // Collect vehicle traffic light IDs with known colors (from received and last detected signals)
+  std::unordered_set<lanelet::Id> known_color_vehicle_traffic_light_ids;
+  for (const auto & traffic_signal : msg->traffic_light_groups) {
+    known_color_vehicle_traffic_light_ids.insert(traffic_signal.traffic_light_group_id);
+  }
+  if (use_last_detect_color_) {
+    for (const auto & [traffic_light_id, _] : last_detect_color_) {
+      known_color_vehicle_traffic_light_ids.insert(traffic_light_id);
+    }
+  }
+
+  // Collect crosswalks related to the vehicle traffic lights with known colors
+  std::unordered_set<lanelet::Id> crosswalk_ids_to_process;
+  for (const auto & traffic_light_id : known_color_vehicle_traffic_light_ids) {
+    const auto crosswalks_iter = traffic_light_id_to_crosswalks_.find(traffic_light_id);
+    if (crosswalks_iter == traffic_light_id_to_crosswalks_.end()) {
+      continue;
+    }
+    for (const auto & crosswalk : crosswalks_iter->second) {
+      crosswalk_ids_to_process.insert(crosswalk.id());
+    }
+  }
+
+  for (const auto & crosswalk_id : crosswalk_ids_to_process) {
+    const auto & crosswalk = lanelet_map_ptr_->laneletLayer.get(crosswalk_id);
+    const auto & conflict_lls = crosswalk_to_vehicle_lanelets_.at(crosswalk_id);
     const auto non_red_lanelets = getNonRedLanelets(conflict_lls, traffic_light_id_map);
 
     const auto crosswalk_tl_color = estimateCrosswalkTrafficSignal(crosswalk, non_red_lanelets);

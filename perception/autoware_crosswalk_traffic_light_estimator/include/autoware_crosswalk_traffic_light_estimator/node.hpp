@@ -22,7 +22,6 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 
 #include <lanelet2_core/Attribute.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -41,7 +40,6 @@ namespace autoware::crosswalk_traffic_light_estimator
 
 using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_map_msgs::msg::LaneletMapBin;
-using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_utils::DebugPublisher;
 using autoware_utils::StopWatch;
 using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
@@ -59,19 +57,15 @@ public:
 
 private:
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr sub_traffic_light_array_;
   rclcpp::Publisher<TrafficSignalArray>::SharedPtr pub_traffic_light_array_;
 
   lanelet::LaneletMapPtr lanelet_map_ptr_;
-  lanelet::traffic_rules::TrafficRulesPtr traffic_rules_ptr_;
   lanelet::routing::RoutingGraphPtr routing_graph_ptr_;
-  std::shared_ptr<const lanelet::routing::RoutingGraphContainer> overall_graphs_ptr_;
-
-  lanelet::ConstLanelets conflicting_crosswalks_;
+  std::unordered_map<lanelet::Id, lanelet::ConstLanelets> traffic_light_id_to_crosswalks_;
+  std::unordered_map<lanelet::Id, lanelet::ConstLanelets> crosswalk_to_vehicle_lanelets_;
 
   void onMap(const LaneletMapBin::ConstSharedPtr msg);
-  void onRoute(const LaneletRoute::ConstSharedPtr msg);
   void onTrafficLightArray(const TrafficSignalArray::ConstSharedPtr msg);
 
   void updateLastDetectedSignal(const TrafficLightIdMap & traffic_signals);
