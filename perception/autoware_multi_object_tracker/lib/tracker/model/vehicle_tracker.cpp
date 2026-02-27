@@ -55,7 +55,9 @@ VehicleTracker::VehicleTracker(
       tracker_type_ = TrackerType::BICYCLE;
       break;
     default:
-      RCLCPP_ERROR(logger_, "VehicleTracker: Unsupported object model type: %d", static_cast<int>(object_model.type));
+      RCLCPP_ERROR(
+        logger_, "VehicleTracker: Unsupported object model type: %d",
+        static_cast<int>(object_model.type));
       break;
   }
 

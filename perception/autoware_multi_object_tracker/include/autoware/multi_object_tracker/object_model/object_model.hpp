@@ -52,7 +52,14 @@ namespace autoware::multi_object_tracker
 namespace object_model
 {
 
-enum class ObjectModelType { GeneralVehicle, NormalVehicle, BigVehicle, Bicycle, Pedestrian, Unknown };
+enum class ObjectModelType {
+  GeneralVehicle,
+  NormalVehicle,
+  BigVehicle,
+  Bicycle,
+  Pedestrian,
+  Unknown
+};
 
 struct ObjectSize
 {
@@ -138,30 +145,30 @@ public:
         size_limit.width_max = 10.0;
         size_limit.height_min = 1.0;
         size_limit.height_max = 10.0;
-  
+
         process_noise.acc_long = const_g * 0.35;
         process_noise.acc_lat = const_g * 0.15;
         process_noise.yaw_rate_min = deg2rad(1.5);
         process_noise.yaw_rate_max = deg2rad(18.0);
-  
+
         process_limit.acc_long_max = const_g;
         process_limit.acc_lat_max = const_g;
         process_limit.vel_long_max = kmph2mps(140.0);
-  
+
         // initial covariance
         initial_covariance.pos_x = sq(1.0);
         initial_covariance.pos_y = sq(0.3);
         initial_covariance.yaw = sq(deg2rad(25.0));
         initial_covariance.vel_long = sq(kmph2mps(1000.0));
         initial_covariance.vel_lat = sq(0.2);
-  
+
         // measurement noise model
         measurement_covariance.pos_x = sq(0.4);
         measurement_covariance.pos_y = sq(0.4);
         measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(1.0);
         measurement_covariance.vel_lat = sq(kmph2mps(3.0));
-  
+
         // bicycle motion model
         bicycle_state.init_slip_angle_cov = sq(deg2rad(5.0));
         bicycle_state.slip_angle_max = deg2rad(30.0);
