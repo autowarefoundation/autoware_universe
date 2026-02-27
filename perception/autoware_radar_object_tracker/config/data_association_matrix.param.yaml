@@ -64,3 +64,9 @@
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,     0.1,       #MOTORBIKE
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,     0.1,       #BICYCLE
           0.1,  0.1,   0.1,   0.1,    0.1,      0.1,       0.1,  0.0001]       #PEDESTRIAN
+    car_tracker: pass_through_tracker
+    truck_tracker: pass_through_tracker
+    bus_tracker: pass_through_tracker
+    pedestrian_tracker: pass_through_tracker
+    bicycle_tracker: pass_through_tracker
+    motorcycle_tracker: pass_through_tracker
