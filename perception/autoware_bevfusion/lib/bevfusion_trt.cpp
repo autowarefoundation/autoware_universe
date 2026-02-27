@@ -415,8 +415,8 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
     Matrix4fRowM img_aug_matrix = Matrix4fRowM::Identity();
     img_aug_matrix(0, 0) = config_.img_aug_scale_x_;
     img_aug_matrix(1, 1) = config_.img_aug_scale_y_;
+    img_aug_matrix(0, 3) = -static_cast<float>(crop_w);
     img_aug_matrix(1, 3) = -static_cast<float>(crop_h);
-    img_aug_matrix(1, 3) = -static_cast<float>(crop_w);
 
     img_aug_matrices_.push_back(img_aug_matrix);
     roi_start_y_vector_.push_back(crop_h);
