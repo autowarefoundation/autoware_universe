@@ -15,6 +15,8 @@
 #include "autoware/bevfusion/bevfusion_node.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
+#include <image_transport/image_transport.hpp>
+
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -51,12 +53,21 @@ void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
   camera_info_msgs_.resize(num_cameras);
   lidar2camera_extrinsics_.resize(num_cameras);
 
+  auto resolve_topic_name = [this](const std::string & query) {
+    return this->get_node_topics_interface()->resolve_topic_name(query);
+  };
+  const std::string transport = use_compressed_images_ ? "compressed" : "raw";
+
   for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
-    image_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::Image>(
-      "~/input/image" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),
-      [this, camera_id](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-        this->imageCallback(msg, camera_id);
-      });
+    // Explicitly resolve the topic name using the node name and namespace, please check
+    // https://github.com/ros-perception/image_transport_plugins/issues/155
+    const std::string base_topic = resolve_topic_name("~/input/image" + std::to_string(camera_id));
+    image_subs_[camera_id] = image_transport::create_subscription(
+      this, base_topic,
+      std::bind(
+        &BEVFusionNode::imageCallback, this, std::placeholders::_1,
+        static_cast<std::size_t>(camera_id)),
+      transport, rmw_qos_profile_sensor_data);
 
     camera_info_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
       "~/input/camera_info" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),

@@ -127,6 +127,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
 
   sensor_fusion_ = config.sensor_fusion_;
+  use_compressed_images_ =
+    this->declare_parameter<bool>("use_compressed_images", false, descriptor);
 
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);

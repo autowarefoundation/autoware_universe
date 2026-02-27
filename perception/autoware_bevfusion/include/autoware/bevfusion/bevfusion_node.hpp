@@ -118,6 +118,7 @@ private:
   bool intrinsics_available_{false};
   bool extrinsics_available_{false};
   bool intrinsics_extrinsics_precomputed_{false};
+  bool use_compressed_images_{false};
 
   // for diagnostics
   double max_allowed_processing_time_ms_;
