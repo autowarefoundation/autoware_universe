@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_bytetrack parameter",
+  "type": "object",
+  "definitions": {
+    "kalman_filter": {
+      "type": "object",
+      "properties": {
+        "dt": {
+          "type": "number",
+          "description": "Time step [s].",
+          "default": 0.1
+        },
+        "dim_x": {
+          "type": "integer",
+          "description": "State dimension (tlbr + velocity).",
+          "default": 8
+        },
+        "dim_z": {
+          "type": "integer",
+          "description": "Measurement dimension (tlbr).",
+          "default": 4
+        },
+        "q_cov_x": {
+          "type": "number",
+          "description": "Process noise covariance for x.",
+          "default": 0.1
+        },
+        "q_cov_y": {
+          "type": "number",
+          "description": "Process noise covariance for y.",
+          "default": 0.1
+        },
+        "q_cov_vx": {
+          "type": "number",
+          "description": "Process noise covariance for velocity x.",
+          "default": 0.1
+        },
+        "q_cov_vy": {
+          "type": "number",
+          "description": "Process noise covariance for velocity y.",
+          "default": 0.1
+        },
+        "r_cov_x": {
+          "type": "number",
+          "description": "Measurement noise covariance for x.",
+          "default": 0.1
+        },
+        "r_cov_y": {
+          "type": "number",
+          "description": "Measurement noise covariance for y.",
+          "default": 0.1
+        },
+        "p0_cov_x": {
+          "type": "number",
+          "description": "Initial covariance for x.",
+          "default": 100.0
+        },
+        "p0_cov_y": {
+          "type": "number",
+          "description": "Initial covariance for y.",
+          "default": 100.0
+        },
+        "p0_cov_vx": {
+          "type": "number",
+          "description": "Initial covariance for velocity x.",
+          "default": 100.0
+        },
+        "p0_cov_vy": {
+          "type": "number",
+          "description": "Initial covariance for velocity y.",
+          "default": 100.0
+        }
+      },
+      "required": [
+        "dt",
+        "dim_x",
+        "dim_z",
+        "q_cov_x",
+        "q_cov_y",
+        "q_cov_vx",
+        "q_cov_vy",
+        "r_cov_x",
+        "r_cov_y",
+        "p0_cov_x",
+        "p0_cov_y",
+        "p0_cov_vx",
+        "p0_cov_vy"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$ref": "#/definitions/kalman_filter",
+  "additionalProperties": false
+}
