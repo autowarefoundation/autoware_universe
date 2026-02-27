@@ -62,6 +62,16 @@
           "default": true,
           "description": "Replan path when the vehicle deviates from its course."
         },
+        "parking_accuracy_tolerance": {
+          "type": "number",
+          "default": 1.0,
+          "description": "The tolerance for parking accuracy."
+        },
+        "max_replan_count": {
+          "type": "number",
+          "default": 3,
+          "description": "The Maximum count of the replan."
+        },
         "time_limit": {
           "type": "number",
           "default": 30000.0,
@@ -230,6 +240,8 @@
         "vehicle_shape_margin_m",
         "replan_when_obstacle_found",
         "replan_when_course_out",
+        "parking_accuracy_tolerance",
+        "max_replan_count",
         "time_limit",
         "max_turning_ratio",
         "turning_steps",
