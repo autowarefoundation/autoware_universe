@@ -241,7 +241,7 @@ bool TrtYoloXNode::readLabelFile(const std::string & label_path)
   while (getline(label_file, label)) {
     std::transform(
       label.begin(), label.end(), label.begin(), [](auto c) { return std::toupper(c); });
-    label_map_.insert({label_index, label});
+    label_map_.emplace(label_index, label);
     ++label_index;
   }
   return true;
