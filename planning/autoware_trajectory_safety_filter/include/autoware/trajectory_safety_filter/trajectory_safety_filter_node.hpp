@@ -20,6 +20,7 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_trajectory_safety_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -45,6 +46,7 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
@@ -68,6 +70,7 @@ private:
    * @param name Metric plugin name to unload
    */
   void unload_metric(const std::string & name);
+  void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
 
   std::unique_ptr<safety_filter::ParamListener> listener_;
 
@@ -92,6 +95,7 @@ private:
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+  DiagnosticsInterface diagnostics_interface_{this, "trajectory_safety_filter"};
 };
 
 }  // namespace autoware::trajectory_safety_filter
