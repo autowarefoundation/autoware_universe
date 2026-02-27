@@ -2,5 +2,31 @@ traffic_rule_filter:
   filter_names:
     type: string_array
     default_value: []
-    description: metrics.
+    description: list of filter names
     read_only: false
+  traffic_light_filter:
+    deceleration_limit:
+      type: double
+      default_value: 2.8
+      description: trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
+      read_only: false
+    jerk_limit:
+      type: double
+      default_value: 5.0
+      description: trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
+      read_only: false
+    delay_response_time:
+      type: double
+      default_value: 0.5
+      description: delay response time used to estimate the minimum ego stopping distance
+      read_only: false
+    crossing_time_limit:
+      type: double
+      default_value: 2.75
+      description: trajectories crossing an amber light are rejected if they cannot cross before this time
+      read_only: false
+    treat_amber_light_as_red_light:
+      type: bool
+      default_value: true
+      description: when true, amber lights are handled like red lights
+      read_only: false
