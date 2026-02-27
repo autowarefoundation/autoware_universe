@@ -88,6 +88,10 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.parallel_parking_parameters.center_line_path_interval =
       p.center_line_path_interval;  // for geometric parallel parking
 
+    // turn signal
+    p.turn_signal_on_centerline_start =
+      get_or_declare_parameter<std::string>(node, ns + "turn_signal_on_centerline_start");
+
     // clothoid pull out
     p.clothoid_initial_velocity =
       get_or_declare_parameter<double>(node, ns + "clothoid_initial_velocity");

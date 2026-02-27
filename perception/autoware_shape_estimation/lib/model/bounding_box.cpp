@@ -211,7 +211,7 @@ float BoundingBoxShapeModel::optimize(
       C_2.push_back(point.x * e_2.x() + point.y * e_2.y());
     }
     float q = calcClosenessCriterion(C_1, C_2);  // col.7, Algo.2
-    Q.emplace_back(theta, q);       // col.8, Algo.2
+    Q.emplace_back(theta, q);                    // col.8, Algo.2
   }
 
   float theta_star{0.0};  // col.10, Algo.2
