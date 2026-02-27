@@ -19,7 +19,7 @@
 
 #include <array>
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {

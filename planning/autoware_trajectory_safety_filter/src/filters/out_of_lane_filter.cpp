@@ -20,11 +20,8 @@
 #include <lanelet2_core/geometry/LaneletMap.h>
 #include <lanelet2_core/geometry/Point.h>
 
-#include <algorithm>
-#include <any>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin

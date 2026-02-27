@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {

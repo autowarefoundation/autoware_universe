@@ -17,10 +17,8 @@
 #include <autoware_utils_geometry/geometry.hpp>
 #include <builtin_interfaces/msg/duration.hpp>
 
-#include <array>
 #include <string>
-#include <unordered_map>
-#include <utility>
+#include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
 {
