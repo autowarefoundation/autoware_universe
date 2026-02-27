@@ -145,26 +145,19 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
       }
     }
 
-    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+    if (is_feasible) {
+      filtered_msg->candidate_trajectories.push_back(trajectory);
+    }
   }
 
   // Also filter generator_info to match kept trajectories
-  std::unordered_set<std::string> kept_generator_ids;
   for (const auto & traj : filtered_msg->candidate_trajectories) {
-    std::stringstream ss;
-    for (const auto & byte : traj.generator_id.uuid) {
-      ss << std::hex << static_cast<int>(byte);
-    }
-    kept_generator_ids.insert(ss.str());
-  }
+    auto it = std::find_if(
+      msg->generator_info.begin(), msg->generator_info.end(),
+      [&](const auto & info) { return traj.generator_id.uuid == info.generator_id.uuid; });
 
-  for (const auto & gen_info : msg->generator_info) {
-    std::stringstream ss;
-    for (const auto & byte : gen_info.generator_id.uuid) {
-      ss << std::hex << static_cast<int>(byte);
-    }
-    if (kept_generator_ids.count(ss.str()) > 0) {
-      filtered_msg->generator_info.push_back(gen_info);
+    if (it != msg->generator_info.end()) {
+      filtered_msg->generator_info.push_back(*it);
     }
   }
 
