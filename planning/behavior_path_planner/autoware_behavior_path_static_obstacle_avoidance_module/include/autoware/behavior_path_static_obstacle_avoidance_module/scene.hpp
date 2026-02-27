@@ -30,6 +30,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -445,8 +446,19 @@ private:
    */
   bool is_operator_approval_required(ShiftedPath & shifted_path, DebugData & debug) const;
 
-  auto getTurnSignal(const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path)
-    -> TurnSignalInfo;
+  auto getTurnSignal(
+    const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path,
+    const ShiftLineArray & shift_lines) const
+    -> std::pair<TurnSignalInfo, std::optional<std::string>>;
+
+  /**
+   * @brief Generate spline/linear shifted paths from a shifter and compute turn signal.
+   * @param shifter PathShifter already configured with desired shift lines.
+   * @param reference_path Reference path used as the base for shifting.
+   * @return Computed TurnSignalInfo and an optional UUID string to be added to ignore_signal_ids_.
+   */
+  auto computeTurnSignalFromShifter(PathShifter & shifter, const PathWithLaneId & reference_path)
+    const -> std::pair<TurnSignalInfo, std::optional<std::string>>;
 
   // post process
 
