@@ -17,9 +17,11 @@
 
 #include "autoware/predicted_path_postprocessor/processor/interface.hpp"
 #include "autoware/predicted_path_postprocessor/processor/refine_by_speed.hpp"
+#include "autoware/predicted_path_postprocessor/processor/refine_penetration_by_static_objects.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -39,6 +41,8 @@ inline std::vector<ProcessorInterface::UniquePtr> build_processors(
   for (const auto & name : processor_names) {
     if (name == "refine_by_speed") {
       outputs.push_back(std::make_unique<RefineBySpeed>(node_ptr, name));
+    } else if (name == "refine_penetration_by_static_objects") {
+      outputs.push_back(std::make_unique<RefinePenetrationByStaticObjects>(node_ptr, name));
     } else {
       RCLCPP_ERROR_STREAM(node_ptr->get_logger(), "Unknown processor: " << name);
       continue;
