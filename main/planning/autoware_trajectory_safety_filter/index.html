@@ -22994,6 +22994,7 @@
 <li>Data validity: removes trajectories that contain NaNs, non‑finite numbers, inconsistent timestamps, or are too short.</li>
 <li>Lane adherence: removes trajectories that will exit all lanelets within the configured look‑ahead time.</li>
 <li>Collision risk: removes trajectories whose estimated time‑to‑collision with any predicted object falls below threshold in the look‑ahead time.</li>
+<li>Vehicle constraint: removes trajectories that violates vehicle constraints, such as maximum speed, acceleration, and deceleration.</li>
 </ul>
 <p>After these checks, the remaining trajectories, along with their original <code>generator_info</code>, are published.</p>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
@@ -23080,6 +23081,36 @@
 <td>double</td>
 <td>2.0</td>
 <td>Minimum acceptable time to collision [s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_speed</code></td>
+<td>double</td>
+<td>16.7</td>
+<td>Maximum allowed speed [m/s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_acceleration</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Maximum allowed acceleration [m/s^2]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_deceleration</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Maximum allowed deceleration; positive but represents deceleration [m/s^s]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_steering_angle</code></td>
+<td>double</td>
+<td>0.8</td>
+<td>Maximum allowed steering angle [rad]</td>
+</tr>
+<tr>
+<td><code>vehicle_constraint.max_steering_rate</code></td>
+<td>double</td>
+<td>0.3</td>
+<td>Maximum allowed steering rate [rad/s]</td>
 </tr>
 </tbody>
 </table>
