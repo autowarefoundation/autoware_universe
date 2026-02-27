@@ -228,12 +228,11 @@ void TrackerObjectDebugger::draw(
       std::to_string(static_cast<int>(object_data_front.total_existence_probability * 100)) + "\n";
 
     // probability per channel
-    const size_t channel_size = channels_config_.size();
-    for (size_t i = 0; i < channel_size; ++i) {
-      if (object_data_front.existence_vector[i] < 0.00101) continue;
+    for (const auto & prob : object_data_front.existence_vector) {
+      if (prob.existence_probability < 0.00101) continue;
       existence_probability_text +=
-        channels_config_[i].short_name +
-        std::to_string(static_cast<int>(object_data_front.existence_vector[i] * 100)) + ":";
+        channels_config_[prob.channel_index].short_name +
+        std::to_string(static_cast<int>(prob.existence_probability * 100)) + ":";
     }
     if (!existence_probability_text.empty()) {
       existence_probability_text.pop_back();
