@@ -66,8 +66,10 @@ class TestFaultInjectionLink(unittest.TestCase):
     def setUp(self):
         # Create a ROS node for tests
         self.test_node = rclpy.create_node("test_node")
-        self.event_name = "cpu_temperature"
+        self.event_name = "cpu_temperature_is_high"
         self.evaluation_time = 0.5  # 500ms
+        self.input_diagnostics_topic = "/diagnostics"
+        self.output_diagnostics_topic = "/diagnostics/fault_injection"
 
     def tearDown(self):
         self.test_node.destroy_node()
@@ -95,20 +97,21 @@ class TestFaultInjectionLink(unittest.TestCase):
         """
         Test node linkage.
 
-        Expect fault_injection_node publish /diagnostics.status
-        when the talker to publish strings
+        Expect fault_injection_node republish diagnostics with fault injection applied
+        after receiving input diagnostics.
         """
         pub_events = self.test_node.create_publisher(SimulationEvents, "/simulation/events", 10)
+        pub_diagnostics = self.test_node.create_publisher(
+            DiagnosticArray, self.input_diagnostics_topic, 10
+        )
 
         msg_buffer = []
         self.test_node.create_subscription(
-            DiagnosticArray, "/diagnostics", lambda msg: msg_buffer.append(msg), 10
+            DiagnosticArray, self.output_diagnostics_topic, lambda msg: msg_buffer.append(msg), 10
         )
 
         # Test init state.
-        # Expect fault_injection_node does not publish /diagnostics.status
-        # while the talker does not to publish
-        # Wait until the talker transmits two messages over the ROS topic
+        # Expect fault_injection_node does not publish diagnostics without input.
         end_time = time.time() + self.evaluation_time
         while time.time() < end_time:
             rclpy.spin_once(self.test_node, timeout_sec=0.1)
@@ -116,8 +119,19 @@ class TestFaultInjectionLink(unittest.TestCase):
         # Return False if no valid data is received
         self.assertEqual(self.get_num_valid_data(msg_buffer, DiagnosticStatus.ERROR), 0)
 
-        # Test node linkage.
-        # Wait until the talker transmits messages over the ROS topic
+        # Send diagnostics input and ensure output is forwarded without errors.
+        input_msg = DiagnosticArray()
+        input_msg.status = [
+            DiagnosticStatus(name=": CPU Temperature", level=DiagnosticStatus.OK, message="OK")
+        ]
+        pub_diagnostics.publish(input_msg)
+        end_time = time.time() + self.evaluation_time
+        while time.time() < end_time:
+            rclpy.spin_once(self.test_node, timeout_sec=0.1)
+
+        self.assertEqual(self.get_num_valid_data(msg_buffer, DiagnosticStatus.ERROR), 0)
+
+        # Inject fault and verify override is applied.
         item = FaultInjectionEvent(name=self.event_name, level=FaultInjectionEvent.ERROR)
         msg = SimulationEvents(fault_injection_events=[item])
         pub_events.publish(msg)
@@ -135,24 +149,36 @@ class TestFaultInjectionLink(unittest.TestCase):
         """
         msg_buffer = []
         self.test_node.create_subscription(
-            DiagnosticArray, "/diagnostics", lambda msg: msg_buffer.append(msg), 10
+            DiagnosticArray, self.output_diagnostics_topic, lambda msg: msg_buffer.append(msg), 10
         )
 
         # Call spin_once() so that the publisher publish messages simultaneously
         pub_events_1 = self.test_node.create_publisher(SimulationEvents, "/simulation/events", 10)
         pub_events_2 = self.test_node.create_publisher(SimulationEvents, "/simulation/events", 10)
+        pub_diagnostics = self.test_node.create_publisher(
+            DiagnosticArray, self.input_diagnostics_topic, 10
+        )
         rclpy.spin_once(self.test_node, timeout_sec=0.1)
+        input_msg = DiagnosticArray()
+        input_msg.status = [
+            DiagnosticStatus(name=": CPU Load Average", level=DiagnosticStatus.OK, message="OK"),
+            DiagnosticStatus(name=": CPU Temperature", level=DiagnosticStatus.OK, message="OK"),
+            DiagnosticStatus(name=": CPU Usage", level=DiagnosticStatus.OK, message="OK"),
+        ]
+        pub_diagnostics.publish(input_msg)
         pub_events_1.publish(
             SimulationEvents(
                 fault_injection_events=[
-                    FaultInjectionEvent(name="cpu_temperature", level=FaultInjectionEvent.ERROR)
+                    FaultInjectionEvent(
+                        name="cpu_temperature_is_high", level=FaultInjectionEvent.ERROR
+                    )
                 ]
             )
         )
         pub_events_2.publish(
             SimulationEvents(
                 fault_injection_events=[
-                    FaultInjectionEvent(name="cpu_usage", level=FaultInjectionEvent.ERROR)
+                    FaultInjectionEvent(name="cpu_usage_is_high", level=FaultInjectionEvent.ERROR)
                 ]
             )
         )
