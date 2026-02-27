@@ -1,7 +1,11 @@
 /**:
   ros__parameters:
-    processors: [refine_by_speed]
+    processors: [refine_by_speed, refine_penetration_by_static_objects]
     # --- RefineBySpeed ---
     refine_by_speed:
+      speed_threshold: 1.0 # [m/s]
+      interpolation: linear # [linear, spline, spline_by_akima]
+    # --- RefinePenetrationByStaticObjects ---
+    refine_penetration_by_static_objects:
       speed_threshold: 1.0 # [m/s]
       interpolation: linear # [linear, spline, spline_by_akima]
