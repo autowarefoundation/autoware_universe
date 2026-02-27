@@ -60,9 +60,6 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
-  bool validate_trajectory_basics(const CandidateTrajectory & trajectory) const;
-  bool check_finite(const TrajectoryPoint & point) const;
-
   void load_metric(const std::string & name);
 
   /**
