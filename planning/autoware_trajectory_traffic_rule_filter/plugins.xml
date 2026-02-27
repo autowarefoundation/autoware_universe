@@ -4,7 +4,7 @@
          base_class_type="autoware::trajectory_traffic_rule_filter::plugin::TrafficRuleFilterInterface">
     <description>
       Filter for checking traffic light violations.
-      Rejects trajectories that would pass through red or yellow traffic lights.
+      Rejects trajectories that would pass through red or amber traffic lights.
     </description>
   </class>
 </library>
