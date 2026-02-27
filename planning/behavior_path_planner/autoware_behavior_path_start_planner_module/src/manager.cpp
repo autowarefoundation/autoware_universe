@@ -99,6 +99,9 @@ void StartPlannerModuleManager::updateModuleParams(
     }
     update_param<double>(
       parameters, ns + "center_line_path_interval", p->center_line_path_interval);
+    update_param(
+      parameters, ns + "turn_signal_on_centerline_start", p->turn_signal_on_centerline_start);
+
     update_param<double>(
       parameters, ns + "shift_collision_check_distance_from_end",
       p->shift_collision_check_distance_from_end);
