@@ -34,9 +34,9 @@ void trim_right(std::string & s);
 std::string trim(std::string & s);
 std::optional<std::vector<std::vector<std::string>>> read_csv(
   const std::string & filename, uint32_t skip_header_lines);
-bool fileExists(const std::string & file_name, bool verbose);
-std::vector<std::string> loadListFromTextFile(const std::string & filename);
-std::vector<std::string> loadImageList(const std::string & filename, const std::string & prefix);
+bool file_exists(const std::string & file_name, bool verbose);
+std::vector<std::string> load_list_from_text_file(const std::string & filename);
+std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix);
 void read_label_file(
   const std::string & label_path, std::vector<std::string> & roi_class_id_to_class_name_map,
   std::unordered_map<std::string, int> & roi_class_name_to_class_id_map);
