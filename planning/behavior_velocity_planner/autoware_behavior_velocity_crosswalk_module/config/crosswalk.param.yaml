@@ -29,7 +29,8 @@
 
       # params to prevent stopping on crosswalks due to another vehicle ahead
       obstruction_prevention:
-        enable_obstruction_prevention: false # [-] flag to enable obstruction prevention checking for crosswalk which is in intersection
+        enable_obstruction_prevention: true # [-] flag to enable obstruction prevention feature
+        ignore_in_intersection: true # [-] if true, skip obstruction prevention for crosswalks in intersection
         target_vehicle_velocity: 1.0 # [m/s] threshold velocity whether other vehicles are assumed to be stuck or not.
         max_target_vehicle_lateral_offset: 2.0 # [m] The feature does not handle the vehicles farther than this value to the ego's path.
         required_clearance: 6.0 # [m] clearance to be secured between the ego and the ahead vehicle
