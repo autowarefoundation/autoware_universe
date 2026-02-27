@@ -145,9 +145,7 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
       }
     }
 
-    if (is_feasible) {
-      filtered_msg->candidate_trajectories.push_back(trajectory);
-    }
+    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
   }
 
   // Also filter generator_info to match kept trajectories
