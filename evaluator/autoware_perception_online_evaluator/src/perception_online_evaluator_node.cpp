@@ -23,8 +23,6 @@
 
 #include "boost/lexical_cast.hpp"
 
-#include <glog/logging.h>
-
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -42,11 +40,6 @@ PerceptionOnlineEvaluatorNode::PerceptionOnlineEvaluatorNode(
   metrics_calculator_(parameters_)
 {
   using std::placeholders::_1;
-
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("perception_online_evaluator_node");
-    google::InstallFailureSignalHandler();
-  }
 
   objects_sub_ = create_subscription<PredictedObjects>(
     "~/input/objects", 1, std::bind(&PerceptionOnlineEvaluatorNode::onObjects, this, _1));
