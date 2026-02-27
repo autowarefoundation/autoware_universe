@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "debugger/debugger.hpp"
+#include "multi_object_tracker_core.hpp"
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
@@ -36,9 +37,6 @@
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <list>
 #include <map>
@@ -58,48 +56,36 @@ public:
 
 private:
   // ROS interface
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
+  std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
+    sub_objects_array_{};
 
-  // debugger
-  std::unique_ptr<TrackerDebugger> debugger_;
-  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
-  bool publish_merged_objects_{false};
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
 
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
-  rclcpp::Time last_published_time_;
-  rclcpp::Time last_updated_time_;
-  double publisher_period_;
-  static constexpr double minimum_publish_interval_ratio = 0.85;
-  static constexpr double maximum_publish_interval_ratio = 1.05;
 
-  // internal states
-  std::string world_frame_id_;  // tracking frame
-  std::string ego_frame_id_;    // ego vehicle frame
-  std::unique_ptr<TrackerProcessor> processor_;
-  bool enable_delay_compensation_{false};
+  // parameters and internal state
+  MultiObjectTrackerParameters params_;
+  MultiObjectTrackerInternalState state_;
 
-  // input manager
-  std::unique_ptr<InputManager> input_manager_;
-  std::shared_ptr<Odometry> odometry_;
-
-  size_t input_channel_size_{};
-  std::vector<types::InputChannel> input_channels_config_;
+  // debugger
+  std::unique_ptr<TrackerDebugger> debugger_;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
+  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_publisher_;
 
   // callback functions
   void onTimer();
   void onTrigger();
 
   // publish processes
-  void runProcess(const types::DynamicObjectList & detected_objects);
-  void checkAndPublish(const rclcpp::Time & time);
-  void publish(const rclcpp::Time & time) const;
-  inline bool shouldTrackerPublish(const std::shared_ptr<const Tracker> tracker) const;
+  void publish(const rclcpp::Time & time);
+  void publishOptional(
+    const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+    const size_t tracked_objects_size);
 };
 
 }  // namespace autoware::multi_object_tracker
