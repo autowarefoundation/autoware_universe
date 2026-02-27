@@ -341,6 +341,8 @@ struct StartPlannerParameters
   AstarParam astar_parameters;
   RRTStarParam rrt_star_parameters;
 
+  // turn signal
+  std::string turn_signal_on_centerline_start;
   // stop condition
   double maximum_deceleration_for_stop{0.0};
   double maximum_jerk_for_stop{0.0};

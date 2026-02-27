@@ -72,7 +72,6 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   object_.uuid = uuid_msg;
 
   // Initialize existence probabilities
-  existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
   classification_ = detected_object.classification;
 }
@@ -88,11 +87,28 @@ void Tracker::initializeExistenceProbabilities(
   const float clamped_existence_probability =
     std::clamp(existence_probability, min_probability, max_probability);
 
-  // existence probability on each channel
-  existence_probabilities_[channel_index] = clamped_existence_probability;
-
   // total existence probability
   total_existence_probability_ = clamped_existence_probability;
+
+  // existence probability on each channel
+  // if the existence probabilities are not initialized, initialize with the given channel index and
+  // existence probability
+  if (existence_probabilities_.empty()) {
+    existence_probabilities_.push_back({channel_index, clamped_existence_probability});
+    return;
+  }
+
+  bool found = false;
+  for (auto & prob : existence_probabilities_) {
+    if (prob.channel_index == channel_index) {
+      prob.existence_probability = clamped_existence_probability;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    existence_probabilities_.push_back({channel_index, clamped_existence_probability});
+  }
 }
 
 void Tracker::updateTotalExistenceProbability(const float & existence_probability)
@@ -101,12 +117,24 @@ void Tracker::updateTotalExistenceProbability(const float & existence_probabilit
     updateProbability(total_existence_probability_, existence_probability, 0.2);
 }
 
-void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabilities)
+void Tracker::mergeExistenceProbabilities(
+  std::vector<types::ExistenceProbability> existence_probabilities)
 {
   // existence probability on each channel
-  for (size_t i = 0; i < existence_probabilities.size(); ++i) {
-    // take larger value
-    existence_probabilities_[i] = std::max(existence_probabilities_[i], existence_probabilities[i]);
+  for (const auto & new_prob : existence_probabilities) {
+    bool found = false;
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index == new_prob.channel_index) {
+        // take larger value
+        prob.existence_probability =
+          std::max(prob.existence_probability, new_prob.existence_probability);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      existence_probabilities_.push_back(new_prob);
+    }
   }
 }
 
@@ -127,14 +155,26 @@ bool Tracker::updateWithMeasurement(
 
     // update measured channel probability without decay
     const uint & channel_index = channel_info.index;
-    existence_probabilities_[channel_index] = updateProbability(
-      existence_probabilities_[channel_index], probability_true_detection,
-      probability_false_detection);
+    bool found = false;
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index == channel_index) {
+        prob.existence_probability = updateProbability(
+          prob.existence_probability, probability_true_detection, probability_false_detection);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // If the channel is not found, add it with initial probability 0.001
+      float new_prob =
+        updateProbability(0.001f, probability_true_detection, probability_false_detection);
+      existence_probabilities_.push_back({channel_index, new_prob});
+    }
 
     // decay other channel probabilities
-    for (size_t i = 0; i < existence_probabilities_.size(); ++i) {
-      if (i != channel_index) {
-        existence_probabilities_[i] = decayProbability(existence_probabilities_[i], delta_time);
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index != channel_index) {
+        prob.existence_probability = decayProbability(prob.existence_probability, delta_time);
       }
     }
 
@@ -225,8 +265,8 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
   {
     // decay existence probability
     float const delta_time = (timestamp - last_update_with_measurement_time_).seconds();
-    for (float & existence_probability : existence_probabilities_) {
-      existence_probability = decayProbability(existence_probability, delta_time);
+    for (auto & prob : existence_probabilities_) {
+      prob.existence_probability = decayProbability(prob.existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
@@ -373,17 +413,25 @@ uint Tracker::getChannelIndex() const
   // Return the index of the channel that has highest priority
   // lower the index, higher the priority
 
-  uint index = types::max_channel_size - 1;  // Default to lowest priority index
+  uint index = 0;
   float max_probability = 0.0f;
   constexpr float threshold = 0.5;
-  for (uint i = 0; i < existence_probabilities_.size(); ++i) {
-    if (existence_probabilities_[i] > threshold) {
-      return i;
+  uint min_index_above_threshold = std::numeric_limits<uint>::max();
+
+  for (const auto & prob : existence_probabilities_) {
+    if (prob.existence_probability > threshold) {
+      if (prob.channel_index < min_index_above_threshold) {
+        min_index_above_threshold = prob.channel_index;
+      }
     }
-    if (existence_probabilities_[i] > max_probability) {
-      max_probability = existence_probabilities_[i];
-      index = i;
+    if (prob.existence_probability > max_probability) {
+      max_probability = prob.existence_probability;
+      index = prob.channel_index;
     }
+  }
+
+  if (min_index_above_threshold != std::numeric_limits<uint>::max()) {
+    return min_index_above_threshold;
   }
   // If no channel has a probability above the threshold, return the highest probability index
   return index;

@@ -32,6 +32,7 @@ include_directories(
 # Generate exe file
 set(${PROJECT_NAME}_src
   src/multi_object_tracker_node.cpp
+  src/multi_object_tracker_core.cpp
   src/debugger/debugger.cpp
   src/debugger/debug_object.cpp
   src/processor/processor.cpp

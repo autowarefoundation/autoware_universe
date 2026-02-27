@@ -18,8 +18,6 @@
 #include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
-#include <glog/logging.h>
-
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -37,11 +35,6 @@ PerceptionAnalyticsPublisherNode::PerceptionAnalyticsPublisherNode(
   parameters_(std::make_shared<AnalyticsParameters>())
 {
   using std::placeholders::_1;
-
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("perception_analytics_publisher_node");
-    google::InstallFailureSignalHandler();
-  }
 
   // Parameters
   initParameter();
