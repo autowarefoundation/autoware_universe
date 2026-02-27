@@ -96,26 +96,34 @@ VehicleConstraintFilter::VehicleConstraintFilter()
 {
 }
 
-void VehicleConstraintFilter::set_parameters(
-  const std::unordered_map<std::string, std::any> & params)
+void VehicleConstraintFilter::set_parameters(rclcpp::Node & node)
 {
-  auto set_value = [&params](const std::string & key, auto & value) {
-    auto it = params.find(key);
-    if (it != params.end()) {
-      try {
-        value = std::any_cast<std::decay_t<decltype(value)>>(it->second);
-      } catch (const std::bad_any_cast &) {
-        // Keep default value if cast fails
-      }
-    }
-  };
+  using autoware_utils_rclcpp::get_or_declare_parameter;
 
-  // Update parameters if provided, otherwise keep defaults
-  set_value("vehicle_constraint.max_speed", params_.max_speed);
-  set_value("vehicle_constraint.max_acceleration", params_.max_acceleration);
-  set_value("vehicle_constraint.max_deceleration", params_.max_deceleration);
-  set_value("vehicle_constraint.max_steering_angle", params_.max_steering_angle);
-  set_value("vehicle_constraint.max_steering_rate", params_.max_steering_rate);
+  params_.max_speed = get_or_declare_parameter<double>(node, "vehicle_constraint.max_speed");
+  params_.max_acceleration =
+    get_or_declare_parameter<double>(node, "vehicle_constraint.max_acceleration");
+  params_.max_deceleration =
+    get_or_declare_parameter<double>(node, "vehicle_constraint.max_deceleration");
+  params_.max_steering_angle =
+    get_or_declare_parameter<double>(node, "vehicle_constraint.max_steering_angle");
+  params_.max_steering_rate =
+    get_or_declare_parameter<double>(node, "vehicle_constraint.max_steering_rate");
+}
+
+void VehicleConstraintFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+{
+  autoware_utils_rclcpp::update_param(
+    parameters, "vehicle_constraint.max_speed", params_.max_speed);
+
+  autoware_utils_rclcpp::update_param(
+    parameters, "vehicle_constraint.max_acceleration", params_.max_acceleration);
+  autoware_utils_rclcpp::update_param(
+    parameters, "vehicle_constraint.max_deceleration", params_.max_deceleration);
+  autoware_utils_rclcpp::update_param(
+    parameters, "vehicle_constraint.max_steering_angle", params_.max_steering_angle);
+  autoware_utils_rclcpp::update_param(
+    parameters, "vehicle_constraint.max_steering_rate", params_.max_steering_rate);
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(

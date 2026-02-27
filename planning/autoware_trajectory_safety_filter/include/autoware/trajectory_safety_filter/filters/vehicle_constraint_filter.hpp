@@ -36,7 +36,9 @@ public:
 
   result_t is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) final;
 
-  void set_parameters(const std::unordered_map<std::string, std::any> & params) override;
+  void set_parameters(rclcpp::Node & node) final;
+
+  void update_parameters(const std::vector<rclcpp::Parameter> & parameters) final;
 
 private:
   result_t check_speed(const TrajectoryPoints & traj_points) const;
