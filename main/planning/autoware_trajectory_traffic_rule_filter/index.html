@@ -23009,10 +23009,18 @@
 <h3 id="filter-plugins">Filter Plugins<a class="headerlink" href="#filter-plugins" title="Permanent link">#</a></h3>
 <h4 id="trafficlightfilter">TrafficLightFilter<a class="headerlink" href="#trafficlightfilter" title="Permanent link">#</a></h4>
 <ul>
-<li>Validates trajectory compliance with traffic signals</li>
-<li>Monitors traffic light states from perception system</li>
-<li>Checks if trajectory would pass through red lights</li>
-<li>Allows trajectories only when traffic lights permit passage</li>
+<li>Validates trajectory compliance with traffic signals.</li>
+<li>Monitors traffic light states from the perception system.</li>
+<li><strong>Limitation</strong>: Currently, only circle light signals (RED, AMBER) are handled; arrow signals are ignored by this filter.</li>
+<li>Reject trajectories when:<ul>
+<li>the vehicle's footprint (front-end extension) crosses a red traffic light stop line.</li>
+<li>the vehicle's footprint crosses an amber traffic light stop line and it is determined that either:<ol>
+<li>ego can safely stop at the stop line without breaking the deceleration/jerk limits, considering a <code>delay_response_time</code>.</li>
+<li>ego's <code>base_link</code> point cannot cross the stop line within the <code>crossing_time_limit</code>.</li>
+</ol>
+</li>
+</ul>
+</li>
 </ul>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
 <h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
@@ -23111,7 +23119,50 @@
 <span class="w">  </span><span class="nt">ros__parameters</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">filter_names</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter"</span>
-</code></pre></div></div>
+</code></pre></div>
+<h4 id="traffic-light-filter-parameters">Traffic Light Filter parameters<a class="headerlink" href="#traffic-light-filter-parameters" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>traffic_light_filter.deceleration_limit</code></td>
+<td>double</td>
+<td>Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td><code>traffic_light_filter.jerk_limit</code></td>
+<td>double</td>
+<td>Trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit</td>
+<td>5.0</td>
+</tr>
+<tr>
+<td><code>traffic_light_filter.delay_response_time</code></td>
+<td>double</td>
+<td>Delay response time (reaction time) used to estimate the minimum ego stopping distance from its current state</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>traffic_light_filter.crossing_time_limit</code></td>
+<td>double</td>
+<td>Trajectories crossing an amber light are rejected if they cannot cross (reach the stop line with <code>base_link</code>) before this time</td>
+<td>2.75</td>
+</tr>
+<tr>
+<td><code>traffic_light_filter.treat_amber_light_as_red_light</code></td>
+<td>bool</td>
+<td>When true, amber lights are handled like red lights (using vehicle footprint crossing). If false, amber lights use the <code>base_link</code> crossing logic described above.</td>
+<td>true</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
