@@ -67,75 +67,39 @@ param_values:
   - name: input/detection01/channel
     type: string
     default: none
-  - name: input/detection01/objects
-    type: string
-    default: ${input detection01/objects}
   - name: input/detection02/channel
     type: string
     default: none
-  - name: input/detection02/objects
-    type: string
-    default: ${input detection02/objects}
   - name: input/detection03/channel
     type: string
     default: none
-  - name: input/detection03/objects
-    type: string
-    default: ${input detection03/objects}
   - name: input/detection04/channel
     type: string
     default: none
-  - name: input/detection04/objects
-    type: string
-    default: ${input detection04/objects}
   - name: input/detection05/channel
     type: string
     default: none
-  - name: input/detection05/objects
-    type: string
-    default: ${input detection05/objects}
   - name: input/detection06/channel
     type: string
     default: none
-  - name: input/detection06/objects
-    type: string
-    default: ${input detection06/objects}
   - name: input/detection07/channel
     type: string
     default: none
-  - name: input/detection07/objects
-    type: string
-    default: ${input detection07/objects}
   - name: input/detection08/channel
     type: string
     default: none
-  - name: input/detection08/objects
-    type: string
-    default: ${input detection08/objects}
   - name: input/detection09/channel
     type: string
     default: none
-  - name: input/detection09/objects
-    type: string
-    default: ${input detection09/objects}
   - name: input/detection10/channel
     type: string
     default: none
-  - name: input/detection10/objects
-    type: string
-    default: ${input detection10/objects}
   - name: input/detection11/channel
     type: string
     default: none
-  - name: input/detection11/objects
-    type: string
-    default: ${input detection11/objects}
   - name: input/detection12/channel
     type: string
     default: none
-  - name: input/detection12/objects
-    type: string
-    default: ${input detection12/objects}
   - name: publish_merged_objects
     type: boolean
     default: false
