@@ -386,17 +386,17 @@ private:
     Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const float safety_slow_down_speed, const std::string & reason,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   void applySlowDownByLanelet2Map(
     Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   void applySlowDownByOcclusion(
     Trajectory & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
     const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
@@ -406,23 +406,24 @@ private:
     const Trajectory & ego_path, double dist_nearest_cp,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
     const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
     const Trajectory & ego_path, const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const std::optional<geometry_msgs::msg::Pose> & stop_pose, const PlannerData & planner_data);
+    const std::optional<geometry_msgs::msg::Pose> & stop_pose, const PlannerData & planner_data,
+    const double ego_s);
 
   std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
     const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   std::optional<double> findEgoPassageDirectionAlongPath(const Trajectory & ego_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
@@ -431,33 +432,34 @@ private:
   std::optional<CollisionPoint> getCollisionPoint(
     const Trajectory & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   std::pair<std::optional<StopPoseWithObjectUuids>, std::string> getNearestStopFactorAndReason(
     const Trajectory & ego_path,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   void setDistanceToStop(
     const Trajectory & ego_path, const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const std::optional<StopPoseWithObjectUuids> & stop_factor, const PlannerData & planner_data);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor, const PlannerData & planner_data,
+    const double ego_s);
 
   void planGo(
     Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
-    const PlannerData & planner_data) const;
+    const PlannerData & planner_data, const double ego_s) const;
 
   void planStop(
     Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose, const std::string & reason,
-    const PlannerData & planner_data) const;
+    const PlannerData & planner_data, const double ego_s) const;
 
   // minor functions
   std::pair<double, double> getAttentionRange(
     const Trajectory & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   void insertDecelPointWithDebugInfo(
     const geometry_msgs::msg::Point & stop_point, const float target_velocity,
@@ -465,7 +467,7 @@ private:
 
   std::pair<double, double> clampAttentionRangeByNeighborCrosswalks(
     const Trajectory & ego_path, const double near_attention_range,
-    const double far_attention_range, const PlannerData & planner_data);
+    const double far_attention_range, const PlannerData & planner_data, const double ego_s);
 
   CollisionPoint createCollisionPoint(
     const geometry_msgs::msg::Point & nearest_collision_point, const double dist_ego2cp,
@@ -476,16 +478,16 @@ private:
 
   float calcTargetVelocity(
     const geometry_msgs::msg::Point & stop_point, const Trajectory & ego_path,
-    const PlannerData & planner_data) const;
+    const PlannerData & planner_data, const double ego_s) const;
 
   Polygon2d getAttentionArea(
     const Trajectory & ego_path, const std::pair<double, double> & crosswalk_attention_range,
-    const PlannerData & planner_data) const;
+    const PlannerData & planner_data, const double ego_s) const;
 
   void updateObjectState(
     const double dist_ego_to_stop, const Trajectory & ego_path,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area,
-    const PlannerData & planner_data);
+    const PlannerData & planner_data, const double ego_s);
 
   bool isRedSignalForLanelet(
     const lanelet::ConstLanelet & lanelet, const PlannerData & planner_data) const;
@@ -504,7 +506,7 @@ private:
 
   bool checkRestartSuppression(
     const Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,
-    const PlannerData & planner_data) const;
+    const PlannerData & planner_data, const double ego_s) const;
 
   SafetyFactorArray createSafetyFactorArray(
     const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
