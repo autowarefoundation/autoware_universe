@@ -46,6 +46,8 @@ public:
 
   void set_parameters(rclcpp::Node & node) final;
 
+  void update_parameters(const std::vector<rclcpp::Parameter> & parameters) final;
+
 private:
   CollisionParams params_;
 

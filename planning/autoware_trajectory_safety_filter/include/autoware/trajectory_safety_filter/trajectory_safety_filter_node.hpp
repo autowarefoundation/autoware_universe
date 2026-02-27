@@ -72,6 +72,9 @@ private:
   void unload_metric(const std::string & name);
   void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
 
+  rcl_interfaces::msg::SetParametersResult on_parameter(
+    const std::vector<rclcpp::Parameter> & parameters);
+
   std::unique_ptr<safety_filter::ParamListener> listener_;
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
@@ -92,8 +95,12 @@ private:
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
+
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
+
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_safety_filter"};
 };

@@ -278,6 +278,14 @@ tl::expected<void, std::string> CollisionFilter::is_feasible(
 
   return {};
 }
+
+void CollisionFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+{
+  using autoware_utils_rclcpp::update_param;
+
+  update_param<double>(parameters, "collision.time", params_.max_check_time);
+  update_param<double>(parameters, "collision.min_value", params_.min_ttc);
+}
 }  // namespace autoware::trajectory_safety_filter::plugin
 
 #include <pluginlib/class_list_macros.hpp>

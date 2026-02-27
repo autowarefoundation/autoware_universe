@@ -47,6 +47,8 @@ public:
 
   void set_parameters(rclcpp::Node & node) final;
 
+  void update_parameters(const std::vector<rclcpp::Parameter> & parameters) final;
+
 private:
   OutOfLaneParams params_;
   std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>

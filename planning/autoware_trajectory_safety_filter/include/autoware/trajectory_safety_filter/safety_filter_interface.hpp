@@ -52,13 +52,15 @@ public:
 
   virtual void set_parameters(rclcpp::Node & node) = 0;
 
+  virtual void update_parameters(const std::vector<rclcpp::Parameter> & parameters) = 0;
+
   // Set vehicle info
   virtual void set_vehicle_info(const VehicleInfo & vehicle_info)
   {
     vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
   }
 
-  std::string get_name() const { return name_; }
+  [[nodiscard]] std::string get_name() const { return name_; }
 
 protected:
   std::string name_;
