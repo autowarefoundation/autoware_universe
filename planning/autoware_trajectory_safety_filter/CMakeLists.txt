@@ -33,11 +33,21 @@ rclcpp_components_register_node(${PROJECT_NAME}
 ament_auto_add_library(autoware_trajectory_safety_filter_plugins SHARED
   src/filters/out_of_lane_filter.cpp
   src/filters/collision_filter.cpp
+  src/filters/vehicle_constraint_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_safety_filter_plugins
   ${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  ament_add_gtest(test_vehicle_constraint_filter
+    test/vehicle_constraint_filter.cpp
+  )
+  target_link_libraries(test_vehicle_constraint_filter
+    autoware_trajectory_safety_filter_plugins
+  )
+endif()
 
 ament_auto_package(
   INSTALL_TO_SHARE
