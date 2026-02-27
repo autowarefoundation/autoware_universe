@@ -1800,6 +1800,26 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
   const bool override_ego_stopped_check =
     !status_.has_departed || geometric_planner_has_not_finished_first_path;
 
+  const bool enable_in_centerline = std::invoke([&]() {
+    const auto is_shift_ok =
+      std::abs(status_.pull_out_path.shift_length.start - status_.pull_out_path.shift_length.end) <
+      parameters_->minimum_shift_length;
+    const auto is_parameterize_threshold_ok =
+      parameters_->th_distance_to_middle_of_the_road < parameters_->minimum_shift_length;
+    const auto is_need_blinker = !status_.first_engaged_and_driving_forward_time ||
+                                 needToPrepareBlinkerBeforeStartDrivingForward();
+    return is_shift_ok && !parameters_->enable_back && is_parameterize_threshold_ok &&
+           is_need_blinker;
+  });
+
+  if (enable_in_centerline) {
+    auto prev_turn_signal = getPreviousModuleOutput().turn_signal_info;
+    prev_turn_signal.turn_signal.command = parameters_->turn_signal_on_centerline_start == "LEFT"
+                                             ? TurnIndicatorsCommand::ENABLE_LEFT
+                                             : TurnIndicatorsCommand::ENABLE_RIGHT;
+    return prev_turn_signal;
+  }
+
   const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
     path, shift_start_idx, shift_end_idx, current_lanes, current_shift_length,
     status_.driving_forward, egos_lane_is_shifted, override_ego_stopped_check, is_pull_out);
