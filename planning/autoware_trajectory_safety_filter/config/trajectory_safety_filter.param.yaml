@@ -1,7 +1,15 @@
 /**:
   ros__parameters:
-    filter_names: ["autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"]
-    # available filter: "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter", "autoware::trajectory_safety_filter::plugin::CollisionFilter"
+    filter_names:
+      [
+        "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter",
+        "autoware::trajectory_safety_filter::plugin::CollisionFilter",
+        "autoware::trajectory_safety_filter::plugin::VehicleConstraintFilter",
+      ]
+    # available filters:
+    #  "autoware::trajectory_safety_filter::plugin::OutOfLaneFilter"
+    #  "autoware::trajectory_safety_filter::plugin::CollisionFilter"
+    #  "autoware::trajectory_safety_filter::plugin::VehicleConstraintFilter"
 
     out_of_lane:
       time: 2.0
@@ -10,3 +18,10 @@
     collision:
       time: 3.0
       min_value: 2.0
+
+    vehicle_constraint:
+      max_speed: 16.7 # m/s
+      max_acceleration: 5.0 # m/s^2
+      max_deceleration: 5.0 # m/s^2 (positive but represents deceleration)
+      max_steering_angle: 0.8 # rad
+      max_steering_rate: 0.3 # rad/s
