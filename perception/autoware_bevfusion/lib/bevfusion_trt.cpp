@@ -406,8 +406,7 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   img_aug_matrices_.clear();
 
   for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    int crop_h = static_cast<int>(
-      std::min(yh_resized, static_cast<float>(config_.resized_height_ - config_.roi_height_)));
+    int crop_h = static_cast<int>(config_.resized_height_ - config_.roi_height_);
     int crop_w =
       std::max(0, static_cast<int>(config_.resized_width_) - static_cast<int>(config_.roi_width_)) /
       2;
