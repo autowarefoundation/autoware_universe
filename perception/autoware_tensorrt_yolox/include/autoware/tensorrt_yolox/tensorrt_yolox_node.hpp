@@ -81,10 +81,8 @@ private:
     const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
   int mapRoiLabel2SegLabel(const int32_t roi_label_index);
   void setupLabel(
-    const std::string & roi_label_file_path,
-    const std::string & segment_color_map_file_path,
-    const std::string & roi_label_remap_file_path,
-    const std::string & roi_segment_remap_path);
+    const std::string & roi_label_file_path, const std::string & segment_color_map_file_path,
+    const std::string & roi_label_remap_file_path, const std::string & roi_segment_remap_path);
   void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
 
   image_transport::Publisher image_pub_;

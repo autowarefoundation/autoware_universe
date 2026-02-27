@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_yolox/label.hpp"
 #include "autoware/tensorrt_yolox/tensorrt_yolox_node.hpp"
 
 #include "autoware/object_recognition_utils/object_classification.hpp"
+#include "autoware/tensorrt_yolox/label.hpp"
 #include "perception_utils/run_length_encoder.hpp"
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
@@ -84,17 +84,17 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   roi_overlay_semseg_labels_.ANIMAL =
     declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
 
-  if (is_publish_color_mask_ && semseg_color_map_path.empty()){
+  if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
     std::stringstream error_msg;
     error_msg << "semseg_color_map_path must be specified"
-    << "when `is_publish_color_mask_` is true.";
+              << "when `is_publish_color_mask_` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
-  if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()){
+  if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()) {
     std::stringstream error_msg;
     error_msg << "semantic_segmentation_remap_path must be specified"
-    << "when `is_roi_overlap_segmentation` is true.";
+              << "when `is_roi_overlap_segmentation` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
@@ -111,8 +111,8 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   const std::string cache_dir = "";
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
-    trt_config, roi_id_to_name_map_.size(), score_threshold, nms_threshold, preprocess_on_gpu, gpu_id,
-    calibration_image_list_path, norm_factor, cache_dir, calib_config);
+    trt_config, roi_id_to_name_map_.size(), score_threshold, nms_threshold, preprocess_on_gpu,
+    gpu_id, calibration_image_list_path, norm_factor, cache_dir, calib_config);
 
   if (!trt_yolox_->isGPUInitialized()) {
     RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", gpu_id);
@@ -266,34 +266,31 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 }
 
 /**
-  * @brief Read label files and remap files. Then remap the labels based on the remap information.
-  *
-  * This method will process label and remap data in the following order:
-  *
-  *  1. Read the label and remap files for ROI output.
-  *  2. Remap the ROI label based on the remap information.
-  *  3. Read the color map and remap files for semantic segmentation output.
-  *  4. Create a remap from ROI to segmentation label based on the remap information.
-  *
-  * you still need to use the original label name even you remap the ROI label for
-  * remapping segmentation label.
-  *
-  * @param[in] roi_label_path file path of label file for ROI
-  * @param[in] semseg_color_map_path file path of color map file for segmentation
-  * @param[in] roi_label_remap_path file path of remap file for ROI
-  * @param[in] roi_to_semseg_remap_path file path of remap file for segmentation
-  */
+ * @brief Read label files and remap files. Then remap the labels based on the remap information.
+ *
+ * This method will process label and remap data in the following order:
+ *
+ *  1. Read the label and remap files for ROI output.
+ *  2. Remap the ROI label based on the remap information.
+ *  3. Read the color map and remap files for semantic segmentation output.
+ *  4. Create a remap from ROI to segmentation label based on the remap information.
+ *
+ * you still need to use the original label name even you remap the ROI label for
+ * remapping segmentation label.
+ *
+ * @param[in] roi_label_path file path of label file for ROI
+ * @param[in] semseg_color_map_path file path of color map file for segmentation
+ * @param[in] roi_label_remap_path file path of remap file for ROI
+ * @param[in] roi_to_semseg_remap_path file path of remap file for segmentation
+ */
 void TrtYoloXNode::setupLabel(
-  const std::string & roi_label_path,
-  const std::string & semseg_color_map_path,
-  const std::string & roi_label_remap_path,
-  const std::string & roi_to_semseg_remap_path)
+  const std::string & roi_label_path, const std::string & semseg_color_map_path,
+  const std::string & roi_label_remap_path, const std::string & roi_to_semseg_remap_path)
 {
   try {
     std::unordered_map<std::string, int> roi_name_to_id_map;
     // read label file and store to roi_id_to_name_map_
-    read_label_file(
-      roi_label_path, roi_id_to_name_map_, roi_name_to_id_map);
+    read_label_file(roi_label_path, roi_id_to_name_map_, roi_name_to_id_map);
 
     roi_id_to_class_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
 
@@ -325,10 +322,7 @@ void TrtYoloXNode::setupLabel(
       constexpr uint32_t skip_header_lines = 1;
       // load semantic segmentation label information (label, label name, r, g, b)
       load_segmentation_colormap(
-        semseg_color_map_path,
-        semseg_color_map_,
-        semseg_name_to_id_map,
-        skip_header_lines);
+        semseg_color_map_path, semseg_color_map_, semseg_name_to_id_map, skip_header_lines);
     }
 
     roi_id_to_semseg_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
@@ -337,7 +331,8 @@ void TrtYoloXNode::setupLabel(
       constexpr uint32_t skip_header_lines = 1;
       // load remapping of ROI to semantic segmentation label
       // e.g. PEDESTRIAN -> 6 (PEDESTRIAN)
-      load_label_id_remap_file(roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
+      load_label_id_remap_file(
+        roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
 
       // map original YOLOX ID directly to semantic segmentation ID
       for (size_t i = 0; i < roi_id_to_name_map_.size(); ++i) {
@@ -390,11 +385,11 @@ void TrtYoloXNode::overlapSegmentByRoi(
 }
 
 /**
-  * @brief get colorized masks from index using specific colormap
-  * @param[out] cmask colorized mask
-  * @param[in] index multitask index
-  * @param[in] colormap colormap for masks
-  */
+ * @brief get colorized masks from index using specific colormap
+ * @param[out] cmask colorized mask
+ * @param[in] index multitask index
+ * @param[in] colormap colormap for masks
+ */
 void TrtYoloXNode::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
 {
   int width = mask.cols;

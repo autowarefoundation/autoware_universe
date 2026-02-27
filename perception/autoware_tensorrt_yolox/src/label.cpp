@@ -45,12 +45,14 @@ std::string trim(std::string & s)
 }
 
 /**
- * @brief Reads a CSV file and returns a vector of rows, where each row is a vector of trimmed strings.
+ * @brief Reads a CSV file and returns a vector of rows, where each row is a vector of trimmed
+ * strings.
  * @param filename Path to the file.
  * @param skip_header_lines Number of lines to skip at the top (default 0).
  * @return Parsed data that contains parsed strings of each line.
  */
-std::optional<std::vector<std::vector<std::string>>> read_csv(const std::string & filename, uint32_t skip_header_lines = 0)
+std::optional<std::vector<std::vector<std::string>>> read_csv(
+  const std::string & filename, uint32_t skip_header_lines = 0)
 {
   std::ifstream file(filename);
   if (!file.is_open()) {
@@ -159,8 +161,7 @@ std::vector<std::string> load_image_list(const std::string & filename, const std
 
 // read label names of the model's outputs
 void read_label_file(
-  const std::string & label_path,
-  std::vector<std::string> & roi_id_to_name_map,
+  const std::string & label_path, std::vector<std::string> & roi_id_to_name_map,
   std::unordered_map<std::string, int> & roi_name_to_id_map)
 {
   std::ifstream label_file(label_path);
@@ -181,10 +182,8 @@ void read_label_file(
 }
 
 void load_segmentation_colormap(
-  const std::string & file_name,
-  std::vector<autoware::tensorrt_yolox::Colormap> & semseg_color_map,
-  std::unordered_map<std::string, int> & semseg_name_to_id_map,
-  uint32_t skip_header_lines = 1)
+  const std::string & file_name, std::vector<autoware::tensorrt_yolox::Colormap> & semseg_color_map,
+  std::unordered_map<std::string, int> & semseg_name_to_id_map, uint32_t skip_header_lines = 1)
 {
   auto rows = read_csv(file_name, skip_header_lines);
   // check loaded status
@@ -229,8 +228,7 @@ void load_segmentation_colormap(
 }
 
 void load_label_remap_file(
-  const std::string & file_name,
-  std::unordered_map<std::string, std::string> & label_name_remap,
+  const std::string & file_name, std::unordered_map<std::string, std::string> & label_name_remap,
   uint32_t skip_header_lines = 1)
 {
   auto rows = read_csv(file_name, skip_header_lines);
@@ -258,8 +256,7 @@ void load_label_remap_file(
 }
 
 void load_label_id_remap_file(
-  const std::string & file_name,
-  std::unordered_map<std::string, int> & label_name_to_id_remap,
+  const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
   uint32_t skip_header_lines = 1)
 {
   auto rows = read_csv(file_name, skip_header_lines);
