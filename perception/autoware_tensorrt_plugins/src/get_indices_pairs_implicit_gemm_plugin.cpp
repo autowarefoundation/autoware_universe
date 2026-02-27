@@ -310,7 +310,8 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     ws_tensors.emplace(SPCONV_ALLOC_PAIR_MASK, pair_mask_fwd_padded);
     ws_tensors.emplace(SPCONV_ALLOC_MASK_ARG_SORT, mask_argsort_fwd_padded);
     ws_tensors.emplace(SPCONV_ALLOC_OUT_INDICES, out_indices);
-    ws_tensors.emplace(SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
+    ws_tensors.emplace(
+      SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
     StaticAllocator alloc(ws_tensors);
 
     // cSpell:ignore indice
@@ -335,7 +336,8 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     ws_tensors.emplace(SPCONV_ALLOC_MASK_ARG_SORT_BWD, mask_argsort_bwd_padded);
 
     ws_tensors.emplace(SPCONV_ALLOC_OUT_INDICES, out_indices);
-    ws_tensors.emplace(SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
+    ws_tensors.emplace(
+      SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
 
     StaticAllocator alloc(ws_tensors);
 
