@@ -1896,13 +1896,13 @@ void generateDrivableAreaForKTurn(
     // Add left lane boundary points
     const auto left_bound = drivable_lane.left_lane.leftBound3d();
     for (const auto & point : left_bound) {
-      left_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+      left_bound_points.push_back(autoware::experimental::lanelet2_utils::to_ros(point));
     }
 
     // Add right lane boundary points
     const auto right_bound = drivable_lane.right_lane.rightBound3d();
     for (const auto & point : right_bound) {
-      right_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+      right_bound_points.push_back(autoware::experimental::lanelet2_utils::to_ros(point));
     }
 
     // Add middle lane boundaries if any
@@ -1911,10 +1911,10 @@ void generateDrivableAreaForKTurn(
       const auto middle_right_bound = middle_lane.rightBound3d();
 
       for (const auto & point : middle_left_bound) {
-        left_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+        left_bound_points.push_back(autoware::experimental::lanelet2_utils::to_ros(point));
       }
       for (const auto & point : middle_right_bound) {
-        right_bound_points.push_back(lanelet::utils::conversion::toGeomMsgPt(point));
+        right_bound_points.push_back(autoware::experimental::lanelet2_utils::to_ros(point));
       }
     }
   }
