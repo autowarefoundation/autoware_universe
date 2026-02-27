@@ -115,6 +115,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/pointpainting_fusion/voxel_generator.cpp
   )
 
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
