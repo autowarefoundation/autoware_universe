@@ -32,6 +32,7 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/negotiated_types.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -95,7 +96,7 @@ private:
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     cloud_sub_;
-  std::vector<rclcpp::Subscription<sensor_msgs::msg::Image>::ConstSharedPtr> image_subs_;
+  std::vector<image_transport::Subscriber> image_subs_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::ConstSharedPtr> camera_info_subs_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
     nullptr};
