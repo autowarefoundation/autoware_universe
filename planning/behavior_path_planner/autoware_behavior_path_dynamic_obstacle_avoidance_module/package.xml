@@ -5,12 +5,13 @@
   <version>0.50.0</version>
   <description>The autoware_behavior_path_dynamic_obstacle_avoidance_module package</description>
 
-  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
   <maintainer email="yuki.takagi@tier4.jp">Yuki Takagi</maintainer>
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
-  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
+  <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
 
   <license>Apache License 2.0</license>
+
+  <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>

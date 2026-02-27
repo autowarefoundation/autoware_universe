@@ -44,14 +44,17 @@
           "properties": {
             "UNKNOWN": {
               "type": "string",
+              "description": "Radar class to map to UNKNOWN label.",
               "default": "UNKNOWN"
             },
             "CAR": {
               "type": "string",
+              "description": "Radar class to map to CAR label.",
               "default": "CAR"
             },
             "TRUCK": {
               "type": "string",
+              "description": "Radar class to map to TRUCK label.",
               "default": "TRUCK"
             },
             "MOTORCYCLE": {
@@ -66,10 +69,12 @@
             },
             "PEDESTRIAN": {
               "type": "string",
+              "description": "Radar class to map to PEDESTRIAN label.",
               "default": "PEDESTRIAN"
             },
             "ANIMAL": {
               "type": "string",
+              "description": "Radar class to map to ANIMAL label.",
               "default": "ANIMAL"
             },
             "HAZARD": {

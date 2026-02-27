@@ -158,7 +158,9 @@ std::optional<PullOutPath> ShiftPullOut::plan(
       const auto long_offset_to_next_point =
         autoware::motion_utils::calcLongitudinalOffsetToSegment(
           cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
-      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
+      constexpr double eps = 1e-2;
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) <
+             max_long_offset + eps;
     };
 
     if (!validate_cropped_path(cropped_path)) {
@@ -285,6 +287,9 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     non_shifted_path.start_pose = start_pose;
     non_shifted_path.end_pose = start_pose;
     non_shifted_path.pairs_terminal_velocity_and_accel.push_back(std::make_pair(0, 0));
+    std::tie(non_shifted_path.shift_length.start, non_shifted_path.shift_length.end) =
+      start_planner_utils::calc_start_and_end_shift_length(
+        road_lanes, non_shifted_path.start_pose, non_shifted_path.end_pose);
     return non_shifted_path;
   });
 
@@ -464,6 +469,9 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     candidate_path.end_pose = shift_line.end;
     candidate_path.pairs_terminal_velocity_and_accel.push_back(
       std::make_pair(terminal_velocity, longitudinal_acc));
+    candidate_path.shift_length.start = shift_line.start_shift_length;
+    candidate_path.shift_length.end = shift_line.end_shift_length;
+
     candidate_paths.push_back(candidate_path);
   }
 

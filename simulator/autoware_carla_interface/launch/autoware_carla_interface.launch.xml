@@ -3,6 +3,7 @@
   <arg name="use_e2e_planning" default="false"/>
   <arg name="vehicle_model" default="sample_vehicle"/>
   <arg name="use_sim_time" default="true"/>
+  <arg name="launch_config_pkg" default="autoware_launch" description="Package providing control parameter configs"/>
   <group>
     <arg name="host" default="localhost"/>
     <arg name="port" default="2000"/>
@@ -147,10 +148,10 @@
           <param name="use_sim_time" value="$(var use_sim_time)"/>
           <param name="lateral_controller_mode" value="mpc"/>
           <param name="longitudinal_controller_mode" value="pid"/>
-          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/trajectory_follower_node.param.yaml"/>
-          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/lateral/mpc.param.yaml"/>
-          <param from="$(find-pkg-share autoware_launch)/config/control/trajectory_follower/longitudinal/pid.param.yaml"/>
-          <param from="$(find-pkg-share autoware_launch)/config/control/common/nearest_search.param.yaml"/>
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/trajectory_follower_node.param.yaml"/>
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/lateral/mpc.param.yaml"/>
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/trajectory_follower/longitudinal/pid.param.yaml"/>
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/common/nearest_search.param.yaml"/>
           <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
           <remap from="~/input/reference_trajectory" to="/planning/trajectory"/>
           <remap from="~/input/current_odometry" to="/localization/kinematic_state"/>
@@ -167,7 +168,7 @@
       <!-- Load shift decider as composable node -->
       <load_composable_node target="/e2e_control_container">
         <composable_node pkg="autoware_shift_decider" plugin="autoware::shift_decider::ShiftDecider" name="autoware_shift_decider">
-          <param from="$(find-pkg-share autoware_launch)/config/control/shift_decider/shift_decider.param.yaml"/>
+          <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/shift_decider/shift_decider.param.yaml"/>
           <remap from="input/control_cmd" to="/trajectory_follower/control_cmd"/>
           <remap from="input/state" to="/autoware/state"/>
           <remap from="input/current_gear" to="/vehicle/status/gear_status"/>
@@ -181,14 +182,14 @@
       <include file="$(find-pkg-share autoware_external_cmd_selector)/launch/external_cmd_selector.launch.py">
         <arg name="use_intra_process" value="false"/>
         <arg name="target_container" value="/e2e_control_container"/>
-        <arg name="external_cmd_selector_param_path" value="$(find-pkg-share autoware_launch)/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
+        <arg name="external_cmd_selector_param_path" value="$(find-pkg-share $(var launch_config_pkg))/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
         <arg name="output/current_selector_mode" value="/control/external_cmd_selector/current_selector_mode"/>
       </include>
 
       <!-- Vehicle command gate for operation mode management -->
       <let name="check_external_emergency_heartbeat" value="false"/>
       <node pkg="autoware_vehicle_cmd_gate" exec="vehicle_cmd_gate_exe" name="vehicle_cmd_gate" output="screen">
-        <param from="$(find-pkg-share autoware_launch)/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml"/>
+        <param from="$(find-pkg-share $(var launch_config_pkg))/config/control/vehicle_cmd_gate/vehicle_cmd_gate.param.yaml"/>
         <param from="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
         <param name="use_emergency_handling" value="false"/>
         <param name="check_external_emergency_heartbeat" value="false"/>

@@ -728,7 +728,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -753,7 +753,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -784,7 +784,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto lanelet = lanelet_map_ptr_->laneletLayer.get(target_end_primitive.id);
     if (lanelet::utils::isInLanelet(target_goal, lanelet)) {
       const auto target_goal_position =
-        lanelet::utils::conversion::toLaneletPoint(target_goal.position);
+        experimental::lanelet2_utils::from_ros(target_goal.position);
       const double dist_to_goal = lanelet::geometry::toArcCoordinates(
                                     lanelet::utils::to2D(lanelet.centerline()),
                                     lanelet::utils::to2D(target_goal_position).basicPoint())

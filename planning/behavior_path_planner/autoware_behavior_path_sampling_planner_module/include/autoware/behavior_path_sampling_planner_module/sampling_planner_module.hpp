@@ -23,6 +23,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_parameters.hpp"
 #include "autoware/behavior_path_sampling_planner_module/util.hpp"
+#include "autoware/lanelet2_utils/geometry.hpp"
 #include "autoware/lanelet2_utils/nn_search.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware_bezier_sampler/bezier_sampling.hpp"
@@ -211,8 +212,10 @@ private:
 
     if (!ego_and_goal_on_same_lanelet) return false;
 
-    const auto ego_arc = lanelet::utils::getArcCoordinates(current_lanes, ego_pose);
-    const auto goal_arc = lanelet::utils::getArcCoordinates(current_lanes, goal_pose);
+    const auto ego_arc =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, ego_pose);
+    const auto goal_arc =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanes, goal_pose);
     const double length_to_goal = std::abs(goal_arc.length - ego_arc.length);
 
     constexpr double epsilon = 1E-5;

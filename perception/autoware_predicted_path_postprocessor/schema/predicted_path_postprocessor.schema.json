@@ -10,10 +10,10 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["refine_by_speed"]
+            "enum": ["refine_by_speed", "refine_penetration_by_static_objects"]
           },
           "description": "An array of processor names.",
-          "default": ["refine_by_speed"]
+          "default": ["refine_by_speed", "refine_penetration_by_static_objects"]
         },
         "refine_by_speed": {
           "type": "object",
@@ -32,9 +32,27 @@
             }
           },
           "required": ["speed_threshold", "interpolation"]
+        },
+        "refine_penetration_by_static_objects": {
+          "type": "object",
+          "properties": {
+            "speed_threshold": {
+              "type": "number",
+              "description": "Threshold speed for path refinement. If the speed of an object is below this threshold, the path will be refined.",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "interpolation": {
+              "type": "string",
+              "description": "Name of the interpolation method.",
+              "enum": ["linear", "spline", "spline_by_akima"],
+              "default": "linear"
+            }
+          },
+          "required": ["speed_threshold", "interpolation"]
         }
       },
-      "required": ["processors", "refine_by_speed"]
+      "required": ["processors", "refine_by_speed", "refine_penetration_by_static_objects"]
     }
   },
   "properties": {

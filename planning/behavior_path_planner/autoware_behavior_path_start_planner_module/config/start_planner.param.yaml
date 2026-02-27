@@ -26,6 +26,7 @@
       allow_check_shift_path_lane_departure_override: false
       shift_collision_check_distance_from_end: -10.0
       minimum_shift_pull_out_distance: 0.0
+      minimum_shift_length: 0.5 # the minimum required length for a clothoid path to be considered valid, and also significant enough to trigger specific safety checks.
       maximum_longitudinal_deviation: 1.0 # Note, should be the same or less than planning validator's "longitudinal_distance_deviation"
       lateral_jerk: 0.5
       lateral_acceleration_sampling_num: 3
@@ -64,6 +65,7 @@
 
       # turns signal
       prepare_time_before_start: 0.0
+      turn_signal_on_centerline_start: "RIGHT" # default turn signal when pull out from centerline
       # freespace planner
       freespace_planner:
         enable_freespace_planner: true

@@ -56,6 +56,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
 
   const double ctrl_period = declare_parameter<double>("ctrl_period");
   timeout_thr_sec_ = declare_parameter<double>("timeout_thr_sec");
+  cyclic_message_timeout_thr_sec_ = declare_parameter<double>("cyclic_message_timeout_thr_sec");
   // NOTE: It is possible that using control_horizon could be expected to enhance performance,
   // but it is not a formal interface topic, only an experimental one.
   // So it is disabled by default.
@@ -63,6 +64,7 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
     declare_parameter<bool>("enable_control_cmd_horizon_pub", false);
 
   diag_updater_->setHardwareID("trajectory_follower_node");
+  diag_updater_->add("incoming_message_timeout", this, &Controller::check_cyclic_message_timeout);
 
   const auto lateral_controller_mode =
     getLateralControllerMode(declare_parameter<std::string>("lateral_controller_mode"));
@@ -136,6 +138,26 @@ Controller::LongitudinalControllerMode Controller::getLongitudinalControllerMode
   if (controller_mode == "pid") return LongitudinalControllerMode::PID;
 
   return LongitudinalControllerMode::INVALID;
+}
+
+void Controller::check_cyclic_message_timeout(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const auto traj_timestamp = sub_ref_path_.last_taken_data_timestamp();
+
+  if (!traj_timestamp) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "no message received");
+    return;
+  }
+
+  const auto elapsed = (this->now() - traj_timestamp.value()).seconds();
+  if (elapsed > cyclic_message_timeout_thr_sec_) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "timeout");
+    stat.add("trajectory", "timeout (elapsed: " + std::to_string(elapsed) + " sec)");
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "OK");
+    stat.add("trajectory", "OK");
+  }
 }
 
 bool Controller::processData(rclcpp::Clock & clock)

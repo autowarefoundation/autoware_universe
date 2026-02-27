@@ -1,0 +1,15 @@
+# This is just an example file, the actual model param file comes with the model onnx files
+# and is stored in the artifacts directory (~/autoware_data/camera_streampetr by default).
+
+/**:
+  ros__parameters:
+    model_params: # These are parameters that are dependent on the onnx file.
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+      detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]  # [-x,-y,-z,x,y,z] from base_link. The model is not trained to predict objects outside this range.
+                                                                # So, anything outside this range is wrong, and this parameter is used to filter out objects that are outside this range
+      input_image_height: 480
+      input_image_width: 640
+      num_proposals: 5400
+      rois_number: 5 # ["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_BACK_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK_RIGHT"]
+      pre_memory_length: 1024 # Input memory length for the temporal model
+      post_memory_length: 1280 # Output memory length for the temporal model

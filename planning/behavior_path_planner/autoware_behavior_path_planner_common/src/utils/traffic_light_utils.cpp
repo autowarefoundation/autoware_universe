@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
@@ -34,7 +35,7 @@ double getDistanceToNextTrafficLight(
   }
   const auto & current_lanelet = current_lanelet_opt.value();
 
-  const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+  const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
   const auto to_object = lanelet::geometry::toArcCoordinates(
     lanelet::utils::to2D(current_lanelet.centerline()),
     lanelet::utils::to2D(lanelet_point).basicPoint());

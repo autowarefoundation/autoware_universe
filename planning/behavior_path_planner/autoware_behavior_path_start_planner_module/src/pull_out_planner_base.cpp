@@ -46,10 +46,14 @@ bool PullOutPlannerBase::isPullOutPathCollided(
   const auto collision_check_section_path =
     autoware::behavior_path_planner::start_planner_utils::extractCollisionCheckSection(
       pull_out_path, collision_check_distance_from_end);
-  if (!collision_check_section_path) return true;
+  if (!collision_check_section_path) return false;
 
-  return utils::checkCollisionBetweenPathFootprintsAndObjects(
-    vehicle_footprint_, collision_check_section_path.value(), pull_out_lane_stop_objects,
-    collision_check_margin_);
+  const auto shift_length =
+    std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
+  return autoware::behavior_path_planner::start_planner_utils::
+    has_collision_between_shifted_path_footprints_and_objects(
+      collision_check_section_path.value(), vehicle_footprint_, pull_out_lane_stop_objects,
+      collision_check_margin_, parameters_.th_stopped_velocity, shift_length,
+      parameters_.minimum_shift_length, parameters_.enable_back);
 };
 }  // namespace autoware::behavior_path_planner
