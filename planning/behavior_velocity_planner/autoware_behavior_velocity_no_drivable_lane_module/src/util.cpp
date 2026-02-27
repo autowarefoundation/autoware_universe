@@ -14,19 +14,17 @@
 
 #include "util.hpp"
 
-#include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+
+#include <boost/geometry/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
 #include <vector>
 
-namespace autoware::behavior_velocity_planner
+namespace autoware::behavior_velocity_planner::no_drivable_lane
 {
 
 namespace bg = boost::geometry;
@@ -34,52 +32,18 @@ using Point = bg::model::d2::point_xy<double>;
 using Polygon = bg::model::polygon<Point>;
 using Line = bg::model::linestring<Point>;
 
-using autoware::motion_utils::calcSignedArcLength;
-using autoware_utils::create_point;
-
-PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
-  const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
-  const geometry_msgs::msg::Point & ego_pos, const size_t max_num)
+no_drivable_lane::PolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
+  const experimental::trajectory::Trajectory<PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const size_t max_num)
 {
-  PathWithNoDrivableLanePolygonIntersection path_no_drivable_lane_polygon_intersection;
-  std::vector<Point> intersects{};
+  no_drivable_lane::PolygonIntersection path_no_drivable_lane_polygon_intersection;
 
-  bool found_max_num = false;
-  for (size_t i = 0; i < ego_path.points.size() - 1; ++i) {
-    const auto & p_back = ego_path.points.at(i).point.pose.position;
-    const auto & p_front = ego_path.points.at(i + 1).point.pose.position;
-    const Line segment{{p_back.x, p_back.y}, {p_front.x, p_front.y}};
+  auto intersects = experimental::trajectory::crossed_with_polygon(ego_path, polygon);
 
-    std::vector<Point> tmp_intersects{};
-    bg::intersection(segment, polygon, tmp_intersects);
+  intersects.resize(std::min(intersects.size(), max_num));
 
-    for (const auto & p : tmp_intersects) {
-      intersects.push_back(p);
-      if (intersects.size() == max_num) {
-        found_max_num = true;
-        break;
-      }
-    }
-
-    if (found_max_num) {
-      break;
-    }
-  }
-
-  const auto compare = [&](const Point & p1, const Point & p2) {
-    const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
-
-    const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
-
-    return dist_l1 < dist_l2;
-  };
-
-  std::sort(intersects.begin(), intersects.end(), compare);
-
-  const auto & p_last = ego_path.points.back().point.pose.position;
-  const auto & p_first = ego_path.points.front().point.pose.position;
+  const auto & p_last = ego_path.compute(ego_path.length()).point.pose.position;
+  const auto & p_first = ego_path.compute(0).point.pose.position;
   const Point & last_path_point{p_last.x, p_last.y};
   const Point & first_path_point{p_first.x, p_first.y};
 
@@ -96,28 +60,22 @@ PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLaneP
       // do nothing
     }
   } else if (intersects.size() == 1) {
-    const auto & p = intersects.at(0);
+    const auto & s = intersects.at(0);
     if (is_last_path_point_inside_polygon) {
-      path_no_drivable_lane_polygon_intersection.first_intersection_point =
-        create_point(p.x(), p.y(), ego_pos.z);
+      path_no_drivable_lane_polygon_intersection.first_intersection_s = s;
     } else if (path_no_drivable_lane_polygon_intersection.is_first_path_point_inside_polygon) {
-      path_no_drivable_lane_polygon_intersection.second_intersection_point =
-        create_point(p.x(), p.y(), ego_pos.z);
+      path_no_drivable_lane_polygon_intersection.second_intersection_s = s;
     } else {
       // do nothing
     }
   } else if (intersects.size() == 2) {
     // classify first and second intersection points
-    const auto & p0 = intersects.at(0);
-    const auto & p1 = intersects.at(1);
-    path_no_drivable_lane_polygon_intersection.first_intersection_point =
-      create_point(p0.x(), p0.y(), ego_pos.z);
-    path_no_drivable_lane_polygon_intersection.second_intersection_point =
-      create_point(p1.x(), p1.y(), ego_pos.z);
+    path_no_drivable_lane_polygon_intersection.first_intersection_s = intersects.at(0);
+    path_no_drivable_lane_polygon_intersection.second_intersection_s = intersects.at(1);
   } else {
     // do nothing
   }
 
   return path_no_drivable_lane_polygon_intersection;
 }
-}  // namespace autoware::behavior_velocity_planner
+}  // namespace autoware::behavior_velocity_planner::no_drivable_lane
