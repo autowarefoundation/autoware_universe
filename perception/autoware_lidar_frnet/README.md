@@ -10,6 +10,114 @@ The implementation is based on the FRNet [1] project. It uses TensorRT library f
 
 We trained the models using AWML [2].
 
+### Processing Flow
+
+The following diagram shows the processing flow of the `autoware_lidar_frnet` package using UML Activity Diagram notation:
+
+```plantuml
+@startuml
+!theme plain
+skinparam activity {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    FontSize 12
+}
+
+start
+
+note right
+  **Entry Point: cloudCallback**
+  Triggered when PointCloud2 message arrives
+end note
+
+:Receive Input Point Cloud\n:PointCloud2;
+
+if (Has active subscribers?) then (yes)
+
+partition "Input Validation" #FFEBEE {
+    :Validate point cloud format (XYZIRC);
+    :Check input point count against profile;
+}
+
+partition "Data Transfer\nHost → Device" #E3F2FD {
+    :Copy point cloud data to GPU memory;
+}
+
+partition "Preprocessing" #FFF3E0 {
+    partition "2D Projection" {
+        :Project 3D points to 2D frustum using yaw and pitch angles;
+        :Generate frustum coordinates and coordinate keys for voxelization;
+        :Update projection map with depth-based point selection;
+    }
+
+    partition "Interpolation" {
+        :Interpolate empty pixels from neighboring valid pixels;
+        :Add interpolated points to the point array with coordinates;
+    }
+
+    :Validate point count after interpolation;
+
+    partition "Unique Coordinates Generation" {
+        :Sort coordinate keys and indices;
+        :Generate unique voxel coordinates from sorted keys;
+        :Create inverse map for point-to-voxel mapping;
+    }
+
+    :Validate unique coordinate count against profile;
+
+    :Set network input shapes\n(points, coors, voxel_coors, inverse_map);
+}
+
+partition "Inference\nTensorRT FRNet" #F3E5F5 {
+    :Run neural network inference on GPU;
+    :Generate segmentation logits for each point;
+}
+
+partition "Postprocessing" #E8F5E9 {
+    partition "Point Classification\nand Output Generation" {
+        :Find best class ID from segmentation logits;
+        :Apply score threshold;
+        :Generate segmentation output with class_id;
+        :Generate visualization output with RGB colors;
+        :Generate filtered output excluding specified classes;
+    }
+
+    partition "Data Transfer\nDevice → Host" {
+        :Copy segmentation results to host memory;
+        :Copy visualization results to host memory;
+        :Copy filtered cloud to host memory;
+    }
+}
+
+fork
+    :Publish segmentation\n:PointCloud2;
+fork again
+    :Publish visualization\n:PointCloud2;
+fork again
+    :Publish filtered\n:PointCloud2;
+end fork
+
+else (no)
+  :Skip processing;
+endif
+
+stop
+
+@enduml
+```
+
+**Legend:**
+
+- **Group title**: Shows the concept name
+- **Group content**: The actual processing step executed
+- Each group represents a single processing unit
+- **Color coding**:
+  - Red (#FFEBEE): Input validation
+  - Blue (#E3F2FD): Data transfer operations
+  - Orange (#FFF3E0): Preprocessing operations
+  - Purple (#F3E5F5): Neural network inference
+  - Green (#E8F5E9): Postprocessing operations
+
 ## Inputs / Outputs
 
 ### Input
