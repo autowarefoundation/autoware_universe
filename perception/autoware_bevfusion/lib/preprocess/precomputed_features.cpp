@@ -266,8 +266,8 @@ std::tuple<
 
   // Compute ranks
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor> ranks(N_kept);
-  std::int64_t factor0 = static_cast<std::int64_t>(W) * D;
-  std::int64_t factor1 = static_cast<std::int64_t>(D);
+  std::int64_t factor0 = static_cast<std::int64_t>(nx(1) * nx(2));
+  std::int64_t factor1 = static_cast<std::int64_t>(nx(2));
   std::int64_t factor2 = 1;
 
   for (Eigen::Index i = 0; i < N_kept; ++i) {
