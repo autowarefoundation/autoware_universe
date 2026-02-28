@@ -21,10 +21,12 @@
   <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>diagnostic_updater</depend>
+  <depend>geometry_msgs</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
