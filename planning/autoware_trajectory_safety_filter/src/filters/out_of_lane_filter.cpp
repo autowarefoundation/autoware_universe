@@ -20,11 +20,8 @@
 #include <lanelet2_core/geometry/LaneletMap.h>
 #include <lanelet2_core/geometry/Point.h>
 
-#include <algorithm>
-#include <any>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_safety_filter::plugin
@@ -68,21 +65,11 @@ OutOfLaneFilter::OutOfLaneFilter() : SafetyFilterInterface("OutOfLaneFilter")
   // BoundaryDepartureChecker will be initialized when vehicle_info is set
 }
 
-void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
+void OutOfLaneFilter::set_parameters(rclcpp::Node & node)
 {
-  auto get_value = [&params](const std::string & key, auto & value) {
-    auto it = params.find(key);
-    if (it != params.end()) {
-      try {
-        value = std::any_cast<std::decay_t<decltype(value)>>(it->second);
-      } catch (const std::bad_any_cast &) {
-        // Keep default value if cast fails
-      }
-    }
-  };
-
-  get_value("max_check_time", params_.max_check_time);
-  get_value("min_value", params_.min_value);
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+  params_.max_check_time = get_or_declare_parameter<double>(node, "out_of_lane.time");
+  params_.min_value = get_or_declare_parameter<double>(node, "out_of_lane.min_value");
 
   // Initialize boundary departure checker if vehicle_info is available
   if (!boundary_departure_checker_ && vehicle_info_ptr_) {
@@ -91,6 +78,12 @@ void OutOfLaneFilter::set_parameters(const std::unordered_map<std::string, std::
       std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
         bdc_param, *vehicle_info_ptr_);
   }
+}
+
+void OutOfLaneFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+{
+  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.time", params_.max_check_time);
+  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.min_value", params_.min_value);
 }
 
 tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
@@ -115,6 +108,7 @@ tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
   }
   return {};
 }
+
 }  // namespace autoware::trajectory_safety_filter::plugin
 
 #include <pluginlib/class_list_macros.hpp>

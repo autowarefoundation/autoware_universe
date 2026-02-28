@@ -41,12 +41,51 @@ target_link_libraries(autoware_trajectory_safety_filter_plugins
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  ament_auto_find_test_dependencies()
+
+  # ==========================================
+  # 1. Plugin Unit Tests
+  # ==========================================
   ament_add_gtest(test_vehicle_constraint_filter
-    test/vehicle_constraint_filter.cpp
+    test/plugins/test_vehicle_constraint_filter.cpp
   )
   target_link_libraries(test_vehicle_constraint_filter
     autoware_trajectory_safety_filter_plugins
   )
+
+  # ==========================================
+  # 2. Dummy Plugin (Test Utility)
+  # ==========================================
+  pluginlib_export_plugin_description_file(autoware_trajectory_safety_filter
+    test/dummy_plugin/dummy_plugins.xml
+  )
+
+  ament_auto_add_library(dummy_safety_filter_plugin SHARED
+    test/dummy_plugin/dummy_safety_filter_plugin.cpp
+  )
+
+  target_link_libraries(dummy_safety_filter_plugin
+    ${PROJECT_NAME}
+  )
+
+  # ==========================================
+  # 3. Node Integration/Unit Tests
+  # ==========================================
+  ament_add_gtest(test_trajectory_safety_filter_node
+    test/node/test_trajectory_safety_filter_node.cpp
+  )
+
+  target_link_libraries(test_trajectory_safety_filter_node
+    ${PROJECT_NAME}
+    dummy_safety_filter_plugin
+  )
+
+  ament_target_dependencies(test_trajectory_safety_filter_node
+    autoware_test_utils
+  )
+
 endif()
 
 ament_auto_package(
