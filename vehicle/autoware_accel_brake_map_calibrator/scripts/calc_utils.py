@@ -38,17 +38,13 @@ class CalcUtils:
     @staticmethod
     def average_filter(data, average_num):
         if not isinstance(average_num, int):
-            print(
-                "Error in average_filter(data, average_num):\
-                Type of average_num must be int"
-            )
+            print("Error in average_filter(data, average_num):\
+                Type of average_num must be int")
             sys.exit(1)
 
         if average_num % 2 == 0:
-            print(
-                "Error in average_filter(data, average_num):\
-                average_num must be odd number"
-            )
+            print("Error in average_filter(data, average_num):\
+                average_num must be odd number")
             sys.exit(1)
 
         average_filter = np.ones(average_num) / float(average_num)

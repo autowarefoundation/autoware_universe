@@ -61,7 +61,7 @@ class ProblemDescription:
         message_map = {}
 
         while reader.has_next():
-            (topic, data, t) = reader.read_next()
+            topic, data, t = reader.read_next()
             msg_type = get_message(type_map[topic])
             msg = deserialize_message(data, msg_type)
             message_map[topic] = msg
