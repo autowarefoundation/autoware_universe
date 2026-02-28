@@ -7,15 +7,29 @@ on:
 
 jobs:
   build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+
+        include:
+          # ROS distribution specific configurations
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-cuda
+
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64-cuda
+
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "['self-hosted', 'Linux', 'X64']"
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       container-suffix: -cuda
-      concurrency-group: ${{ github.workflow }}-${{ github.ref }}
+      runner: "['self-hosted', 'Linux', 'X64']"
+      concurrency-group: build-and-test-${{ matrix.rosdistro }}-${{ github.ref }}
       cancel-in-progress: false
       pull-ccache: false
       push-ccache: true
-      codecov-flag: total-cuda
+      codecov-flag: total-${{ matrix.rosdistro }}-cuda
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}

@@ -10,6 +10,10 @@ on:
         required: false
         default: ""
         type: string
+      rosdistro:
+        type: string
+        default: humble
+        required: false
       # Why is it a JSON string?
       # https://github.com/orgs/community/discussions/11692#discussioncomment-3541856
       runner:
@@ -68,15 +72,15 @@ jobs:
         shell: bash
 
       - name: Prepare build_depends.repos file (main branch)
-        if: ${{ github.event.pull_request.base.ref != 'humble' }}
+        if: ${{ github.event.pull_request.base.ref != 'humble' && github.event.pull_request.base.ref != 'jazzy' }}
         uses: ./.github/actions/combine-repos-action
         with:
           base_file: build_depends_humble.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
-      - name: Prepare build_depends.repos file (humble branch)
-        if: ${{ github.event.pull_request.base.ref == 'humble' }}
+      - name: Prepare build_depends.repos file (humble/jazzy branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' || github.event.pull_request.base.ref == 'jazzy' }}
         run: cp build_depends_humble.repos build_depends.repos
         shell: bash
 
@@ -84,7 +88,7 @@ jobs:
         if: ${{ steps.get-changed-files.outputs.changed-files != '' }}
         uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
         with:
-          rosdistro: humble
+          rosdistro: ${{ inputs.rosdistro }}
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy-ci
           clang-tidy-ignore-path: .clang-tidy-ignore
