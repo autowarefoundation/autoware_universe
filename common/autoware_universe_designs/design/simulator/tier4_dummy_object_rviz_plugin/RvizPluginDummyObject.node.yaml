@@ -1,0 +1,33 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RvizPluginDummyObject.node
+
+package:
+  name: tier4_dummy_object_rviz_plugin
+  provider: autoware
+
+launch:
+  plugin: autoware::dummy_perception_publisher::DummyPerceptionPublisherNode
+  executable: tier4_dummy_object_rviz_plugin_node
+  node_output: screen
+
+# interfaces
+inputs: []
+
+outputs:
+  - name: object
+    message_type: tier4_simulation_msgs/msg/DummyObject
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: publish
+    trigger_conditions:
+      - periodic: 10
+    outcomes:
+      - to_output: object

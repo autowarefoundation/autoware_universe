@@ -1,0 +1,66 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PoseInitializer.node
+
+package:
+  name: autoware_pose_initializer
+  provider: autoware
+
+launch:
+  plugin: autoware::pose_initializer::PoseInitializer
+  executable: autoware_pose_initializer_node
+  node_output: screen
+
+# interfaces
+inputs: []
+
+outputs:
+  - name: pose_reset
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: pose_reset
+  - name: pub_state
+    message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
+    remap_target: /localization/initialization_state
+  - name: initialize
+    message_type: autoware_localization_msgs/srv/InitializeLocalization
+    remap_target: /localization/initialize
+
+# parameters
+param_files:
+  - name: config_file
+    default: config/pose_initializer.param.yaml
+
+param_values:
+  - name: ekf_enabled
+    default: false
+  - name: gnss_enabled
+    default: false
+  - name: ndt_enabled
+    default: false
+  - name: yabloc_enabled
+    default: false
+  - name: stop_check_enabled
+    default: false
+  - name: pose_error_check_enabled
+    default: false
+  - name: stop_check_duration
+    default: 0.0
+  - name: gnss_pose_timeout
+    default: 0.0
+  - name: user_defined_initial_pose.enable
+    default: false
+  - name: user_defined_initial_pose.pose
+    default: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+  - name: map_height_fitter.map_loader_name
+    default: /map/pointcloud_map_loader
+  - name: map_height_fitter.target
+    default: pointcloud_map
+
+# processes
+processes:
+  - name: initialize
+    trigger_conditions: []
+    outcomes:
+      - to_output: pose_reset
+      - to_output: pub_state
