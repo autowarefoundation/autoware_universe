@@ -4,14 +4,14 @@
   <version>0.50.0</version>
   <description>The autoware_rtc_interface package</description>
 
-  <maintainer email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</maintainer>
-  <maintainer email="taiki.tanaka@tier4.jp">Taiki Tanaka</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
+  <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
 
   <license>Apache License 2.0</license>
 
   <author email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</author>
+  <author email="taiki.tanaka@tier4.jp">Taiki Tanaka</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
