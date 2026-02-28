@@ -24,16 +24,22 @@ Butterworth2dFilter::Butterworth2dFilter(double dt, double f_cutoff_hz)
   initialize(dt, f_cutoff_hz);
 }
 
+Butterworth2dFilter::Butterworth2dFilter(double dt, double f_cutoff_hz, double initial_value)
+{
+  initialize(dt, f_cutoff_hz, initial_value);
+}
+
 Butterworth2dFilter::~Butterworth2dFilter()
 {
 }
 
-void Butterworth2dFilter::initialize(const double & dt, const double & f_cutoff_hz)
+void Butterworth2dFilter::initialize(
+  const double & dt, const double & f_cutoff_hz, const double initial_value)
 {
-  m_y1 = 0.0;
-  m_y2 = 0.0;
-  m_u2 = 0.0;
-  m_u1 = 0.0;
+  m_y1 = initial_value;
+  m_y2 = initial_value;
+  m_u2 = initial_value;
+  m_u1 = initial_value;
 
   // 2d Butterworth low pass filter with bi-linear transformation
   const double f_sampling_hz = 1.0 / dt;

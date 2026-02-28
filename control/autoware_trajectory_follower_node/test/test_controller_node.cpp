@@ -59,12 +59,14 @@ rclcpp::NodeOptions makeNodeOptions(const bool enable_keep_stopped_until_steer_c
   rclcpp::NodeOptions node_options;
   node_options.append_parameter_override("lateral_controller_mode", "mpc");
   node_options.append_parameter_override("longitudinal_controller_mode", "pid");
+  node_options.append_parameter_override("steer_offset_param_name", "steer_offset");
   node_options.append_parameter_override(
     "enable_keep_stopped_until_steer_convergence",
     enable_keep_stopped_until_steer_convergence);  // longitudinal
   node_options.arguments(
     {"--ros-args", "--params-file",
      lateral_share_dir + "/param/lateral_controller_defaults.param.yaml", "--params-file",
+     lateral_share_dir + "/param/steer_offset.param.yaml", "--params-file",
      longitudinal_share_dir + "/config/autoware_pid_longitudinal_controller.param.yaml",
      "--params-file", share_dir + "/test/test_vehicle_info.param.yaml", "--params-file",
      share_dir + "/test/test_nearest_search.param.yaml", "--params-file",

@@ -13,3 +13,18 @@
     max_ang_velocity: 0.02 # [rad/s]
     max_steer_buffer: 2.0 # [s]
     max_pose_lag: 0.5 # [s]
+
+    calibration:
+      mode: "off"  # Options: ["off", "manual", "auto"]
+
+      # Logic thresholds
+      update_offset_th: 0.001        # min error to trigger an AUTO update [rad]
+      covariance_th: 0.0008 # max uncertainty to trust the estimate
+
+      # Persistence & Safety
+      min_steady_duration: 10.0     # required duration of continuous estimation data [s]
+      min_velocity: 1.0             # minimum speed to allow estimation updates [m/s]
+      max_offset_limit: 0.05        # safety cap to prevent extreme calibration jumps [rad]
+      min_update_interval: 100.0    # minimum duration between updates [s]
+
+      warning_offset_th: 0.005      # error threshold to trigger a warning [rad]
