@@ -28,6 +28,7 @@
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_trajectory</depend>
+  <depend>autoware_universe_utils</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_geometry</depend>

@@ -118,6 +118,7 @@ struct DiffusionPlannerParams
   float turn_indicator_keep_offset;
   double turn_indicator_hold_duration;
   bool shift_x;
+  bool use_time_interpolation;
 };
 
 /**

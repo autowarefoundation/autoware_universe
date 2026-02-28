@@ -12,12 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#include <rclcpp/time.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <gtest/gtest.h>
+#include <tf2/LinearMath/Quaternion.h>
 
 #include <cmath>
+#include <deque>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -267,6 +274,40 @@ TEST_F(PreprocessingUtilsEdgeCaseTest, CreateFloatDataEdgeCases)
   // Test with negative dimension (should be handled as unsigned)
   std::vector<int64_t> negative_shape{-5, 10};
   EXPECT_ANY_THROW(utils::create_float_data(negative_shape, 4.0f));
+}
+
+// Test: create_ego_agent_past with time-based interpolation
+TEST_F(PreprocessingUtilsEdgeCaseTest, CreateEgoAgentPastTimeInterpolation)
+{
+  // Create 3 odom messages at 0.0s, 0.1s, 0.2s moving along X axis
+  std::deque<nav_msgs::msg::Odometry> odom_msgs;
+  for (int i = 0; i < 3; ++i) {
+    nav_msgs::msg::Odometry odom;
+    odom.header.stamp.sec = 0;
+    odom.header.stamp.nanosec = static_cast<uint32_t>(i) * 100000000u;  // 0.0, 0.1, 0.2
+    odom.pose.pose.position.x = static_cast<double>(i);                 // 0, 1, 2
+    odom.pose.pose.position.y = 0.0;
+    odom.pose.pose.orientation.w = 1.0;  // identity quaternion
+    odom_msgs.push_back(odom);
+  }
+
+  const Eigen::Matrix4d identity = Eigen::Matrix4d::Identity();
+  const rclcpp::Time ref_time(0, 200000000u);  // 0.2s
+  const size_t num_timesteps = 3;
+
+  const auto result =
+    preprocess::create_ego_agent_past(odom_msgs, num_timesteps, identity, ref_time);
+
+  // Should have 3 timesteps * 4 features = 12 values
+  ASSERT_EQ(result.size(), num_timesteps * 4);
+
+  // Each timestep should match the odom positions (0, 1, 2) since times align exactly
+  for (size_t t = 0; t < num_timesteps; ++t) {
+    const size_t base = t * 4;
+    EXPECT_NEAR(result[base + EGO_AGENT_PAST_IDX_X], static_cast<float>(t), 1e-3f)
+      << "timestep " << t;
+    EXPECT_NEAR(result[base + EGO_AGENT_PAST_IDX_Y], 0.0f, 1e-3f);
+  }
 }
 
 }  // namespace autoware::diffusion_planner::test

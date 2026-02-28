@@ -99,6 +99,11 @@
           "default": false,
           "description": "Whether to shift the ego center position by half the wheel base"
         },
+        "use_time_interpolation": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to interpolate ego past trajectory at regular time intervals"
+        },
         "debug_params": {
           "type": "object",
           "properties": {

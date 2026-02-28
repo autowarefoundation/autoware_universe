@@ -18,6 +18,8 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#include <autoware/universe_utils/geometry/geometry.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -112,40 +114,88 @@ std::vector<float> create_ego_current_state(
 
 std::vector<float> create_ego_agent_past(
   const std::deque<nav_msgs::msg::Odometry> & odom_msgs, size_t num_timesteps,
-  const Eigen::Matrix4d & map_to_ego_transform)
+  const Eigen::Matrix4d & map_to_ego_transform, const std::optional<rclcpp::Time> & reference_time)
 {
   const size_t features_per_timestep = 4;  // x, y, cos, sin
   const size_t total_size = num_timesteps * features_per_timestep;
 
   std::vector<float> ego_agent_past(total_size, 0.0f);
 
-  const size_t start_idx =
-    (odom_msgs.size() >= num_timesteps) ? odom_msgs.size() - num_timesteps : 0;
+  // Initialize cos values to 1.0 (identity heading)
+  for (size_t t = 0; t < num_timesteps; ++t) {
+    ego_agent_past[t * features_per_timestep + EGO_AGENT_PAST_IDX_COS] = 1.0f;
+  }
 
-  for (size_t i = start_idx; i < odom_msgs.size(); ++i) {
-    const auto & historical_pose = odom_msgs[i].pose.pose;
+  // If no odometry messages are available, return the default-initialized ego_agent_past
+  if (odom_msgs.empty()) {
+    return ego_agent_past;
+  }
 
-    // Convert pose to 4x4 matrix
-    const Eigen::Matrix4d pose_map_4x4 = utils::pose_to_matrix4d(historical_pose);
-
-    // Transform to ego frame
+  // Lambda to transform a pose to ego frame and store into the flat array
+  auto store_pose = [&](size_t timestep_idx, const geometry_msgs::msg::Pose & pose) {
+    const Eigen::Matrix4d pose_map_4x4 = utils::pose_to_matrix4d(pose);
     const Eigen::Matrix4d pose_ego_4x4 = map_to_ego_transform * pose_map_4x4;
-
-    // Extract position
-    const float x = pose_ego_4x4(0, 3);
-    const float y = pose_ego_4x4(1, 3);
-
-    // Extract heading as cos/sin
     const auto [cos_yaw, sin_yaw] =
       utils::rotation_matrix_to_cos_sin(pose_ego_4x4.block<3, 3>(0, 0));
-
-    // Store in flat array: [timestep, features]
-    const size_t timestep_idx = i - start_idx;
     const size_t base_idx = timestep_idx * features_per_timestep;
-    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_X] = x;
-    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_Y] = y;
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_X] = pose_ego_4x4(0, 3);
+    ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_Y] = pose_ego_4x4(1, 3);
     ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_COS] = cos_yaw;
     ego_agent_past[base_idx + EGO_AGENT_PAST_IDX_SIN] = sin_yaw;
+  };
+
+  if (!reference_time.has_value()) {
+    // Legacy behavior: use the last num_timesteps odom messages directly
+    const size_t start_idx =
+      (odom_msgs.size() >= num_timesteps) ? odom_msgs.size() - num_timesteps : 0;
+    for (size_t i = start_idx; i < odom_msgs.size(); ++i) {
+      store_pose(i - start_idx, odom_msgs[i].pose.pose);
+    }
+    return ego_agent_past;
+  }
+
+  // Time-based interpolation behavior
+  auto stamp_to_sec = [](const builtin_interfaces::msg::Time & stamp) -> double {
+    return static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
+  };
+
+  const double ref_sec = reference_time->seconds();
+  constexpr double dt = constants::PREDICTION_TIME_STEP_S;  // 0.1s
+
+  const double first_sec = stamp_to_sec(odom_msgs.front().header.stamp);
+  const double last_sec = stamp_to_sec(odom_msgs.back().header.stamp);
+
+  // Both target_sec and odom timestamps are monotonically increasing,
+  // so we can carry the search index forward across iterations.
+  size_t search_start = 0;
+
+  for (size_t t = 0; t < num_timesteps; ++t) {
+    // t=0 is the oldest, t=num_timesteps-1 is the reference time
+    const double target_sec = ref_sec - static_cast<double>(num_timesteps - 1 - t) * dt;
+
+    geometry_msgs::msg::Pose interpolated_pose;
+    if (target_sec <= first_sec) {
+      interpolated_pose = odom_msgs.front().pose.pose;
+    } else if (target_sec >= last_sec) {
+      interpolated_pose = odom_msgs.back().pose.pose;
+    } else {
+      // Find the two bracketing odom messages, continuing from previous position
+      for (; search_start + 1 < odom_msgs.size(); ++search_start) {
+        const double t_next = stamp_to_sec(odom_msgs[search_start + 1].header.stamp);
+        if (target_sec <= t_next) {
+          break;
+        }
+      }
+
+      const double t0 = stamp_to_sec(odom_msgs[search_start].header.stamp);
+      const double t1 = stamp_to_sec(odom_msgs[search_start + 1].header.stamp);
+      const double ratio = (t1 > t0) ? (target_sec - t0) / (t1 - t0) : 0.0;
+
+      interpolated_pose = autoware::universe_utils::calcInterpolatedPose(
+        odom_msgs[search_start].pose.pose, odom_msgs[search_start + 1].pose.pose, ratio, false);
+    }
+
+    store_pose(t, interpolated_pose);
   }
 
   return ego_agent_past;
