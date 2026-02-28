@@ -24,7 +24,6 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
@@ -1022,7 +1021,7 @@ bool is_goal_reachable_on_path(
   }
   const bool goal_is_in_current_segment_lanes = std::any_of(
     goal_check_lanes.begin(), goal_check_lanes.end(), [&](const lanelet::ConstLanelet & lane) {
-      return lanelet::utils::isInLanelet(goal_pose, lane);
+      return autoware::experimental::lanelet2_utils::is_in_lanelet(lane, goal_pose);
     });
 
   // check that goal is in current neighbor shoulder lane
@@ -1030,7 +1029,9 @@ bool is_goal_reachable_on_path(
     for (const auto & lane : current_lanes) {
       const auto shoulder_lane = left_side_parking ? route_handler.getLeftShoulderLanelet(lane)
                                                    : route_handler.getRightShoulderLanelet(lane);
-      if (shoulder_lane && lanelet::utils::isInLanelet(goal_pose, *shoulder_lane)) {
+      if (
+        shoulder_lane &&
+        autoware::experimental::lanelet2_utils::is_in_lanelet(*shoulder_lane, goal_pose)) {
         return true;
       }
     }

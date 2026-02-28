@@ -19,9 +19,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/universe_utils/math/normalization.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -49,10 +49,12 @@ PathWithLaneId getBackwardPath(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & shoulder_lanes,
   const Pose & current_pose, const Pose & backed_pose, const double velocity)
 {
-  const auto current_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
-  const auto backed_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
+  const auto current_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
+  const auto backed_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
 
   const double s_start = backed_pose_arc_coords.length;
   const double s_end = current_pose_arc_coords.length;
@@ -231,7 +233,7 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 1. First, find all lanes containing the pose
   bool found_containing_lane = false;
   for (const auto & lane : candidate_lanes) {
-    if (lanelet::utils::isInLanelet(pose, lane)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, pose)) {
       lane_ids.push_back(lane.id());
       found_containing_lane = true;
     }

@@ -24,7 +24,6 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
@@ -492,7 +491,7 @@ PathWithLaneId refinePathForGoal(
 bool isInLanelets(const Pose & pose, const lanelet::ConstLanelets & lanes)
 {
   for (const auto & lane : lanes) {
-    if (lanelet::utils::isInLanelet(pose, lane)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, pose)) {
       return true;
     }
   }
@@ -509,7 +508,7 @@ bool isInLaneletWithYawThreshold(
   const double angle_diff = std::abs(autoware_utils::normalize_radian(lanelet_angle - pose_yaw));
 
   return (angle_diff < std::abs(yaw_threshold)) &&
-         lanelet::utils::isInLanelet(current_pose, lanelet, radius);
+         autoware::experimental::lanelet2_utils::is_in_lanelet(lanelet, current_pose, radius);
 }
 
 bool isEgoOutOfRoute(
@@ -555,14 +554,14 @@ bool isEgoOutOfRoute(
   const bool is_in_shoulder_lane = !route_handler->getShoulderLaneletsAtPose(self_pose).empty();
   // Check if ego vehicle is in road lane
   const bool is_in_road_lane = std::invoke([&]() {
-    if (lanelet::utils::isInLanelet(self_pose, closest_road_lane)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(closest_road_lane, self_pose)) {
       return true;
     }
 
     // check previous lanes for backward driving (e.g. pull out)
     const auto prev_lanes = route_handler->getPreviousLanelets(closest_road_lane);
     for (const auto & lane : prev_lanes) {
-      if (lanelet::utils::isInLanelet(self_pose, lane)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, self_pose)) {
         return true;
       }
     }

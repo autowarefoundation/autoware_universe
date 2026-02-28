@@ -18,7 +18,6 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -625,12 +624,18 @@ auto get_previous_polygons_with_lane_recursively(
     const auto expand_lanelets_opt =
       autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
         target_lanes, left_offset, -1.0 * right_offset);
-    if (expand_lanelets_opt.has_value()) {
-      const auto & expand_lanelets = expand_lanelets_opt.value();
-      const auto polygon = lanelet::utils::getPolygonFromArcLength(
-        expand_lanelets, total_length - s2, total_length - s1);
-      ret.emplace_back(polygon.basicPolygon(), target_lanes);
+    if (!expand_lanelets_opt.has_value()) {
+      return ret;
     }
+    const auto & expand_lanelets = expand_lanelets_opt.value();
+    const auto polygon_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+      expand_lanelets, total_length - s2, total_length - s1);
+    if (!polygon_opt.has_value()) {
+      return ret;
+    }
+    const auto & polygon = polygon_opt.value();
+    ret.emplace_back(polygon.basicPolygon(), target_lanes);
+
     return ret;
   }
 
@@ -644,12 +649,18 @@ auto get_previous_polygons_with_lane_recursively(
         const auto expand_lanelets_opt =
           autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
             target_lanes, left_offset, -1.0 * right_offset);
-        if (expand_lanelets_opt.has_value()) {
-          const auto & expand_lanelets = expand_lanelets_opt.value();
-          const auto polygon = lanelet::utils::getPolygonFromArcLength(
-            expand_lanelets, total_length - s2, total_length - s1);
-          ret.emplace_back(polygon.basicPolygon(), target_lanes);
+        if (!expand_lanelets_opt.has_value()) {
+          continue;
         }
+        const auto & expand_lanelets = expand_lanelets_opt.value();
+        const auto polygon_opt =
+          autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+            expand_lanelets, total_length - s2, total_length - s1);
+        if (!polygon_opt.has_value()) {
+          continue;
+        }
+        const auto & polygon = polygon_opt.value();
+        ret.emplace_back(polygon.basicPolygon(), target_lanes);
 
         continue;
       }
@@ -664,12 +675,19 @@ auto get_previous_polygons_with_lane_recursively(
         const auto expand_lanelets_opt =
           autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
             pushed_lanes, left_offset, -1.0 * right_offset);
-        if (expand_lanelets_opt.has_value()) {
-          const auto & expand_lanelets = expand_lanelets_opt.value();
-          const auto polygon = lanelet::utils::getPolygonFromArcLength(
-            expand_lanelets, total_length - s2, total_length - s1);
-          ret.emplace_back(polygon.basicPolygon(), pushed_lanes);
+        if (!expand_lanelets_opt.has_value()) {
+          continue;
         }
+        const auto & expand_lanelets = expand_lanelets_opt.value();
+        const auto polygon_opt =
+          autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+            expand_lanelets, total_length - s2, total_length - s1);
+        if (!polygon_opt.has_value()) {
+          continue;
+        }
+        const auto & polygon = polygon_opt.value();
+        ret.emplace_back(polygon.basicPolygon(), pushed_lanes);
+
       } else {
         const auto polygons = get_previous_polygons_with_lane_recursively(
           current_lanes, pushed_lanes, s1, s2, route_handler, left_offset, right_offset);
@@ -708,9 +726,14 @@ auto generate_detection_polygon(
 {
   const auto ego_coordinate_on_arc =
     autoware::experimental::lanelet2_utils::get_arc_coordinates(lanelets, ego_pose).length;
-  const auto polygon = lanelet::utils::getPolygonFromArcLength(
+  const auto polygon_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
     lanelets, ego_coordinate_on_arc - backward_distance, ego_coordinate_on_arc + forward_distance);
-  return polygon.basicPolygon();
+  if (polygon_opt.has_value()) {
+    return polygon_opt.value().basicPolygon();
+  } else {
+    // return blank polygon (no detection_polygon)
+    return lanelet::BasicPolygon3d();
+  }
 }
 
 auto generate_half_lanelet(

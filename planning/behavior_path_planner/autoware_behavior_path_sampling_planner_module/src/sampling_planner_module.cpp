@@ -345,7 +345,7 @@ PathWithLaneId SamplingPlannerModule::convertFrenetPathToPathWithLaneID(
     // put the lane that contain waypoints in lane_ids.
     bool is_in_lanes = false;
     for (const auto & lane : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lane)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, point.point.pose)) {
         point.lane_ids.push_back(lane.id());
         is_in_lanes = true;
       }
@@ -495,12 +495,12 @@ BehaviorModuleOutput SamplingPlannerModule::plan()
   auto get_goal_pose = [&]() {
     auto goal_pose = planner_data_->route_handler->getGoalPose();
     if (!std::any_of(current_lanes.begin(), current_lanes.end(), [&](const auto & lane) {
-          return lanelet::utils::isInLanelet(goal_pose, lane);
+          return autoware::experimental::lanelet2_utils::is_in_lanelet(lane, goal_pose);
         })) {
       for (auto it = reference_path_ptr->points.rbegin(); it < reference_path_ptr->points.rend();
            it++) {
         if (std::any_of(current_lanes.begin(), current_lanes.end(), [&](const auto & lane) {
-              return lanelet::utils::isInLanelet(it->point.pose, lane);
+              return autoware::experimental::lanelet2_utils::is_in_lanelet(lane, it->point.pose);
             })) {
           goal_pose = it->point.pose;
           break;

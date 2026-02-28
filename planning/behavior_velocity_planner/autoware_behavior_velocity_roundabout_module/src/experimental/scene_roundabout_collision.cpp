@@ -21,7 +21,6 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 #include <autoware_utils/geometry/geometry.hpp>
 #include <magic_enum.hpp>
@@ -261,11 +260,13 @@ void RoundaboutModule::updateObjectInfoManagerCollision(
         closest_arc_coords.length + ego_end_itr->second +
           planner_data.vehicle_info_.max_longitudinal_offset_m,
         lanelet::geometry::length2d(concat_lanelets));
-      const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
-        {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
-      if (trimmed_ego_polygon.empty()) {
+      const auto trimmed_ego_polygon_opt =
+        autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+          {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
+      if (!trimmed_ego_polygon_opt.has_value()) {
         continue;
       }
+      const auto & trimmed_ego_polygon = trimmed_ego_polygon_opt.value();
       Polygon2d polygon{};
       for (const auto & p : trimmed_ego_polygon) {
         polygon.outer().emplace_back(p.x(), p.y());
@@ -613,7 +614,7 @@ std::optional<size_t> RoundaboutModule::checkAngleForTargetLanelets(
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
     const auto & ll = target_lanelets.at(i);
-    if (!lanelet::utils::isInLanelet(pose, ll, dist_margin)) {
+    if (!autoware::experimental::lanelet2_utils::is_in_lanelet(ll, pose, dist_margin)) {
       continue;
     }
     const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(

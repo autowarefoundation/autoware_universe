@@ -35,8 +35,6 @@
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -589,7 +587,14 @@ lanelet::BasicPolygon2d create_polygon(
     return {};
   }
 
-  const auto polygon_3d = lanelet::utils::getPolygonFromArcLength(lanes, start_dist, end_dist);
+  const auto polygon_3d_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+    lanes, start_dist, end_dist);
+
+  if (!polygon_3d_opt.has_value()) {
+    return {};
+  }
+
+  const auto & polygon_3d = polygon_3d_opt.value();
   return lanelet::utils::to2D(polygon_3d).basicPolygon();
 }
 
