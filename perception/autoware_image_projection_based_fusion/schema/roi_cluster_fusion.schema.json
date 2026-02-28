@@ -123,6 +123,31 @@
           "type": "boolean",
           "description": "If this parameter is true, all of objects labeled UNKNOWN will be removed in post-process.",
           "default": false
+        },
+        "pedestrian_size_validation": {
+          "type": "object",
+          "description": "Pedestrian size validation parameters to reduce false positives",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enable pedestrian size validation (3D size check)",
+              "default": true
+            },
+            "min_width": {
+              "type": "number",
+              "description": "Minimum pedestrian width in meters (shoulder width)",
+              "default": 0.3,
+              "minimum": 0.1,
+              "maximum": 0.5
+            },
+            "max_width": {
+              "type": "number",
+              "description": "Maximum pedestrian width in meters (with bags/umbrella)",
+              "default": 1.0,
+              "minimum": 0.5,
+              "maximum": 2.0
+            }
+          }
         }
       },
       "required": [
