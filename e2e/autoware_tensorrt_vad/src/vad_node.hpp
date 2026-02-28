@@ -17,6 +17,7 @@
 
 #include "ros_vad_logger.hpp"
 #include "synchronization_strategy.hpp"
+#include "utils/classification_loader.hpp"
 #include "utils/model_config.hpp"
 #include "utils/param_loader.hpp"
 #include "utils/version_checker.hpp"
@@ -81,38 +82,29 @@ private:
     autoware::tensorrt_common::TrtCommonConfig>
   load_trt_common_configs();
 
-  // Helper struct to reduce function arguments and eliminate duplication
-  struct ClassificationConfig
-  {
-    std::vector<std::string> class_names;
-    std::vector<double> thresholds;
-    std::vector<std::string> * target_class_names;
-    std::map<std::string, float> * target_thresholds;
-    int32_t * num_classes;
-    std::string validation_context;
-  };
-
   // Helper methods for load_vad_config
-  void load_detection_range(VadConfig & config);
-  void load_classification_config(const ClassificationConfig & params);
-  void load_map_configuration_with_model_params(
+  bool load_detection_range(VadConfig & config);
+  bool load_map_configuration(VadConfig & config);
+  bool load_object_configuration(VadConfig & config);
+  bool load_map_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
-  void load_object_configuration_with_model_params(
+  bool load_object_configuration_with_model_params(
     VadConfig & config, const utils::ModelParams & model_params);
-  void load_network_configurations(VadConfig & config);
-  void initialize_vad_model();
-  void create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);
-  void create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos);
+  bool load_image_normalization(VadConfig & config);
+  bool load_network_configurations(VadConfig & config);
+  bool initialize_vad_model();
+  bool create_camera_image_subscribers(const rclcpp::QoS & sensor_qos);
+  bool create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos);
 
   // Callback methods
-  void image_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id);
-  void camera_info_callback(
+  bool image_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id);
+  bool camera_info_callback(
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id);
-  void odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void acceleration_callback(
+  bool odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+  bool acceleration_callback(
     const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg);
-  void tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg);
-  void anchor_callback();
+  bool tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg);
+  bool anchor_callback();
 
   // Generic callback handler template
   template <typename MsgType>
@@ -167,7 +159,7 @@ private:
     const VadInputTopicData & vad_input_topic_data);
   std::optional<VadOutputTopicData> trigger_inference(
     VadInputTopicData vad_input_topic_data_current_frame);
-  void publish(const VadOutputTopicData & vad_output_topic_data);
+  bool publish(const VadOutputTopicData & vad_output_topic_data);
 };
 }  // namespace autoware::tensorrt_vad
 
