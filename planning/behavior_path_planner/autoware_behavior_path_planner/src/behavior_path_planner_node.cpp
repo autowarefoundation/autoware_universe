@@ -369,6 +369,7 @@ void BehaviorPathPlannerNode::run()
 
   // behavior_path_planner runs only in LANE DRIVING scenario.
   if (current_scenario_->current_scenario != Scenario::LANEDRIVING) {
+    diagnostics_message_timeout_->publish(stamp);
     return;
   }
 
