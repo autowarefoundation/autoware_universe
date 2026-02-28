@@ -10,7 +10,7 @@
           "type": "integer",
           "minimum": 0,
           "description": "number of indices to be sampled",
-          "default": "1500"
+          "default": 1500
         }
       },
       "required": ["sample_num"],

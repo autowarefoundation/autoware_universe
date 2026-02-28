@@ -34,12 +34,12 @@
         "enable_dust_diag": {
           "type": "boolean",
           "description": "enable dust diagnostic",
-          "default": "false"
+          "default": false
         },
         "publish_debug_image": {
           "type": "boolean",
           "description": "publish debug image",
-          "default": "false"
+          "default": false
         },
         "dust_ratio_threshold": {
           "type": "number",
@@ -111,7 +111,7 @@
         "is_channel_order_top2down": {
           "type": "boolean",
           "description": "If the lidar channels are indexed from top to down",
-          "default": "true"
+          "default": true
         },
         "horizontal_ring_id": {
           "type": "integer",

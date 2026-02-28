@@ -19,13 +19,13 @@
         },
         "maximum_queue_size": {
           "type": "integer",
-          "default": "5",
+          "default": 5,
           "minimum": 1,
           "description": "Maximum size of the queue for the Keep Last policy in QoS history."
         },
         "timeout_sec": {
           "type": "number",
-          "default": "0.1",
+          "default": 0.1,
           "minimum": 0.001,
           "description": "Timer's timeout duration in seconds when collectors are created. Collectors will concatenate the point clouds when timeout_sec reaches zero."
         },
