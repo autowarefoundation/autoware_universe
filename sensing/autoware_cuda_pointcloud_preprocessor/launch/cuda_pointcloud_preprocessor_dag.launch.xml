@@ -1,0 +1,31 @@
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/top/pointcloud_raw_ex"/>
+  <arg name="input/imu" default="/sensing/imu/imu_data"/>
+  <arg name="input/twist" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="output/pointcloud" default="/test/sensing/lidar/top/pointcloud_before_sync"/>
+
+  <arg name="dag_config_file" default="$(find-pkg-share autoware_cuda_pointcloud_preprocessor)/config/dag/standard_preprocessing.yaml"/>
+
+  <!--node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_pointcloud_preprocessor_dag_node" name="cuda_pointcloud_preprocessor_dag" output="screen">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
+    <remap from="~/input/imu" to="$(var input/imu)"/>
+    <remap from="~/input/twist" to="$(var input/twist)"/>
+    <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda"/>
+    <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+
+    <param name="dag_config_file" value="$(var dag_config_file)"/>
+  </node-->
+
+  <load_composable_node target="/sensing/lidar/top/pointcloud_preprocessor/pointcloud_container">
+    <composable_node pkg="autoware_cuda_pointcloud_preprocessor" plugin="autoware::cuda_pointcloud_preprocessor::dag::CudaPointcloudPreprocessorDagNode" name="test_preprocessor">
+      <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
+      <remap from="~/input/imu" to="$(var input/imu)"/>
+      <remap from="~/input/twist" to="$(var input/twist)"/>
+      <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda"/>
+      <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+      <param name="dag_config_file" value="$(var dag_config_file)"/>
+    </composable_node>
+  </load_composable_node>
+</launch>

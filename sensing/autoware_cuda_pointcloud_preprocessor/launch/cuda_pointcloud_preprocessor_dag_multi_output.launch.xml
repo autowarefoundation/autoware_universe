@@ -1,0 +1,20 @@
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/top/pointcloud_raw_ex"/>
+  <arg name="input/imu" default="/sensing/imu/imu_data"/>
+  <arg name="input/twist" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="output/organized" default="/sensing/lidar/top/organized"/>
+  <arg name="output/pointcloud" default="/sensing/lidar/top/pointcloud"/>
+
+  <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_pointcloud_preprocessor_dag_node" name="cuda_pointcloud_preprocessor_dag" output="screen">
+    <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
+    <remap from="~/input/imu" to="$(var input/imu)"/>
+    <remap from="~/input/twist" to="$(var input/twist)"/>
+    <remap from="~/output/organized" to="$(var output/organized)"/>
+    <remap from="~/output/organized/cuda" to="$(var output/organized)/cuda"/>
+    <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda"/>
+
+    <param name="dag_config_file" value="$(find-pkg-share autoware_cuda_pointcloud_preprocessor)/config/dag/multi_output_example.yaml"/>
+  </node>
+</launch>
