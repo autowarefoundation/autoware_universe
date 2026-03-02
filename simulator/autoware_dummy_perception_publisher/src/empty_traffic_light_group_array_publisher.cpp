@@ -43,6 +43,11 @@ private:
 
   void timerCallback()
   {
+    const auto topic_name = empty_traffic_light_group_array_pub_->get_topic_name();
+    if (this->count_publishers(topic_name) > 1) {
+      return;
+    }
+
     autoware_perception_msgs::msg::TrafficLightGroupArray empty_traffic_light_group_array;
     empty_traffic_light_group_array.stamp = this->now();
     empty_traffic_light_group_array_pub_->publish(empty_traffic_light_group_array);
