@@ -65,6 +65,7 @@
 
       # turns signal
       prepare_time_before_start: 0.0
+      turn_signal_on_centerline_start: "RIGHT" # default turn signal when pull out from centerline
       # freespace planner
       freespace_planner:
         enable_freespace_planner: true
