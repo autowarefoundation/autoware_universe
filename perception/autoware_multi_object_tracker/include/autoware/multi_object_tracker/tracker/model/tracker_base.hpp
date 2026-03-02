@@ -63,7 +63,7 @@ private:
   int total_no_measurement_count_;
   int total_measurement_count_;
   rclcpp::Time last_update_with_measurement_time_;
-  std::vector<float> existence_probabilities_;
+  std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
@@ -89,14 +89,18 @@ public:
   // tracker probabilities
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
-  std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  std::vector<types::ExistenceProbability> getExistenceProbabilityVector() const
+  {
+    return existence_probabilities_;
+  }
   std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
   {
     return classification_;
   }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
-  void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
+  void mergeExistenceProbabilities(
+    std::vector<types::ExistenceProbability> existence_probabilities);
 
   // object update
   bool updateWithMeasurement(

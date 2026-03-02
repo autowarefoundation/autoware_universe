@@ -19,16 +19,19 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>autoware_boundary_departure_checker</depend>
   <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_interpolation</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_lanelet2_utils</depend>
+  <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_rclcpp</depend>
+  <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>generate_parameter_library</depend>
   <depend>lanelet2_core</depend>
