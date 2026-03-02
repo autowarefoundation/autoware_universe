@@ -71,8 +71,8 @@ private:
   rclcpp::Publisher<Float32Stamped>::SharedPtr m_pub_steer_offset;
 
   std::shared_ptr<Butterworth2dFilter> lpf_steer_offset_;
-  double m_steering_offset_;
-  double m_steering_offset_filtered_;
+  double m_steering_offset_{0.0};
+  double m_steering_offset_filtered_{0.0};
 
   std::shared_ptr<diagnostic_updater::Updater>
     diag_updater_{};  // Diagnostic updater for publishing diagnostic data.
