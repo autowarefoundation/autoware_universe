@@ -31,8 +31,6 @@
 #include <tf2_ros/buffer.hpp>
 #include <tf2_ros/transform_listener.hpp>
 
-#include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
@@ -67,7 +65,7 @@ public:
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   /**
-   * @brief Publish ego crop box as polygon and/or marker when subscribed; no-op if crop box
+   * @brief Publish ego crop box as marker when subscribed; no-op if crop box
    *        disabled or no subscribers. Uses given stamp for header.
    * @param stamp Timestamp for published messages
    */
@@ -124,17 +122,8 @@ private:
   bool crop_box_enabled_;
 
   // Debug: ego crop box preview
-  rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr ego_crop_box_polygon_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr ego_crop_box_marker_pub_;
-  std::optional<geometry_msgs::msg::PolygonStamped> ego_crop_box_polygon_msg_;
   std::optional<visualization_msgs::msg::Marker> ego_crop_box_marker_msg_;
-
-  /**
-   * @brief Return cached ego crop box polygon message with given stamp.
-   * @param stamp Timestamp to set in header
-   * @return PolygonStamped (call only when ego_crop_box_polygon_msg_ has value)
-   */
-  geometry_msgs::msg::PolygonStamped getPolygonMsg(rclcpp::Time stamp) const;
 
   /**
    * @brief Return cached ego crop box marker message with given stamp.
