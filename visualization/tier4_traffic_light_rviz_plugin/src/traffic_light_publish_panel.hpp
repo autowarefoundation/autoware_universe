@@ -76,7 +76,6 @@ protected:
 
   TrafficLightGroupArray extra_traffic_signals_;
 
-  bool enable_publish_{false};
   std::set<int> traffic_light_ids_;
   bool received_vector_map_{false};
 };
