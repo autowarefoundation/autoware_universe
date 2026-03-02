@@ -26,8 +26,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/polygon_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
 #include <memory>
@@ -66,11 +64,8 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
     }
   }
 
-  // Ego crop box debug messages: build once (polygon + marker), only stamp updated when publishing
+  // Ego crop box debug messages: build once (marker), only stamp updated when publishing
   if (crop_box_enabled_) {
-    geometry_msgs::msg::PolygonStamped polygon_msg;
-    ros_utils::setPolygonMsg(crop_box_bounds_, crop_reference_frame_, polygon_msg);
-    ego_crop_box_polygon_msg_.emplace(std::move(polygon_msg));
     visualization_msgs::msg::Marker marker_msg;
     ros_utils::setMarkerMsg(crop_box_bounds_, crop_reference_frame_, marker_msg);
     ego_crop_box_marker_msg_.emplace(std::move(marker_msg));
@@ -121,8 +116,6 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
       *this, "~/output/pointcloud/filtered");
 
   // Debug: ego crop box preview (only published when subscribed)
-  ego_crop_box_polygon_pub_ =
-    this->create_publisher<geometry_msgs::msg::PolygonStamped>("~/debug/ego_crop_box_polygon", 10);
   ego_crop_box_marker_pub_ =
     this->create_publisher<visualization_msgs::msg::Marker>("~/debug/ego_crop_box_marker", 10);
 
@@ -184,16 +177,6 @@ bool LidarFRNetNode::setStaticCropBoxTransform(const std::string & sensor_frame_
     get_logger(), "Ego crop box: cached static transform %s -> %s, TF listener shut down.",
     sensor_frame_id.c_str(), crop_reference_frame_.c_str());
   return true;
-}
-
-/**
- * @brief Return cached ego crop box polygon with given stamp. Call only when polygon cache exists.
- */
-geometry_msgs::msg::PolygonStamped LidarFRNetNode::getPolygonMsg(rclcpp::Time stamp) const
-{
-  geometry_msgs::msg::PolygonStamped msg = *ego_crop_box_polygon_msg_;
-  msg.header.stamp = stamp;
-  return msg;
 }
 
 /**
@@ -359,7 +342,7 @@ void LidarFRNetNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatus
 }
 
 /**
- * @brief If crop box enabled and polygon or marker has subscribers, publish cached ego crop box
+ * @brief If crop box enabled and marker has subscribers, publish cached ego crop box
  *        messages with the given stamp.
  */
 void LidarFRNetNode::publishEgoCropBoxDebug(rclcpp::Time stamp)
@@ -367,19 +350,9 @@ void LidarFRNetNode::publishEgoCropBoxDebug(rclcpp::Time stamp)
   if (!crop_box_enabled_) {
     return;
   }
-  const bool has_polygon_sub = ego_crop_box_polygon_pub_->get_subscription_count() +
-                                 ego_crop_box_polygon_pub_->get_intra_process_subscription_count() >
-                               0;
   const bool has_marker_sub = ego_crop_box_marker_pub_->get_subscription_count() +
                                 ego_crop_box_marker_pub_->get_intra_process_subscription_count() >
                               0;
-  if (!has_polygon_sub && !has_marker_sub) {
-    return;
-  }
-
-  if (has_polygon_sub) {
-    ego_crop_box_polygon_pub_->publish(getPolygonMsg(stamp));
-  }
 
   if (has_marker_sub) {
     ego_crop_box_marker_pub_->publish(getMarkerMsg(stamp));

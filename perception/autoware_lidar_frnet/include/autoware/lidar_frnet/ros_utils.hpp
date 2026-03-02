@@ -19,7 +19,7 @@
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/polygon_stamped.hpp>
+#include <geometry_msgs/msg/point32.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <visualization_msgs/msg/marker.hpp>
@@ -216,43 +216,6 @@ inline geometry_msgs::msg::Point32 toPoint32(const geometry_msgs::msg::Point & p
   q.y = static_cast<float>(p.y);
   q.z = static_cast<float>(p.z);
   return q;
-}
-
-/**
- * @brief Fill polygon message for ego crop box wireframe.
- *
- * Builds 16 points (edges of the box) for PolygonStamped. Bounds order:
- * [min_x, min_y, min_z, max_x, max_y, max_z].
- *
- * @param bounds Axis-aligned box bounds (6 floats)
- * @param frame_id Frame ID for the message header
- * @param msg Output polygon message (header.frame_id and polygon.points are set)
- */
-inline void setPolygonMsg(
-  const std::array<float, 6> & bounds, const std::string & frame_id,
-  geometry_msgs::msg::PolygonStamped & msg)
-{
-  std::array<geometry_msgs::msg::Point, 8> corners;
-  getEgoCropBoxCorners(bounds, corners);
-  msg.header.frame_id = frame_id;
-  msg.polygon.points.clear();
-  msg.polygon.points.reserve(16);
-  msg.polygon.points.push_back(toPoint32(corners[0]));
-  msg.polygon.points.push_back(toPoint32(corners[1]));
-  msg.polygon.points.push_back(toPoint32(corners[2]));
-  msg.polygon.points.push_back(toPoint32(corners[3]));
-  msg.polygon.points.push_back(toPoint32(corners[0]));
-  msg.polygon.points.push_back(toPoint32(corners[4]));
-  msg.polygon.points.push_back(toPoint32(corners[5]));
-  msg.polygon.points.push_back(toPoint32(corners[1]));
-  msg.polygon.points.push_back(toPoint32(corners[5]));
-  msg.polygon.points.push_back(toPoint32(corners[6]));
-  msg.polygon.points.push_back(toPoint32(corners[2]));
-  msg.polygon.points.push_back(toPoint32(corners[6]));
-  msg.polygon.points.push_back(toPoint32(corners[7]));
-  msg.polygon.points.push_back(toPoint32(corners[3]));
-  msg.polygon.points.push_back(toPoint32(corners[7]));
-  msg.polygon.points.push_back(toPoint32(corners[4]));
 }
 
 /**
