@@ -22,6 +22,7 @@
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_universe_utils</depend>
   <depend>cuda_blackboard</depend>
+  <depend>image_transport</depend>
   <depend>launch_ros</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
@@ -30,7 +31,6 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_sensor_msgs</depend>
 
-  <exec_depend>autoware_image_transport_decompressor</exec_depend>
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
