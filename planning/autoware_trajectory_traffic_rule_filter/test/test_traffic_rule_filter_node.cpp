@@ -120,8 +120,12 @@ protected:
 
     autoware_planning_msgs::msg::TrajectoryPoint p1;
     autoware_planning_msgs::msg::TrajectoryPoint p2;
+    p1.longitudinal_velocity_mps = 1.0;
     p1.pose.position.x = 0.0;
+    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);
+    p2.longitudinal_velocity_mps = 1.0;
     p2.pose.position.x = end_x;
+    p2.time_from_start = rclcpp::Duration::from_seconds(end_x);
     traj.points.push_back(p1);
     traj.points.push_back(p2);
 

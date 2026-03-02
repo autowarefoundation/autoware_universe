@@ -31,9 +31,9 @@ namespace autoware::multi_object_tracker
 /////// InputStream ///////
 ///////////////////////////
 InputStream::InputStream(
-  rclcpp::Node & node, const types::InputChannel & input_channel,
-  std::shared_ptr<Odometry> odometry)
-: node_(node), channel_(input_channel), odometry_(odometry)
+  const types::InputChannel & input_channel, std::shared_ptr<Odometry> odometry,
+  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock)
+: channel_(input_channel), odometry_(odometry), logger_(logger), clock_(clock)
 {
   // Initialize queue
   objects_que_.clear();
@@ -44,8 +44,8 @@ InputStream::InputStream(
   interval_mean_ = 0.0;  // [s] (initial value)
   interval_var_ = 0.0;
 
-  latest_measurement_time_ = node_.now();
-  latest_message_time_ = node_.now();
+  latest_measurement_time_ = clock_->now();
+  latest_message_time_ = clock_->now();
 }
 
 void InputStream::onMessage(
@@ -68,8 +68,8 @@ void InputStream::onMessage(
   // Transform the objects to the world frame
   auto transformed_objects = odometry_->transformObjects(objects_with_uncertainty);
   if (!transformed_objects) {
-    RCLCPP_WARN(
-      node_.get_logger(), "InputManager::onMessage %s: Failed to transform objects.",
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "InputManager::onMessage %s: Failed to transform objects.",
       channel_.long_name.c_str());
     return;
   }
@@ -89,8 +89,7 @@ void InputStream::onMessage(
       // convert convex hull to bounding box
       if (!shapes::convertConvexHullToBoundingBox(object, object)) {
         RCLCPP_WARN(
-          node_.get_logger(),
-          "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
+          logger_, "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
           channel_.long_name.c_str());
         continue;
       }
@@ -118,7 +117,7 @@ void InputStream::onMessage(
   }
 
   // update the timing statistics
-  rclcpp::Time now = node_.now();
+  rclcpp::Time now = clock_->now();
   rclcpp::Time objects_time(objects.header.stamp);
   updateTimingStatus(now, objects_time);
 
@@ -155,7 +154,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
     const double interval = (now - latest_message_time_).seconds();
     if (interval < 0.0) {
       RCLCPP_WARN(
-        node_.get_logger(),
+        logger_,
         "InputManager::updateTimingStatus %s: Negative interval detected, now: %f, "
         "latest_message_time_: %f",
         channel_.long_name.c_str(), now.seconds(), latest_message_time_.seconds());
@@ -183,8 +182,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
     // threshold, the system time may have been reset. Reset the latest measurement time
     latest_measurement_time_ = objects_time;
     RCLCPP_WARN(
-      node_.get_logger(),
-      "InputManager::updateTimingStatus %s: Resetting the latest measurement time to %f",
+      logger_, "InputManager::updateTimingStatus %s: Resetting the latest measurement time to %f",
       channel_.long_name.c_str(), objects_time.seconds());
   } else {
     // Update only if the object time is newer than the latest measurement time
@@ -204,7 +202,7 @@ void InputStream::getObjectsOlderThan(
 {
   if (object_latest_time < object_earliest_time) {
     RCLCPP_WARN(
-      node_.get_logger(),
+      logger_,
       "InputManager::getObjectsOlderThan %s: Invalid object time interval, object_latest_time: %f, "
       "object_earliest_time: %f",
       channel_.long_name.c_str(), object_latest_time.seconds(), object_earliest_time.seconds());
@@ -238,10 +236,11 @@ void InputStream::getObjectsOlderThan(
 ////////////////////////////
 /////// InputManager ///////
 ////////////////////////////
-InputManager::InputManager(rclcpp::Node & node, std::shared_ptr<Odometry> odometry)
-: node_(node), odometry_(odometry)
+InputManager::InputManager(
+  std::shared_ptr<Odometry> odometry, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock)
+: odometry_(odometry), logger_(logger), clock_(clock)
 {
-  latest_exported_object_time_ = node_.now() - rclcpp::Duration::from_seconds(3.0);
+  latest_exported_object_time_ = clock_->now() - rclcpp::Duration::from_seconds(3.0);
 }
 
 void InputManager::init(const std::vector<types::InputChannel> & input_channels)
@@ -249,37 +248,43 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
   // Check input sizes
   input_size_ = input_channels.size();
   if (input_size_ == 0) {
-    RCLCPP_ERROR(node_.get_logger(), "InputManager::init No input streams");
+    RCLCPP_ERROR(logger_, "InputManager::init No input streams");
     return;
   }
 
   // Initialize input streams
-  sub_objects_array_.resize(input_size_);
   bool is_any_spawn_enabled = false;
   for (size_t i = 0; i < input_size_; i++) {
-    InputStream input_stream(node_, input_channels[i], odometry_);
+    InputStream input_stream(input_channels[i], odometry_, logger_, clock_);
     input_stream.setTriggerFunction(
       std::bind(&InputManager::onTrigger, this, std::placeholders::_1));
     input_streams_.push_back(std::make_shared<InputStream>(input_stream));
     is_any_spawn_enabled |= input_streams_.at(i)->isSpawnEnabled();
 
-    // Set subscription
     RCLCPP_INFO(
-      node_.get_logger(), "InputManager::init Initializing %s input stream from %s",
-      input_channels[i].long_name.c_str(), input_channels[i].input_topic.c_str());
-    std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
-      func = std::bind(&InputStream::onMessage, input_streams_.at(i), std::placeholders::_1);
-    sub_objects_array_.at(i) =
-      node_.create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-        input_channels[i].input_topic, rclcpp::QoS{1}, func);
+      logger_, "InputManager::init Initializing %s input stream index %lu",
+      input_channels[i].long_name.c_str(), i);
   }
 
   // Check if any spawn enabled input streams
   if (!is_any_spawn_enabled) {
-    RCLCPP_ERROR(node_.get_logger(), "InputManager::init No spawn enabled input streams");
+    RCLCPP_ERROR(logger_, "InputManager::init No spawn enabled input streams");
     return;
   }
   is_initialized_ = true;
+}
+
+void InputManager::onMessage(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+{
+  if (channel_index >= input_streams_.size()) {
+    RCLCPP_WARN(
+      logger_, "InputManager::onMessage Invalid channel index: %lu, input_streams_ size: %lu",
+      channel_index, input_streams_.size());
+    return;
+  }
+  input_streams_.at(channel_index)->onMessage(msg);
 }
 
 void InputManager::onTrigger(const uint & index) const
@@ -365,7 +370,7 @@ void InputManager::optimizeTimings()
 bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_list)
 {
   if (!is_initialized_) {
-    RCLCPP_INFO(node_.get_logger(), "InputManager::getObjects Input manager is not initialized");
+    RCLCPP_INFO(logger_, "InputManager::getObjects Input manager is not initialized");
     return false;
   }
 
@@ -403,7 +408,7 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
     // check time jump back
     if (now < latest_exported_object_time_) {
       RCLCPP_WARN(
-        node_.get_logger(),
+        logger_,
         "InputManager::getObjects Detected jump back in time, now: %f, "
         "latest_exported_object_time_: %f",
         now.seconds(), latest_exported_object_time_.seconds());
@@ -414,7 +419,7 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
     } else {
       // No objects in the object list, no update for the latest exported object time
       RCLCPP_DEBUG(
-        node_.get_logger(),
+        logger_,
         "InputManager::getObjects No objects in the object list, object time band from %f to %f",
         (now - object_earliest_time).seconds(), (now - object_latest_time).seconds());
     }
