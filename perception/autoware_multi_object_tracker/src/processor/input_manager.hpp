@@ -36,8 +36,8 @@ class InputStream
 {
 public:
   InputStream(
-    rclcpp::Node & node, const types::InputChannel & input_channel,
-    std::shared_ptr<Odometry> odometry);
+    const types::InputChannel & input_channel, std::shared_ptr<Odometry> odometry,
+    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock);
 
   void setTriggerFunction(std::function<void(const uint &)> func_trigger)
   {
@@ -66,9 +66,10 @@ public:
   rclcpp::Time getLatestMeasurementTime() const { return latest_measurement_time_; }
 
 private:
-  rclcpp::Node & node_;
   const types::InputChannel channel_;
   std::shared_ptr<Odometry> odometry_;
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
 
   size_t que_size_{30};
   std::deque<types::DynamicObjectList> objects_que_;
@@ -88,20 +89,22 @@ private:
 class InputManager
 {
 public:
-  InputManager(rclcpp::Node & node, std::shared_ptr<Odometry> odometry);
+  InputManager(
+    std::shared_ptr<Odometry> odometry, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock);
   void init(const std::vector<types::InputChannel> & input_channels);
 
   void setTriggerFunction(std::function<void()> func_trigger) { func_trigger_ = func_trigger; }
   void onTrigger(const uint & index) const;
+  void onMessage(
+    const size_t channel_index,
+    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
 
   bool getObjects(const rclcpp::Time & now, ObjectsList & objects_list);
 
 private:
-  rclcpp::Node & node_;
   std::shared_ptr<Odometry> odometry_;
-
-  std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
-    sub_objects_array_{};
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
 
   bool is_initialized_{false};
   rclcpp::Time latest_exported_object_time_;

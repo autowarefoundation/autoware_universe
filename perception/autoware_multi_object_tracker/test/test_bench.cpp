@@ -180,7 +180,6 @@ std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChan
   // Using lidar_centerpoint as the primary input channel
   autoware::multi_object_tracker::types::InputChannel input_channel_config;
   input_channel_config.index = 0;
-  input_channel_config.input_topic = "/perception/object_recognition/detection/centerpoint/objects";
   input_channel_config.long_name = "centerpoint";
   input_channel_config.short_name = "Lcp";
   input_channel_config.is_spawn_enabled = true;
