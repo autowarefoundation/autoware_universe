@@ -18,8 +18,8 @@
 
 #include <autoware/boundary_departure_checker/conversion.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -223,7 +223,8 @@ void ControlEvaluatorNode::AddMetricMsg(
 void ControlEvaluatorNode::AddLaneletInfoMsg(const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(current_lanelets, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
   const auto current_lane_opt =
     autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanelets, ego_pose);
   if (!current_lane_opt) {

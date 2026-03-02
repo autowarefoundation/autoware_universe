@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_predicted_path_postprocessor)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
 # --- find dependencies ---
 find_package(autoware_cmake REQUIRED)
 autoware_package()
@@ -18,10 +14,6 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-target_link_libraries(${PROJECT_NAME}
-  ament_index_cpp::ament_index_cpp
-)
-
 rclcpp_components_register_node(
     ${PROJECT_NAME} PLUGIN
     "autoware::predicted_path_postprocessor::PredictedPathPostprocessorNode"
@@ -32,11 +24,12 @@ if(BUILD_TESTING)
     ament_auto_find_test_dependencies()
 
     ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
-        test/test_refine_by_speed.cpp)
+        test/test_collision.cpp
+        test/test_refine_by_speed.cpp
+        test/test_refine_penetration_by_static_objects.cpp)
 
     target_link_libraries(test_${PROJECT_NAME}
       ${PROJECT_NAME}
-      ament_index_cpp::ament_index_cpp
     )
 endif()
 

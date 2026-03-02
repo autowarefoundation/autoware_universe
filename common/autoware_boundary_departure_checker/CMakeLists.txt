@@ -35,7 +35,10 @@ target_link_libraries(boundary_departure_checker
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
-  find_package(autoware_pyplot REQUIRED)
+  find_package(python_cmake_module REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+  find_package(pybind11_vendor REQUIRED)
+  find_package(pybind11 REQUIRED)
   option(EXPORT_TEST_PLOT_FIGURE "Enable plotting in tests" OFF)
   file(GLOB_RECURSE TEST_SOURCES test/*.cpp)
   ament_add_gtest(test_${PROJECT_NAME}
@@ -45,6 +48,8 @@ if(BUILD_TESTING)
     boundary_departure_checker_utils
     boundary_departure_checker
     uncrossable_boundary_departure_checker
+    Python3::Python
+    pybind11::embed
   )
   target_include_directories(test_${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
