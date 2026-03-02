@@ -44,6 +44,15 @@ bool isInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInter
   return true;
 }
 
+bool isCenterInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInterest & rough_roi)
+{
+  const auto center_x = detected_roi.x_offset + detected_roi.width / 2;
+  const auto center_y = detected_roi.y_offset + detected_roi.height / 2;
+
+  return rough_roi.x_offset < center_x && center_x < rough_roi.x_offset + rough_roi.width &&
+         rough_roi.y_offset < center_y && center_y < rough_roi.y_offset + rough_roi.height;
+}
+
 void computeCenterOffset(
   const RegionOfInterest & source, const RegionOfInterest & target, int32_t & shift_x,
   int32_t & shift_y)

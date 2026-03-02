@@ -27,6 +27,8 @@ using sensor_msgs::msg::RegionOfInterest;
 
 bool isInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInterest & rough_roi);
 
+bool isCenterInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInterest & rough_roi);
+
 void computeCenterOffset(
   const RegionOfInterest & source, const RegionOfInterest & target, int32_t & shift_x,
   int32_t & shift_y);
