@@ -31,9 +31,9 @@
 namespace autoware::boundary_departure_checker
 {
 void plot_steering_footprints(
-  const TrajectoryPoints & pred_traj,
-  const std::vector<autoware_utils_geometry::LinearRing2d> & footprints, const std::string & title,
-  const std::string & sub_dir)
+  [[maybe_unused]] const TrajectoryPoints & pred_traj,
+  [[maybe_unused]] const std::vector<autoware_utils_geometry::LinearRing2d> & footprints,
+  [[maybe_unused]] const std::string & title, [[maybe_unused]] const std::string & sub_dir)
 {
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
