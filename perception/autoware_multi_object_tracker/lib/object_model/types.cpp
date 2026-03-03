@@ -119,6 +119,16 @@ DynamicObjectList toDynamicObjectList(
   return dynamic_objects;
 }
 
+int DynamicObjectList::getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const
+{
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (UUIDEqual()(objects[i].uuid, uuid)) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
+}
+
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)
 {
   autoware_perception_msgs::msg::TrackedObject tracked_object;

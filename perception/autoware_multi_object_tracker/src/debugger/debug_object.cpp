@@ -99,28 +99,21 @@ void TrackerObjectDebugger::collect(
 
     // associated detection
     unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
-    bool found = false;
-    size_t measurement_idx = 0;
 
     if (association_result.tracker_to_measurement.count(tracker_uuid)) {
-      unique_identifier_msgs::msg::UUID measurement_uuid =
-        association_result.tracker_to_measurement.at(tracker_uuid);
-      for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
-        if (types::UUIDEqual()(detected_objects.objects[i].uuid, measurement_uuid)) {
-          measurement_idx = i;
-          found = true;
-          break;
-        }
+      const auto & measurement_uuid = association_result.tracker_to_measurement.at(tracker_uuid);
+      const int measurement_idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
+
+      if (measurement_idx != -1) {
+        const auto & associated_object = detected_objects.objects.at(measurement_idx);
+        detection_point.x = associated_object.pose.position.x;
+        detection_point.y = associated_object.pose.position.y;
+        detection_point.z = associated_object.pose.position.z;
+        is_associated = true;
       }
     }
 
-    if (found) {
-      const auto & associated_object = detected_objects.objects.at(measurement_idx);
-      detection_point.x = associated_object.pose.position.x;
-      detection_point.y = associated_object.pose.position.y;
-      detection_point.z = associated_object.pose.position.z;
-      is_associated = true;
-    } else {
+    if (!is_associated) {
       // no detection
       detection_point.x = tracker_point.x;
       detection_point.y = tracker_point.y;
