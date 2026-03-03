@@ -169,13 +169,13 @@ struct PlannerData
 
   LateralOffset::ConstSharedPtr get_lateral_offset() const
   {
-    std::lock_guard<std::mutex> lock(lateral_offset_mutex_);
+    std::lock_guard<std::mutex> lock(*lateral_offset_mutex_);
     return lateral_offset_;
   }
 
   void set_lateral_offset(LateralOffset::ConstSharedPtr ptr)
   {
-    std::lock_guard<std::mutex> lock(lateral_offset_mutex_);
+    std::lock_guard<std::mutex> lock(*lateral_offset_mutex_);
     lateral_offset_ = std::move(ptr);
   }
 
@@ -195,7 +195,7 @@ struct PlannerData
   mutable TurnSignalDecider turn_signal_decider;
 
 private:
-  mutable std::mutex lateral_offset_mutex_{};
+  mutable std::shared_ptr<std::mutex> lateral_offset_mutex_{std::make_shared<std::mutex>()};
   LateralOffset::ConstSharedPtr lateral_offset_{};
 
 public:
