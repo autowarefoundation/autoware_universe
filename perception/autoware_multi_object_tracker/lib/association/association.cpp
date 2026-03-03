@@ -70,7 +70,7 @@ void DataAssociation::updateMaxSearchDistances()
 }
 
 void DataAssociation::assign(
-  const Eigen::MatrixXd & src,
+  const types::AssociationData & data,
   const std::vector<unique_identifier_msgs::msg::UUID> & tracker_uuids,
   const std::vector<unique_identifier_msgs::msg::UUID> & measurement_uuids,
   types::AssociationResult & association_result)
@@ -81,18 +81,13 @@ void DataAssociation::assign(
   std::unordered_map<int, int> direct_assignment;
   std::unordered_map<int, int> reverse_assignment;
 
-  std::vector<std::vector<double>> score(src.rows());
-  for (int row = 0; row < src.rows(); ++row) {
-    score.at(row).resize(src.cols());
-    for (int col = 0; col < src.cols(); ++col) {
-      score.at(row).at(col) = src(row, col);
-    }
-  }
+  std::vector<std::vector<double>> score = formatScoreMatrix(data);
+
   // Solve
   gnn_solver_ptr_->maximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
   for (auto itr = direct_assignment.begin(); itr != direct_assignment.end();) {
-    if (src(itr->first, itr->second) < score_threshold_) {
+    if (score[itr->first][itr->second] < score_threshold_) {
       itr = direct_assignment.erase(itr);
       continue;
     } else {
@@ -101,18 +96,32 @@ void DataAssociation::assign(
     }
   }
 
+  // Populate shape change info
+  for (const auto & entry : data.entries) {
+    if (entry.has_significant_shape_change) {
+      // Check if this pair was assigned
+      if (
+        direct_assignment.count(entry.tracker_idx) &&
+        direct_assignment.at(entry.tracker_idx) == static_cast<int>(entry.measurement_idx)) {
+        association_result.trackers_with_shape_change.insert(tracker_uuids[entry.tracker_idx]);
+      }
+    }
+  }
+
   // Fill unassigned trackers
   for (size_t i = 0; i < tracker_uuids.size(); ++i) {
-    if (association_result.tracker_to_measurement.find(tracker_uuids[i]) ==
-        association_result.tracker_to_measurement.end()) {
+    if (
+      association_result.tracker_to_measurement.find(tracker_uuids[i]) ==
+      association_result.tracker_to_measurement.end()) {
       association_result.unassigned_trackers.push_back(tracker_uuids[i]);
     }
   }
 
   // Fill unassigned measurements
   for (size_t i = 0; i < measurement_uuids.size(); ++i) {
-    if (association_result.measurement_to_tracker.find(measurement_uuids[i]) ==
-        association_result.measurement_to_tracker.end()) {
+    if (
+      association_result.measurement_to_tracker.find(measurement_uuids[i]) ==
+      association_result.measurement_to_tracker.end()) {
       association_result.unassigned_measurements.push_back(measurement_uuids[i]);
     }
   }
@@ -144,24 +153,21 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   return result;
 }
 
-Eigen::MatrixXd DataAssociation::calcScoreMatrix(
+types::AssociationData DataAssociation::calcAssociationData(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  types::AssociationData association_data;
+  association_data.num_trackers = trackers.size();
+  association_data.num_measurements = measurements.objects.size();
+
   // Ensure that the detected_objects and list_tracker are not empty
   if (measurements.objects.empty() || trackers.empty()) {
-    return Eigen::MatrixXd();
+    return association_data;
   }
-
-  // Initialize the score matrix
-  Eigen::MatrixXd score_matrix =
-    Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
-
-  // Clear previous tracker/measurement pair that shape significantly changed
-  significant_shape_change_checker_.clear();
 
   // Pre-allocate vectors to avoid reallocations
   std::vector<types::DynamicObject> tracked_objects;
@@ -248,14 +254,29 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       double score = calculateScore(
         tracked_object, tracker_label, measurement_object, measurement_label,
         tracker_inverse_covariances[tracker_idx], has_significant_shape_change);
-      score_matrix(tracker_idx, measurement_idx) = score;
 
-      if (has_significant_shape_change) {
-        significant_shape_change_checker_.addPair(tracker_idx, measurement_idx);
+      if (score > INVALID_SCORE) {
+        types::AssociationEntry entry;
+        entry.tracker_idx = tracker_idx;
+        entry.measurement_idx = measurement_idx;
+        entry.score = score;
+        entry.has_significant_shape_change = has_significant_shape_change;
+        association_data.entries.push_back(entry);
       }
     }
   }
 
+  return association_data;
+}
+
+std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
+  const types::AssociationData & data) const
+{
+  std::vector<std::vector<double>> score_matrix(
+    data.num_trackers, std::vector<double>(data.num_measurements, 0.0));
+  for (const auto & entry : data.entries) {
+    score_matrix[entry.tracker_idx][entry.measurement_idx] = entry.score;
+  }
   return score_matrix;
 }
 

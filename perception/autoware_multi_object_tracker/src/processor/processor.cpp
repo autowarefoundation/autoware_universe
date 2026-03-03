@@ -33,6 +33,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -89,9 +90,9 @@ void TrackerProcessor::associate(
   }
 
   // global nearest neighbor
-  Eigen::MatrixXd score_matrix = association_->calcScoreMatrix(
+  types::AssociationData association_data = association_->calcAssociationData(
     detected_objects, tracker_list);  // row : tracker, col : measurement
-  association_->assign(score_matrix, tracker_uuids, measurement_uuids, association_result);
+  association_->assign(association_data, tracker_uuids, measurement_uuids, association_result);
 }
 
 void TrackerProcessor::update(
@@ -128,8 +129,7 @@ void TrackerProcessor::update(
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
 
       // do conditioned update based on significant shape change info
-      bool has_significant_shape_change =
-        association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
+      bool has_significant_shape_change = association_result.wasShapeChanged(tracker_uuid);
       (*(tracker_itr))
         ->updateWithMeasurement(
           associated_object, time, channel_info, has_significant_shape_change);
