@@ -71,6 +71,8 @@ DynamicObject toDynamicObject(
   } else {
     dynamic_object.existence_probability = det_object.existence_probability;
   }
+  dynamic_object.existence_probabilities.push_back(
+    {channel_index, dynamic_object.existence_probability});
 
   dynamic_object.classification = det_object.classification;
 

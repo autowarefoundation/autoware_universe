@@ -306,12 +306,12 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   if (is_subm) {
     out_indices.copy_(input_indices, ctx);
 
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_FWD, pair_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_MASK, pair_mask_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_MASK_ARG_SORT, mask_argsort_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_OUT_INDICES, out_indices});
-    ws_tensors.insert(
-      {SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num});  // cSpell:ignore INDICE
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_FWD, pair_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_MASK, pair_mask_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_MASK_ARG_SORT, mask_argsort_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_OUT_INDICES, out_indices);
+    ws_tensors.emplace(
+      SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
     StaticAllocator alloc(ws_tensors);
 
     // cSpell:ignore indice
@@ -326,18 +326,18 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     tv::Tensor pair_mask_bwd_padded = tv::empty({mask_count, static_num_act_in}, tv::int32, 0);
     tv::Tensor mask_argsort_bwd_padded = tv::empty({mask_count, static_num_act_in}, tv::int32, 0);
 
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_FWD, pair_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_BWD, pair_bwd_padded});
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_FWD, pair_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_BWD, pair_bwd_padded);
 
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_MASK, pair_mask_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_PAIR_MASK_BWD, pair_mask_bwd_padded});
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_MASK, pair_mask_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_PAIR_MASK_BWD, pair_mask_bwd_padded);
 
-    ws_tensors.insert({SPCONV_ALLOC_MASK_ARG_SORT, mask_argsort_fwd_padded});
-    ws_tensors.insert({SPCONV_ALLOC_MASK_ARG_SORT_BWD, mask_argsort_bwd_padded});
+    ws_tensors.emplace(SPCONV_ALLOC_MASK_ARG_SORT, mask_argsort_fwd_padded);
+    ws_tensors.emplace(SPCONV_ALLOC_MASK_ARG_SORT_BWD, mask_argsort_bwd_padded);
 
-    ws_tensors.insert({SPCONV_ALLOC_OUT_INDICES, out_indices});
-    ws_tensors.insert(
-      {SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num});  // cSpell:ignore INDICE
+    ws_tensors.emplace(SPCONV_ALLOC_OUT_INDICES, out_indices);
+    ws_tensors.emplace(
+      SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num);  // cSpell:ignore INDICE
 
     StaticAllocator alloc(ws_tensors);
 
