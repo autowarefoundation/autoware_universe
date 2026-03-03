@@ -152,8 +152,8 @@ struct AssociationEntry
 struct AssociationData
 {
   std::vector<AssociationEntry> entries;
-  size_t num_trackers;
-  size_t num_measurements;
+  std::vector<unique_identifier_msgs::msg::UUID> tracker_uuids;
+  std::vector<unique_identifier_msgs::msg::UUID> measurement_uuids;
 };
 
 struct AssociationResult

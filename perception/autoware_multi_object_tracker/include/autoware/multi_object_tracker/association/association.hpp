@@ -95,11 +95,7 @@ public:
   explicit DataAssociation(const AssociatorConfig & config);
   virtual ~DataAssociation() {}
 
-  void assign(
-    const types::AssociationData & data,
-    const std::vector<unique_identifier_msgs::msg::UUID> & tracker_uuids,
-    const std::vector<unique_identifier_msgs::msg::UUID> & measurement_uuids,
-    types::AssociationResult & association_result);
+  void assign(const types::AssociationData & data, types::AssociationResult & association_result);
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
