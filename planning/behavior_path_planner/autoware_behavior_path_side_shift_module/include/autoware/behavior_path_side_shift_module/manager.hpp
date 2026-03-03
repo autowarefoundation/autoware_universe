@@ -19,8 +19,9 @@
 #include "autoware/behavior_path_side_shift_module/data_structs.hpp"
 #include "autoware/behavior_path_side_shift_module/scene.hpp"
 
-#include <autoware_planning_msgs/srv/set_lateral_offset.hpp>
 #include <rclcpp/rclcpp.hpp>
+
+#include <autoware_planning_msgs/srv/set_lateral_offset.hpp>
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
 
 #include <memory>

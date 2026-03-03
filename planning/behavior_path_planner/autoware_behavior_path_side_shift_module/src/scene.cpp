@@ -187,9 +187,7 @@ void SideShiftModule::updateData()
 {
   {
     const auto lateral_offset = planner_data_->get_lateral_offset();
-    if (
-      lateral_offset != nullptr &&
-      lateral_offset->stamp != latest_lateral_offset_stamp_) {
+    if (lateral_offset != nullptr && lateral_offset->stamp != latest_lateral_offset_stamp_) {
       if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
         lateral_offset_change_request_ = true;
         requested_lateral_offset_ = lateral_offset->lateral_offset;
