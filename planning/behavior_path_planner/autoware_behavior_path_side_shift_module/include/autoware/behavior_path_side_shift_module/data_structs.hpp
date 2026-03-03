@@ -42,8 +42,9 @@ struct SideShiftParameters
   double drivable_area_height;
   double shift_request_time_limit;
   bool publish_debug_marker;
-  /** @brief Shift amount in meters when shift_mode is DIRECTION (used by SetLateralOffset service) */
-  double direction_shift_amount;
+  /** @brief Shift amount in meters when shift_mode is DIRECTION (used by SetLateralOffset service)
+   */
+  double unit_shift_amount;
 };
 
 struct SideShiftDebugData

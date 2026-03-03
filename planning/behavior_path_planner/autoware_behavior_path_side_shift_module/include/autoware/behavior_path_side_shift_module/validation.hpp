@@ -30,13 +30,13 @@ constexpr std::optional<double> DEFAULT_MAX_RAW_SHIFT_MAGNITUDE = 3.0;
  * @param request SetLateralOffset service request (uses Request::RAW_VALUE, Request::DIRECTION,
  *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
  * @param current_inserted_lateral_offset Current inserted lateral offset [m] (scene's state)
- * @param direction_shift_amount Shift increment in meters for DIRECTION mode (must be >= 0)
+ * @param unit_shift_amount Shift increment in meters for DIRECTION mode (must be >= 0)
  * @param max_raw_shift_magnitude Optional max |shift_value| for RAW_VALUE; nullopt to skip
  * @return Computed lateral offset in meters, or nullopt if validation failed
  */
 std::optional<double> validateAndComputeLateralOffset(
   const autoware_planning_msgs::srv::SetLateralOffset::Request & request,
-  double current_inserted_lateral_offset, double direction_shift_amount,
+  double current_inserted_lateral_offset, double unit_shift_amount,
   std::optional<double> max_raw_shift_magnitude = DEFAULT_MAX_RAW_SHIFT_MAGNITUDE);
 
 }  // namespace autoware::behavior_path_planner

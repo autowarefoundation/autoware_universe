@@ -17,8 +17,9 @@
 #include "autoware/behavior_path_side_shift_module/validation.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
-#include <autoware_common_msgs/msg/response_status.hpp>
 #include <rclcpp/rclcpp.hpp>
+
+#include <autoware_common_msgs/msg/response_status.hpp>
 
 #include <chrono>
 #include <memory>
@@ -44,21 +45,22 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   p.min_shifting_speed = node->declare_parameter<double>(ns + "min_shifting_speed");
   p.shift_request_time_limit = node->declare_parameter<double>(ns + "shift_request_time_limit");
   p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
-  p.direction_shift_amount = node->declare_parameter<double>(ns + "direction_shift_amount");
+  p.unit_shift_amount = node->declare_parameter<double>(ns + "unit_shift_amount");
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
   inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
 
   set_lateral_offset_srv_ = node->create_service<autoware_planning_msgs::srv::SetLateralOffset>(
-    "~/set_lateral_offset",
-    std::bind(&SideShiftModuleManager::onSetLateralOffset, this, std::placeholders::_1, std::placeholders::_2));
+    "~/set_lateral_offset", std::bind(
+                              &SideShiftModuleManager::onSetLateralOffset, this,
+                              std::placeholders::_1, std::placeholders::_2));
 
   lateral_offset_publisher_ =
     node->create_publisher<tier4_planning_msgs::msg::LateralOffset>("~/output/lateral_offset", 1);
 
   const auto period = std::chrono::milliseconds(100);  // 10 Hz
-  lateral_offset_publish_timer_ =
-    node->create_wall_timer(period, std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
+  lateral_offset_publish_timer_ = node->create_wall_timer(
+    period, std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
 }
 
 void SideShiftModuleManager::onSetLateralOffset(
@@ -69,12 +71,14 @@ void SideShiftModuleManager::onSetLateralOffset(
     inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
 
   const auto lateral_offset_opt =
-    validateAndComputeLateralOffset(*request, current_inserted, parameters_->direction_shift_amount);
+    validateAndComputeLateralOffset(*request, current_inserted, parameters_->unit_shift_amount);
 
   if (!lateral_offset_opt) {
     response->status.success = false;
     response->status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
-    response->status.message = "SetLateralOffset: validation failed (invalid shift_mode, shift_value, or shift_direction_value)";
+    response->status.message =
+      "SetLateralOffset: validation failed (invalid shift_mode, shift_value, or "
+      "shift_direction_value)";
     return;
   }
 
@@ -83,8 +87,7 @@ void SideShiftModuleManager::onSetLateralOffset(
   tier4_planning_msgs::msg::LateralOffset msg;
   msg.stamp = node_->now();
   msg.lateral_offset = static_cast<float>(lateral_offset);
-  planner_data_->set_lateral_offset(
-    std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg));
+  planner_data_->set_lateral_offset(std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg));
 
   response->status.success = true;
   response->status.code = 0;
@@ -102,14 +105,13 @@ void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
   lateral_offset_publisher_->publish(msg);
 }
 
-void SideShiftModuleManager::updateModuleParams(
-  const std::vector<rclcpp::Parameter> & parameters)
+void SideShiftModuleManager::updateModuleParams(const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
 
   auto p = parameters_;
   const std::string ns = "side_shift.";
-  update_param<double>(parameters, ns + "direction_shift_amount", p->direction_shift_amount);
+  update_param<double>(parameters, ns + "unit_shift_amount", p->unit_shift_amount);
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
     if (!observer.expired()) observer.lock()->updateModuleParams(p);

@@ -21,14 +21,15 @@ namespace autoware::behavior_path_planner
 
 std::optional<double> validateAndComputeLateralOffset(
   const autoware_planning_msgs::srv::SetLateralOffset::Request & request,
-  double current_inserted_lateral_offset, double direction_shift_amount,
+  double current_inserted_lateral_offset, double unit_shift_amount,
   std::optional<double> max_raw_shift_magnitude)
 {
   using Request = autoware_planning_msgs::srv::SetLateralOffset::Request;
 
   if (request.shift_mode == Request::RAW_VALUE) {
-    if (max_raw_shift_magnitude &&
-        std::fabs(static_cast<double>(request.shift_value)) > *max_raw_shift_magnitude) {
+    if (
+      max_raw_shift_magnitude &&
+      std::fabs(static_cast<double>(request.shift_value)) > *max_raw_shift_magnitude) {
       return std::nullopt;
     }
     return static_cast<double>(request.shift_value);
@@ -39,16 +40,16 @@ std::optional<double> validateAndComputeLateralOffset(
       return 0.0;
     }
     if (request.shift_direction_value == Request::LEFT) {
-      if (direction_shift_amount < 0.0) {
+      if (unit_shift_amount < 0.0) {
         return std::nullopt;
       }
-      return current_inserted_lateral_offset + direction_shift_amount;
+      return current_inserted_lateral_offset + unit_shift_amount;
     }
     if (request.shift_direction_value == Request::RIGHT) {
-      if (direction_shift_amount < 0.0) {
+      if (unit_shift_amount < 0.0) {
         return std::nullopt;
       }
-      return current_inserted_lateral_offset - direction_shift_amount;
+      return current_inserted_lateral_offset - unit_shift_amount;
     }
     return std::nullopt;
   }
