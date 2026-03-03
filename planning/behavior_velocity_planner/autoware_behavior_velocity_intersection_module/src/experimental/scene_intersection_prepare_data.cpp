@@ -799,16 +799,21 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
   // entry2ego if exist
   const auto [assigned_lane_start, assigned_lane_end] = assigned_lane_interval;
   if (closest_idx > assigned_lane_start) {
-    path_lanelets.all.push_back(
-      util::generatePathLanelet(
-        path, assigned_lane_start, closest_idx, width, path_lanelet_interval));
+    const auto path_lanelet_entry2ego_opt = util::generatePathLanelet(
+      path, assigned_lane_start, closest_idx, width, path_lanelet_interval);
+    if (path_lanelet_entry2ego_opt.has_value()) {
+      path_lanelets.all.push_back(*path_lanelet_entry2ego_opt);
+    }
   }
 
   // ego_or_entry2exit
   const auto ego_or_entry_start = std::max(closest_idx, assigned_lane_start);
-  path_lanelets.ego_or_entry2exit = util::generatePathLanelet(
+  const auto path_lanelet_ego_or_entry2_exit_opt = util::generatePathLanelet(
     path, ego_or_entry_start, assigned_lane_end, width, path_lanelet_interval);
-  path_lanelets.all.push_back(path_lanelets.ego_or_entry2exit);
+  if (path_lanelet_ego_or_entry2_exit_opt.has_value()) {
+    path_lanelets.ego_or_entry2exit = *path_lanelet_ego_or_entry2_exit_opt;
+    path_lanelets.all.push_back(path_lanelets.ego_or_entry2exit);
+  }
 
   // next
   if (assigned_lane_end < path.points.size() - 1) {
@@ -816,9 +821,12 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
     const auto next_lane_interval_opt = util::findLaneIdsInterval(path, {next_id});
     if (next_lane_interval_opt) {
       const auto [next_start, next_end] = next_lane_interval_opt.value();
-      path_lanelets.next =
+      const auto next_path_opt =
         util::generatePathLanelet(path, next_start, next_end, width, path_lanelet_interval);
-      path_lanelets.all.push_back(path_lanelets.next.value());
+      if (next_path_opt.has_value()) {
+        path_lanelets.next = *next_path_opt;
+        path_lanelets.all.push_back(path_lanelets.next.value());
+      }
     }
   }
 
@@ -830,18 +838,27 @@ std::optional<PathLanelets> IntersectionModule::generatePathLanelets(
     first_attention_area.has_value()
       ? util::getFirstPointInsidePolygons(path, assigned_lane_interval, attention_areas, false)
       : util::getFirstPointInsidePolygons(path, assigned_lane_interval, conflicting_areas, false);
-  if (first_inside_conflicting_idx_opt && last_inside_conflicting_idx_opt) {
-    const auto first_inside_conflicting_idx = first_inside_conflicting_idx_opt.value();
-    const auto last_inside_conflicting_idx = last_inside_conflicting_idx_opt.value().first;
-    lanelet::ConstLanelet conflicting_interval = util::generatePathLanelet(
-      path, first_inside_conflicting_idx, last_inside_conflicting_idx, width,
-      path_lanelet_interval);
+
+  if (!first_inside_conflicting_idx_opt || !last_inside_conflicting_idx_opt) {
+    return path_lanelets;
+  }
+  const auto first_inside_conflicting_idx = first_inside_conflicting_idx_opt.value();
+  const auto last_inside_conflicting_idx = last_inside_conflicting_idx_opt.value().first;
+  const auto conflicting_interval_opt = util::generatePathLanelet(
+    path, first_inside_conflicting_idx, last_inside_conflicting_idx, width, path_lanelet_interval);
+  if (conflicting_interval_opt.has_value()) {
+    const auto & conflicting_interval = *conflicting_interval_opt;
     path_lanelets.conflicting_interval_and_remaining.push_back(std::move(conflicting_interval));
-    if (last_inside_conflicting_idx < assigned_lane_end) {
-      lanelet::ConstLanelet remaining_interval = util::generatePathLanelet(
-        path, last_inside_conflicting_idx, assigned_lane_end, width, path_lanelet_interval);
-      path_lanelets.conflicting_interval_and_remaining.push_back(std::move(remaining_interval));
-    }
+  }
+
+  if (last_inside_conflicting_idx >= assigned_lane_end) {
+    return path_lanelets;
+  }
+  const auto remaining_interval_opt = util::generatePathLanelet(
+    path, last_inside_conflicting_idx, assigned_lane_end, width, path_lanelet_interval);
+  if (remaining_interval_opt.has_value()) {
+    const auto & remaining_interval = *remaining_interval_opt;
+    path_lanelets.conflicting_interval_and_remaining.push_back(std::move(remaining_interval));
   }
   return path_lanelets;
 }
