@@ -70,10 +70,7 @@ void DataAssociation::updateMaxSearchDistances()
 }
 
 void DataAssociation::assign(
-  const types::AssociationData & data,
-  const std::vector<unique_identifier_msgs::msg::UUID> & tracker_uuids,
-  const std::vector<unique_identifier_msgs::msg::UUID> & measurement_uuids,
-  types::AssociationResult & association_result)
+  const types::AssociationData & data, types::AssociationResult & association_result)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -86,43 +83,40 @@ void DataAssociation::assign(
   // Solve
   gnn_solver_ptr_->maximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
-  for (auto itr = direct_assignment.begin(); itr != direct_assignment.end();) {
-    if (score[itr->first][itr->second] < score_threshold_) {
-      itr = direct_assignment.erase(itr);
-      continue;
-    } else {
-      association_result.add(tracker_uuids[itr->first], measurement_uuids[itr->second]);
-      ++itr;
+  for (const auto & [tracker_idx, measurement_idx] : direct_assignment) {
+    if (score[tracker_idx][measurement_idx] >= score_threshold_) {
+      association_result.add(
+        data.tracker_uuids[tracker_idx], data.measurement_uuids[measurement_idx]);
     }
   }
 
   // Populate shape change info
   for (const auto & entry : data.entries) {
     if (entry.has_significant_shape_change) {
+      if (entry.score < score_threshold_) continue;
       // Check if this pair was assigned
-      if (
-        direct_assignment.count(entry.tracker_idx) &&
-        direct_assignment.at(entry.tracker_idx) == static_cast<int>(entry.measurement_idx)) {
-        association_result.trackers_with_shape_change.insert(tracker_uuids[entry.tracker_idx]);
+      auto it = direct_assignment.find(entry.tracker_idx);
+      if (it != direct_assignment.end() && it->second == static_cast<int>(entry.measurement_idx)) {
+        association_result.trackers_with_shape_change.insert(data.tracker_uuids[entry.tracker_idx]);
       }
     }
   }
 
   // Fill unassigned trackers
-  for (size_t i = 0; i < tracker_uuids.size(); ++i) {
+  for (size_t i = 0; i < data.tracker_uuids.size(); ++i) {
     if (
-      association_result.tracker_to_measurement.find(tracker_uuids[i]) ==
+      association_result.tracker_to_measurement.find(data.tracker_uuids[i]) ==
       association_result.tracker_to_measurement.end()) {
-      association_result.unassigned_trackers.push_back(tracker_uuids[i]);
+      association_result.unassigned_trackers.push_back(data.tracker_uuids[i]);
     }
   }
 
   // Fill unassigned measurements
-  for (size_t i = 0; i < measurement_uuids.size(); ++i) {
+  for (size_t i = 0; i < data.measurement_uuids.size(); ++i) {
     if (
-      association_result.measurement_to_tracker.find(measurement_uuids[i]) ==
+      association_result.measurement_to_tracker.find(data.measurement_uuids[i]) ==
       association_result.measurement_to_tracker.end()) {
-      association_result.unassigned_measurements.push_back(measurement_uuids[i]);
+      association_result.unassigned_measurements.push_back(data.measurement_uuids[i]);
     }
   }
 }
@@ -161,8 +155,6 @@ types::AssociationData DataAssociation::calcAssociationData(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   types::AssociationData association_data;
-  association_data.num_trackers = trackers.size();
-  association_data.num_measurements = measurements.objects.size();
 
   // Ensure that the detected_objects and list_tracker are not empty
   if (measurements.objects.empty() || trackers.empty()) {
@@ -176,6 +168,13 @@ types::AssociationData DataAssociation::calcAssociationData(
   tracked_objects.reserve(trackers.size());
   tracker_labels.reserve(trackers.size());
   tracker_types.reserve(trackers.size());
+  association_data.tracker_uuids.reserve(trackers.size());
+  association_data.measurement_uuids.reserve(measurements.objects.size());
+
+  for (const auto & object : measurements.objects) {
+    association_data.measurement_uuids.push_back(object.uuid);
+  }
+
   // Build R-tree and store tracker data
   {
     size_t tracker_idx = 0;
@@ -188,6 +187,7 @@ types::AssociationData DataAssociation::calcAssociationData(
       tracked_objects.push_back(tracked_object);
       tracker_labels.push_back(tracker->getHighestProbLabel());
       tracker_types.push_back(tracker->getTrackerType());
+      association_data.tracker_uuids.push_back(tracker->getUUID());
 
       Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
       rtree_points.emplace_back(p, tracker_idx);
@@ -273,7 +273,7 @@ std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
   const types::AssociationData & data) const
 {
   std::vector<std::vector<double>> score_matrix(
-    data.num_trackers, std::vector<double>(data.num_measurements, 0.0));
+    data.tracker_uuids.size(), std::vector<double>(data.measurement_uuids.size(), 0.0));
   for (const auto & entry : data.entries) {
     score_matrix[entry.tracker_idx][entry.measurement_idx] = entry.score;
   }

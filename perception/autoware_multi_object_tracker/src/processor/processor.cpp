@@ -76,23 +76,10 @@ void TrackerProcessor::associate(
 
   const auto & tracker_list = list_tracker_;
 
-  // Extract UUIDs
-  std::vector<unique_identifier_msgs::msg::UUID> tracker_uuids;
-  tracker_uuids.reserve(tracker_list.size());
-  for (const auto & tracker : tracker_list) {
-    tracker_uuids.push_back(tracker->getUUID());
-  }
-
-  std::vector<unique_identifier_msgs::msg::UUID> measurement_uuids;
-  measurement_uuids.reserve(detected_objects.objects.size());
-  for (const auto & object : detected_objects.objects) {
-    measurement_uuids.push_back(object.uuid);
-  }
-
   // global nearest neighbor
   types::AssociationData association_data = association_->calcAssociationData(
     detected_objects, tracker_list);  // row : tracker, col : measurement
-  association_->assign(association_data, tracker_uuids, measurement_uuids, association_result);
+  association_->assign(association_data, association_result);
 }
 
 void TrackerProcessor::update(
