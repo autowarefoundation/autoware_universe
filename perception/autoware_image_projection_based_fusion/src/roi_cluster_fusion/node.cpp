@@ -58,6 +58,18 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   fusion_distance_ = declare_parameter<double>("fusion_distance");
   strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
 
+  // Pedestrian size validation parameters
+  pedestrian_size_params_.enable_size_validation =
+    declare_parameter<bool>("pedestrian_size_validation.enable");
+  pedestrian_size_params_.min_width =
+    declare_parameter<double>("pedestrian_size_validation.min_width");
+  pedestrian_size_params_.max_width =
+    declare_parameter<double>("pedestrian_size_validation.max_width");
+
+  RCLCPP_INFO(
+    get_logger(), "Pedestrian size validation: %s",
+    pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled");
+
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
 }
@@ -172,15 +184,14 @@ void RoiClusterFusionNode::fuse_on_single_image(
     double max_iou = 0.0;
     const auto obj_label = getHighestProbLabel(feature_obj.object.classification);
     const float obj_class_iou_threshold = iou_threshold_.get_class_iou_thresh(obj_label);
-
+    auto image_roi = feature_obj.feature.roi;
+    sanitizeROI(image_roi, camera_info.width, camera_info.height);
     const bool is_roi_label_known = obj_label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
       bool use_rough_iou_match = is_far_enough(
         input_cluster_msg.feature_objects.at(cluster_map.first), strict_iou_fusion_distance_);
-      auto image_roi = feature_obj.feature.roi;
       auto cluster_roi = cluster_map.second;
-      sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
       if (use_rough_iou_match || (!is_roi_label_known)) {
         iou = cal_iou_by_mode(cluster_roi, image_roi, rough_iou_match_mode_);
@@ -208,10 +219,24 @@ void RoiClusterFusionNode::fuse_on_single_image(
       const bool is_roi_iou_over_threshold = obj_class_iou_threshold < max_iou;
 
       if (is_roi_iou_over_threshold && is_roi_existence_prob_higher) {
-        fused_object.classification = feature_obj.object.classification;
-        // Update existence_probability for fused objects
-        fused_object.existence_probability =
-          std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
+        // Get the label from the image ROI
+        const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
+
+        // Get the cluster pointcloud for 3D size validation
+        const auto & cluster_pointcloud =
+          input_cluster_msg.feature_objects.at(index).feature.cluster;
+
+        const bool passes_size_validation = validateSizeForClass(cluster_pointcloud, roi_label);
+
+        if (passes_size_validation) {
+          fused_object.classification = feature_obj.object.classification;
+          // Update existence_probability for fused objects
+          fused_object.existence_probability =
+            std::clamp(feature_obj.object.existence_probability, min_roi_existence_prob_, 1.0f);
+        } else {
+          RCLCPP_DEBUG(
+            get_logger(), "Size validation failed for label %d, skipping fusion", roi_label);
+        }
       }
     }
     if (debugger_) debug_image_rois.push_back(feature_obj.feature.roi);
@@ -304,6 +329,18 @@ void RoiClusterFusionNode::postprocess(
         output_msg.feature_objects.push_back(feature_object);
       }
     }
+  }
+}
+
+bool RoiClusterFusionNode::validateSizeForClass(
+  const sensor_msgs::msg::PointCloud2 & cluster, const uint8_t label)
+{
+  // NOTE: Currently only validate pedestrians, the other classes are passed through
+  switch (label) {
+    case ObjectClassification::PEDESTRIAN:
+      return validatePedestrianSize(cluster, pedestrian_size_params_);
+    default:
+      return true;
   }
 }
 
