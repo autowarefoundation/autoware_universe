@@ -11,9 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/unknown_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/model/polygon_tracker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -32,15 +33,15 @@
 namespace autoware::multi_object_tracker
 {
 
-UnknownTracker::UnknownTracker(
+PolygonTracker::PolygonTracker(
   const rclcpp::Time & time, const types::DynamicObject & object,
   const bool enable_velocity_estimation, const bool enable_motion_output)
 : Tracker(time, object),
-  logger_(rclcpp::get_logger("UnknownTracker")),
+  logger_(rclcpp::get_logger("PolygonTracker")),
   enable_velocity_estimation_(enable_velocity_estimation),
   enable_motion_output_(enable_motion_output)
 {
-  tracker_type_ = TrackerType::UNKNOWN;
+  tracker_type_ = TrackerType::POLYGON;
 
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -144,7 +145,7 @@ UnknownTracker::UnknownTracker(
   }
 }
 
-bool UnknownTracker::predict(const rclcpp::Time & time)
+bool PolygonTracker::predict(const rclcpp::Time & time)
 {
   if (enable_velocity_estimation_) {
     return motion_model_.predictState(time);
@@ -155,7 +156,7 @@ bool UnknownTracker::predict(const rclcpp::Time & time)
   return true;
 }
 
-bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
+bool PolygonTracker::measureWithPose(const types::DynamicObject & object)
 {
   bool is_updated = true;
 
@@ -182,7 +183,7 @@ bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
   return is_updated;
 }
 
-bool UnknownTracker::measure(
+bool PolygonTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & /*channel_info*/)
 {
@@ -198,7 +199,7 @@ bool UnknownTracker::measure(
     if (0.01 /*10msec*/ < dt) {
       RCLCPP_WARN(
         logger_,
-        "UnknownTracker::measure There is a large gap between predicted time and measurement time. "
+        "PolygonTracker::measure There is a large gap between predicted time and measurement time. "
         "(%f)",
         dt);
     }
@@ -210,7 +211,7 @@ bool UnknownTracker::measure(
   return true;
 }
 
-bool UnknownTracker::getTrackedObject(
+bool PolygonTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   auto time_object = time;
@@ -231,7 +232,7 @@ bool UnknownTracker::getTrackedObject(
     if (!motion_model_.getPredictedState(
           time_object, object.pose, object.pose_covariance, object.twist,
           object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
+      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   } else {
@@ -239,7 +240,7 @@ bool UnknownTracker::getTrackedObject(
     if (!static_motion_model_.getPredictedState(
           time_object, object.pose, object.pose_covariance, object.twist,
           object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
+      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   }
