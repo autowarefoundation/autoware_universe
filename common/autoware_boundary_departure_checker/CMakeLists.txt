@@ -53,6 +53,7 @@ if(BUILD_TESTING)
   )
   target_include_directories(test_${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
   )
   ament_target_dependencies(test_${PROJECT_NAME} autoware_pyplot)
   target_compile_definitions(test_${PROJECT_NAME} PRIVATE

@@ -67,9 +67,6 @@ void plot_ego_and_boundary(
 namespace autoware::boundary_departure_checker
 {
 constexpr const char * export_folder = "test_uncrossable_boundary_checker";
-
-static pybind11::scoped_interpreter guard{};
-
 TEST(UncrossableBoundaryTest, TestSegmentToSegmentProjection)
 {
   // 1. Setup PyPlot context
@@ -85,7 +82,7 @@ TEST(UncrossableBoundaryTest, TestSegmentToSegmentProjection)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -104,7 +101,7 @@ TEST(UncrossableBoundaryTest, TestIntersectionDetection)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -125,7 +122,7 @@ TEST(UncrossableBoundaryTest, TestParallelSegments)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -150,7 +147,7 @@ TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -167,7 +164,7 @@ TEST(UncrossableBoundaryTest, TestPointBeyondSegmentEnd)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -184,7 +181,7 @@ TEST(UncrossableBoundaryTest, TestCollinearSegments)
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
     plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -227,7 +224,7 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
 
     plt.plot(
       Args(line_x_v, line_y_v), Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -261,7 +258,7 @@ TEST(UncrossableBoundaryUtilsTest, TestPointToSegmentProjection)
 
     plt.axis(Args("equal"));
     plt.legend();
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 }
 
@@ -312,7 +309,7 @@ TEST(UncrossableBoundaryUtilsTest, TestTrimPredPath)
     plt.title(Args("Trajectory Trimming (Time-based Cutoff)"));
     plt.legend();
 
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 
   EXPECT_EQ(trimmed.size(), 6);
@@ -360,7 +357,7 @@ TEST(UncrossableBoundaryUtilsTest, TestMarginFromCovariance)
     axes[1].set_aspect(Args("equal"));
 
     fig.tight_layout();
-    save_figure(export_folder);
+    save_figure(plt, export_folder);
   });
 
   EXPECT_GT(margin.lon_m, 0.0);
