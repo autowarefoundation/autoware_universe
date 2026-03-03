@@ -230,6 +230,12 @@ struct AssociationResult
   }
 };
 
+struct AssociatedObjects
+{
+  const DynamicObjectList & objects;
+  const AssociationResult & association;
+};
+
 DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index = 0);
 
