@@ -162,7 +162,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
     roi.y_offset = min_y;
     roi.width = max_x - min_x;
     roi.height = max_y - min_y;
-    m_cluster_roi.insert(std::make_pair(i, roi));
+    m_cluster_roi.emplace(i, roi);
     if (debugger_) debug_obstacle_rois.push_back(roi);
   }
 

@@ -55,7 +55,7 @@ struct ObjectData
   bool is_associated{false};
 
   // existence probabilities
-  std::vector<float> existence_vector;
+  std::vector<types::ExistenceProbability> existence_vector;
   float total_existence_probability;
 
   // detection channel id
