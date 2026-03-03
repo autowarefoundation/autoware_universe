@@ -64,14 +64,13 @@ public:
   void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
   void associate(
     const types::DynamicObjectList & detected_objects,
-    std::unordered_map<int, int> & direct_assignment,
-    std::unordered_map<int, int> & reverse_assignment) const;
+    types::AssociationResult & association_result) const;
   void update(
     const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment);
+    const types::AssociationResult & association_result);
   void spawn(
     const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & reverse_assignment);
+    const types::AssociationResult & association_result);
   void prune(const rclcpp::Time & time);
 
   // output processes

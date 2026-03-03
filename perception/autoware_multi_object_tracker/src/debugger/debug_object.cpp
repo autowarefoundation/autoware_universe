@@ -73,8 +73,7 @@ void TrackerObjectDebugger::reset()
 void TrackerObjectDebugger::collect(
   const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
   const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & direct_assignment,
-  const std::unordered_map<int, int> & /*reverse_assignment*/)
+  const types::AssociationResult & association_result)
 {
   is_initialized_ = true;
 
@@ -99,9 +98,24 @@ void TrackerObjectDebugger::collect(
     tracker_point.z = tracked_object.pose.position.z;
 
     // associated detection
-    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
-      const auto & associated_object =
-        detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
+    unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
+    bool found = false;
+    size_t measurement_idx = 0;
+
+    if (association_result.tracker_to_measurement.count(tracker_uuid)) {
+      unique_identifier_msgs::msg::UUID measurement_uuid =
+        association_result.tracker_to_measurement.at(tracker_uuid);
+      for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
+        if (types::UUIDEqual()(detected_objects.objects[i].uuid, measurement_uuid)) {
+          measurement_idx = i;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (found) {
+      const auto & associated_object = detected_objects.objects.at(measurement_idx);
       detection_point.x = associated_object.pose.position.x;
       detection_point.y = associated_object.pose.position.y;
       detection_point.z = associated_object.pose.position.z;

@@ -70,11 +70,16 @@ void DataAssociation::updateMaxSearchDistances()
 }
 
 void DataAssociation::assign(
-  const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
-  std::unordered_map<int, int> & reverse_assignment)
+  const Eigen::MatrixXd & src,
+  const std::vector<unique_identifier_msgs::msg::UUID> & tracker_uuids,
+  const std::vector<unique_identifier_msgs::msg::UUID> & measurement_uuids,
+  types::AssociationResult & association_result)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  std::unordered_map<int, int> direct_assignment;
+  std::unordered_map<int, int> reverse_assignment;
 
   std::vector<std::vector<double>> score(src.rows());
   for (int row = 0; row < src.rows(); ++row) {
@@ -91,15 +96,24 @@ void DataAssociation::assign(
       itr = direct_assignment.erase(itr);
       continue;
     } else {
+      association_result.add(tracker_uuids[itr->first], measurement_uuids[itr->second]);
       ++itr;
     }
   }
-  for (auto itr = reverse_assignment.begin(); itr != reverse_assignment.end();) {
-    if (src(itr->second, itr->first) < score_threshold_) {
-      itr = reverse_assignment.erase(itr);
-      continue;
-    } else {
-      ++itr;
+
+  // Fill unassigned trackers
+  for (size_t i = 0; i < tracker_uuids.size(); ++i) {
+    if (association_result.tracker_to_measurement.find(tracker_uuids[i]) ==
+        association_result.tracker_to_measurement.end()) {
+      association_result.unassigned_trackers.push_back(tracker_uuids[i]);
+    }
+  }
+
+  // Fill unassigned measurements
+  for (size_t i = 0; i < measurement_uuids.size(); ++i) {
+    if (association_result.measurement_to_tracker.find(measurement_uuids[i]) ==
+        association_result.measurement_to_tracker.end()) {
+      association_result.unassigned_measurements.push_back(measurement_uuids[i]);
     }
   }
 }

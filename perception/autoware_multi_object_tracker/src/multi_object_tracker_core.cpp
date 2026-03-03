@@ -202,22 +202,21 @@ void process_objects(
   state.processor->predict(measurement_time, ego_pose);
 
   /* object association */
-  std::unordered_map<int, int> direct_assignment, reverse_assignment;
-  state.processor->associate(objects, direct_assignment, reverse_assignment);
+  types::AssociationResult association_result;
+  state.processor->associate(objects, association_result);
 
   // Collect debug information - tracker list, existence probabilities, association results
   debugger.collectObjectInfo(
-    measurement_time, state.processor->getListTracker(), objects, direct_assignment,
-    reverse_assignment);
+    measurement_time, state.processor->getListTracker(), objects, association_result);
 
   /* tracker update */
-  state.processor->update(objects, direct_assignment);
+  state.processor->update(objects, association_result);
 
   /* tracker pruning */
   state.processor->prune(measurement_time);
 
   /* spawn new tracker */
-  state.processor->spawn(objects, reverse_assignment);
+  state.processor->spawn(objects, association_result);
 
   state.last_updated_time = current_time;
 }

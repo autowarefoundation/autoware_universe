@@ -68,22 +68,35 @@ void TrackerProcessor::predict(
 
 void TrackerProcessor::associate(
   const types::DynamicObjectList & detected_objects,
-  std::unordered_map<int, int> & direct_assignment,
-  std::unordered_map<int, int> & reverse_assignment) const
+  types::AssociationResult & association_result) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const auto & tracker_list = list_tracker_;
+
+  // Extract UUIDs
+  std::vector<unique_identifier_msgs::msg::UUID> tracker_uuids;
+  tracker_uuids.reserve(tracker_list.size());
+  for (const auto & tracker : tracker_list) {
+    tracker_uuids.push_back(tracker->getUUID());
+  }
+
+  std::vector<unique_identifier_msgs::msg::UUID> measurement_uuids;
+  measurement_uuids.reserve(detected_objects.objects.size());
+  for (const auto & object : detected_objects.objects) {
+    measurement_uuids.push_back(object.uuid);
+  }
+
   // global nearest neighbor
   Eigen::MatrixXd score_matrix = association_->calcScoreMatrix(
     detected_objects, tracker_list);  // row : tracker, col : measurement
-  association_->assign(score_matrix, direct_assignment, reverse_assignment);
+  association_->assign(score_matrix, tracker_uuids, measurement_uuids, association_result);
 }
 
 void TrackerProcessor::update(
   const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & direct_assignment)
+  const types::AssociationResult & association_result)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -92,10 +105,25 @@ void TrackerProcessor::update(
   const auto & time = detected_objects.header.stamp;
   for (auto tracker_itr = list_tracker_.begin(); tracker_itr != list_tracker_.end();
        ++tracker_itr, ++tracker_idx) {
-    auto it = direct_assignment.find(tracker_idx);
-    if (it != direct_assignment.end()) {
+    bool found = false;
+    size_t measurement_idx = 0;
+    unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
+
+    if (association_result.tracker_to_measurement.count(tracker_uuid)) {
+      unique_identifier_msgs::msg::UUID measurement_uuid =
+        association_result.tracker_to_measurement.at(tracker_uuid);
+      // Find index
+      for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
+        if (types::UUIDEqual()(detected_objects.objects[i].uuid, measurement_uuid)) {
+          measurement_idx = i;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (found) {
       // found
-      size_t measurement_idx = static_cast<size_t>(it->second);
       const auto & associated_object = detected_objects.objects.at(measurement_idx);
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
 
@@ -114,7 +142,7 @@ void TrackerProcessor::update(
 
 void TrackerProcessor::spawn(
   const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & reverse_assignment)
+  const types::AssociationResult & association_result)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -128,10 +156,10 @@ void TrackerProcessor::spawn(
   // Spawn new trackers for the objects that are not associated
   const auto & time = detected_objects.header.stamp;
   for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
-    if (reverse_assignment.find(i) != reverse_assignment.end()) {  // found
+    const auto & new_object = detected_objects.objects.at(i);
+    if (association_result.measurement_to_tracker.count(new_object.uuid)) {  // found
       continue;
     }
-    const auto & new_object = detected_objects.objects.at(i);
     std::shared_ptr<Tracker> tracker = createNewTracker(new_object, time);
 
     // Initialize existence probabilities

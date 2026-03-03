@@ -16,6 +16,9 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
+#include <algorithm>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include <cmath>
 #include <vector>
 
@@ -59,6 +62,11 @@ DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index)
 {
   DynamicObject dynamic_object;
+
+  // Generate random UUID
+  static boost::uuids::random_generator gen;
+  boost::uuids::uuid u = gen();
+  std::copy(u.begin(), u.end(), dynamic_object.uuid.uuid.begin());
 
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;

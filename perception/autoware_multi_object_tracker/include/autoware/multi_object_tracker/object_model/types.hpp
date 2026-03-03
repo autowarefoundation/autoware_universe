@@ -34,7 +34,9 @@
 
 #include <boost/optional.hpp>
 
+#include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -114,6 +116,91 @@ struct DynamicObjectList
   std_msgs::msg::Header header;
   uint channel_index;
   std::vector<DynamicObject> objects;
+};
+
+struct UUIDHash
+{
+  std::size_t operator()(const unique_identifier_msgs::msg::UUID & u) const
+  {
+    std::size_t seed = 0;
+    for (const auto & b : u.uuid) {
+      seed ^= std::hash<uint8_t>{}(b) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+
+struct UUIDEqual
+{
+  bool operator()(
+    const unique_identifier_msgs::msg::UUID & u1, const unique_identifier_msgs::msg::UUID & u2) const
+  {
+    return std::equal(std::begin(u1.uuid), std::end(u1.uuid), std::begin(u2.uuid));
+  }
+};
+
+struct AssociationResult
+{
+  std::unordered_map<
+    unique_identifier_msgs::msg::UUID, unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    tracker_to_measurement;
+  std::unordered_map<
+    unique_identifier_msgs::msg::UUID, unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    measurement_to_tracker;
+  std::vector<unique_identifier_msgs::msg::UUID> unassigned_trackers;
+  std::vector<unique_identifier_msgs::msg::UUID> unassigned_measurements;
+
+  void add(
+    const unique_identifier_msgs::msg::UUID & tracker_uuid,
+    const unique_identifier_msgs::msg::UUID & measurement_uuid)
+  {
+    tracker_to_measurement[tracker_uuid] = measurement_uuid;
+    measurement_to_tracker[measurement_uuid] = tracker_uuid;
+  }
+
+  void remove(const unique_identifier_msgs::msg::UUID & tracker_uuid)
+  {
+    if (tracker_to_measurement.count(tracker_uuid)) {
+      measurement_to_tracker.erase(tracker_to_measurement[tracker_uuid]);
+      tracker_to_measurement.erase(tracker_uuid);
+    }
+  }
+
+  unique_identifier_msgs::msg::UUID findMeasurement(
+    const unique_identifier_msgs::msg::UUID & tracker_uuid) const
+  {
+    if (tracker_to_measurement.count(tracker_uuid)) {
+      return tracker_to_measurement.at(tracker_uuid);
+    }
+    return unique_identifier_msgs::msg::UUID();
+  }
+
+  unique_identifier_msgs::msg::UUID findTracker(
+    const unique_identifier_msgs::msg::UUID & measurement_uuid) const
+  {
+    if (measurement_to_tracker.count(measurement_uuid)) {
+      return measurement_to_tracker.at(measurement_uuid);
+    }
+    return unique_identifier_msgs::msg::UUID();
+  }
+
+  std::vector<unique_identifier_msgs::msg::UUID> getTrackerAssignments() const
+  {
+    std::vector<unique_identifier_msgs::msg::UUID> trackers;
+    for (const auto & pair : tracker_to_measurement) {
+      trackers.push_back(pair.first);
+    }
+    return trackers;
+  }
+
+  std::vector<unique_identifier_msgs::msg::UUID> getMeasurementAssignments() const
+  {
+    std::vector<unique_identifier_msgs::msg::UUID> measurements;
+    for (const auto & pair : measurement_to_tracker) {
+      measurements.push_back(pair.first);
+    }
+    return measurements;
+  }
 };
 
 DynamicObject toDynamicObject(
