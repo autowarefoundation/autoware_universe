@@ -199,7 +199,7 @@ private:
     update the prime messages
     */
     StampT stamp = convertStampFormat(msg->header.stamp);
-    prime_messages_.insert(std::make_pair(stamp, msg));
+    prime_messages_.emplace(stamp, msg);
     /*
     check if secondary messages are all ready to synchronize with prime message.
     If yes, process it immediately
@@ -227,7 +227,7 @@ private:
     */
     StampT stamp = convertStampFormat(msg->header.stamp);
     auto & msg_map = std::get<Idx>(sec_messages_);
-    msg_map.insert(std::make_pair(stamp, msg));
+    msg_map.emplace(stamp, msg);
     assert(prime_messages_.size() <= 1);
     /*
     check if any prime message can gather all secondary messages.
