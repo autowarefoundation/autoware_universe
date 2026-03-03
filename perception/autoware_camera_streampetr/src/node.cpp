@@ -44,13 +44,13 @@ std::vector<float> cast_to_float(const std::vector<double> & double_vector)
 
 StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
 : Node("autoware_camera_streampetr", node_options),
-  logger_name_(declare_parameter<std::string>("logger_name", "camera_streampetr")),
-  multithreading_(declare_parameter<bool>("multithreading", false)),
+  logger_name_("camera_streampetr"),
+  multithreading_(declare_parameter<bool>("multithreading")),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_),
-  rois_number_(static_cast<size_t>(declare_parameter<int>("model_params.rois_number", 6))),
-  max_camera_time_diff_(declare_parameter<float>("max_camera_time_diff", 0.15f)),
-  anchor_camera_id_(declare_parameter<int>("anchor_camera_id", 0)),
+  rois_number_(static_cast<size_t>(declare_parameter<int>("model_params.rois_number"))),
+  max_camera_time_diff_(declare_parameter<float>("max_camera_time_diff")),
+  anchor_camera_id_(declare_parameter<int>("anchor_camera_id")),
   debug_mode_(declare_parameter<bool>("debug_mode"))
 {
   RCLCPP_INFO(
@@ -67,15 +67,15 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::string>("model_params.position_embedding_path");
 
   const std::string backbone_engine_path =
-    declare_parameter<std::string>("model_params.backbone_engine_path", "");
+    declare_parameter<std::string>("model_params.backbone_engine_path");
   const std::string head_engine_path =
-    declare_parameter<std::string>("model_params.head_engine_path", "");
+    declare_parameter<std::string>("model_params.head_engine_path");
   const std::string position_embedding_engine_path =
-    declare_parameter<std::string>("model_params.position_embedding_engine_path", "");
+    declare_parameter<std::string>("model_params.position_embedding_engine_path");
 
   const std::string trt_precision = declare_parameter<std::string>("model_params.trt_precision");
   const uint64_t workspace_size =
-    1ULL << declare_parameter<int>("model_params.workspace_size", 32);  // Default 4GB
+    1ULL << declare_parameter<int>("model_params.workspace_size");  // Default 4GB
 
   const bool use_temporal = declare_parameter<bool>("model_params.use_temporal");
   const double search_distance_2d =
@@ -92,8 +92,8 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::vector<double>>("post_process_params.yaw_norm_thresholds");
   const std::vector<float> detection_range =
     cast_to_float(declare_parameter<std::vector<double>>("model_params.detection_range"));
-  const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length", 1024);
-  const int post_memory_length = declare_parameter<int>("model_params.post_memory_length", 1280);
+  const int pre_memory_length = declare_parameter<int>("model_params.pre_memory_length");
+  const int post_memory_length = declare_parameter<int>("model_params.post_memory_length");
 
   NetworkConfig network_config{
     logger_name_,

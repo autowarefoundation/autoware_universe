@@ -28,32 +28,6 @@
 
 namespace autoware::predicted_path_postprocessor::processor
 {
-namespace
-{
-/**
- * @brief Convert a string to an interpolation function.
- *
- * @param name The name of the interpolation function.
- * @return The interpolation function.
- */
-RefineBySpeed::interpolation_fn to_interpolator(const std::string & name)
-{
-  using kv_type = RefineBySpeed::kv_type;
-
-  if (name == "linear") {
-    // needs to cast overloads
-    return static_cast<kv_type (*)(const kv_type &, const kv_type &, const kv_type &)>(
-      interpolation::lerp);
-  } else if (name == "spline") {
-    return interpolation::spline;
-  } else if (name == "spline_by_akima") {
-    return interpolation::splineByAkima;
-  } else {
-    throw std::invalid_argument("Invalid interpolation type: " + name);
-  }
-}
-}  // namespace
-
 RefineBySpeed::RefineBySpeed(rclcpp::Node * node_ptr, const std::string & processor_name)
 : ProcessorInterface(processor_name)
 {
