@@ -222,7 +222,7 @@ class TTCVisualizer(Node):
             max_size_total = 0
             max_size = None
             for image in self.images:
-                (w, h) = image.size
+                w, h = image.size
                 if w * h > max_size_total:
                     max_size = image.size
                     max_size_total = w * h
