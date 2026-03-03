@@ -18,7 +18,7 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -191,7 +191,7 @@ std::vector<float> create_ego_agent_past(
       const double t1 = stamp_to_sec(odom_msgs[search_start + 1].header.stamp);
       const double ratio = (t1 > t0) ? (target_sec - t0) / (t1 - t0) : 0.0;
 
-      interpolated_pose = autoware::universe_utils::calcInterpolatedPose(
+      interpolated_pose = autoware_utils_geometry::calc_interpolated_pose(
         odom_msgs[search_start].pose.pose, odom_msgs[search_start + 1].pose.pose, ratio, false);
     }
 
