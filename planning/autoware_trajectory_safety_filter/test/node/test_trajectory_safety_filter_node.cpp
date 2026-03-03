@@ -155,9 +155,9 @@ TEST_F(TrajectorySafetyFilterNodeTest, FiltersTrajectoriesViaPlugin)
   ASSERT_TRUE(
     spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(1000)));
 
-  ASSERT_EQ(last_output_->candidate_trajectories.size(), 1u);
+  EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
   ASSERT_EQ(last_output_->generator_info.size(), 1u);
-  ASSERT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
+  EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
 }
 
 TEST_F(TrajectorySafetyFilterNodeTest, UpdateParametersDynamically)
@@ -170,7 +170,7 @@ TEST_F(TrajectorySafetyFilterNodeTest, UpdateParametersDynamically)
 
   traj_pub_->publish(msg);
   ASSERT_TRUE(spin_until([this] { return last_output_ != nullptr; }));
-  ASSERT_EQ(last_output_->candidate_trajectories.size(), 1u);
+  EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
 
   last_output_ = nullptr;
 
@@ -180,7 +180,7 @@ TEST_F(TrajectorySafetyFilterNodeTest, UpdateParametersDynamically)
   traj_pub_->publish(msg);
   ASSERT_TRUE(spin_until([this] { return last_output_ != nullptr; }));
 
-  ASSERT_EQ(last_output_->candidate_trajectories.size(), 1u);
+  EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
 }
 
 TEST_F(TrajectorySafetyFilterNodeTest, HandlesPluginRejection)
@@ -194,6 +194,6 @@ TEST_F(TrajectorySafetyFilterNodeTest, HandlesPluginRejection)
   traj_pub_->publish(msg);
 
   ASSERT_TRUE(spin_until([this] { return last_output_ != nullptr; }));
-  ASSERT_EQ(last_output_->candidate_trajectories.size(), 0u);
+  EXPECT_EQ(last_output_->candidate_trajectories.size(), 0u);
 }
 }  // namespace autoware::trajectory_safety_filter
