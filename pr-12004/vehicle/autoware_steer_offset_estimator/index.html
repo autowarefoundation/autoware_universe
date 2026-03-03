@@ -23025,7 +23025,7 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <p>In addition to publishing the offset update for control purposes, the node allows the user to apply the estimated offset to the vehicle system through three distinct modes and a set of safety validation gates.</p>
 <h3 id="calibration-modes">Calibration Modes<a class="headerlink" href="#calibration-modes" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>OFF</strong>: No system callibration, the estimator only provides offset updates for control puposes.</li>
+<li><strong>OFF</strong>: No system calibration, the estimator only provides offset updates for control purposes.</li>
 <li><strong>MANUAL</strong>: Calibration is triggered only via a dedicated ROS 2 service call (<code>~/trigger_steer_offset_calibration</code>).</li>
 <li><strong>AUTO</strong>: The system automatically triggers a calibration update when the internal stability and confidence conditions are met.</li>
 </ul>
