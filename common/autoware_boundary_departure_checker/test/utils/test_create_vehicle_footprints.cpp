@@ -15,11 +15,11 @@
 #include "autoware/boundary_departure_checker/utils.hpp"
 #include "test_plot_utils.hpp"
 
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
 #include <Eigen/Core>
 
 #include <gtest/gtest.h>
+#include <pybind11/embed.h>
+#include <pybind11/stl.h>
 
 #include <string>
 #include <vector>
@@ -75,7 +75,6 @@ PathWithLaneId create_path(const std::vector<std::pair<Eigen::Vector2d, double>>
   return path;
 }
 
-
 // reference:
 // https://github.com/autowarefoundation/autoware_core/blob/main/description/autoware_sample_vehicle_description/config/vehicle_info.param.yaml
 constexpr double wheel_radius_m = 0.383;
@@ -94,8 +93,8 @@ constexpr double half_width_left = wheel_tread_m / 2.0 + left_overhang_m;
 constexpr double half_width_right = wheel_tread_m / 2.0 + right_overhang_m;
 }  // namespace
 
-
-namespace autoware::boundary_departure_checker{
+namespace autoware::boundary_departure_checker
+{
 
 struct CreateVehicleFootprintsAlongTrajectoryParam
 {
@@ -345,14 +344,11 @@ INSTANTIATE_TEST_SUITE_P(
         {wheel_base_to_front_overhang + 0.1 + 1.0, half_width_left + 0.1}}}}),
   ::testing::PrintToStringParamName());
 
-
-
 TEST(CreateVehicleFootprintsTest, TestCreateFootprintsWithLongitudinalConfig)
 {
-const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
-    wheel_radius_m, wheel_width_m, wheel_base_m, wheel_tread_m,
-    front_overhang_m, rear_overhang_m, left_overhang_m, right_overhang_m,
-    vehicle_height_m, max_steer_angle_rad);
+  const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
+    wheel_radius_m, wheel_width_m, wheel_base_m, wheel_tread_m, front_overhang_m, rear_overhang_m,
+    left_overhang_m, right_overhang_m, vehicle_height_m, max_steer_angle_rad);
 
   // 1. Setup Trajectory with Velocity (10 m/s)
   TrajectoryPoints trajectory;
@@ -379,7 +375,8 @@ const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
   config.lon_tracking.extra_margin_m = extra_margin;
 
   // 3. Compute Expected Boundaries using Variables
-  const double total_lon_margin = lon_margin_init + (p.longitudinal_velocity_mps * velocity_scale) + extra_margin;
+  const double total_lon_margin =
+    lon_margin_init + (p.longitudinal_velocity_mps * velocity_scale) + extra_margin;
   const double total_lat_margin = lat_margin_init;
 
   const double expected_front = wheel_base_to_front_overhang + total_lon_margin;
@@ -387,7 +384,8 @@ const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
   const double expected_left = half_width_left + total_lat_margin;
   const double expected_right = -(half_width_right + total_lat_margin);
 
-  const auto footprints = utils::create_vehicle_footprints(trajectory, vehicle_info, uncertainty_margin, config);
+  const auto footprints =
+    utils::create_vehicle_footprints(trajectory, vehicle_info, uncertainty_margin, config);
 
   ASSERT_EQ(footprints.size(), 1);
   const auto & fp = footprints[0];
@@ -424,9 +422,8 @@ const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
 TEST(CreateVehicleFootprintsTest, TestGetFootprintSides)
 {
   const auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
-    wheel_radius_m, wheel_width_m, wheel_base_m, wheel_tread_m,
-    front_overhang_m, rear_overhang_m, left_overhang_m, right_overhang_m,
-    vehicle_height_m, max_steer_angle_rad);
+    wheel_radius_m, wheel_width_m, wheel_base_m, wheel_tread_m, front_overhang_m, rear_overhang_m,
+    left_overhang_m, right_overhang_m, vehicle_height_m, max_steer_angle_rad);
 
   const auto footprint = vehicle_info.createFootprint(0.0, 0.0);
 
@@ -459,17 +456,21 @@ TEST(CreateVehicleFootprintsTest, TestGetFootprintSides)
     auto sides = utils::get_footprint_sides(footprint, false, false);
 
     // Plot segments
-    plt.plot(Args(std::vector<double>{sides.left.first.x(), sides.left.second.x()},
-                  std::vector<double>{sides.left.first.y(), sides.left.second.y()}),
-             Kwargs("color"_a = "blue", "label"_a = "Left Side Segment"));
+    plt.plot(
+      Args(
+        std::vector<double>{sides.left.first.x(), sides.left.second.x()},
+        std::vector<double>{sides.left.first.y(), sides.left.second.y()}),
+      Kwargs("color"_a = "blue", "label"_a = "Left Side Segment"));
 
-    plt.plot(Args(std::vector<double>{sides.right.first.x(), sides.right.second.x()},
-                  std::vector<double>{sides.right.first.y(), sides.right.second.y()}),
-             Kwargs("color"_a = "red", "label"_a = "Right Side Segment"));
+    plt.plot(
+      Args(
+        std::vector<double>{sides.right.first.x(), sides.right.second.x()},
+        std::vector<double>{sides.right.first.y(), sides.right.second.y()}),
+      Kwargs("color"_a = "red", "label"_a = "Right Side Segment"));
 
     plt.axis(Args("equal"));
     plt.legend();
     save_figure(plt, "test_create_vehicle_footprint");
   });
 }
-} // namespace autoware::boundary_departure_checker
+}  // namespace autoware::boundary_departure_checker
