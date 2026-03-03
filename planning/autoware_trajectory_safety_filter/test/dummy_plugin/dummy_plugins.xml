@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<library path="dummy_safety_filter_plugin">
+  <class type="autoware::trajectory_safety_filter::plugin::DummyFilter"
+         base_class_type="autoware::trajectory_safety_filter::plugin::SafetyFilterInterface">
+    <description>A predictable dummy filter for testing the main node</description>
+  </class>
+</library>
