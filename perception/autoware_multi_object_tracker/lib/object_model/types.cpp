@@ -16,10 +16,9 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
-#include <algorithm>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <atomic>
 #include <cmath>
+#include <cstring>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -63,10 +62,15 @@ DynamicObject toDynamicObject(
 {
   DynamicObject dynamic_object;
 
-  // Generate random UUID
-  static boost::uuids::random_generator gen;
-  boost::uuids::uuid u = gen();
-  std::copy(u.begin(), u.end(), dynamic_object.uuid.uuid.begin());
+  // Generate UUID using Atomic Counter for uniqueness within a launch
+  // Start from 1 to avoid 0 UUID which is used as "not found" or "invalid"
+  static std::atomic<uint64_t> object_counter{1};
+
+  uint64_t count = object_counter.fetch_add(1, std::memory_order_relaxed);
+
+  // Copy count (8 bytes) into the 16-byte UUID
+  // The rest of the UUID is already zero-initialized by DynamicObject constructor
+  std::memcpy(dynamic_object.uuid.uuid.data(), &count, sizeof(count));
 
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
