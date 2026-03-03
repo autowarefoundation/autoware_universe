@@ -244,7 +244,7 @@ TEST_F(FootprintGeneratorTest, TestFootprintManagerDuplicateNormalIgnored)
   const auto & type_order = manager.get_footprint_type_order();
 
   // Because the constructor forces NORMAL first and ignores subsequent NORMALs
-  EXPECT_EQ(type_order.size(), 1);
+  ASSERT_EQ(type_order.size(), 1);
   EXPECT_EQ(type_order.front(), FootprintType::NORMAL);
 }
 
