@@ -37,6 +37,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -133,10 +134,26 @@ struct UUIDHash
 struct UUIDEqual
 {
   bool operator()(
-    const unique_identifier_msgs::msg::UUID & u1, const unique_identifier_msgs::msg::UUID & u2) const
+    const unique_identifier_msgs::msg::UUID & u1,
+    const unique_identifier_msgs::msg::UUID & u2) const
   {
     return std::equal(std::begin(u1.uuid), std::end(u1.uuid), std::begin(u2.uuid));
   }
+};
+
+struct AssociationEntry
+{
+  size_t tracker_idx;
+  size_t measurement_idx;
+  double score;
+  bool has_significant_shape_change;
+};
+
+struct AssociationData
+{
+  std::vector<AssociationEntry> entries;
+  size_t num_trackers;
+  size_t num_measurements;
 };
 
 struct AssociationResult
@@ -149,6 +166,8 @@ struct AssociationResult
     measurement_to_tracker;
   std::vector<unique_identifier_msgs::msg::UUID> unassigned_trackers;
   std::vector<unique_identifier_msgs::msg::UUID> unassigned_measurements;
+  std::unordered_set<unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    trackers_with_shape_change;
 
   void add(
     const unique_identifier_msgs::msg::UUID & tracker_uuid,
@@ -163,7 +182,13 @@ struct AssociationResult
     if (tracker_to_measurement.count(tracker_uuid)) {
       measurement_to_tracker.erase(tracker_to_measurement[tracker_uuid]);
       tracker_to_measurement.erase(tracker_uuid);
+      trackers_with_shape_change.erase(tracker_uuid);
     }
+  }
+
+  bool wasShapeChanged(const unique_identifier_msgs::msg::UUID & tracker_uuid) const
+  {
+    return trackers_with_shape_change.count(tracker_uuid) > 0;
   }
 
   unique_identifier_msgs::msg::UUID findMeasurement(
