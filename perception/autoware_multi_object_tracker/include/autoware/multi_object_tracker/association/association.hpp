@@ -100,8 +100,10 @@ public:
   virtual ~DataAssociation() {}
 
   void assign(
-    const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
-    std::unordered_map<int, int> & reverse_assignment);
+    const Eigen::MatrixXd & src,
+    const std::vector<unique_identifier_msgs::msg::UUID> & tracker_uuids,
+    const std::vector<unique_identifier_msgs::msg::UUID> & measurement_uuids,
+    types::AssociationResult & association_result);
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,

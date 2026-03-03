@@ -142,6 +142,8 @@ public:
   }
   rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
 
+  unique_identifier_msgs::msg::UUID getUUID() const { return object_.uuid; }
+
   std::string getUuidString() const
   {
     const auto uuid_msg = object_.uuid;
