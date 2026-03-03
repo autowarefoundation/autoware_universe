@@ -820,20 +820,21 @@ void BehaviorPathPlannerNode::onTrafficSignals(const TrafficLightGroupArray::Con
 
 void BehaviorPathPlannerNode::onLateralOffset(const LateralOffset::ConstSharedPtr msg)
 {
-  if (!planner_data_->lateral_offset) {
-    planner_data_->lateral_offset = msg;
+  const auto current = planner_data_->get_lateral_offset();
+  if (!current) {
+    planner_data_->set_lateral_offset(msg);
     return;
   }
 
   const auto & new_offset = msg->lateral_offset;
-  const auto & old_offset = planner_data_->lateral_offset->lateral_offset;
+  const auto & old_offset = current->lateral_offset;
 
   // offset is not changed.
   if (std::abs(old_offset - new_offset) < 1e-4) {
     return;
   }
 
-  planner_data_->lateral_offset = msg;
+  planner_data_->set_lateral_offset(msg);
 }
 
 SetParametersResult BehaviorPathPlannerNode::onSetParam(

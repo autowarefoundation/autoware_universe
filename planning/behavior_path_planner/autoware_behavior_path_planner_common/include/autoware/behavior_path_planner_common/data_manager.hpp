@@ -44,6 +44,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -165,7 +166,19 @@ struct PlannerData
   PredictedObjects::ConstSharedPtr dynamic_object{};
   OccupancyGrid::ConstSharedPtr occupancy_grid{};
   OccupancyGrid::ConstSharedPtr costmap{};
-  LateralOffset::ConstSharedPtr lateral_offset{};
+
+  LateralOffset::ConstSharedPtr get_lateral_offset() const
+  {
+    std::lock_guard<std::mutex> lock(lateral_offset_mutex_);
+    return lateral_offset_;
+  }
+
+  void set_lateral_offset(LateralOffset::ConstSharedPtr ptr)
+  {
+    std::lock_guard<std::mutex> lock(lateral_offset_mutex_);
+    lateral_offset_ = std::move(ptr);
+  }
+
   OperationModeState::ConstSharedPtr operation_mode{};
   PathWithLaneId::SharedPtr prev_output_path{std::make_shared<PathWithLaneId>()};
   std::optional<PoseWithUuidStamped> prev_modified_goal{};
@@ -181,6 +194,11 @@ struct PlannerData
   mutable std::vector<double> drivable_area_expansion_prev_curvatures{};
   mutable TurnSignalDecider turn_signal_decider;
 
+private:
+  mutable std::mutex lateral_offset_mutex_{};
+  LateralOffset::ConstSharedPtr lateral_offset_{};
+
+public:
   void init_parameters(rclcpp::Node & node)
   {
     parameters.traffic_light_signal_timeout =

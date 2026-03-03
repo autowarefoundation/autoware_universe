@@ -81,7 +81,8 @@ void SideShiftModuleManager::onSetLateralOffset(
   tier4_planning_msgs::msg::LateralOffset msg;
   msg.stamp = node_->now();
   msg.lateral_offset = static_cast<float>(lateral_offset);
-  planner_data_->lateral_offset = std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg);
+  planner_data_->set_lateral_offset(
+    std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg));
 
   response->status.success = true;
   response->status.code = 0;
