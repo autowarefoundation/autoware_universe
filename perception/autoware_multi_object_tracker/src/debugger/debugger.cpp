@@ -300,12 +300,10 @@ void TrackerDebugger::endPublishTime(const rclcpp::Time & now, const rclcpp::Tim
 
 void TrackerDebugger::collectObjectInfo(
   const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-  const types::DynamicObjectList & detected_objects,
-  const types::AssociationResult & association_result)
+  const types::AssociatedObjects & associated_objects)
 {
   if (!debug_settings_.publish_debug_markers) return;
-  object_debugger_.collect(
-    message_time, list_tracker, detected_objects, association_result);
+  object_debugger_.collect(message_time, list_tracker, associated_objects);
 }
 
 // ObjectDebugger

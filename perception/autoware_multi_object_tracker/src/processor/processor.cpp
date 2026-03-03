@@ -67,27 +67,29 @@ void TrackerProcessor::predict(
   }
 }
 
-void TrackerProcessor::associate(
-  const types::DynamicObjectList & detected_objects,
-  types::AssociationResult & association_result) const
+types::AssociationResult TrackerProcessor::associate(
+  const types::DynamicObjectList & detected_objects) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  types::AssociationResult association_result;
   const auto & tracker_list = list_tracker_;
 
   // global nearest neighbor
   types::AssociationData association_data = association_->calcAssociationData(
     detected_objects, tracker_list);  // row : tracker, col : measurement
   association_->assign(association_data, association_result);
+  return association_result;
 }
 
-void TrackerProcessor::update(
-  const types::DynamicObjectList & detected_objects,
-  const types::AssociationResult & association_result)
+void TrackerProcessor::update(const types::AssociatedObjects & associated_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   int tracker_idx = 0;
   const auto & time = detected_objects.header.stamp;
@@ -125,12 +127,13 @@ void TrackerProcessor::update(
   }
 }
 
-void TrackerProcessor::spawn(
-  const types::DynamicObjectList & detected_objects,
-  const types::AssociationResult & association_result)
+void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   const auto channel_config = channels_config_[detected_objects.channel_index];
   // If spawn is disabled, return

@@ -202,21 +202,21 @@ void process_objects(
   state.processor->predict(measurement_time, ego_pose);
 
   /* object association */
-  types::AssociationResult association_result;
-  state.processor->associate(objects, association_result);
+  const auto association_result = state.processor->associate(objects);
+  const types::AssociatedObjects associated_objects{objects, association_result};
 
   // Collect debug information - tracker list, existence probabilities, association results
   debugger.collectObjectInfo(
-    measurement_time, state.processor->getListTracker(), objects, association_result);
+    measurement_time, state.processor->getListTracker(), associated_objects);
 
   /* tracker update */
-  state.processor->update(objects, association_result);
+  state.processor->update(associated_objects);
 
   /* tracker pruning */
   state.processor->prune(measurement_time);
 
   /* spawn new tracker */
-  state.processor->spawn(objects, association_result);
+  state.processor->spawn(associated_objects);
 
   state.last_updated_time = current_time;
 }

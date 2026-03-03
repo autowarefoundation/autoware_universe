@@ -127,8 +127,7 @@ public:
   // Debug object
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-    const types::DynamicObjectList & detected_objects,
-    const types::AssociationResult & association_result);
+    const types::AssociatedObjects & associated_objects);
   void publishObjectsMarkers();
 };
 

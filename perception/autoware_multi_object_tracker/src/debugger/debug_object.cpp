@@ -72,10 +72,12 @@ void TrackerObjectDebugger::reset()
 
 void TrackerObjectDebugger::collect(
   const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-  const types::DynamicObjectList & detected_objects,
-  const types::AssociationResult & association_result)
+  const types::AssociatedObjects & associated_objects)
 {
   is_initialized_ = true;
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   message_time_ = message_time;
 

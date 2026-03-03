@@ -62,15 +62,9 @@ public:
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
   void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
-  void associate(
-    const types::DynamicObjectList & detected_objects,
-    types::AssociationResult & association_result) const;
-  void update(
-    const types::DynamicObjectList & detected_objects,
-    const types::AssociationResult & association_result);
-  void spawn(
-    const types::DynamicObjectList & detected_objects,
-    const types::AssociationResult & association_result);
+  types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
+  void update(const types::AssociatedObjects & associated_objects);
+  void spawn(const types::AssociatedObjects & associated_objects);
   void prune(const rclcpp::Time & time);
 
   // output processes
