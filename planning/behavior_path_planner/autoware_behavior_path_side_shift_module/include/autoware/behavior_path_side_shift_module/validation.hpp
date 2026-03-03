@@ -15,32 +15,26 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 
+#include <autoware_planning_msgs/srv/set_lateral_offset.hpp>
+
 #include <optional>
 
 namespace autoware::behavior_path_planner
 {
-
-/** Constants matching SetLateralOffset.srv */
-constexpr uint8_t SHIFT_MODE_RAW_VALUE = 1;
-constexpr uint8_t SHIFT_MODE_DIRECTION = 2;
-constexpr uint8_t SHIFT_DIRECTION_RESET = 0;
-constexpr uint8_t SHIFT_DIRECTION_LEFT = 1;
-constexpr uint8_t SHIFT_DIRECTION_RIGHT = 2;
 
 /** Optional max magnitude for RAW_VALUE (meters). Use nullopt to skip range check. */
 constexpr std::optional<double> DEFAULT_MAX_RAW_SHIFT_MAGNITUDE = 3.0;
 
 /**
  * @brief Example validation for SetLateralOffset service request.
- * @param shift_mode RAW_VALUE (1) or DIRECTION (2)
- * @param shift_value Used when shift_mode is RAW_VALUE (meters; positive = left)
- * @param shift_direction_value RESET (0), LEFT (1), RIGHT (2) when shift_mode is DIRECTION
+ * @param request SetLateralOffset service request (uses Request::RAW_VALUE, Request::DIRECTION,
+ *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
  * @param direction_shift_amount Shift amount in meters for DIRECTION mode (must be >= 0)
  * @param max_raw_shift_magnitude Optional max |shift_value| for RAW_VALUE; nullopt to skip
  * @return Computed lateral offset in meters, or nullopt if validation failed
  */
 std::optional<double> validateAndComputeLateralOffset(
-  uint8_t shift_mode, float shift_value, uint8_t shift_direction_value,
+  const autoware_planning_msgs::srv::SetLateralOffset::Request & request,
   double direction_shift_amount,
   std::optional<double> max_raw_shift_magnitude = DEFAULT_MAX_RAW_SHIFT_MAGNITUDE);
 
