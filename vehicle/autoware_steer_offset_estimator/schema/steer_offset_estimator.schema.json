@@ -130,13 +130,12 @@
           },
           "required": [
             "mode",
-            "error_threshold",
-            "covariance_threshold",
+            "update_offset_th",
+            "covariance_th",
             "min_steady_duration",
-            "min_velocity",
             "max_offset_limit",
             "min_update_interval",
-            "enable_parameter_file_overwrite"
+            "warning_offset_th"
           ]
         }
       },

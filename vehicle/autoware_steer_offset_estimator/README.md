@@ -113,7 +113,7 @@ In addition to publishing the offset update for control purposes, the node allow
 
 ### Calibration Modes
 
-- **OFF**: No system callibration, the estimator only provides offset updates for control puposes.
+- **OFF**: No system calibration, the estimator only provides offset updates for control purposes.
 - **MANUAL**: Calibration is triggered only via a dedicated ROS 2 service call (`~/trigger_steer_offset_calibration`).
 - **AUTO**: The system automatically triggers a calibration update when the internal stability and confidence conditions are met.
 
