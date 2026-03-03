@@ -60,9 +60,6 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
-  bool validate_trajectory_basics(const CandidateTrajectory & trajectory) const;
-  bool check_finite(const TrajectoryPoint & point) const;
-
   void load_metric(const std::string & name);
 
   /**
@@ -71,6 +68,9 @@ private:
    */
   void unload_metric(const std::string & name);
   void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
+
+  rcl_interfaces::msg::SetParametersResult on_parameter(
+    const std::vector<rclcpp::Parameter> & parameters);
 
   std::unique_ptr<safety_filter::ParamListener> listener_;
 
@@ -92,8 +92,12 @@ private:
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
+
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
+
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_safety_filter"};
 };
