@@ -1012,7 +1012,7 @@ void CrosswalkModule::applySlowDownByOcclusion(
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
-  const PathWithLaneId & sparse_resample_path, const std::pair<double, double> & attension_range,
+  const PathWithLaneId & sparse_resample_path, const std::pair<double, double> & attention_range,
   const double lateral_margin, std::vector<std::vector<geometry_msgs::msg::Point>> & polygons) const
 {
   const auto & ego_pos = planner_data_->current_odometry->pose.position;
@@ -1027,11 +1027,11 @@ Polygon2d CrosswalkModule::getAttentionArea(
     const auto front_length = length_sum.at(j) - backward_path_length;
     const auto back_length = length_sum.at(j + 1) - backward_path_length;
 
-    if (back_length < attension_range.first) {
+    if (back_length < attention_range.first) {
       continue;
     }
 
-    if (attension_range.second < front_length) {
+    if (attention_range.second < front_length) {
       break;
     }
 
@@ -1086,13 +1086,13 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
   const double ego_to_last_path_point_on_crosswalk =
     calcSignedArcLength(sparse_resample_path.points, ego_pos, last_path_point_on_crosswalk);
 
-  std::vector<std::vector<geometry_msgs::msg::Point>> attension_polygons{};
+  std::vector<std::vector<geometry_msgs::msg::Point>> attention_polygons{};
   const auto attention_area = getAttentionArea(
     sparse_resample_path,
     std::make_pair(
       ego_to_first_path_point_on_crosswalk,
       ego_to_last_path_point_on_crosswalk + required_space_length),
-    p.required_lateral_clearance, attension_polygons);
+    p.required_lateral_clearance, attention_polygons);
 
   for (const auto & object : objects) {
     if (!isVehicle(object)) {
@@ -1132,7 +1132,6 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
         return {};
       }
 
-      const auto & ego_pos = planner_data_->current_odometry->pose.position;
       const double dist_ego2stop =
         calcSignedArcLength(ego_path.points, ego_pos, stop_pose->position);
       const double feasible_dist_ego2stop = std::max(*braking_distance, dist_ego2stop);

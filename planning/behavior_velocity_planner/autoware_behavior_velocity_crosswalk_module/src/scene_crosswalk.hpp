@@ -484,7 +484,7 @@ private:
     const geometry_msgs::msg::Point & stop_point, const PathWithLaneId & ego_path) const;
 
   Polygon2d getAttentionArea(
-    const PathWithLaneId & sparse_resample_path, const std::pair<double, double> & attension_range,
+    const PathWithLaneId & sparse_resample_path, const std::pair<double, double> & attention_range,
     const double lateral_margin,
     std::vector<std::vector<geometry_msgs::msg::Point>> & polygons) const;
 
