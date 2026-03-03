@@ -21,7 +21,8 @@ namespace autoware::behavior_path_planner
 
 std::optional<double> validateAndComputeLateralOffset(
   const autoware_planning_msgs::srv::SetLateralOffset::Request & request,
-  double direction_shift_amount, std::optional<double> max_raw_shift_magnitude)
+  double current_inserted_lateral_offset, double direction_shift_amount,
+  std::optional<double> max_raw_shift_magnitude)
 {
   using Request = autoware_planning_msgs::srv::SetLateralOffset::Request;
 
@@ -41,13 +42,13 @@ std::optional<double> validateAndComputeLateralOffset(
       if (direction_shift_amount < 0.0) {
         return std::nullopt;
       }
-      return direction_shift_amount;
+      return current_inserted_lateral_offset + direction_shift_amount;
     }
     if (request.shift_direction_value == Request::RIGHT) {
       if (direction_shift_amount < 0.0) {
         return std::nullopt;
       }
-      return -direction_shift_amount;
+      return current_inserted_lateral_offset - direction_shift_amount;
     }
     return std::nullopt;
   }

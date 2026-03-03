@@ -65,8 +65,11 @@ void SideShiftModuleManager::onSetLateralOffset(
   const autoware_planning_msgs::srv::SetLateralOffset::Request::SharedPtr request,
   autoware_planning_msgs::srv::SetLateralOffset::Response::SharedPtr response)
 {
+  const double current_inserted =
+    inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
+
   const auto lateral_offset_opt =
-    validateAndComputeLateralOffset(*request, parameters_->direction_shift_amount);
+    validateAndComputeLateralOffset(*request, current_inserted, parameters_->direction_shift_amount);
 
   if (!lateral_offset_opt) {
     response->status.success = false;
