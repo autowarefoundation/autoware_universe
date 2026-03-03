@@ -116,7 +116,6 @@ void SteerOffsetEstimatorNode::set_calibration_parameters()
     this->declare_parameter<double>("calibration.warning_offset_th");
   calibration_params_.min_steady_duration =
     this->declare_parameter<double>("calibration.min_steady_duration");
-  calibration_params_.min_velocity = this->declare_parameter<double>("calibration.min_velocity");
   calibration_params_.max_offset_limit =
     this->declare_parameter<double>("calibration.max_offset_limit");
   calibration_params_.min_update_interval =

@@ -67,7 +67,6 @@ struct SteerOffsetCalibrationParameters
   double update_offset_th{0.001};
   double covariance_th{0.0008};
   double min_steady_duration{10.0};
-  double min_velocity{1.0};
   double max_offset_limit{0.05};
   double min_update_interval{100.0};
   double warning_offset_th{0.005};

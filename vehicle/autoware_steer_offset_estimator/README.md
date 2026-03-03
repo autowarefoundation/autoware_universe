@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The role of this node is to automatically estimate the `steer_offset` used in the lateral controller and vehicle interface, and enable auto or manual calibration in real time.
+The role of this node is to automatically estimate the `steer_offset` used in the lateral controller. The value estimated is the residual bias (on top of the static mechanical bias specified in vehicle calibration files). It also allow for auto or manual calibration of total system bias in real time.
 
 ## Inner-workings / Algorithms
 
@@ -103,13 +103,17 @@ The algorithm only updates when:
 
 This Kalman Filter approach provides continuous, real-time calibration of steering offset during normal driving operations, with process noise allowing adaptation to changing conditions and measurement noise handling sensor uncertainties.
 
-## Calibration
+## Steering Offset Update
 
-The node manages how the estimated offset is applied to the vehicle system through three distinct modes and a set of safety validation gates.
+Once the estimator converges (i.e covariance < `covariance_th`), if the difference between the new offset estimate and last published estimate is greater than `update_offset_th`, then the new offset estimate is published to allow the controller to get the latest value to improve the control performance.
+
+## System Calibration
+
+In addition to publishing the offset update for control purposes, the node allows the user to apply the estimated offset to the vehicle system through three distinct modes and a set of safety validation gates.
 
 ### Calibration Modes
 
-- **OFF**: The estimator runs in the background for monitoring and debug purposes. No parameters are updated and no calibration topics are published.
+- **OFF**: No system callibration, the estimator only provides offset updates for control puposes.
 - **MANUAL**: Calibration is triggered only via a dedicated ROS 2 service call (`~/trigger_steer_offset_calibration`).
 - **AUTO**: The system automatically triggers a calibration update when the internal stability and confidence conditions are met.
 
@@ -148,13 +152,12 @@ In addition to the Manual gates, Auto mode applies more restrictive temporal and
 
 #### Output
 
-| Name                                  | Type                                                | Description                                   |
-| ------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| `~/output/steering_offset`            | `autoware_internal_debug_msgs::msg::Float32Stamped` | steering offset                               |
-| `~/output/steering_offset_covariance` | `autoware_internal_debug_msgs::msg::Float32Stamped` | covariance of steering offset                 |
-| `~/output/steering_offset_error`      | `autoware_internal_debug_msgs::msg::Float32Stamped` | difference between estimate and current value |
-| `~/output/steering_offset_update`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | updated steering offset value                 |
-| `~/output/debug_info`                 | `autoware_internal_debug_msgs::msg::StringStamped`  | debug info                                    |
+| Name                                  | Type                                                | Description                   |
+| ------------------------------------- | --------------------------------------------------- | ----------------------------- |
+| `~/output/steering_offset`            | `autoware_internal_debug_msgs::msg::Float32Stamped` | steering offset               |
+| `~/output/steering_offset_covariance` | `autoware_internal_debug_msgs::msg::Float32Stamped` | covariance of steering offset |
+| `~/output/steering_offset_update`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | updated steering offset value |
+| `~/output/debug_info`                 | `autoware_internal_debug_msgs::msg::StringStamped`  | debug info                    |
 
 ### Services
 
