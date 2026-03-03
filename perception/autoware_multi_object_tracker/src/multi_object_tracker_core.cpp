@@ -79,6 +79,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
   // convert string to TrackerType
   static const std::unordered_map<std::string, TrackerType> TRACKER_TYPE_MAP = {
     {"multi_vehicle_tracker", TrackerType::MULTIPLE_VEHICLE},
+    {"general_vehicle_tracker", TrackerType::GENERAL_VEHICLE},
     {"pedestrian_and_bicycle_tracker", TrackerType::PEDESTRIAN_AND_BICYCLE},
     {"normal_vehicle_tracker", TrackerType::NORMAL_VEHICLE},
     {"pedestrian_tracker", TrackerType::PEDESTRIAN},
@@ -89,11 +90,11 @@ void process_parameters(MultiObjectTrackerParameters & params)
   auto getTrackerType = [&params](const std::string & tracker_key) -> TrackerType {
     auto tracker_name_it = params.tracker_type_map.find(tracker_key);
     if (tracker_name_it == params.tracker_type_map.end()) {
-      return TrackerType::UNKNOWN;
+      return TrackerType::POLYGON;
     }
     const std::string & tracker_name = tracker_name_it->second;
     auto it = TRACKER_TYPE_MAP.find(tracker_name);
-    return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::UNKNOWN;
+    return it != TRACKER_TYPE_MAP.end() ? it->second : TrackerType::POLYGON;
   };
 
   // Set the tracker map for processor config
@@ -105,7 +106,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::PEDESTRIAN, getTrackerType("pedestrian_tracker")},
     {Label::BICYCLE, getTrackerType("bicycle_tracker")},
     {Label::MOTORCYCLE, getTrackerType("motorcycle_tracker")},
-    {Label::UNKNOWN, TrackerType::UNKNOWN}};
+    {Label::UNKNOWN, TrackerType::POLYGON}};
   // Set the pruning thresholds for processor config
   for (size_t i = 0; i < params.pruning_giou_thresholds.size(); ++i) {
     const auto label = static_cast<LabelType>(i);
