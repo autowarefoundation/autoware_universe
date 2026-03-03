@@ -17,7 +17,6 @@
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
-#include "autoware/boundary_departure_checker/steering_abnormality_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -35,7 +34,6 @@
 #include <cstddef>
 #include <limits>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -584,14 +582,15 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
 
     const auto rear_seg = Segment2d(ego_lb, ego_rb);
 
+    if (i > 0) {
+      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
+    }
+
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
       closest_bound.lon_dist_on_pred_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
-    }
-    if (i > 1) {
-      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
     }
   }
 
