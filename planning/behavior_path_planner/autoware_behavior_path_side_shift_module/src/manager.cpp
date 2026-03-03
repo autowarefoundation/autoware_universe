@@ -14,10 +14,13 @@
 
 #include "autoware/behavior_path_side_shift_module/manager.hpp"
 
+#include "autoware/behavior_path_side_shift_module/validation.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
+#include <autoware_common_msgs/msg/response_status.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -41,19 +44,69 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   p.min_shifting_speed = node->declare_parameter<double>(ns + "min_shifting_speed");
   p.shift_request_time_limit = node->declare_parameter<double>(ns + "shift_request_time_limit");
   p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
+  p.direction_shift_amount = node->declare_parameter<double>(ns + "direction_shift_amount");
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
+  inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
+
+  set_lateral_offset_srv_ = node->create_service<autoware_planning_msgs::srv::SetLateralOffset>(
+    "~/set_lateral_offset",
+    std::bind(&SideShiftModuleManager::onSetLateralOffset, this, std::placeholders::_1, std::placeholders::_2));
+
+  lateral_offset_publisher_ =
+    node->create_publisher<tier4_planning_msgs::msg::LateralOffset>("~/output/lateral_offset", 1);
+
+  const auto period = std::chrono::milliseconds(100);  // 10 Hz
+  lateral_offset_publish_timer_ =
+    node->create_wall_timer(period, std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
+}
+
+void SideShiftModuleManager::onSetLateralOffset(
+  const autoware_planning_msgs::srv::SetLateralOffset::Request::SharedPtr request,
+  autoware_planning_msgs::srv::SetLateralOffset::Response::SharedPtr response)
+{
+  const auto lateral_offset_opt = validateAndComputeLateralOffset(
+    request->shift_mode, request->shift_value, request->shift_direction_value,
+    parameters_->direction_shift_amount);
+
+  if (!lateral_offset_opt) {
+    response->status.success = false;
+    response->status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+    response->status.message = "SetLateralOffset: validation failed (invalid shift_mode, shift_value, or shift_direction_value)";
+    return;
+  }
+
+  const double lateral_offset = *lateral_offset_opt;
+
+  tier4_planning_msgs::msg::LateralOffset msg;
+  msg.stamp = node_->now();
+  msg.lateral_offset = static_cast<float>(lateral_offset);
+  planner_data_->lateral_offset = std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg);
+
+  response->status.success = true;
+  response->status.code = 0;
+  response->status.message = "";
+}
+
+void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
+{
+  if (!lateral_offset_publisher_ || !inserted_lateral_offset_state_) {
+    return;
+  }
+  tier4_planning_msgs::msg::LateralOffset msg;
+  msg.stamp = node_->now();
+  msg.lateral_offset = static_cast<float>(inserted_lateral_offset_state_->value.load());
+  lateral_offset_publisher_->publish(msg);
 }
 
 void SideShiftModuleManager::updateModuleParams(
-  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
+  const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
 
-  [[maybe_unused]] auto p = parameters_;
-
-  [[maybe_unused]] const std::string ns = "side_shift.";
-  // update_param<bool>(parameters, ns + ..., ...);
+  auto p = parameters_;
+  const std::string ns = "side_shift.";
+  update_param<double>(parameters, ns + "direction_shift_amount", p->direction_shift_amount);
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
     if (!observer.expired()) observer.lock()->updateModuleParams(p);

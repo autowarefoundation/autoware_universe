@@ -19,6 +19,7 @@
 
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
@@ -41,6 +42,8 @@ struct SideShiftParameters
   double drivable_area_height;
   double shift_request_time_limit;
   bool publish_debug_marker;
+  /** @brief Shift amount in meters when shift_mode is DIRECTION (used by SetLateralOffset service) */
+  double direction_shift_amount;
 };
 
 struct SideShiftDebugData
@@ -48,6 +51,16 @@ struct SideShiftDebugData
   std::shared_ptr<PathShifter> path_shifter{};
   ShiftLineArray shift_lines{};
   double current_request{0.0};
+};
+
+/**
+ * @brief Shared state for the inserted (actually applied) lateral offset [m].
+ *        The manager owns this and passes it to the scene; the scene updates it
+ *        whenever inserted_lateral_offset_ changes; the manager reads it periodically to publish.
+ */
+struct InsertedLateralOffsetState
+{
+  std::atomic<double> value{0.0};
 };
 
 }  // namespace autoware::behavior_path_planner
