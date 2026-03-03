@@ -54,7 +54,7 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/multiple_vehicle_tracker.cpp
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
-  lib/tracker/model/unknown_tracker.cpp
+  lib/tracker/model/polygon_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
