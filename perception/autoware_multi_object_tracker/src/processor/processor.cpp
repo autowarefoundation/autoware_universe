@@ -101,12 +101,10 @@ void TrackerProcessor::update(
       unique_identifier_msgs::msg::UUID measurement_uuid =
         association_result.tracker_to_measurement.at(tracker_uuid);
       // Find index
-      for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
-        if (types::UUIDEqual()(detected_objects.objects[i].uuid, measurement_uuid)) {
-          measurement_idx = i;
-          found = true;
-          break;
-        }
+      const int idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
+      if (idx != -1) {
+        measurement_idx = idx;
+        found = true;
       }
     }
 

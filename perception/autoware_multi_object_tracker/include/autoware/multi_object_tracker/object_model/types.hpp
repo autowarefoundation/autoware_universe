@@ -117,6 +117,8 @@ struct DynamicObjectList
   std_msgs::msg::Header header;
   uint channel_index;
   std::vector<DynamicObject> objects;
+
+  int getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const;
 };
 
 struct UUIDHash
