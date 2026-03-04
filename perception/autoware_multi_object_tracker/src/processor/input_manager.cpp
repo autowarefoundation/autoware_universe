@@ -256,8 +256,6 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
   bool is_any_spawn_enabled = false;
   for (size_t i = 0; i < input_size_; i++) {
     InputStream input_stream(input_channels[i], odometry_, logger_, clock_);
-    input_stream.setTriggerFunction(
-      std::bind(&InputManager::onTrigger, this, std::placeholders::_1));
     input_streams_.push_back(std::make_shared<InputStream>(input_stream));
     is_any_spawn_enabled |= input_streams_.at(i)->isSpawnEnabled();
 
@@ -287,11 +285,11 @@ void InputManager::onMessage(
   input_streams_.at(channel_index)->onMessage(msg);
 }
 
-void InputManager::onTrigger(const uint & index) const
+void InputManager::setTriggerFunction(std::function<void(size_t)> func_trigger)
 {
-  // when the target stream triggers, call the trigger function
-  if (index == target_stream_idx_ && func_trigger_) {
-    func_trigger_();
+  func_trigger_ = func_trigger;
+  for (const auto & input_stream : input_streams_) {
+    input_stream->setTriggerFunction(func_trigger);
   }
 }
 

@@ -83,7 +83,7 @@ struct MultiObjectTrackerInternalState
 
   void init(
     const MultiObjectTrackerParameters & params, rclcpp::Node & node,
-    const std::function<void()> & trigger_function);
+    const std::function<void(size_t)> & trigger_function);
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer;
 };
