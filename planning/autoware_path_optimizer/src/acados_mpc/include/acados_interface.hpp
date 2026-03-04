@@ -23,6 +23,7 @@
 #undef MAX_ITER
 #endif
 
+#ifdef HAS_ACADOS_GENERATED
 extern "C" {
 #include "c_generated_code/acados_solver_curvilinear_bicycle_model_spatial.h"
 }
@@ -96,3 +97,4 @@ private:
   ocp_nlp_out * nlp_out_;
   ocp_nlp_solver * nlp_solver_;
 };
+#endif  // HAS_ACADOS_GENERATED

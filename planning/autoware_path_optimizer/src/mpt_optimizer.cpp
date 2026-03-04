@@ -14,7 +14,9 @@
 
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
+#ifdef HAS_ACADOS_GENERATED
 #include "acados_mpc/include/acados_interface.hpp"
+#endif
 #include "autoware/interpolation/spline_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
@@ -556,6 +558,7 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return mpt_traj_points;
   }
 
+#ifdef HAS_ACADOS_GENERATED
   // 8. run acados mpt (optional)
   std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
   AcadosSolution acados_result;
@@ -590,6 +593,9 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   prev_optimized_traj_points_ptr_ =
     std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
   return acados_traj_points;
+#else
+  return mpt_traj_points;
+#endif
 }
 
 std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajectoryPoints() const
@@ -625,6 +631,7 @@ void MPTOptimizer::publishOptimizedStates(const Eigen::VectorXd & states, const 
   debug_optimised_states_pub_->publish(msg);
 }
 
+#ifdef HAS_ACADOS_GENERATED
 void MPTOptimizer::updateDebugDataAndPublishAcadosSteering(
   const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
   const std::vector<TrajectoryPoint> & acados_traj_points)
@@ -669,6 +676,8 @@ void MPTOptimizer::publishAcadosStates(const AcadosSolution & acados_result) con
   }
   debug_acados_optimised_states_pub_->publish(acados_states_msg);
 }
+
+#endif  // HAS_ACADOS_GENERATED
 
 void MPTOptimizer::publishReferenceTrajectory(
   const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const
@@ -745,6 +754,7 @@ geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, d
   return p;
 }
 
+#ifdef HAS_ACADOS_GENERATED
 // Build parameter vector and initial state x0 from the request. If a parameter-size mismatch
 // is detected, this will set skipSolve=true and populate the response with empty results.
 std::array<double, NP> MPTOptimizer::buildParameters(
@@ -995,6 +1005,7 @@ AcadosSolution MPTOptimizer::runAcadosMPT(
 
   return acados_solution;
 }
+#endif  // HAS_ACADOS_GENERATED
 
 std::pair<std::vector<ReferencePoint>, autoware::interpolation::SplineInterpolationPoints2d>
 MPTOptimizer::calcReferencePoints(

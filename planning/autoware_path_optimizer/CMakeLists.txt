@@ -13,6 +13,19 @@ include(CheckCXXCompilerFlag)
 # endif()
 
 find_package(autoware_cmake REQUIRED)
+
+# Exclude generated acados code from copyright checking
+# Must be set before autoware_package() is called (when lint hooks are registered)
+# Use glob patterns to exclude all generated files (they're created during build)
+if(NOT DEFINED AMENT_LINT_AUTO_FILE_EXCLUDE)
+  set(AMENT_LINT_AUTO_FILE_EXCLUDE "" CACHE INTERNAL "")
+endif()
+list(APPEND AMENT_LINT_AUTO_FILE_EXCLUDE
+  "src/acados_mpc/c_generated_code/**"
+  "src/acados_mpc/c_generated_code/**/*"
+  "src/acados_mpc/c_generated_code/**/*.*"
+)
+
 autoware_package()
 
 find_package(Eigen3 REQUIRED)
@@ -49,6 +62,9 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} acados_interface)
+if(PATH_OPTIMIZER_HAS_ACADOS_GENERATED)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_ACADOS_GENERATED)
+endif()
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::path_optimizer::PathOptimizer"
@@ -65,8 +81,14 @@ ament_auto_package(INSTALL_TO_SHARE launch config rviz)
 install(PROGRAMS scripts/calculation_time_plotter.py DESTINATION lib/${PROJECT_NAME})
 install(TARGETS acados_interface LIBRARY DESTINATION lib)
 install(FILES src/acados_mpc/include/acados_interface.hpp DESTINATION include/autoware/path_optimizer)
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc/c_generated_code/
+
+# Downstream (e.g. autoware_trajectory_optimizer) includes acados_interface.hpp -> c_generated_code/...
+set(MODEL "curvilinear_bicycle_model_spatial")
+set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc/c_generated_code")
+install(FILES
+  ${GEN_DIR}/acados_solver_${MODEL}.h
+  ${GEN_DIR}/${MODEL}_model/${MODEL}_model.h
+  ${GEN_DIR}/${MODEL}_constraints/${MODEL}_constraints.h
   DESTINATION include/autoware/path_optimizer/c_generated_code
-  FILES_MATCHING PATTERN "*.h"
+  OPTIONAL
 )

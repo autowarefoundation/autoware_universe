@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__PATH_OPTIMIZER__MPT_OPTIMIZER_HPP_
 #define AUTOWARE__PATH_OPTIMIZER__MPT_OPTIMIZER_HPP_
 
+#ifdef HAS_ACADOS_GENERATED
 #include "acados_interface.hpp"
+#endif
 #include "autoware/interpolation/linear_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/osqp_interface/osqp_interface.hpp"
@@ -344,7 +346,9 @@ private:
 
   StateEquationGenerator state_equation_generator_;
   std::unique_ptr<autoware::osqp_interface::OSQPInterface> osqp_solver_ptr_;
+#ifdef HAS_ACADOS_GENERATED
   AcadosInterface acados_interface_{20, 1e-6};
+#endif
 
   const double osqp_epsilon_ = 1.0e-3;
 
@@ -422,6 +426,7 @@ private:
     const std_msgs::msg::Header & header, const std::vector<ReferencePoint> & ref_points,
     const std::vector<TrajectoryPoint> & mpt_traj_points) const;
 
+#ifdef HAS_ACADOS_GENERATED
   // Helper method to build parameters for Acados solver
   std::array<double, NP> buildParameters(
     const std::vector<double> & knots, const std::vector<double> & curvatures) const;
@@ -435,24 +440,24 @@ private:
   std::optional<std::vector<TrajectoryPoint>> convertAcadosSolutionToTrajectory(
     std::vector<ReferencePoint> & ref_points, const AcadosSolution & acados_solution) const;
 
-  // Add new method to publish spline coefficients and curvatures
   AcadosSolution runAcadosMPT(
     const std::vector<ReferencePoint> & ref_points,
     autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
     const geometry_msgs::msg::Pose & ego_pose);
 
-  void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
-  void publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const;
-
   void updateDebugDataAndPublishAcadosSteering(
     const AcadosSolution & acados_result, const std::vector<ReferencePoint> & ref_points,
     const std::vector<TrajectoryPoint> & acados_traj_points);
 
+  void publishAcadosStates(const AcadosSolution & acados_result) const;
+#endif
+
+  void publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const;
+  void publishOptimizedStates(const Eigen::VectorXd & states, const size_t N) const;
+
   void publishAcadosTrajectory(
     const std::vector<TrajectoryPoint> & acados_traj_points,
     const std_msgs::msg::Header & header) const;
-
-  void publishAcadosStates(const AcadosSolution & acados_result) const;
 
   void publishReferenceTrajectory(
     const std::vector<ReferencePoint> & ref_points, const std_msgs::msg::Header & header) const;

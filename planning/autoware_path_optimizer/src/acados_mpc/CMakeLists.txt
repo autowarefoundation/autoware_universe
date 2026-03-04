@@ -19,20 +19,6 @@ endforeach()
 set(MODEL "curvilinear_bicycle_model_spatial")
 set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code")
 
-# Exclude generated acados code from copyright checking
-# Note: Files are marked GENERATED TRUE below, but we also explicitly exclude the directory
-# Path must be relative to package root (where autoware_package() is called)
-if(AMENT_CMAKE_COPYRIGHT_FOUND)
-  if(NOT DEFINED AMENT_COPYRIGHT_EXCLUDE)
-    set(AMENT_COPYRIGHT_EXCLUDE "" CACHE INTERNAL "")
-  endif()
-  # Compute relative path from package root (parent directory) to generated code directory
-  get_filename_component(PACKAGE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-  file(RELATIVE_PATH GEN_DIR_RELATIVE "${PACKAGE_ROOT}" "${GEN_DIR}")
-  list(APPEND AMENT_COPYRIGHT_EXCLUDE
-    "${GEN_DIR_RELATIVE}"
-  )
-endif()
 
 set(GENERATED_MPC_FILES
   ${GEN_DIR}/acados_solver_${MODEL}.h
@@ -64,11 +50,16 @@ add_custom_command(
   VERBATIM
 )
 
+# When we build this target, generated code exists; tell parent so it defines HAS_ACADOS_GENERATED too.
+set(PATH_OPTIMIZER_HAS_ACADOS_GENERATED TRUE PARENT_SCOPE)
+
 # --- acados_interface library ---
 add_library(acados_interface SHARED
   src/acados_interface.cpp
   ${GENERATED_MPC_FILES}
 )
+
+target_compile_definitions(acados_interface PRIVATE HAS_ACADOS_GENERATED)
 
 target_include_directories(acados_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -84,7 +75,8 @@ target_include_directories(acados_interface PUBLIC
 target_link_libraries(acados_interface PRIVATE acados)
 
 # Suppress warnings on generated C code
+# The acados-generated code contains unused variables and parameters that we cannot control
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set_source_files_properties(${GENERATED_MPC_FILES} PROPERTIES
-      COMPILE_OPTIONS "-Wno-all;-Wno-extra;-Wno-unused-function")
+  set_source_files_properties(${GENERATED_MPC_FILES} PROPERTIES
+    COMPILE_OPTIONS "-Wno-unused-variable;-Wno-unused-parameter;-Wno-unused-function")
 endif()
