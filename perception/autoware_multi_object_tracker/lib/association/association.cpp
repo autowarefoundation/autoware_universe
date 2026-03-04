@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -36,6 +37,14 @@ constexpr double INVALID_SCORE = 0.0;
 
 namespace autoware::multi_object_tracker
 {
+
+struct MeasurementWithIndex
+{
+  const types::DynamicObject & object;
+  size_t index;
+
+  MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
+};
 using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
@@ -57,7 +66,6 @@ void DataAssociation::updateMaxSearchDistances()
 {
   const int num_classes = config_.max_dist_matrix.cols();
   max_squared_dist_per_class_.resize(num_classes);
-  squared_distance_matrix_ = config_.max_dist_matrix;  // These are already squared distances
 
   // For each measurement class (column), find maximum squared distance with any tracker class
   for (int measurement_class = 0; measurement_class < num_classes; ++measurement_class) {
@@ -108,7 +116,7 @@ void DataAssociation::assign(
     if (
       association_result.tracker_to_measurement.find(data.tracker_uuids[i]) ==
       association_result.tracker_to_measurement.end()) {
-      association_result.unassigned_trackers.push_back(data.tracker_uuids[i]);
+      association_result.unassigned_trackers.emplace_back(data.tracker_uuids[i]);
     }
   }
 
@@ -117,7 +125,7 @@ void DataAssociation::assign(
     if (
       association_result.measurement_to_tracker.find(data.measurement_uuids[i]) ==
       association_result.measurement_to_tracker.end()) {
-      association_result.unassigned_measurements.push_back(data.measurement_uuids[i]);
+      association_result.unassigned_measurements.emplace_back(data.measurement_uuids[i]);
     }
   }
 }
@@ -148,32 +156,21 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   return result;
 }
 
-types::AssociationData DataAssociation::calcAssociationData(
+PreparationData DataAssociation::prepareAssociationData(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  types::AssociationData association_data;
-
-  // Ensure that the detected_objects and list_tracker are not empty
-  if (measurements.objects.empty() || trackers.empty()) {
-    return association_data;
-  }
+  PreparationData prep_data;
 
   // Pre-allocate vectors to avoid reallocations
-  std::vector<types::DynamicObject> tracked_objects;
-  std::vector<std::uint8_t> tracker_labels;
-  std::vector<TrackerType> tracker_types;
-  tracked_objects.reserve(trackers.size());
-  tracker_labels.reserve(trackers.size());
-  tracker_types.reserve(trackers.size());
-  association_data.tracker_uuids.reserve(trackers.size());
-  association_data.measurement_uuids.reserve(measurements.objects.size());
+  prep_data.tracked_objects.reserve(trackers.size());
+  prep_data.tracker_labels.reserve(trackers.size());
+  prep_data.tracker_types.reserve(trackers.size());
+  prep_data.association_data.tracker_uuids.reserve(trackers.size());
+  prep_data.association_data.measurement_uuids.reserve(measurements.objects.size());
 
   for (const auto & object : measurements.objects) {
-    association_data.measurement_uuids.push_back(object.uuid);
+    prep_data.association_data.measurement_uuids.emplace_back(object.uuid);
   }
 
   // Build R-tree and store tracker data
@@ -185,33 +182,100 @@ types::AssociationData DataAssociation::calcAssociationData(
     for (const auto & tracker : trackers) {
       types::DynamicObject tracked_object;
       tracker->getTrackedObject(measurements.header.stamp, tracked_object);
-      tracked_objects.push_back(tracked_object);
-      tracker_labels.push_back(tracker->getHighestProbLabel());
-      tracker_types.push_back(tracker->getTrackerType());
-      association_data.tracker_uuids.push_back(tracker->getUUID());
 
       Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
       rtree_points.emplace_back(p, tracker_idx);
+
+      prep_data.tracked_objects.emplace_back(std::move(tracked_object));
+      prep_data.tracker_labels.emplace_back(tracker->getHighestProbLabel());
+      prep_data.tracker_types.emplace_back(tracker->getTrackerType());
+      prep_data.association_data.tracker_uuids.emplace_back(tracker->getUUID());
       ++tracker_idx;
     }
     rtree_.insert(rtree_points.begin(), rtree_points.end());
   }
 
   // Pre-compute inverse covariance for each tracker
-  std::vector<InverseCovariance2D> tracker_inverse_covariances;
-  tracker_inverse_covariances.reserve(tracked_objects.size());
-  for (const auto & tracked_object : tracked_objects) {
-    tracker_inverse_covariances.push_back(
+  prep_data.tracker_inverse_covariances.reserve(prep_data.tracked_objects.size());
+  for (const auto & tracked_object : prep_data.tracked_objects) {
+    prep_data.tracker_inverse_covariances.emplace_back(
       precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
   }
 
-  // For each measurement, find nearby trackers using R-tree
+  return prep_data;
+}
 
-  for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
-       ++measurement_idx) {
-    const auto & measurement_object = measurements.objects[measurement_idx];
-    const auto measurement_label =
-      autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
+void DataAssociation::processMeasurement(
+  const types::DynamicObject & measurement_object, size_t measurement_idx,
+  const std::uint8_t measurement_label, const PreparationData & prep_data,
+  types::AssociationData & association_data)
+{
+  // Get pre-computed maximum squared distance for this measurement class
+  const double max_squared_dist = max_squared_dist_per_class_[measurement_label];
+
+  // Use circle query instead of box for more precise filtering
+  Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
+
+  std::vector<ValueType> nearby_trackers;
+  nearby_trackers.reserve(
+    std::min(size_t{100}, prep_data.tracked_objects.size()));  // Reasonable initial capacity
+
+  // Compute search bounding box (square that contains the circle)
+  const double max_dist = std::sqrt(max_squared_dist);
+  const Box query_box(
+    Point(measurement_point.get<0>() - max_dist, measurement_point.get<1>() - max_dist),
+    Point(measurement_point.get<0>() + max_dist, measurement_point.get<1>() + max_dist));
+  // Initial R-tree box query
+  rtree_.query(bgi::within(query_box), std::back_inserter(nearby_trackers));
+
+  // Process nearby trackers
+  for (const auto & tracker_value : nearby_trackers) {
+    const size_t tracker_idx = tracker_value.second;
+    const auto tracker_type = prep_data.tracker_types[tracker_idx];
+
+    // Check if this tracker can be assigned to the measurement
+    bool can_assign = config_.can_assign_map.at(tracker_type)[static_cast<int>(measurement_label)];
+    if (!can_assign) continue;
+
+    // Calculate score for this tracker-measurement pair
+    const auto & tracked_object = prep_data.tracked_objects[tracker_idx];
+    const auto tracker_label = prep_data.tracker_labels[tracker_idx];
+
+    bool has_significant_shape_change = false;
+    double score = calculateScore(
+      tracked_object, tracker_label, measurement_object, measurement_label,
+      prep_data.tracker_inverse_covariances[tracker_idx], has_significant_shape_change);
+
+    if (score > INVALID_SCORE) {
+      association_data.entries.emplace_back(
+        types::AssociationEntry{tracker_idx, measurement_idx, score, has_significant_shape_change});
+    }
+  }
+}
+
+types::AssociationData DataAssociation::calcAssociationData(
+  const types::DynamicObjectList & measurements,
+  const std::list<std::shared_ptr<Tracker>> & trackers)
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  // Ensure that the detected_objects and list_tracker are not empty
+  if (measurements.objects.empty() || trackers.empty()) {
+    return types::AssociationData{};
+  }
+
+  // Preparation stage: build R-tree and pre-compute data
+  auto prep_data = prepareAssociationData(measurements, trackers);
+  types::AssociationData association_data = std::move(prep_data.association_data);
+
+  // Processing stage: process each measurement
+  for (auto it = measurements.objects.begin(); it != measurements.objects.end(); ++it) {
+    const size_t measurement_idx = std::distance(measurements.objects.begin(), it);
+    const MeasurementWithIndex measurement_with_idx(*it, measurement_idx);
+
+    const auto measurement_label = autoware::object_recognition_utils::getHighestProbLabel(
+      measurement_with_idx.object.classification);
     if (measurement_label >= types::NUM_LABELS) {
       RCLCPP_WARN(
         rclcpp::get_logger("DataAssociation"),
@@ -220,51 +284,9 @@ types::AssociationData DataAssociation::calcAssociationData(
       continue;
     }
 
-    // Get pre-computed maximum squared distance for this measurement class
-    const double max_squared_dist = max_squared_dist_per_class_[measurement_label];
-
-    // Use circle query instead of box for more precise filtering
-    Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
-
-    std::vector<ValueType> nearby_trackers;
-    nearby_trackers.reserve(std::min(size_t{100}, trackers.size()));  // Reasonable initial capacity
-
-    // Compute search bounding box (square that contains the circle)
-    const double max_dist = std::sqrt(max_squared_dist);
-    const Box query_box(
-      Point(measurement_point.get<0>() - max_dist, measurement_point.get<1>() - max_dist),
-      Point(measurement_point.get<0>() + max_dist, measurement_point.get<1>() + max_dist));
-    // Initial R-tree box query
-    rtree_.query(bgi::within(query_box), std::back_inserter(nearby_trackers));
-
-    // Process nearby trackers
-    for (const auto & tracker_value : nearby_trackers) {
-      const size_t tracker_idx = tracker_value.second;
-      const auto tracker_type = tracker_types[tracker_idx];
-
-      // Check if this tracker can be assigned to the measurement
-      bool can_assign =
-        config_.can_assign_map.at(tracker_type)[static_cast<int>(measurement_label)];
-      if (!can_assign) continue;
-
-      // Calculate score for this tracker-measurement pair
-      const auto & tracked_object = tracked_objects[tracker_idx];
-      const auto tracker_label = tracker_labels[tracker_idx];
-
-      bool has_significant_shape_change = false;
-      double score = calculateScore(
-        tracked_object, tracker_label, measurement_object, measurement_label,
-        tracker_inverse_covariances[tracker_idx], has_significant_shape_change);
-
-      if (score > INVALID_SCORE) {
-        types::AssociationEntry entry;
-        entry.tracker_idx = tracker_idx;
-        entry.measurement_idx = measurement_idx;
-        entry.score = score;
-        entry.has_significant_shape_change = has_significant_shape_change;
-        association_data.entries.push_back(entry);
-      }
-    }
+    processMeasurement(
+      measurement_with_idx.object, measurement_with_idx.index, measurement_label, prep_data,
+      association_data);
   }
 
   return association_data;
