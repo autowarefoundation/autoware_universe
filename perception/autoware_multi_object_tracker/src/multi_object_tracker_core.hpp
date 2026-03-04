@@ -107,10 +107,7 @@ struct ObjectProcessingResult
 struct PublishingData
 {
   autoware_perception_msgs::msg::TrackedObjects tracked_objects;
-  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
   size_t tracked_objects_size;
-  double min_extrapolation_time;
-  rclcpp::Time object_time;  // for tentative objects and published time
 };
 
 struct OptionalPublishingData
