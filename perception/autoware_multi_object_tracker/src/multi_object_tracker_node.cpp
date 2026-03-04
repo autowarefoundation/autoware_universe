@@ -176,7 +176,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   core::process_parameters(params_);
 
   ////// Initialize state
-  state_.init(params_, *this, std::bind(&MultiObjectTracker::onTrigger, this));
+  state_.init(
+    params_, *this, std::bind(&MultiObjectTracker::onMessage, this, std::placeholders::_1));
 
   ////// Create subscriptions and publishers
   // subscriptions
@@ -231,6 +232,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     time_keeper_ =
       std::make_shared<autoware_utils_debug::TimeKeeper>(detailed_processing_time_publisher_);
     state_.processor->setTimeKeeper(time_keeper_);
+  }
+}
+
+void MultiObjectTracker::onMessage(const size_t channel_index)
+{
+  if (channel_index == state_.input_manager->getTargetChannelIdx()) {
+    onTrigger();
   }
 }
 

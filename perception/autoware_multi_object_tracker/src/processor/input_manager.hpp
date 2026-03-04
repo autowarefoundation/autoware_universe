@@ -39,7 +39,7 @@ public:
     const types::InputChannel & input_channel, std::shared_ptr<Odometry> odometry,
     rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock);
 
-  void setTriggerFunction(std::function<void(const uint &)> func_trigger)
+  void setTriggerFunction(std::function<void(const size_t)> func_trigger)
   {
     func_trigger_ = func_trigger;
   }
@@ -74,7 +74,7 @@ private:
   size_t que_size_{30};
   std::deque<types::DynamicObjectList> objects_que_;
 
-  std::function<void(const uint &)> func_trigger_;
+  std::function<void(const size_t)> func_trigger_;
 
   int initial_count_{0};
   double latency_mean_{};
@@ -93,8 +93,8 @@ public:
     std::shared_ptr<Odometry> odometry, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock);
   void init(const std::vector<types::InputChannel> & input_channels);
 
-  void setTriggerFunction(std::function<void()> func_trigger) { func_trigger_ = func_trigger; }
-  void onTrigger(const uint & index) const;
+  void setTriggerFunction(std::function<void(size_t)> func_trigger);
+  size_t getTargetChannelIdx() const { return target_stream_idx_; }
   void onMessage(
     const size_t channel_index,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
@@ -112,7 +112,7 @@ private:
   size_t input_size_{};
   std::vector<std::shared_ptr<InputStream>> input_streams_;
 
-  std::function<void()> func_trigger_;
+  std::function<void(size_t)> func_trigger_;
   uint target_stream_idx_{0};
   double target_stream_latency_{0.2};        // [s]
   double target_stream_latency_std_{0.04};   // [s]

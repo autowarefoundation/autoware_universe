@@ -80,6 +80,7 @@ private:
   // callback functions
   void onTimer();
   void onTrigger();
+  void onMessage(const size_t channel_index);
 
   // publish processes
   void publish(const rclcpp::Time & time);
