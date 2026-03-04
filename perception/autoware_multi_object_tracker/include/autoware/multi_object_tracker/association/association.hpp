@@ -65,6 +65,15 @@ struct InverseCovariance2D
   double inv11;  // (a / det)
 };
 
+struct PreparationData
+{
+  std::vector<types::DynamicObject> tracked_objects;
+  std::vector<std::uint8_t> tracker_labels;
+  std::vector<TrackerType> tracker_types;
+  std::vector<InverseCovariance2D> tracker_inverse_covariances;
+  types::AssociationData association_data;
+};
+
 class DataAssociation
 {
 private:
@@ -80,11 +89,17 @@ private:
   // class
   std::vector<double> max_squared_dist_per_class_;
 
-  // Cache of squared distances for each class pair to avoid sqrt in inner loop
-  Eigen::MatrixXd squared_distance_matrix_;
-
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
+
+  // Preparation and processing stages for association
+  PreparationData prepareAssociationData(
+    const types::DynamicObjectList & measurements,
+    const std::list<std::shared_ptr<Tracker>> & trackers);
+  void processMeasurement(
+    const types::DynamicObject & measurement_object, size_t measurement_idx,
+    const std::uint8_t measurement_label, const PreparationData & prep_data,
+    types::AssociationData & association_data);
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
