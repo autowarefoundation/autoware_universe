@@ -30,7 +30,7 @@ namespace autoware::multi_object_tracker
 {
 
 MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
-: last_published_time(0, 0, RCL_ROS_TIME), last_updated_time(0, 0, RCL_ROS_TIME)
+: last_publish_time(0, 0, RCL_ROS_TIME), last_updated_time(0, 0, RCL_ROS_TIME)
 {
 }
 
@@ -56,7 +56,7 @@ void MultiObjectTrackerInternalState::init(
   processor = std::make_unique<TrackerProcessor>(
     params.processor_config, params.associator_config, params.input_channels_config);
 
-  last_published_time = node.now();
+  last_publish_time = node.now();
   last_updated_time = node.now();
 }
 
@@ -179,9 +179,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
   }
 }
 
-void process_objects(
+void process_objects_(
   const types::ObjectsWithAssociation & objects_data, const rclcpp::Time & current_time,
-  [[maybe_unused]] const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
   const rclcpp::Logger & logger)
 {
@@ -238,14 +237,14 @@ bool should_publish(
 
   const double publisher_period = 1.0 / params.publish_rate;
   const double minimum_publish_interval = publisher_period * minimum_publish_interval_ratio;
-  const auto elapsed_time = (current_time - state.last_published_time).seconds();
+  const auto elapsed_time = (current_time - state.last_publish_time).seconds();
 
   if (elapsed_time < minimum_publish_interval) {
     return false;
   }
 
   // if there was update after publishing, publish new messages
-  bool should_publish = state.last_published_time < state.last_updated_time;
+  bool should_publish = state.last_publish_time < state.last_updated_time;
 
   // if there was no update, publish if the elapsed time is longer than the maximum publish latency
   // in this case, it will perform extrapolate/remove old objects
@@ -253,11 +252,6 @@ bool should_publish(
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
 
   return should_publish;
-}
-
-void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state)
-{
-  state.processor->prune(time);
 }
 
 autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
@@ -268,8 +262,6 @@ autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
   tracked_objects.header.frame_id = params.world_frame_id;
   const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
   state.processor->getTrackedObjects(object_time, tracked_objects);
-
-  state.last_published_time = current_time;
 
   return tracked_objects;
 }
@@ -296,6 +288,123 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
     logger, "No odometry information available at the publishing time: %.9f",
     publish_time.seconds());
   return std::nullopt;
+}
+
+MeasurementProcessingResult process_measurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
+{
+  MeasurementProcessingResult result;
+  result.should_process = false;
+
+  const auto objects = state.input_manager->processMessage(channel_index, msg);
+  if (!objects) {
+    return result;
+  }
+
+  const auto association_result = state.processor->associate(*objects);
+  state.input_manager->push(channel_index, *objects, association_result);
+
+  result.objects = objects;
+  result.association_result = association_result;
+  result.measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
+  result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
+
+  return result;
+}
+
+ObjectProcessingResult process_objects_batch(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger)
+{
+  ObjectProcessingResult result;
+  result.should_publish = false;
+
+  // get objects from the input manager and run process
+  const auto objects_with_associations = get_objects(current_time, state);
+  if (!objects_with_associations) {
+    return result;
+  }
+
+  // Get latest time for debug timing
+  result.latest_time = objects_with_associations->back().getTimestamp();
+
+  // process start - start measurement time before processing
+  debugger.startMeasurementTime(current_time, result.latest_time);
+
+  // run process for each DynamicObject
+  for (const auto & objects_data : *objects_with_associations) {
+    process_objects_(objects_data, current_time, state, debugger, logger);
+  }
+
+  // process end - end measurement time after processing
+  debugger.endMeasurementTime(current_time);
+
+  // Publish immediately if delay compensation is disabled
+  result.should_publish = !params.enable_delay_compensation;
+
+  return result;
+}
+
+PublishingData prepare_publishing_data(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  const rclcpp::Logger & logger)
+{
+  PublishingData result;
+
+  /* tracker pruning*/
+  state.processor->prune(publish_time);
+
+  // Get tracked objects
+  result.tracked_objects = get_tracked_objects(publish_time, current_time, params, state);
+  result.tracked_objects_size = result.tracked_objects.objects.size();
+
+  // Get merged objects
+  result.merged_objects = get_merged_objects(publish_time, current_time, params, state, logger);
+
+  // Calculate min_extrapolation_time
+  result.min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
+
+  // Calculate object_time
+  result.object_time = params.enable_delay_compensation ? current_time : publish_time;
+
+  // Update last_publish_time
+  state.last_publish_time = current_time;
+
+  return result;
+}
+
+OptionalPublishingData prepare_optional_publishing_data(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger)
+{
+  OptionalPublishingData result;
+
+  // Get merged objects
+  if (params.publish_merged_objects) {
+    result.merged_objects = get_merged_objects(publish_time, current_time, params, state, logger);
+  }
+
+  // Calculate min_extrapolation_time
+  result.min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
+  result.tracked_objects_size = tracked_objects_size;
+
+  // Calculate object_time
+  result.object_time = params.enable_delay_compensation ? current_time : publish_time;
+
+  // Prepare tentative objects
+  result.should_publish_tentative = debugger.shouldPublishTentativeObjects();
+  if (result.should_publish_tentative) {
+    result.tentative_objects.header.frame_id = params.world_frame_id;
+    state.processor->getTentativeObjects(result.object_time, result.tentative_objects);
+  }
+
+  return result;
 }
 
 }  // namespace core

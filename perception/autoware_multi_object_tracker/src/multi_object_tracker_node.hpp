@@ -70,7 +70,7 @@ private:
 
   // callback functions
   void onTimer();
-  void onTrigger();
+  void processObjects();
   void onMeasurement(
     const size_t channel_index,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
