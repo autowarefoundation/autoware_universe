@@ -257,17 +257,13 @@ UncrossableBoundRTree build_uncrossable_boundaries_rtree(
  * If it is within the segment's bounds, it returns the projection point. If it's outside,
  * an error is returned indicating the relative position.
  *
- * The `swap_points` flag controls the order of the returned pair, useful when projection
- * direction matters (e.g., from ego to boundary vs. from boundary to ego).
- *
  * @param p            The point to be projected.
  * @param segment      The line segment to project onto.
- * @param swap_points  Whether to swap the order of the original and projected point in the result.
  * @return A tuple containing the original point, projection point, and the distance between them,
  *         or an error message if the point lies outside the segment.
  */
-tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment_projection(
-  const Point2d & p, const Segment2d & segment, const bool swap_points = false);
+tl::expected<std::pair<Point2d, double>, std::string> point_to_segment_projection(
+  const Point2d & p, const Segment2d & segment);
 
 /**
  * @brief Computes the nearest projection between two segments, used to assess lateral distance.

@@ -263,7 +263,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   const std::string world_frame_id = "map";      // Assuming map is the world frame ID
   const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
   const auto odometry = std::make_shared<autoware::multi_object_tracker::Odometry>(
-    *node, world_frame_id, ego_frame_id, true);
+    node->get_logger(), node->get_clock(), tf_buffer, world_frame_id, ego_frame_id, true);
 
   auto processor_config = createProcessorConfig();
   const auto associator_config = createAssociatorConfig();

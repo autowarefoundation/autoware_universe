@@ -146,7 +146,6 @@ LaneSegmentContext::get_first_traffic_light_on_route(
       unknown_element.status = TrafficLightElement::UNKNOWN;
       unknown_element.confidence = 0.0f;
       result.elements = {unknown_element};
-      result.predictions.clear();
     }
     return result;
   }

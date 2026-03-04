@@ -1358,14 +1358,9 @@
               "type": "boolean",
               "description": "Flag to enable yield maneuver during shifting.",
               "default": "false"
-            },
-            "enable_signalling_during_yield": {
-              "type": "boolean",
-              "description": "Flag to enable signalling during yield maneuver.",
-              "default": "false"
             }
           },
-          "required": ["enable", "enable_during_shifting", "enable_signalling_during_yield"],
+          "required": ["enable", "enable_during_shifting"],
           "additionalProperties": false
         },
         "cancel": {
@@ -1421,6 +1416,12 @@
               "type": "boolean",
               "description": "if true, module doesn't wait deceleration and outputs avoidance path by best effort margin.",
               "default": "true"
+            },
+            "candidate_path_turn_signal": {
+              "type": "string",
+              "enum": ["none", "stopped_candidate", "all_candidate"],
+              "description": "policy for turn signal output during planWaitingApproval (candidate path). 'none': never output turn signal for candidate paths. 'stopped_candidate': output turn signal only when the vehicle is stopped and a candidate path exists (default behavior). 'all_candidate': always output turn signal whenever a candidate path exists.",
+              "default": "none"
             }
           },
           "required": ["make_approval_request"],

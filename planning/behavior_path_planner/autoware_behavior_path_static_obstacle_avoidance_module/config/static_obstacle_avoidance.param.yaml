@@ -283,7 +283,6 @@
       yield:
         enable: true                                    # [-]
         enable_during_shifting: false                   # [-]
-        enable_signalling_during_yield: false           # [-]
 
       # For stop maneuver
       stop:
@@ -313,6 +312,11 @@
         lateral_margin: "best_effort"                   # [-]
         # if true, module doesn't wait deceleration and outputs avoidance path by best effort margin.
         use_shorten_margin_immediately: true            # [-]
+        # policy for turn signal output during candidate path (waiting approval).
+        # "none"             : never output turn signal for candidate paths.
+        # "stopped_candidate": output turn signal only when vehicle is stopped and candidate path exists.
+        # "all_candidate"    : always output turn signal whenever a candidate path exists.
+        candidate_path_turn_signal: "none" # [-]
 
       # --------------------------------------
       # FOLLOWING PARAMETERS ARE FOR DEVELOPER

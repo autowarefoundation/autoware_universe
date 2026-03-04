@@ -14,6 +14,7 @@
 
 #include "map_based_prediction/predictor_vru.hpp"
 
+#include "map_based_prediction/data_structure.hpp"
 #include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/utils.hpp"
 
@@ -430,7 +431,7 @@ bool PredictorVru::hasPotentialToReachWithHistory(
   // If this is the first time observing this crossing point, initialize its intention state
   if (itr == last_object_data.intention_history.end()) {
     last_object_data.intention_history.push_back(
-      Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
+      CrosswalkUser::Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
     return has_crossing_intention;
   }
 
@@ -691,19 +692,19 @@ void PredictorVru::updateCrosswalkUserHistory(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const auto now = node_.get_clock()->now();
-  CrosswalkUserData crosswalk_user_data;
-  crosswalk_user_data.header = header;
-  crosswalk_user_data.tracked_object = object;
+  CrosswalkUser crosswalk_user;
+  crosswalk_user.header = header;
+  crosswalk_user.tracked_object = object;
 
   if (crosswalk_users_history_.count(object_id) == 0) {
-    crosswalk_users_history_.emplace(object_id, std::deque<CrosswalkUserData>{crosswalk_user_data});
+    crosswalk_users_history_.emplace(object_id, std::deque<CrosswalkUser>{crosswalk_user});
     return;
   }
 
   const auto last_object_data = crosswalk_users_history_.at(object_id).back();
-  crosswalk_user_data.intention_history = last_object_data.intention_history;
-  crosswalk_user_data.is_crossing = last_object_data.is_crossing;
-  crosswalk_users_history_.at(object_id).push_back(crosswalk_user_data);
+  crosswalk_user.intention_history = last_object_data.intention_history;
+  crosswalk_user.is_crossing = last_object_data.is_crossing;
+  crosswalk_users_history_.at(object_id).push_back(crosswalk_user);
 }
 
 std::string PredictorVru::tryMatchNewObjectToDisappeared(
