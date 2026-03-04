@@ -14,6 +14,7 @@
 
 #include "multi_object_tracker_core.hpp"
 
+#include <tf2_ros/create_timer_interface.hpp>
 #include <tf2_ros/create_timer_ros.h>
 
 #include <functional>
@@ -178,11 +179,14 @@ void process_parameters(MultiObjectTrackerParameters & params)
 }
 
 void process_objects(
-  const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
-  [[maybe_unused]] const MultiObjectTrackerParameters & params,
+  const std::pair<types::DynamicObjectList, types::AssociationResult> & objects_data,
+  const rclcpp::Time & current_time, [[maybe_unused]] const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
   const rclcpp::Logger & logger)
 {
+  const auto & objects = objects_data.first;
+  const auto & association_result = objects_data.second;
+
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
     rclcpp::Time(objects.header.stamp, current_time.get_clock_type());
@@ -202,7 +206,6 @@ void process_objects(
   state.processor->predict(measurement_time, ego_pose);
 
   /* object association */
-  const auto association_result = state.processor->associate(objects);
   const types::AssociatedObjects associated_objects{objects, association_result};
 
   // Collect debug information - tracker list, existence probabilities, association results

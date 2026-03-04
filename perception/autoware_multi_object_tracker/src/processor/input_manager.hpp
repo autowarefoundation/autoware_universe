@@ -24,13 +24,14 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-using ObjectsList = std::vector<types::DynamicObjectList>;
+using ObjectsList = std::vector<std::pair<types::DynamicObjectList, types::AssociationResult>>;
 
 class InputStream
 {
@@ -44,7 +45,9 @@ public:
     func_trigger_ = func_trigger;
   }
 
-  void onMessage(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+  std::optional<types::DynamicObjectList> processMessage(
+    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+  void push(const types::DynamicObjectList & objects, const types::AssociationResult & association);
   void updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time);
 
   bool isTimeInitialized() const { return initial_count_ > 0; }
@@ -72,7 +75,7 @@ private:
   rclcpp::Clock::SharedPtr clock_;
 
   size_t que_size_{30};
-  std::deque<types::DynamicObjectList> objects_que_;
+  std::deque<std::pair<types::DynamicObjectList, types::AssociationResult>> objects_que_;
 
   std::function<void(const size_t)> func_trigger_;
 
@@ -95,9 +98,12 @@ public:
 
   void setTriggerFunction(std::function<void(size_t)> func_trigger);
   size_t getTargetChannelIdx() const { return target_stream_idx_; }
-  void onMessage(
+  std::optional<types::DynamicObjectList> processMessage(
     const size_t channel_index,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+  void push(
+    const size_t channel_index, const types::DynamicObjectList & objects,
+    const types::AssociationResult & association);
 
   bool getObjects(const rclcpp::Time & now, ObjectsList & objects_list);
 

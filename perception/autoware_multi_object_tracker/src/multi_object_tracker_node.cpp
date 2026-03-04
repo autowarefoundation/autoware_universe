@@ -177,7 +177,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   ////// Initialize state
   state_.init(
-    params_, *this, std::bind(&MultiObjectTracker::onMessage, this, std::placeholders::_1));
+    params_, *this, nullptr);
 
   ////// Create subscriptions and publishers
   // subscriptions
@@ -194,8 +194,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
       func = std::bind(
-        &InputManager::onMessage, state_.input_manager.get(), input_channel.index,
-        std::placeholders::_1);
+        &MultiObjectTracker::onMeasurement, this, input_channel.index, std::placeholders::_1);
 
     sub_objects_array_.at(index) =
       create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
@@ -235,8 +234,25 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void MultiObjectTracker::onMessage(const size_t channel_index)
+void MultiObjectTracker::onMeasurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
+  const auto objects = state_.input_manager->processMessage(channel_index, msg);
+  if (!objects) {
+    return;
+  }
+
+  const auto association_result = state_.processor->associate(*objects);
+  state_.input_manager->push(channel_index, *objects, association_result);
+
+  // Collect debug information - tracker list, existence probabilities, association results
+  const rclcpp::Time measurement_time =
+    rclcpp::Time(objects->header.stamp, this->now().get_clock_type());
+  const types::AssociatedObjects associated_objects{*objects, association_result};
+  debugger_->collectObjectInfo(
+    measurement_time, state_.processor->getListTracker(), associated_objects);
+
   if (channel_index == state_.input_manager->getTargetChannelIdx()) {
     onTrigger();
   }
@@ -253,7 +269,7 @@ void MultiObjectTracker::onTrigger()
   if (!objects_list) return;
 
   // process start
-  const rclcpp::Time latest_time(objects_list->back().header.stamp);
+  const rclcpp::Time latest_time(objects_list->back().first.header.stamp);
   debugger_->startMeasurementTime(this->now(), latest_time);
 
   // run process for each DynamicObject
@@ -269,7 +285,7 @@ void MultiObjectTracker::onTrigger()
 
   // Publish without delay compensation
   if (!publish_timer_) {
-    const auto latest_object_time = rclcpp::Time(objects_list->back().header.stamp);
+    const auto latest_object_time = rclcpp::Time(objects_list->back().first.header.stamp);
     publish(latest_object_time);
   }
 }
