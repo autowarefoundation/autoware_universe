@@ -1,0 +1,6 @@
+from, to
+# this line is comment
+CAR, 1
+PEDESTRIAN, 3 # after hash, it will be comment
+# this line is also comment
+UNKNOWN, 5
