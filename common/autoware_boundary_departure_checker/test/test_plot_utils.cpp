@@ -47,14 +47,23 @@ std::string to_snake_case(const std::string & str)
 namespace autoware::boundary_departure_checker
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
-void save_figure(const std::string & sub_dir)
-{
-  auto plt = autoware::pyplot::import();
-  const std::string file_path = __FILE__;
+static pybind11::scoped_interpreter guard{};
 
+void save_figure(autoware::pyplot::PyPlot & plt, const std::string & sub_dir)
+{
+  const std::string file_path = __FILE__;
   const auto * test_info = ::testing::UnitTest::GetInstance()->current_test_info();
-  std::string filename =
-    test_info ? to_snake_case(std::string(test_info->name())) + ".png" : "unknown_test.png";
+
+  if (!test_info) return;
+
+  // 1. Get the raw test name (e.g., "test_create_vehicle_footprints/NonZeroMargin")
+  std::string test_name = test_info->name();
+
+  // 2. Replace '/' with '_' to prevent FileNotFoundError in Python
+  std::replace(test_name.begin(), test_name.end(), '/', '_');
+
+  // 3. Convert to snake_case and add extension
+  std::string filename = to_snake_case(test_name) + ".png";
 
   size_t pos = file_path.rfind(TEST_PACKAGE_NAME);
   if (pos != std::string::npos) {
@@ -65,6 +74,7 @@ void save_figure(const std::string & sub_dir)
     }
 
     std::filesystem::create_directories(output_path);
+    // Use the passed plt reference
     plt.savefig(Args(output_path + filename), Kwargs("dpi"_a = 150));
     plt.clf();
   }
