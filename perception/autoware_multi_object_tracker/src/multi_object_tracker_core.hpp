@@ -141,12 +141,13 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger);
 
 void process_objects_(
   const types::ObjectsWithAssociation & objects_with_associations,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger);
+  const rclcpp::Logger & logger);
 
 // High-level orchestration functions
 ObjectProcessingResult process_objects_batch(

@@ -244,7 +244,8 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger)
 {
   MeasurementProcessingResult result;
   result.should_process = false;
@@ -262,13 +263,18 @@ MeasurementProcessingResult process_measurement(
   result.measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
   result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
 
+  // Collect debug information - tracker list, existence probabilities, association results
+  const types::AssociatedObjects associated_objects{*objects, association_result};
+  debugger.collectObjectInfo(
+    result.measurement_time, state.processor->getListTracker(), associated_objects);
+
   return result;
 }
 
 void process_objects_(
   const types::ObjectsWithAssociation & objects_with_associations,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger)
+  const rclcpp::Logger & logger)
 {
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
@@ -291,10 +297,6 @@ void process_objects_(
   /* object association */
   const types::AssociatedObjects associated_objects{
     objects_with_associations.objects, objects_with_associations.association};
-
-  // Collect debug information - tracker list, existence probabilities, association results
-  debugger.collectObjectInfo(
-    measurement_time, state.processor->getListTracker(), associated_objects);
 
   /* tracker update */
   state.processor->update(associated_objects);
@@ -328,7 +330,7 @@ ObjectProcessingResult process_objects_batch(
 
   // run process for each DynamicObject
   for (const auto & objects_data : objects_with_associations) {
-    process_objects_(objects_data, current_time, state, debugger, logger);
+    process_objects_(objects_data, current_time, state, logger);
   }
 
   // Update last_updated_time and last_tracker_time
