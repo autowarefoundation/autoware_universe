@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <vector>
 
+// cspell: ignore semseg
+
 std::string get_file_path(const std::string & filename)
 {
   const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox");
@@ -74,7 +76,7 @@ TEST(LabelProcessing, ReadSemsegColorMapFile)
   EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[2]), 2);
 
   EXPECT_EQ(semseg_color_map[1].id, 1);
-  EXPECT_EQ(semseg_color_map[1].name, "buildling");
+  EXPECT_EQ(semseg_color_map[1].name, "building");
   EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[0]), 70);
   EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[1]), 75);
   EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[2]), 80);
@@ -88,7 +90,7 @@ TEST(LabelProcessing, ReadSemsegColorMapFile)
   // check name-to-id mapping is correct
   ASSERT_EQ(semseg_name_to_id_map.size(), 3);
   EXPECT_EQ(semseg_name_to_id_map["others"], 0);
-  EXPECT_EQ(semseg_name_to_id_map["buildling"], 1);
+  EXPECT_EQ(semseg_name_to_id_map["building"], 1);
   EXPECT_EQ(semseg_name_to_id_map["wall"], 2);
 }
 
