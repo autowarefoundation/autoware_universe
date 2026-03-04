@@ -21,7 +21,6 @@
   <depend>autoware_utils_geometry</depend>
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
-  <depend>glog</depend>
   <depend>mussp</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>

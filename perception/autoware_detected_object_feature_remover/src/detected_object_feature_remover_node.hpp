@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2021 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
 #ifndef DETECTED_OBJECT_FEATURE_REMOVER_NODE_HPP_
 #define DETECTED_OBJECT_FEATURE_REMOVER_NODE_HPP_
 
-#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware/detected_object_feature_remover/convert.hpp"
 
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
-#include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 
 #include <memory>
 
@@ -37,9 +38,9 @@ public:
 private:
   rclcpp::Subscription<DetectedObjectsWithFeature>::SharedPtr sub_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_;
+  convert::ConvertParams convert_params_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
   void objectCallback(const DetectedObjectsWithFeature::ConstSharedPtr input);
-  void convert(const DetectedObjectsWithFeature & objs_with_feature, DetectedObjects & objs);
 };
 
 }  // namespace autoware::detected_object_feature_remover

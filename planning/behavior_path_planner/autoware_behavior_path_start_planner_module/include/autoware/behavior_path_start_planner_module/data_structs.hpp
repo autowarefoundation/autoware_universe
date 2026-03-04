@@ -291,6 +291,7 @@ struct StartPlannerParameters
     object_types_to_check_for_path_generation{};
   double center_line_path_interval{0.0};
   double lane_departure_check_expansion_margin{0.0};
+  double minimum_shift_length{0.5};
 
   // shift pull out
   bool check_shift_path_lane_departure{false};
@@ -340,6 +341,8 @@ struct StartPlannerParameters
   AstarParam astar_parameters;
   RRTStarParam rrt_star_parameters;
 
+  // turn signal
+  std::string turn_signal_on_centerline_start;
   // stop condition
   double maximum_deceleration_for_stop{0.0};
   double maximum_jerk_for_stop{0.0};

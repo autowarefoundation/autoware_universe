@@ -816,6 +816,12 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
 
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, ctrl_cmd_as_pedal_pos.acc);
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, ctrl_cmd_as_pedal_pos.acc);
+
+    if (m_enable_slope_compensation) {
+      const double pitch_limited =
+        std::clamp(control_data.slope_angle, m_min_pitch_rad, m_max_pitch_rad);
+      ctrl_cmd_as_pedal_pos.acc -= 9.81 * std::sin(std::abs(pitch_limited));
+    }
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_SLOPE_APPLIED, ctrl_cmd_as_pedal_pos.acc);
 
     RCLCPP_DEBUG(

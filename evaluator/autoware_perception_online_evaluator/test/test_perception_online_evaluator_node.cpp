@@ -26,7 +26,6 @@
 
 #include "boost/lexical_cast.hpp"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -96,11 +95,7 @@ protected:
     uuid_ = generate_uuid();
   }
 
-  ~EvalTest() override
-  {
-    rclcpp::shutdown();
-    google::ShutdownGoogleLogging();
-  }
+  ~EvalTest() override { rclcpp::shutdown(); }
 
   void publishEgoTF(const double time = 0.0)
   {

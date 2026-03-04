@@ -28,3 +28,30 @@ safety_filter:
       default_value: 2.0
       description: Minimum acceptable time to collision
       read_only: false
+
+  vehicle_constraint:
+    max_speed:
+      type: double
+      default_value: 16.7
+      description: Maximum allowed speed (m/s)
+      read_only: false
+    max_acceleration:
+      type: double
+      default_value: 5.0
+      description: Maximum allowed acceleration (m/s^2)
+      read_only: false
+    max_deceleration:
+      type: double
+      default_value: 5.0
+      description: Maximum allowed deceleration (m/s^2, positive but represents deceleration)
+      read_only: false
+    max_steering_angle:
+      type: double
+      default_value: 0.8
+      description: Maximum allowed steering angle (rad)
+      read_only: false
+    max_steering_rate:
+      type: double
+      default_value: 0.3
+      description: Maximum allowed steering rate (rad/s)
+      read_only: false
