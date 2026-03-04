@@ -53,7 +53,7 @@ void InputStream::push(
   const types::DynamicObjectList & objects, const types::AssociationResult & association)
 {
   // Move the objects_with_uncertainty to the objects queue
-  objects_que_.push_back(std::make_pair(objects, association));
+  objects_que_.push_back(types::ObjectsWithAssociation{objects, association});
   while (objects_que_.size() > que_size_) {
     objects_que_.pop_front();
   }
@@ -217,8 +217,7 @@ void InputStream::getObjectsOlderThan(
   }
 
   for (const auto & objects_pair : objects_que_) {
-    const auto & objects = objects_pair.first;
-    const rclcpp::Time object_time = rclcpp::Time(objects.header.stamp);
+    const rclcpp::Time object_time = objects_pair.getTimestamp();
     // ignore objects older than the specified duration
     if (object_time < object_earliest_time) {
       continue;
@@ -232,7 +231,7 @@ void InputStream::getObjectsOlderThan(
 
   // remove objects older than 'object_latest_time'
   while (!objects_que_.empty()) {
-    const rclcpp::Time object_time = rclcpp::Time(objects_que_.front().first.header.stamp);
+    const rclcpp::Time object_time = objects_que_.front().getTimestamp();
     if (object_time < object_latest_time) {
       objects_que_.pop_front();
     } else {
@@ -414,13 +413,13 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
 
   // Sort objects by timestamp
   std::sort(objects_list.begin(), objects_list.end(), [](const auto & a, const auto & b) {
-    return (rclcpp::Time(a.first.header.stamp) - rclcpp::Time(b.first.header.stamp)).seconds() < 0;
+    return (a.getTimestamp() - b.getTimestamp()).seconds() < 0;
   });
 
   // Update the latest exported object time
   bool is_any_object = !objects_list.empty();
   if (is_any_object) {
-    latest_exported_object_time_ = rclcpp::Time(objects_list.back().first.header.stamp);
+    latest_exported_object_time_ = objects_list.back().getTimestamp();
   } else {
     // check time jump back
     if (now < latest_exported_object_time_) {

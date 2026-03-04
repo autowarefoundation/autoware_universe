@@ -31,7 +31,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using ObjectsList = std::vector<std::pair<types::DynamicObjectList, types::AssociationResult>>;
+using ObjectsList = types::ObjectsList;
 
 class InputStream
 {
@@ -75,7 +75,7 @@ private:
   rclcpp::Clock::SharedPtr clock_;
 
   size_t que_size_{30};
-  std::deque<std::pair<types::DynamicObjectList, types::AssociationResult>> objects_que_;
+  std::deque<types::ObjectsWithAssociation> objects_que_;
 
   std::function<void(const size_t)> func_trigger_;
 
