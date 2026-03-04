@@ -21,11 +21,11 @@
       
       
       <link rel="icon" href="../../docs/assets/images/autoware-foundation.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
-        <title>steer_offset_estimator - Autoware Universe Documentation</title>
+        <title>Steer Offset Estimator - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#steer_offset_estimator" class="md-skip">
+        <a href="#steer-offset-estimator" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              steer_offset_estimator
+              Steer Offset Estimator
             
           </span>
         </div>
@@ -22802,6 +22802,68 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#steering-offset-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steering Offset Update
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-calibration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Calibration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Calibration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration Modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calibration-execution-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calibration Execution Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#inputs-outputs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -22810,25 +22872,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Inputs / Outputs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#input" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input
-      
-    </span>
-  </a>
-  
 </li>
         
           <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#services" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output
+        Services
       
     </span>
   </a>
@@ -22871,9 +22921,9 @@
   
 
 
-<div><h1 id="steer_offset_estimator">steer_offset_estimator<a class="headerlink" href="#steer_offset_estimator" title="Permanent link">#</a></h1>
+<div><h1 id="steer-offset-estimator">Steer Offset Estimator<a class="headerlink" href="#steer-offset-estimator" title="Permanent link">#</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
-<p>The role of this node is to automatically calibrate <code>steer_offset</code> used in the <code>vehicle_interface</code> node.</p>
+<p>The role of this node is to automatically estimate the <code>steer_offset</code> used in the lateral controller. The value estimated is the residual bias (on top of the static mechanical bias specified in vehicle calibration files). It also allow for auto or manual calibration of total system bias in real time.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>This module estimates the steering offset using a <strong>Kalman Filter</strong> algorithm based on vehicle kinematic model constraints.</p>
 <h3 id="kinematic-model">Kinematic Model<a class="headerlink" href="#kinematic-model" title="Permanent link">#</a></h3>
@@ -22969,8 +23019,36 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <li>angular velocity &lt; <code>max_ang_velocity</code> (avoids tire slip and dynamic noise)</li>
 </ul>
 <p>This Kalman Filter approach provides continuous, real-time calibration of steering offset during normal driving operations, with process noise allowing adaptation to changing conditions and measurement noise handling sensor uncertainties.</p>
-<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
-<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<h2 id="steering-offset-update">Steering Offset Update<a class="headerlink" href="#steering-offset-update" title="Permanent link">#</a></h2>
+<p>Once the estimator converges (i.e covariance &lt; <code>covariance_th</code>), if the difference between the new offset estimate and last published estimate is greater than <code>update_offset_th</code>, then the new offset estimate is published to allow the controller to get the latest value to improve the control performance.</p>
+<h2 id="system-calibration">System Calibration<a class="headerlink" href="#system-calibration" title="Permanent link">#</a></h2>
+<p>In addition to publishing the offset update for control purposes, the node allows the user to apply the estimated offset to the vehicle system through three distinct modes and a set of safety validation gates.</p>
+<h3 id="calibration-modes">Calibration Modes<a class="headerlink" href="#calibration-modes" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>OFF</strong>: No system calibration, the estimator only provides offset updates for control purposes.</li>
+<li><strong>MANUAL</strong>: Calibration is triggered only via a dedicated ROS 2 service call (<code>~/trigger_steer_offset_calibration</code>).</li>
+<li><strong>AUTO</strong>: The system automatically triggers a calibration update when the internal stability and confidence conditions are met.</li>
+</ul>
+<h3 id="calibration-execution-logic">Calibration Execution Logic<a class="headerlink" href="#calibration-execution-logic" title="Permanent link">#</a></h3>
+<p>A calibration is executed when a service call is received, or in case of <strong>AUTO</strong> mode update conditions are satisfied.
+When calibration is triggered the node will update the persistent YAML file (if parameter is enabled) and publish the offset update value on the topic <code>~/steering_offset_update</code>.</p>
+<p>Calibration is executed only if specific validation checks are satisfied.</p>
+<h4 id="1-manual-mode-checks">1. Manual Mode Checks<a class="headerlink" href="#1-manual-mode-checks" title="Permanent link">#</a></h4>
+<p>When a service call is received, the following checks are performed:</p>
+<ul>
+<li><strong>Confidence</strong>: The estimation covariance must be below <code>covariance_threshold</code>.</li>
+<li><strong>Safety</strong>: The total offset must not exceed <code>max_offset_limit</code>.</li>
+</ul>
+<h4 id="2-auto-mode-checks">2. Auto Mode Checks<a class="headerlink" href="#2-auto-mode-checks" title="Permanent link">#</a></h4>
+<p>In addition to the Manual gates, Auto mode applies more restrictive temporal and significance filters:</p>
+<ul>
+<li><strong>Steady State</strong>: Valid estimation results must be continuous for at least <code>min_steady_duration</code>.</li>
+<li><strong>Update Interval</strong>: Time since the last update must exceed <code>min_update_interval</code>.</li>
+<li><strong>Significance</strong>: The difference between the current estimate and the registered offset must exceed <code>error_threshold</code>.</li>
+</ul>
+<h2 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">#</a></h2>
+<h3 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h3>
+<h4 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -22992,7 +23070,7 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 </tr>
 </tbody>
 </table>
-<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<h4 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -23013,14 +23091,31 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>covariance of steering offset</td>
 </tr>
 <tr>
-<td><code>~/output/steering_offset_error</code></td>
+<td><code>~/output/steering_offset_update</code></td>
 <td><code>autoware_internal_debug_msgs::msg::Float32Stamped</code></td>
-<td>Difference between estimate and current value</td>
+<td>updated steering offset value</td>
 </tr>
 <tr>
 <td><code>~/output/debug_info</code></td>
 <td><code>autoware_internal_debug_msgs::msg::StringStamped</code></td>
 <td>debug info</td>
+</tr>
+</tbody>
+</table>
+<h3 id="services">Services<a class="headerlink" href="#services" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/trigger_steer_offset_calibration</code></td>
+<td><code>std_srvs::srv::Trigger</code></td>
+<td>trigger steering offset calibration</td>
 </tr>
 </tbody>
 </table>
@@ -23040,70 +23135,70 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>initial_covariance</td>
 <td>float</td>
 <td>steer offset is larger than tolerance</td>
-<td>1000</td>
+<td>1000.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>update_hz</td>
 <td>float</td>
 <td>update hz of steer data</td>
-<td>10</td>
+<td>10.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>initial_offset</td>
 <td>float</td>
 <td>initial steer offset value</td>
-<td>0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>process_noise_covariance</td>
 <td>float</td>
 <td>process noise covariance for Kalman filter</td>
-<td>0.01</td>
+<td>5e-8</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>measurement_noise_covariance</td>
 <td>float</td>
 <td>measurement noise covariance for Kalman filter</td>
-<td>0.01</td>
+<td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>denominator_floor</td>
 <td>float</td>
 <td>minimum value for denominator to avoid numerical issues</td>
-<td>1e-12</td>
+<td>1.0e-12</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>covariance_floor</td>
 <td>float</td>
 <td>minimum value for covariance to avoid numerical issues</td>
-<td>1e-12</td>
+<td>1.0e-12</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>min_velocity</td>
 <td>float</td>
 <td>velocity below this value is not used</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>max_steer</td>
 <td>float</td>
 <td>offset estimation is skipped if steering is above this value</td>
-<td>0.03</td>
+<td>0.02</td>
 <td>≥0.0</td>
 </tr>
 <tr>
 <td>max_steer_rate</td>
 <td>float</td>
 <td>offset estimation is skipped if steering rate is above this value</td>
-<td>0.02</td>
+<td>0.01</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23117,7 +23212,7 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>max_steer_buffer</td>
 <td>float</td>
 <td>duration to keep steering values in the buffer</td>
-<td>1</td>
+<td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23125,6 +23220,55 @@ P_k = P_{prior} - \frac{P_{prior} \times \phi^2 \times P_{prior}}{denom}
 <td>float</td>
 <td>max valid age of previous pose which can be used for twist calculation</td>
 <td>0.5</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.mode</td>
+<td>string</td>
+<td>offset calibration mode</td>
+<td>off</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>calibration.update_offset_th</td>
+<td>float</td>
+<td>error threshold for offset calibration</td>
+<td>0.001</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.covariance_th</td>
+<td>float</td>
+<td>covariance threshold for offset calibration</td>
+<td>0.0015</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.min_steady_duration</td>
+<td>float</td>
+<td>min duration of continuous estimation data for offset calibration</td>
+<td>10.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.max_offset_limit</td>
+<td>float</td>
+<td>max offset limit for offset calibration</td>
+<td>0.05</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.min_update_interval</td>
+<td>float</td>
+<td>min interval between offset calibration updates</td>
+<td>100.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>calibration.warning_offset_th</td>
+<td>float</td>
+<td>offset threshold to trigger a warning</td>
+<td>0.005</td>
 <td>≥0.0</td>
 </tr>
 </tbody>
