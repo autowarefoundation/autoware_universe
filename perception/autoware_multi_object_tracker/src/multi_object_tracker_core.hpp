@@ -74,7 +74,7 @@ struct MultiObjectTrackerInternalState
   std::unique_ptr<InputManager> input_manager;
   std::shared_ptr<Odometry> odometry;
 
-  rclcpp::Time last_published_time;
+  rclcpp::Time last_publish_time;
   rclcpp::Time last_updated_time;
 
   MultiObjectTrackerInternalState();
@@ -89,10 +89,66 @@ struct MultiObjectTrackerInternalState
 namespace core
 {
 
-void process_objects(
-  const types::ObjectsWithAssociation & objects, const rclcpp::Time & current_time,
+// Result structs for core functions
+struct MeasurementProcessingResult
+{
+  bool should_process;  // true if this is the target channel
+  std::optional<types::DynamicObjectList> objects;
+  types::AssociationResult association_result;
+  rclcpp::Time measurement_time;
+};
+
+struct ObjectProcessingResult
+{
+  bool should_publish;  // true if should publish immediately (no delay compensation)
+  rclcpp::Time latest_time;
+};
+
+struct PublishingData
+{
+  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
+  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
+  size_t tracked_objects_size;
+  double min_extrapolation_time;
+  rclcpp::Time object_time;  // for tentative objects and published time
+};
+
+struct OptionalPublishingData
+{
+  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
+  autoware_perception_msgs::msg::TrackedObjects tentative_objects;
+  double min_extrapolation_time;
+  size_t tracked_objects_size;
+  rclcpp::Time object_time;
+  bool should_publish_tentative;
+};
+
+// Core business logic functions
+MeasurementProcessingResult process_measurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
+
+ObjectProcessingResult process_objects_batch(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
+
+PublishingData prepare_publishing_data(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger);
+  const rclcpp::Logger & logger);
+
+OptionalPublishingData prepare_optional_publishing_data(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
+
+void process_objects_(
+  const types::ObjectsWithAssociation & objects, const rclcpp::Time & current_time,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
 
 std::optional<ObjectsList> get_objects(
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
@@ -111,8 +167,6 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
-
-void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state);
 
 }  // namespace core
 
