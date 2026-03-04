@@ -31,7 +31,6 @@
 
 namespace autoware::multi_object_tracker
 {
-using ObjectsList = types::ObjectsList;
 
 class InputStream
 {
@@ -54,7 +53,7 @@ public:
   uint getIndex() const { return channel_.index; }
   void getObjectsOlderThan(
     const rclcpp::Time & object_latest_time, const rclcpp::Time & object_earliest_time,
-    ObjectsList & objects_list);
+    types::ObjectsWithAssociationList & objects_with_associations);
   bool isSpawnEnabled() const { return channel_.is_spawn_enabled; }
 
   void getTimeStatistics(
@@ -105,7 +104,8 @@ public:
     const size_t channel_index, const types::DynamicObjectList & objects,
     const types::AssociationResult & association);
 
-  bool getObjects(const rclcpp::Time & now, ObjectsList & objects_list);
+  bool getObjects(
+    const rclcpp::Time & now, types::ObjectsWithAssociationList & objects_with_associations);
 
 private:
   std::shared_ptr<Odometry> odometry_;

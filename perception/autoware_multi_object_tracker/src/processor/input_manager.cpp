@@ -205,7 +205,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
 
 void InputStream::getObjectsOlderThan(
   const rclcpp::Time & object_latest_time, const rclcpp::Time & object_earliest_time,
-  ObjectsList & objects_list)
+  types::ObjectsWithAssociationList & objects_with_associations)
 {
   if (object_latest_time < object_earliest_time) {
     RCLCPP_WARN(
@@ -225,7 +225,7 @@ void InputStream::getObjectsOlderThan(
 
     // Add the object if the object is older than the specified latest time
     if (object_time <= object_latest_time) {
-      objects_list.push_back(objects_pair);
+      objects_with_associations.push_back(objects_pair);
     }
   }
 
@@ -385,7 +385,8 @@ void InputManager::optimizeTimings()
   target_stream_interval_std_ = selected_stream_interval_std;
 }
 
-bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_list)
+bool InputManager::getObjects(
+  const rclcpp::Time & now, types::ObjectsWithAssociationList & objects_with_associations)
 {
   if (!is_initialized_) {
     RCLCPP_INFO(logger_, "InputManager::getObjects Input manager is not initialized");
@@ -393,7 +394,7 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   }
 
   // Clear the objects
-  objects_list.clear();
+  objects_with_associations.clear();
 
   // Get the time interval for the objects
   rclcpp::Time object_latest_time;
@@ -408,18 +409,21 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   // Get objects from all input streams
   // adds up to the objects vector for efficient processing
   for (const auto & input_stream : input_streams_) {
-    input_stream->getObjectsOlderThan(object_latest_time, object_earliest_time, objects_list);
+    input_stream->getObjectsOlderThan(
+      object_latest_time, object_earliest_time, objects_with_associations);
   }
 
   // Sort objects by timestamp
-  std::sort(objects_list.begin(), objects_list.end(), [](const auto & a, const auto & b) {
-    return (a.getTimestamp() - b.getTimestamp()).seconds() < 0;
-  });
+  std::sort(
+    objects_with_associations.begin(), objects_with_associations.end(),
+    [](const auto & a, const auto & b) {
+      return (a.getTimestamp() - b.getTimestamp()).seconds() < 0;
+    });
 
   // Update the latest exported object time
-  bool is_any_object = !objects_list.empty();
+  bool is_any_object = !objects_with_associations.empty();
   if (is_any_object) {
-    latest_exported_object_time_ = objects_list.back().getTimestamp();
+    latest_exported_object_time_ = objects_with_associations.back().getTimestamp();
   } else {
     // check time jump back
     if (now < latest_exported_object_time_) {

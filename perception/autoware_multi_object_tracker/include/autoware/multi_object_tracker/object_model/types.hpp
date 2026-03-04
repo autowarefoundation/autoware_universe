@@ -248,7 +248,7 @@ struct ObjectsWithAssociation
   }
 };
 
-using ObjectsList = std::vector<ObjectsWithAssociation>;
+using ObjectsWithAssociationList = std::vector<ObjectsWithAssociation>;
 
 DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index = 0);
