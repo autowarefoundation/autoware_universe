@@ -15,15 +15,19 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 
-#include <autoware_planning_msgs/srv/set_lateral_offset.hpp>
+#include "autoware/behavior_path_side_shift_module/manager.hpp"
+
+#include <tier4_planning_msgs/srv/detail/set_lateral_offset__struct.hpp>
+#include <tier4_planning_msgs/srv/set_lateral_offset.hpp>
 
 #include <optional>
 
 namespace autoware::behavior_path_planner
 {
+using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
 
 /** Optional max magnitude for RAW_VALUE (meters). Use nullopt to skip range check. */
-constexpr std::optional<double> DEFAULT_MAX_RAW_SHIFT_MAGNITUDE = 3.0;
+constexpr std::optional<double> default_max_raw_shift_magnitude = 2.0;
 
 /**
  * @brief Example validation for SetLateralOffset service request.
@@ -35,9 +39,9 @@ constexpr std::optional<double> DEFAULT_MAX_RAW_SHIFT_MAGNITUDE = 3.0;
  * @return Computed lateral offset in meters, or nullopt if validation failed
  */
 std::optional<double> validateAndComputeLateralOffset(
-  const autoware_planning_msgs::srv::SetLateralOffset::Request & request,
-  double current_inserted_lateral_offset, double unit_shift_amount,
-  std::optional<double> max_raw_shift_magnitude = DEFAULT_MAX_RAW_SHIFT_MAGNITUDE);
+  const SetLateralOffset::Request & request, double current_inserted_lateral_offset,
+  double unit_shift_amount,
+  std::optional<double> max_raw_shift_magnitude = default_max_raw_shift_magnitude);
 
 }  // namespace autoware::behavior_path_planner
 

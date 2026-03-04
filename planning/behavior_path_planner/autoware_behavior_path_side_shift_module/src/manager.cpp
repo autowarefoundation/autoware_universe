@@ -17,10 +17,13 @@
 #include "autoware/behavior_path_side_shift_module/validation.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
+#include <rclcpp/create_timer.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_common_msgs/msg/response_status.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -50,7 +53,7 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   parameters_ = std::make_shared<SideShiftParameters>(p);
   inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
 
-  set_lateral_offset_srv_ = node->create_service<autoware_planning_msgs::srv::SetLateralOffset>(
+  set_lateral_offset_srv_ = node->create_service<SetLateralOffset>(
     "~/set_lateral_offset", std::bind(
                               &SideShiftModuleManager::onSetLateralOffset, this,
                               std::placeholders::_1, std::placeholders::_2));
@@ -59,19 +62,32 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
     node->create_publisher<tier4_planning_msgs::msg::LateralOffset>("~/output/lateral_offset", 1);
 
   const auto period = std::chrono::milliseconds(100);  // 10 Hz
-  lateral_offset_publish_timer_ = node->create_wall_timer(
-    period, std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
+  lateral_offset_publish_timer_ = rclcpp::create_timer(
+    node_, node_->get_clock(), period,
+    std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
 }
 
 void SideShiftModuleManager::onSetLateralOffset(
-  const autoware_planning_msgs::srv::SetLateralOffset::Request::SharedPtr request,
-  autoware_planning_msgs::srv::SetLateralOffset::Response::SharedPtr response)
+  const SetLateralOffset::Request::SharedPtr request,
+  SetLateralOffset::Response::SharedPtr response)
 {
+  RCLCPP_INFO(node_->get_logger(), "Service called!");
+  if (!planner_data_) {
+    response->status.success = false;
+    response->status.code = autoware_common_msgs::msg::ResponseStatus::SERVICE_UNREADY;
+    response->status.message = "SetLateralOffset: side_shift module is not ready!";
+    return;
+  }
+
   const double current_inserted =
     inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
 
+  RCLCPP_INFO(node_->get_logger(), "current inserted defined!");
+
   const auto lateral_offset_opt =
     validateAndComputeLateralOffset(*request, current_inserted, parameters_->unit_shift_amount);
+
+  RCLCPP_INFO(node_->get_logger(), "lateral offset opt defined!");
 
   if (!lateral_offset_opt) {
     response->status.success = false;
@@ -82,16 +98,29 @@ void SideShiftModuleManager::onSetLateralOffset(
     return;
   }
 
+  RCLCPP_INFO(node_->get_logger(), "!!lateral_offset_opt");
+
   const double lateral_offset = *lateral_offset_opt;
 
-  tier4_planning_msgs::msg::LateralOffset msg;
-  msg.stamp = node_->now();
-  msg.lateral_offset = static_cast<float>(lateral_offset);
-  planner_data_->set_lateral_offset(std::make_shared<tier4_planning_msgs::msg::LateralOffset>(msg));
+  RCLCPP_INFO(node_->get_logger(), "lateral_offset defined! (%lf)", lateral_offset);
+
+  auto msg = std::make_shared<tier4_planning_msgs::msg::LateralOffset>();
+  msg->lateral_offset = static_cast<float>(lateral_offset);
+  RCLCPP_INFO(node_->get_logger(), "msg->lateral_offset defined!");
+  msg->stamp = node_->now();
+  RCLCPP_INFO(node_->get_logger(), "node_->now() defined!");
+  RCLCPP_INFO(node_->get_logger(), "msg defined!");
+
+  if (!planner_data_) {
+    RCLCPP_ERROR(node_->get_logger(), "planner_data_ is null!");
+  }
+
+  planner_data_->set_lateral_offset(msg);
+  RCLCPP_INFO(node_->get_logger(), "set_lateral_offset!");
 
   response->status.success = true;
   response->status.code = 0;
-  response->status.message = "";
+  response->status.message = "Successfully set lateral offset.";
 }
 
 void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
@@ -103,6 +132,11 @@ void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
   msg.stamp = node_->now();
   msg.lateral_offset = static_cast<float>(inserted_lateral_offset_state_->value.load());
   lateral_offset_publisher_->publish(msg);
+
+  if (planner_data_ && planner_data_->get_lateral_offset())
+    RCLCPP_INFO(
+      node_->get_logger(), "planner_data->lateral_offset (%f m)",
+      planner_data_->get_lateral_offset()->lateral_offset);
 }
 
 void SideShiftModuleManager::updateModuleParams(const std::vector<rclcpp::Parameter> & parameters)

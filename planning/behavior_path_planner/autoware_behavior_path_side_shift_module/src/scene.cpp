@@ -69,6 +69,10 @@ void SideShiftModule::initVariables()
   if (inserted_lateral_offset_state_) {
     inserted_lateral_offset_state_->value.store(0.0);
   }
+  // auto zero_msg = std::make_shared<tier4_planning_msgs::msg::LateralOffset>();
+  // zero_msg->stamp = clock_->now();
+  // zero_msg->lateral_offset = 0.0;
+  // planner_data_->set_lateral_offset(zero_msg);
 }
 
 void SideShiftModule::processOnEntry()

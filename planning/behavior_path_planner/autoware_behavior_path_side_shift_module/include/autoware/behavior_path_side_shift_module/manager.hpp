@@ -21,8 +21,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_planning_msgs/srv/set_lateral_offset.hpp>
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
+#include <tier4_planning_msgs/srv/detail/set_lateral_offset__struct.hpp>
+#include <tier4_planning_msgs/srv/set_lateral_offset.hpp>
 
 #include <memory>
 #include <string>
@@ -31,6 +32,7 @@
 
 namespace autoware::behavior_path_planner
 {
+using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
 
 class SideShiftModuleManager : public SceneModuleManagerInterface
 {
@@ -51,14 +53,14 @@ public:
 
 private:
   void onSetLateralOffset(
-    const autoware_planning_msgs::srv::SetLateralOffset::Request::SharedPtr request,
-    autoware_planning_msgs::srv::SetLateralOffset::Response::SharedPtr response);
+    const tier4_planning_msgs::srv::SetLateralOffset::Request::SharedPtr request,
+    tier4_planning_msgs::srv::SetLateralOffset::Response::SharedPtr response);
 
   void publishInsertedLateralOffsetTimerCallback();
 
   std::shared_ptr<SideShiftParameters> parameters_;
   std::shared_ptr<InsertedLateralOffsetState> inserted_lateral_offset_state_;
-  rclcpp::Service<autoware_planning_msgs::srv::SetLateralOffset>::SharedPtr set_lateral_offset_srv_;
+  rclcpp::Service<tier4_planning_msgs::srv::SetLateralOffset>::SharedPtr set_lateral_offset_srv_;
   rclcpp::Publisher<tier4_planning_msgs::msg::LateralOffset>::SharedPtr lateral_offset_publisher_;
   rclcpp::TimerBase::SharedPtr lateral_offset_publish_timer_;
 };
