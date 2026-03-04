@@ -20,6 +20,7 @@
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -412,11 +413,9 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   }
 
   // Sort objects by timestamp
-  std::sort(
-    objects_list.begin(), objects_list.end(),
-    [](const auto & a, const auto & b) {
-      return (rclcpp::Time(a.first.header.stamp) - rclcpp::Time(b.first.header.stamp)).seconds() < 0;
-    });
+  std::sort(objects_list.begin(), objects_list.end(), [](const auto & a, const auto & b) {
+    return (rclcpp::Time(a.first.header.stamp) - rclcpp::Time(b.first.header.stamp)).seconds() < 0;
+  });
 
   // Update the latest exported object time
   bool is_any_object = !objects_list.empty();
