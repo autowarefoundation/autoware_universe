@@ -319,8 +319,8 @@ void TrtYoloXNode::setupLabel(
       }
     }
 
-    std::unordered_map<std::string, int> semseg_name_to_id_map;
     if (!semseg_color_map_path.empty()) {
+      std::unordered_map<std::string, int> semseg_name_to_id_map;
       constexpr uint32_t skip_header_lines = 1;
       // load semantic segmentation label information (label, label name, r, g, b)
       load_segmentation_colormap(
