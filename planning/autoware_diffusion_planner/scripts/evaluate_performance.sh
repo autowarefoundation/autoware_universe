@@ -84,7 +84,7 @@ done
 # Auto-detect engine file
 if [[ -z ${ENGINE_PATH} ]]; then
     MODEL_DIR="${HOME}/autoware_data/diffusion_planner/v3.0"
-    ENGINE_PATH=$(find "${MODEL_DIR}" -name "*_batch*.engine" -print -quit 2>/dev/null || true)
+    ENGINE_PATH=$(find "${MODEL_DIR}" -name "*.engine" -print -quit 2>/dev/null || true)
     if [[ -z ${ENGINE_PATH} ]]; then
         echo "ERROR: No engine file found in ${MODEL_DIR}"
         echo ""
@@ -92,7 +92,7 @@ if [[ -z ${ENGINE_PATH} ]]; then
         echo "  1. Running the planner node (engine is cached on first inference)"
         echo "  2. Using trtexec:"
         echo "     trtexec --onnx=${MODEL_DIR}/diffusion_planner_simplified.onnx \\"
-        echo "       --saveEngine=${MODEL_DIR}/diffusion_planner_simplified_batch1.engine"
+        echo "       --saveEngine=${MODEL_DIR}/diffusion_planner_simplified.engine"
         exit 1
     fi
 fi

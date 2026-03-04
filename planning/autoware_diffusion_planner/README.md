@@ -24,7 +24,7 @@ Make sure that the directory specified in `planning/autoware_diffusion_planner/c
 
 ```bash
 $ ls ~/autoware_data/diffusion_planner/v3.0/
-diffusion_planner.onnx diffusion_planner.param.json
+diffusion_planner_simplified.onnx diffusion_planner.param.json
 ```
 
 This can be downloaded from [setup-dev-env.sh](https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh).
