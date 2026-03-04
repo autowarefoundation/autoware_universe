@@ -6,10 +6,6 @@ autoware_package()
 
 find_package(fmt REQUIRED)
 
-ament_auto_add_library(steering_offset_lib SHARED
-  src/steering_offset/steering_offset.cpp
-)
-
 set(MPC_LAT_CON_LIB ${PROJECT_NAME}_lib)
 ament_auto_add_library(${MPC_LAT_CON_LIB} SHARED
   src/mpc_lateral_controller.cpp
@@ -25,7 +21,6 @@ ament_auto_add_library(${MPC_LAT_CON_LIB} SHARED
   src/vehicle_model/vehicle_model_bicycle_kinematics.cpp
   src/vehicle_model/vehicle_model_interface.cpp
 )
-target_link_libraries(${MPC_LAT_CON_LIB} steering_offset_lib)
 
 if(BUILD_TESTING)
   set(TEST_LAT_SOURCES
