@@ -78,7 +78,7 @@ std::optional<std::vector<std::vector<std::string>>> read_csv(
     // i.e. RFC 4180 does not mention this feature
     size_t comment_pos = line.find('#');
     if (comment_pos != std::string::npos) {
-      line = line.substr(0, comment_pos);
+      line.resize(comment_pos);
     }
 
     // skip empty lines
