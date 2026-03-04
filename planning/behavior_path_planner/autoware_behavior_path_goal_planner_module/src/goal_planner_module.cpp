@@ -29,9 +29,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <magic_enum.hpp>
@@ -741,12 +741,23 @@ void GoalPlannerModule::updateData()
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
     const bool lane_change_ctx_expired = !lane_change_ctx_.is_in_consistent_transition();
-    if (
-      !lane_parking_response_.pull_over_path_candidates.empty() &&
-      lane_parking_response_.original_upstream_module_output) {
+
+    // Copy lane_parking_response_ under lock to avoid data race with LaneParkingPlanner thread
+    std::optional<BehaviorModuleOutput> original_upstream_module_output_copy;
+    bool has_candidates = false;
+    {
+      std::lock_guard<std::mutex> guard(lane_parking_mutex_);
+      has_candidates = !lane_parking_response_.pull_over_path_candidates.empty();
+      if (has_candidates && lane_parking_response_.original_upstream_module_output) {
+        original_upstream_module_output_copy =
+          lane_parking_response_.original_upstream_module_output;
+      }
+    }
+
+    if (has_candidates && original_upstream_module_output_copy) {
       const auto result = goal_planner_utils::should_regenerate_path_candidates(
         planner_data_->self_odometry->pose.pose, getPreviousModuleOutput(),
-        lane_parking_response_.original_upstream_module_output.value(), lane_change_ctx_expired);
+        original_upstream_module_output_copy.value(), lane_change_ctx_expired);
 
       if (!result.reason.empty()) {
         RCLCPP_INFO_THROTTLE(
@@ -2428,7 +2439,7 @@ bool GoalPlannerModule::isCrossingPossible(
   if (is_shoulder_lane) {
     Pose end_lane_pose{};
     end_lane_pose.orientation.w = 1.0;
-    end_lane_pose.position = lanelet::utils::conversion::toGeomMsgPt(end_lane.centerline().front());
+    end_lane_pose.position = experimental::lanelet2_utils::to_ros(end_lane.centerline().front());
     // NOTE: this line does not specify the /forward/backward length, so if the shoulders form a
     // loop, this returns all shoulder lanes in the loop
     end_lane_sequence = route_handler->getShoulderLaneletSequence(end_lane, end_lane_pose);
@@ -2612,7 +2623,7 @@ std::pair<bool, utils::path_safety_checker::CollisionCheckDebugMap> GoalPlannerM
     // generate first road lane pose
     Pose first_road_pose{};
     const auto first_road_point =
-      lanelet::utils::conversion::toGeomMsgPt(fist_road_lane.centerline().front());
+      experimental::lanelet2_utils::to_ros(fist_road_lane.centerline().front());
     const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       fist_road_lane,
       autoware::experimental::lanelet2_utils::from_ros(first_road_point).basicPoint());

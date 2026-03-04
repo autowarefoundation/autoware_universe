@@ -24,72 +24,79 @@
 namespace autoware::multi_object_tracker
 {
 TrackerDebugger::TrackerDebugger(
-  rclcpp::Node & node, const std::string & frame_id,
+  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & frame_id,
   const std::vector<types::InputChannel> & channels_config)
-: node_(node), diagnostic_updater_(&node), object_debugger_(frame_id, channels_config)
+: logger_(logger), clock_(clock), object_debugger_(frame_id, channels_config)
 {
-  // declare debug parameters to decide whether to publish debug topics
-  loadParameters();
-  // initialize debug publishers
-  if (debug_settings_.publish_processing_time) {
-    processing_time_publisher_ =
-      std::make_unique<autoware_utils_debug::DebugPublisher>(&node_, "multi_object_tracker");
-  }
-
-  if (debug_settings_.publish_tentative_objects) {
-    debug_tentative_objects_pub_ =
-      node_.create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-        "~/debug/tentative_objects", rclcpp::QoS{1});
-  }
-
-  if (debug_settings_.publish_debug_markers) {
-    debug_objects_markers_pub_ = node_.create_publisher<visualization_msgs::msg::MarkerArray>(
-      "~/debug/objects_markers", rclcpp::QoS{1});
-  }
-
   // initialize timestamps
-  const rclcpp::Time now = node_.now();
+  const rclcpp::Time now = clock_->now();
   last_input_stamp_ = now;
   stamp_process_start_ = now;
   stamp_process_end_ = now;
   stamp_publish_start_ = now;
   stamp_publish_output_ = now;
   last_non_warning_timestamp_ = now;
-  // setup diagnostics
-  setupDiagnostics();
 }
 
-void TrackerDebugger::loadParameters()
+void TrackerDebugger::init(rclcpp::Node & node)
+{
+  // declare debug parameters to decide whether to publish debug topics
+  loadParameters(node);
+  // initialize debug publishers
+  if (debug_settings_.publish_processing_time) {
+    processing_time_publisher_ =
+      std::make_unique<autoware_utils_debug::DebugPublisher>(&node, "multi_object_tracker");
+  }
+
+  if (debug_settings_.publish_tentative_objects) {
+    debug_tentative_objects_pub_ =
+      node.create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+        "~/debug/tentative_objects", rclcpp::QoS{1});
+  }
+
+  if (debug_settings_.publish_debug_markers) {
+    debug_objects_markers_pub_ = node.create_publisher<visualization_msgs::msg::MarkerArray>(
+      "~/debug/objects_markers", rclcpp::QoS{1});
+  }
+
+  // setup diagnostics
+  setupDiagnostics(node);
+}
+
+void TrackerDebugger::loadParameters(rclcpp::Node & node)
 {
   try {
     debug_settings_.publish_processing_time =
-      node_.declare_parameter<bool>("publish_processing_time");
+      node.declare_parameter<bool>("publish_processing_time");
     debug_settings_.publish_tentative_objects =
-      node_.declare_parameter<bool>("publish_tentative_objects");
-    debug_settings_.publish_debug_markers = node_.declare_parameter<bool>("publish_debug_markers");
+      node.declare_parameter<bool>("publish_tentative_objects");
+    debug_settings_.publish_debug_markers = node.declare_parameter<bool>("publish_debug_markers");
     debug_settings_.diagnostics_warn_delay =
-      node_.declare_parameter<double>("diagnostics_warn_delay");
+      node.declare_parameter<double>("diagnostics_warn_delay");
     debug_settings_.diagnostics_error_delay =
-      node_.declare_parameter<double>("diagnostics_error_delay");
+      node.declare_parameter<double>("diagnostics_error_delay");
     debug_settings_.diagnostics_warn_extrapolation =
-      node_.declare_parameter<double>("diagnostics_warn_extrapolation");
+      node.declare_parameter<double>("diagnostics_warn_extrapolation");
     debug_settings_.diagnostics_error_extrapolation =
-      node_.declare_parameter<double>("diagnostics_error_extrapolation");
+      node.declare_parameter<double>("diagnostics_error_extrapolation");
   } catch (const std::exception & e) {
-    RCLCPP_WARN(node_.get_logger(), "Failed to declare parameter: %s", e.what());
+    RCLCPP_WARN(logger_, "Failed to declare parameter: %s", e.what());
     debug_settings_.publish_processing_time = false;
     debug_settings_.publish_tentative_objects = false;
     debug_settings_.publish_debug_markers = false;
     debug_settings_.diagnostics_warn_delay = 0.5;
     debug_settings_.diagnostics_error_delay = 1.0;
+    debug_settings_.diagnostics_warn_extrapolation = 0.5;
+    debug_settings_.diagnostics_error_extrapolation = 1.0;
   }
 }
 
-void TrackerDebugger::setupDiagnostics()
+void TrackerDebugger::setupDiagnostics(rclcpp::Node & node)
 {
-  diagnostic_updater_.setHardwareID(node_.get_name());
-  diagnostic_updater_.add("Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
-  diagnostic_updater_.setPeriod(0.1);
+  diagnostic_updater_ = std::make_unique<diagnostic_updater::Updater>(&node);
+  diagnostic_updater_->setHardwareID(node.get_name());
+  diagnostic_updater_->add("Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
+  diagnostic_updater_->setPeriod(0.1);
 }
 
 void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size_t published_count)
@@ -97,7 +104,9 @@ void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size
   diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
   diagnostic_values_.published_trackers_count = published_count;
   // Force update diagnostic values
-  diagnostic_updater_.force_update();
+  if (diagnostic_updater_) {
+    diagnostic_updater_->force_update();
+  }
 }
 
 void TrackerDebugger::publishTentativeObjects(
@@ -213,7 +222,7 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
   // Check individual timing components
   const auto delay_result = checkDelayTiming(delay);
   const auto extrapolation_result =
-    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time, node_.now());
+    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time, clock_->now());
   // Determine overall status
   const auto overall_result =
     determineOverallTimingStatus(no_published_trackers, delay_result, extrapolation_result);

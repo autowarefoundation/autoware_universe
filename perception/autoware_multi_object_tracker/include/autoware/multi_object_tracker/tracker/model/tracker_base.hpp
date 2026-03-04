@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
@@ -49,10 +45,11 @@ enum class TrackerType {
   PEDESTRIAN = 11,
   BICYCLE = 12,
   MULTIPLE_VEHICLE = 20,
-  NORMAL_VEHICLE = 21,
-  BIG_VEHICLE = 22,
-  VEHICLE = 23,
-  UNKNOWN = 30,
+  GENERAL_VEHICLE = 21,
+  NORMAL_VEHICLE = 22,
+  BIG_VEHICLE = 23,
+  VEHICLE = 24,
+  POLYGON = 30,
 };
 
 class Tracker
@@ -63,7 +60,7 @@ private:
   int total_no_measurement_count_;
   int total_measurement_count_;
   rclcpp::Time last_update_with_measurement_time_;
-  std::vector<float> existence_probabilities_;
+  std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
   std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
 
@@ -89,14 +86,18 @@ public:
   // tracker probabilities
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
-  std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  std::vector<types::ExistenceProbability> getExistenceProbabilityVector() const
+  {
+    return existence_probabilities_;
+  }
   std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
   {
     return classification_;
   }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
-  void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
+  void mergeExistenceProbabilities(
+    std::vector<types::ExistenceProbability> existence_probabilities);
 
   // object update
   bool updateWithMeasurement(
@@ -165,7 +166,7 @@ public:
 
 protected:
   types::DynamicObject object_;
-  TrackerType tracker_type_{TrackerType::UNKNOWN};
+  TrackerType tracker_type_{TrackerType::POLYGON};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

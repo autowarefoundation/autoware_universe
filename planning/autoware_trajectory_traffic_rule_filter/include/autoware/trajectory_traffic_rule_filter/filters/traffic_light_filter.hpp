@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@
 
 #include <lanelet2_core/Forward.h>
 
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_traffic_rule_filter::plugin
@@ -31,17 +33,26 @@ class TrafficLightFilter : public TrafficRuleFilterInterface
 public:
   TrafficLightFilter();
 
-  bool is_feasible(const TrajectoryPoints & trajectory_points) override;
+  tl::expected<void, std::string> is_feasible(const TrajectoryPoints & trajectory_points) override;
   void set_traffic_lights(
     const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr & traffic_lights)
     override;
 
+  void set_parameters(const traffic_rule_filter::Params & params) override { params_ = params; }
+
+  /// @brief return true if ego can safely pass an amber traffic light
+  [[nodiscard]] bool can_pass_amber_light(
+    const double distance_to_stop_line, const double current_velocity,
+    const double current_acceleration, const double time_to_cross_stop_line) const;
+
 private:
-  /// @brief return the stop lines with red traffic lights for the given lanelet
-  [[nodiscard]] std::vector<lanelet::BasicLineString2d> get_red_stop_lines(
-    const lanelet::ConstLanelet & lanelet) const;
+  /// @brief return the red and amber stop lines related to the given lanelets
+  [[nodiscard]] std::pair<
+    std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
+  get_stop_lines(const lanelet::Lanelets & lanelets) const;
 
   autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights_;
+  traffic_rule_filter::Params params_;
 };
 
 }  // namespace autoware::trajectory_traffic_rule_filter::plugin

@@ -1,0 +1,29 @@
+/**:
+  ros__parameters:
+    debug_mode: true # Whether to enable debug mode, which may include additional logging
+    max_camera_time_diff: 0.15 #Maximum allowed time difference for camera image sync in seconds
+    multithreading: false # Whether to use multithreading for handling image callbacks
+    anchor_camera_id: 0 # Camera id of the anchor topic. The forward pass begins once every anchor camera topic reaches.
+    is_compressed_image: false # Whether the input images are compressed
+    is_distorted_image: false # Whether the input images are distorted
+    model_params:
+
+      trt_precision: "fp16" # TensorRT precision mode: "fp16" or "fp32"
+      use_temporal: true # Can the model use temporal information or not.
+
+      backbone_path: "$(var model_path)/simplify_extract_img_feat.onnx" # Path to the backbone onnx file, relative to the model_param_path
+      head_path: "$(var model_path)/simplify_pts_head_memory.onnx" # Path to the detection head onnx file, relative to the model_param_path
+      position_embedding_path: "$(var model_path)/simplify_position_embedding.onnx" # Path to the position embedding onnx file, relative to the model_param_path
+
+      backbone_engine_path: ""   # Path to the tensorRT engine file for the backbone. If empty, the path will be set to backbone_path with .engine extension, and the engine will be built if it does not exist.
+      head_engine_path: ""       # Path to the tensorRT engine file for the head. If empty, the path will be set to head_path with .engine extension, and the engine will be built if it does not exist.
+      position_embedding_engine_path: "" # Path to the tensorRT engine file for the position embedding. If empty, the path will be set to position_embedding_path with .engine extension, and the engine will be built if it does not exist.
+
+      workspace_size: 32 # TensorRT workspace size for building the engine. 2^workspace_size bytes, e.g., 32 means 4 GB of workspace will be used for building the engine.
+
+    post_process_params: # These are post-processing parameters to improve the predictions.
+      confidence_threshold: [0.36, 0.39, 0.38, 0.41, 0.43]  # Per-class thresholds: [CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN]
+      circle_nms_dist_threshold: 0.0   # turn off circle NMS by setting 0.0, otherwise set to around 0.5
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.5           # set to 0 to turn off iou NMS
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
