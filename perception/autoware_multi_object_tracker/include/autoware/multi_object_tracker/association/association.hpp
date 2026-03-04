@@ -71,7 +71,6 @@ struct PreparationData
   std::vector<std::uint8_t> tracker_labels;
   std::vector<TrackerType> tracker_types;
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
-  types::AssociationData association_data;
 };
 
 class DataAssociation

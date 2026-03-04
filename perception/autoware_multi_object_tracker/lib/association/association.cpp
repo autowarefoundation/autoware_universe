@@ -166,12 +166,6 @@ PreparationData DataAssociation::prepareAssociationData(
   prep_data.tracked_objects.reserve(trackers.size());
   prep_data.tracker_labels.reserve(trackers.size());
   prep_data.tracker_types.reserve(trackers.size());
-  prep_data.association_data.tracker_uuids.reserve(trackers.size());
-  prep_data.association_data.measurement_uuids.reserve(measurements.objects.size());
-
-  for (const auto & object : measurements.objects) {
-    prep_data.association_data.measurement_uuids.emplace_back(object.uuid);
-  }
 
   // Build R-tree and store tracker data
   {
@@ -189,7 +183,6 @@ PreparationData DataAssociation::prepareAssociationData(
       prep_data.tracked_objects.emplace_back(std::move(tracked_object));
       prep_data.tracker_labels.emplace_back(tracker->getHighestProbLabel());
       prep_data.tracker_types.emplace_back(tracker->getTrackerType());
-      prep_data.association_data.tracker_uuids.emplace_back(tracker->getUUID());
       ++tracker_idx;
     }
     rtree_.insert(rtree_points.begin(), rtree_points.end());
@@ -267,7 +260,19 @@ types::AssociationData DataAssociation::calcAssociationData(
 
   // Preparation stage: build R-tree and pre-compute data
   auto prep_data = prepareAssociationData(measurements, trackers);
-  types::AssociationData association_data = std::move(prep_data.association_data);
+
+  // Initialize association data with UUIDs
+  types::AssociationData association_data;
+  association_data.tracker_uuids.reserve(trackers.size());
+  association_data.measurement_uuids.reserve(measurements.objects.size());
+
+  for (const auto & object : measurements.objects) {
+    association_data.measurement_uuids.emplace_back(object.uuid);
+  }
+
+  for (const auto & tracker : trackers) {
+    association_data.tracker_uuids.emplace_back(tracker->getUUID());
+  }
 
   // Processing stage: process each measurement
   for (auto it = measurements.objects.begin(); it != measurements.objects.end(); ++it) {
