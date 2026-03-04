@@ -284,7 +284,7 @@ void MultiObjectTracker::onTimer()
   }
 }
 
-void MultiObjectTracker::publish(const rclcpp::Time & time)
+void MultiObjectTracker::publish(const rclcpp::Time & publish_time)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -299,13 +299,13 @@ void MultiObjectTracker::publish(const rclcpp::Time & time)
       st_get_output_ptr = std::make_unique<ScopedTimeTrack>("get_output", *time_keeper_);
 
     publishing_data =
-      core::prepare_publishing_data(time, current_time, params_, state_, get_logger());
+      core::prepare_publishing_data(publish_time, current_time, params_, state_, get_logger());
   }
   tracked_objects_pub_->publish(publishing_data.tracked_objects);
 
-  debugger_->endPublishTime(this->now(), time);
+  debugger_->endPublishTime(this->now(), publish_time);
 
-  publishOptional(time, current_time, publishing_data.tracked_objects_size);
+  publishOptional(publish_time, current_time, publishing_data.tracked_objects_size);
 }
 
 void MultiObjectTracker::publishOptional(

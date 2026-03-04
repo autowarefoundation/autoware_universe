@@ -351,7 +351,7 @@ ObjectProcessingResult process_objects_batch(
 PublishingData prepare_publishing_data(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger)
+  [[maybe_unused]] const rclcpp::Logger & logger)
 {
   PublishingData result;
 
@@ -361,15 +361,6 @@ PublishingData prepare_publishing_data(
   // Get tracked objects
   result.tracked_objects = get_tracked_objects(publish_time, current_time, params, state);
   result.tracked_objects_size = result.tracked_objects.objects.size();
-
-  // Get merged objects
-  result.merged_objects = get_merged_objects(publish_time, current_time, params, state, logger);
-
-  // Calculate min_extrapolation_time
-  result.min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
-
-  // Calculate object_time
-  result.object_time = params.enable_delay_compensation ? current_time : publish_time;
 
   // Update last_publish_time
   state.last_publish_time = current_time;
