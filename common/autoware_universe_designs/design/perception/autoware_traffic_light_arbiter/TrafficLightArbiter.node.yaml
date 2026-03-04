@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
     remap_target: ~/sub/vector_map

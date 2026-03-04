@@ -6,7 +6,7 @@ name: SimpleObjectMerger_6_inputs.node
 base: SimpleObjectMerger.node
 
 override:
-  inputs:
+  subscribers:
     - name: object1
       message_type: autoware_perception_msgs/msg/DetectedObjects
     - name: object2

@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: car_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
     remap_target: input/car_signals

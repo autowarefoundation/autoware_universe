@@ -14,7 +14,7 @@ launch:
   use_container: false
 
 # interfaces
-inputs:
+subscribers:
   - name: velocity_status
     message_type: autoware_vehicle_msgs/msg/VelocityReport
     remap_target: velocity_status

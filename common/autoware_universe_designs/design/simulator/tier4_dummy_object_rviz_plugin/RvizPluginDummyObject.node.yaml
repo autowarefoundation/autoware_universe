@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs: []
+subscribers: []
 
 outputs:
   - name: object

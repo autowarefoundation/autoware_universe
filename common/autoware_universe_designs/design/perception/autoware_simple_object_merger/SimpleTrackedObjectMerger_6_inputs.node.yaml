@@ -7,7 +7,7 @@ base: SimpleTrackedObjectMerger.node
 
 # interfaces
 override:
-  inputs:
+  subscribers:
     - name: object1
       message_type: autoware_perception_msgs/msg/TrackedObjects
     - name: object2

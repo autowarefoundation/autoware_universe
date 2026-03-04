@@ -15,7 +15,7 @@ launch:
   node_output: screen
 
 # interface
-inputs:
+subscribers:
   - name: image
     message_type: sensor_msgs/msg/Image
     remap_target: ~/in/image

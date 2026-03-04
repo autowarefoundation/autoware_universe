@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: fix
     message_type: sensor_msgs/msg/NavSatFix
     remap_target: fix

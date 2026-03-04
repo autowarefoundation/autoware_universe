@@ -15,7 +15,7 @@ launch:
   container_name: pointcloud_container
 
 # interfaces
-inputs:
+subscribers:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
   - name: twist

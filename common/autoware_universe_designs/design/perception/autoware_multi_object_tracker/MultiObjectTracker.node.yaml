@@ -12,7 +12,7 @@ launch:
   executable: multi_object_tracker_node
 
 # interfaces
-inputs:
+subscribers:
   - name: ros_transform
     message_type: tf2_msgs/msg/TFMessage
     global: /tf

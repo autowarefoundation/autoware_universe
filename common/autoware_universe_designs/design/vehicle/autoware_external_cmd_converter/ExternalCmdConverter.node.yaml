@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: pedals_cmd
     message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
   - name: steering_cmd

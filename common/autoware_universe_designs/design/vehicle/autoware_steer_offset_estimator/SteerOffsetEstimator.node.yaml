@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: twist
     message_type: geometry_msgs/msg/TwistStamped
   - name: steer

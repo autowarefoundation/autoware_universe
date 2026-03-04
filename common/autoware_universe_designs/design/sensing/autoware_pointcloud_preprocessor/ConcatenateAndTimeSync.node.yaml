@@ -15,7 +15,7 @@ launch:
   container_name: pointcloud_container
 
 # interfaces
-inputs:
+subscribers:
   - name: twist
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
   - name: odometry

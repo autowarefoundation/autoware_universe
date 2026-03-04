@@ -14,7 +14,7 @@ launch:
   use_container: false
 
 # interfaces
-inputs:
+subscribers:
   - name: compressed_image
     message_type: sensor_msgs/msg/CompressedImage
 

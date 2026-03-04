@@ -15,7 +15,7 @@ launch:
   container_name: pointcloud_container
 
 # interface
-inputs:
+subscribers:
   - name: ros_transform
     message_type: tf2_msgs/msg/TFMessage
     global: /tf

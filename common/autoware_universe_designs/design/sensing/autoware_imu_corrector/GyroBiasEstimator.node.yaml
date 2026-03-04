@@ -14,7 +14,7 @@ launch:
   use_container: false
 
 # interfaces
-inputs:
+subscribers:
   - name: imu_raw
     message_type: sensor_msgs/msg/Imu
   - name: odom

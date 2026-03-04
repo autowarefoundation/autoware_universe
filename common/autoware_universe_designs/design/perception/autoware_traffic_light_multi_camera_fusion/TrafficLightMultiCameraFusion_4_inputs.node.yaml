@@ -7,7 +7,7 @@ base: TrafficLightMultiCameraFusion.node
 
 # interfaces
 override:
-  inputs:
+  subscribers:
     - name: camera3/camera_info
       message_type: sensor_msgs/msg/CameraInfo
       remap_target: camera3/camera_info

@@ -13,7 +13,7 @@ launch:
   node_output: screen
 
 # interfaces
-inputs:
+subscribers:
   - name: steer
     message_type: autoware_vehicle_msgs/msg/SteeringReport
   - name: actuation_status

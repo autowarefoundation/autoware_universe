@@ -7,7 +7,7 @@ base: TrafficLightMultiCameraFusion.node
 
 # interfaces
 remove:
-  inputs:
+  subscribers:
     - name: camera2/camera_info
     - name: camera2/classification/traffic_signals
     - name: camera2/detection/rois

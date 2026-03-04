@@ -16,7 +16,7 @@ launch:
   container_name: pointcloud_container
 
 # interfaces
-inputs:
+subscribers:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: input/objects

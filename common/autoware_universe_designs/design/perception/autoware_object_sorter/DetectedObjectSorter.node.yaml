@@ -15,7 +15,7 @@ launch:
   container_name: pointcloud_container
 
 # interfaces
-inputs:
+subscribers:
   - name: objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
 

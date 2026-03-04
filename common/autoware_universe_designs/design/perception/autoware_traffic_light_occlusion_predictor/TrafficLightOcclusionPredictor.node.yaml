@@ -15,7 +15,7 @@ launch:
   container_name: pointcloud_container
 
 # interfaces
-inputs:
+subscribers:
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: car/traffic_signals

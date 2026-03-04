@@ -6,7 +6,7 @@ name: ConcatenateAndTimeSync_3_inputs.node
 base: ConcatenateAndTimeSync.node
 
 override:
-  inputs:
+  subscribers:
     - name: input3
       message_type: sensor_msgs/msg/PointCloud2
   param_values:
