@@ -125,8 +125,8 @@ void DataAssociation::assign(
   // Fill unassigned trackers using direct_assignment map (faster than UUID map lookup)
   for (size_t i = 0; i < data.tracker_uuids.size(); ++i) {
     auto it = direct_assignment.find(static_cast<int>(i));
-    if (it == direct_assignment.end() ||
-        score[static_cast<int>(i)][it->second] < score_threshold_) {
+    if (
+      it == direct_assignment.end() || score[static_cast<int>(i)][it->second] < score_threshold_) {
       association_result.unassigned_trackers.emplace_back(data.tracker_uuids[i]);
     }
   }
@@ -134,8 +134,8 @@ void DataAssociation::assign(
   // Fill unassigned measurements using reverse_assignment map (faster than UUID map lookup)
   for (size_t i = 0; i < data.measurement_uuids.size(); ++i) {
     auto it = reverse_assignment.find(static_cast<int>(i));
-    if (it == reverse_assignment.end() ||
-        score[it->second][static_cast<int>(i)] < score_threshold_) {
+    if (
+      it == reverse_assignment.end() || score[it->second][static_cast<int>(i)] < score_threshold_) {
       association_result.unassigned_measurements.emplace_back(data.measurement_uuids[i]);
     }
   }
