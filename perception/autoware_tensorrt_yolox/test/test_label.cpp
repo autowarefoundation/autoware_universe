@@ -19,6 +19,8 @@
 
 #include <fstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 std::string get_file_path(const std::string & filename)
 {
