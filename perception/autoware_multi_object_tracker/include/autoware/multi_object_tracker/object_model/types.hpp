@@ -236,6 +236,20 @@ struct AssociatedObjects
   const AssociationResult & association;
 };
 
+struct ObjectsWithAssociation
+{
+  DynamicObjectList objects;
+  AssociationResult association;
+
+  rclcpp::Time getTimestamp() const { return rclcpp::Time(objects.header.stamp); }
+  rclcpp::Time getTimestamp(rcl_clock_type_t clock_type) const
+  {
+    return rclcpp::Time(objects.header.stamp, clock_type);
+  }
+};
+
+using ObjectsList = std::vector<ObjectsWithAssociation>;
+
 DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index = 0);
 

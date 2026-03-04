@@ -180,17 +180,16 @@ void process_parameters(MultiObjectTrackerParameters & params)
 }
 
 void process_objects(
-  const std::pair<types::DynamicObjectList, types::AssociationResult> & objects_data,
-  const rclcpp::Time & current_time, [[maybe_unused]] const MultiObjectTrackerParameters & params,
+  const types::ObjectsWithAssociation & objects_data, const rclcpp::Time & current_time,
+  [[maybe_unused]] const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
   const rclcpp::Logger & logger)
 {
-  const auto & objects = objects_data.first;
-  const auto & association_result = objects_data.second;
+  const auto & objects = objects_data.objects;
+  const auto & association_result = objects_data.association;
 
   // Get the time of the measurement
-  const rclcpp::Time measurement_time =
-    rclcpp::Time(objects.header.stamp, current_time.get_clock_type());
+  const rclcpp::Time measurement_time = objects_data.getTimestamp(current_time.get_clock_type());
 
   std::optional<geometry_msgs::msg::Pose> ego_pose;
   if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {

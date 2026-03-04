@@ -259,15 +259,15 @@ void MultiObjectTracker::onTrigger()
 
   const rclcpp::Time current_time = this->now();
   // get objects from the input manager and run process
-  const auto objects_list = core::get_objects(current_time, state_);
-  if (!objects_list) return;
+  const auto objects_with_associations = core::get_objects(current_time, state_);
+  if (!objects_with_associations) return;
 
   // process start
-  const rclcpp::Time latest_time(objects_list->back().first.header.stamp);
+  const rclcpp::Time latest_time = objects_with_associations->back().getTimestamp();
   debugger_->startMeasurementTime(this->now(), latest_time);
 
   // run process for each DynamicObject
-  for (const auto & objects_data : *objects_list) {
+  for (const auto & objects_data : *objects_with_associations) {
     std::unique_ptr<ScopedTimeTrack> st_process_objects_ptr;
     if (time_keeper_)
       st_process_objects_ptr = std::make_unique<ScopedTimeTrack>("process_objects", *time_keeper_);
@@ -279,7 +279,7 @@ void MultiObjectTracker::onTrigger()
 
   // Publish without delay compensation
   if (!publish_timer_) {
-    const auto latest_object_time = rclcpp::Time(objects_list->back().first.header.stamp);
+    const auto latest_object_time = objects_with_associations->back().getTimestamp();
     publish(latest_object_time);
   }
 }

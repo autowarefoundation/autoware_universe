@@ -90,10 +90,9 @@ namespace core
 {
 
 void process_objects(
-  const std::pair<types::DynamicObjectList, types::AssociationResult> & objects,
-  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
-  const rclcpp::Logger & logger);
+  const types::ObjectsWithAssociation & objects, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger, const rclcpp::Logger & logger);
 
 std::optional<ObjectsList> get_objects(
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
