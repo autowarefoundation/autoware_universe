@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAFFIC_RULE_FILTER_INTERFACE_HPP_
 #define AUTOWARE__TRAJECTORY_TRAFFIC_RULE_FILTER__TRAFFIC_RULE_FILTER_INTERFACE_HPP_
 
+#include <autoware_trajectory_traffic_rule_filter/autoware_trajectory_traffic_rule_filter_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -45,13 +47,18 @@ public:
   TrafficRuleFilterInterface(TrafficRuleFilterInterface &&) = delete;
   TrafficRuleFilterInterface & operator=(TrafficRuleFilterInterface &&) = delete;
 
-  virtual bool is_feasible(const TrajectoryPoints & trajectory_points) = 0;
+  virtual tl::expected<void, std::string> is_feasible(
+    const TrajectoryPoints & trajectory_points) = 0;
   std::string get_name() const { return name_; }
 
   virtual void set_vehicle_info(const VehicleInfo & vehicle_info)
   {
     vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
   }
+
+  virtual void set_parameters(const traffic_rule_filter::Params & params) { (void)params; }
+
+  virtual void set_logger(rclcpp::Logger && logger) { logger_ = logger; }
 
   virtual void set_lanelet_map(
     const std::shared_ptr<lanelet::LaneletMap> & lanelet_map,
@@ -73,6 +80,7 @@ public:
 
 protected:
   std::string name_;
+  std::optional<rclcpp::Logger> logger_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_;

@@ -2,6 +2,11 @@
   ros__parameters:
     traffic_light_signal_timeout: 1.0
 
+    # timeout monitoring
+    # The timeout means the time between source timestamp and current time.
+    cyclic_timeout: 0.90
+    enable_traffic_signal_timeout: false
+
     planning_hz: 10.0
     backward_path_length: 5.0
     forward_path_length: 300.0

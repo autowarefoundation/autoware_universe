@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@
 
 #include "util.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <utility>
@@ -27,9 +26,9 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using Trajectory = autoware::experimental::trajectory::Trajectory<PathPointWithLaneId>;
 
-class NoDrivableLaneModule : public SceneModuleInterface
+class NoDrivableLaneModule : public experimental::SceneModuleInterface
 {
 public:
   enum class State { INIT, APPROACHING, INSIDE_NO_DRIVABLE_LANE, STOPPED };
@@ -43,7 +42,8 @@ public:
   struct DebugData
   {
     double base_link2front;
-    PathWithNoDrivableLanePolygonIntersection path_polygon_intersection;
+    std::optional<geometry_msgs::msg::Point> first_intersection_point;
+    std::optional<geometry_msgs::msg::Point> second_intersection_point;
     std::vector<geometry_msgs::msg::Point> no_drivable_lane_polygon;
     geometry_msgs::msg::Pose stop_pose;
   };
@@ -55,19 +55,23 @@ public:
   };
 
   NoDrivableLaneModule(
-    const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
+    const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
+    const std::vector<geometry_msgs::msg::Point> & right_bound,
+    const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
+
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
 private:
-  const int64_t lane_id_;
+  const lanelet::Id lane_id_;
 
   // Parameter
   PlannerParam planner_param_;
@@ -78,16 +82,23 @@ private:
   // State machine
   State state_;
 
-  PathWithNoDrivableLanePolygonIntersection path_no_drivable_lane_polygon_intersection;
-  geometry_msgs::msg::Point first_intersection_point;
-  double distance_ego_first_intersection{};
+  void handle_init_state(
+    const double ego_front_s,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection);
+  void handle_approaching_state(
+    Trajectory & path, const double ego_front_s,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection,
+    const PlannerData & planner_data);
+  void handle_inside_no_drivable_lane_state(
+    Trajectory & path, const double ego_front_s, const PlannerData & planner_data);
+  void handle_stopped_state(
+    Trajectory & path, const double ego_front_s, const PlannerData & planner_data);
 
-  void handle_init_state();
-  void handle_approaching_state(PathWithLaneId * path);
-  void handle_inside_no_drivable_lane_state(PathWithLaneId * path);
-  void handle_stopped_state(PathWithLaneId * path);
   void initialize_debug_data(
-    const lanelet::Lanelet & no_drivable_lane, const geometry_msgs::msg::Point & ego_pos);
+    const Trajectory & path, const lanelet::Lanelet & no_drivable_lane,
+    const geometry_msgs::msg::Point & ego_pos,
+    const no_drivable_lane::PolygonIntersection & path_polygon_intersection,
+    const PlannerData & planner_data);
 };
 }  // namespace autoware::behavior_velocity_planner
 

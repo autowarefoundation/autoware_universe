@@ -348,11 +348,11 @@ LinearRing2d RadarFusionToDetectedObject::createObject2dWithMargin(
   const double y_right = -object_size.y() / 2.0 - margin;
 
   LinearRing2d box{};
-  box.push_back(Point2d{x_front, y_left});
-  box.push_back(Point2d{x_front, y_right});
-  box.push_back(Point2d{x_rear, y_right});
-  box.push_back(Point2d{x_rear, y_left});
-  box.push_back(Point2d{x_front, y_left});
+  box.emplace_back(x_front, y_left);
+  box.emplace_back(x_front, y_right);
+  box.emplace_back(x_rear, y_right);
+  box.emplace_back(x_rear, y_left);
+  box.emplace_back(x_front, y_left);
 
   return box;
 }
