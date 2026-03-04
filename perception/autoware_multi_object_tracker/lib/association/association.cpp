@@ -92,39 +92,50 @@ void DataAssociation::assign(
   // Solve
   gnn_solver_ptr_->maximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
+  // Build a map from (tracker_idx, measurement_idx) to entry info for efficient shape change lookup
+  std::unordered_map<int, std::unordered_map<int, const types::AssociationEntry *>> entry_map;
+  for (const auto & entry : data.entries) {
+    if (entry.has_significant_shape_change && entry.score >= score_threshold_) {
+      entry_map[static_cast<int>(entry.tracker_idx)][static_cast<int>(entry.measurement_idx)] =
+        &entry;
+    }
+  }
+
+  // Pre-allocate capacity for unassigned vectors
+  association_result.unassigned_trackers.reserve(data.tracker_uuids.size());
+  association_result.unassigned_measurements.reserve(data.measurement_uuids.size());
+
+  // Process assignments and shape changes in a single loop
   for (const auto & [tracker_idx, measurement_idx] : direct_assignment) {
     if (score[tracker_idx][measurement_idx] >= score_threshold_) {
       association_result.add(
         data.tracker_uuids[tracker_idx], data.measurement_uuids[measurement_idx]);
-    }
-  }
 
-  // Populate shape change info
-  for (const auto & entry : data.entries) {
-    if (entry.has_significant_shape_change) {
-      if (entry.score < score_threshold_) continue;
-      // Check if this pair was assigned
-      auto it = direct_assignment.find(entry.tracker_idx);
-      if (it != direct_assignment.end() && it->second == static_cast<int>(entry.measurement_idx)) {
-        association_result.trackers_with_shape_change.insert(data.tracker_uuids[entry.tracker_idx]);
+      // Check for shape change using the pre-built entry map
+      auto tracker_it = entry_map.find(tracker_idx);
+      if (tracker_it != entry_map.end()) {
+        auto measurement_it = tracker_it->second.find(measurement_idx);
+        if (measurement_it != tracker_it->second.end()) {
+          association_result.trackers_with_shape_change.insert(data.tracker_uuids[tracker_idx]);
+        }
       }
     }
   }
 
-  // Fill unassigned trackers
+  // Fill unassigned trackers using direct_assignment map (faster than UUID map lookup)
   for (size_t i = 0; i < data.tracker_uuids.size(); ++i) {
-    if (
-      association_result.tracker_to_measurement.find(data.tracker_uuids[i]) ==
-      association_result.tracker_to_measurement.end()) {
+    auto it = direct_assignment.find(static_cast<int>(i));
+    if (it == direct_assignment.end() ||
+        score[static_cast<int>(i)][it->second] < score_threshold_) {
       association_result.unassigned_trackers.emplace_back(data.tracker_uuids[i]);
     }
   }
 
-  // Fill unassigned measurements
+  // Fill unassigned measurements using reverse_assignment map (faster than UUID map lookup)
   for (size_t i = 0; i < data.measurement_uuids.size(); ++i) {
-    if (
-      association_result.measurement_to_tracker.find(data.measurement_uuids[i]) ==
-      association_result.measurement_to_tracker.end()) {
+    auto it = reverse_assignment.find(static_cast<int>(i));
+    if (it == reverse_assignment.end() ||
+        score[it->second][static_cast<int>(i)] < score_threshold_) {
       association_result.unassigned_measurements.emplace_back(data.measurement_uuids[i]);
     }
   }
