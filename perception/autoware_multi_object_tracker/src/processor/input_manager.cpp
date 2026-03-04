@@ -48,7 +48,27 @@ InputStream::InputStream(
   latest_message_time_ = clock_->now();
 }
 
-void InputStream::onMessage(
+void InputStream::push(
+  const types::DynamicObjectList & objects, const types::AssociationResult & association)
+{
+  // Move the objects_with_uncertainty to the objects queue
+  objects_que_.push_back(std::make_pair(objects, association));
+  while (objects_que_.size() > que_size_) {
+    objects_que_.pop_front();
+  }
+
+  // update the timing statistics
+  rclcpp::Time now = clock_->now();
+  rclcpp::Time objects_time(objects.header.stamp);
+  updateTimingStatus(now, objects_time);
+
+  // trigger the function if it is set
+  if (func_trigger_) {
+    func_trigger_(channel_.index);
+  }
+}
+
+std::optional<types::DynamicObjectList> InputStream::processMessage(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
@@ -71,7 +91,7 @@ void InputStream::onMessage(
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 1000, "InputManager::onMessage %s: Failed to transform objects.",
       channel_.long_name.c_str());
-    return;
+    return std::nullopt;
   }
   dynamic_objects = transformed_objects.value();
 
@@ -110,21 +130,7 @@ void InputStream::onMessage(
     }
   }
 
-  // Move the objects_with_uncertainty to the objects queue
-  objects_que_.push_back(std::move(dynamic_objects));
-  while (objects_que_.size() > que_size_) {
-    objects_que_.pop_front();
-  }
-
-  // update the timing statistics
-  rclcpp::Time now = clock_->now();
-  rclcpp::Time objects_time(objects.header.stamp);
-  updateTimingStatus(now, objects_time);
-
-  // trigger the function if it is set
-  if (func_trigger_) {
-    func_trigger_(channel_.index);
-  }
+  return dynamic_objects;
 }
 
 void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time)
@@ -209,7 +215,8 @@ void InputStream::getObjectsOlderThan(
     return;
   }
 
-  for (const auto & objects : objects_que_) {
+  for (const auto & objects_pair : objects_que_) {
+    const auto & objects = objects_pair.first;
     const rclcpp::Time object_time = rclcpp::Time(objects.header.stamp);
     // ignore objects older than the specified duration
     if (object_time < object_earliest_time) {
@@ -218,13 +225,13 @@ void InputStream::getObjectsOlderThan(
 
     // Add the object if the object is older than the specified latest time
     if (object_time <= object_latest_time) {
-      objects_list.push_back(objects);
+      objects_list.push_back(objects_pair);
     }
   }
 
   // remove objects older than 'object_latest_time'
   while (!objects_que_.empty()) {
-    const rclcpp::Time object_time = rclcpp::Time(objects_que_.front().header.stamp);
+    const rclcpp::Time object_time = rclcpp::Time(objects_que_.front().first.header.stamp);
     if (object_time < object_latest_time) {
       objects_que_.pop_front();
     } else {
@@ -272,17 +279,30 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
   is_initialized_ = true;
 }
 
-void InputManager::onMessage(
+void InputManager::push(
+  const size_t channel_index, const types::DynamicObjectList & objects,
+  const types::AssociationResult & association)
+{
+  if (channel_index >= input_streams_.size()) {
+    RCLCPP_WARN(
+      logger_, "InputManager::push Invalid channel index: %lu, input_streams_ size: %lu",
+      channel_index, input_streams_.size());
+    return;
+  }
+  input_streams_.at(channel_index)->push(objects, association);
+}
+
+std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(
-      logger_, "InputManager::onMessage Invalid channel index: %lu, input_streams_ size: %lu",
+      logger_, "InputManager::processMessage Invalid channel index: %lu, input_streams_ size: %lu",
       channel_index, input_streams_.size());
-    return;
+    return std::nullopt;
   }
-  input_streams_.at(channel_index)->onMessage(msg);
+  return input_streams_.at(channel_index)->processMessage(msg);
 }
 
 void InputManager::setTriggerFunction(std::function<void(size_t)> func_trigger)
@@ -394,14 +414,14 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   // Sort objects by timestamp
   std::sort(
     objects_list.begin(), objects_list.end(),
-    [](const types::DynamicObjectList & a, const types::DynamicObjectList & b) {
-      return (rclcpp::Time(a.header.stamp) - rclcpp::Time(b.header.stamp)).seconds() < 0;
+    [](const auto & a, const auto & b) {
+      return (rclcpp::Time(a.first.header.stamp) - rclcpp::Time(b.first.header.stamp)).seconds() < 0;
     });
 
   // Update the latest exported object time
   bool is_any_object = !objects_list.empty();
   if (is_any_object) {
-    latest_exported_object_time_ = rclcpp::Time(objects_list.back().header.stamp);
+    latest_exported_object_time_ = rclcpp::Time(objects_list.back().first.header.stamp);
   } else {
     // check time jump back
     if (now < latest_exported_object_time_) {

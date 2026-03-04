@@ -80,7 +80,9 @@ private:
   // callback functions
   void onTimer();
   void onTrigger();
-  void onMessage(const size_t channel_index);
+  void onMeasurement(
+    const size_t channel_index,
+    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
 
   // publish processes
   void publish(const rclcpp::Time & time);

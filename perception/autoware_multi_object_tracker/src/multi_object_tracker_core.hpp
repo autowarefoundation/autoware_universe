@@ -41,8 +41,6 @@
 
 namespace autoware::multi_object_tracker
 {
-using ObjectsList = std::vector<types::DynamicObjectList>;
-
 struct MultiObjectTrackerParameters
 {
   // Given parameters
@@ -92,9 +90,10 @@ namespace core
 {
 
 void process_objects(
-  const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger);
+  const std::pair<types::DynamicObjectList, types::AssociationResult> & objects,
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
 
 std::optional<ObjectsList> get_objects(
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
