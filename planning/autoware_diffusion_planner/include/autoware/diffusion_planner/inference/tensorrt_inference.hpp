@@ -59,9 +59,11 @@ public:
    * @param model_path Path to the TensorRT model file.
    * @param plugins_path Path to TensorRT plugin shared libraries.
    * @param batch_size Batch size for inference buffers and shapes.
+   * @param cuda_graph_enable Whether to enable CUDA Graph for inference.
    */
   TensorrtInference(
-    const std::string & model_path, const std::string & plugins_path, int batch_size);
+    const std::string & model_path, const std::string & plugins_path, int batch_size,
+    bool cuda_graph_enable = false);
   ~TensorrtInference();
 
   /**
@@ -78,10 +80,8 @@ public:
 
 private:
   int batch_size_{1};
-  /**
-   * @brief Plugins path used for TensorRT engine creation.
-   */
   std::string plugins_path_;
+  bool cuda_graph_enable_{false};
   std::unique_ptr<autoware::tensorrt_common::TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   /**
@@ -105,7 +105,23 @@ private:
   autoware::cuda_utils::CudaUniquePtr<float[]> turn_indicators_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> output_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> turn_indicator_logit_d_;
+
+  // Pinned host buffers for fast D2H transfers
+  autoware::cuda_utils::CudaUniquePtrHost<float[]> output_pinned_;
+  autoware::cuda_utils::CudaUniquePtrHost<float[]> logit_pinned_;
+  size_t output_num_elements_{0};
+  size_t logit_num_elements_{0};
+
   cudaStream_t stream_{nullptr};
+
+  cudaGraph_t graph_{nullptr};
+  cudaGraphExec_t graph_exec_{nullptr};
+  bool cuda_graph_enabled_{false};
+  bool graph_initialized_{false};
+
+  void enableCudaGraph();
+  void bindBuffers();
+  void transferInputsToDevice(const preprocess::InputDataMap & input_data_map);
 };
 
 }  // namespace autoware::diffusion_planner

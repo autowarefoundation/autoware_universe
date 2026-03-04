@@ -52,7 +52,7 @@ void DiffusionPlannerCore::load_model()
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
   tensorrt_inference_ = std::make_unique<TensorrtInference>(
-    params_.model_path, params_.plugins_path, params_.batch_size);
+    params_.model_path, params_.plugins_path, params_.batch_size, params_.cuda_graph_enable);
 }
 
 void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
