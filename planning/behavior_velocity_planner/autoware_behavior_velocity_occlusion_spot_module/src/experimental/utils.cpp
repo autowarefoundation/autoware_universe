@@ -16,7 +16,9 @@
 
 #include "../risk_predictive_braking.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/trajectory/utils/crop.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -221,6 +223,111 @@ generateOneNotableCollisionFromOcclusionSpot(
   }
   return candidate;
 }
+
+bool createDetectionAreaPolygons(
+  Polygons2d & da_polys,
+  const autoware::experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
+  const double s_ego, const DetectionRange & da_range, const double obstacle_vel_mps,
+  const double min_velocity = 1.0)
+{
+  /**
+   * @brief relationships for interpolated polygon
+   *
+   * +(min_length,max_distance)-+ - +---+(max_length,max_distance) = outer_polygons
+   * |                                  |
+   * +--------------------------+ - +---+(max_length,min_distance) = inner_polygons
+   */
+
+  using planning_utils::calculateOffsetPoint2d;
+
+  if (s_ego >= path.length()) {
+    return false;
+  }
+
+  const auto & min_len = da_range.min_longitudinal_distance;
+  const auto & max_len = da_range.max_longitudinal_distance;
+  const auto & max_dst = da_range.max_lateral_distance;
+  const auto & interval = da_range.interval;
+  const auto offset_left = (da_range.wheel_tread / 2.0) + da_range.left_overhang;
+  const auto offset_right = (da_range.wheel_tread / 2.0) + da_range.right_overhang;
+
+  const auto cropped_path = autoware::experimental::trajectory::crop(path, s_ego, path.length());
+
+  // initial point of detection area polygon
+  const auto bases = cropped_path.get_underlying_bases();
+  auto p0 = cropped_path.compute(bases.front()).point;
+  constexpr auto epsilon = 1e-3;
+  LineString2d left_inner_bound = {calculateOffsetPoint2d(p0.pose, min_len, offset_left)};
+  LineString2d left_outer_bound = {calculateOffsetPoint2d(p0.pose, min_len, offset_left + epsilon)};
+  LineString2d right_inner_bound = {calculateOffsetPoint2d(p0.pose, min_len, -offset_right)};
+  LineString2d right_outer_bound = {
+    calculateOffsetPoint2d(p0.pose, min_len, -offset_right - epsilon)};
+
+  auto ttc = 0.0;
+  auto dist_sum = 0.0;
+  auto length = 0;
+
+  for (auto it = std::next(bases.begin()); it != bases.end(); ++it) {
+    const auto p1 = cropped_path.compute(*it).point;
+    const auto ds = autoware_utils_geometry::calc_distance2d(p0, p1);
+
+    dist_sum += ds;
+    length += ds;
+
+    // calculate the distance that obstacles can move until ego reach the trajectory point
+    const auto v_average = 0.5 * (p0.longitudinal_velocity_mps + p1.longitudinal_velocity_mps);
+    const auto v = std::max(v_average, min_velocity);
+    const auto dt = ds / v;
+    ttc += dt;
+
+    // for offset calculation
+    const auto max_lateral_distance_right =
+      std::min(max_dst, offset_right + ttc * obstacle_vel_mps + epsilon);
+    const auto max_lateral_distance_left =
+      std::min(max_dst, offset_left + ttc * obstacle_vel_mps + epsilon);
+
+    // left bound
+    if (da_range.use_left) {
+      left_inner_bound.emplace_back(calculateOffsetPoint2d(p1.pose, min_len, offset_left));
+      left_outer_bound.emplace_back(
+        calculateOffsetPoint2d(p1.pose, min_len, max_lateral_distance_left));
+    }
+
+    // right bound
+    if (da_range.use_right) {
+      right_inner_bound.emplace_back(calculateOffsetPoint2d(p1.pose, min_len, -offset_right));
+      right_outer_bound.emplace_back(
+        calculateOffsetPoint2d(p1.pose, min_len, -max_lateral_distance_right));
+    }
+
+    // replace previous point with next point
+    p0 = p1;
+
+    // separate detection area polygon with fixed interval or at the end of detection max length
+    if (length <= interval && max_len >= dist_sum && it != std::prev(bases.end())) {
+      continue;
+    }
+    if (left_inner_bound.size() > 1) {
+      da_polys.emplace_back(lines2polygon(left_inner_bound, left_outer_bound));
+    }
+    if (right_inner_bound.size() > 1) {
+      da_polys.emplace_back(lines2polygon(right_outer_bound, right_inner_bound));
+    }
+
+    if (max_len < dist_sum || it == std::prev(bases.end())) {
+      return true;
+    }
+
+    left_inner_bound = {left_inner_bound.back()};
+    left_outer_bound = {left_outer_bound.back()};
+    right_inner_bound = {right_inner_bound.back()};
+    right_outer_bound = {right_outer_bound.back()};
+    length = 0;
+  }
+
+  return true;
+}
 }  // namespace
 
 void applyVelocityToPath(Trajectory & path, const double velocity)
@@ -247,8 +354,7 @@ bool buildDetectionAreaPolygons(
   detection_range.right_overhang = param.right_overhang;
   detection_range.left_overhang = param.left_overhang;
 
-  return planning_utils::createDetectionAreaPolygons(
-    polygons, path, s_ego, detection_range, param.pedestrian_vel);
+  return createDetectionAreaPolygons(polygons, path, s_ego, detection_range, param.pedestrian_vel);
 }
 
 bool generatePossibleCollisionsFromGridMap(
