@@ -236,16 +236,12 @@ void MultiObjectTracker::onMeasurement(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
-  const auto result = core::process_measurement(channel_index, msg, current_time, state_);
+  const auto result =
+    core::process_measurement(channel_index, msg, current_time, state_, *debugger_);
 
   if (!result.objects) {
     return;
   }
-
-  // Collect debug information - tracker list, existence probabilities, association results
-  const types::AssociatedObjects associated_objects{*result.objects, result.association_result};
-  debugger_->collectObjectInfo(
-    result.measurement_time, state_.processor->getListTracker(), associated_objects);
 
   if (result.should_process) {
     processObjects();
