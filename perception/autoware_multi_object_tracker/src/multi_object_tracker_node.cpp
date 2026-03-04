@@ -232,6 +232,9 @@ void MultiObjectTracker::onMeasurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const rclcpp::Time current_time = this->now();
   const auto result = core::process_measurement(channel_index, msg, current_time, state_);
 
