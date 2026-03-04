@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/tensorrt_yolox/label.hpp>
-
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/tensorrt_yolox/label.hpp>
 
 #include <gtest/gtest.h>
 
@@ -23,15 +22,15 @@
 
 std::string get_file_path(const std::string & filename)
 {
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox");
+  const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox");
   std::string path = package_dir + "/test_label_data/" + filename;
 
   return path;
 }
 
 // test parsing a label file
-TEST(LabelProcessing, ReadLabelFile) {
+TEST(LabelProcessing, ReadLabelFile)
+{
   const std::string input_file_name = get_file_path("test_label_with_spaces.txt");
 
   std::vector<std::string> roi_id_to_name_map;
@@ -52,7 +51,8 @@ TEST(LabelProcessing, ReadLabelFile) {
 }
 
 // test parsing a semantic segmentation color map file
-TEST(LabelProcessing, ReadSemsegColorMapFile) {
+TEST(LabelProcessing, ReadSemsegColorMapFile)
+{
   const std::string input_file_name = get_file_path("test_semseg_col_map_with_spaces.csv");
 
   std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map;
@@ -91,7 +91,8 @@ TEST(LabelProcessing, ReadSemsegColorMapFile) {
 }
 
 // test parsing a label remap file
-TEST(LabelProcessing, ReadLabelRemapFile) {
+TEST(LabelProcessing, ReadLabelRemapFile)
+{
   const std::string input_file_name = get_file_path("test_label_remap.csv");
 
   std::unordered_map<std::string, int> label_name_to_id_remap;
@@ -108,7 +109,8 @@ TEST(LabelProcessing, ReadLabelRemapFile) {
 
 // test parsing a label remap file without header
 // NOTE: the skip_header_lines is hard-coded in the source
-TEST(LabelProcessing, ReadLabelRemapFileWithoutHeader) {
+TEST(LabelProcessing, ReadLabelRemapFileWithoutHeader)
+{
   const std::string input_file_name = get_file_path("test_label_remap_without_header.csv");
 
   std::unordered_map<std::string, int> label_name_to_id_remap;
@@ -124,7 +126,8 @@ TEST(LabelProcessing, ReadLabelRemapFileWithoutHeader) {
 }
 
 // test parsing a label remap file with comment in the lines
-TEST(LabelProcessing, ReadLabelRemapFileWithComment) {
+TEST(LabelProcessing, ReadLabelRemapFileWithComment)
+{
   const std::string input_file_name = get_file_path("test_label_file_with_comment.csv");
 
   std::unordered_map<std::string, int> label_name_to_id_remap;
