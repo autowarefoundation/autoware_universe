@@ -76,6 +76,7 @@ struct MultiObjectTrackerInternalState
 
   rclcpp::Time last_publish_time;
   rclcpp::Time last_updated_time;
+  rclcpp::Time last_tracker_time;
 
   MultiObjectTrackerInternalState();
 
@@ -101,7 +102,6 @@ struct MeasurementProcessingResult
 struct ObjectProcessingResult
 {
   bool should_publish;  // true if should publish immediately (no delay compensation)
-  rclcpp::Time latest_time;
 };
 
 struct PublishingData
@@ -146,9 +146,6 @@ void process_objects_(
   const types::ObjectsWithAssociation & objects, const rclcpp::Time & current_time,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
   const rclcpp::Logger & logger);
-
-std::optional<ObjectsList> get_objects(
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
 
 void process_parameters(MultiObjectTrackerParameters & params);
 
