@@ -174,8 +174,10 @@ void read_label_file(
   int label_index = 0;
   std::string label_name;
   while (getline(label_file, label_name)) {
-    roi_id_to_name_map.push_back(label_name);
-    roi_name_to_id_map.insert({label_name, label_index});
+    std::string trimmed_label_name = label_name;
+    trim(trimmed_label_name);
+    roi_id_to_name_map.push_back(trim(trimmed_label_name));
+    roi_name_to_id_map.insert({trimmed_label_name, label_index});
 
     ++label_index;
   }
