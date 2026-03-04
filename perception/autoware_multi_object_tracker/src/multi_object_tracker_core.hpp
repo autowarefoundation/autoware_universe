@@ -139,13 +139,13 @@ PublishingData prepare_publishing_data(
 OptionalPublishingData prepare_optional_publishing_data(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
   const rclcpp::Logger & logger);
 
 void process_objects_(
-  const types::ObjectsWithAssociation & objects, const rclcpp::Time & current_time,
-  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
-  const rclcpp::Logger & logger);
+  const types::ObjectsWithAssociation & objects_with_associations,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger, const rclcpp::Logger & logger);
 
 void process_parameters(MultiObjectTrackerParameters & params);
 
@@ -155,11 +155,11 @@ bool should_publish(
 
 autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state);
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state);
 
 std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
 }  // namespace core
