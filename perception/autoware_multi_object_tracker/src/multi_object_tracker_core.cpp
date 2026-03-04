@@ -313,23 +313,24 @@ ObjectProcessingResult process_objects_batch(
   result.should_publish = false;
 
   // get objects from the input manager and run process
-  ObjectsList objects_list;
-  const bool is_objects_ready = state.input_manager->getObjects(current_time, objects_list);
+  types::ObjectsWithAssociationList objects_with_associations;
+  const bool is_objects_ready =
+    state.input_manager->getObjects(current_time, objects_with_associations);
   if (!is_objects_ready) {
     return result;
   }
 
   // process start - start measurement time before processing
-  debugger.startMeasurementTime(current_time, objects_list.back().getTimestamp());
+  debugger.startMeasurementTime(current_time, objects_with_associations.back().getTimestamp());
 
   // run process for each DynamicObject
-  for (const auto & objects_data : objects_list) {
+  for (const auto & objects_data : objects_with_associations) {
     process_objects_(objects_data, current_time, state, debugger, logger);
   }
 
   // Update last_updated_time and last_tracker_time
   state.last_updated_time = current_time;
-  state.last_tracker_time = objects_list.back().getTimestamp();
+  state.last_tracker_time = objects_with_associations.back().getTimestamp();
 
   // process end - end measurement time after processing
   debugger.endMeasurementTime(current_time);
