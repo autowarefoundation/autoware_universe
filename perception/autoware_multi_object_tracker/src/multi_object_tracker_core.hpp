@@ -120,12 +120,35 @@ struct OptionalPublishingData
   bool should_publish_tentative;
 };
 
-// Core business logic functions
+// Parameter processing
+void process_parameters(MultiObjectTrackerParameters & params);
+
+// Utility functions
+bool should_publish(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state);
+
+autoware_perception_msgs::msg::TrackedObjects get_tracked_objects_(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state);
+
+std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects_(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
+  const rclcpp::Logger & logger);
+
+// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
 
+void process_objects_(
+  const types::ObjectsWithAssociation & objects_with_associations,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger, const rclcpp::Logger & logger);
+
+// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
@@ -140,26 +163,6 @@ OptionalPublishingData prepare_optional_publishing_data(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
   const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
-  const rclcpp::Logger & logger);
-
-void process_objects_(
-  const types::ObjectsWithAssociation & objects_with_associations,
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger);
-
-void process_parameters(MultiObjectTrackerParameters & params);
-
-bool should_publish(
-  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state);
-
-autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state);
-
-std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
 }  // namespace core

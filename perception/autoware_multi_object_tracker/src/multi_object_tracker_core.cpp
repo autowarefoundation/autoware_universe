@@ -66,6 +66,7 @@ void MultiObjectTrackerInternalState::init(
 namespace core
 {
 
+// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
   using Label = autoware_perception_msgs::msg::ObjectClassification;
@@ -171,6 +172,99 @@ void process_parameters(MultiObjectTrackerParameters & params)
   }
 }
 
+// Utility functions
+bool should_publish(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state)
+{
+  if (state.last_updated_time.nanoseconds() == 0) {
+    state.last_updated_time = current_time;
+  }
+
+  // ensure minimum interval: room for the next process(prediction)
+  static constexpr double minimum_publish_interval_ratio = 0.85;
+  static constexpr double maximum_publish_interval_ratio = 1.05;
+
+  const double publisher_period = 1.0 / params.publish_rate;
+  const double minimum_publish_interval = publisher_period * minimum_publish_interval_ratio;
+  const auto elapsed_time = (current_time - state.last_publish_time).seconds();
+
+  if (elapsed_time < minimum_publish_interval) {
+    return false;
+  }
+
+  // if there was update after publishing, publish new messages
+  bool should_publish = state.last_publish_time < state.last_updated_time;
+
+  // if there was no update, publish if the elapsed time is longer than the maximum publish latency
+  // in this case, it will perform extrapolate/remove old objects
+  const double maximum_publish_interval = publisher_period * maximum_publish_interval_ratio;
+  should_publish = should_publish || elapsed_time > maximum_publish_interval;
+
+  return should_publish;
+}
+
+autoware_perception_msgs::msg::TrackedObjects get_tracked_objects_(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state)
+{
+  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
+  tracked_objects.header.frame_id = params.world_frame_id;
+  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
+  state.processor->getTrackedObjects(object_time, tracked_objects);
+
+  return tracked_objects;
+}
+
+std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects_(
+  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
+  const rclcpp::Logger & logger)
+{
+  if (!params.publish_merged_objects) {
+    return std::nullopt;
+  }
+
+  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
+  const auto tf_base_to_world = state.odometry->getTransform(publish_time);
+  if (tf_base_to_world) {
+    autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
+    state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
+    merged_output_msg.header.frame_id = params.ego_frame_id;
+    return merged_output_msg;
+  }
+
+  RCLCPP_WARN(
+    logger, "No odometry information available at the publishing time: %.9f",
+    publish_time.seconds());
+  return std::nullopt;
+}
+
+// Low-level processing functions
+MeasurementProcessingResult process_measurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
+{
+  MeasurementProcessingResult result;
+  result.should_process = false;
+
+  const auto objects = state.input_manager->processMessage(channel_index, msg);
+  if (!objects) {
+    return result;
+  }
+
+  const auto association_result = state.processor->associate(*objects);
+  state.input_manager->push(channel_index, *objects, association_result);
+
+  result.objects = objects;
+  result.association_result = association_result;
+  result.measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
+  result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
+
+  return result;
+}
+
 void process_objects_(
   const types::ObjectsWithAssociation & objects_with_associations,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
@@ -212,97 +306,7 @@ void process_objects_(
   state.processor->spawn(associated_objects);
 }
 
-bool should_publish(
-  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state)
-{
-  if (state.last_updated_time.nanoseconds() == 0) {
-    state.last_updated_time = current_time;
-  }
-
-  // ensure minimum interval: room for the next process(prediction)
-  static constexpr double minimum_publish_interval_ratio = 0.85;
-  static constexpr double maximum_publish_interval_ratio = 1.05;
-
-  const double publisher_period = 1.0 / params.publish_rate;
-  const double minimum_publish_interval = publisher_period * minimum_publish_interval_ratio;
-  const auto elapsed_time = (current_time - state.last_publish_time).seconds();
-
-  if (elapsed_time < minimum_publish_interval) {
-    return false;
-  }
-
-  // if there was update after publishing, publish new messages
-  bool should_publish = state.last_publish_time < state.last_updated_time;
-
-  // if there was no update, publish if the elapsed time is longer than the maximum publish latency
-  // in this case, it will perform extrapolate/remove old objects
-  const double maximum_publish_interval = publisher_period * maximum_publish_interval_ratio;
-  should_publish = should_publish || elapsed_time > maximum_publish_interval;
-
-  return should_publish;
-}
-
-autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state)
-{
-  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
-  tracked_objects.header.frame_id = params.world_frame_id;
-  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
-  state.processor->getTrackedObjects(object_time, tracked_objects);
-
-  return tracked_objects;
-}
-
-std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
-  const rclcpp::Logger & logger)
-{
-  if (!params.publish_merged_objects) {
-    return std::nullopt;
-  }
-
-  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
-  const auto tf_base_to_world = state.odometry->getTransform(publish_time);
-  if (tf_base_to_world) {
-    autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
-    state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
-    merged_output_msg.header.frame_id = params.ego_frame_id;
-    return merged_output_msg;
-  }
-
-  RCLCPP_WARN(
-    logger, "No odometry information available at the publishing time: %.9f",
-    publish_time.seconds());
-  return std::nullopt;
-}
-
-MeasurementProcessingResult process_measurement(
-  const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
-{
-  MeasurementProcessingResult result;
-  result.should_process = false;
-
-  const auto objects = state.input_manager->processMessage(channel_index, msg);
-  if (!objects) {
-    return result;
-  }
-
-  const auto association_result = state.processor->associate(*objects);
-  state.input_manager->push(channel_index, *objects, association_result);
-
-  result.objects = objects;
-  result.association_result = association_result;
-  result.measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
-  result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
-
-  return result;
-}
-
+// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
@@ -351,7 +355,7 @@ PublishingData prepare_publishing_data(
   state.processor->prune(publish_time);
 
   // Get tracked objects
-  result.tracked_objects = get_tracked_objects(publish_time, current_time, params, state);
+  result.tracked_objects = get_tracked_objects_(publish_time, current_time, params, state);
   result.tracked_objects_size = result.tracked_objects.objects.size();
 
   // Update last_publish_time
@@ -370,7 +374,7 @@ OptionalPublishingData prepare_optional_publishing_data(
 
   // Get merged objects
   if (params.publish_merged_objects) {
-    result.merged_objects = get_merged_objects(publish_time, current_time, params, state, logger);
+    result.merged_objects = get_merged_objects_(publish_time, current_time, params, state, logger);
   }
 
   // Calculate min_extrapolation_time
