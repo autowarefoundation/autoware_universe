@@ -115,19 +115,17 @@ FunctionTimings runIterationsAssociation(
     // Individual function timing
     timings.predict.times.push_back(
       measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
-    timings.associate.times.push_back(measureTimeMs(
-      [&]() { association_result = processor->associate(detections); }));
-    timings.update.times.push_back(
-      measureTimeMs([&]() {
-        processor->update(autoware::multi_object_tracker::types::AssociatedObjects{
-          detections, association_result});
-      }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
-    timings.spawn.times.push_back(
-      measureTimeMs([&]() {
-        processor->spawn(autoware::multi_object_tracker::types::AssociatedObjects{
-          detections, association_result});
-      }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
 
     const auto total_end = Clock::now();
     auto total_duration =
@@ -184,21 +182,19 @@ FunctionTimings runIterations(
     // Individual function timing
     timings.predict.times.push_back(
       measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
-    timings.associate.times.push_back(measureTimeMs(
-      [&]() { association_result = processor->associate(detections); }));
-    timings.update.times.push_back(
-      measureTimeMs([&]() {
-        processor->update(autoware::multi_object_tracker::types::AssociatedObjects{
-          detections, association_result});
-      }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers0 = processor->getListTracker().size();
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
     int num_trackers1 = processor->getListTracker().size();
-    timings.spawn.times.push_back(
-      measureTimeMs([&]() {
-        processor->spawn(autoware::multi_object_tracker::types::AssociatedObjects{
-          detections, association_result});
-      }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers2 = processor->getListTracker().size();
 
     int num_pruned = num_trackers0 - num_trackers1;

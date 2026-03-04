@@ -176,8 +176,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   core::process_parameters(params_);
 
   ////// Initialize state
-  state_.init(
-    params_, *this, nullptr);
+  state_.init(params_, *this, nullptr);
 
   ////// Create subscriptions and publishers
   // subscriptions
