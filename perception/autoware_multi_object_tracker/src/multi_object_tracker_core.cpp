@@ -30,7 +30,9 @@ namespace autoware::multi_object_tracker
 {
 
 MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
-: last_publish_time(0, 0, RCL_ROS_TIME), last_updated_time(0, 0, RCL_ROS_TIME)
+: last_publish_time(0, 0, RCL_ROS_TIME),
+  last_updated_time(0, 0, RCL_ROS_TIME),
+  last_tracker_time(0, 0, RCL_ROS_TIME)
 {
 }
 
@@ -58,21 +60,11 @@ void MultiObjectTrackerInternalState::init(
 
   last_publish_time = node.now();
   last_updated_time = node.now();
+  last_tracker_time = node.now();
 }
 
 namespace core
 {
-
-std::optional<ObjectsList> get_objects(
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state)
-{
-  ObjectsList objects_list;
-  const bool is_objects_ready = state.input_manager->getObjects(current_time, objects_list);
-  if (!is_objects_ready) {
-    return std::nullopt;
-  }
-  return objects_list;
-}
 
 void process_parameters(MultiObjectTrackerParameters & params)
 {
@@ -219,8 +211,6 @@ void process_objects_(
 
   /* spawn new tracker */
   state.processor->spawn(associated_objects);
-
-  state.last_updated_time = current_time;
 }
 
 bool should_publish(
@@ -323,21 +313,23 @@ ObjectProcessingResult process_objects_batch(
   result.should_publish = false;
 
   // get objects from the input manager and run process
-  const auto objects_with_associations = get_objects(current_time, state);
-  if (!objects_with_associations) {
+  ObjectsList objects_list;
+  const bool is_objects_ready = state.input_manager->getObjects(current_time, objects_list);
+  if (!is_objects_ready) {
     return result;
   }
 
-  // Get latest time for debug timing
-  result.latest_time = objects_with_associations->back().getTimestamp();
-
   // process start - start measurement time before processing
-  debugger.startMeasurementTime(current_time, result.latest_time);
+  debugger.startMeasurementTime(current_time, objects_list.back().getTimestamp());
 
   // run process for each DynamicObject
-  for (const auto & objects_data : *objects_with_associations) {
+  for (const auto & objects_data : objects_list) {
     process_objects_(objects_data, current_time, state, debugger, logger);
   }
+
+  // Update last_updated_time and last_tracker_time
+  state.last_updated_time = current_time;
+  state.last_tracker_time = objects_list.back().getTimestamp();
 
   // process end - end measurement time after processing
   debugger.endMeasurementTime(current_time);

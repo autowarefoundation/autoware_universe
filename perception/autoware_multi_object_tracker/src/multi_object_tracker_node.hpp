@@ -76,7 +76,7 @@ private:
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
 
   // publish processes
-  void publish(const rclcpp::Time & time);
+  void publish();
   void publishOptional(
     const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
     const size_t tracked_objects_size);

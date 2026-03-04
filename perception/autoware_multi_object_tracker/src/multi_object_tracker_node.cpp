@@ -260,15 +260,9 @@ void MultiObjectTracker::processObjects()
   const auto result =
     core::process_objects_batch(current_time, params_, state_, *debugger_, get_logger());
 
-  // Check if processing was successful (objects were available)
-  if (result.latest_time.nanoseconds() == 0) {
-    // No objects available, skip publishing
-    return;
-  }
-
   // Publish without delay compensation
   if (result.should_publish) {
-    publish(result.latest_time);
+    publish();
   }
 }
 
@@ -280,17 +274,17 @@ void MultiObjectTracker::onTimer()
   const rclcpp::Time current_time = this->now();
 
   if (core::should_publish(current_time, params_, state_)) {
-    publish(state_.last_publish_time);
+    publish();
   }
 }
 
-void MultiObjectTracker::publish(const rclcpp::Time & publish_time)
+void MultiObjectTracker::publish()
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
-
+  const rclcpp::Time publish_time = state_.last_tracker_time;
   debugger_->startPublishTime(current_time);
   core::PublishingData publishing_data;
   {
