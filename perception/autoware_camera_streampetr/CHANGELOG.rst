@@ -2,6 +2,14 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(stream_petr): remove invalid thrust stream policy for copy operations (`#12064 <https://github.com/autowarefoundation/autoware_universe/issues/12064>`_)
+  Remove unnecessary thrust::device specification
+* chore(autoware_camera_streampetr): remove cudnn dependency (`#11890 <https://github.com/autowarefoundation/autoware_universe/issues/11890>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, Samrat Thapa
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

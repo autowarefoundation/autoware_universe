@@ -23,6 +23,8 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/exceptions/exceptions.hpp>
 
+#include <thrust/iterator/transform_iterator.h>
+
 #include <cstdint>
 #include <limits>
 #include <locale>
@@ -754,7 +756,7 @@ CudaPolarVoxelOutlierFilter::calculate_voxel_index(
 
     // Because `operator<=` for cuda::std::optional considers nullopt is less than any valid value,
     // this conversion helps searching minimum valid value from the array of cuda::std::optional
-    cub::TransformInputIterator<int, NulloptToMax, ::cuda::std::optional<int> *>
+    thrust::transform_iterator<NulloptToMax, ::cuda::std::optional<int> *>
       transformed_in_null_to_max(polar_voxel_index, NulloptToMax{});
 
     // Take Minimum value
@@ -766,7 +768,7 @@ CudaPolarVoxelOutlierFilter::calculate_voxel_index(
     // cuda::std::optional does not have ::Lowest() member, which is required for
     // cub::DeviceReduce::Max. Here, cuda::std::optional is wrapped to transform into its contained
     // value (if nullopt, then return numeric_limits::lowest) to make cub::DeviceReduce::Max work
-    cub::TransformInputIterator<int, NulloptToLowest, ::cuda::std::optional<int> *>
+    thrust::transform_iterator<NulloptToLowest, ::cuda::std::optional<int> *>
       transformed_in_null_to_lowest(polar_voxel_index, NulloptToLowest{});
 
     // Take maximum value

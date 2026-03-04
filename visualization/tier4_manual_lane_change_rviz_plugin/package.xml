@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_manual_lane_change_rviz_plugin</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>Rviz plugin for setting manually shifting the preferred lanes to the desired direction</description>
   <maintainer email="arjun.ram@tier4.jp">arjunram</maintainer>
   <license>Apache License 2.0</license>

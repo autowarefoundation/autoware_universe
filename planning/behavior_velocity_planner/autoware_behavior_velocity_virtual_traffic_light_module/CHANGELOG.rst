@@ -2,6 +2,19 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(behavior_velocity_virtual_traffic_light_module): use Trajectory instead of PathWithLaneId (`#11576 <https://github.com/autowarefoundation/autoware_universe/issues/11576>`_)
+  * use Trajectory instead of PathWithLaneId
+  * clarify null check
+  * include necessary header
+  * fix clang tidy
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
+* Contributors: Mitsuhiro Sakamoto, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

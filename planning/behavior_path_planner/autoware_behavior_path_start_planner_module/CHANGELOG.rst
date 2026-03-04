@@ -2,6 +2,15 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(start_planner): reuse previous stop pose to stop for dynamic objects (`#12011 <https://github.com/autowarefoundation/autoware_universe/issues/12011>`_)
+* refactor(start_planner): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet (`#11990 <https://github.com/autowarefoundation/autoware_universe/issues/11990>`_)
+* fix(behavior_path_start_planner_module): add missing dependencies to CMakeLists (`#11936 <https://github.com/autowarefoundation/autoware_universe/issues/11936>`_)
+* docs(start_planner): document revision (`#11844 <https://github.com/autowarefoundation/autoware_universe/issues/11844>`_)
+* Contributors: Mamoru Sobue, Maxime CLEMENT, Mete Fatih Cırıt, Ryohsuke Mitsudome, Zulfaqar Azmi
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

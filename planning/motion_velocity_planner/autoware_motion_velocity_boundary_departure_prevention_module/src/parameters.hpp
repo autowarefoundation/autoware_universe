@@ -38,7 +38,7 @@ struct PredictedPathFootprint
 struct Output
 {
   std::unordered_map<std::string, double> processing_time_map;
-  AbnormalitiesData abnormalities_data;
+  DepartureData abnormalities_data;
   std::vector<std::tuple<Pose, Pose, double>> slowdown_intervals;
 
   trajectory::Trajectory<TrajectoryPoint> aw_ref_traj;

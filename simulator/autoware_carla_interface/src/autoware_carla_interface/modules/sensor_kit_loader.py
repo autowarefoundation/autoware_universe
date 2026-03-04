@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Sensor kit configuration loader for CARLA-Autoware interface."""
 
 import logging
@@ -38,10 +37,13 @@ class SensorKitLoader:
     """Loader for Autoware sensor kit configurations."""
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        """Initialize sensor kit loader.
+        """
+        Initialize sensor kit loader.
 
         Args:
+        ----
             logger: Logger instance for output
+
         """
         self.logger = logger or logging.getLogger(__name__)
         self.sensor_mapping: Dict[str, Any] = {}
@@ -49,13 +51,17 @@ class SensorKitLoader:
         self.wheelbase: float = DEFAULT_WHEELBASE
 
     def load_sensor_mapping(self, mapping_file: Optional[str] = None) -> bool:
-        """Load sensor mapping configuration.
+        """
+        Load sensor mapping configuration.
 
         Args:
+        ----
             mapping_file: Path to sensor mapping YAML file
 
-        Returns:
+        Returns
+        -------
             True if successfully loaded, False otherwise
+
         """
         try:
             mapping_file = self._resolve_mapping_file_path(mapping_file)
@@ -82,13 +88,17 @@ class SensorKitLoader:
             return False
 
     def _resolve_mapping_file_path(self, mapping_file: Optional[str]) -> Optional[str]:
-        """Resolve sensor mapping file path.
+        """
+        Resolve sensor mapping file path.
 
         Args:
+        ----
             mapping_file: Optional path to mapping file
 
-        Returns:
+        Returns
+        -------
             Resolved file path or None if not found
+
         """
         if not mapping_file:
             pkg_dir = get_package_share_directory("autoware_carla_interface")
@@ -106,10 +116,13 @@ class SensorKitLoader:
         return None
 
     def _validate_sensor_mapping_yaml(self):
-        """Validate sensor mapping YAML structure.
+        """
+        Validate sensor mapping YAML structure.
 
-        Raises:
+        Raises
+        ------
             ValueError: If YAML structure is invalid
+
         """
         self._validate_yaml_is_dict()
         self._validate_required_keys()
@@ -138,10 +151,13 @@ class SensorKitLoader:
             raise ValueError("enabled_sensors must be a list")
 
     def _load_vehicle_config(self):
-        """Load vehicle configuration from sensor mapping.
+        """
+        Load vehicle configuration from sensor mapping.
 
-        Raises:
+        Raises
+        ------
             ValueError: If vehicle config is invalid
+
         """
         if "vehicle_config" not in self.sensor_mapping:
             self.logger.info(f"Using default wheelbase: {self.wheelbase}m")
@@ -158,13 +174,17 @@ class SensorKitLoader:
         self._load_wheelbase_value(vehicle_config["wheelbase"])
 
     def _load_wheelbase_value(self, wheelbase_value):
-        """Validate and load wheelbase value.
+        """
+        Validate and load wheelbase value.
 
         Args:
+        ----
             wheelbase_value: Wheelbase value from config
 
-        Raises:
+        Raises
+        ------
             ValueError: If wheelbase is invalid
+
         """
         if not isinstance(wheelbase_value, (int, float)):
             raise ValueError(f"wheelbase must be a number, got: {type(wheelbase_value).__name__}")
@@ -175,19 +195,24 @@ class SensorKitLoader:
         self.logger.info(f"Using wheelbase from config: {self.wheelbase}m")
 
     def find_sensor_kit_path(self, sensor_kit_name: str) -> Optional[Path]:
-        """Find sensor kit calibration directory using ament_index.
+        """
+        Find sensor kit calibration directory using ament_index.
 
         This method works in both source and install spaces by using ROS 2's
         package discovery mechanism instead of hardcoded paths.
 
         Args:
+        ----
             sensor_kit_name: Name of the sensor kit package (e.g., 'carla_sensor_kit_launch')
 
-        Returns:
+        Returns
+        -------
             Path to sensor kit config directory
 
-        Raises:
+        Raises
+        ------
             FileNotFoundError: If sensor kit calibration cannot be found
+
         """
         tried_packages = []
 
@@ -213,13 +238,17 @@ class SensorKitLoader:
         raise self._create_not_found_error(sensor_kit_name, tried_packages)
 
     def _try_find_sensor_kit(self, package_name: str) -> Optional[Path]:
-        """Try to find sensor kit calibration in a package.
+        """
+        Try to find sensor kit calibration in a package.
 
         Args:
+        ----
             package_name: ROS package name to search
 
-        Returns:
+        Returns
+        -------
             Path to sensor kit config directory or None
+
         """
         from ament_index_python.packages import PackageNotFoundError
 
@@ -241,14 +270,18 @@ class SensorKitLoader:
         return None
 
     def _create_not_found_error(self, sensor_kit_name: str, tried_packages: List[str]):
-        """Create detailed FileNotFoundError for missing sensor kit.
+        """
+        Create detailed FileNotFoundError for missing sensor kit.
 
         Args:
+        ----
             sensor_kit_name: Original sensor kit name
             tried_packages: List of package names attempted
 
-        Returns:
+        Returns
+        -------
             FileNotFoundError with detailed message
+
         """
         return FileNotFoundError(
             f"Sensor kit calibration not found for '{sensor_kit_name}'.\n"
@@ -261,17 +294,21 @@ class SensorKitLoader:
         )
 
     def parse_sensor_kit_calibration(self, sensor_kit_path: Path) -> Dict[str, Any]:
-        """Parse sensor calibration from sensor kit.
+        """
+        Parse sensor calibration from sensor kit.
 
         Currently only loads extrinsic calibration (sensor positions/orientations).
         Camera intrinsics and other sensor-specific parameters are handled by CARLA
         and the sensor_mapping.yaml configuration.
 
         Args:
+        ----
             sensor_kit_path: Path to sensor kit calibration directory
 
-        Returns:
+        Returns
+        -------
             Dictionary of sensor configurations with transforms
+
         """
         sensors = {}
 
@@ -288,13 +325,17 @@ class SensorKitLoader:
         return sensors
 
     def _parse_extrinsic_calibration(self, calibration_data: Dict) -> Dict[str, Any]:
-        """Parse extrinsic calibration data.
+        """
+        Parse extrinsic calibration data.
 
         Args:
+        ----
             calibration_data: Raw calibration YAML data
 
-        Returns:
+        Returns
+        -------
             Dictionary of sensor configurations
+
         """
         sensors = {}
 
@@ -327,16 +368,20 @@ class SensorKitLoader:
         return sensors
 
     def _extract_transform(self, transform_data: Dict) -> Dict[str, float]:
-        """Extract transform values from calibration data.
+        """
+        Extract transform values from calibration data.
 
         Autoware sensor calibration files use radians for angles.
 
         Args:
+        ----
             transform_data: Transform dictionary with x, y, z, roll, pitch, yaw
                            Angles are expected in radians (Autoware standard)
 
-        Returns:
+        Returns
+        -------
             Transform dictionary with angles in radians
+
         """
         return {
             "x": float(transform_data.get("x", 0.0)),
@@ -348,13 +393,17 @@ class SensorKitLoader:
         }
 
     def normalize_sensor_name(self, sensor_name: str) -> str:
-        """Normalize sensor name for matching.
+        """
+        Normalize sensor name for matching.
 
         Args:
+        ----
             sensor_name: Original sensor name
 
-        Returns:
+        Returns
+        -------
             Normalized sensor name
+
         """
         # Early return if no normalization rules
         if "normalization" not in self.sensor_mapping:
@@ -373,13 +422,17 @@ class SensorKitLoader:
         return normalized
 
     def is_sensor_enabled(self, sensor_name: str) -> bool:
-        """Check if sensor is enabled in configuration.
+        """
+        Check if sensor is enabled in configuration.
 
         Args:
+        ----
             sensor_name: Sensor name to check
 
-        Returns:
+        Returns
+        -------
             True if enabled, False otherwise
+
         """
         if "enabled_sensors" not in self.sensor_mapping:
             return True  # Enable all by default if no list specified
@@ -391,16 +444,21 @@ class SensorKitLoader:
         return sensor_name in enabled_list or normalized in enabled_list
 
     def build_sensor_configs(self, sensor_kit_name: Optional[str] = None) -> List[SensorConfig]:
-        """Build sensor configurations from sensor kit calibration.
+        """
+        Build sensor configurations from sensor kit calibration.
 
         Args:
+        ----
             sensor_kit_name: Name of sensor kit to use
 
-        Returns:
+        Returns
+        -------
             List of sensor configurations
 
-        Raises:
+        Raises
+        ------
             RuntimeError: If sensor kit is not found or calibration cannot be loaded
+
         """
         if not sensor_kit_name:
             raise RuntimeError(
@@ -428,16 +486,21 @@ class SensorKitLoader:
         return configs
 
     def _create_configs_from_kit(self, kit_sensors: Dict) -> List[SensorConfig]:
-        """Create sensor configs from sensor kit data.
+        """
+        Create sensor configs from sensor kit data.
 
         Args:
+        ----
             kit_sensors: Parsed sensor kit data
 
-        Returns:
+        Returns
+        -------
             List of sensor configurations
 
-        Raises:
+        Raises
+        ------
             RuntimeError: If enabled sensors lack transform data
+
         """
         configs = []
         missing_transforms = []
@@ -458,15 +521,19 @@ class SensorKitLoader:
     def _try_create_sensor_config(
         self, sensor_name: str, sensor_data: Dict, missing_transforms: List[str]
     ) -> Optional[SensorConfig]:
-        """Try to create sensor config for a single sensor.
+        """
+        Try to create sensor config for a single sensor.
 
         Args:
+        ----
             sensor_name: Name of the sensor
             sensor_data: Sensor data from calibration
             missing_transforms: List to append missing transform errors to
 
-        Returns:
+        Returns
+        -------
             SensorConfig if successful, None if sensor should be skipped
+
         """
         if not self.is_sensor_enabled(sensor_name):
             return None
@@ -489,13 +556,17 @@ class SensorKitLoader:
         )
 
     def _find_sensor_mapping(self, sensor_name: str) -> Optional[Dict]:
-        """Find mapping configuration for a sensor.
+        """
+        Find mapping configuration for a sensor.
 
         Args:
+        ----
             sensor_name: Name of the sensor
 
-        Returns:
+        Returns
+        -------
             Mapping dictionary or None if not found
+
         """
         mappings = self.sensor_mapping.get("sensor_mappings", {})
         normalized = self.normalize_sensor_name(sensor_name)
@@ -509,15 +580,19 @@ class SensorKitLoader:
     def _create_sensor_config(
         self, sensor_name: str, mapping: Dict, transform: Optional[Dict] = None
     ) -> SensorConfig:
-        """Create a sensor configuration.
+        """
+        Create a sensor configuration.
 
         Args:
+        ----
             sensor_name: Name of the sensor
             mapping: Sensor mapping data
             transform: Optional transform data
 
-        Returns:
+        Returns
+        -------
             Sensor configuration
+
         """
         ros_config = mapping.get("ros_config", {})
 
@@ -561,17 +636,21 @@ class SensorKitLoader:
     def _carla_baselink_to_vehicle_center_transform(
         self, baselink_transform: Dict
     ) -> Dict[str, float]:
-        """Convert CARLA base_link coordinates to CARLA vehicle center coordinates.
+        """
+        Convert CARLA base_link coordinates to CARLA vehicle center coordinates.
 
         The carla_sensor_kit calibration uses CARLA coordinate conventions (Y-right).
         This function applies the wheelbase offset to translate from base_link
         (rear axle center) to vehicle center, without coordinate system conversion.
 
         Args:
+        ----
             baselink_transform: Transform dict with x, y, z, roll, pitch, yaw in CARLA coords
 
-        Returns:
+        Returns
+        -------
             Transform dict in vehicle center coordinates
+
         """
         # Extract values
         x = baselink_transform["x"]

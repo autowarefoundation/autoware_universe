@@ -19,7 +19,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
@@ -155,7 +154,9 @@ lanelet::ConstLanelets extend_lanelet(
   const geometry_msgs::msg::Pose & ref_point, const double distance_th)
 {
   lanelet::ConstLanelets extended_lanelets{ll};
-  auto current_arc_length = lanelet::utils::getArcCoordinates(extended_lanelets, ref_point).length;
+  auto current_arc_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(extended_lanelets, ref_point)
+      .length;
   if (current_arc_length >= distance_th) return extended_lanelets;
 
   lanelet::ConstLanelets prev_lanelets = {ll};
@@ -223,7 +224,12 @@ void set_right_turn_target_lanelets(
       return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
-  const auto combined_turn_lls = lanelet::utils::combineLaneletsShape(lanelets.turn_lanelets);
+  const auto combined_turn_lls_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(lanelets.turn_lanelets);
+  if (!combined_turn_lls_opt.has_value()) {
+    return;
+  }
+  const auto & combined_turn_lls = combined_turn_lls_opt.value();
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
   const auto candidates = lanelet_map_ptr->laneletLayer.search(
     boost::geometry::return_envelope<lanelet::BoundingBox2d>(
@@ -425,12 +431,16 @@ MarkerArray get_lanelets_marker_array(const DebugData & debug_data)
   {  // target lanelets
     lanelet::BasicPolygons2d ll_polygons;
     for (const auto & target_ll : debug_data.target_lanelets) {
-      const auto combine_ll = lanelet::utils::combineLaneletsShape(target_ll.lanelets);
-      marker_array.markers.push_back(create_polygon_marker(
-        combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
-      marker_array.markers.push_back(create_point_marker(
-        target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
-      add_text_marker(target_ll, "ICC_target_lanelets_text");
+      const auto combine_ll_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_ll.lanelets);
+      if (combine_ll_opt.has_value()) {
+        const auto & combine_ll = combine_ll_opt.value();
+        marker_array.markers.push_back(create_polygon_marker(
+          combine_ll.polygon3d().basicPolygon(), "ICC_target_lanelets", target_ll.id, blue));
+        marker_array.markers.push_back(create_point_marker(
+          target_ll.overlap_point.position, "ICC_target_lanelets_op", target_ll.id, blue));
+        add_text_marker(target_ll, "ICC_target_lanelets_text");
+      }
     }
   }
 

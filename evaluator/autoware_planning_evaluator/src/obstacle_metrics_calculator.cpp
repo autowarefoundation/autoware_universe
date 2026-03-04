@@ -430,8 +430,8 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
 
         // calculate DRAC
         const double distance_to_collision = ego_trajectory_point.distance_from_start_m;
-        const double point_drac = (ego_end_vel * ego_end_vel - ego_start_vel * ego_start_vel) /
-                                  (2.0 * distance_to_collision + 1e-6);
+        const double point_drac =
+          std::pow(ego_end_vel - ego_start_vel, 2) / (2.0 * distance_to_collision + 1e-6);
         obstacle_drac = std::max(obstacle_drac, std::abs(point_drac));
       }
 

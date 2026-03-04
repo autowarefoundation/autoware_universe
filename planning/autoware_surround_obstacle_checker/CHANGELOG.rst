@@ -2,6 +2,12 @@
 Changelog for package autoware_surround_obstacle_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* Contributors: Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

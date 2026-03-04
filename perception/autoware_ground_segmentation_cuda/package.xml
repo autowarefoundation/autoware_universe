@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_ground_segmentation_cuda</name>
-  <version>0.0.0</version>
+  <version>0.50.0</version>
   <description>GPU-Accelerated ground segmentation</description>
   <maintainer email="dai.nguyen@tier4.jp">badai-nguyen</maintainer>
   <maintainer email="anh.nguyen.2@tier4.jp">Anh Nguyen</maintainer>

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_vehicle_cmd_gate</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>The vehicle_cmd_gate package</description>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
   <maintainer email="arjun.ram@tier4.jp">Arjun Ram</maintainer>

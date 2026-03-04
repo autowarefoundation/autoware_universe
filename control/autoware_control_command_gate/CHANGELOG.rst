@@ -2,6 +2,12 @@
 Changelog for package autoware_control_command_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(control_command_gate): fix funcArgNamesDifferent (`#11975 <https://github.com/autowarefoundation/autoware_universe/issues/11975>`_)
+* Contributors: Ryohsuke Mitsudome, Ryuta Kambe
+
 0.49.0 (2025-12-30)
 -------------------
 

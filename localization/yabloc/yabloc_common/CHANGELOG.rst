@@ -2,6 +2,12 @@
 Changelog for package yabloc_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: localization related packages support jazzy (`#11419 <https://github.com/autowarefoundation/autoware_universe/issues/11419>`_)
+* Contributors: Ryohsuke Mitsudome, 心刚
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

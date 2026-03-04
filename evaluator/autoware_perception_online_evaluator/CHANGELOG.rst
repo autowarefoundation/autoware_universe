@@ -2,6 +2,12 @@
 Changelog for package autoware_perception_online_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(perception_online_evaluator): add missing include (`#11877 <https://github.com/autowarefoundation/autoware_universe/issues/11877>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 
