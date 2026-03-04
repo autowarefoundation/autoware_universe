@@ -172,15 +172,13 @@ void process_parameters(MultiObjectTrackerParameters & params)
 }
 
 void process_objects_(
-  const types::ObjectsWithAssociation & objects_data, const rclcpp::Time & current_time,
-  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
-  const rclcpp::Logger & logger)
+  const types::ObjectsWithAssociation & objects_with_associations,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger, const rclcpp::Logger & logger)
 {
-  const auto & objects = objects_data.objects;
-  const auto & association_result = objects_data.association;
-
   // Get the time of the measurement
-  const rclcpp::Time measurement_time = objects_data.getTimestamp(current_time.get_clock_type());
+  const rclcpp::Time measurement_time =
+    objects_with_associations.getTimestamp(current_time.get_clock_type());
 
   std::optional<geometry_msgs::msg::Pose> ego_pose;
   if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {
@@ -197,7 +195,8 @@ void process_objects_(
   state.processor->predict(measurement_time, ego_pose);
 
   /* object association */
-  const types::AssociatedObjects associated_objects{objects, association_result};
+  const types::AssociatedObjects associated_objects{
+    objects_with_associations.objects, objects_with_associations.association};
 
   // Collect debug information - tracker list, existence probabilities, association results
   debugger.collectObjectInfo(
@@ -246,7 +245,7 @@ bool should_publish(
 
 autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state)
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state)
 {
   autoware_perception_msgs::msg::TrackedObjects tracked_objects;
   tracked_objects.header.frame_id = params.world_frame_id;
@@ -258,7 +257,7 @@ autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
 
 std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger)
 {
   if (!params.publish_merged_objects) {
@@ -364,7 +363,7 @@ PublishingData prepare_publishing_data(
 OptionalPublishingData prepare_optional_publishing_data(
   const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
   const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
-  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
   const rclcpp::Logger & logger)
 {
   OptionalPublishingData result;
