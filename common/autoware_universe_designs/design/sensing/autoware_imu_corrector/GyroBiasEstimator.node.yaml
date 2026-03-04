@@ -22,7 +22,7 @@ subscribers:
   - name: pose_ndt
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
 
-outputs:
+publishers:
   - name: gyro_bias
     message_type: geometry_msgs/msg/Vector3Stamped
   - name: gyro_scale

@@ -22,7 +22,7 @@ subscribers:
   - name: initial_objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
 
-outputs:
+publishers:
   - name: objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
     remap_target: ~/output

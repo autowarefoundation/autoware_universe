@@ -21,7 +21,7 @@ subscribers:
     message_type: tier4_perception_msgs/msg/TrafficLightArray
     remap_target: input/pedestrian_signals
 
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
     remap_target: output/traffic_signals

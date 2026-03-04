@@ -31,7 +31,7 @@ subscribers:
     message_type: nav_msgs/msg/OccupancyGrid
   - name: occupancy_grid_map_6
     message_type: nav_msgs/msg/OccupancyGrid
-outputs:
+publishers:
   - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
     qos:

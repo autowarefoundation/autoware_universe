@@ -74,7 +74,7 @@ subscribers:
     message_type: sensor_msgs/msg/CameraInfo
     remap_target: input/camera_info7
 
-outputs:
+publishers:
   - name: fused_objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
     remap_target: output

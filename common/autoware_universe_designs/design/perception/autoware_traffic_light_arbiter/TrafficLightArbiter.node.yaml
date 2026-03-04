@@ -23,7 +23,7 @@ subscribers:
   - name: external_traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroup
     remap_target: ~/sub/external_traffic_signals
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
     remap_target: ~/pub/traffic_signals

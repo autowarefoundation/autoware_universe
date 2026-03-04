@@ -19,7 +19,7 @@ subscribers:
     message_type: autoware_vehicle_msgs/msg/VelocityReport
     remap_target: velocity_status
 
-outputs:
+publishers:
   - name: twist_with_covariance
     message_type: geometry_msgs/msg/TwistWithCovarianceStamped
     remap_target: twist_with_covariance

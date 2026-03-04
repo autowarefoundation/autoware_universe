@@ -27,7 +27,7 @@ subscribers:
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
     remap_target: ~/input/classified/traffic_signals
 
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
     qos:

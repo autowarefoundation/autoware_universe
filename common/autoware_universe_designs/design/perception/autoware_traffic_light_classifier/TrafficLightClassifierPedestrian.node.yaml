@@ -19,7 +19,7 @@ subscribers:
   - name: rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
 
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
     qos:

@@ -19,7 +19,7 @@ subscribers:
   - name: steer
     message_type: autoware_vehicle_msgs/msg/SteeringReport
 
-outputs:
+publishers:
   - name: steering_offset
     message_type: autoware_internal_debug_msgs/msg/Float32Stamped
   - name: steering_offset_covariance

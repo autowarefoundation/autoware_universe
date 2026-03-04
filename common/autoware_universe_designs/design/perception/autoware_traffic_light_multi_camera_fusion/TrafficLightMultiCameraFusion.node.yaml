@@ -36,7 +36,7 @@ subscribers:
   - name: camera2/detection/rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
     remap_target: camera2/detection/rois
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
     qos:

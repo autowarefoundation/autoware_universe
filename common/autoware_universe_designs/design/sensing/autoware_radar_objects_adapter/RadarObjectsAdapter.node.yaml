@@ -17,7 +17,7 @@ subscribers:
   - name: radar_info
     message_type: autoware_sensing_msgs/msg/RadarInfo
 
-outputs:
+publishers:
   - name: detections
     message_type: autoware_perception_msgs/msg/DetectedObjects
   - name: tracks

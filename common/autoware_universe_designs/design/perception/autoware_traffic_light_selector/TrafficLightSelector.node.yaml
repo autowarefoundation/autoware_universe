@@ -29,7 +29,7 @@ subscribers:
     message_type: sensor_msgs/msg/CameraInfo
     remap_target: input/camera_info
 
-outputs:
+publishers:
   - name: traffic_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
     remap_target: output/traffic_rois

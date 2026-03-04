@@ -27,7 +27,7 @@ subscribers:
   - name: odometry
     message_type: nav_msgs/msg/Odometry
 
-outputs:
+publishers:
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
 

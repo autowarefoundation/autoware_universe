@@ -29,7 +29,7 @@ subscribers:
   - name: control_horizon
     message_type: autoware_control_msgs/msg/ControlHorizon
 
-outputs:
+publishers:
   - name: actuation_cmd
     message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
   - name: steering_status

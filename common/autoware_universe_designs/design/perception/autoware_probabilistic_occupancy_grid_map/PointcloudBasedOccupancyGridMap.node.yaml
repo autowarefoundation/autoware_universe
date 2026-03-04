@@ -24,7 +24,7 @@ subscribers:
   - name: raw_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
 
-outputs:
+publishers:
   - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
     qos:

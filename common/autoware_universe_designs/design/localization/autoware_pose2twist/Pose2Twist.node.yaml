@@ -15,9 +15,9 @@ launch:
 # interfaces
 subscribers:
   - name: pose
-    message_type: geometry_msgs::msg::PoseStamped
+    message_type: geometry_msgs/msg/PoseStamped
 
-outputs:
+publishers:
   - name: twist
     message_type: geometry_msgs/msg/TwistStamped
     qos:

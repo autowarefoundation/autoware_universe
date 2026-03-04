@@ -74,7 +74,7 @@ subscribers:
     message_type: sensor_msgs/msg/CameraInfo
     remap_target: input/camera_info7
 
-outputs:
+publishers:
   - name: clusters
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: output

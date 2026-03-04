@@ -22,7 +22,7 @@ subscribers:
   - name: cluster1
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
 
-outputs:
+publishers:
   - name: clusters
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     qos:

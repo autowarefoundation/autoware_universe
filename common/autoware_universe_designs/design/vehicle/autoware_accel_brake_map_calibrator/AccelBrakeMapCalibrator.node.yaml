@@ -22,10 +22,8 @@ subscribers:
     message_type: tier4_vehicle_msgs/msg/ActuationCommandStamped
   - name: velocity
     message_type: autoware_vehicle_msgs/msg/VelocityReport
-  - name: update_map_dir
-    message_type: tier4_vehicle_msgs/srv/UpdateAccelBrakeMap
 
-outputs:
+publishers:
   - name: calibration_status
     message_type: tier4_external_api_msgs/msg/CalibrationStatus
   - name: update_suggest
@@ -58,6 +56,10 @@ outputs:
     message_type: autoware_internal_debug_msgs/msg/Float32Stamped
   - name: offset_covariance
     message_type: std_msgs/msg/Float32MultiArray
+
+clients:
+  - name: update_map_dir
+    message_type: tier4_vehicle_msgs/srv/UpdateAccelBrakeMap
 
 # parameters
 param_files:

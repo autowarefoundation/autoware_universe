@@ -23,7 +23,7 @@ subscribers:
   - name: imu
     message_type: sensor_msgs/msg/Imu
 
-outputs:
+publishers:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
 

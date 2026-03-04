@@ -21,7 +21,7 @@ subscribers:
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: input
 
-outputs:
+publishers:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: objects

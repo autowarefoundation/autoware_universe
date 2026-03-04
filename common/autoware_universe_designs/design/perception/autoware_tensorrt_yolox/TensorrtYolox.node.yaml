@@ -20,7 +20,7 @@ subscribers:
     message_type: sensor_msgs/msg/Image
     remap_target: ~/in/image
 
-outputs:
+publishers:
   - name: objects
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: ~/out/objects

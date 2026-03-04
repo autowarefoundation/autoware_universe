@@ -24,7 +24,7 @@ subscribers:
     message_type: sensor_msgs/msg/PointCloud2
   - name: input2
     message_type: sensor_msgs/msg/PointCloud2
-outputs:
+publishers:
   - name: output
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: output

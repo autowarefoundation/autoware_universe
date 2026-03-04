@@ -21,7 +21,7 @@ subscribers:
     message_type: autoware_sensing_msgs/msg/GnssInsOrientationStamped
     remap_target: autoware_orientation
 
-outputs:
+publishers:
   - name: gnss_pose
     message_type: geometry_msgs/msg/PoseStamped
     remap_target: gnss_pose

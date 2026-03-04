@@ -15,13 +15,15 @@ launch:
 # interfaces
 subscribers: []
 
-outputs:
+publishers:
   - name: pose_reset
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
     remap_target: pose_reset
   - name: pub_state
     message_type: autoware_adapi_v1_msgs/msg/LocalizationInitializationState
     remap_target: /localization/initialization_state
+
+servers:
   - name: initialize
     message_type: autoware_localization_msgs/srv/InitializeLocalization
     remap_target: /localization/initialize

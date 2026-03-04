@@ -29,7 +29,7 @@ subscribers:
   - name: cloud
     message_type: sensor_msgs/msg/PointCloud2
 
-outputs:
+publishers:
   - name: traffic_signals
     message_type: tier4_perception_msgs/msg/TrafficLightArray
     qos:

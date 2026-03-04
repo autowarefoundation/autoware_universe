@@ -22,7 +22,7 @@ subscribers:
   - name: detected_objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
 
-outputs:
+publishers:
   - name: objects
     message_type: autoware_perception_msgs/msg/DetectedObjects
     qos:

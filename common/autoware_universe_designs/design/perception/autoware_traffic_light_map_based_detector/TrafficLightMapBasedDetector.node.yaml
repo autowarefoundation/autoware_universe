@@ -24,7 +24,7 @@ subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
 
-outputs:
+publishers:
   - name: rough_rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
     remap_target: ~/output/rois

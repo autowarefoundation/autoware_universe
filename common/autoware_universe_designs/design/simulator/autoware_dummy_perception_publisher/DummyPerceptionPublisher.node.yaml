@@ -26,7 +26,7 @@ subscribers:
   - name: predicted_objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
     remap_target: input/predicted_objects
-outputs:
+publishers:
   - name: dynamic_object
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: output/dynamic_object

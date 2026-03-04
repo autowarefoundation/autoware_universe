@@ -26,7 +26,7 @@ subscribers:
     message_type: autoware_perception_msgs/msg/DetectedObjects
     remap_target: input/object
 
-outputs:
+publishers:
   - name: object
     message_type: autoware_perception_msgs/msg/DetectedObjects
     remap_target: output/object

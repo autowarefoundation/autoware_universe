@@ -23,7 +23,7 @@ subscribers:
     message_type: tf2_msgs/msg/TFMessage
     global: /tf
 
-outputs:
+publishers:
   - name: labeled_clusters
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: output/labeled_clusters

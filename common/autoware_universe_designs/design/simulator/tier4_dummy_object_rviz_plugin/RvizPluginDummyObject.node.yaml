@@ -15,7 +15,7 @@ launch:
 # interfaces
 subscribers: []
 
-outputs:
+publishers:
   - name: object
     message_type: tier4_simulation_msgs/msg/DummyObject
 

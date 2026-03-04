@@ -25,7 +25,7 @@ subscribers:
     message_type: geometry_msgs/msg/Vector3Stamped
     remap_target: gyro_scale_input
 
-outputs:
+publishers:
   - name: imu_data
     message_type: sensor_msgs/msg/Imu
     remap_target: output

@@ -51,7 +51,7 @@ subscribers:
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
     remap_target: input/hazard_lights_command
 
-outputs:
+publishers:
   - name: vehicle/status/velocity_status
     message_type: autoware_vehicle_msgs/msg/VelocityReport
     remap_target: output/twist
@@ -82,6 +82,8 @@ outputs:
   - name: sensing/imu/imu_data
     message_type: sensor_msgs/msg/Imu
     remap_target: output/imu
+
+servers:
   - name: api/simulator/set/pose
     message_type: tier4_external_api_msgs/srv/InitializePose
     remap_target: /api/simulator/set/pose

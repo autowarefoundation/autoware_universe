@@ -18,7 +18,7 @@ subscribers:
     message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
     remap_target: ~/input
 
-outputs:
+publishers:
   - name: output
     message_type: autoware_perception_msgs/msg/DetectedObjects
     remap_target: ~/output

@@ -24,7 +24,7 @@ subscribers:
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
     remap_target: ~/expect/rois
 
-outputs:
+publishers:
   - name: rois
     message_type: tier4_perception_msgs/msg/TrafficLightRoiArray
     remap_target: ~/output/rois

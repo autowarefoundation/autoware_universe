@@ -18,7 +18,7 @@ subscribers:
   - name: compressed_image
     message_type: sensor_msgs/msg/CompressedImage
 
-outputs:
+publishers:
   - name: raw_image
     message_type: sensor_msgs/msg/Image
     qos:
