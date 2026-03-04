@@ -23,6 +23,8 @@
 
 namespace autoware::behavior_velocity_planner
 {
+using autoware_utils::create_marker_position;
+
 namespace
 {
 visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
@@ -32,7 +34,6 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
   using autoware_utils::create_default_marker;
   using autoware_utils::create_marker_color;
   using autoware_utils::create_marker_scale;
-  using autoware_utils::create_point;
   using visualization_msgs::msg::Marker;
 
   visualization_msgs::msg::MarkerArray msg;
@@ -44,7 +45,7 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
       "map", now, "no_drivable_lane polygon", uid, Marker::LINE_STRIP,
       create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
     for (const auto & p : debug_data.no_drivable_lane_polygon) {
-      marker.points.push_back(create_point(p.x, p.y, p.z));
+      marker.points.push_back(create_marker_position(p.x, p.y, p.z));
     }
     marker.points.push_back(marker.points.front());
     msg.markers.push_back(marker);
@@ -57,11 +58,11 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
       create_marker_scale(0.25, 0.25, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999));
     const auto & p_first = debug_data.first_intersection_point;
     if (p_first) {
-      marker.points.push_back(create_point(p_first->x, p_first->y, p_first->z));
+      marker.points.push_back(create_marker_position(p_first->x, p_first->y, p_first->z));
     }
     const auto & p_second = debug_data.second_intersection_point;
     if (p_second) {
-      marker.points.push_back(create_point(p_second->x, p_second->y, p_second->z));
+      marker.points.push_back(create_marker_position(p_second->x, p_second->y, p_second->z));
     }
     if (!marker.points.empty()) msg.markers.push_back(marker);
   }
@@ -69,8 +70,6 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
   return msg;
 }
 }  // namespace
-
-using autoware_utils::create_point;
 
 NoDrivableLaneModule::NoDrivableLaneModule(
   const lanelet::Id module_id, const lanelet::Id lane_id, const PlannerParam & planner_param,
@@ -275,7 +274,7 @@ void NoDrivableLaneModule::initialize_debug_data(
   }
 
   for (const auto & p : no_drivable_lane.polygon2d().basicPolygon()) {
-    debug_data_.no_drivable_lane_polygon.push_back(create_point(p.x(), p.y(), ego_pos.z));
+    debug_data_.no_drivable_lane_polygon.push_back(create_marker_position(p.x(), p.y(), ego_pos.z));
   }
 }
 
