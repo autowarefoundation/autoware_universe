@@ -46,14 +46,6 @@ void load_segmentation_colormap(
 void load_label_remap_file(
   const std::string & file_name, std::unordered_map<std::string, std::string> & label_name_remap,
   uint32_t skip_header_lines);
-void replace_roi_label_map(
-  std::vector<std::string> & roi_id_to_name_map,
-  const std::unordered_map<std::string, std::string> & roi_class_name_remap);
-void replace_semseg_label_map(
-  std::vector<int> & roi_id_to_semseg_id_map,
-  const std::unordered_map<std::string, std::string> & roi_name_to_semseg_name_map,
-  const std::unordered_map<std::string, int> & roi_name_to_id_map,
-  const std::unordered_map<std::string, int> & semseg_name_to_id_map);
 void load_label_id_remap_file(
   const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
   uint32_t skip_header_lines);

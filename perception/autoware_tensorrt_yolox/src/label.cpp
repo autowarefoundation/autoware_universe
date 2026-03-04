@@ -229,34 +229,6 @@ void load_segmentation_colormap(
   }
 }
 
-void load_label_remap_file(
-  const std::string & file_name, std::unordered_map<std::string, std::string> & label_name_remap,
-  uint32_t skip_header_lines = 1)
-{
-  auto rows = read_csv(file_name, skip_header_lines);
-  // check loaded status
-  if (!rows) {
-    std::stringstream error_msg;
-    error_msg << "Could not open the label map file: " << file_name;
-    throw std::runtime_error{error_msg.str()};
-  }
-
-  // expecting 2 columns (label names of from and to)
-  constexpr size_t expected_column_num = 2;
-  for (const auto & row : rows.value()) {
-    // ensure we have expected columns numbers
-    if (row.size() != expected_column_num) {
-      std::stringstream error_msg;
-      error_msg << "Invalid row: " << expected_column_num << " columns was expected.";
-      throw std::runtime_error{error_msg.str()};
-    }
-
-    const std::string label_name_from = row[0];
-    const std::string label_name_to = row[1];
-    label_name_remap[label_name_from] = label_name_to;
-  }
-}
-
 void load_label_id_remap_file(
   const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
   uint32_t skip_header_lines = 1)
