@@ -19,6 +19,21 @@ endforeach()
 set(MODEL "curvilinear_bicycle_model_spatial")
 set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/c_generated_code")
 
+# Exclude generated acados code from copyright checking
+# Note: Files are marked GENERATED TRUE below, but we also explicitly exclude the directory
+# Path must be relative to package root (where autoware_package() is called)
+if(AMENT_CMAKE_COPYRIGHT_FOUND)
+  if(NOT DEFINED AMENT_COPYRIGHT_EXCLUDE)
+    set(AMENT_COPYRIGHT_EXCLUDE "" CACHE INTERNAL "")
+  endif()
+  # Compute relative path from package root (parent directory) to generated code directory
+  get_filename_component(PACKAGE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+  file(RELATIVE_PATH GEN_DIR_RELATIVE "${PACKAGE_ROOT}" "${GEN_DIR}")
+  list(APPEND AMENT_COPYRIGHT_EXCLUDE
+    "${GEN_DIR_RELATIVE}"
+  )
+endif()
+
 set(GENERATED_MPC_FILES
   ${GEN_DIR}/acados_solver_${MODEL}.h
   ${GEN_DIR}/acados_solver_${MODEL}.c

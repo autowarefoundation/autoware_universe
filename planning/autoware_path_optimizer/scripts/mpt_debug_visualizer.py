@@ -147,16 +147,16 @@ class MPTDebugVisualizer(Node):
         (self.line_ey_acados,) = self.ax_ey.plot([], [], "r-o", label="Acados eY", markersize=4)
         self.ax_ey.legend()
 
-        self.ax_epsi = self.fig.add_subplot(3, 2, 6)
-        self.ax_epsi.set_title("Yaw Error (ePsi)")
-        self.ax_epsi.set_xlabel("Point Index")
-        self.ax_epsi.set_ylabel("ePsi [rad]")
-        self.ax_epsi.grid(True)
-        (self.line_epsi_mpt,) = self.ax_epsi.plot([], [], "b-s", label="MPT ePsi", markersize=4)
-        (self.line_epsi_acados,) = self.ax_epsi.plot(
+        self.ax_e_psi = self.fig.add_subplot(3, 2, 6)
+        self.ax_e_psi.set_title("Yaw Error (ePsi)")
+        self.ax_e_psi.set_xlabel("Point Index")
+        self.ax_e_psi.set_ylabel("ePsi [rad]")
+        self.ax_e_psi.grid(True)
+        (self.line_e_psi_mpt,) = self.ax_e_psi.plot([], [], "b-s", label="MPT ePsi", markersize=4)
+        (self.line_e_psi_acados,) = self.ax_e_psi.plot(
             [], [], "r-s", label="Acados ePsi", markersize=4
         )
-        self.ax_epsi.legend()
+        self.ax_e_psi.legend()
 
         plt.tight_layout()
         plt.show(block=False)  # Non-blocking to prevent focus stealing
@@ -307,13 +307,13 @@ class MPTDebugVisualizer(Node):
         indices = np.arange(len(eY))
 
         self.line_ey_mpt.set_data(indices, eY)
-        self.line_epsi_mpt.set_data(indices, ePsi)
+        self.line_e_psi_mpt.set_data(indices, ePsi)
 
         # Update both axes to accommodate both MPT and Acados data
         self.ax_ey.relim()
         self.ax_ey.autoscale_view(True, True, True)
-        self.ax_epsi.relim()
-        self.ax_epsi.autoscale_view(True, True, True)
+        self.ax_e_psi.relim()
+        self.ax_e_psi.autoscale_view(True, True, True)
 
         self.latest_mpt_states = {"eY": eY, "ePsi": ePsi}
         self.updatePlot()
@@ -330,13 +330,13 @@ class MPTDebugVisualizer(Node):
         indices = np.arange(len(eY))
 
         self.line_ey_acados.set_data(indices, eY)
-        self.line_epsi_acados.set_data(indices, ePsi)
+        self.line_e_psi_acados.set_data(indices, ePsi)
 
         # Update both axes to accommodate both MPT and Acados data
         self.ax_ey.relim()
         self.ax_ey.autoscale_view(True, True, True)
-        self.ax_epsi.relim()
-        self.ax_epsi.autoscale_view(True, True, True)
+        self.ax_e_psi.relim()
+        self.ax_e_psi.autoscale_view(True, True, True)
 
         self.latest_acados_states = {"eY": eY, "ePsi": ePsi}
         self.updatePlot()
