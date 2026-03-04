@@ -28,7 +28,6 @@
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <tf2_ros/buffer.h>
 
