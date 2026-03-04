@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+// cspell: ignore semseg
+
 namespace autoware::tensorrt_yolox
 {
 TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)

@@ -20,6 +20,8 @@
 #include <unordered_map>
 #include <vector>
 
+// cspell: ignore semseg
+
 namespace autoware::tensorrt_yolox
 {
 typedef struct Colormap_

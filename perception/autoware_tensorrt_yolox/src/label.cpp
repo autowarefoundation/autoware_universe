@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+// cspell: ignore semseg
+
 namespace autoware::tensorrt_yolox
 {
 void trim_left(std::string & s)
