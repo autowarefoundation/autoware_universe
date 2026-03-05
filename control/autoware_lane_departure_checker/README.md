@@ -96,6 +96,4 @@ This package includes the following features:
 | resample_interval          | double | Minimum Euclidean distance between points when resample trajectory.[m]             | 0.3           |
 | max_deceleration           | double | Maximum deceleration when calculating braking distance.                            | 2.8           |
 | delay_time                 | double | Delay time which took to actuate brake when calculating braking distance. [second] | 1.3           |
-| max_lateral_deviation      | double | Maximum lateral deviation in vehicle coordinate. [m]                               | 2.0           |
-| max_longitudinal_deviation | double | Maximum longitudinal deviation in vehicle coordinate. [m]                          | 2.0           |
-| max_yaw_deviation_deg      | double | Maximum ego yaw deviation from trajectory. [deg]                                   | 60.0          |
+| min_braking_distance       | double | Minimum braking distance. [m]                                                       | 0.0           |
