@@ -37,7 +37,7 @@ using Classification = autoware_perception_msgs::msg::ObjectClassification;
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
-  const std::vector<std::pair<std::string, uint8_t>> fusion_class_names = {
+  const std::array<std::pair<std::string, uint8_t>, 8> fusion_class_names = {
     {"UNKNOWN", Classification::UNKNOWN}, {"CAR", Classification::CAR},
     {"TRUCK", Classification::TRUCK},     {"BUS", Classification::BUS},
     {"TRAILER", Classification::TRAILER}, {"MOTORCYCLE", Classification::MOTORCYCLE},
