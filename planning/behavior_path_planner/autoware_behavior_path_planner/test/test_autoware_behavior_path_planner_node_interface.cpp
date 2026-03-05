@@ -44,6 +44,12 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
   // test with empty route
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
+
+  // Explicitly reset the node to ensure plugins are unloaded
+  // before the ClassLoader is destroyed effectively.
+  test_target_node.reset();
+  test_manager.reset();
+
   rclcpp::shutdown();
 }
 
@@ -67,6 +73,11 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
+
+  // Explicitly reset the node to ensure plugins are unloaded
+  // before the ClassLoader is destroyed effectively.
+  test_target_node.reset();
+  test_manager.reset();
 
   rclcpp::shutdown();
 }
