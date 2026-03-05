@@ -54,6 +54,12 @@ Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_
 
 - **Trajectory Extender positioning**: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is **disabled by default** (`use_trajectory_extender: false`). Fixing the extender's discontinuity issues is future work.
 
+## Design Specification
+
+For a detailed description of the optimizer's core assumptions, the constant-dt contract,
+how velocity and acceleration are derived from positions, plugin pipeline specification, and
+known limitations, see [docs/trajectory_optimizer_specification.md](docs/trajectory_optimizer_specification.md).
+
 ## QP Smoother
 
 The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths with advanced features:
