@@ -339,6 +339,15 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
   const auto crosswalk_attention_range = getAttentionRange(
     sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk);
 
+  const auto base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  const auto remaining_width = crosswalk_attention_range.second - base_link2front;
+  if (remaining_width < planner_param_.min_vru_crossing_width) {
+    RCLCPP_DEBUG(
+      logger_, "Stop decision skipped: remaining crosswalk width (%.2f) <= threshold (%.2f)",
+      remaining_width, planner_param_.min_vru_crossing_width);
+    return {};
+  }
+
   // Get attention area, which is ego's footprints on the crosswalk
   const auto attention_area = getAttentionArea(
     sparse_resample_path, crosswalk_attention_range, 0.0, debug_data_.ego_polygons);

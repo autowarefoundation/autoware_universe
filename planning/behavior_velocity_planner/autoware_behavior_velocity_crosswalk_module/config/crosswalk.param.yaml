@@ -62,6 +62,7 @@
         distance_set_for_no_intention_to_walk: [1.0, 5.0] # [m] ascending order
         timeout_set_for_no_intention_to_walk: [1.0, 0.0] # [s]
         timeout_ego_stop_for_yield: 1.0 # [s] If the ego maintains the stop for this amount of time, then the ego proceeds, assuming it has stopped long time enough.
+        min_vru_crossing_width: 0.0  # [m] If the remaining crosswalk width not occupied by the ego footprint is smaller than this value, pedestrians are assumed not to cross through that gap and the ego may proceed.
 
       # params for suppressing the ego to restart when the ego is close to the next stop position.
       restart_suppression:
