@@ -83,8 +83,8 @@ vehicle pose:
 
 ### Key Algorithm Properties
 
-- **Arc length preservation**: Maintains `dt = s / v` relationship for each
-  segment
+- **Arc length preservation**: Segment distances are preserved; timing uses a single
+  `avg_dt` averaged from `time_from_start` deltas across the whole trajectory
 - **Forward causality**: Each point depends only on previous points (no
   backward propagation)
 - **Velocity preservation**: Original velocity profile unchanged
@@ -163,8 +163,9 @@ the plugin pipeline to ensure:
 1. **Path deviation**: Kinematic constraints may cause significant deviation
    from the original planner path, especially for aggressive maneuvers.
 
-2. **Velocity-time assumptions**: Algorithm assumes constant velocity within
-   each segment (`dt = s / v`). Large velocity changes may affect accuracy.
+2. **Single average dt**: The yaw rate constraint uses one `avg_dt` averaged from all
+   `time_from_start` deltas. In practice this equals the configured upstream `time_step_s`
+   since the input has constant dt and `time_from_start` is not modified by preceding plugins.
 
 3. **Steering dynamics**: Does not model steering rate limits or steering
    system dynamics - only considers geometric and yaw rate constraints.

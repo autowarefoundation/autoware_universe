@@ -52,10 +52,12 @@ After the QP smoother adjusts point positions, the output kinematics are derived
 
 ```text
 v[i] = || p[i] - p[i-1] || / dt        (for i >= 1)
-v[0] = input_trajectory[0].longitudinal_velocity_mps   (preserved from input)
+v[0] = input_trajectory[0].longitudinal_velocity_mps   (copied from input before smoothing)
 ```
 
-A 3-point moving average is then applied to reduce numerical noise from the finite difference.
+A 3-point moving average is then applied starting at index 0, which overwrites v[0] with
+`(v_input[0] + v_geom[1] + v_geom[2]) / 3`. v[0] is therefore not purely preserved - it is
+blended with the geometric velocities of the next two points.
 
 **Acceleration** (fourth pass, `recalculate_longitudinal_acceleration`):
 
@@ -63,7 +65,7 @@ A 3-point moving average is then applied to reduce numerical noise from the fini
 a[i] = (v[i+1] - v[i]) / dt
 ```
 
-The last point gets `a[N-2]` (copy of the second-to-last value).
+The last point gets `0.0` (explicitly zeroed).
 
 **Consequences:**
 
@@ -116,13 +118,16 @@ Forward-propagating filter that clamps heading changes at each trajectory segmen
 Ackermann steering geometry and a maximum yaw rate limit. At each step:
 
 ```text
-delta_psi_max = min(kappa_max * s, psi_dot_max * dt)
+delta_psi_max = min(kappa_max * s, psi_dot_max * avg_dt)
 ```
 
-where `kappa_max = tan(delta_max) / L`, `s` is the segment arc length, and `dt = s / v`.
+where `kappa_max = tan(delta_max) / L`, `s` is the segment arc length, and `avg_dt` is a single
+average time step computed from all `time_from_start` deltas in the input trajectory (fallback:
+0.1 s). The same `avg_dt` is used for every segment - per-segment dt is not recomputed from
+distance or velocity.
 
-Positions are adjusted to enforce this limit while preserving segment arc lengths (and therefore
-the `dt = s / v` timing structure). Velocities and `time_from_start` are not modified.
+Positions are adjusted to enforce this limit while preserving segment arc lengths. Velocities
+and `time_from_start` are not modified.
 
 Running it **before** the QP smoother pre-conditions the path so the QP operates on a
 kinematically plausible input. Running it **after** the QP smoother catches any constraint
@@ -316,9 +321,11 @@ is close enough to the geometric tangent that the error is acceptable.
    `time_step_s` uniformly. If the input trajectory has a different dt (e.g., because a resampler
    ran earlier), the QP smoother will produce incorrect velocities without warning.
 
-4. **Velocity at index 0 is the only preserved value.** The QP smoother copies
-   `longitudinal_velocity_mps` from `input_trajectory[0]` to `output_trajectory[0]`. All other
-   velocity values are overwritten.
+4. **No velocity value from the input is fully preserved.** The QP smoother copies
+   `input_trajectory[0].longitudinal_velocity_mps` to `output_trajectory[0]` before the moving
+   average, but the moving average immediately overwrites it with
+   `(v_input[0] + v_geom[1] + v_geom[2]) / 3`. Every velocity in the output is therefore a
+   function of smoothed geometry, not the planner's intent.
 
 5. **Trajectory extender discontinuity is unresolved.** The history-based backward extension
    creates a positional gap at the junction point that propagates through the smoothers. No fix
@@ -326,4 +333,4 @@ is close enough to the geometric tangent that the error is acceptable.
 
 6. **MPT bounds are not map-aware.** The MPT optimizer's corridor bounds are simple perpendicular
    offsets, not derived from lanelet or drivable area data. The optimizer has no knowledge of
-   actual road boundaries. Currently, there are no plans on introducing a map dependency into the optimizer node.
+   actual road boundaries. Currently, there are no plans to introduce a map dependency into the optimizer node.
