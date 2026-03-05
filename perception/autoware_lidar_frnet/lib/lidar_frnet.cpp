@@ -220,7 +220,9 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(
-    cudaMemcpy(&num_points_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
+    cudaMemcpyAsync(&num_points_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost, stream_));
+    
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (
     num_points_ < network_params_.num_points_profile.min ||
