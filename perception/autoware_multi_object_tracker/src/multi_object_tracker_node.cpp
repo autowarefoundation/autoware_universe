@@ -239,7 +239,7 @@ void MultiObjectTracker::onMeasurement(
   const auto result =
     core::process_measurement(channel_index, msg, current_time, state_, *debugger_);
 
-  if (!result.objects) {
+  if (!result.has_objects) {
     return;
   }
 

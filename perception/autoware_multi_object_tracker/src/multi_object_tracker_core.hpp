@@ -93,10 +93,8 @@ namespace core
 // Result structs for core functions
 struct MeasurementProcessingResult
 {
+  bool has_objects;     // true if objects were accepted from InputManager
   bool should_process;  // true if this is the target channel
-  std::optional<types::DynamicObjectList> objects;
-  types::AssociationResult association_result;
-  rclcpp::Time measurement_time;
 };
 
 struct ObjectProcessingResult

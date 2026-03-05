@@ -248,6 +248,7 @@ MeasurementProcessingResult process_measurement(
   TrackerDebugger & debugger)
 {
   MeasurementProcessingResult result;
+  result.has_objects = false;
   result.should_process = false;
 
   const auto objects = state.input_manager->processMessage(channel_index, msg);
@@ -258,15 +259,15 @@ MeasurementProcessingResult process_measurement(
   const auto association_result = state.processor->associate(*objects);
   state.input_manager->push(channel_index, *objects, association_result);
 
-  result.objects = objects;
-  result.association_result = association_result;
-  result.measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
+  result.has_objects = true;
   result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
+
+  const auto measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
 
   // Collect debug information - tracker list, existence probabilities, association results
   const types::AssociatedObjects associated_objects{*objects, association_result};
   debugger.collectObjectInfo(
-    result.measurement_time, state.processor->getListTracker(), associated_objects);
+    measurement_time, state.processor->getListTracker(), associated_objects);
 
   return result;
 }
