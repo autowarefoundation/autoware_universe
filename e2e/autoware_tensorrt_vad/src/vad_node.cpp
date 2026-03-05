@@ -14,6 +14,7 @@
 
 #include "vad_node.hpp"
 
+#include "utils/classification_loader.hpp"
 #include "utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
@@ -133,10 +134,16 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
   auto reliable_qos = rclcpp::QoS(1).reliability(rclcpp::ReliabilityPolicy::Reliable);
 
   // Subscribers for each camera
-  create_camera_image_subscribers(sensor_qos);
+  if (!create_camera_image_subscribers(sensor_qos)) {
+    // Throw not to use partially initialized object
+    throw std::runtime_error("Failed to create camera image subscribers");
+  }
 
   // Subscribers for camera info
-  create_camera_info_subscribers(camera_info_qos);
+  if (!create_camera_info_subscribers(camera_info_qos)) {
+    // Throw as critical error
+    throw std::runtime_error("Failed to create camera info subscribers");
+  }
 
   // Odometry subscriber (kinematic state is usually reliable)
   odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
@@ -169,11 +176,11 @@ VadNode::VadNode(const rclcpp::NodeOptions & options)
     "VAD Node has been initialized - VAD model will be initialized after first callback");
 }
 
-void VadNode::image_callback(
+bool VadNode::image_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg, std::size_t camera_id)
 {
   if (!validate_camera_id(camera_id, "image_callback")) {
-    return;
+    return false;
   }
 
   const std::string callback_name = "image (camera " + std::to_string(camera_id) + ")";
@@ -184,54 +191,62 @@ void VadNode::image_callback(
     });
 
   if (processed && static_cast<int32_t>(camera_id) == front_camera_id_) {
-    anchor_callback();
+    return anchor_callback();
   }
+
+  return processed;
 }
 
-void VadNode::camera_info_callback(
+bool VadNode::camera_info_callback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr msg, std::size_t camera_id)
 {
   if (!validate_camera_id(camera_id, "camera_info_callback")) {
-    return;
+    return false;
   }
 
   const std::string callback_name = "camera_info (camera " + std::to_string(camera_id) + ")";
-  process_callback<sensor_msgs::msg::CameraInfo>(
+  return process_callback<sensor_msgs::msg::CameraInfo>(
     msg, callback_name,
     [this, camera_id](const sensor_msgs::msg::CameraInfo::ConstSharedPtr & info_msg) {
       vad_input_topic_data_current_frame_.set_camera_info(camera_id, info_msg);
     });
 }
 
-void VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
+bool VadNode::odometry_callback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
-  process_callback<nav_msgs::msg::Odometry>(
+  return process_callback<nav_msgs::msg::Odometry>(
     msg, "odometry", [this](const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg) {
       vad_input_topic_data_current_frame_.set_kinematic_state(odometry_msg);
     });
 }
 
-void VadNode::acceleration_callback(
+bool VadNode::acceleration_callback(
   const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr msg)
 {
-  process_callback<geometry_msgs::msg::AccelWithCovarianceStamped>(
+  return process_callback<geometry_msgs::msg::AccelWithCovarianceStamped>(
     msg, "acceleration",
     [this](const geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr & accel_msg) {
       vad_input_topic_data_current_frame_.set_acceleration(accel_msg);
     });
 }
 
-void VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
+bool VadNode::tf_static_callback(const tf2_msgs::msg::TFMessage::ConstSharedPtr msg)
 {
-  // Register transforms in tf_buffer
-  for (const auto & transform : msg->transforms) {
-    tf_buffer_.setTransform(transform, "default_authority", true);
+  try {
+    // Register transforms in tf_buffer
+    for (const auto & transform : msg->transforms) {
+      tf_buffer_.setTransform(transform, "default_authority", true);
+    }
+    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received TF static data");
+  } catch (...) {
+    RCLCPP_ERROR_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Exception in tf_static_callback");
+    return false;
   }
-
-  RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Received TF static data");
+  return true;
 }
 
-void VadNode::anchor_callback()
+bool VadNode::anchor_callback()
 {
   try {
     std::optional<VadInputTopicData> frame_data;
@@ -240,32 +255,32 @@ void VadNode::anchor_callback()
       if (!sync_strategy_) {
         RCLCPP_ERROR_THROTTLE(
           this->get_logger(), *this->get_clock(), 5000, "Sync strategy not initialized");
-        return;
+        return false;
       }
-
       if (!sync_strategy_->is_ready(vad_input_topic_data_current_frame_)) {
         RCLCPP_DEBUG_THROTTLE(
           this->get_logger(), *this->get_clock(), 5000,
           "Synchronization strategy indicates data is not ready for inference");
-        return;
+        return false;
       }
-
       frame_data.emplace(vad_input_topic_data_current_frame_);
       vad_input_topic_data_current_frame_.reset();
     }
-
     if (!frame_data.has_value()) {
-      return;
+      return false;
     }
-
     auto vad_output_topic_data = trigger_inference(std::move(*frame_data));
     if (vad_output_topic_data.has_value()) {
-      publish(vad_output_topic_data.value());
+      if (!publish(vad_output_topic_data.value())) {
+        return false;
+      }
     }
   } catch (const std::exception & e) {
     RCLCPP_ERROR_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000, "Exception in anchor_callback: %s", e.what());
+    return false;
   }
+  return true;
 }
 
 std::optional<VadOutputTopicData> VadNode::trigger_inference(
@@ -289,24 +304,31 @@ std::optional<VadOutputTopicData> VadNode::trigger_inference(
   }
 }
 
-void VadNode::initialize_vad_model()
+bool VadNode::initialize_vad_model()
 {
-  // load configs
-  VadConfig vad_config = load_vad_config();
-  auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] = load_trt_common_configs();
+  try {
+    // load configs
+    VadConfig vad_config = load_vad_config();
+    auto [backbone_trt_config, head_trt_config, head_no_prev_trt_config] =
+      load_trt_common_configs();
 
-  // Initialize VAD interface and model
-  auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
-  vad_interface_ptr_ = std::make_unique<VadInterface>(*vad_interface_config_, tf_buffer_shared);
+    // Initialize VAD interface and model
+    auto tf_buffer_shared = std::shared_ptr<tf2_ros::Buffer>(&tf_buffer_, [](tf2_ros::Buffer *) {});
+    vad_interface_ptr_ = std::make_unique<VadInterface>(*vad_interface_config_, tf_buffer_shared);
 
-  // Create RosVadLogger using the logger
-  auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
-  vad_model_ptr_ = std::make_unique<VadModel<RosVadLogger>>(
-    vad_config, backbone_trt_config, head_trt_config, head_no_prev_trt_config, ros_logger);
+    // Create RosVadLogger using the logger
+    auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
+    vad_model_ptr_ = std::make_unique<VadModel<RosVadLogger>>(
+      vad_config, backbone_trt_config, head_trt_config, head_no_prev_trt_config, ros_logger);
 
-  RCLCPP_INFO_THROTTLE(
-    this->get_logger(), *this->get_clock(), 5000,
-    "VAD model and interface initialized successfully");
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "VAD model and interface initialized successfully");
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Error during VAD model initialization: %s", e.what());
+    return false;
+  }
 }
 
 VadConfig VadNode::load_vad_config()
@@ -351,13 +373,22 @@ VadConfig VadNode::load_vad_config()
   vad_config.image_normalization_param_std = model_params.image_normalization_std;
 
   // Deployment-specific parameters (from YAML)
-  load_detection_range(vad_config);
+  auto ensure_config_step = [](bool ok, const std::string & context) {
+    if (!ok) {
+      throw std::runtime_error("Failed to " + context);
+    }
+  };
+  ensure_config_step(load_detection_range(vad_config), "load_detection_range");
 
   // Map configuration: use class names from param.json but thresholds from YAML
-  load_map_configuration_with_model_params(vad_config, model_params);
+  ensure_config_step(
+    load_map_configuration_with_model_params(vad_config, model_params),
+    "load_map_configuration_with_model_params");
 
   // Object configuration: use class names from param.json but thresholds from YAML
-  load_object_configuration_with_model_params(vad_config, model_params);
+  ensure_config_step(
+    load_object_configuration_with_model_params(vad_config, model_params),
+    "load_object_configuration_with_model_params");
 
   vad_config.plugins_path = this->declare_parameter<std::string>("model_params.plugins_path");
   vad_config.input_image_width =
@@ -365,95 +396,132 @@ VadConfig VadNode::load_vad_config()
   vad_config.input_image_height =
     this->declare_parameter<int32_t>("interface_params.input_image_height");
 
-  load_network_configurations(vad_config);
+  ensure_config_step(load_network_configurations(vad_config), "load_network_configurations");
 
   return vad_config;
 }
 
-void VadNode::load_detection_range(VadConfig & config)
+bool VadNode::load_detection_range(VadConfig & config)
 {
-  const auto detection_range =
-    this->get_parameter("interface_params.detection_range").as_double_array();
-  const std::size_t entries =
-    std::min<std::size_t>(config.detection_range.size(), detection_range.size());
-  for (std::size_t i = 0; i < entries; ++i) {
-    config.detection_range[i] = static_cast<float>(detection_range[i]);
+  try {
+    const auto detection_range =
+      this->get_parameter("interface_params.detection_range").as_double_array();
+    const std::size_t entries =
+      std::min<std::size_t>(config.detection_range.size(), detection_range.size());
+    for (std::size_t i = 0; i < entries; ++i) {
+      config.detection_range[i] = static_cast<float>(detection_range[i]);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_detection_range failed: %s", e.what());
+    return false;
   }
 }
 
-void VadNode::load_classification_config(const ClassificationConfig & params)
+bool VadNode::load_map_configuration(VadConfig & config)
 {
-  if (params.class_names.size() != params.thresholds.size()) {
-    RCLCPP_ERROR(
-      this->get_logger(), "%s: class_names (%zu) and thresholds (%zu) size mismatch",
-      params.validation_context.c_str(), params.class_names.size(), params.thresholds.size());
-    throw std::runtime_error(params.validation_context + ": Parameter array length mismatch");
-  }
-
-  params.target_class_names->assign(params.class_names.begin(), params.class_names.end());
-  if (params.num_classes != nullptr) {
-    *params.num_classes = static_cast<int32_t>(params.class_names.size());
-  }
-
-  params.target_thresholds->clear();
-  for (std::size_t i = 0; i < params.class_names.size(); ++i) {
-    (*params.target_thresholds)[params.class_names[i]] = static_cast<float>(params.thresholds[i]);
-  }
+  return utils::load_classification_config(
+    {this->get_parameter("model_params.map_class_names").as_string_array(),
+     this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
+     &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
+     "load_map_configuration"});
 }
 
-void VadNode::load_map_configuration_with_model_params(
+bool VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  load_classification_config(
+  return utils::load_classification_config(
     {model_params.map_classes,
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
      "load_map_configuration_with_model_params"});
 }
 
-void VadNode::load_object_configuration_with_model_params(
+bool VadNode::load_object_configuration(VadConfig & config)
+{
+  return utils::load_classification_config(
+    {this->get_parameter("model_params.object_class_names").as_string_array(),
+     this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
+     &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
+     "load_object_configuration"});
+}
+
+bool VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  load_classification_config(
+  return utils::load_classification_config(
     {model_params.object_classes,
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
      "load_object_configuration_with_model_params"});
 }
 
-void VadNode::load_network_configurations(VadConfig & config)
+bool VadNode::load_image_normalization(VadConfig & config)
 {
-  config.nets_config.clear();
+  try {
+    const auto image_mean =
+      this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_mean");
+    const auto image_std =
+      this->declare_parameter<std::vector<double>>("model_params.image_normalization_param_std");
 
-  NetConfig backbone_config;
-  backbone_config.name = this->declare_parameter<std::string>("model_params.nets.backbone.name");
+    const std::size_t mean_entries =
+      std::min<std::size_t>(config.image_normalization_param_mean.size(), image_mean.size());
+    const std::size_t std_entries =
+      std::min<std::size_t>(config.image_normalization_param_std.size(), image_std.size());
 
-  NetConfig head_config;
-  head_config.name = this->declare_parameter<std::string>("model_params.nets.head.name");
-  const std::string head_input_feature =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.input_feature");
-  const std::string head_input_net =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
-  const std::string head_input_name =
-    this->declare_parameter<std::string>("model_params.nets.head.inputs.name");
-  head_config.inputs[head_input_feature]["net"] = head_input_net;
-  head_config.inputs[head_input_feature]["name"] = head_input_name;
+    for (std::size_t i = 0; i < mean_entries; ++i) {
+      config.image_normalization_param_mean[i] = static_cast<float>(image_mean[i]);
+    }
 
-  NetConfig head_no_prev_config;
-  head_no_prev_config.name =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.name");
-  const std::string head_no_prev_input_feature =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.input_feature");
-  const std::string head_no_prev_input_net =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.net");
-  const std::string head_no_prev_input_name =
-    this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.name");
-  head_no_prev_config.inputs[head_no_prev_input_feature]["net"] = head_no_prev_input_net;
-  head_no_prev_config.inputs[head_no_prev_input_feature]["name"] = head_no_prev_input_name;
+    for (std::size_t i = 0; i < std_entries; ++i) {
+      config.image_normalization_param_std[i] = static_cast<float>(image_std[i]);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_image_normalization failed: %s", e.what());
+    return false;
+  }
+}
 
-  config.nets_config.push_back(backbone_config);
-  config.nets_config.push_back(head_config);
-  config.nets_config.push_back(head_no_prev_config);
+bool VadNode::load_network_configurations(VadConfig & config)
+{
+  try {
+    config.nets_config.clear();
+
+    NetConfig backbone_config;
+    backbone_config.name = this->declare_parameter<std::string>("model_params.nets.backbone.name");
+
+    NetConfig head_config;
+    head_config.name = this->declare_parameter<std::string>("model_params.nets.head.name");
+    const std::string head_input_feature =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.input_feature");
+    const std::string head_input_net =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.net");
+    const std::string head_input_name =
+      this->declare_parameter<std::string>("model_params.nets.head.inputs.name");
+    head_config.inputs[head_input_feature]["net"] = head_input_net;
+    head_config.inputs[head_input_feature]["name"] = head_input_name;
+
+    NetConfig head_no_prev_config;
+    head_no_prev_config.name =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.name");
+    const std::string head_no_prev_input_feature =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.input_feature");
+    const std::string head_no_prev_input_net =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.net");
+    const std::string head_no_prev_input_name =
+      this->declare_parameter<std::string>("model_params.nets.head_no_prev.inputs.name");
+    head_no_prev_config.inputs[head_no_prev_input_feature]["net"] = head_no_prev_input_net;
+    head_no_prev_config.inputs[head_no_prev_input_feature]["name"] = head_no_prev_input_name;
+
+    config.nets_config.push_back(backbone_config);
+    config.nets_config.push_back(head_config);
+    config.nets_config.push_back(head_no_prev_config);
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "load_network_configurations failed: %s", e.what());
+    return false;
+  }
 }
 
 std::tuple<
@@ -548,25 +616,31 @@ std::optional<VadOutputTopicData> VadNode::execute_inference(
   return std::nullopt;
 }
 
-void VadNode::publish(const VadOutputTopicData & vad_output_topic_data)
+bool VadNode::publish(const VadOutputTopicData & vad_output_topic_data)
 {
-  // Publish selected trajectory
-  trajectory_publisher_->publish(vad_output_topic_data.trajectory);
+  try {
+    // Publish selected trajectory
+    trajectory_publisher_->publish(vad_output_topic_data.trajectory);
 
-  // Publish candidate trajectories
-  candidate_trajectories_publisher_->publish(vad_output_topic_data.candidate_trajectories);
+    // Publish candidate trajectories
+    candidate_trajectories_publisher_->publish(vad_output_topic_data.candidate_trajectories);
 
-  // // Publish predicted objects
-  predicted_objects_publisher_->publish(vad_output_topic_data.objects);
+    // Publish predicted objects
+    predicted_objects_publisher_->publish(vad_output_topic_data.objects);
 
-  // Publish map points
-  map_points_publisher_->publish(vad_output_topic_data.map_points);
+    // Publish map points
+    map_points_publisher_->publish(vad_output_topic_data.map_points);
 
-  RCLCPP_DEBUG_THROTTLE(
-    this->get_logger(), *this->get_clock(), 5000, "Published trajectories and predicted objects");
+    RCLCPP_DEBUG_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Published trajectories and predicted objects");
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Error during publishing: %s", e.what());
+    return false;
+  }
 }
 
-void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
+bool VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
 {
   try {
     camera_image_subs_.resize(num_cameras_);
@@ -578,8 +652,7 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
       RCLCPP_ERROR(
         this->get_logger(), "use_raw parameter size (%zu) does not match num_cameras (%d)",
         use_raw_cameras.size(), num_cameras_);
-      throw std::runtime_error(
-        "Parameter array length mismatch: use_raw size must match num_cameras");
+      return false;
     }
 
     auto resolve_topic_name = [this](const std::string & query) {
@@ -599,22 +672,30 @@ void VadNode::create_camera_image_subscribers(const rclcpp::QoS & sensor_qos)
         this, image_topic, callback, transport, sensor_qos.get_rmw_qos_profile());
       RCLCPP_INFO(this->get_logger(), "Image subscriber %d created successfully", i);
     }
+    return true;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Exception in create_camera_image_subscribers: %s", e.what());
-    throw;  // Re-throw to prevent partial initialization
+    // Need to handle partial initialization properly
+    return false;
   }
 }
 
-void VadNode::create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos)
+bool VadNode::create_camera_info_subscribers(const rclcpp::QoS & camera_info_qos)
 {
-  camera_info_subs_.resize(num_cameras_);
-  for (int32_t i = 0; i < num_cameras_; ++i) {
-    auto callback = [this, i](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
-      this->camera_info_callback(msg, i);
-    };
+  try {
+    camera_info_subs_.resize(num_cameras_);
+    for (int32_t i = 0; i < num_cameras_; ++i) {
+      auto callback = [this, i](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
+        this->camera_info_callback(msg, i);
+      };
 
-    camera_info_subs_[i] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-      "~/input/camera_info" + std::to_string(i), camera_info_qos, callback);
+      camera_info_subs_[i] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+        "~/input/camera_info" + std::to_string(i), camera_info_qos, callback);
+    }
+    return true;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "Exception in create_camera_info_subscribers: %s", e.what());
+    return false;
   }
 }
 
