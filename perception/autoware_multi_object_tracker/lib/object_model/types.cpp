@@ -15,10 +15,9 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
-#include <atomic>
 #include <cmath>
-#include <cstring>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -62,15 +61,8 @@ DynamicObject toDynamicObject(
 {
   DynamicObject dynamic_object;
 
-  // Generate UUID using Atomic Counter for uniqueness within a launch
-  // Start from 1 to avoid 0 UUID which is used as "not found" or "invalid"
-  static std::atomic<uint64_t> object_counter{1};
-
-  uint64_t count = object_counter.fetch_add(1, std::memory_order_relaxed);
-
-  // Copy count (8 bytes) into the 16-byte UUID
-  // The rest of the UUID is already zero-initialized by DynamicObject constructor
-  std::memcpy(dynamic_object.uuid.uuid.data(), &count, sizeof(count));
+  // Always generate UUID for consistency (shared generator across the package).
+  dynamic_object.uuid = object_model::generate_uuid();
 
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
