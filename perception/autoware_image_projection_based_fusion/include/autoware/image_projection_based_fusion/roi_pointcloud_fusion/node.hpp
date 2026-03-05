@@ -19,6 +19,8 @@
 
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -45,7 +47,7 @@ private:
   int min_cluster_size_{1};
   int max_cluster_size_{20};
   double max_object_size_{2.0};
-  bool fuse_unknown_only_{true};
+  std::map<uint8_t, bool> enable_fusion_per_class_;
   double cluster_2d_tolerance_;
   double roi_scale_factor_{1.0};
   bool override_class_with_unknown_{false};

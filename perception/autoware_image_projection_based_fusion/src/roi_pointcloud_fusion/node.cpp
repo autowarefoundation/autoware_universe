@@ -34,7 +34,19 @@ using Classification = autoware_perception_msgs::msg::ObjectClassification;
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
-  fuse_unknown_only_ = declare_parameter<bool>("fuse_unknown_only");
+  const std::vector<std::pair<std::string, uint8_t>> fusion_class_names = {
+    {"UNKNOWN", Classification::UNKNOWN},
+    {"CAR", Classification::CAR},
+    {"TRUCK", Classification::TRUCK},
+    {"BUS", Classification::BUS},
+    {"TRAILER", Classification::TRAILER},
+    {"MOTORCYCLE", Classification::MOTORCYCLE},
+    {"BICYCLE", Classification::BICYCLE},
+    {"PEDESTRIAN", Classification::PEDESTRIAN}};
+  for (const auto & [class_name, label] : fusion_class_names) {
+    enable_fusion_per_class_[label] =
+      declare_parameter<bool>("enable_fusion_per_class." + class_name);
+  }
   min_cluster_size_ = declare_parameter<int>("min_cluster_size");
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
@@ -62,26 +74,22 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   std::vector<DetectedObjectWithFeature> output_objs;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
   std::vector<Eigen::Vector2d> debug_image_points;
-  // select ROIs for fusion
+  // select ROIs for fusion by per-class enable_fusion_per_class flag
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
-    if (fuse_unknown_only_) {
-      bool is_roi_label_unknown =
-        feature_obj.object.classification.front().label == Classification::UNKNOWN;
-      if (is_roi_label_unknown) {
-        output_objs.push_back(feature_obj);
-        debug_image_rois.push_back(feature_obj.feature.roi);
-      }
-    } else {
-      // TODO(badai-nguyen): selected class from a list
-      if (override_class_with_unknown_) {
-        auto feature_obj_remap = feature_obj;
-        feature_obj_remap.object.classification.front().label = Classification::UNKNOWN;
-        output_objs.push_back(feature_obj_remap);
-      } else {
-        output_objs.push_back(feature_obj);
-      }
-      debug_image_rois.push_back(feature_obj.feature.roi);
+    const uint8_t roi_label = feature_obj.object.classification.front().label;
+    const auto it = enable_fusion_per_class_.find(roi_label);
+    const bool fuse_this_class = (it != enable_fusion_per_class_.end() && it->second);
+    if (!fuse_this_class) {
+      continue;
     }
+    if (override_class_with_unknown_) {
+      auto feature_obj_remap = feature_obj;
+      feature_obj_remap.object.classification.front().label = Classification::UNKNOWN;
+      output_objs.push_back(feature_obj_remap);
+    } else {
+      output_objs.push_back(feature_obj);
+    }
+    debug_image_rois.push_back(feature_obj.feature.roi);
   }
 
   // check if there is no object to fuse
