@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>roi_pointcloud_fusion - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#roi_pointcloud_fusion" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              roi_pointcloud_fusion
             
           </span>
         </div>
@@ -8524,6 +8524,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    roi_pointcloud_fusion
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -8531,7 +8549,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    roi_pointcloud_fusion
   
 
     
@@ -8540,6 +8558,169 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inner-workings / Algorithms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -22874,6 +23055,158 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inner-workings / Algorithms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assumptions / Known limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Error detection and handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Performance characterization
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-referencesexternal-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) References/External links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        (Optional) Future extensions / Unimplemented parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22892,27 +23225,230 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>perception/autoware_image_projection_based_fusion/docs/roi-pointcloud-fusion.md</code></p>
-<p><em>KeyError</em>: 'description'</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.19/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 36, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
-    params.extend(extract_parameter_info(v["properties"], k + "."))
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
-    param["Description"] = v["description"]
-KeyError: 'description'
-</code></pre></div></div>
+<div><h1 id="roi_pointcloud_fusion">roi_pointcloud_fusion<a class="headerlink" href="#roi_pointcloud_fusion" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>The node <code>roi_pointcloud_fusion</code> is to cluster the pointcloud based on Region Of Interests (ROIs) detected by a 2D object detector, specific for unknown labeled ROI.</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<ul>
+<li>The pointclouds are projected onto image planes and extracted as cluster if they are inside the unknown labeled ROIs.</li>
+<li>Since the cluster might contain unrelated points from background, then a refinement step is added to filter the background pointcloud by distance to camera.</li>
+</ul>
+<p><img alt="roi_pointcloud_fusion_image" src="../images/roi_pointcloud_fusion.png"></p>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>input pointcloud</td>
+</tr>
+<tr>
+<td><code>input/camera_info[0-7]</code></td>
+<td><code>sensor_msgs::msg::CameraInfo</code></td>
+<td>camera information to project 3d points onto image planes</td>
+</tr>
+<tr>
+<td><code>input/rois[0-7]</code></td>
+<td><code>tier4_perception_msgs::msg::DetectedObjectsWithFeature</code></td>
+<td>ROIs from each image</td>
+</tr>
+<tr>
+<td><code>input/image_raw[0-7]</code></td>
+<td><code>sensor_msgs::msg::Image</code></td>
+<td>images for visualization</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>output</code></td>
+<td><code>tier4_perception_msgs::msg::DetectedObjectsWithFeature</code></td>
+<td>output clusters</td>
+</tr>
+<tr>
+<td><code>debug/clusters</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td>colored cluster pointcloud for visualization</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<h3 id="core-parameters">Core Parameters<a class="headerlink" href="#core-parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>enable_fusion_per_class.UNKNOWN</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with UNKNOWN class.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.CAR</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with CAR class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.TRUCK</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with TRUCK class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.BUS</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with BUS class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.TRAILER</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with TRAILER class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.MOTORCYCLE</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with MOTORCYCLE class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.BICYCLE</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with BICYCLE class.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_fusion_per_class.PEDESTRIAN</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with PEDESTRIAN class.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>override_class_with_unknown</td>
+<td>boolean</td>
+<td>Whether to override class of fused output cluster with UNKNOWN.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_cluster_size</td>
+<td>integer</td>
+<td>The minimum number of points that a cluster must contain to be considered as valid.</td>
+<td>2</td>
+<td>≥2</td>
+</tr>
+<tr>
+<td>max_cluster_size</td>
+<td>integer</td>
+<td>The maximum number of points that a cluster must contain to be considered as valid.</td>
+<td>20</td>
+<td>≥2</td>
+</tr>
+<tr>
+<td>cluster_2d_tolerance</td>
+<td>float</td>
+<td>A cluster tolerance measured in radial direction [m]</td>
+<td>0.5</td>
+<td>&gt;0.0</td>
+</tr>
+<tr>
+<td>roi_scale_factor</td>
+<td>float</td>
+<td>A scale factor for resizing RoI while checking if points are inside the RoI.</td>
+<td>1</td>
+<td>&gt;0.0</td>
+</tr>
+<tr>
+<td>max_object_size</td>
+<td>float</td>
+<td>The maximum size of the object to be considered as valid.</td>
+<td>2</td>
+<td>&gt;0.0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<ul>
+<li>Currently, the refinement is only based on distance to camera, the roi based clustering is supposed to work well with small object ROIs. Others criteria for refinement might needed in the future.</li>
+</ul>
+<!-- Write assumptions and limitations of your implementation.
+
+Example:
+  This algorithm assumes obstacles are not moving, so if they rapidly move after the vehicle started to avoid them, it might collide with them.
+  Also, this algorithm doesn't care about blind spots. In general, since too close obstacles aren't visible due to the sensing performance limit, please take enough margin to obstacles.
+-->
+
+<h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
+<!-- Write how to detect errors and how to recover from them.
+
+Example:
+  This package can handle up to 20 obstacles. If more obstacles found, this node will give up and raise diagnostic errors.
+-->
+
+<h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
+<!-- Write performance information like complexity. If it wouldn't be the bottleneck, not necessary.
+
+Example:
+
+  ### Complexity
+
+  This algorithm is O(N).
+
+  ### Processing time
+
+  ...
+-->
+
+<h2 id="optional-referencesexternal-links">(Optional) References/External links<a class="headerlink" href="#optional-referencesexternal-links" title="Permanent link">#</a></h2>
+<!-- Write links you referred to when you implemented.
+
+Example:
+  [1] {link_to_a_thesis}
+  [2] {link_to_an_issue}
+-->
+
+<h2 id="optional-future-extensions-unimplemented-parts">(Optional) Future extensions / Unimplemented parts<a class="headerlink" href="#optional-future-extensions-unimplemented-parts" title="Permanent link">#</a></h2>
+<!-- Write future extensions of this package.
+
+Example:
+  Currently, this package can't handle the chattering obstacles well. We plan to add some probabilistic filters in the perception layer to improve it.
+  Also, there are some parameters that should be global(e.g. vehicle size, max steering, etc.). These will be refactored and defined as global parameters so that we can share the same parameters between different nodes.
+--></div>
 
 
 
