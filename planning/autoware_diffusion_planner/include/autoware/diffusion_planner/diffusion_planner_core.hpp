@@ -118,7 +118,6 @@ struct DiffusionPlannerParams
   double turn_indicator_hold_duration;
   bool shift_x;
   bool use_time_interpolation;
-  bool cuda_graph_enable{false};
 };
 
 /**

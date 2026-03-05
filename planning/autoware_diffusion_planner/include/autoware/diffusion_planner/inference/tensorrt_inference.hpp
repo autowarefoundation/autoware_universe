@@ -59,11 +59,9 @@ public:
    * @param model_path Path to the TensorRT model file.
    * @param plugins_path Path to TensorRT plugin shared libraries.
    * @param batch_size Batch size for inference buffers and shapes.
-   * @param cuda_graph_enable Whether to enable CUDA Graph for inference.
    */
   TensorrtInference(
-    const std::string & model_path, const std::string & plugins_path, int batch_size,
-    bool cuda_graph_enable = false);
+    const std::string & model_path, const std::string & plugins_path, int batch_size);
   ~TensorrtInference();
 
   /**
@@ -81,7 +79,6 @@ public:
 private:
   int batch_size_{1};
   std::string plugins_path_;
-  bool cuda_graph_enable_{false};
   std::unique_ptr<autoware::tensorrt_common::TrtConvCalib> trt_common_;
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   /**
@@ -114,12 +111,6 @@ private:
 
   cudaStream_t stream_{nullptr};
 
-  cudaGraph_t graph_{nullptr};
-  cudaGraphExec_t graph_exec_{nullptr};
-  bool cuda_graph_enabled_{false};
-  bool graph_initialized_{false};
-
-  void enableCudaGraph();
   void bindBuffers();
   void transferInputsToDevice(const preprocess::InputDataMap & input_data_map);
 };

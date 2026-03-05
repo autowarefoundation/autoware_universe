@@ -48,9 +48,8 @@ size_t num_elements(const Container & shape)
 }  // namespace
 
 TensorrtInference::TensorrtInference(
-  const std::string & model_path, const std::string & plugins_path, int batch_size,
-  bool cuda_graph_enable)
-: batch_size_(batch_size), plugins_path_(plugins_path), cuda_graph_enable_(cuda_graph_enable)
+  const std::string & model_path, const std::string & plugins_path, int batch_size)
+: batch_size_(batch_size), plugins_path_(plugins_path)
 {
   const size_t sampled_trajectories_size = batch_size_ * num_elements(SAMPLED_TRAJECTORIES_SHAPE);
   const size_t ego_history_size = batch_size_ * num_elements(EGO_HISTORY_SHAPE);
@@ -112,58 +111,6 @@ TensorrtInference::~TensorrtInference()
   if (stream_) {
     cudaStreamDestroy(stream_);
   }
-  if (graph_exec_) {
-    cudaGraphExecDestroy(graph_exec_);
-  }
-  if (graph_) {
-    cudaGraphDestroy(graph_);
-  }
-}
-
-void TensorrtInference::enableCudaGraph()
-{
-  if (graph_initialized_) {
-    return;
-  }
-
-  auto * context = network_trt_ptr_->getContext();
-  if (!context) {
-    return;
-  }
-
-  // Register an empty aux stream set so TRT uses only the main stream during capture.
-  context->setAuxStreams(nullptr, 0);
-
-  // Warm-up inferences to ensure all GPU allocations and lazy init are complete
-  for (int i = 0; i < 3; ++i) {
-    network_trt_ptr_->enqueueV3(stream_);
-    cudaStreamSynchronize(stream_);
-  }
-
-  // Attempt CUDA Graph capture. This may fail on GPUs where TRT uses the compiler backend
-  // (e.g., Blackwell/SM 12.0), which does not support stream capture.
-  auto capture_err = cudaStreamBeginCapture(stream_, cudaStreamCaptureModeRelaxed);
-  if (capture_err != cudaSuccess) {
-    // Capture not supported — fall back to standard enqueueV3
-    graph_initialized_ = true;  // prevent retrying
-    return;
-  }
-
-  network_trt_ptr_->enqueueV3(stream_);
-  cudaError_t end_err = cudaStreamEndCapture(stream_, &graph_);
-  if (end_err != cudaSuccess || graph_ == nullptr) {
-    // Capture failed (e.g., compiler backend incompatible) — graceful fallback
-    cudaGetLastError();  // clear any lingering error
-    graph_ = nullptr;
-    graph_initialized_ = true;
-    return;
-  }
-
-  const auto status = cudaGraphInstantiate(&graph_exec_, graph_, 0ULL);
-  if (status == cudaSuccess) {
-    cuda_graph_enabled_ = true;
-  }
-  graph_initialized_ = true;
 }
 
 void TensorrtInference::load_engine(const std::string & model_path)
@@ -256,7 +203,6 @@ void TensorrtInference::load_engine(const std::string & model_path)
     trt_config, std::make_shared<Profiler>(), std::vector<std::string>{plugins_path_});
 
   // Force single-stream execution to reduce scratch memory (~384MB → ~27MB).
-  // This also enables CUDA Graph capture on GPUs that support it.
   auto builder_config = network_trt_ptr_->getBuilderConfig();
   if (builder_config) {
     builder_config->setMaxAuxStreams(0);
@@ -375,16 +321,7 @@ TensorrtInference::InferenceResult TensorrtInference::infer(
 {
   transferInputsToDevice(input_data_map);
 
-  if (cuda_graph_enable_ && !graph_initialized_) {
-    enableCudaGraph();
-  }
-
-  bool status = true;
-  if (cuda_graph_enabled_ && graph_initialized_) {
-    CHECK_CUDA_ERROR(cudaGraphLaunch(graph_exec_, stream_));
-  } else {
-    status = network_trt_ptr_->enqueueV3(stream_);
-  }
+  const bool status = network_trt_ptr_->enqueueV3(stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (!status) {
