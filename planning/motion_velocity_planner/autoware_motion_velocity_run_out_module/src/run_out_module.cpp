@@ -176,8 +176,10 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->start_track("filter_objects()");
   const auto filtering_data = run_out::calculate_filtering_data(
     planner_data->route_handler->getLaneletMapPtr(), ego_footprint, planner_data->objects, params_);
+  detection_tracker_.update(planner_data->objects, now);
   auto filtered_objects = run_out::prepare_dynamic_objects(
-    planner_data->objects, ego_footprint, decisions_tracker_, filtering_data, params_);
+    planner_data->objects, ego_footprint, decisions_tracker_, detection_tracker_, filtering_data,
+    params_);
   time_keeper_->end_track("filter_objects()");
   time_keeper_->start_track("calc_collisions()");
   params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
