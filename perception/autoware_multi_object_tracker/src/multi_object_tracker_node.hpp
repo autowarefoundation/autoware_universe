@@ -78,7 +78,7 @@ private:
   // publish processes
   void publish();
   void publishOptional(
-    const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+    const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
     const size_t tracked_objects_size);
 };
 

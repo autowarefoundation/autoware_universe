@@ -205,19 +205,20 @@ bool should_publish(
 }
 
 autoware_perception_msgs::msg::TrackedObjects get_tracked_objects_(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state)
 {
   autoware_perception_msgs::msg::TrackedObjects tracked_objects;
   tracked_objects.header.frame_id = params.world_frame_id;
-  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
+  const rclcpp::Time object_time =
+    params.enable_delay_compensation ? current_time : last_tracker_time;
   state.processor->getTrackedObjects(object_time, tracked_objects);
 
   return tracked_objects;
 }
 
 std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects_(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger)
 {
@@ -225,8 +226,9 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
     return std::nullopt;
   }
 
-  const rclcpp::Time object_time = params.enable_delay_compensation ? current_time : publish_time;
-  const auto tf_base_to_world = state.odometry->getTransform(publish_time);
+  const rclcpp::Time object_time =
+    params.enable_delay_compensation ? current_time : last_tracker_time;
+  const auto tf_base_to_world = state.odometry->getTransform(last_tracker_time);
   if (tf_base_to_world) {
     autoware_perception_msgs::msg::DetectedObjects merged_output_msg;
     state.processor->getMergedObjects(object_time, *tf_base_to_world, merged_output_msg);
@@ -236,7 +238,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 
   RCLCPP_WARN(
     logger, "No odometry information available at the publishing time: %.9f",
-    publish_time.seconds());
+    last_tracker_time.seconds());
   return std::nullopt;
 }
 
@@ -348,17 +350,17 @@ ObjectProcessingResult process_objects_batch(
 }
 
 PublishingData prepare_publishing_data(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
   [[maybe_unused]] const rclcpp::Logger & logger)
 {
   PublishingData result;
 
   /* tracker pruning*/
-  state.processor->prune(publish_time);
+  state.processor->prune(last_tracker_time);
 
   // Get tracked objects
-  result.tracked_objects = get_tracked_objects_(publish_time, current_time, params, state);
+  result.tracked_objects = get_tracked_objects_(last_tracker_time, current_time, params, state);
   result.tracked_objects_size = result.tracked_objects.objects.size();
 
   // Update last_publish_time
@@ -368,30 +370,34 @@ PublishingData prepare_publishing_data(
 }
 
 OptionalPublishingData prepare_optional_publishing_data(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
-  const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
-  const rclcpp::Logger & logger)
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
+  const TrackerDebugger & debugger, const rclcpp::Logger & logger)
 {
   OptionalPublishingData result;
 
   // Get merged objects
   if (params.publish_merged_objects) {
-    result.merged_objects = get_merged_objects_(publish_time, current_time, params, state, logger);
+    result.merged_objects =
+      get_merged_objects_(last_tracker_time, current_time, params, state, logger);
   }
 
-  // Calculate min_extrapolation_time
-  result.min_extrapolation_time = (publish_time - state.last_updated_time).seconds();
-  result.tracked_objects_size = tracked_objects_size;
+  // Calculate object_time (timestamp of the output objects)
+  result.object_time = params.enable_delay_compensation ? current_time : last_tracker_time;
 
-  // Calculate object_time
-  result.object_time = params.enable_delay_compensation ? current_time : publish_time;
+  // Calculate min_extrapolation_time
+  result.min_extrapolation_time = 0.0;
+  if (params.enable_delay_compensation) {
+    const double dt = (current_time - last_tracker_time).seconds();
+    result.min_extrapolation_time = dt > 0.0 ? dt : 0.0;
+  }
 
   // Prepare tentative objects
-  result.should_publish_tentative = debugger.shouldPublishTentativeObjects();
-  if (result.should_publish_tentative) {
-    result.tentative_objects.header.frame_id = params.world_frame_id;
-    state.processor->getTentativeObjects(result.object_time, result.tentative_objects);
+  if (debugger.shouldPublishTentativeObjects()) {
+    autoware_perception_msgs::msg::TrackedObjects tentative_objects;
+    tentative_objects.header.frame_id = params.world_frame_id;
+    state.processor->getTentativeObjects(result.object_time, tentative_objects);
+    result.tentative_objects = std::move(tentative_objects);
   }
 
   return result;
