@@ -44,10 +44,12 @@ SideShiftModule::SideShiftModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface,
-  const std::shared_ptr<InsertedLateralOffsetState> & inserted_lateral_offset_state)
+  const std::shared_ptr<InsertedLateralOffsetState> & inserted_lateral_offset_state,
+  const std::shared_ptr<RequestedLateralOffsetState> & requested_lateral_offset_state)
 : SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
   parameters_{parameters},
-  inserted_lateral_offset_state_{inserted_lateral_offset_state}
+  inserted_lateral_offset_state_{inserted_lateral_offset_state},
+  requested_lateral_offset_state_{requested_lateral_offset_state}
 {
 }
 
@@ -69,10 +71,6 @@ void SideShiftModule::initVariables()
   if (inserted_lateral_offset_state_) {
     inserted_lateral_offset_state_->value.store(0.0);
   }
-  // auto zero_msg = std::make_shared<tier4_planning_msgs::msg::LateralOffset>();
-  // zero_msg->stamp = clock_->now();
-  // zero_msg->lateral_offset = 0.0;
-  // planner_data_->set_lateral_offset(zero_msg);
 }
 
 void SideShiftModule::processOnEntry()
@@ -189,13 +187,15 @@ bool SideShiftModule::canTransitSuccessState()
 
 void SideShiftModule::updateData()
 {
-  {
-    const auto lateral_offset = planner_data_->get_lateral_offset();
-    if (lateral_offset != nullptr && lateral_offset->stamp != latest_lateral_offset_stamp_) {
+  if (requested_lateral_offset_state_) {
+    const double requested = requested_lateral_offset_state_->value.load();
+    // Only react when the requested value actually changes meaningfully.
+    constexpr double REQUEST_THRESHOLD = 1.0e-4;
+    if (std::fabs(requested - requested_lateral_offset_) > REQUEST_THRESHOLD) {
       if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
         lateral_offset_change_request_ = true;
-        requested_lateral_offset_ = lateral_offset->lateral_offset;
-        latest_lateral_offset_stamp_ = lateral_offset->stamp;
+        requested_lateral_offset_ = requested;
+        latest_lateral_offset_stamp_ = clock_->now();
       }
     }
   }

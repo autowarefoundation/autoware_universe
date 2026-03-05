@@ -39,7 +39,6 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/lateral_offset.hpp>
 
 #include <limits>
 #include <map>
@@ -64,7 +63,6 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::OccupancyGrid;
 using nav_msgs::msg::Odometry;
-using tier4_planning_msgs::msg::LateralOffset;
 using PlanResult = PathWithLaneId::SharedPtr;
 using autoware_internal_planning_msgs::msg::VelocityLimit;
 using lanelet::TrafficLight;
@@ -167,18 +165,6 @@ struct PlannerData
   OccupancyGrid::ConstSharedPtr occupancy_grid{};
   OccupancyGrid::ConstSharedPtr costmap{};
 
-  LateralOffset::ConstSharedPtr get_lateral_offset() const
-  {
-    std::lock_guard<std::mutex> lock(*lateral_offset_mutex_);
-    return lateral_offset_;
-  }
-
-  void set_lateral_offset(LateralOffset::ConstSharedPtr ptr)
-  {
-    std::lock_guard<std::mutex> lock(*lateral_offset_mutex_);
-    lateral_offset_ = std::move(ptr);
-  }
-
   OperationModeState::ConstSharedPtr operation_mode{};
   PathWithLaneId::SharedPtr prev_output_path{std::make_shared<PathWithLaneId>()};
   std::optional<PoseWithUuidStamped> prev_modified_goal{};
@@ -195,10 +181,6 @@ struct PlannerData
   mutable TurnSignalDecider turn_signal_decider;
 
 private:
-  mutable std::shared_ptr<std::mutex> lateral_offset_mutex_{std::make_shared<std::mutex>()};
-  LateralOffset::ConstSharedPtr lateral_offset_{};
-
-public:
   void init_parameters(rclcpp::Node & node)
   {
     parameters.traffic_light_signal_timeout =

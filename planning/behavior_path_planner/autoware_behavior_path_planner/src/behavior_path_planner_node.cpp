@@ -251,13 +251,6 @@ void BehaviorPathPlannerNode::takeData()
       onTrafficSignals(msg);
     }
   }
-  // lateral_offset
-  {
-    const auto msg = lateral_offset_subscriber_.take_data();
-    if (msg) {
-      onLateralOffset(msg);
-    }
-  }
   // operation_mode
   {
     const auto msg = operation_mode_subscriber_.take_data();
@@ -816,25 +809,6 @@ void BehaviorPathPlannerNode::onTrafficSignals(const TrafficLightGroupArray::Con
     traffic_signal.signal = signal;
     planner_data_->traffic_light_id_map[signal.traffic_light_group_id] = traffic_signal;
   }
-}
-
-void BehaviorPathPlannerNode::onLateralOffset(const LateralOffset::ConstSharedPtr msg)
-{
-  const auto current = planner_data_->get_lateral_offset();
-  if (!current) {
-    planner_data_->set_lateral_offset(msg);
-    return;
-  }
-
-  const auto & new_offset = msg->lateral_offset;
-  const auto & old_offset = current->lateral_offset;
-
-  // offset is not changed.
-  if (std::abs(old_offset - new_offset) < 1e-4) {
-    return;
-  }
-
-  planner_data_->set_lateral_offset(msg);
 }
 
 SetParametersResult BehaviorPathPlannerNode::onSetParam(

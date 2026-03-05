@@ -64,5 +64,15 @@ struct InsertedLateralOffsetState
   std::atomic<double> value{0.0};
 };
 
+/**
+ * @brief Shared state for the requested lateral offset [m] coming from external commands.
+ *        The manager owns this and passes it to the scene; the manager updates it when a new
+ *        lateral offset command is received; the scene reads it in updateData().
+ */
+struct RequestedLateralOffsetState
+{
+  std::atomic<double> value{0.0};
+};
+
 }  // namespace autoware::behavior_path_planner
 #endif  // AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__DATA_STRUCTS_HPP_

@@ -52,6 +52,7 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
   inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
+  requested_lateral_offset_state_ = std::make_shared<RequestedLateralOffsetState>();
 
   set_lateral_offset_srv_ = node->create_service<SetLateralOffset>(
     "~/set_lateral_offset", std::bind(
@@ -60,6 +61,10 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
 
   lateral_offset_publisher_ =
     node->create_publisher<tier4_planning_msgs::msg::LateralOffset>("~/output/lateral_offset", 1);
+
+  lateral_offset_sub_ = node->create_subscription<tier4_planning_msgs::msg::LateralOffset>(
+    "~/input/lateral_offset", rclcpp::QoS{1},
+    std::bind(&SideShiftModuleManager::onLateralOffset, this, std::placeholders::_1));
 
   const auto period = std::chrono::milliseconds(100);  // 10 Hz
   lateral_offset_publish_timer_ = rclcpp::create_timer(
@@ -111,12 +116,8 @@ void SideShiftModuleManager::onSetLateralOffset(
   RCLCPP_INFO(node_->get_logger(), "node_->now() defined!");
   RCLCPP_INFO(node_->get_logger(), "msg defined!");
 
-  if (!planner_data_) {
-    RCLCPP_ERROR(node_->get_logger(), "planner_data_ is null!");
-  }
-
-  planner_data_->set_lateral_offset(msg);
-  RCLCPP_INFO(node_->get_logger(), "set_lateral_offset!");
+  // NOTE: The validated lateral offset is exposed to external components via the output topic.
+  lateral_offset_publisher_->publish(*msg);
 
   response->status.success = true;
   response->status.code = 0;
@@ -132,11 +133,24 @@ void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
   msg.stamp = node_->now();
   msg.lateral_offset = static_cast<float>(inserted_lateral_offset_state_->value.load());
   lateral_offset_publisher_->publish(msg);
+}
 
-  if (planner_data_ && planner_data_->get_lateral_offset())
-    RCLCPP_INFO(
-      node_->get_logger(), "planner_data->lateral_offset (%f m)",
-      planner_data_->get_lateral_offset()->lateral_offset);
+void SideShiftModuleManager::onLateralOffset(
+  const tier4_planning_msgs::msg::LateralOffset::ConstSharedPtr msg)
+{
+  if (!requested_lateral_offset_state_) {
+    return;
+  }
+
+  constexpr double THRESHOLD = 1.0e-3;
+  const double new_offset = static_cast<double>(msg->lateral_offset);
+  const double current = requested_lateral_offset_state_->value.load();
+
+  if (std::abs(new_offset - current) < THRESHOLD) {
+    return;
+  }
+
+  requested_lateral_offset_state_->value.store(new_offset);
 }
 
 void SideShiftModuleManager::updateModuleParams(const std::vector<rclcpp::Parameter> & parameters)

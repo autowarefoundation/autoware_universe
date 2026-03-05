@@ -45,7 +45,8 @@ public:
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
     const std::shared_ptr<PlanningFactorInterface> planning_factor_interface,
-    const std::shared_ptr<InsertedLateralOffsetState> & inserted_lateral_offset_state = nullptr);
+    const std::shared_ptr<InsertedLateralOffsetState> & inserted_lateral_offset_state = nullptr,
+    const std::shared_ptr<RequestedLateralOffsetState> & requested_lateral_offset_state = nullptr);
 
   bool isExecutionRequested() const override;
   bool isExecutionReady() const override;
@@ -124,6 +125,9 @@ private:
 
   /** Shared state updated by this scene and read by the manager for publishing. */
   std::shared_ptr<InsertedLateralOffsetState> inserted_lateral_offset_state_;
+
+  /** Shared state updated by the manager and read by this scene. */
+  std::shared_ptr<RequestedLateralOffsetState> requested_lateral_offset_state_;
 
   // debug
   mutable SideShiftDebugData debug_data_;

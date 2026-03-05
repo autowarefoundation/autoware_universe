@@ -108,8 +108,6 @@ private:
     this, "~/input/costmap"};
   autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> traffic_signals_subscriber_{
     this, "~/input/traffic_signals"};
-  autoware_utils::InterProcessPollingSubscriber<LateralOffset> lateral_offset_subscriber_{
-    this, "~/input/lateral_offset"};
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> operation_mode_subscriber_{
     this, "/system/operation_mode/state", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<autoware_internal_planning_msgs::msg::VelocityLimit>
@@ -157,7 +155,6 @@ private:
 
   // data processing called from takeData()
   void onTrafficSignals(const TrafficLightGroupArray::ConstSharedPtr msg);
-  void onLateralOffset(const LateralOffset::ConstSharedPtr msg);
 
   SetParametersResult onSetParam(const std::vector<rclcpp::Parameter> & parameters);
 
