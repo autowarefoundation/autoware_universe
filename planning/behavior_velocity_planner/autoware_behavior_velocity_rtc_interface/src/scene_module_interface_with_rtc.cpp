@@ -87,7 +87,7 @@ UUID SceneModuleManagerInterfaceWithRTC::getUUID(const int64_t & module_id) cons
 
 void SceneModuleManagerInterfaceWithRTC::generate_uuid(const int64_t & module_id)
 {
-  map_uuid_.insert({module_id, autoware_utils::generate_uuid()});
+  map_uuid_.emplace(module_id, autoware_utils::generate_uuid());
 }
 
 void SceneModuleManagerInterfaceWithRTC::removeUUID(const int64_t & module_id)

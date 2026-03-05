@@ -161,7 +161,7 @@ std::optional<Polygon2d> generate_ego_no_stopping_area_lane_polygon(
       const double yaw = tf2::getYaw(pose.orientation);
       const double x = pose.position.x + offset * std::sin(yaw);
       const double y = pose.position.y - offset * std::cos(yaw);
-      ego_area.outer().push_back(Point2d(x, y));
+      ego_area.outer().emplace_back(x, y);
     }
   };
 
