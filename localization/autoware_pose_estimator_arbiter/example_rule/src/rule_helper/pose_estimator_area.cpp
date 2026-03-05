@@ -111,7 +111,7 @@ void PoseEstimatorArea::Impl::init(HADMapBin::ConstSharedPtr msg)
     // Enqueue the vertices of the polygon to bounding box and visualization marker
     BoostPolygon poly;
     for (const lanelet::ConstPoint3d & p : polygon) {
-      poly.outer().push_back(BoostPoint(p.x(), p.y()));
+      poly.outer().emplace_back(p.x(), p.y());
 
       geometry_msgs::msg::Point point_msg;
       point_msg.set__x(p.x()).set__y(p.y()).set__z(p.z());

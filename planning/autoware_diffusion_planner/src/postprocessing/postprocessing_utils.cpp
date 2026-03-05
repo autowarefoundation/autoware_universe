@@ -308,7 +308,8 @@ Trajectory get_trajectory_from_poses(
 
     // stopping logic
     if (
-      enable_force_stop &&
+      enable_force_stop && i > 0 &&
+      std::abs(trajectory.points[i - 1].longitudinal_velocity_mps) > threshold_velocity &&
       std::abs(trajectory.points[i].longitudinal_velocity_mps) < threshold_velocity) {
       force_stop = true;
     }

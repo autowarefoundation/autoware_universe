@@ -2,6 +2,23 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(multi_object_tracker): add setOrientationAvailability method to trackers to fix orientation bug (`#12013 <https://github.com/autowarefoundation/autoware_universe/issues/12013>`_)
+  * fix(multi_object_tracker): add setOrientationAvailability method to trackers
+  - Implemented setOrientationAvailability in MultipleVehicleTracker and PedestrianAndBicycleTracker to manage orientation availability.
+  - Updated TrackerBase to include a default implementation of setOrientationAvailability.
+  - Enhanced vehicle and pedestrian tracking logic to utilize the new orientation availability feature.
+  This change improves the flexibility of orientation handling across different tracker types.
+  * refactor(tracker_base): remove unused tracker includes
+  - Removed unnecessary includes for MultipleVehicleTracker and PedestrianAndBicycleTracker from tracker_base.cpp to clean up the codebase.
+  This change helps streamline the tracker base implementation by eliminating unused dependencies.
+  ---------
+* fix(multi_object_tracker): conform to updated TopicMetadata type (`#11880 <https://github.com/autowarefoundation/autoware_universe/issues/11880>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, lei.gu
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

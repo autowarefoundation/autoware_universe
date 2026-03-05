@@ -28,14 +28,10 @@ const std::size_t THREADS_PER_BLOCK = 32;
 namespace autoware::lidar_centerpoint
 {
 
-struct is_score_greater
+// Keep only the boxes with score > 0.0
+struct is_score_keep
 {
-  is_score_greater(float * t) : t_(t) {}
-
-  __device__ bool operator()(const Box3D & b) { return b.score > t_[b.label]; }
-
-private:
-  float * t_{nullptr};
+  __device__ bool operator()(const Box3D & b) { return b.score > 0.0; }
 };
 
 struct is_kept
@@ -58,7 +54,9 @@ __global__ void generateBoxes3D_kernel(
   const float * out_rot, const float * out_vel, const float voxel_size_x, const float voxel_size_y,
   const float range_min_x, const float range_min_y, const std::size_t down_grid_size_x,
   const std::size_t down_grid_size_y, const std::size_t downsample_factor, const int class_size,
-  const bool has_variance, const float * yaw_norm_thresholds, Box3D * det_boxes3d)
+  const float * distance_bin_upper_limits, const float * score_thresholds,
+  const std::size_t num_distance_bin_upper_limits, const bool has_variance,
+  const float * yaw_norm_thresholds, Box3D * det_boxes3d)
 {
   // generate boxes3d from the outputs of the network.
   // shape of out_*: (N, DOWN_GRID_SIZE_Y, DOWN_GRID_SIZE_X)
@@ -82,10 +80,46 @@ __global__ void generateBoxes3D_kernel(
     }
   }
 
+  // If the label is not found, then we set the score to 0, and stop processing
+  if (label == -1) {
+    det_boxes3d[idx].score = 0.f;
+    return;
+  }
+
   const float offset_x = out_offset[down_grid_size * 0 + idx];
   const float offset_y = out_offset[down_grid_size * 1 + idx];
   const float x = voxel_size_x * downsample_factor * (xi + offset_x) + range_min_x;
   const float y = voxel_size_y * downsample_factor * (yi + offset_y) + range_min_y;
+  const float radial_distance = sqrtf(x * x + y * y);
+  // Loop through score_upper_bounds to decide the distance bucket index, and since upper_bounds is
+  // sorted in ascending order, the first one that is greater than the radial distance is the
+  // distance bucket index
+  int distance_bucket_index = -1;
+  for (int i = 0; i < num_distance_bin_upper_limits; i++) {
+    if (radial_distance < distance_bin_upper_limits[i]) {
+      distance_bucket_index = i;
+      break;
+    }
+  }
+
+  // If the radial distance is greater than the last distance_bin_upper_limit, which is out of bound
+  // and then we set the score to 0, and stop processing
+  if (distance_bucket_index == -1) {
+    det_boxes3d[idx].score = 0.f;
+    return;
+  }
+
+  // Index = distance_bucket_index * class_size + label since row = num of distance buckets and
+  // column = num of classes
+  const float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
+
+  // If the score is less than the class score threshold, then we set the score to 0, and stop
+  // processing
+  if (max_score < class_score_threshold) {
+    det_boxes3d[idx].score = 0.f;
+    return;
+  }
+
   const float z = out_z[idx];
   const float w = out_dim[down_grid_size * 0 + idx];
   const float l = out_dim[down_grid_size * 1 + idx];
@@ -98,6 +132,12 @@ __global__ void generateBoxes3D_kernel(
 
   det_boxes3d[idx].label = label;
   det_boxes3d[idx].score = yaw_norm >= yaw_norm_thresholds[label] ? max_score : 0.f;
+
+  // If the score is 0, then we stop processing
+  if (det_boxes3d[idx].score == 0.f) {
+    return;
+  }
+
   det_boxes3d[idx].x = x;
   det_boxes3d[idx].y = y;
   det_boxes3d[idx].z = z;
@@ -142,11 +182,16 @@ PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t 
 {
   // Allocate memory for score thresholds on device using cuda::make_unique
   score_thresholds_d_ptr_ = cuda::make_unique<float[]>(config_.score_thresholds_.size());
+  distance_bin_upper_limits_d_ptr_ =
+    cuda::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
 
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     score_thresholds_d_ptr_.get(), config_.score_thresholds_.data(),
     config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    distance_bin_upper_limits_d_ptr_.get(), config_.distance_bin_upper_limits_.data(),
+    config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
 // cspell: ignore divup
@@ -167,20 +212,20 @@ cudaError_t PostProcessCUDA::generateDetectedBoxes3D_launch(
     out_heatmap, out_offset, out_z, out_dim, out_rot, out_vel, config_.voxel_size_x_,
     config_.voxel_size_y_, config_.range_min_x_, config_.range_min_y_, config_.down_grid_size_x_,
     config_.down_grid_size_y_, config_.downsample_factor_, config_.class_size_,
-    config_.has_variance_, thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
+    distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
+    config_.distance_bin_upper_limits_.size(), config_.has_variance_,
+    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()),
     thrust::raw_pointer_cast(boxes3d_d.data()));
 
   // suppress by score
-  const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(),
-    is_score_greater(score_thresholds_d_ptr_.get()));
+  const auto num_det_boxes3d =
+    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_keep());
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
   thrust::copy_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(),
-    is_score_greater(score_thresholds_d_ptr_.get()));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
 
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());

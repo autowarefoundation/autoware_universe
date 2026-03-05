@@ -15,9 +15,9 @@
 #include "mission_planner.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -719,14 +719,16 @@ bool MissionPlanner::check_reroute_safety(
       start_lanelets.push_back(lanelet);
     }
     // closest lanelet in start lanelets
-    lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(start_lanelets, current_pose, &closest_lanelet)) {
+    const auto closest_lanelet_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(start_lanelets, current_pose);
+    if (!closest_lanelet_opt) {
       RCLCPP_ERROR(get_logger(), "Check reroute safety failed. Cannot find the closest lanelet.");
       return false;
     }
+    const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -742,14 +744,16 @@ bool MissionPlanner::check_reroute_safety(
       start_lanelets.push_back(lanelet);
     }
     // closest lanelet in start lanelets
-    lanelet::ConstLanelet closest_lanelet;
-    if (!lanelet::utils::query::getClosestLanelet(start_lanelets, current_pose, &closest_lanelet)) {
+    const auto closest_lanelet_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(start_lanelets, current_pose);
+    if (!closest_lanelet_opt) {
       RCLCPP_ERROR(get_logger(), "Check reroute safety failed. Cannot find the closest lanelet.");
       return false;
     }
+    const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -780,7 +784,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto lanelet = lanelet_map_ptr_->laneletLayer.get(target_end_primitive.id);
     if (lanelet::utils::isInLanelet(target_goal, lanelet)) {
       const auto target_goal_position =
-        lanelet::utils::conversion::toLaneletPoint(target_goal.position);
+        experimental::lanelet2_utils::from_ros(target_goal.position);
       const double dist_to_goal = lanelet::geometry::toArcCoordinates(
                                     lanelet::utils::to2D(lanelet.centerline()),
                                     lanelet::utils::to2D(target_goal_position).basicPoint())

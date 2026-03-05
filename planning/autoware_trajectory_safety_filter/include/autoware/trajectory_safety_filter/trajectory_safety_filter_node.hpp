@@ -20,6 +20,7 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_trajectory_safety_filter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -31,6 +32,7 @@
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
@@ -44,6 +46,8 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils_diagnostics::DiagnosticsInterface;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 class TrajectorySafetyFilter : public rclcpp::Node
@@ -56,9 +60,6 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
-  bool validate_trajectory_basics(const CandidateTrajectory & trajectory) const;
-  bool check_finite(const TrajectoryPoint & point) const;
-
   void load_metric(const std::string & name);
 
   /**
@@ -66,6 +67,10 @@ private:
    * @param name Metric plugin name to unload
    */
   void unload_metric(const std::string & name);
+  void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
+
+  rcl_interfaces::msg::SetParametersResult on_parameter(
+    const std::vector<rclcpp::Parameter> & parameters);
 
   std::unique_ptr<safety_filter::ParamListener> listener_;
 
@@ -78,6 +83,8 @@ private:
     this, "~/input/odometry"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
     this, "~/input/objects"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
+    sub_acceleration_{this, "~/input/acceleration"};
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 
@@ -85,9 +92,14 @@ private:
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
   pluginlib::ClassLoader<plugin::SafetyFilterInterface> plugin_loader_;
+
   std::vector<std::shared_ptr<plugin::SafetyFilterInterface>> plugins_;
+
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+  DiagnosticsInterface diagnostics_interface_{this, "trajectory_safety_filter"};
 };
 
 }  // namespace autoware::trajectory_safety_filter

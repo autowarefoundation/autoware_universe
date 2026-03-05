@@ -15,23 +15,17 @@
 #ifndef AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 
+#include "autoware/mpc_lateral_controller/mpc_trajectory.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <Eigen/Core>
 #include <tf2/utils.hpp>
 
-#ifdef ROS_DISTRO_GALACTIC
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#else
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#endif
-
-#include "autoware/mpc_lateral_controller/mpc_trajectory.hpp"
-
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <cmath>
 #include <string>

@@ -7,10 +7,26 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_launch.git
     version: main
+  universe/external/eagleye:
+    type: git
+    url: https://github.com/MapIV/eagleye.git
+    version: 575136ebba99892946d36d8398f228aee2136af0
+  universe/external/rtklib_ros_bridge:
+    type: git
+    url: https://github.com/MapIV/rtklib_ros_bridge.git
+    version: ef094407bba4f475a8032972e0c60cbb939b51b8
+  universe/external/llh_converter:
+    type: git
+    url: https://github.com/MapIV/llh_converter.git
+    version: 4fc2a2e1bc9dcf3e6ab0a8085d8257168e160342
   sensor_component/external/nebula:
     type: git
     url: https://github.com/tier4/nebula.git
-    version: v0.2.6
+    version: v0.3.2
+  sensor_component/external/sync_tooling_msgs:
+    type: git
+    url: https://github.com/tier4/sync_tooling_msgs.git
+    version: 0.2.6
   # Fork of transport_drivers that enables reduction of copy operations
   sensor_component/transport_drivers:
     type: git

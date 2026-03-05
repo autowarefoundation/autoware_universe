@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_camera_streampetr</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>autoware_camera_streampetr</description>
   <maintainer email="samratthapa120@gmail.com">samrat</maintainer>
+  <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>

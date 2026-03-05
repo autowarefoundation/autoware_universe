@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_tensorrt_bevdet</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>This package is ported version toward Autoware from bevdet_vendor</description>
 
   <author email="cynthia.liu@autocore.ai">Cynthia</author>

@@ -46,53 +46,6 @@
 namespace tf2
 {
 void fromMsg(const geometry_msgs::msg::PoseStamped & msg, tf2::Stamped<tf2::Transform> & out);
-#ifdef ROS_DISTRO_GALACTIC
-// Remove after this commit is released
-// https://github.com/ros2/geometry2/commit/e9da371d81e388a589540357c050e262442f1b4a
-inline geometry_msgs::msg::Point & toMsg(const tf2::Vector3 & in, geometry_msgs::msg::Point & out)
-{
-  out.x = in.getX();
-  out.y = in.getY();
-  out.z = in.getZ();
-  return out;
-}
-
-// Remove after this commit is released
-// https://github.com/ros2/geometry2/commit/e9da371d81e388a589540357c050e262442f1b4a
-inline void fromMsg(const geometry_msgs::msg::Point & in, tf2::Vector3 & out)
-{
-  out = tf2::Vector3(in.x, in.y, in.z);
-}
-
-template <>
-inline void doTransform(
-  const geometry_msgs::msg::Point & t_in, geometry_msgs::msg::Point & t_out,
-  const geometry_msgs::msg::TransformStamped & transform)
-{
-  tf2::Transform t;
-  fromMsg(transform.transform, t);
-  tf2::Vector3 v_in;
-  fromMsg(t_in, v_in);
-  tf2::Vector3 v_out = t * v_in;
-  toMsg(v_out, t_out);
-}
-
-template <>
-inline void doTransform(
-  const geometry_msgs::msg::Pose & t_in, geometry_msgs::msg::Pose & t_out,
-  const geometry_msgs::msg::TransformStamped & transform)
-{
-  tf2::Vector3 v;
-  fromMsg(t_in.position, v);
-  tf2::Quaternion r;
-  fromMsg(t_in.orientation, r);
-
-  tf2::Transform t;
-  fromMsg(transform.transform, t);
-  tf2::Transform v_out = t * tf2::Transform(r, v);
-  toMsg(v_out, t_out);
-}
-#endif
 }  // namespace tf2
 
 namespace autoware::universe_utils

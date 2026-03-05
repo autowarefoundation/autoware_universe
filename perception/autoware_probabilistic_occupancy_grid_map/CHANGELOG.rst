@@ -2,6 +2,14 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_probabilistic_occupancy_grid_map): update nvcc flags (`#12052 <https://github.com/autowarefoundation/autoware_universe/issues/12052>`_)
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(probabilistic_occupancy_grid_map): add missing `#include <cstdint>` (`#11919 <https://github.com/autowarefoundation/autoware_universe/issues/11919>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

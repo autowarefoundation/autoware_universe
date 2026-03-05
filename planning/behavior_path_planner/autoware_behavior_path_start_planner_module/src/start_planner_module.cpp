@@ -21,6 +21,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -799,7 +800,14 @@ bool StartPlannerModule::isExecutionReady() const
   }
 
   if (!is_safe) {
-    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    if (previous_stop_pose_) {
+      stop_pose_ = previous_stop_pose_;
+    } else {
+      stop_pose_ = previous_stop_pose_ =
+        PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
+    }
+  } else {
+    previous_stop_pose_.reset();
   }
 
   return is_safe;
@@ -890,10 +898,8 @@ BehaviorModuleOutput StartPlannerModule::plan()
     const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
       planner_data_,
       planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-    const double start_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.start_pose).distance;
-    const double finish_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.end_pose).distance;
+    const double start_shift_length = status_.pull_out_path.shift_length.start;
+    const double finish_shift_length = status_.pull_out_path.shift_length.end;
 
     planning_factor_interface_->add(
       start_distance, finish_distance, status_.pull_out_path.start_pose,
@@ -925,10 +931,9 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-  const double start_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_start_pose).distance;
-  const double finish_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_end_pose).distance;
+  const auto [start_shift_length, finish_shift_length] =
+    start_planner_utils::calc_start_and_end_shift_length(
+      pull_out_lanes, backward_start_pose, backward_end_pose);
 
   planning_factor_interface_->add(
     0.0, distance, backward_start_pose, backward_end_pose, planning_factor_direction,
@@ -1008,9 +1013,18 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   const std::string stop_reason =
     !status_.is_safe_dynamic_objects ? "unsafe against dynamic objects" : "waiting approval";
 
-  stop_pose_ = utils::insert_feasible_stop_point(
-    stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
-    parameters_->maximum_jerk_for_stop, stop_reason);
+  if (!stop_pose_ && previous_stop_pose_) {
+    stop_pose_ = previous_stop_pose_;
+  }
+  if (!stop_pose_) {
+    previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
+      stop_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
+      parameters_->maximum_jerk_for_stop, stop_reason);
+  } else {
+    const auto stop_length =
+      motion_utils::calcSignedArcLength(stop_path.points, 0UL, stop_pose_->pose.position);
+    utils::insertStopPoint(stop_length, stop_path);
+  }
 
   const auto drivable_lanes = generateDrivableLanes(stop_path);
   const auto & dp = planner_data_->drivable_area_expansion_parameters;
@@ -1049,10 +1063,12 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
       planner_data_,
       planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-    const double start_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.start_pose).distance;
-    const double finish_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.end_pose).distance;
+    const double start_shift_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                        pull_out_lanes, status_.pull_out_path.start_pose)
+                                        .distance;
+    const double finish_shift_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                         pull_out_lanes, status_.pull_out_path.end_pose)
+                                         .distance;
     planning_factor_interface_->add(
       start_distance, finish_distance, status_.pull_out_path.start_pose,
       status_.pull_out_path.end_pose, planning_factor_direction,
@@ -1085,9 +1101,11 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
   const double start_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_start_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, backward_start_pose)
+      .distance;
   const double finish_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_end_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, backward_end_pose)
+      .distance;
 
   planning_factor_interface_->add(
     0.0, distance, backward_start_pose, backward_end_pose, planning_factor_direction,
@@ -1158,7 +1176,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
 
     // Delete stop point if conditions are met
     if (status_.is_safe_dynamic_objects && isStopped()) {
-      stop_pose_ = std::nullopt;
+      previous_stop_pose_ = stop_pose_ = std::nullopt;
       status_.prev_stop_path_after_approval = nullptr;
       return getCurrentPath();
     }
@@ -1172,7 +1190,7 @@ PathWithLaneId StartPlannerModule::getCurrentOutputPath()
   waitApproval();
   removeRTCStatus();
 
-  stop_pose_ = utils::insert_feasible_stop_point(
+  previous_stop_pose_ = stop_pose_ = utils::insert_feasible_stop_point(
     current_path, planner_data_, -parameters_->maximum_deceleration_for_stop,
     parameters_->maximum_jerk_for_stop, "unsafe against dynamic objects");
 
@@ -1781,6 +1799,26 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
 
   const bool override_ego_stopped_check =
     !status_.has_departed || geometric_planner_has_not_finished_first_path;
+
+  const bool enable_in_centerline = std::invoke([&]() {
+    const auto is_shift_ok =
+      std::abs(status_.pull_out_path.shift_length.start - status_.pull_out_path.shift_length.end) <
+      parameters_->minimum_shift_length;
+    const auto is_parameterize_threshold_ok =
+      parameters_->th_distance_to_middle_of_the_road < parameters_->minimum_shift_length;
+    const auto is_need_blinker = !status_.first_engaged_and_driving_forward_time ||
+                                 needToPrepareBlinkerBeforeStartDrivingForward();
+    return is_shift_ok && !parameters_->enable_back && is_parameterize_threshold_ok &&
+           is_need_blinker;
+  });
+
+  if (enable_in_centerline) {
+    auto prev_turn_signal = getPreviousModuleOutput().turn_signal_info;
+    prev_turn_signal.turn_signal.command = parameters_->turn_signal_on_centerline_start == "LEFT"
+                                             ? TurnIndicatorsCommand::ENABLE_LEFT
+                                             : TurnIndicatorsCommand::ENABLE_RIGHT;
+    return prev_turn_signal;
+  }
 
   const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
     path, shift_start_idx, shift_end_idx, current_lanes, current_shift_length,

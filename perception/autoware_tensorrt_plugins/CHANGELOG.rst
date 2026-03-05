@@ -2,6 +2,15 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_tensorrt_plugins): update nvcc flags (`#12056 <https://github.com/autowarefoundation/autoware_universe/issues/12056>`_)
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* chore(autoware_tensorrt_plugins): adjust flags for build system (`#11956 <https://github.com/autowarefoundation/autoware_universe/issues/11956>`_)
+* chore(autoware_tensorrt_plugins): remove cudnn dependency (`#11897 <https://github.com/autowarefoundation/autoware_universe/issues/11897>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

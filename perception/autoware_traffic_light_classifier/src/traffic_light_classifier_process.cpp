@@ -91,8 +91,11 @@ bool isColorLabel(const std::string & label)
   return convertColorStringtoT4(label) != tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
 }
 
-bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold)
+double compute_brightness(const cv::Mat & img)
 {
+  // based on collected images
+  constexpr double mean_brightness = 112.5;
+
   if (img.empty()) {
     return false;
   }
@@ -100,9 +103,9 @@ bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold)
   cv::cvtColor(img, y_cr_cb, cv::COLOR_RGB2YCrCb);
 
   const cv::Scalar mean_values = cv::mean(y_cr_cb);
-  const double intensity = (mean_values[0] - 112.5) / 112.5;
 
-  return backlight_threshold <= intensity;
+  // use Y to compute relative brightness based on mean_brightness
+  return (mean_values[0] - mean_brightness) / mean_brightness;
 }
 
 }  // namespace utils

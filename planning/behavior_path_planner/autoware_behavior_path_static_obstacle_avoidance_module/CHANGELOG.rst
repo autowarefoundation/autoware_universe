@@ -2,6 +2,23 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(behavior_path_planner node, common, sampling_planner): replace getClosesetLanelet to handle invalid value (`#12017 <https://github.com/autowarefoundation/autoware_universe/issues/12017>`_)
+* refactor(lane_change, static_obstacle_avoidance): replace getClosesetLanelet, fix undefined behavior for default-initialized Lanelet (`#12010 <https://github.com/autowarefoundation/autoware_universe/issues/12010>`_)
+* fix(behavior_path_static_obstacle_avoidance_module): use polygon intersection (`#11939 <https://github.com/autowarefoundation/autoware_universe/issues/11939>`_)
+* fix(behavior_path_static_obstacle_avoidance_module): intersection no inline (`#11928 <https://github.com/autowarefoundation/autoware_universe/issues/11928>`_)
+* fix(behavior_path_static_obstacle_avoidance_module): avoid dangling pointers (`#11927 <https://github.com/autowarefoundation/autoware_universe/issues/11927>`_)
+* feat(static_obstacle_avoidance): turn signal during yield maneuver (`#11778 <https://github.com/autowarefoundation/autoware_universe/issues/11778>`_)
+  * fix(avoidance): refactor reference path
+  * feat(avoidance): enable signaling while avoidance yield
+  * feat(avoidance): add parameter for signalling during yield
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Mamoru Sobue, Mehmet Dogru, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

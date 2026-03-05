@@ -158,31 +158,6 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   const FootprintMargin & margin = {0.0, 0.0});
 
 /**
- * @brief Generate vehicle footprints with adjustments based on abnormality type.
- *
- * This function creates different footprint shapes depending on the specified abnormality:
- * - For LONGITUDINAL, it lengthens the footprint based on vehicle speed.
- * - For STEERING, it widens the footprint to account for outward movement during turning.
- * - For LOCALIZATION, it applies extra margins to cover possible pose errors.
- * - For NORMAL, it only applies the provided uncertainty margin without any adjustment.
- *
- * The appropriate configuration is selected from the parameter set. This helps simulate
- * how the ego vehicle might occupy space under different uncertainty sources.
- *
- * @param abnormality_type        Type of abnormality (e.g. NORMAL, LOCALIZATION, etc.).
- * @param uncertainty_fp_margin   Margin based on pose uncertainty.
- * @param ego_pred_traj           Predicted trajectory of the ego vehicle.
- * @param current_steering        Current steering report, used for steering-based expansion.
- * @param vehicle_info            Vehicle dimensions and geometry.
- * @param param                   Parameter accessor with abnormality-specific settings.
- * @return List of footprints adapted to the given abnormality type.
- */
-std::vector<LinearRing2d> create_ego_footprints(
-  const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
-  const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
-  const VehicleInfo & vehicle_info, const Param & param);
-
-/**
  * @brief Extract left and right side segments from a 2D vehicle footprint polygon.
  *
  * This function returns the left and right side edges of a given vehicle footprint polygon.
@@ -282,17 +257,13 @@ UncrossableBoundRTree build_uncrossable_boundaries_rtree(
  * If it is within the segment's bounds, it returns the projection point. If it's outside,
  * an error is returned indicating the relative position.
  *
- * The `swap_points` flag controls the order of the returned pair, useful when projection
- * direction matters (e.g., from ego to boundary vs. from boundary to ego).
- *
  * @param p            The point to be projected.
  * @param segment      The line segment to project onto.
- * @param swap_points  Whether to swap the order of the original and projected point in the result.
  * @return A tuple containing the original point, projection point, and the distance between them,
  *         or an error message if the point lies outside the segment.
  */
-tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment_projection(
-  const Point2d & p, const Segment2d & segment, const bool swap_points = false);
+tl::expected<std::pair<Point2d, double>, std::string> point_to_segment_projection(
+  const Point2d & p, const Segment2d & segment);
 
 /**
  * @brief Computes the nearest projection between two segments, used to assess lateral distance.

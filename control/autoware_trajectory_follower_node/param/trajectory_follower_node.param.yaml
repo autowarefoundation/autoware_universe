@@ -2,3 +2,4 @@
   ros__parameters:
     ctrl_period: 0.03
     timeout_thr_sec: 0.5
+    cyclic_message_timeout_thr_sec: 0.9

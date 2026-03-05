@@ -2,6 +2,12 @@
 Changelog for package autoware_topic_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(topic_state_monitor): simplify timer handling in TopicStateMonitorNode (`#11951 <https://github.com/autowarefoundation/autoware_universe/issues/11951>`_)
+* Contributors: Kyoichi Sugahara, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

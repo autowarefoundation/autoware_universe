@@ -206,8 +206,8 @@ GroundServer::GroundPlane GroundServer::estimate_ground(const Point & point)
   last_indices_ = indices;
 
   // Estimate normal vector using covariance matrix around the target point
-  Eigen::Matrix3f covariance;
-  Eigen::Vector4f centroid;
+  Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
+  Eigen::Vector4f centroid = Eigen::Vector4f::Zero();
   pcl::compute3DCentroid(*cloud_, indices, centroid);
   pcl::computeCovarianceMatrix(*cloud_, indices, centroid, covariance);
 

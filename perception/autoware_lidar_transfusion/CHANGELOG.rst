@@ -2,6 +2,19 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_lidar_transfusion): update nvcc flags (`#12051 <https://github.com/autowarefoundation/autoware_universe/issues/12051>`_)
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(TransFusion): move cuda stream init before init and cleaning point_d buffer (`#11968 <https://github.com/autowarefoundation/autoware_universe/issues/11968>`_)
+  * move cuda stream init before init and add point_d cleaning
+  * Update memory buffer changes
+  ---------
+* chore(autoware_lidar_transfusion): remove cudnn dependency (`#11886 <https://github.com/autowarefoundation/autoware_universe/issues/11886>`_)
+* Contributors: Amadeusz Szymko, Kok Seang Tan, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

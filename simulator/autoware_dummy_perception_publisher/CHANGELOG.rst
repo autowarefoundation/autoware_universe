@@ -2,6 +2,13 @@
 Changelog for package autoware_dummy_perception_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* feat(dummy_perception publisher): use object z as baselink coordinates (`#11995 <https://github.com/autowarefoundation/autoware_universe/issues/11995>`_)
+* Contributors: Ryohsuke Mitsudome, Yuki TAKAGI
+
 0.49.0 (2025-12-30)
 -------------------
 

@@ -2,6 +2,14 @@
 Changelog for package autoware_tensorrt_bevformer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_tensorrt_bevformer): remove cudnn dependency (`#11903 <https://github.com/autowarefoundation/autoware_universe/issues/11903>`_)
+* fix(tensorrt_bevformer): initialize Eigen::Translation3d (`#11920 <https://github.com/autowarefoundation/autoware_universe/issues/11920>`_)
+* fix: add cv_bridge.hpp support (`#11873 <https://github.com/autowarefoundation/autoware_universe/issues/11873>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

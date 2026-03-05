@@ -206,7 +206,7 @@ void SSP::maximizeLinearAssignment(
     }
 
     // Start trajectory from the source node
-    p_queue.push(std::make_pair(0, source));
+    p_queue.emplace(0, source);
     distances.at(source) = 0;
 
     while (!p_queue.empty()) {
@@ -248,7 +248,7 @@ void SSP::maximizeLinearAssignment(
             prev_values.at(it_incident_edge->dst) =
               std::make_pair(cur_node, it_incident_edge - adjacency_list.at(cur_node).cbegin());
             // std::cout << "[push]: (" << reduced_cost << ", " << next_v << ")" << std::endl;
-            p_queue.push(std::make_pair(reduced_cost, it_incident_edge->dst));
+            p_queue.emplace(reduced_cost, it_incident_edge->dst);
           }
         }
       }

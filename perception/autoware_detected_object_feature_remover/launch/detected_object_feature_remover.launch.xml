@@ -2,9 +2,11 @@
   <arg name="input"/>
   <arg name="output"/>
   <arg name="node_name" default="detected_object_feature_remover"/>
+  <arg name="run_convex_hull_conversion" default="false"/>
 
   <node pkg="autoware_detected_object_feature_remover" exec="detected_object_feature_remover_node" name="$(var node_name)" output="screen">
     <remap from="~/input" to="$(var input)"/>
     <remap from="~/output" to="$(var output)"/>
+    <param name="run_convex_hull_conversion" value="$(var run_convex_hull_conversion)"/>
   </node>
 </launch>

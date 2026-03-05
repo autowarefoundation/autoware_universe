@@ -17,8 +17,9 @@
 #include <autoware/behavior_path_planner_common/utils/path_utils.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -34,6 +35,7 @@
 #include <utility>
 #include <vector>
 
+using autoware::experimental::lanelet2_utils::get_arc_coordinates;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
@@ -42,7 +44,6 @@ using autoware_utils::normalize_radian;
 using autoware_utils::transform_pose;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
-using lanelet::utils::getArcCoordinates;
 
 namespace autoware::behavior_path_planner
 {
@@ -268,7 +269,7 @@ bool GeometricParallelParking::planPullOut(
     }
 
     // get road center line path from pull_out end to goal, and combine after the second arc path
-    const double s_start = getArcCoordinates(road_lanes, *end_pose).length;
+    const double s_start = get_arc_coordinates(road_lanes, *end_pose).length;
     const auto path_end_info = utils::parking_departure::calcEndArcLength(
       s_start, planner_data_->parameters.forward_path_length, road_lanes, goal_pose);
     const double s_end = path_end_info.first;
@@ -322,7 +323,8 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
   const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes, const double start_pose_offset,
   const double R_E_far, const bool is_forward, const bool left_side_parking)
 {
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(road_lanes, goal_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, goal_pose);
 
   // todo
   // When forwarding, the turning radius of the right and left will be the same.
@@ -341,10 +343,15 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
   // Assuming parallel poses, calculate the approximate start pose on the centerline from the goal
   // pose
   const Pose approximate_start_pose = calc_offset_pose(goal_pose, dx, -arc_coordinates.distance, 0);
-  lanelet::ConstLanelet closest_road_lane{};
 
   // Calculate start pose on the centerline, then offset it.
-  lanelet::utils::query::getClosestLanelet(road_lanes, approximate_start_pose, &closest_road_lane);
+  const auto closest_road_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(road_lanes, approximate_start_pose);
+  if (!closest_road_lane_opt) {
+    return std::nullopt;
+  }
+  const auto & closest_road_lane = closest_road_lane_opt.value();
+
   const Pose start_pose_no_offset = autoware::experimental::lanelet2_utils::get_closest_center_pose(
     closest_road_lane, autoware::experimental::lanelet2_utils::from_ros(approximate_start_pose));
   const auto road_lane_path = planner_data_->route_handler->getCenterLinePath(
@@ -359,10 +366,12 @@ PathWithLaneId GeometricParallelParking::generateStraightPath(
   const Pose & start_pose, const lanelet::ConstLanelets & road_lanes)
 {
   // get straight path before parking.
-  const auto start_arc_position = lanelet::utils::getArcCoordinates(road_lanes, start_pose);
+  const auto start_arc_position =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, start_pose);
 
   const Pose current_pose = planner_data_->self_odometry->pose.pose;
-  const auto current_arc_position = lanelet::utils::getArcCoordinates(road_lanes, current_pose);
+  const auto current_arc_position =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(road_lanes, current_pose);
 
   auto path = utils::resamplePathWithSpline(
     planner_data_->route_handler->getCenterLinePath(

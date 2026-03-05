@@ -18,9 +18,9 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -233,13 +233,15 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 {
   const auto logger = node_->get_logger();
 
-  const auto goal_lanelet_pt = lanelet::utils::conversion::toLaneletPoint(goal.position);
+  const auto goal_lanelet_pt = experimental::lanelet2_utils::from_ros(goal.position);
 
   // check if goal is in shoulder lanelet
-  lanelet::Lanelet closest_shoulder_lanelet;
   const auto shoulder_lanelets = route_handler_.getShoulderLaneletsAtPose(goal);
-  if (lanelet::utils::query::getClosestLanelet(
-        shoulder_lanelets, goal, &closest_shoulder_lanelet)) {
+  if (const auto closest_shoulder_lanelet_opt =
+        experimental::lanelet2_utils::get_closest_lanelet_within_constraint(
+          shoulder_lanelets, goal);
+      closest_shoulder_lanelet_opt) {
+    const auto & closest_shoulder_lanelet = closest_shoulder_lanelet_opt.value();
     const auto lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
       closest_shoulder_lanelet,
       autoware::experimental::lanelet2_utils::from_ros(goal.position).basicPoint());
@@ -250,10 +252,10 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
       return true;
     }
   }
-  lanelet::ConstLanelet closest_lanelet_to_goal;
   const auto road_lanelets_at_goal = route_handler_.getRoadLaneletsAtPose(goal);
-  if (!lanelet::utils::query::getClosestLanelet(
-        road_lanelets_at_goal, goal, &closest_lanelet_to_goal)) {
+  auto closest_lanelet_to_goal_opt =
+    experimental::lanelet2_utils::get_closest_lanelet(road_lanelets_at_goal, goal);
+  if (!closest_lanelet_to_goal_opt) {
     // if no road lanelets directly at the goal, find the closest one
     const lanelet::BasicPoint2d goal_point{goal.position.x, goal.position.y};
     auto closest_dist = std::numeric_limits<double>::max();
@@ -267,7 +269,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
           const auto dist = lanelet::geometry::distance2d(goal_point, ll.polygon2d());
           if (route_handler_.isRoadLanelet(ll) && dist < closest_dist) {
             closest_dist = dist;
-            closest_lanelet_to_goal = ll;
+            closest_lanelet_to_goal_opt = ll;
           }
           return false;  // continue the search
         });
@@ -276,6 +278,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
 
   // If the goal is at the very beginning or the end of closest_lanelet_to_goal, base link to rear
   // part of ego footprint will be outside of it. To tolerate it, add previous and next lanelets
+  const auto & closest_lanelet_to_goal = closest_lanelet_to_goal_opt.value();
   lanelet::ConstLanelets lanelets_near_goal{closest_lanelet_to_goal};
   const auto previous_lanelets = get_lanelets_to(
     closest_lanelet_to_goal, vehicle_info_.max_longitudinal_offset_m, true, route_handler_);
@@ -297,7 +300,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
     !check_goal_footprint_inside_lanes(lanelets_near_goal, polygon_footprint) &&
     !is_in_parking_lot(
       lanelet::utils::query::getAllParkingLots(route_handler_.getLaneletMapPtr()),
-      lanelet::utils::conversion::toLaneletPoint(goal.position))) {
+      experimental::lanelet2_utils::from_ros(goal.position))) {
     RCLCPP_WARN(logger, "Goal's footprint exceeds lane!");
     return false;
   }
@@ -334,7 +337,8 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
 
   std::stringstream log_ss;
   for (const auto & point : points) {
-    log_ss << "x: " << point.position.x << " " << "y: " << point.position.y << std::endl;
+    log_ss << "x: " << point.position.x << " "
+           << "y: " << point.position.y << std::endl;
   }
   RCLCPP_DEBUG_STREAM(
     logger, "start planning route with check points: " << std::endl
@@ -395,7 +399,7 @@ geometry_msgs::msg::Pose DefaultPlanner::refine_goal_height(
 {
   const auto goal_lane_id = route_sections.back().preferred_primitive.id;
   const auto goal_lanelet = route_handler_.getLaneletsFromId(goal_lane_id);
-  const auto goal_lanelet_pt = lanelet::utils::conversion::toLaneletPoint(goal.position);
+  const auto goal_lanelet_pt = experimental::lanelet2_utils::from_ros(goal.position);
   const auto goal_height = project_goal_to_map(goal_lanelet, goal_lanelet_pt);
 
   Pose refined_goal = goal;

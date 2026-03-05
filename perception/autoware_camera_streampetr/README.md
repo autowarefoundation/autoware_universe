@@ -152,9 +152,9 @@ You can download the ONNX model files for StreamPETR. The files should be placed
 
 Required model files:
 
-- Backbone ONNX model: TODO
-- Head ONNX model: TODO
-- Position embedding ONNX model: TODO
+- [Backbone ONNX Model](https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_extract_img_feat.onnx)
+- [Head ONNX Model](https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_pts_head_memory.onnx)
+- [Position Embedding ONNX Model](https://awf.ml.dev.web.auto/perception/models/streampetr/v1/simplify_position_embedding.onnx)
 
 If you want to train and deploy your own model, you can find the source code for that in [AWML](https://github.com/tier4/AWML/tree/main/projects/StreamPETR).
 

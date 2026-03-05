@@ -46,6 +46,48 @@
               "type": "integer",
               "description": "A size of encoder input feature channels.",
               "default": 9
+            },
+            "detection_score_thresholds": {
+              "type": "object",
+              "description": "A dictionary of minimum confidence scores for each class and a distance bin upper limits.",
+              "properties": {
+                "distance_bin_upper_limits": {
+                  "type": "array",
+                  "description": "An array of upper bounds of each distance bin.",
+                  "default": [50.0, 90.0, 121.0, 200.0]
+                },
+                "min_confidence_scores": {
+                  "type": "object",
+                  "description": "A dictionary of minimum confidence scores for each class.",
+                  "properties": {
+                    "CAR": {
+                      "type": "array",
+                      "description": "A minimum confidence score for CAR in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "TRUCK": {
+                      "type": "array",
+                      "description": "A minimum confidence score for TRUCK in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BUS": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BUS in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "BICYCLE": {
+                      "type": "array",
+                      "description": "A minimum confidence score for BICYCLE in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    },
+                    "PEDESTRIAN": {
+                      "type": "array",
+                      "description": "A minimum confidence score for PEDESTRIAN in each distance bin.",
+                      "default": [0.35, 0.35, 0.35, 0.35]
+                    }
+                  }
+                }
+              }
             }
           }
         }

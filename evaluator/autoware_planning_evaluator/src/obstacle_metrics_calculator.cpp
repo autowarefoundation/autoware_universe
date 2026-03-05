@@ -246,8 +246,12 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
           obstacle_trajectory_points_.emplace_back(obstacle_pose, obstacle_velocity, ego_time, 0.0);
         }
       } else {
-        // Create obstacle trajectory points based on the predicted path.
-        const auto & obstacle_path = object.kinematics.predicted_paths.front().path;
+        // Create obstacle trajectory points based on the predicted path with highest confidence.
+        const auto & predicted_paths = object.kinematics.predicted_paths;
+        auto max_confidence_iter = std::max_element(
+          predicted_paths.begin(), predicted_paths.end(),
+          [](const auto & a, const auto & b) { return a.confidence < b.confidence; });
+        const auto & obstacle_path = max_confidence_iter->path;
 
         // initialize reference point and the point right after next reference point. Here
         // `reference_point` is the point right before the current ego trajectory point.
@@ -426,8 +430,8 @@ void ObstacleMetricsCalculator::ProcessObstaclesTrajectory()
 
         // calculate DRAC
         const double distance_to_collision = ego_trajectory_point.distance_from_start_m;
-        const double point_drac = (ego_end_vel * ego_end_vel - ego_start_vel * ego_start_vel) /
-                                  (2.0 * distance_to_collision + 1e-6);
+        const double point_drac =
+          std::pow(ego_end_vel - ego_start_vel, 2) / (2.0 * distance_to_collision + 1e-6);
         obstacle_drac = std::max(obstacle_drac, std::abs(point_drac));
       }
 
