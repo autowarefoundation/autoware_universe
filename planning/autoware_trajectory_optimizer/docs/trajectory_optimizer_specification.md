@@ -302,8 +302,10 @@ orientations are derived purely from the smoothed path tangent.
 
 When enabled, the rationale is that the diffusion planner produces orientations that encode the
 intended heading, which may differ from the pure geometric tangent of the smoothed path. If the
-smoothing deviation is small relative to `max_distance_for_orientation_m`, the copied orientation
-is close enough to the geometric tangent that the error is acceptable.
+smoothing deviation is small relative to the configured distance threshold (QP smoother:
+`max_distance_for_orientation_m`; spline smoother: `max_distance_discrepancy_m`; both default
+to 5.0 m), the copied orientation is close enough to the geometric tangent that the error is
+acceptable.
 
 ---
 
