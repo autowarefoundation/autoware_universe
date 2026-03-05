@@ -95,6 +95,8 @@ public:
 
   virtual agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept = 0;
   virtual std::shared_ptr<MessageT> move_ros2_ptr() && noexcept = 0;
+
+  virtual std::unique_ptr<message_interface<MessageT, OwnershipType::Shared>> clone() const = 0;
 };
 
 template <typename MessageT, OwnershipType Ownership>
@@ -119,6 +121,12 @@ public:
   // The following member function should never be called at runtime. They are implemented just for
   // inheriting `message_interface`.
   ros2_ptr_t move_ros2_ptr() && noexcept override { return ros2_ptr_t{}; }
+
+  // Can only be called with shared ownership.
+  std::unique_ptr<message_interface<MessageT, OwnershipType::Shared>> clone() const
+  {
+    return std::make_unique<agnocast_message<MessageT, Ownership>>(*this);
+  }
 };
 
 template <typename MessageT, OwnershipType Ownership>
@@ -143,15 +151,23 @@ public:
   {
     return agnocast::ipc_shared_ptr<MessageT>{};
   }
+
+  // Can only be called with shared ownership.
+  std::unique_ptr<message_interface<MessageT, OwnershipType::Shared>> clone() const
+  {
+    return std::make_unique<ros2_message<MessageT, Ownership>>(*this);
+  }
 };
 
 template <typename MessageT, OwnershipType Ownership>
-class message_ptr
-{
-  using ros2_ptr_t = std::conditional_t<
-    Ownership == OwnershipType::Unique, std::unique_ptr<MessageT>, std::shared_ptr<MessageT>>;
+class message_ptr;
 
-  std::shared_ptr<message_interface<MessageT, Ownership>> ptr_;
+template <typename MessageT>
+class message_ptr<MessageT, OwnershipType::Unique>
+{
+  using ros2_ptr_t = std::unique_ptr<MessageT>;
+
+  std::unique_ptr<message_interface<MessageT, OwnershipType::Unique>> ptr_;
 
   template <typename U>
   friend class AgnocastPublisher;
@@ -170,14 +186,82 @@ public:
   message_ptr() : ptr_(nullptr) {}
 
   explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
-  : ptr_(std::make_unique<agnocast_message<MessageT, Ownership>>(std::move(ptr)))
+  : ptr_(std::make_unique<agnocast_message<MessageT, OwnershipType::Unique>>(std::move(ptr)))
   {
   }
 
   explicit message_ptr(ros2_ptr_t && ptr)
-  : ptr_(std::make_unique<ros2_message<MessageT, Ownership>>(std::move(ptr)))
+  : ptr_(std::make_unique<ros2_message<MessageT, OwnershipType::Unique>>(std::move(ptr)))
   {
   }
+
+  message_ptr(const message_ptr & r) = delete;
+  message_ptr & operator=(const message_ptr & r) = delete;
+
+  message_ptr(message_ptr && r) noexcept = default;
+  message_ptr & operator=(message_ptr && r) noexcept = default;
+
+  MessageT & operator*() const noexcept { return ptr_->as_ref(); }
+
+  MessageT * operator->() const noexcept { return ptr_->as_ptr(); }
+
+  explicit operator bool() const noexcept { return static_cast<bool>(ptr_->as_ptr()); }
+
+  MessageT * get() const noexcept { return ptr_->as_ptr(); }
+};
+
+template <typename MessageT>
+class message_ptr<MessageT, OwnershipType::Shared>
+{
+  using ros2_ptr_t = std::shared_ptr<MessageT>;
+
+  std::unique_ptr<message_interface<MessageT, OwnershipType::Shared>> ptr_;
+
+  template <typename U>
+  friend class AgnocastPublisher;
+  template <typename U>
+  friend class ROS2Publisher;
+
+private:
+  agnocast::ipc_shared_ptr<MessageT> move_agnocast_ptr() && noexcept
+  {
+    return std::move(*std::move(ptr_)).move_agnocast_ptr();
+  }
+
+  auto move_ros2_ptr() && noexcept { return std::move(*std::move(ptr_)).move_ros2_ptr(); }
+
+public:
+  message_ptr() : ptr_(nullptr) {}
+
+  explicit message_ptr(agnocast::ipc_shared_ptr<MessageT> && ptr)
+  : ptr_(std::make_unique<agnocast_message<MessageT, OwnershipType::Shared>>(std::move(ptr)))
+  {
+  }
+
+  explicit message_ptr(ros2_ptr_t && ptr)
+  : ptr_(std::make_unique<ros2_message<MessageT, OwnershipType::Shared>>(std::move(ptr)))
+  {
+  }
+
+  message_ptr(const message_ptr & r)
+  {
+    if (r.ptr_ != nullptr) {
+      ptr_ = r.ptr_->clone();
+    }
+  }
+  message_ptr & operator=(const message_ptr & r)
+  {
+    if (this != &r) {
+      ptr_ = nullptr;
+      if (r.ptr_ != nullptr) {
+        ptr_ = r.ptr_->clone();
+      }
+    }
+    return *this;
+  }
+
+  message_ptr(message_ptr && r) noexcept = default;
+  message_ptr & operator=(message_ptr && r) noexcept = default;
 
   MessageT & operator*() const noexcept { return ptr_->as_ref(); }
 
