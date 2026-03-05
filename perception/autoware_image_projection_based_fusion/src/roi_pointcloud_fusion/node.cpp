@@ -24,6 +24,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,10 +39,14 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
   const std::array<std::pair<std::string, uint8_t>, 8> fusion_class_names = {
-    {"UNKNOWN", Classification::UNKNOWN}, {"CAR", Classification::CAR},
-    {"TRUCK", Classification::TRUCK},     {"BUS", Classification::BUS},
-    {"TRAILER", Classification::TRAILER}, {"MOTORCYCLE", Classification::MOTORCYCLE},
-    {"BICYCLE", Classification::BICYCLE}, {"PEDESTRIAN", Classification::PEDESTRIAN}};
+    {{"UNKNOWN", Classification::UNKNOWN},
+     {"CAR", Classification::CAR},
+     {"TRUCK", Classification::TRUCK},
+     {"BUS", Classification::BUS},
+     {"TRAILER", Classification::TRAILER},
+     {"MOTORCYCLE", Classification::MOTORCYCLE},
+     {"BICYCLE", Classification::BICYCLE},
+     {"PEDESTRIAN", Classification::PEDESTRIAN}}};
   for (const auto & [class_name, label] : fusion_class_names) {
     enable_fusion_per_class_[label] =
       declare_parameter<bool>("enable_fusion_per_class." + class_name);

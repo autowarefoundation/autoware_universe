@@ -20,9 +20,9 @@
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::image_projection_based_fusion
