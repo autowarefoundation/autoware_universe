@@ -69,7 +69,6 @@ using nav_msgs::msg::OccupancyGrid;
 using nav_msgs::msg::Odometry;
 using rcl_interfaces::msg::SetParametersResult;
 using tier4_planning_msgs::msg::AvoidanceDebugMsgArray;
-using tier4_planning_msgs::msg::LateralOffset;
 using tier4_planning_msgs::msg::RerouteAvailability;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
