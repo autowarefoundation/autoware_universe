@@ -6,7 +6,7 @@
     "roi_pointcloud_fusion": {
       "type": "object",
       "properties": {
-        "enable_fusion_per_class": {
+        "fusion_enabled_classes": {
           "type": "object",
           "properties": {
             "UNKNOWN": {
@@ -98,7 +98,7 @@
         }
       },
       "required": [
-        "enable_fusion_per_class",
+        "fusion_enabled_classes",
         "override_class_with_unknown",
         "min_cluster_size",
         "cluster_2d_tolerance",

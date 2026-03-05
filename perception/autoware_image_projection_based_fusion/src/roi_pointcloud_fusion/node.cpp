@@ -48,8 +48,8 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
      {"BICYCLE", Classification::BICYCLE},
      {"PEDESTRIAN", Classification::PEDESTRIAN}}};
   for (const auto & [class_name, label] : fusion_class_names) {
-    enable_fusion_per_class_[label] =
-      declare_parameter<bool>("enable_fusion_per_class." + class_name);
+    fusion_enabled_classes_[label] =
+      declare_parameter<bool>("fusion_enabled_classes." + class_name);
   }
   min_cluster_size_ = declare_parameter<int>("min_cluster_size");
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
@@ -78,11 +78,11 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   std::vector<DetectedObjectWithFeature> output_objs;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
   std::vector<Eigen::Vector2d> debug_image_points;
-  // select ROIs for fusion by per-class enable_fusion_per_class flag
+  // select ROIs for fusion by per-class fusion_enabled_classes flag
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
     const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
-    const auto it = enable_fusion_per_class_.find(roi_label);
-    const bool fuse_this_class = (it != enable_fusion_per_class_.end() && it->second);
+    const bool fuse_this_class =
+      fusion_enabled_classes_.count(roi_label) && fusion_enabled_classes_.at(roi_label);
     if (!fuse_this_class) {
       continue;
     }

@@ -6,7 +6,7 @@
     roi_scale_factor: 1.0
     max_object_size: 2.0
     override_class_with_unknown: false
-    enable_fusion_per_class:
+    fusion_enabled_classes:
       UNKNOWN: true
       CAR: false
       BUS: false
