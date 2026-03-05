@@ -730,10 +730,9 @@ auto generate_detection_polygon(
     lanelets, ego_coordinate_on_arc - backward_distance, ego_coordinate_on_arc + forward_distance);
   if (polygon_opt.has_value()) {
     return polygon_opt.value().basicPolygon();
-  } else {
-    // return blank polygon (no detection_polygon)
-    return lanelet::BasicPolygon3d();
   }
+  // return blank polygon (no detection_polygon)
+  return lanelet::BasicPolygon3d();
 }
 
 auto generate_half_lanelet(
