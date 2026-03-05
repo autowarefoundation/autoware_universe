@@ -21,6 +21,10 @@ on:
         required: false
         type: boolean
 
+concurrency:
+  group: clang-tidy-differential${{ inputs.container-suffix }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   clang-tidy-differential:
     if: ${{ inputs.run-condition }}
