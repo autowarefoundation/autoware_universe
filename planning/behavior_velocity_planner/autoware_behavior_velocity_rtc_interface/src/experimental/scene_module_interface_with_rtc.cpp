@@ -87,7 +87,7 @@ UUID SceneModuleManagerInterfaceWithRTC::getUUID(const lanelet::Id & module_id) 
 
 void SceneModuleManagerInterfaceWithRTC::generate_uuid(const lanelet::Id & module_id)
 {
-  map_uuid_.insert({module_id, autoware_utils::generate_uuid()});
+  map_uuid_.emplace(module_id, autoware_utils::generate_uuid());
 }
 
 void SceneModuleManagerInterfaceWithRTC::removeUUID(const lanelet::Id & module_id)

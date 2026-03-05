@@ -11,34 +11,13 @@
           "description": "Estimate the steering offset and apply compensation",
           "default": true
         },
-        "update_vel_threshold": {
+        "steer_offset_filter_cutoff_hz": {
           "type": "number",
-          "description": "If the velocity is smaller than this value, the data is not used for the offset estimation",
-          "default": 5.56
-        },
-        "update_steer_threshold": {
-          "type": "number",
-          "description": "If the steering angle is larger than this value, the data is not used for the offset estimation",
-          "default": 0.035
-        },
-        "average_num": {
-          "type": "integer",
-          "description": "The average of this number of data is used as a steering offset",
-          "default": 1000
-        },
-        "steering_offset_limit": {
-          "type": "number",
-          "description": "The angle limit to be applied to the offset compensation",
-          "default": 0.02
+          "description": "Cutoff frequency of lowpass filter for steering offset [Hz]",
+          "default": 0.5
         }
       },
-      "required": [
-        "enable_auto_steering_offset_removal",
-        "update_vel_threshold",
-        "update_steer_threshold",
-        "average_num",
-        "steering_offset_limit"
-      ],
+      "required": ["enable_auto_steering_offset_removal", "steer_offset_filter_cutoff_hz"],
       "additionalProperties": false
     }
   },

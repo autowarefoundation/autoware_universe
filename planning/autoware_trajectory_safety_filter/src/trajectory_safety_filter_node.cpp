@@ -29,7 +29,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
+#include <vector>
 
 namespace
 {
@@ -91,6 +91,9 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
     "~/debug/processing_time_detail_ms/feasible_trajectory_filter", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+
+  set_param_res_ = this->add_on_set_parameters_callback(
+    std::bind(&TrajectorySafetyFilter::on_parameter, this, std::placeholders::_1));
 }
 
 void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
@@ -127,10 +130,6 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
 
   // Process and filter trajectories
   for (const auto & trajectory : msg->candidate_trajectories) {
-    if (!validate_trajectory_basics(trajectory)) {
-      continue;
-    }
-
     // Apply each filter to the trajectory
     bool is_feasible = true;
     for (const auto & plugin : plugins_) {
@@ -146,22 +145,13 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
   }
 
   // Also filter generator_info to match kept trajectories
-  std::unordered_set<std::string> kept_generator_ids;
   for (const auto & traj : filtered_msg->candidate_trajectories) {
-    std::stringstream ss;
-    for (const auto & byte : traj.generator_id.uuid) {
-      ss << std::hex << static_cast<int>(byte);
-    }
-    kept_generator_ids.insert(ss.str());
-  }
+    auto it = std::find_if(
+      msg->generator_info.begin(), msg->generator_info.end(),
+      [&](const auto & info) { return traj.generator_id.uuid == info.generator_id.uuid; });
 
-  for (const auto & gen_info : msg->generator_info) {
-    std::stringstream ss;
-    for (const auto & byte : gen_info.generator_id.uuid) {
-      ss << std::hex << static_cast<int>(byte);
-    }
-    if (kept_generator_ids.count(ss.str()) > 0) {
-      filtered_msg->generator_info.push_back(gen_info);
+    if (it != msg->generator_info.end()) {
+      filtered_msg->generator_info.push_back(*it);
     }
   }
 
@@ -189,31 +179,8 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       }
     }
 
-    // Load parameters from ROS and pass to plugin
-    std::unordered_map<std::string, std::any> params;
-    const auto all_params = listener_->get_params();
-
-    // Determine parameter prefix based on plugin name
-    if (name.find("OutOfLaneFilter") != std::string::npos) {
-      params["out_of_lane.time"] = all_params.out_of_lane.time;
-      params["out_of_lane.min_value"] = all_params.out_of_lane.min_value;
-    } else if (name.find("CollisionFilter") != std::string::npos) {
-      params["collision.time"] = all_params.collision.time;
-      params["collision.min_value"] = all_params.collision.min_value;
-    } else if (name.find("VehicleConstraintFilter") != std::string::npos) {
-      params["vehicle_constraint.max_speed"] = all_params.vehicle_constraint.max_speed;
-      params["vehicle_constraint.max_acceleration"] =
-        all_params.vehicle_constraint.max_acceleration;
-      params["vehicle_constraint.max_deceleration"] =
-        all_params.vehicle_constraint.max_deceleration;
-      params["vehicle_constraint.max_steering_angle"] =
-        all_params.vehicle_constraint.max_steering_angle;
-      params["vehicle_constraint.max_steering_rate"] =
-        all_params.vehicle_constraint.max_steering_rate;
-    }
-
     plugin->set_vehicle_info(vehicle_info_);
-    plugin->set_parameters(params);
+    plugin->set_parameters(*this);
 
     plugins_.push_back(plugin);
 
@@ -263,33 +230,25 @@ void TrajectorySafetyFilter::update_diagnostic(const CandidateTrajectories & fil
   diagnostics_interface_.publish(this->get_clock()->now());
 }
 
-bool TrajectorySafetyFilter::validate_trajectory_basics(
-  const CandidateTrajectory & trajectory) const
+rcl_interfaces::msg::SetParametersResult TrajectorySafetyFilter::on_parameter(
+  const std::vector<rclcpp::Parameter> & parameters)
 {
-  // Check minimum trajectory length
-  if (trajectory.points.size() < 2) {
-    return false;
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+
+  try {
+    // Broadcast the changed parameters to all loaded plugins
+    for (const auto & plugin : plugins_) {
+      plugin->update_parameters(parameters);
+    }
+  } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
+    // Cleanly reject the parameter change if any plugin detects a type mismatch
+    result.successful = false;
+    result.reason = e.what();
   }
 
-  // Check all points have finite values
-  return std::all_of(
-    trajectory.points.begin(), trajectory.points.end(),
-    [this](const auto & point) { return check_finite(point); });
-}
-
-bool TrajectorySafetyFilter::check_finite(const TrajectoryPoint & point) const
-{
-  const auto & p = point.pose.position;
-  const auto & o = point.pose.orientation;
-
-  using std::isfinite;
-  const bool p_result = isfinite(p.x) && isfinite(p.y) && isfinite(p.z);
-  const bool quat_result = isfinite(o.x) && isfinite(o.y) && isfinite(o.z) && isfinite(o.w);
-  const bool v_result = isfinite(point.longitudinal_velocity_mps);
-  const bool w_result = isfinite(point.heading_rate_rps);
-  const bool a_result = isfinite(point.acceleration_mps2);
-
-  return p_result && quat_result && v_result && w_result && a_result;
+  return result;
 }
 }  // namespace autoware::trajectory_safety_filter
 
