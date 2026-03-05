@@ -28,12 +28,12 @@ The script compiles the C++ benchmark, runs both legacy and optimized modes, and
 
 ### Options
 
-| Option            | Description                        | Default    |
-| ----------------- | ---------------------------------- | ---------- |
-| `--engine PATH`   | Path to TRT engine file            | auto-detect |
-| `--runs N`        | Benchmark iterations               | `300`      |
-| `--warmup N`      | Warmup iterations                  | `50`       |
-| `--full-pipeline` | Include H2D+D2H transfers in timing | disabled   |
+| Option            | Description                         | Default     |
+| ----------------- | ----------------------------------- | ----------- |
+| `--engine PATH`   | Path to TRT engine file             | auto-detect |
+| `--runs N`        | Benchmark iterations                | `300`       |
+| `--warmup N`      | Warmup iterations                   | `50`        |
+| `--full-pipeline` | Include H2D+D2H transfers in timing | disabled    |
 
 ## What It Measures
 
@@ -44,9 +44,9 @@ The script compiles the C++ benchmark, runs both legacy and optimized modes, and
 
 Measured on NVIDIA RTX PRO 6000 Blackwell, TensorRT 10.8, CUDA 12.4:
 
-| Metric  | Legacy  | Optimized | Improvement      |
-| ------- | ------- | --------- | ---------------- |
-| Mean    | 5.30 ms | 5.04 ms   | -4.9%            |
-| P99     | 5.84 ms | 5.22 ms   | -10.7%           |
-| Std     | 0.09 ms | 0.04 ms   | 2.1x more stable |
-| GPU mem | 2665 MiB | 2235 MiB | -430 MiB         |
+| Metric  | Legacy   | Optimized | Improvement      |
+| ------- | -------- | --------- | ---------------- |
+| Mean    | 5.30 ms  | 5.04 ms   | -4.9%            |
+| P99     | 5.84 ms  | 5.22 ms   | -10.7%           |
+| Std     | 0.09 ms  | 0.04 ms   | 2.1x more stable |
+| GPU mem | 2665 MiB | 2235 MiB  | -430 MiB         |
