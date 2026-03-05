@@ -283,7 +283,7 @@ void MultiObjectTracker::publish()
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
-  const rclcpp::Time publish_time = state_.last_tracker_time;
+  const rclcpp::Time last_tracker_time = state_.last_tracker_time;
   debugger_->startPublishTime(current_time);
   core::PublishingData publishing_data;
   {
@@ -292,24 +292,24 @@ void MultiObjectTracker::publish()
       st_get_output_ptr = std::make_unique<ScopedTimeTrack>("get_output", *time_keeper_);
 
     publishing_data =
-      core::prepare_publishing_data(publish_time, current_time, params_, state_, get_logger());
+      core::prepare_publishing_data(last_tracker_time, current_time, params_, state_, get_logger());
   }
   tracked_objects_pub_->publish(publishing_data.tracked_objects);
 
-  debugger_->endPublishTime(this->now(), publish_time);
+  debugger_->endPublishTime(this->now(), last_tracker_time);
 
-  publishOptional(publish_time, current_time, publishing_data.tracked_objects_size);
+  publishOptional(last_tracker_time, current_time, publishing_data.tracked_objects_size);
 }
 
 void MultiObjectTracker::publishOptional(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const size_t tracked_objects_size)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const auto optional_data = core::prepare_optional_publishing_data(
-    publish_time, current_time, tracked_objects_size, params_, state_, *debugger_, get_logger());
+    last_tracker_time, current_time, params_, state_, *debugger_, get_logger());
 
   // Publish merged objects
   if (optional_data.merged_objects) {
@@ -317,12 +317,11 @@ void MultiObjectTracker::publishOptional(
   }
 
   // Update the diagnostic values
-  debugger_->updateDiagnosticValues(
-    optional_data.min_extrapolation_time, optional_data.tracked_objects_size);
+  debugger_->updateDiagnosticValues(optional_data.min_extrapolation_time, tracked_objects_size);
 
   // Publish tentative objects
-  if (optional_data.should_publish_tentative) {
-    debugger_->publishTentativeObjects(optional_data.tentative_objects);
+  if (optional_data.tentative_objects) {
+    debugger_->publishTentativeObjects(*optional_data.tentative_objects);
   }
 
   published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, optional_data.object_time);

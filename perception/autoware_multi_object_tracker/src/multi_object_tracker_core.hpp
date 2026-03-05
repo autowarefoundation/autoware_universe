@@ -110,12 +110,10 @@ struct PublishingData
 
 struct OptionalPublishingData
 {
-  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
-  autoware_perception_msgs::msg::TrackedObjects tentative_objects;
-  double min_extrapolation_time;
-  size_t tracked_objects_size;
   rclcpp::Time object_time;
-  bool should_publish_tentative;
+  double min_extrapolation_time;
+  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
+  std::optional<autoware_perception_msgs::msg::TrackedObjects> tentative_objects;
 };
 
 // Parameter processing
@@ -127,11 +125,11 @@ bool should_publish(
   MultiObjectTrackerInternalState & state);
 
 autoware_perception_msgs::msg::TrackedObjects get_tracked_objects_(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state);
 
 std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects_(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
@@ -154,15 +152,14 @@ ObjectProcessingResult process_objects_batch(
   const rclcpp::Logger & logger);
 
 PublishingData prepare_publishing_data(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
   const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
 OptionalPublishingData prepare_optional_publishing_data(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const size_t tracked_objects_size, const MultiObjectTrackerParameters & params,
-  const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
-  const rclcpp::Logger & logger);
+  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
+  const MultiObjectTrackerParameters & params, const MultiObjectTrackerInternalState & state,
+  const TrackerDebugger & debugger, const rclcpp::Logger & logger);
 
 }  // namespace core
 
