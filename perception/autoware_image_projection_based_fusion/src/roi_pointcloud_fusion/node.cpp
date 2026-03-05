@@ -17,6 +17,7 @@
 #include "autoware/euclidean_cluster/utils.hpp"
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 
@@ -28,6 +29,7 @@
 
 namespace autoware::image_projection_based_fusion
 {
+using autoware::object_recognition_utils::getHighestProbLabel;
 using autoware_utils::ScopedTimeTrack;
 using Classification = autoware_perception_msgs::msg::ObjectClassification;
 
@@ -72,7 +74,7 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   std::vector<Eigen::Vector2d> debug_image_points;
   // select ROIs for fusion by per-class enable_fusion_per_class flag
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
-    const uint8_t roi_label = feature_obj.object.classification.front().label;
+    const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
     const auto it = enable_fusion_per_class_.find(roi_label);
     const bool fuse_this_class = (it != enable_fusion_per_class_.end() && it->second);
     if (!fuse_this_class) {
