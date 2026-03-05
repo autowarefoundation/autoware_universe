@@ -219,26 +219,24 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
     proj_idxs_d_.get(), proj_2d_d_.get(), num_points_d_.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d_.get()));
 
-  uint32_t num_points{};
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(
-    cudaMemcpy(&num_points, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
-  num_points_ = num_points;
+    cudaMemcpy(&num_points_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
 
   if (
-    num_points < network_params_.num_points_profile.min ||
-    num_points > network_params_.num_points_profile.max) {
+    num_points_ < network_params_.num_points_profile.min ||
+    num_points_ > network_params_.num_points_profile.max) {
     RCLCPP_ERROR(
       logger_,
       "Number of points (%d) after interpolation does not match the profile. Consider to update "
       "num_points in config file [min: %ld, opt: %ld, max: %ld].",
-      num_points, network_params_.num_points_profile.min, network_params_.num_points_profile.opt,
+      num_points_, network_params_.num_points_profile.min, network_params_.num_points_profile.opt,
       network_params_.num_points_profile.max);
     return false;
   }
 
   preprocess_ptr_->generateUniqueCoors(
-    num_points, coors_d_.get(), coors_keys_d_.get(), num_unique_coors, voxel_coors_d_.get(),
+    num_points_, coors_d_.get(), coors_keys_d_.get(), num_unique_coors, voxel_coors_d_.get(),
     inverse_map_d_.get());
 
   if (
@@ -254,10 +252,10 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
     return false;
   }
 
-  network_ptr_->setInputShape("points", {2, {num_points, 4}});
-  network_ptr_->setInputShape("coors", {2, {num_points, 3}});
+  network_ptr_->setInputShape("points", {2, {num_points_, 4}});
+  network_ptr_->setInputShape("coors", {2, {num_points_, 3}});
   network_ptr_->setInputShape("voxel_coors", {2, {num_unique_coors, 3}});
-  network_ptr_->setInputShape("inverse_map", {1, {num_points}});
+  network_ptr_->setInputShape("inverse_map", {1, {num_points_}});
 
   return true;
 }
