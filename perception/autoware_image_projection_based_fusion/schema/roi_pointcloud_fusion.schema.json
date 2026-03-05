@@ -8,16 +8,47 @@
       "properties": {
         "enable_fusion_per_class": {
           "type": "object",
-          "description": "Per-class flag: enable pointcloud fusion for ROIs with this class when true.",
           "properties": {
-            "UNKNOWN": { "type": "boolean", "default": true },
-            "CAR": { "type": "boolean", "default": false },
-            "TRUCK": { "type": "boolean", "default": false },
-            "BUS": { "type": "boolean", "default": false },
-            "TRAILER": { "type": "boolean", "default": false },
-            "MOTORCYCLE": { "type": "boolean", "default": false },
-            "BICYCLE": { "type": "boolean", "default": true },
-            "PEDESTRIAN": { "type": "boolean", "default": true }
+            "UNKNOWN": { 
+              "type": "boolean", 
+              "default": true,
+              "description": "Whether to enable fusion for objects with UNKNOWN class."
+            },
+            "CAR": { 
+              "type": "boolean", 
+              "default": false,
+              "description": "Whether to enable fusion for objects with CAR class."
+            },
+            "TRUCK": { 
+              "type": "boolean", 
+              "default": false,
+              "description": "Whether to enable fusion for objects with TRUCK class."
+            },
+            "BUS": { 
+              "type": "boolean", 
+              "default": false,
+              "description": "Whether to enable fusion for objects with BUS class."
+            },
+            "TRAILER": { 
+              "type": "boolean", 
+              "default": false,
+              "description": "Whether to enable fusion for objects with TRAILER class."
+            },
+            "MOTORCYCLE": { 
+              "type": "boolean", 
+              "default": false,
+              "description": "Whether to enable fusion for objects with MOTORCYCLE class."
+            },
+            "BICYCLE": { 
+              "type": "boolean", 
+              "default": true,
+              "description": "Whether to enable fusion for objects with BICYCLE class."
+            },
+            "PEDESTRIAN": { 
+              "type": "boolean", 
+              "default": true,
+              "description": "Whether to enable fusion for objects with PEDESTRIAN class."
+            }
           },
           "required": [
             "UNKNOWN",
