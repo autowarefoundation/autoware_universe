@@ -24,8 +24,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace autoware::image_projection_based_fusion
