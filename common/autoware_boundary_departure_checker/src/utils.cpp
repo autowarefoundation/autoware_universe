@@ -575,6 +575,10 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
 
   auto s = 0.0;
   for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
+    if (i > 0) {
+      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
+    }
+
     const auto & fp = ego_sides_from_footprints[i];
 
     const auto & ego_lb = fp.left.second;
@@ -582,12 +586,35 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
 
     const auto rear_seg = Segment2d(ego_lb, ego_rb);
 
-    if (i > 0) {
-      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
-    }
-
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
+
+      // Assign negative sign if the boundary has been crossed
+      if (
+        closest_bound.lat_dist > 0.0 &&
+        closest_bound.lat_dist < std::numeric_limits<double>::max()) {
+        const auto & ego_front = fp[side_key].first;
+        const auto & ego_rear = fp[side_key].second;
+
+        // Forward vector of the ego side segment
+        const double v_fwd_x = ego_front.x() - ego_rear.x();
+        const double v_fwd_y = ego_front.y() - ego_rear.y();
+
+        // Lateral vector pointing from ego to the boundary
+        const double v_lat_x = closest_bound.pt_on_bound.x() - closest_bound.pt_on_ego.x();
+        const double v_lat_y = closest_bound.pt_on_bound.y() - closest_bound.pt_on_ego.y();
+
+        // 2D Cross Product (Z-component)
+        const double cross_prod = v_fwd_x * v_lat_y - v_fwd_y * v_lat_x;
+
+        // If cross_prod < 0, boundary is to the RIGHT. If > 0, boundary is to the LEFT.
+        if (side_key == SideKey::LEFT && cross_prod < 0.0) {
+          closest_bound.lat_dist = -closest_bound.lat_dist;  // Crossed left boundary!
+        } else if (side_key == SideKey::RIGHT && cross_prod > 0.0) {
+          closest_bound.lat_dist = -closest_bound.lat_dist;  // Crossed right boundary!
+        }
+      }
+
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
       closest_bound.lon_dist_on_pred_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
@@ -841,21 +868,24 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
   for (auto candidate : candidate_projections) {
     if (!candidate.footprint_type_opt) continue;
 
-    // If the normal footprint crosses the critical threshold, it takes absolute priority
-    if (
-      candidate.footprint_type_opt.value() == FootprintType::NORMAL &&
-      candidate.lat_dist < th_dist_critical) {
-      candidate.departure_type_opt = DepartureType::CRITICAL_DEPARTURE;
+    candidate.departure_type_opt = assign_departure_type(
+      candidate.lon_dist_on_pred_traj, 0.5, min_braking_dist, max_braking_dist,
+      param.th_cutoff_time_departure_s, candidate.time_from_start, candidate.lat_dist, th_dist_near,
+      th_dist_critical, candidate.footprint_type_opt.value());
+
+    if (candidate.departure_type_opt.value() == DepartureType::NONE) {
+      continue;
+    }
+
+    if (!closest_projection) {
       closest_projection = candidate;
+    }
+
+    if (closest_projection->is_critical_departure()) {
       break;
     }
 
-    // Ignore candidates that are too far away
-    if (candidate.lat_dist > th_dist_near) continue;
-
-    // Keep the candidate that is closest to the boundary
-    if (!closest_projection || candidate.lat_dist < closest_projection->lat_dist) {
-      candidate.departure_type_opt = DepartureType::NEAR_BOUNDARY;
+    if (candidate.lat_dist < closest_projection->lat_dist) {
       closest_projection = candidate;
     }
   }
@@ -864,8 +894,6 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
     return std::nullopt;
   }
 
-  // 2. Filter out non-critical points that are longitudinally too close to the previously accepted
-  // point
   if (
     previous_longitudinal_distance && !closest_projection->is_critical_departure() &&
     std::abs(*previous_longitudinal_distance - closest_projection->lon_dist_on_pred_traj) <=
@@ -873,26 +901,37 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
     return std::nullopt;
   }
 
-  const auto exceeds_time_and_distance_cutoff =
-    [&closest_projection](const auto target_type, const auto braking_dist, const auto cutoff_time) {
-      return closest_projection->departure_type_opt.value() == target_type &&
-             closest_projection->lon_dist_on_pred_traj > braking_dist &&
-             closest_projection->time_from_start > cutoff_time;
-    };
-
-  // 3. Apply time and distance cutoffs
-  if (exceeds_time_and_distance_cutoff(
-        DepartureType::NEAR_BOUNDARY, max_braking_dist, param.th_cutoff_time_near_boundary_s)) {
-    return std::nullopt;
-  }
-
-  // If a critical departure is too far away/too far in the future, downgrade it to just
-  // "approaching"
-  if (exceeds_time_and_distance_cutoff(
-        DepartureType::CRITICAL_DEPARTURE, min_braking_dist, param.th_cutoff_time_departure_s)) {
-    closest_projection->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
-  }
-
   return closest_projection;
+}
+
+DepartureType assign_departure_type(
+  const double longitudinal_distance_to_departure_point,
+  const double longitudinal_offset_to_departure_point, const double minimum_braking_distance,
+  const double maximum_braking_distance, const double cutoff_time, const double time_from_start,
+  const double lat_dist, const double th_lat_near, const double th_lat_critical,
+  const FootprintType footprint_type)
+{
+  if (lat_dist > th_lat_near) {
+    return DepartureType::NONE;
+  }
+
+  const double dist_to_departure_point_with_offset =
+    longitudinal_distance_to_departure_point -
+    longitudinal_offset_to_departure_point;  // shorter distance
+
+  if (footprint_type == FootprintType::NORMAL && lat_dist <= th_lat_critical) {
+    if (
+      dist_to_departure_point_with_offset > minimum_braking_distance &&
+      time_from_start > cutoff_time) {
+      return DepartureType::APPROACHING_DEPARTURE;
+    }
+    return DepartureType::CRITICAL_DEPARTURE;
+  }
+
+  if (dist_to_departure_point_with_offset < maximum_braking_distance) {
+    return DepartureType::NEAR_BOUNDARY;
+  }
+
+  return DepartureType::NONE;
 }
 }  // namespace autoware::boundary_departure_checker::utils
