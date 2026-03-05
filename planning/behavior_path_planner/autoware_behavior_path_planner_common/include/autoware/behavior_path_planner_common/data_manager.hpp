@@ -179,8 +179,6 @@ struct PlannerData
   mutable std::vector<geometry_msgs::msg::Pose> drivable_area_expansion_prev_path_poses{};
   mutable std::vector<double> drivable_area_expansion_prev_curvatures{};
   mutable TurnSignalDecider turn_signal_decider;
-
-private:
   void init_parameters(rclcpp::Node & node)
   {
     parameters.traffic_light_signal_timeout =
