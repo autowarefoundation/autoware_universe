@@ -26,13 +26,13 @@
         "process_noise_covariance": {
           "type": "number",
           "description": "process noise covariance for Kalman filter",
-          "default": "0.01",
+          "default": "5e-8",
           "minimum": 0.0
         },
         "measurement_noise_covariance": {
           "type": "number",
           "description": "measurement noise covariance for Kalman filter",
-          "default": "0.01",
+          "default": "1.0",
           "minimum": 0.0
         },
         "denominator_floor": {
@@ -56,13 +56,13 @@
         "max_steer": {
           "type": "number",
           "description": "offset estimation is skipped if steering is above this value",
-          "default": "0.03",
+          "default": "0.02",
           "minimum": 0.0
         },
         "max_steer_rate": {
           "type": "number",
           "description": "offset estimation is skipped if steering rate is above this value",
-          "default": "0.02",
+          "default": "0.01",
           "minimum": 0.0
         },
         "max_ang_velocity": {
@@ -82,6 +82,61 @@
           "description": "max valid age of previous pose which can be used for twist calculation",
           "default": "0.5",
           "minimum": 0.0
+        },
+        "calibration": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "offset calibration mode",
+              "default": "off"
+            },
+            "update_offset_th": {
+              "type": "number",
+              "description": "error threshold for offset calibration",
+              "default": "0.001",
+              "minimum": 0.0
+            },
+            "covariance_th": {
+              "type": "number",
+              "description": "covariance threshold for offset calibration",
+              "default": "0.0015",
+              "minimum": 0.0
+            },
+            "min_steady_duration": {
+              "type": "number",
+              "description": "min duration of continuous estimation data for offset calibration",
+              "default": "10.0",
+              "minimum": 0.0
+            },
+            "max_offset_limit": {
+              "type": "number",
+              "description": "max offset limit for offset calibration",
+              "default": "0.05",
+              "minimum": 0.0
+            },
+            "min_update_interval": {
+              "type": "number",
+              "description": "min interval between offset calibration updates",
+              "default": "100.0",
+              "minimum": 0.0
+            },
+            "warning_offset_th": {
+              "type": "number",
+              "description": "offset threshold to trigger a warning",
+              "default": "0.005",
+              "minimum": 0.0
+            }
+          },
+          "required": [
+            "mode",
+            "update_offset_th",
+            "covariance_th",
+            "min_steady_duration",
+            "max_offset_limit",
+            "min_update_interval",
+            "warning_offset_th"
+          ]
         }
       },
       "required": [

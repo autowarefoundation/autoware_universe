@@ -69,9 +69,6 @@
     # steer offset
     steering_offset:
       enable_auto_steering_offset_removal: true
-      update_vel_threshold: 5.56
-      update_steer_threshold: 0.035
-      average_num: 1000
-      steering_offset_limit: 0.02
+      steer_offset_filter_cutoff_hz: 0.5 # cutoff frequency of lowpass filter for steering offset [Hz]
 
     publish_debug_trajectories: true # flag to publish predicted trajectory and resampled reference trajectory for debug purpose
