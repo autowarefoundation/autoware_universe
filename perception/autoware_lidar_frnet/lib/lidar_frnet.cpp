@@ -148,8 +148,8 @@ bool LidarFRNet::process(
     return false;
   }
 
-  const auto max_buffer_size = network_params_.num_points_profile.max * input_point_step_;
-  cuda_utils::clear_async(cloud_in_d_.get(), max_buffer_size, stream_);
+  const auto max_num_elem = network_params_.num_points_profile.max * input_point_step_;
+  cuda_utils::clear_async(cloud_in_d_.get(), max_num_elem, stream_);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     cloud_in_d_.get(), cloud_in->data.get(), input_point_step_ * input_num_points,
     cudaMemcpyDeviceToDevice, stream_));
