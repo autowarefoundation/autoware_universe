@@ -239,7 +239,7 @@ which limits the optimizer's ability to meaningfully reshape the trajectory.
 | Rule                                      | Reason                                                  |
 | ----------------------------------------- | ------------------------------------------------------- |
 | Kinematic enforcer before QP              | Pre-conditions path so QP operates on feasible input    |
-| QP smoother before spline/EB smoother     | Both resamplers destroy constant-dt; QP needs it        |
+| QP smoother before spline/EB smoother     | Both resampling plugins destroy constant-dt; QP needs it |
 | Kinematic enforcer after QP (second pass) | Catches constraint violations reintroduced by smoothing |
 | QP smoother before velocity optimizer     | Velocity optimizer works on the final path geometry     |
 | Point fixer at start                      | Degenerate inputs break the QP solver                   |
