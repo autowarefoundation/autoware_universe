@@ -173,7 +173,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
 - `osqp_verbose` (default: false)
   - Enable OSQP debug output
 
-### Orientation Correction
+### Orientation Preservation
 
 - `preserve_input_trajectory_orientation` (default: false)
 
@@ -185,12 +185,12 @@ After QP optimization solves for smoothed positions, the following are recalcula
 
 ## Usage Examples
 
-### Example 1: Enable Velocity-Based Fidelity
+### Example 1: Disable Velocity-Based Fidelity
 
-To enable velocity-dependent smoothing for stop-and-go scenarios:
+Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:
 
 ```bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity true
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity false
 ```
 
 ### Example 2: Tune Velocity Threshold

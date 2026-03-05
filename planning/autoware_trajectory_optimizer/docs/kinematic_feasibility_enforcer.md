@@ -46,7 +46,8 @@ The yaw rate limit restricts heading changes over time:
 Δψ_rate = ψ_dot_max * Δt
 ```
 
-where `Δt` is the time interval between trajectory points.
+where `Δt` is a single average time step computed from all `time_from_start` deltas across
+the trajectory (fallback: 0.1 s). The same value is used for every segment.
 
 #### 3. Combined Constraint
 
@@ -105,8 +106,8 @@ for (size_t i = 0; i < traj_points.size() - 1; ++i) {
 }
 ```
 
-This ensures arc lengths remain constant during forward propagation, preserving
-the implicit timing: `dt_i = s_i / v_i`.
+This ensures arc lengths remain constant during forward propagation. Timing is determined
+by the single `avg_dt` computed from `time_from_start` deltas, not per-segment kinematics.
 
 ### Heading Update Logic
 
@@ -151,12 +152,10 @@ These are automatically loaded from vehicle configuration:
 
 ### Plugin Execution Order
 
-The kinematic feasibility enforcer should run **before** the QP smoother in
-the plugin pipeline to ensure:
-
-1. Trajectory points respect kinematic constraints
-2. QP smoother operates on kinematically feasible input
-3. Arc lengths and timing structure are preserved for QP optimization
+In the default pipeline the kinematic feasibility enforcer runs **twice**: once before the QP
+smoother and once after. The first pass pre-conditions the path so the QP solver operates on
+a kinematically plausible input. The second pass catches any constraint violations reintroduced
+by the smoothing. Both passes use the same parameter set and operate independently.
 
 ## Limitations
 

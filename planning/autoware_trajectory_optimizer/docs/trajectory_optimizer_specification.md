@@ -70,7 +70,8 @@ The last point gets `0.0` (explicitly zeroed).
 **Consequences:**
 
 - Any velocity profile set by the upstream planner (including stop points, speed limits,
-  deceleration ramps) is **overwritten** for all points except the first.
+  deceleration ramps) is **overwritten** for all points. Even v[0], which is initially copied
+  from the input, is blended with the next two geometric velocities by the moving average.
 - The velocity at each point reflects only how far the optimizer moved that point relative
   to the previous one over one dt interval.
 - There is no mechanism inside the QP smoother to respect a maximum speed constraint per point.
@@ -179,12 +180,14 @@ Responsibilities:
 
 - **Speed cap** (`limit_speed`, enabled by default): applies a global maximum speed from an
   external velocity limit topic or the configured default.
-- **Lateral acceleration limiting** (`limit_lateral_acceleration`, disabled by default): computes
-  a per-point maximum speed from path curvature (`v_max[i] = sqrt(a_lat_max / kappa[i])`) and
-  clips velocities accordingly.
-- **Jerk-filtered velocity smoothing** (`smooth_velocities`, disabled by default): runs a QP
-  from `autoware_velocity_smoother` that enforces `limit.max_acc`, `limit.min_acc`,
-  `limit.max_jerk`, `limit.min_jerk` on the velocity profile.
+- **Lateral acceleration limiting** (`limit_lateral_acceleration`, disabled by default): first
+  calls `calculate_time_from_start` to refresh timing, then for each consecutive point pair
+  computes `yaw_rate = |delta_yaw / delta_time|` from orientation differences and
+  `time_from_start`. If `v * yaw_rate > a_lat_max`, the point's speed is capped to
+  `v_limit = a_lat_max / yaw_rate`.
+- **Jerk-filtered velocity smoothing** (`smooth_velocities`, disabled by default): runs the
+  in-package `ContinuousJerkSmoother` (QP-based, via `autoware_qp_interface`) that enforces
+  `limit.max_acc`, `limit.min_acc`, `limit.max_jerk`, `limit.min_jerk` on the velocity profile.
 - **Pull-out speed** (`set_engage_speed`, disabled by default): clamps initial velocity to
   `target_pull_out_speed_mps` when the vehicle is near standstill.
 
