@@ -925,6 +925,14 @@ DepartureType assign_departure_type(
       time_from_start > cutoff_time) {
       return DepartureType::APPROACHING_DEPARTURE;
     }
+    // Set CRITICAL if:
+    // - Short Dist & Short Time: boundary crossing is less than braking distance and we will hit it
+    // in less than cutoff time.
+    // - Long Dist but Short Time: At 100 km/h, the boundary crossing is 30 meters away, but ego
+    // will hit the crossing in less than cutoff time.
+    // - Long time, but dist less than braking: Creeping forward in a parking lot at 2 km/h, and it
+    // takes it will 4 seconds to reach it, however, the boundary less than minimum braking
+    // distance.
     return DepartureType::CRITICAL_DEPARTURE;
   }
 
