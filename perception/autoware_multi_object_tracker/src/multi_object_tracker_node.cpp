@@ -291,25 +291,23 @@ void MultiObjectTracker::publish()
     if (time_keeper_)
       st_get_output_ptr = std::make_unique<ScopedTimeTrack>("get_output", *time_keeper_);
 
-    publishing_data =
-      core::prepare_publishing_data(last_tracker_time, current_time, params_, state_, get_logger());
+    publishing_data = core::prepare_publishing_data(current_time, params_, state_, get_logger());
   }
   tracked_objects_pub_->publish(publishing_data.tracked_objects);
 
   debugger_->endPublishTime(this->now(), last_tracker_time);
 
-  publishOptional(last_tracker_time, current_time, publishing_data.tracked_objects_size);
+  publishOptional(publishing_data.object_time, publishing_data.tracked_objects_size);
 }
 
 void MultiObjectTracker::publishOptional(
-  const rclcpp::Time & last_tracker_time, const rclcpp::Time & current_time,
-  const size_t tracked_objects_size)
+  const rclcpp::Time & object_time, const size_t tracked_objects_size)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  const auto optional_data = core::prepare_optional_publishing_data(
-    last_tracker_time, current_time, params_, state_, *debugger_, get_logger());
+  const auto optional_data =
+    core::prepare_optional_publishing_data(object_time, params_, state_, *debugger_, get_logger());
 
   // Publish merged objects
   if (optional_data.merged_objects) {
@@ -324,7 +322,7 @@ void MultiObjectTracker::publishOptional(
     debugger_->publishTentativeObjects(*optional_data.tentative_objects);
   }
 
-  published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, optional_data.object_time);
+  published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, object_time);
 
   // Publish debug markers
   debugger_->publishObjectsMarkers();
