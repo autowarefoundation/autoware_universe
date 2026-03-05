@@ -293,9 +293,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
 
     std::size_t current_index = std::distance(current_segment.primitives.begin(), current_it);
 
-    const auto current_lanelet = get_lanelet_by_id(current_it->id);
-    std::string current_turning_dir = current_lanelet.attributeOr("turn_direction", "none");
-
     const auto next_lanelet = get_lanelet_by_id(next_it->id);
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");
 

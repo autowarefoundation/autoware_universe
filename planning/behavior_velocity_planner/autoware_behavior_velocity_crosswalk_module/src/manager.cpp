@@ -82,8 +82,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".obstruction_prevention.enable_obstruction_prevention");
   cp.target_vehicle_velocity =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.target_vehicle_velocity");
-  cp.max_target_vehicle_lateral_offset = get_or_declare_parameter<double>(
-    node, ns + ".obstruction_prevention.max_target_vehicle_lateral_offset");
+  cp.required_lateral_clearance = get_or_declare_parameter<double>(
+    node, ns + ".obstruction_prevention.required_lateral_clearance");
   cp.required_clearance =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.required_clearance");
   cp.min_acc_for_target_vehicle =
