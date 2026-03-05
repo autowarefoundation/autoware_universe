@@ -28,6 +28,12 @@
 #include <iostream>
 #include <memory>
 
+// Forward declaration for DAG processing state
+namespace autoware::cuda_pointcloud_preprocessor::dag
+{
+struct PointcloudProcessingState;
+}
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
@@ -67,6 +73,7 @@ public:
     size_t input_xyzi_offset[4];
     OptionalField input_return_type_offset;
     OptionalField input_channel_offset;
+    uint8_t intensity_datatype;  // Store intensity field datatype
     size_t output_offsets[6];
     ThreeDim<float> voxel_size;
     ThreeDim<int> min_coord;
@@ -91,6 +98,17 @@ public:
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filter(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
 
+  /**
+   * @brief DAG-optimized filter interface working with PointcloudProcessingState
+   * @param input_state Input processing state (non-owning pointer to GPU data)
+   * @return Output processing state with downsampled data (owns new GPU memory)
+   *
+   * This interface avoids unnecessary copies by working directly with raw GPU pointers.
+   * The output state owns new GPU memory allocated for the downsampled pointcloud.
+   */
+  std::shared_ptr<dag::PointcloudProcessingState> filterProcessingState(
+    const std::shared_ptr<dag::PointcloudProcessingState> & input_state);
+
 private:
   template <typename T>
   T * allocateBufferFromPool(size_t num_elements);
@@ -98,18 +116,47 @@ private:
   template <typename T>
   void returnBufferToPool(T * buffer);
 
+  /**
+   * @brief Core filtering implementation working with raw GPU pointers
+   * @param input_device_data Raw GPU pointer to input pointcloud data
+   * @param output_device_data Raw GPU pointer to output buffer (must be pre-allocated)
+   * @param num_valid_voxel Output parameter: number of valid voxels after filtering
+   * @return Number of output points (voxels)
+   *
+   * This is the core implementation that both filter() and filterProcessingState() use.
+   * It works directly with raw GPU pointers for zero-copy processing.
+   * The caller is responsible for allocating output_device_data.
+   */
+  size_t filterCore(
+    const std::uint8_t * input_device_data, std::uint8_t * output_device_data,
+    decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev);
+
   void getVoxelMinMaxCoordinate(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points, float * buffer_dev);
+  void getVoxelMinMaxCoordinateRaw(const std::uint8_t * input_device_data, float * buffer_dev);
+
   size_t searchValidVoxel(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points,
     size_t * voxel_index_buffer_dev, size_t * point_index_buffer_dev,
     decltype(OutputPointType::return_type) * return_type_field_dev,
     decltype(OutputPointType::channel) * channel_field_dev);
+  size_t searchValidVoxelRaw(
+    const std::uint8_t * input_device_data, size_t * voxel_index_buffer_dev,
+    size_t * point_index_buffer_dev, decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev);
+
   void getCentroid(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
     const size_t num_valid_voxel, const size_t * voxel_index_dev, const size_t * point_index_dev,
     size_t * index_map_dev, Centroid * buffer_dev,
     std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_points,
+    decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev);
+  void getCentroidRaw(
+    const std::uint8_t * input_device_data, const size_t num_valid_voxel,
+    const size_t * voxel_index_dev, const size_t * point_index_dev, size_t * index_map_dev,
+    Centroid * buffer_dev, std::uint8_t * output_device_data,
     decltype(OutputPointType::return_type) * return_type_field_dev,
     decltype(OutputPointType::channel) * channel_field_dev);
 
