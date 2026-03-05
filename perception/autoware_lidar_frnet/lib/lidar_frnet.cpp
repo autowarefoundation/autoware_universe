@@ -212,9 +212,8 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
     cloud_in_d_.get(), input_num_points, input_format_, num_points_d_.get(), points_d_.get(),
     coors_d_.get(), coors_keys_d_.get(), proj_idxs_d_.get(), proj_2d_d_.get(),
     cloud_compact_d_.get()));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(
-    cudaMemcpy(&num_points_raw_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost));
+    cudaMemcpyAsync(&num_points_raw_, num_points_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost, stream_));
   CHECK_CUDA_ERROR(preprocess_ptr_->interpolatePoints_launch(
     proj_idxs_d_.get(), proj_2d_d_.get(), num_points_d_.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d_.get()));
