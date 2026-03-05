@@ -9,43 +9,43 @@
         "enable_fusion_per_class": {
           "type": "object",
           "properties": {
-            "UNKNOWN": { 
-              "type": "boolean", 
+            "UNKNOWN": {
+              "type": "boolean",
               "default": true,
               "description": "Whether to enable fusion for objects with UNKNOWN class."
             },
-            "CAR": { 
-              "type": "boolean", 
+            "CAR": {
+              "type": "boolean",
               "default": false,
               "description": "Whether to enable fusion for objects with CAR class."
             },
-            "TRUCK": { 
-              "type": "boolean", 
+            "TRUCK": {
+              "type": "boolean",
               "default": false,
               "description": "Whether to enable fusion for objects with TRUCK class."
             },
-            "BUS": { 
-              "type": "boolean", 
+            "BUS": {
+              "type": "boolean",
               "default": false,
               "description": "Whether to enable fusion for objects with BUS class."
             },
-            "TRAILER": { 
-              "type": "boolean", 
+            "TRAILER": {
+              "type": "boolean",
               "default": false,
               "description": "Whether to enable fusion for objects with TRAILER class."
             },
-            "MOTORCYCLE": { 
-              "type": "boolean", 
+            "MOTORCYCLE": {
+              "type": "boolean",
               "default": false,
               "description": "Whether to enable fusion for objects with MOTORCYCLE class."
             },
-            "BICYCLE": { 
-              "type": "boolean", 
+            "BICYCLE": {
+              "type": "boolean",
               "default": true,
               "description": "Whether to enable fusion for objects with BICYCLE class."
             },
-            "PEDESTRIAN": { 
-              "type": "boolean", 
+            "PEDESTRIAN": {
+              "type": "boolean",
               "default": true,
               "description": "Whether to enable fusion for objects with PEDESTRIAN class."
             }
