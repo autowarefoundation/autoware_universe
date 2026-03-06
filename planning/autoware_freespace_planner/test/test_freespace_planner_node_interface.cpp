@@ -66,11 +66,17 @@ void publishMandatoryTopics(
     autoware::test_utils::makeScenarioMsg(autoware_internal_planning_msgs::msg::Scenario::PARKING));
 }
 
-// the following tests are disable because they randomly fail
-TEST(PlanningModuleInterfaceTest, DISABLED_testPlanningInterfaceWithVariousTrajectoryInput)
+class PlanningModuleInterfaceTest : public ::testing::Test
 {
-  rclcpp::init(0, nullptr);
+protected:
+  void SetUp() override { rclcpp::init(0, nullptr); }
 
+  void TearDown() override { (void)rclcpp::shutdown(); }
+};
+
+// the following tests are disable because they randomly fail
+TEST_F(PlanningModuleInterfaceTest, testPlanningInterfaceWithVariousTrajectoryInput)
+{
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
   publishMandatoryTopics(test_manager, test_target_node);
@@ -85,12 +91,10 @@ TEST(PlanningModuleInterfaceTest, DISABLED_testPlanningInterfaceWithVariousTraje
   // test with empty route
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
-  rclcpp::shutdown();
 }
 
-TEST(PlanningModuleInterfaceTest, DISABLED_NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
-  rclcpp::init(0, nullptr);
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
 
@@ -106,6 +110,4 @@ TEST(PlanningModuleInterfaceTest, DISABLED_NodeTestWithOffTrackEgoPose)
 
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
-
-  rclcpp::shutdown();
 }

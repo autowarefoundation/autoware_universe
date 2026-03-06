@@ -26,9 +26,16 @@ using autoware::behavior_path_planner::generateNode;
 using autoware::behavior_path_planner::generateTestManager;
 using autoware::behavior_path_planner::publishMandatoryTopics;
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
+class PlanningModuleInterfaceTest : public ::testing::Test
 {
-  rclcpp::init(0, nullptr);
+protected:
+  void SetUp() override { rclcpp::init(0, nullptr); }
+
+  void TearDown() override { (void)rclcpp::shutdown(); }
+};
+
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
+{
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode({}, {});
 
@@ -44,13 +51,10 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
   // test with empty route
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
-  rclcpp::shutdown();
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
-  rclcpp::init(0, nullptr);
-
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode({}, {});
   publishMandatoryTopics(test_manager, test_target_node);
@@ -67,6 +71,4 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
-
-  rclcpp::shutdown();
 }
