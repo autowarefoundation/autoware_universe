@@ -52,16 +52,6 @@
           },
           "description": "velocity list for steering angle rate limit interpolation in ascending order [m/s]",
           "default": [10.0, 15.0, 20.0]
-        },
-        "acceleration_limit": {
-          "type": "number",
-          "description": "acceleration limit for trajectory velocity modification [m/ss]",
-          "default": 2.0
-        },
-        "velocity_time_constant": {
-          "type": "number",
-          "description": "velocity dynamics time constant for trajectory velocity modification [s]",
-          "default": 0.3
         }
       },
       "required": [
@@ -71,9 +61,7 @@
         "steer_rate_lim_dps_list_by_curvature",
         "curvature_list_for_steer_rate_lim",
         "steer_rate_lim_dps_list_by_velocity",
-        "velocity_list_for_steer_rate_lim",
-        "acceleration_limit",
-        "velocity_time_constant"
+        "velocity_list_for_steer_rate_lim"
       ],
       "additionalProperties": false
     }
