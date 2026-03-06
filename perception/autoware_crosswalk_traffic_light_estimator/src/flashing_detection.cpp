@@ -29,6 +29,20 @@ bool is_skippable_signal(const TrafficSignal & signal)
          elements.front().confidence == 1;
 }
 
+bool is_flashing_green_signal(const TrafficSignal & signal)
+{
+  return !signal.elements.empty() &&
+         signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
+         signal.elements.front().confidence != 0;
+}
+
+bool all_history_matches_color(const std::vector<TrafficSignalAndTime> & history, uint8_t color)
+{
+  return std::all_of(history.begin(), history.end(), [color](const auto & entry) {
+    return entry.first.elements.front().color == color;
+  });
+}
+
 FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : config_(config)
 {
 }
@@ -86,21 +100,17 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
 
   // flashing green: UNKNOWN color with non-zero confidence (not occlusion)
   if (
-    !signal.elements.empty() && signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
-    signal.elements.front().confidence != 0 &&
+    is_flashing_green_signal(signal) &&
     current_color_state_.at(id) != TrafficSignalElement::UNKNOWN) {
     is_flashing_.at(id) = true;
     return;
   }
 
   // check history: if all entries match current signal color, flashing has stopped
-  if (signal_history_.count(id) > 0) {
-    std::vector<TrafficSignalAndTime> history = signal_history_.at(id);
-    for (const auto & history_entry : history) {
-      if (history_entry.first.elements.front().color != signal.elements.front().color) {
-        return;
-      }
-    }
+  auto history_iter = signal_history_.find(id);
+  if (
+    history_iter != signal_history_.end() &&
+    all_history_matches_color(history_iter->second, signal.elements.front().color)) {
     is_flashing_.at(id) = false;
   }
 }
