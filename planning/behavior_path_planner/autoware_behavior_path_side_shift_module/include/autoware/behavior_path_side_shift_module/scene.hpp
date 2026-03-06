@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 #include "autoware/behavior_path_side_shift_module/data_structs.hpp"
+#include "autoware/behavior_path_side_shift_module/drivable_area_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -85,6 +86,16 @@ private:
 
   void replaceShiftLine();
 
+  double calcMaxLateralOffset(const double requested_offset) const;
+
+  // Helper: get adjacent lane info (depends on planner_data_ and parameters_)
+  AdjacentLaneInfo getAdjacentLaneInfo(const lanelet::ConstLanelet & lane) const;
+
+  void processLateralOffsetRequest();
+
+  void restoreVelocityFromOriginal(
+    PathWithLaneId & resampled_path, const PathWithLaneId & original_path) const;
+
   // const methods
   void publishPath(const PathWithLaneId & path) const;
 
@@ -116,8 +127,6 @@ private:
 
   ShiftedPath prev_output_;
   ShiftLine prev_shift_line_;
-
-  PathWithLaneId extendBackwardLength(const PathWithLaneId & original_path) const;
 
   mutable rclcpp::Time last_requested_shift_change_time_{clock_->now()};
 

@@ -8,6 +8,7 @@ pluginlib_export_plugin_description_file(autoware_behavior_path_planner plugins.
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/scene.cpp
   src/utils.cpp
+  src/drivable_area_utils.cpp
   src/manager.cpp
 )
 
@@ -34,6 +35,14 @@ if(BUILD_TESTING)
   )
 
   target_link_libraries(test_${PROJECT_NAME}_utils
+    ${PROJECT_NAME}
+  )
+
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}_drivable_area_utils
+    test/test_drivable_area_utils.cpp
+  )
+
+  target_link_libraries(test_${PROJECT_NAME}_drivable_area_utils
     ${PROJECT_NAME}
   )
 endif()
