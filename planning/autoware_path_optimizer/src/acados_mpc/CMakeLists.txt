@@ -24,11 +24,14 @@ set(GENERATED_MPC_FILES
 
 # CRITICAL: Mark files as generated so CMake knows to wait for them
 set_source_files_properties(${GENERATED_MPC_FILES} PROPERTIES GENERATED TRUE)
+# Get the parent directory of 'generators' so 'from generators.xxx' works
+get_filename_component(PACKAGE_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)
 
 set(_template_path "${ACADOS_SOURCE_DIR}/interfaces/acados_template")
+
 set(_env_vars
   "ACADOS_SOURCE_DIR=${ACADOS_SOURCE_DIR}"
-  "PYTHONPATH=$ENV{PYTHONPATH}:${_template_path}"
+  "PYTHONPATH=${_template_path}:${PACKAGE_ROOT_DIR}:$ENV{PYTHONPATH}"
 )
 
 # 3. Define the Generation Target
@@ -38,9 +41,7 @@ add_custom_command(
   ${ACADOS_SOURCE_DIR}/.venv/bin/python3
   ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial_with_body_points.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/generators/path_tracking_mpc_spatial_with_body_points.py
-  COMMENT "Generating MPC solver code..."
-  VERBATIM
+  # ... rest of the command ...
 )
 
 # Create a logical target for the generation to ensure proper dependency tracking

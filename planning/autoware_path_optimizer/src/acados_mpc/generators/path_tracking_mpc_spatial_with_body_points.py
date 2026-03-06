@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# author: Arjun Jagdish Ram
 from acados_template import AcadosModel
 from acados_template import AcadosOcp
 from acados_template import AcadosOcpSolver
