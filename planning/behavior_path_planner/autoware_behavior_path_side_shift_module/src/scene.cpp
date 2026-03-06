@@ -68,6 +68,9 @@ void SideShiftModule::initVariables()
   path_shifter_ = PathShifter{};
   resetPathCandidate();
   resetPathReference();
+  if (requested_lateral_offset_state_) {
+    requested_lateral_offset_state_->value.store(0.0);
+  }
   if (inserted_lateral_offset_state_) {
     inserted_lateral_offset_state_->value.store(0.0);
   }
