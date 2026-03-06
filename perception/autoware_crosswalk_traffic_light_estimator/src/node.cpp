@@ -165,7 +165,10 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
   use_last_detect_color_ = declare_parameter<bool>("use_last_detect_color");
   use_pedestrian_signal_detect_ = declare_parameter<bool>("use_pedestrian_signal_detect");
   last_detect_color_hold_time_ = declare_parameter<double>("last_detect_color_hold_time");
-  last_colors_hold_time_ = declare_parameter<double>("last_colors_hold_time");
+
+  FlashingDetectionConfig flashing_config;
+  flashing_config.last_colors_hold_time = declare_parameter<double>("last_colors_hold_time");
+  flashing_detector_ = FlashingDetector(flashing_config);
 
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
@@ -329,7 +332,6 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   removeDuplicateIds(output);
 
   updateLastDetectedSignal(traffic_light_id_map);
-  updateLastDetectedSignals(traffic_light_id_map);
 
   pub_traffic_light_array_->publish(output);
   pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch.toc("Total"));
@@ -376,57 +378,8 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignal(
   }
   for (const auto id : erase_id_list) {
     last_detect_color_.erase(id);
-    is_flashing_.erase(id);
-    current_color_state_.erase(id);
+    flashing_detector_.clear_state(id);
   }
-}
-
-void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignals(
-  const TrafficLightIdMap & traffic_light_id_map)
-{
-  for (const auto & input_traffic_signal : traffic_light_id_map) {
-    const auto & elements = input_traffic_signal.second.first.elements;
-
-    if (elements.empty()) {
-      continue;
-    }
-
-    if (
-      elements.front().color == TrafficSignalElement::UNKNOWN && elements.front().confidence == 1) {
-      continue;
-    }
-
-    const auto & id = input_traffic_signal.second.first.traffic_light_group_id;
-
-    if (last_colors_.count(id) == 0) {
-      std::vector<TrafficSignalAndTime> signal{input_traffic_signal.second};
-      last_colors_.emplace(id, signal);
-      continue;
-    }
-
-    last_colors_.at(id).push_back(input_traffic_signal.second);
-  }
-
-  std::vector<int32_t> erase_id_list;
-  for (auto & last_traffic_signal : last_colors_) {
-    const auto & id = last_traffic_signal.first;
-    for (auto it = last_traffic_signal.second.begin(); it != last_traffic_signal.second.end();) {
-      auto sig = (*it).first;
-      rclcpp::Time t = (*it).second;
-
-      // hold signal recognition results for [last_colors_hold_time_] seconds.
-      const auto time_from_last_detected = (get_clock()->now() - t).seconds();
-      if (time_from_last_detected > last_colors_hold_time_) {
-        it = last_traffic_signal.second.erase(it);
-      } else {
-        ++it;
-      }
-    }
-    if (last_traffic_signal.second.empty()) {
-      erase_id_list.emplace_back(id);
-    }
-  }
-  for (const auto id : erase_id_list) last_colors_.erase(id);
 }
 
 void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
@@ -495,13 +448,12 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
       }
 
       // Update flashing state and apply the most recent color
-      updateFlashingState(detected);
       if (out_signal.elements
             .empty()) {  // unnecessary check because msg has detection but for safety
         out_signal.elements.push_back(base_traffic_signal_element);
       }
-      out_signal.elements[0].color = updateAndGetColorState(
-        detected);  // TODO(MasatoSaeki): determine what value is good for confidence
+      out_signal.elements[0].color =
+        flashing_detector_.estimate_stable_color(detected, get_clock()->now());
       continue;
     }
 
@@ -513,84 +465,15 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
 bool CrosswalkTrafficLightEstimatorNode::isInvalidDetectionStatus(
   const TrafficSignal & signal) const
 {
-  // invalid if elements is empty
   if (signal.elements.empty()) {
     return true;
   }
-  // check occlusion, backlight(shape is unknown) and no detection(shape is circle)
   if (
     signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
     signal.elements.front().confidence == 0.0) {
     return true;
   }
-
   return false;
-}
-
-void CrosswalkTrafficLightEstimatorNode::updateFlashingState(const TrafficSignal & signal)
-{
-  const auto id = signal.traffic_light_group_id;
-
-  // no record of detected color in last_detect_color_hold_time_
-  if (is_flashing_.count(id) == 0) {
-    is_flashing_.emplace(id, false);
-    return;
-  }
-
-  // flashing green
-  if (
-    !signal.elements.empty() && signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
-    signal.elements.front().confidence != 0 &&  // not due to occlusion
-    current_color_state_.at(id) != TrafficSignalElement::UNKNOWN) {
-    is_flashing_.at(id) = true;
-    return;
-  }
-
-  // history exists
-  if (last_colors_.count(id) > 0) {
-    std::vector<TrafficSignalAndTime> history = last_colors_.at(id);
-    for (const auto & h : history) {
-      if (h.first.elements.front().color != signal.elements.front().color) {
-        // keep the current value if not same with input signal
-        return;
-      }
-    }
-    // all history is same with input signal
-    is_flashing_.at(id) = false;
-  }
-
-  // no record of detected color in last_color_hold_time_
-  // keep the current value
-  return;
-}
-
-uint8_t CrosswalkTrafficLightEstimatorNode::updateAndGetColorState(const TrafficSignal & signal)
-{
-  const auto id = signal.traffic_light_group_id;
-  const auto color = signal.elements[0].color;
-
-  if (current_color_state_.count(id) == 0) {
-    current_color_state_.emplace(id, color);
-  } else if (is_flashing_.at(id) == false) {
-    current_color_state_.at(id) = color;
-  } else if (is_flashing_.at(id) == true) {
-    if (
-      current_color_state_.at(id) == TrafficSignalElement::GREEN &&
-      color == TrafficSignalElement::RED) {
-      current_color_state_.at(id) = TrafficSignalElement::RED;
-    } else if (
-      current_color_state_.at(id) == TrafficSignalElement::RED &&
-      color == TrafficSignalElement::GREEN) {
-      current_color_state_.at(id) = TrafficSignalElement::GREEN;
-    } else if (current_color_state_.at(id) == TrafficSignalElement::UNKNOWN) {
-      if (color == TrafficSignalElement::GREEN || color == TrafficSignalElement::UNKNOWN)
-        current_color_state_.at(id) = TrafficSignalElement::GREEN;
-      if (color == TrafficSignalElement::RED)
-        current_color_state_.at(id) = TrafficSignalElement::RED;
-    }
-  }
-
-  return current_color_state_.at(id);
 }
 
 lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::getNonRedLanelets(
