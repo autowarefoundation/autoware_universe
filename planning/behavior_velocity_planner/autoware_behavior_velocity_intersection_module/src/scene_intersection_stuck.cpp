@@ -412,7 +412,7 @@ bool IntersectionModule::checkYieldStuckVehicleInIntersection(
     }
     for (const auto & yield_stuck_detect_lanelet : yield_stuck_detect_lanelets) {
       const bool is_inside_lanelet = autoware::experimental::lanelet2_utils::is_in_lanelet(
-        yield_stuck_detect_lanelet, object.kinematics.initial_pose_with_covariance.pose);
+        object.kinematics.initial_pose_with_covariance.pose, yield_stuck_detect_lanelet);
       if (is_inside_lanelet) {
         debug_data_.yield_stuck_targets.objects.push_back(object);
         return true;

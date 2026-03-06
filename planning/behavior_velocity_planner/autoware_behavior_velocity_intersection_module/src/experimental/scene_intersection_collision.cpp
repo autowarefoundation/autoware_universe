@@ -703,7 +703,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 
   for (unsigned i = 0; i < target_lanelets.size(); ++i) {
     const auto & ll = target_lanelets.at(i);
-    if (!autoware::experimental::lanelet2_utils::is_in_lanelet(ll, pose, dist_margin)) {
+    if (!autoware::experimental::lanelet2_utils::is_in_lanelet(pose, ll, dist_margin)) {
       continue;
     }
     const double ll_angle = autoware::experimental::lanelet2_utils::get_lanelet_angle(
