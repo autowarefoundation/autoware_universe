@@ -20,49 +20,6 @@
 namespace autoware::crosswalk_traffic_light_estimator
 {
 
-bool is_skippable_signal(const TrafficSignal & signal)
-{
-  const auto & elements = signal.elements;
-  if (elements.empty()) return true;
-  // Occluded signal: UNKNOWN with confidence=1
-  return elements.front().color == TrafficSignalElement::UNKNOWN &&
-         elements.front().confidence == 1;
-}
-
-bool is_flashing_green_signal(const TrafficSignal & signal)
-{
-  return !signal.elements.empty() &&
-         signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
-         signal.elements.front().confidence != 0;
-}
-
-bool all_history_matches_color(const std::vector<TrafficSignalAndTime> & history, uint8_t color)
-{
-  return std::all_of(history.begin(), history.end(), [color](const auto & entry) {
-    return entry.first.elements.front().color == color;
-  });
-}
-
-// Resolve color transition during flashing state.
-// During flashing, UNKNOWN detections appear intermittently between real colors,
-// so we hold the last known color and only transition on clear color changes.
-uint8_t resolve_flashing_color_transition(uint8_t current_state, uint8_t detected_color)
-{
-  if (current_state == TrafficSignalElement::GREEN && detected_color == TrafficSignalElement::RED) {
-    return TrafficSignalElement::RED;
-  }
-  if (current_state == TrafficSignalElement::RED && detected_color == TrafficSignalElement::GREEN) {
-    return TrafficSignalElement::GREEN;
-  }
-  if (current_state == TrafficSignalElement::UNKNOWN) {
-    if (detected_color == TrafficSignalElement::RED) {
-      return TrafficSignalElement::RED;
-    }
-    return TrafficSignalElement::GREEN;
-  }
-  return current_state;
-}
-
 FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : config_(config)
 {
 }
@@ -73,6 +30,15 @@ uint8_t FlashingDetector::estimate_stable_color(
   update_signal_history(signal, current_time);
   update_flashing_state(signal);
   return update_and_get_color_state(signal);
+}
+
+bool is_skippable_signal(const TrafficSignal & signal)
+{
+  const auto & elements = signal.elements;
+  if (elements.empty()) return true;
+  // Occluded signal: UNKNOWN with confidence=1
+  return elements.front().color == TrafficSignalElement::UNKNOWN &&
+         elements.front().confidence == 1;
 }
 
 void FlashingDetector::update_signal_history(
@@ -109,6 +75,20 @@ void FlashingDetector::clear_state(lanelet::Id id)
   signal_history_.erase(id);
 }
 
+bool all_history_matches_color(const std::vector<TrafficSignalAndTime> & history, uint8_t color)
+{
+  return std::all_of(history.begin(), history.end(), [color](const auto & entry) {
+    return entry.first.elements.front().color == color;
+  });
+}
+
+bool is_flashing_green_signal(const TrafficSignal & signal)
+{
+  return !signal.elements.empty() &&
+         signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
+         signal.elements.front().confidence != 0;
+}
+
 void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
 {
   const auto id = signal.traffic_light_group_id;
@@ -134,6 +114,23 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
     all_history_matches_color(history_iter->second, signal.elements.front().color)) {
     is_flashing_.at(id) = false;
   }
+}
+
+uint8_t resolve_flashing_color_transition(uint8_t current_state, uint8_t detected_color)
+{
+  if (current_state == TrafficSignalElement::GREEN && detected_color == TrafficSignalElement::RED) {
+    return TrafficSignalElement::RED;
+  }
+  if (current_state == TrafficSignalElement::RED && detected_color == TrafficSignalElement::GREEN) {
+    return TrafficSignalElement::GREEN;
+  }
+  if (current_state == TrafficSignalElement::UNKNOWN) {
+    if (detected_color == TrafficSignalElement::RED) {
+      return TrafficSignalElement::RED;
+    }
+    return TrafficSignalElement::GREEN;
+  }
+  return current_state;
 }
 
 uint8_t FlashingDetector::update_and_get_color_state(const TrafficSignal & signal)
