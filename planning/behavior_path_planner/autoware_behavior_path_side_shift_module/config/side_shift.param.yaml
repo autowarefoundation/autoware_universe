@@ -7,5 +7,7 @@
       min_shifting_distance: 5.0
       min_shifting_speed: 5.56
       shift_request_time_limit: 1.0
-      unit_shift_amount: 0.5
+      max_shift_magnitude: 1.0
+      min_shift_gap: 0.001
+      unit_shift_amount: 0.1
       publish_debug_marker: false

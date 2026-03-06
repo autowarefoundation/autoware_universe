@@ -21,13 +21,11 @@
 #include <tier4_planning_msgs/srv/set_lateral_offset.hpp>
 
 #include <optional>
+#include <utility>
 
 namespace autoware::behavior_path_planner
 {
 using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
-
-/** Optional max magnitude for RAW_VALUE (meters). Use nullopt to skip range check. */
-constexpr std::optional<double> default_max_raw_shift_magnitude = 2.0;
 
 /**
  * @brief Example validation for SetLateralOffset service request.
@@ -36,12 +34,19 @@ constexpr std::optional<double> default_max_raw_shift_magnitude = 2.0;
  * @param current_inserted_lateral_offset Current inserted lateral offset [m] (scene's state)
  * @param unit_shift_amount Shift increment in meters for DIRECTION mode (must be >= 0)
  * @param max_raw_shift_magnitude Optional max |shift_value| for RAW_VALUE; nullopt to skip
- * @return Computed lateral offset in meters, or nullopt if validation failed
+ * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
-std::optional<double> validateAndComputeLateralOffset(
+std::pair<uint16_t, double> validateAndComputeLateralOffset(
   const SetLateralOffset::Request & request, double current_inserted_lateral_offset,
-  double unit_shift_amount,
-  std::optional<double> max_raw_shift_magnitude = default_max_raw_shift_magnitude);
+  double unit_shift_amount, double max_shift_magnitude, double min_shift_gap);
+
+/**
+ * @brief Get the status message identical to te status code
+ *
+ * @param status_code
+ * @return const char* status message
+ */
+const char * getStatusMessage(uint16_t status_code);
 
 }  // namespace autoware::behavior_path_planner
 

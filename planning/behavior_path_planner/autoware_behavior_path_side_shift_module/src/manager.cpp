@@ -47,8 +47,10 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   p.min_shifting_distance = node->declare_parameter<double>(ns + "min_shifting_distance");
   p.min_shifting_speed = node->declare_parameter<double>(ns + "min_shifting_speed");
   p.shift_request_time_limit = node->declare_parameter<double>(ns + "shift_request_time_limit");
-  p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
+  p.max_shift_magnitude = node->declare_parameter<double>(ns + "max_shift_magnitude");
+  p.min_shift_gap = node->declare_parameter<double>(ns + "min_shift_gap");
   p.unit_shift_amount = node->declare_parameter<double>(ns + "unit_shift_amount");
+  p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
   inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
@@ -76,52 +78,30 @@ void SideShiftModuleManager::onSetLateralOffset(
   const SetLateralOffset::Request::SharedPtr request,
   SetLateralOffset::Response::SharedPtr response)
 {
-  RCLCPP_INFO(node_->get_logger(), "Service called!");
-  if (!planner_data_) {
+  if (!planner_data_ || !planner_data_->route_handler->isHandlerReady()) {
     response->status.success = false;
     response->status.code = autoware_common_msgs::msg::ResponseStatus::SERVICE_UNREADY;
-    response->status.message = "SetLateralOffset: side_shift module is not ready!";
+    response->status.message = getStatusMessage(response->status.code);
     return;
   }
 
   const double current_inserted =
     inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
 
-  RCLCPP_INFO(node_->get_logger(), "current inserted defined!");
+  const auto [status_code, lateral_offset] = validateAndComputeLateralOffset(
+    *request, current_inserted, parameters_->unit_shift_amount, parameters_->max_shift_magnitude,
+    parameters_->min_shift_gap);
 
-  const auto lateral_offset_opt =
-    validateAndComputeLateralOffset(*request, current_inserted, parameters_->unit_shift_amount);
+  // WARN_EXCEEDED_LIMIT will be treated as success since the shift itself will be performed
+  response->status.success =
+    (status_code == SetLateralOffset::Response::SUCCESS ||
+     status_code == SetLateralOffset::Response::WARN_EXCEEDED_LIMIT);
+  response->status.code = status_code;
+  response->status.message = getStatusMessage(status_code);
 
-  RCLCPP_INFO(node_->get_logger(), "lateral offset opt defined!");
-
-  if (!lateral_offset_opt) {
-    response->status.success = false;
-    response->status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
-    response->status.message =
-      "SetLateralOffset: validation failed (invalid shift_mode, shift_value, or "
-      "shift_direction_value)";
-    return;
+  if (response->status.success) {
+    requested_lateral_offset_state_->value.store(lateral_offset);
   }
-
-  RCLCPP_INFO(node_->get_logger(), "!!lateral_offset_opt");
-
-  const double lateral_offset = *lateral_offset_opt;
-
-  RCLCPP_INFO(node_->get_logger(), "lateral_offset defined! (%lf)", lateral_offset);
-
-  auto msg = std::make_shared<tier4_planning_msgs::msg::LateralOffset>();
-  msg->lateral_offset = static_cast<float>(lateral_offset);
-  RCLCPP_INFO(node_->get_logger(), "msg->lateral_offset defined!");
-  msg->stamp = node_->now();
-  RCLCPP_INFO(node_->get_logger(), "node_->now() defined!");
-  RCLCPP_INFO(node_->get_logger(), "msg defined!");
-
-  // NOTE: The validated lateral offset is exposed to external components via the output topic.
-  lateral_offset_publisher_->publish(*msg);
-
-  response->status.success = true;
-  response->status.code = 0;
-  response->status.message = "Successfully set lateral offset.";
 }
 
 void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
@@ -142,11 +122,14 @@ void SideShiftModuleManager::onLateralOffset(
     return;
   }
 
-  constexpr double THRESHOLD = 1.0e-3;
   const double new_offset = static_cast<double>(msg->lateral_offset);
   const double current = requested_lateral_offset_state_->value.load();
 
-  if (std::abs(new_offset - current) < THRESHOLD) {
+  if (std::abs(new_offset) > parameters_->max_shift_magnitude) {
+    return;
+  }
+
+  if (std::abs(new_offset - current) < parameters_->min_shift_gap) {
     return;
   }
 
