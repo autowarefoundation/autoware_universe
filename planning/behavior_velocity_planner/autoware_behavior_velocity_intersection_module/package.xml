@@ -5,16 +5,14 @@
   <version>0.50.0</version>
   <description>The autoware_behavior_velocity_intersection_module package</description>
 
-  <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
-  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
-  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
-  <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
-  <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
+  <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
 
   <license>Apache License 2.0</license>
 
   <author email="mamoru.sobue@tier4.jp">Mamoru Sobue</author>
+  <author email="takayuki.murooka@tier4.jp">Takayuki Murooka</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
