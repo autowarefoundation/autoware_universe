@@ -695,7 +695,7 @@ bool MissionPlanner::check_reroute_safety(
     target_route.segments.front().primitives.end(), [&](const auto & primitive) {
       const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
       return autoware::experimental::lanelet2_utils::is_in_lanelet(
-        lanelet, target_route.start_pose);
+        target_route.start_pose, lanelet);
     });
   if (!ego_is_on_first_target_section) {
     RCLCPP_ERROR(
@@ -782,7 +782,7 @@ bool MissionPlanner::check_reroute_safety(
   const auto & target_goal = target_route.goal_pose;
   for (const auto & target_end_primitive : target_end_primitives) {
     const auto lanelet = lanelet_map_ptr_->laneletLayer.get(target_end_primitive.id);
-    if (autoware::experimental::lanelet2_utils::is_in_lanelet(lanelet, target_goal)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(target_goal, lanelet)) {
       const auto target_goal_position =
         experimental::lanelet2_utils::from_ros(target_goal.position);
       const double dist_to_goal = lanelet::geometry::toArcCoordinates(
