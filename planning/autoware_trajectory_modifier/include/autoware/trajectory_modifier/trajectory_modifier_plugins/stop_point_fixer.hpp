@@ -38,6 +38,10 @@ public:
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
+
+  bool is_long_stop_trajectory(const TrajectoryPoints & traj_points) const;
+  bool is_stop_point_close_to_ego(
+    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const;
   bool is_trajectory_modification_required(
     const TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
     const TrajectoryModifierData & data) const override;
@@ -45,8 +49,11 @@ public:
 private:
   struct Parameters
   {
-    double velocity_threshold_mps{0.1};
+    bool force_stop_long_stopped_trajectories{true};
+    bool force_stop_close_stopped_trajectories{true};
+    double velocity_threshold_mps{0.25};
     double min_distance_threshold_m{1.0};
+    double min_stop_duration_s{0.5};
   };
 
   Parameters params_;

@@ -25,11 +25,12 @@ All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implem
 
 #### Stop Point Fixer
 
-The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by:
+The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by replacing the trajectory with a single stop point when either of two independently configurable conditions is met:
 
-- Monitoring ego vehicle velocity and trajectory distance
-- Replacing the trajectory with a single stop point when conditions are met
-- Ensuring smooth operation during stationary periods
+- **Close stop**: the trajectory's last point (stop point) is within a minimum distance threshold from ego
+- **Long stop**: the trajectory commands ego to remain stopped for longer than a minimum duration threshold
+
+Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.
 
 ## Dependencies
 
@@ -48,9 +49,17 @@ This package depends on the following packages:
 
 ## Parameters
 
-- `use_stop_point_fixer`: Enable the stop point fixer modifier plugin (default: true)
-- `stop_point_fixer.velocity_threshold_mps`: Velocity threshold below which ego vehicle is considered stationary (default: 0.1 m/s)
-- `stop_point_fixer.min_distance_threshold_m`: Minimum distance threshold to trigger trajectory replacement (default: 1.0 m)
+- `use_stop_point_fixer`: Enable the stop point fixer modifier plugin (default: `true`)
+
+### Stop Point Fixer
+
+| Parameter                                                | Type   | Default | Description                                                                                          |
+| -------------------------------------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------- |
+| `stop_point_fixer.force_stop_close_stopped_trajectories` | bool   | `true`  | Force zero-velocity trajectory when the stop point is within `min_distance_threshold_m` of ego       |
+| `stop_point_fixer.force_stop_long_stopped_trajectories`  | bool   | `true`  | Force zero-velocity trajectory when the trajectory commands a stop longer than `min_stop_duration_s` |
+| `stop_point_fixer.velocity_threshold_mps`                | double | `0.25`  | Velocity threshold (m/s) below which ego is considered stationary                                    |
+| `stop_point_fixer.min_distance_threshold_m`              | double | `1.0`   | Distance threshold (m) for the close-stop condition                                                  |
+| `stop_point_fixer.min_stop_duration_s`                   | double | `0.5`   | Minimum stop duration (s) for the long-stop condition                                                |
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
