@@ -1,0 +1,4 @@
+label_name, label_id
+BACKGROUND, 0
+traffic_light, 1
+pedestrian_traffic_light, 2

@@ -17,7 +17,9 @@
     description="options `yolox-sPlus-T4-960x960-pseudo-finetune.onnx` if only detection is needed, `yolox-sPlus-opt-pseudoV2-T4-960x960-T4-seg16cls.onnx` if sematic segmentation is also needed"
   />
   <arg name="label_path" default="$(var data_path)/tensorrt_yolox/label.txt" description="label path"/>
-  <arg name="color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="color map path"/>
+  <arg name="semantic_segmentation_color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="color map path"/>
+  <arg name="roi_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/roi_label_remap.csv" description="color map path"/>
+  <arg name="semantic_segmentation_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/semseg_label_remap.csv" description="color map path"/>
 
   <arg name="use_decompress" default="true" description="use image decompress"/>
   <arg name="build_only" default="false" description="exit after trt engine is built"/>
@@ -36,7 +38,9 @@
     <param from="$(var yolox_param_path)" allow_substs="true"/>
     <param name="model_path" value="$(var model_path)"/>
     <param name="label_path" value="$(var label_path)"/>
-    <param name="color_map_path" value="$(var color_map_path)"/>
+    <param name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
+    <param name="roi_remap_path" value="$(var roi_remap_path)"/>
+    <param name="semantic_segmentation_remap_path" value="$(var semantic_segmentation_remap_path)"/>
     <param name="build_only" value="$(var build_only)"/>
   </node>
 </launch>

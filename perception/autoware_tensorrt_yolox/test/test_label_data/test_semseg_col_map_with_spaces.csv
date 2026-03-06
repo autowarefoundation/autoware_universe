@@ -1,0 +1,4 @@
+id,name,r,g,b
+0,others,0,1,2
+1, building ,70,75,80
+ 2, wall, 150, 160, 170

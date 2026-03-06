@@ -1,4 +1,3 @@
-# cspell: ignore semseg
 /**:
   ros__parameters:
 
@@ -16,11 +15,11 @@
     gpu_id: 0 # GPU ID to select CUDA Device
     calibration_image_list_path: "" # Path to a file which contains path to images. Those images will be used for int8 quantization.
 
-    # default params of tensorrt_yolox package, only effective for semseg model
-    is_roi_overlap_segment: false
+    # default params of tensorrt_yolox package, only effective for semantic segmentation model
+    is_roi_overlap_segmentation: false
     overlap_roi_score_threshold: 0.3
     is_publish_color_mask: false
-    roi_overlay_segment_label:
+    roi_overlay_segmentation_label:
       UNKNOWN : false
       CAR : false
       TRUCK : false
