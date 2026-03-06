@@ -41,11 +41,11 @@ TrafficSignal make_signal(uint8_t color, float confidence = 1.0)
   return signal;
 }
 
-// Helper that manages FlashingDetector with explicit time offsets from start
-class DetectorTimeline
+// Helper that manages FlashingDetector
+class FlashingDetectorDriver
 {
 public:
-  explicit DetectorTimeline(FlashingDetectionConfig config = FlashingDetectionConfig{1.0})
+  explicit FlashingDetectorDriver(FlashingDetectionConfig config = FlashingDetectionConfig{1.0})
   : detector_(config)
   {
   }
@@ -69,10 +69,10 @@ private:
 TEST(FlashingDetectorTest, FirstCall_ReturnsDetectedColor)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Act
-  const uint8_t color = timeline.estimate(0.0, TrafficSignalElement::GREEN);
+  const uint8_t color = driver.estimate(0.0, TrafficSignalElement::GREEN);
 
   // Act & Assert
   EXPECT_EQ(color, TrafficSignalElement::GREEN);
@@ -81,11 +81,11 @@ TEST(FlashingDetectorTest, FirstCall_ReturnsDetectedColor)
 TEST(FlashingDetectorTest, FlashingDetected_UnknownAfterGreen)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Act
-  timeline.estimate(0.0, TrafficSignalElement::GREEN);
-  const uint8_t color = timeline.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  driver.estimate(0.0, TrafficSignalElement::GREEN);
+  const uint8_t color = driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
 
   // Assert: maintains GREEN during flashing (UNKNOWN input doesn't change state to UNKNOWN)
   EXPECT_EQ(color, TrafficSignalElement::GREEN);
@@ -94,12 +94,12 @@ TEST(FlashingDetectorTest, FlashingDetected_UnknownAfterGreen)
 TEST(FlashingDetectorTest, FlashingTransition_GreenToRed)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Act: during flashing, RED input transitions from GREEN to RED
-  timeline.estimate(0.0, TrafficSignalElement::GREEN);
-  timeline.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
-  const uint8_t color = timeline.estimate(0.2, TrafficSignalElement::RED);
+  driver.estimate(0.0, TrafficSignalElement::GREEN);
+  driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  const uint8_t color = driver.estimate(0.2, TrafficSignalElement::RED);
 
   // Assert
   EXPECT_EQ(color, TrafficSignalElement::RED);
@@ -108,13 +108,13 @@ TEST(FlashingDetectorTest, FlashingTransition_GreenToRed)
 TEST(FlashingDetectorTest, FlashingTransition_RedToGreen)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Act: during flashing, GREEN input transitions from RED to GREEN
-  timeline.estimate(0.0, TrafficSignalElement::GREEN);
-  timeline.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
-  timeline.estimate(0.2, TrafficSignalElement::RED);
-  const uint8_t color = timeline.estimate(0.3, TrafficSignalElement::GREEN);
+  driver.estimate(0.0, TrafficSignalElement::GREEN);
+  driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  driver.estimate(0.2, TrafficSignalElement::RED);
+  const uint8_t color = driver.estimate(0.3, TrafficSignalElement::GREEN);
 
   // Assert
   EXPECT_EQ(color, TrafficSignalElement::GREEN);
@@ -123,14 +123,14 @@ TEST(FlashingDetectorTest, FlashingTransition_RedToGreen)
 TEST(FlashingDetectorTest, EstimateStableColor_PrunesOldEntries)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Build state and trigger flashing
-  timeline.estimate(0.0, TrafficSignalElement::GREEN);
-  timeline.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  driver.estimate(0.0, TrafficSignalElement::GREEN);
+  driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
 
   // Act: feed RED at time > hold_time, old GREEN/UNKNOWN entries are pruned
-  const uint8_t color = timeline.estimate(2.0, TrafficSignalElement::RED);
+  const uint8_t color = driver.estimate(2.0, TrafficSignalElement::RED);
 
   // Assert: flashing was reset because old entries were pruned, only RED remains
   EXPECT_EQ(color, TrafficSignalElement::RED);
@@ -141,13 +141,13 @@ TEST(FlashingDetectorTest, EstimateStableColor_PrunesOldEntries)
 TEST(FlashingDetectorTest, ClearState_RemovesTracking)
 {
   // Arrange
-  DetectorTimeline timeline;
+  FlashingDetectorDriver driver;
 
   // Act: trigger flashing, then clear state
-  timeline.estimate(0.0, TrafficSignalElement::GREEN);
-  timeline.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
-  timeline.clear_state();
-  const uint8_t color = timeline.estimate(0.2, TrafficSignalElement::RED);
+  driver.estimate(0.0, TrafficSignalElement::GREEN);
+  driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  driver.clear_state();
+  const uint8_t color = driver.estimate(0.2, TrafficSignalElement::RED);
 
   // Assert: returns RED as a first call (no flashing state)
   EXPECT_EQ(color, TrafficSignalElement::RED);
