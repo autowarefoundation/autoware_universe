@@ -1314,8 +1314,6 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
       (obj_s - first_point_s) - object.shape.dimensions.x / 2.0;
     const double crosswalk_back_to_obj_rear =
       (obj_s - last_point_s) - object.shape.dimensions.x / 2.0;
-    const double required_space_length =
-      planner_data.vehicle_info_.vehicle_length_m + planner_param_.required_clearance;
 
     if (crosswalk_front_to_obj_rear > 0.0 && crosswalk_back_to_obj_rear < required_space_length) {
       // If there exists at least one vehicle ahead, plan STOP considering min_acc, max_jerk and
