@@ -240,7 +240,7 @@ bool NoStoppingAreaModule::modifyPathVelocity(
 
   if (!isActivated()) {
     // ----------------stop reason and stop point--------------------------
-    path.longitudinal_velocity_mps().range(*stop_point_s, path.length()).set(0.0);
+    path.set_stopline(*stop_point_s);
     // For virtual wall
     const auto stop_pose = path.compute(*stop_point_s).point.pose;
     debug_data_.stop_poses.push_back(stop_pose);

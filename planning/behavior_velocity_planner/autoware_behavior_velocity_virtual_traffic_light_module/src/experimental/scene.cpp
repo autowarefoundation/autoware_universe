@@ -456,7 +456,7 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
     const auto is_stopped = planner_data.isVehicleStopped();
 
     if (stop_distance < planner_param_.hold_stop_margin_distance && is_stopped) {
-      path.longitudinal_velocity_mps().range(*ego_s, path.length()).set(0.0);
+      path.set_stopline(*ego_s);
     } else {
       path.longitudinal_velocity_mps()
         .range(std::max(0., *collision + offset), path.length())

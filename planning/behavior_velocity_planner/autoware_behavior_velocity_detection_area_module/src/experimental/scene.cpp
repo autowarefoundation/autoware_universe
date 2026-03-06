@@ -187,7 +187,7 @@ void DetectionAreaModule::finalizeStopPoint(
     print_detected_obstacle(debug_data_.obstacle_points, self_pose);
   }
 
-  path.longitudinal_velocity_mps().range(modified_stop_point_s, path.length()).set(0.0);
+  path.set_stopline(modified_stop_point_s);
 
   // For virtual wall
   const auto stop_pose = path.compute(stop_point_s).point.pose;
