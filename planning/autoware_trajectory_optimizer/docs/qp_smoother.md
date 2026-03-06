@@ -145,7 +145,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
   - Recommended: 3 to preserve initial acceleration
   - Set to 0 to allow all points to be optimized (may cause initial state discontinuities)
 
-- `num_constrained_points_end` (default: 3)
+- `num_constrained_points_end` (default: 0)
   - Number of points from trajectory end to fix as hard constraints
   - Set to 0 for maximum smoothness at trajectory end
   - Increase if you need to preserve goal state and acceleration
@@ -164,27 +164,28 @@ After QP optimization solves for smoothed positions, the following are recalcula
 - `osqp_verbose` (default: false)
   - Enable OSQP debug output
 
-### Orientation Correction
+### Orientation Preservation
 
-- `fix_orientation` (default: true)
-  - Apply orientation correction post-solve
+- `preserve_input_trajectory_orientation` (default: false)
+  - Copy orientations from the original input trajectory (nearest-neighbor match) instead of
+    deriving them from the smoothed path tangent
 
-- `orientation_correction_threshold_deg` (default: 5.0)
-  - Yaw threshold for correcting QP output orientation
+- `max_distance_for_orientation_m` (default: 5.0)
+  - Maximum search distance for nearest-neighbor orientation matching [m]
 
 ## Usage Examples
 
-### Example 1: Enable Velocity-Based Fidelity
+### Example 1: Disable Velocity-Based Fidelity
 
-To enable velocity-dependent smoothing for stop-and-go scenarios:
+Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:
 
 ```bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity true
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity false
 ```
 
 ### Example 2: Tune Velocity Threshold
 
-To make the transition occur at higher speeds (0.5 m/s instead of 0.2 m/s):
+To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):
 
 ```bash
 ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.velocity_threshold_mps 0.5
