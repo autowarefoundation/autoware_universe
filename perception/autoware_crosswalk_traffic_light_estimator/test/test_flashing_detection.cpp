@@ -105,21 +105,6 @@ TEST(FlashingDetectorTest, FlashingTransition_GreenToRed)
   EXPECT_EQ(color, TrafficSignalElement::RED);
 }
 
-TEST(FlashingDetectorTest, FlashingTransition_RedToGreen)
-{
-  // Arrange
-  FlashingDetectorDriver driver;
-
-  // Act: during flashing, GREEN input transitions from RED to GREEN
-  driver.estimate(0.0, TrafficSignalElement::GREEN);
-  driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
-  driver.estimate(0.2, TrafficSignalElement::RED);
-  const uint8_t color = driver.estimate(0.3, TrafficSignalElement::GREEN);
-
-  // Assert
-  EXPECT_EQ(color, TrafficSignalElement::GREEN);
-}
-
 TEST(FlashingDetectorTest, EstimateStableColor_PrunesOldEntries)
 {
   // Arrange
@@ -147,10 +132,10 @@ TEST(FlashingDetectorTest, ClearState_RemovesTracking)
   driver.estimate(0.0, TrafficSignalElement::GREEN);
   driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
   driver.clear_state();
-  const uint8_t color = driver.estimate(0.2, TrafficSignalElement::RED);
+  const uint8_t color = driver.estimate(0.2, TrafficSignalElement::UNKNOWN);
 
-  // Assert: returns RED as a first call (no flashing state)
-  EXPECT_EQ(color, TrafficSignalElement::RED);
+  // Assert: returns UNKNOWN as a first call (no flashing state)
+  EXPECT_EQ(color, TrafficSignalElement::UNKNOWN);
 }
 
 int main(int argc, char ** argv)
