@@ -23,61 +23,39 @@ FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : con
 {
 }
 
-void FlashingDetector::update_signal_history(
-  const TrafficLightIdMap & traffic_light_id_map, const rclcpp::Time & current_time)
+uint8_t FlashingDetector::estimate_stable_color(
+  const TrafficSignal & signal, const rclcpp::Time & current_time)
 {
-  // --- Append new detections to the history ---
-  for (const auto & input_traffic_signal : traffic_light_id_map) {
-    const auto & elements = input_traffic_signal.second.first.elements;
+  const auto id = signal.traffic_light_group_id;
+  const auto & elements = signal.elements;
 
-    // Skip signals with no detection data
-    if (elements.empty()) {
-      continue;
-    }
-
-    // Skip occluded signals (UNKNOWN with confidence=1 means the light is intentionally
-    // classified as unknown due to occlusion, not a detection failure)
-    if (
-      elements.front().color == TrafficSignalElement::UNKNOWN && elements.front().confidence == 1) {
-      continue;
-    }
-
-    const auto & id = input_traffic_signal.second.first.traffic_light_group_id;
-
-    // Create a new history entry if this traffic light ID is seen for the first time
+  // --- Append this signal to history ---
+  // Skip empty signals and occluded signals (UNKNOWN with confidence=1)
+  if (
+    !elements.empty() && !(elements.front().color == TrafficSignalElement::UNKNOWN &&
+                           elements.front().confidence == 1)) {
     if (signal_history_.count(id) == 0) {
-      std::vector<TrafficSignalAndTime> signal{input_traffic_signal.second};
-      signal_history_.emplace(id, signal);
-      continue;
+      signal_history_.emplace(id, std::vector<TrafficSignalAndTime>{{signal, current_time}});
+    } else {
+      signal_history_.at(id).push_back({signal, current_time});
     }
-
-    // Append to existing history
-    signal_history_.at(id).push_back(input_traffic_signal.second);
   }
 
-  // --- Remove stale entries that exceed the hold time ---
-  std::vector<int32_t> erase_id_list;
-  for (auto & last_traffic_signal : signal_history_) {
-    const auto & id = last_traffic_signal.first;
-    for (auto history_entry = last_traffic_signal.second.begin();
-         history_entry != last_traffic_signal.second.end();) {
-      const auto time_from_last_detected = (current_time - history_entry->second).seconds();
-      if (time_from_last_detected > config_.last_colors_hold_time) {
-        history_entry = last_traffic_signal.second.erase(history_entry);
+  // --- Remove stale entries for this signal ---
+  if (signal_history_.count(id) > 0) {
+    auto & history = signal_history_.at(id);
+    for (auto history_entry = history.begin(); history_entry != history.end();) {
+      if ((current_time - history_entry->second).seconds() > config_.last_colors_hold_time) {
+        history_entry = history.erase(history_entry);
       } else {
         ++history_entry;
       }
     }
-    // Mark traffic light IDs whose history is now empty for removal
-    if (last_traffic_signal.second.empty()) {
-      erase_id_list.emplace_back(id);
+    if (history.empty()) {
+      signal_history_.erase(id);
     }
   }
-  for (const auto id : erase_id_list) signal_history_.erase(id);
-}
 
-uint8_t FlashingDetector::estimate_stable_color(const TrafficSignal & signal)
-{
   update_flashing_state(signal);
   return update_and_get_color_state(signal);
 }
@@ -86,6 +64,7 @@ void FlashingDetector::clear_state(lanelet::Id id)
 {
   is_flashing_.erase(id);
   current_color_state_.erase(id);
+  signal_history_.erase(id);
 }
 
 void FlashingDetector::update_flashing_state(const TrafficSignal & signal)

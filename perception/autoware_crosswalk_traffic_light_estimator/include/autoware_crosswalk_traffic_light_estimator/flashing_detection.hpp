@@ -50,10 +50,7 @@ public:
   explicit FlashingDetector(const FlashingDetectionConfig & config);
   FlashingDetector() = default;
 
-  void update_signal_history(
-    const TrafficLightIdMap & traffic_light_id_map, const rclcpp::Time & current_time);
-
-  uint8_t estimate_stable_color(const TrafficSignal & signal);
+  uint8_t estimate_stable_color(const TrafficSignal & signal, const rclcpp::Time & current_time);
 
   void clear_state(lanelet::Id id);
 

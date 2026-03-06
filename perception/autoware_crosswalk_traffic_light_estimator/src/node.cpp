@@ -332,7 +332,6 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   removeDuplicateIds(output);
 
   updateLastDetectedSignal(traffic_light_id_map);
-  flashing_detector_.update_signal_history(traffic_light_id_map, get_clock()->now());
 
   pub_traffic_light_array_->publish(output);
   pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch.toc("Total"));
@@ -453,7 +452,8 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
             .empty()) {  // unnecessary check because msg has detection but for safety
         out_signal.elements.push_back(base_traffic_signal_element);
       }
-      out_signal.elements[0].color = flashing_detector_.estimate_stable_color(detected);
+      out_signal.elements[0].color =
+        flashing_detector_.estimate_stable_color(detected, get_clock()->now());
       continue;
     }
 
