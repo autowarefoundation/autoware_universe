@@ -1512,15 +1512,21 @@ CrosswalkModule::getNearestStopFactorAndReason(
   const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles,
   const PlannerData & planner_data)
 {
+  const auto calc_signed_arc_length =
+    [](const auto & trajectory, const auto & ego_point, const auto & stop_point) {
+      const auto ego_s =
+        autoware::experimental::trajectory::find_nearest_index(trajectory, ego_point);
+      const auto stop_s =
+        autoware::experimental::trajectory::find_nearest_index(trajectory, stop_point);
+      return stop_s - ego_s;
+    };
+
   const auto get_distance_to_stop = [&](const auto & stop_factor) -> double {
     if (!stop_factor.has_value()) {
       return std::numeric_limits<double>::max();
     }
     const auto & ego_pos = planner_data.current_odometry->pose.position;
-    const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
-    const auto stop_s = autoware::experimental::trajectory::find_nearest_index(
-      ego_path, stop_factor->stop_pose.position);
-    return stop_s - ego_s;
+    return calc_signed_arc_length(ego_path, ego_pos, stop_factor->stop_pose.position);
   };
 
   const std::vector<std::pair<std::optional<StopPoseWithObjectUuids>, std::string>>
@@ -1537,14 +1543,21 @@ CrosswalkModule::getNearestStopFactorAndReason(
     return {std::nullopt, ""};
   }
   constexpr auto previous_stop_reuse_margin =
-    3.0;  // [m] reuse the previous stop pose if it is within the margin
+    1.0;  // [m] reuse the previous stop pose if it is within the margin
   const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
-  const auto use_previous_stop_pose =
-    previous_stop_pose_ && dist_to_stop > get_distance_to_stop(previous_stop_pose_) &&
-    dist_to_stop - get_distance_to_stop(previous_stop_pose_) < previous_stop_reuse_margin;
-  if (use_previous_stop_pose) {
-    previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
-    return {previous_stop_pose_, nearest_stop_and_reason->second};
+  if (previous_stop_pose_) {
+    const auto previous_stop_arc_length = calc_signed_arc_length(
+      ego_path, geometry_msgs::msg::Point(), previous_stop_pose_->stop_pose.position);
+    previous_stop_pose_->stop_pose =
+      autoware_utils_geometry::get_pose(ego_path.compute(previous_stop_arc_length));
+    const auto dist_to_previous_stop = get_distance_to_stop(previous_stop_pose_);
+    const auto use_previous_stop_pose =
+      dist_to_stop > dist_to_previous_stop &&
+      dist_to_stop - dist_to_previous_stop < previous_stop_reuse_margin;
+    if (use_previous_stop_pose) {
+      previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
+      return {previous_stop_pose_, nearest_stop_and_reason->second};
+    }
   }
 
   return *nearest_stop_and_reason;
