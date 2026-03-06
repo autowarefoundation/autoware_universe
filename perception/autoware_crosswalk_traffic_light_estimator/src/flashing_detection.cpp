@@ -14,10 +14,20 @@
 
 #include "autoware_crosswalk_traffic_light_estimator/flashing_detection.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace autoware::crosswalk_traffic_light_estimator
 {
+
+bool is_skippable_signal(const TrafficSignal & signal)
+{
+  const auto & elements = signal.elements;
+  if (elements.empty()) return true;
+  // Occluded signal: UNKNOWN with confidence=1
+  return elements.front().color == TrafficSignalElement::UNKNOWN &&
+         elements.front().confidence == 1;
+}
 
 FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : config_(config)
 {
@@ -35,33 +45,25 @@ void FlashingDetector::update_signal_history(
   const TrafficSignal & signal, const rclcpp::Time & current_time)
 {
   const auto id = signal.traffic_light_group_id;
-  const auto & elements = signal.elements;
 
-  // Append this signal to history.
-  // Skip empty signals and occluded signals (UNKNOWN with confidence=1)
-  if (
-    !elements.empty() && !(elements.front().color == TrafficSignalElement::UNKNOWN &&
-                           elements.front().confidence == 1)) {
-    if (signal_history_.count(id) == 0) {
-      signal_history_.emplace(id, std::vector<TrafficSignalAndTime>{{signal, current_time}});
-    } else {
-      signal_history_.at(id).push_back({signal, current_time});
-    }
+  if (!is_skippable_signal(signal)) {
+    signal_history_[id].push_back({signal, current_time});
   }
 
-  // Remove stale entries for this signal
-  if (signal_history_.count(id) > 0) {
-    auto & history = signal_history_.at(id);
-    for (auto history_entry = history.begin(); history_entry != history.end();) {
-      if ((current_time - history_entry->second).seconds() > config_.last_colors_hold_time) {
-        history_entry = history.erase(history_entry);
-      } else {
-        ++history_entry;
-      }
-    }
-    if (history.empty()) {
-      signal_history_.erase(id);
-    }
+  auto history_iter = signal_history_.find(id);
+  if (history_iter == signal_history_.end()) return;
+
+  auto & history = history_iter->second;
+  history.erase(
+    std::remove_if(
+      history.begin(), history.end(),
+      [&](const TrafficSignalAndTime & entry) {
+        return (current_time - entry.second).seconds() > config_.last_colors_hold_time;
+      }),
+    history.end());
+
+  if (history.empty()) {
+    signal_history_.erase(history_iter);
   }
 }
 
