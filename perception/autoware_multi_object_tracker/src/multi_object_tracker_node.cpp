@@ -20,12 +20,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
 #include <autoware_perception_msgs/msg/object_classification.hpp>
-
-#include <boost/optional.hpp>
 
 #include <array>
 #include <iomanip>
@@ -176,7 +171,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   core::process_parameters(params_);
 
   ////// Initialize state
-  state_.init(params_, *this, std::bind(&MultiObjectTracker::onTrigger, this));
+  state_.init(params_, *this, nullptr);
 
   ////// Create subscriptions and publishers
   // subscriptions
@@ -193,8 +188,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
       func = std::bind(
-        &InputManager::onMessage, state_.input_manager.get(), input_channel.index,
-        std::placeholders::_1);
+        &MultiObjectTracker::onMeasurement, this, input_channel.index, std::placeholders::_1);
 
     sub_objects_array_.at(index) =
       create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
@@ -234,35 +228,40 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void MultiObjectTracker::onTrigger()
+void MultiObjectTracker::onMeasurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const rclcpp::Time current_time = this->now();
-  // get objects from the input manager and run process
-  const auto objects_list = core::get_objects(current_time, state_);
-  if (!objects_list) return;
+  const auto result =
+    core::process_measurement(channel_index, msg, current_time, state_, *debugger_);
 
-  // process start
-  const rclcpp::Time latest_time(objects_list->back().header.stamp);
-  debugger_->startMeasurementTime(this->now(), latest_time);
-
-  // run process for each DynamicObject
-  for (const auto & objects_data : *objects_list) {
-    std::unique_ptr<ScopedTimeTrack> st_process_objects_ptr;
-    if (time_keeper_)
-      st_process_objects_ptr = std::make_unique<ScopedTimeTrack>("process_objects", *time_keeper_);
-    core::process_objects(objects_data, current_time, params_, state_, *debugger_, get_logger());
+  if (!result.has_objects) {
+    return;
   }
 
-  // process end
-  debugger_->endMeasurementTime(this->now());
+  if (result.should_process) {
+    processObjects();
+  }
+}
+
+void MultiObjectTracker::processObjects()
+{
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  const rclcpp::Time current_time = this->now();
+
+  // Process objects batch (this will get objects internally and handle debug timing)
+  const auto result =
+    core::process_objects_batch(current_time, params_, state_, *debugger_, get_logger());
 
   // Publish without delay compensation
-  if (!publish_timer_) {
-    const auto latest_object_time = rclcpp::Time(objects_list->back().header.stamp);
-    publish(latest_object_time);
+  if (result.should_publish) {
+    publish();
   }
 }
 
@@ -274,64 +273,53 @@ void MultiObjectTracker::onTimer()
   const rclcpp::Time current_time = this->now();
 
   if (core::should_publish(current_time, params_, state_)) {
-    publish(state_.last_published_time);
+    publish();
   }
 }
 
-void MultiObjectTracker::publish(const rclcpp::Time & time)
+void MultiObjectTracker::publish()
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  /* tracker pruning*/
-  core::prune_objects(time, state_);
-
-  // Publish
   const rclcpp::Time current_time = this->now();
-
+  const rclcpp::Time last_tracker_time = state_.last_tracker_time;
   debugger_->startPublishTime(current_time);
-  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
+  core::PublishingData publishing_data;
   {
     std::unique_ptr<ScopedTimeTrack> st_get_output_ptr;
     if (time_keeper_)
       st_get_output_ptr = std::make_unique<ScopedTimeTrack>("get_output", *time_keeper_);
 
-    tracked_objects = core::get_tracked_objects(time, current_time, params_, state_);
+    publishing_data = core::prepare_publishing_data(current_time, params_, state_, get_logger());
   }
-  tracked_objects_pub_->publish(tracked_objects);
+  tracked_objects_pub_->publish(publishing_data.tracked_objects);
 
-  debugger_->endPublishTime(this->now(), time);
+  debugger_->endPublishTime(this->now(), last_tracker_time);
 
-  publishOptional(time, current_time, tracked_objects.objects.size());
+  publishOptional(publishing_data.object_time, publishing_data.tracked_objects_size);
 }
 
 void MultiObjectTracker::publishOptional(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const size_t tracked_objects_size)
+  const rclcpp::Time & object_time, const size_t tracked_objects_size)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  const auto optional_data =
+    core::prepare_optional_publishing_data(object_time, params_, state_, *debugger_, get_logger());
+
   // Publish merged objects
-  if (params_.publish_merged_objects) {
-    const auto merged_objects =
-      core::get_merged_objects(publish_time, current_time, params_, state_, get_logger());
-    if (merged_objects) {
-      merged_objects_pub_->publish(*merged_objects);
-    }
+  if (optional_data.merged_objects) {
+    merged_objects_pub_->publish(*optional_data.merged_objects);
   }
 
   // Update the diagnostic values
-  const double min_extrapolation_time = (publish_time - state_.last_updated_time).seconds();
-  debugger_->updateDiagnosticValues(min_extrapolation_time, tracked_objects_size);
+  debugger_->updateDiagnosticValues(optional_data.min_extrapolation_time, tracked_objects_size);
 
   // Publish tentative objects
-  const rclcpp::Time object_time = params_.enable_delay_compensation ? current_time : publish_time;
-  if (debugger_->shouldPublishTentativeObjects()) {
-    autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
-    tentative_output_msg.header.frame_id = params_.world_frame_id;
-    state_.processor->getTentativeObjects(object_time, tentative_output_msg);
-    debugger_->publishTentativeObjects(tentative_output_msg);
+  if (optional_data.tentative_objects) {
+    debugger_->publishTentativeObjects(*optional_data.tentative_objects);
   }
 
   published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, object_time);

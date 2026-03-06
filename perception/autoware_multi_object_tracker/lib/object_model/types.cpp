@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
 #include <cmath>
 #include <vector>
@@ -59,6 +60,9 @@ DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index)
 {
   DynamicObject dynamic_object;
+
+  // Always generate UUID for consistency (shared generator across the package).
+  dynamic_object.uuid = object_model::generate_uuid();
 
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
@@ -105,6 +109,16 @@ DynamicObjectList toDynamicObjectList(
     dynamic_objects.objects.emplace_back(toDynamicObject(det_object, channel_index));
   }
   return dynamic_objects;
+}
+
+int DynamicObjectList::getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const
+{
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (UUIDEqual()(objects[i].uuid, uuid)) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
 }
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)

@@ -15,7 +15,6 @@
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 namespace autoware::multi_object_tracker
 {

@@ -24,6 +24,7 @@
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::multi_object_tracker

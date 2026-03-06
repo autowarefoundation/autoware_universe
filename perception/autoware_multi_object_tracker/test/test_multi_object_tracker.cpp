@@ -77,8 +77,7 @@ FunctionTimings runIterationsAssociation(
   FunctionTimings timings;
   rclcpp::Clock clock;
   rclcpp::Time current_time = rclcpp::Time(clock.now(), RCL_ROS_TIME);
-  std::unordered_map<int, int> direct_assignment;
-  std::unordered_map<int, int> reverse_assignment;
+  autoware::multi_object_tracker::types::AssociationResult association_result;
   if (print_frame_stats) {
     printFrameStatsHeader();
   }
@@ -105,8 +104,7 @@ FunctionTimings runIterationsAssociation(
   }
 
   for (int i = 0; i < num_iterations; ++i) {
-    direct_assignment.clear();
-    reverse_assignment.clear();
+    association_result = autoware::multi_object_tracker::types::AssociationResult();
     // Advance simulation time (10Hz)
     current_time += 100ms;
     auto detections = simulator.generateDetections(current_time);
@@ -117,13 +115,17 @@ FunctionTimings runIterationsAssociation(
     // Individual function timing
     timings.predict.times.push_back(
       measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
-    timings.associate.times.push_back(measureTimeMs(
-      [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
-    timings.update.times.push_back(
-      measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
-    timings.spawn.times.push_back(
-      measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
 
     const auto total_end = Clock::now();
     auto total_duration =
@@ -164,14 +166,12 @@ FunctionTimings runIterations(
 
   rclcpp::Clock clock;
   rclcpp::Time current_time = rclcpp::Time(clock.now(), RCL_ROS_TIME);
-  std::unordered_map<int, int> direct_assignment;
-  std::unordered_map<int, int> reverse_assignment;
+  autoware::multi_object_tracker::types::AssociationResult association_result;
   if (print_frame_stats) {
     printFrameStatsHeader();
   }
   for (int i = 0; i < num_iterations; ++i) {
-    direct_assignment.clear();
-    reverse_assignment.clear();
+    association_result = autoware::multi_object_tracker::types::AssociationResult();
     // Advance simulation time (10Hz)
     current_time += 100ms;
     auto detections = simulator.generateDetections(current_time);
@@ -182,15 +182,19 @@ FunctionTimings runIterations(
     // Individual function timing
     timings.predict.times.push_back(
       measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
-    timings.associate.times.push_back(measureTimeMs(
-      [&]() { processor->associate(detections, direct_assignment, reverse_assignment); }));
-    timings.update.times.push_back(
-      measureTimeMs([&]() { processor->update(detections, direct_assignment); }));
+    timings.associate.times.push_back(
+      measureTimeMs([&]() { association_result = processor->associate(detections); }));
+    timings.update.times.push_back(measureTimeMs([&]() {
+      processor->update(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers0 = processor->getListTracker().size();
     timings.prune.times.push_back(measureTimeMs([&]() { processor->prune(current_time); }));
     int num_trackers1 = processor->getListTracker().size();
-    timings.spawn.times.push_back(
-      measureTimeMs([&]() { processor->spawn(detections, reverse_assignment); }));
+    timings.spawn.times.push_back(measureTimeMs([&]() {
+      processor->spawn(
+        autoware::multi_object_tracker::types::AssociatedObjects{detections, association_result});
+    }));
     int num_trackers2 = processor->getListTracker().size();
 
     int num_pruned = num_trackers0 - num_trackers1;
@@ -319,12 +323,12 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
       // Process through tracker
       processor->predict(msg->header.stamp, std::nullopt);
 
-      std::unordered_map<int, int> direct_assignment;
-      std::unordered_map<int, int> reverse_assignment;
-      processor->associate(dynamic_objects, direct_assignment, reverse_assignment);
-      processor->update(dynamic_objects, direct_assignment);
+      const auto association_result = processor->associate(dynamic_objects);
+      const autoware::multi_object_tracker::types::AssociatedObjects associated_objects{
+        dynamic_objects, association_result};
+      processor->update(associated_objects);
       processor->prune(msg->header.stamp);
-      processor->spawn(dynamic_objects, reverse_assignment);
+      processor->spawn(associated_objects);
 
       // Get and output results
       rclcpp::Time current_time(msg->header.stamp);
