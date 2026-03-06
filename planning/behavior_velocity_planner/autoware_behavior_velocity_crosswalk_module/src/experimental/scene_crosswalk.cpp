@@ -96,7 +96,7 @@ void offsetPolygon2d(
     const auto offset_pos =
       autoware_utils::calc_offset_pose(origin_point, polygon_point.x, polygon_point.y, 0.0)
         .position;
-    offset_polygon.outer().push_back(Point2d(offset_pos.x, offset_pos.y));
+    offset_polygon.outer().emplace_back(offset_pos.x, offset_pos.y);
   }
 }
 

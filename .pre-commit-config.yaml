@@ -37,7 +37,7 @@ repos:
         args: [--no-error-on-unmatched-pattern]
 
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
 
@@ -93,7 +93,7 @@ repos:
         exclude: .cu
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.36.0
+    rev: 0.36.2
     hooks:
       - id: check-metaschema
         files: ^.+/schema/.*schema\.json$

@@ -4,8 +4,14 @@ project(autoware_steer_offset_estimator)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+ament_auto_find_build_dependencies()
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  yaml_cpp_vendor
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}

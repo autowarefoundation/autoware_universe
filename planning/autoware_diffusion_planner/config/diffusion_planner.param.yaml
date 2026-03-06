@@ -6,7 +6,6 @@
     planning_frequency_hz: 10.0
     ignore_neighbors: false
     ignore_unknown_neighbors: true
-    predict_neighbor_trajectory: true
     traffic_light_group_msg_timeout_seconds: 0.2
     batch_size: 1
     temperature: [0.0]
