@@ -233,7 +233,7 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 1. First, find all lanes containing the pose
   bool found_containing_lane = false;
   for (const auto & lane : candidate_lanes) {
-    if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, pose)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(pose, lane)) {
       lane_ids.push_back(lane.id());
       found_containing_lane = true;
     }

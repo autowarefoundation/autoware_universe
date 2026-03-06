@@ -491,7 +491,7 @@ PathWithLaneId refinePathForGoal(
 bool isInLanelets(const Pose & pose, const lanelet::ConstLanelets & lanes)
 {
   for (const auto & lane : lanes) {
-    if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, pose)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(pose, lane)) {
       return true;
     }
   }
@@ -508,7 +508,7 @@ bool isInLaneletWithYawThreshold(
   const double angle_diff = std::abs(autoware_utils::normalize_radian(lanelet_angle - pose_yaw));
 
   return (angle_diff < std::abs(yaw_threshold)) &&
-         autoware::experimental::lanelet2_utils::is_in_lanelet(lanelet, current_pose, radius);
+         autoware::experimental::lanelet2_utils::is_in_lanelet(current_pose, lanelet, radius);
 }
 
 bool isEgoOutOfRoute(
@@ -554,14 +554,14 @@ bool isEgoOutOfRoute(
   const bool is_in_shoulder_lane = !route_handler->getShoulderLaneletsAtPose(self_pose).empty();
   // Check if ego vehicle is in road lane
   const bool is_in_road_lane = std::invoke([&]() {
-    if (autoware::experimental::lanelet2_utils::is_in_lanelet(closest_road_lane, self_pose)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(self_pose, closest_road_lane)) {
       return true;
     }
 
     // check previous lanes for backward driving (e.g. pull out)
     const auto prev_lanes = route_handler->getPreviousLanelets(closest_road_lane);
     for (const auto & lane : prev_lanes) {
-      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, self_pose)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(self_pose, lane)) {
         return true;
       }
     }

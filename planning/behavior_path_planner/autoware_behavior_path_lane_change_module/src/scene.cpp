@@ -1598,7 +1598,7 @@ bool NormalLaneChange::isValidPath(const PathWithLaneId & path) const
   for (const auto & point : path.points) {
     bool is_inside_lanelet = false;
     for (const auto & lanelet : lanelets) {
-      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lanelet, point.point.pose)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(point.point.pose, lanelet)) {
         is_inside_lanelet = true;
         break;
       }

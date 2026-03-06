@@ -214,7 +214,7 @@ PathWithLaneId convertWayPointsToPathWithLaneId(
     // put the lane that contain waypoints in lane_ids.
     bool is_in_lanes = false;
     for (const auto & lane : lanelets) {
-      if (autoware::experimental::lanelet2_utils::is_in_lanelet(lane, point.point.pose)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(point.point.pose, lane)) {
         point.lane_ids.push_back(lane.id());
         is_in_lanes = true;
       }

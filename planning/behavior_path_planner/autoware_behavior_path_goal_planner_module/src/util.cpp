@@ -1021,7 +1021,7 @@ bool is_goal_reachable_on_path(
   }
   const bool goal_is_in_current_segment_lanes = std::any_of(
     goal_check_lanes.begin(), goal_check_lanes.end(), [&](const lanelet::ConstLanelet & lane) {
-      return autoware::experimental::lanelet2_utils::is_in_lanelet(lane, goal_pose);
+      return autoware::experimental::lanelet2_utils::is_in_lanelet(goal_pose, lane);
     });
 
   // check that goal is in current neighbor shoulder lane
@@ -1031,7 +1031,7 @@ bool is_goal_reachable_on_path(
                                                    : route_handler.getRightShoulderLanelet(lane);
       if (
         shoulder_lane &&
-        autoware::experimental::lanelet2_utils::is_in_lanelet(*shoulder_lane, goal_pose)) {
+        autoware::experimental::lanelet2_utils::is_in_lanelet(goal_pose, *shoulder_lane)) {
         return true;
       }
     }

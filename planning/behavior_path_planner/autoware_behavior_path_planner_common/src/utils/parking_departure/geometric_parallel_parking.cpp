@@ -505,7 +505,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
     for (const auto & p : path.points) {
       for (const auto & lane : lanes) {
         if (
-          autoware::experimental::lanelet2_utils::is_in_lanelet(lane, p.point.pose) &&
+          autoware::experimental::lanelet2_utils::is_in_lanelet(p.point.pose, lane) &&
           std::find(path_lane_ids.begin(), path_lane_ids.end(), lane.id()) == path_lane_ids.end()) {
           path_lane_ids.push_back(lane.id());
         }
