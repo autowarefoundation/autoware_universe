@@ -43,6 +43,26 @@ bool all_history_matches_color(const std::vector<TrafficSignalAndTime> & history
   });
 }
 
+// Resolve color transition during flashing state.
+// During flashing, UNKNOWN detections appear intermittently between real colors,
+// so we hold the last known color and only transition on clear color changes.
+uint8_t resolve_flashing_color_transition(uint8_t current_state, uint8_t detected_color)
+{
+  if (current_state == TrafficSignalElement::GREEN && detected_color == TrafficSignalElement::RED) {
+    return TrafficSignalElement::RED;
+  }
+  if (current_state == TrafficSignalElement::RED && detected_color == TrafficSignalElement::GREEN) {
+    return TrafficSignalElement::GREEN;
+  }
+  if (current_state == TrafficSignalElement::UNKNOWN) {
+    if (detected_color == TrafficSignalElement::RED) {
+      return TrafficSignalElement::RED;
+    }
+    return TrafficSignalElement::GREEN;
+  }
+  return current_state;
+}
+
 FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : config_(config)
 {
 }
@@ -123,30 +143,12 @@ uint8_t FlashingDetector::update_and_get_color_state(const TrafficSignal & signa
   // First observation: initialize with the detected color
   if (current_color_state_.count(id) == 0) {
     current_color_state_.emplace(id, color);
-  } else if (is_flashing_.at(id) == false) {
+  } else if (!is_flashing_.at(id)) {
     // Not flashing: simply follow the detected color
     current_color_state_.at(id) = color;
-  } else if (is_flashing_.at(id) == true) {
-    // During flashing: only update the color on definitive transitions.
-    // While flashing, UNKNOWN detections appear intermittently between real colors,
-    // so we hold the last known color and only transition on clear color changes.
-    if (
-      current_color_state_.at(id) == TrafficSignalElement::GREEN &&
-      color == TrafficSignalElement::RED) {
-      // Flashing green ended, now red
-      current_color_state_.at(id) = TrafficSignalElement::RED;
-    } else if (
-      current_color_state_.at(id) == TrafficSignalElement::RED &&
-      color == TrafficSignalElement::GREEN) {
-      // Red ended, now green
-      current_color_state_.at(id) = TrafficSignalElement::GREEN;
-    } else if (current_color_state_.at(id) == TrafficSignalElement::UNKNOWN) {
-      // Previous state is unknown: resolve to a concrete color once detected
-      if (color == TrafficSignalElement::GREEN || color == TrafficSignalElement::UNKNOWN)
-        current_color_state_.at(id) = TrafficSignalElement::GREEN;
-      if (color == TrafficSignalElement::RED)
-        current_color_state_.at(id) = TrafficSignalElement::RED;
-    }
+  } else {
+    current_color_state_.at(id) =
+      resolve_flashing_color_transition(current_color_state_.at(id), color);
   }
 
   return current_color_state_.at(id);
