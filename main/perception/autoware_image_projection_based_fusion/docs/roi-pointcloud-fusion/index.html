@@ -23303,16 +23303,65 @@
 </thead>
 <tbody>
 <tr>
-<td>fuse_unknown_only</td>
+<td>fusion_enabled_classes.UNKNOWN</td>
 <td>boolean</td>
-<td>Whether to fuse only UNKNOWN clusters.</td>
+<td>Whether to enable fusion for objects with UNKNOWN class.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.CAR</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with CAR class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.TRUCK</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with TRUCK class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.BUS</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with BUS class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.TRAILER</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with TRAILER class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.MOTORCYCLE</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with MOTORCYCLE class.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.BICYCLE</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with BICYCLE class.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fusion_enabled_classes.PEDESTRIAN</td>
+<td>boolean</td>
+<td>Whether to enable fusion for objects with PEDESTRIAN class.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>override_class_with_unknown</td>
 <td>boolean</td>
-<td>Whether to override class of output cluster with UNKNOWN. It is effective only when fuse_unknown_only is false.</td>
+<td>Whether to override class of fused output cluster with UNKNOWN.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>

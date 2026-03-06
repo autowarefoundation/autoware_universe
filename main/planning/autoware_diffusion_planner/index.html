@@ -22940,7 +22940,7 @@
 <h2 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">#</a></h2>
 <h3 id="1-prerequisites">(1) Prerequisites<a class="headerlink" href="#1-prerequisites" title="Permanent link">#</a></h3>
 <p>Make sure that the directory specified in <code>planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml</code> points to the correct model version and contains the required model weight and parameter files.</p>
-<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/diffusion_planner/v3.0/
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ls<span class="w"> </span>~/autoware_data/diffusion_planner/v3.1/
 diffusion_planner.onnx<span class="w"> </span>diffusion_planner.param.json
 </code></pre></div>
 <p>This can be downloaded from <a href="https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh">setup-dev-env.sh</a>.</p>
@@ -23384,6 +23384,12 @@ The model version is defined either by the directory name provided to the node o
 <td><strong>3.0</strong></td>
 <td>2026/01/09</td>
 <td>- Added <code>TURN_INDICATOR_OUTPUT_KEEP</code> to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.</td>
+<td>OK</td>
+</tr>
+<tr>
+<td><strong>3.1</strong></td>
+<td>2026/03/05</td>
+<td>- ONNX simplified model for faster TRT engine build and reduced GPU memory. <br>- Same weights as v3.0 (no retraining).</td>
 <td>OK</td>
 </tr>
 </tbody>

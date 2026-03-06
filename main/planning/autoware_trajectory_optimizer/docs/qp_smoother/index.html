@@ -14,7 +14,7 @@
         <link rel="prev" href="../mpt_optimizer/">
       
       
-        <link rel="next" href="../../../autoware_trajectory_ranker/">
+        <link rel="next" href="../trajectory_optimizer_specification/">
       
       
         
@@ -22906,10 +22906,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#orientation-correction" class="md-nav__link">
+  <a href="#orientation-preservation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Orientation Correction
+        Orientation Preservation
       
     </span>
   </a>
@@ -22934,10 +22934,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example-1-enable-velocity-based-fidelity" class="md-nav__link">
+  <a href="#example-1-disable-velocity-based-fidelity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example 1: Enable Velocity-Based Fidelity
+        Example 1: Disable Velocity-Based Fidelity
       
     </span>
   </a>
@@ -23242,7 +23242,7 @@ where σ(x) = 1 / (1 + exp(-x))
 </li>
 </ul>
 <ul>
-<li><code>num_constrained_points_end</code> (default: 3)<ul>
+<li><code>num_constrained_points_end</code> (default: 0)<ul>
 <li>Number of points from trajectory end to fix as hard constraints</li>
 <li>Set to 0 for maximum smoothness at trajectory end</li>
 <li>Increase if you need to preserve goal state and acceleration</li>
@@ -23274,26 +23274,27 @@ where σ(x) = 1 / (1 + exp(-x))
 </ul>
 </li>
 </ul>
-<h3 id="orientation-correction">Orientation Correction<a class="headerlink" href="#orientation-correction" title="Permanent link">#</a></h3>
+<h3 id="orientation-preservation">Orientation Preservation<a class="headerlink" href="#orientation-preservation" title="Permanent link">#</a></h3>
 <ul>
-<li><code>fix_orientation</code> (default: true)<ul>
-<li>Apply orientation correction post-solve</li>
+<li><code>preserve_input_trajectory_orientation</code> (default: false)<ul>
+<li>Copy orientations from the original input trajectory (nearest-neighbor match) instead of
+  deriving them from the smoothed path tangent</li>
 </ul>
 </li>
 </ul>
 <ul>
-<li><code>orientation_correction_threshold_deg</code> (default: 5.0)<ul>
-<li>Yaw threshold for correcting QP output orientation</li>
+<li><code>max_distance_for_orientation_m</code> (default: 5.0)<ul>
+<li>Maximum search distance for nearest-neighbor orientation matching [m]</li>
 </ul>
 </li>
 </ul>
 <h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">#</a></h2>
-<h3 id="example-1-enable-velocity-based-fidelity">Example 1: Enable Velocity-Based Fidelity<a class="headerlink" href="#example-1-enable-velocity-based-fidelity" title="Permanent link">#</a></h3>
-<p>To enable velocity-dependent smoothing for stop-and-go scenarios:</p>
-<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity<span class="w"> </span><span class="nb">true</span>
+<h3 id="example-1-disable-velocity-based-fidelity">Example 1: Disable Velocity-Based Fidelity<a class="headerlink" href="#example-1-disable-velocity-based-fidelity" title="Permanent link">#</a></h3>
+<p>Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.use_velocity_based_fidelity<span class="w"> </span><span class="nb">false</span>
 </code></pre></div>
 <h3 id="example-2-tune-velocity-threshold">Example 2: Tune Velocity Threshold<a class="headerlink" href="#example-2-tune-velocity-threshold" title="Permanent link">#</a></h3>
-<p>To make the transition occur at higher speeds (0.5 m/s instead of 0.2 m/s):</p>
+<p>To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):</p>
 <div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>param<span class="w"> </span><span class="nb">set</span><span class="w"> </span>/planning/trajectory_optimizer<span class="w"> </span>trajectory_qp_smoother.velocity_threshold_mps<span class="w"> </span><span class="m">0</span>.5
 </code></pre></div>
 <h3 id="example-3-more-aggressive-low-speed-smoothing">Example 3: More Aggressive Low-Speed Smoothing<a class="headerlink" href="#example-3-more-aggressive-low-speed-smoothing" title="Permanent link">#</a></h3>
@@ -23402,13 +23403,13 @@ ros2<span class="w"> </span>topic<span class="w"> </span><span class="nb">echo</
         
         
           
-          <a href="../../../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_trajectory_ranker">
+          <a href="../trajectory_optimizer_specification/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Optimizer - Specification and Assumptions">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_trajectory_ranker
+                Trajectory Optimizer - Specification and Assumptions
               </div>
             </div>
             <div class="md-footer__button md-icon">

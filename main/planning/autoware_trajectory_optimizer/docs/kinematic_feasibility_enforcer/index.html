@@ -22994,7 +22994,8 @@ downstream optimization plugins (e.g., QP smoother).</p>
 <p>The yaw rate limit restricts heading changes over time:</p>
 <div class="highlight"><pre><span></span><code>Δψ_rate = ψ_dot_max * Δt
 </code></pre></div>
-<p>where <code>Δt</code> is the time interval between trajectory points.</p>
+<p>where <code>Δt</code> is a single average time step computed from all <code>time_from_start</code> deltas across
+the trajectory (fallback: 0.1 s). The same value is used for every segment.</p>
 <h4 id="3-combined-constraint">3. Combined Constraint<a class="headerlink" href="#3-combined-constraint" title="Permanent link">#</a></h4>
 <p>At each trajectory segment, the feasible yaw change is:</p>
 <div class="highlight"><pre><span></span><code>Δψ_max = min(Δψ_geom, Δψ_rate)
@@ -23023,8 +23024,8 @@ vehicle pose:</p>
 </ol>
 <h3 id="key-algorithm-properties">Key Algorithm Properties<a class="headerlink" href="#key-algorithm-properties" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Arc length preservation</strong>: Maintains <code>dt = s / v</code> relationship for each
-  segment</li>
+<li><strong>Arc length preservation</strong>: Segment distances are preserved; timing uses a single
+  <code>avg_dt</code> averaged from <code>time_from_start</code> deltas across the whole trajectory</li>
 <li><strong>Forward causality</strong>: Each point depends only on previous points (no
   backward propagation)</li>
 <li><strong>Velocity preservation</strong>: Original velocity profile unchanged</li>
@@ -23040,8 +23041,8 @@ trajectory are pre-computed and stored:</p>
 <span class="w">  </span><span class="n">segment_distances</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">max</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span><span class="w"> </span><span class="n">min_segment_distance</span><span class="p">));</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>This ensures arc lengths remain constant during forward propagation, preserving
-the implicit timing: <code>dt_i = s_i / v_i</code>.</p>
+<p>This ensures arc lengths remain constant during forward propagation. Timing is determined
+by the single <code>avg_dt</code> computed from <code>time_from_start</code> deltas, not per-segment kinematics.</p>
 <h3 id="heading-update-logic">Heading Update Logic<a class="headerlink" href="#heading-update-logic" title="Permanent link">#</a></h3>
 <p>At each iteration:</p>
 <ol>
@@ -23082,13 +23083,10 @@ the implicit timing: <code>dt_i = s_i / v_i</code>.</p>
 </ul>
 <h2 id="interaction-with-other-plugins">Interaction with Other Plugins<a class="headerlink" href="#interaction-with-other-plugins" title="Permanent link">#</a></h2>
 <h3 id="plugin-execution-order">Plugin Execution Order<a class="headerlink" href="#plugin-execution-order" title="Permanent link">#</a></h3>
-<p>The kinematic feasibility enforcer should run <strong>before</strong> the QP smoother in
-the plugin pipeline to ensure:</p>
-<ol>
-<li>Trajectory points respect kinematic constraints</li>
-<li>QP smoother operates on kinematically feasible input</li>
-<li>Arc lengths and timing structure are preserved for QP optimization</li>
-</ol>
+<p>In the default pipeline the kinematic feasibility enforcer runs <strong>twice</strong>: once before the QP
+smoother and once after. The first pass pre-conditions the path so the QP solver operates on
+a kinematically plausible input. The second pass catches any constraint violations reintroduced
+by the smoothing. Both passes use the same parameter set and operate independently.</p>
 <h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
 <ol>
 <li>
@@ -23096,8 +23094,9 @@ the plugin pipeline to ensure:</p>
    from the original planner path, especially for aggressive maneuvers.</p>
 </li>
 <li>
-<p><strong>Velocity-time assumptions</strong>: Algorithm assumes constant velocity within
-   each segment (<code>dt = s / v</code>). Large velocity changes may affect accuracy.</p>
+<p><strong>Single average dt</strong>: The yaw rate constraint uses one <code>avg_dt</code> averaged from all
+   <code>time_from_start</code> deltas. In practice this equals the configured upstream <code>time_step_s</code>
+   since the input has constant dt and <code>time_from_start</code> is not modified by preceding plugins.</p>
 </li>
 <li>
 <p><strong>Steering dynamics</strong>: Does not model steering rate limits or steering
