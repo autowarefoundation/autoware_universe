@@ -84,20 +84,21 @@ void FlashingDetector::update_signal_history(
     signal_history_[id].push_back({signal, current_time});
   }
 
-  auto history_iter = signal_history_.find(id);
-  if (history_iter == signal_history_.end()) return;
+  remove_expired_entries(id, current_time);
+}
 
-  auto & history = history_iter->second;
-  history.erase(
-    std::remove_if(
-      history.begin(), history.end(),
-      [&](const TrafficSignalAndTime & entry) {
-        return (current_time - entry.second).seconds() > config_.last_colors_hold_time;
-      }),
-    history.end());
+void FlashingDetector::remove_expired_entries(lanelet::Id id, const rclcpp::Time & current_time)
+{
+  if (signal_history_.count(id) == 0) return;
+
+  auto & history = signal_history_.at(id);
+  const auto is_expired = [&](const TrafficSignalAndTime & entry) {
+    return (current_time - entry.second).seconds() > config_.last_colors_hold_time;
+  };
+  history.erase(std::remove_if(history.begin(), history.end(), is_expired), history.end());
 
   if (history.empty()) {
-    signal_history_.erase(history_iter);
+    signal_history_.erase(id);
   }
 }
 
