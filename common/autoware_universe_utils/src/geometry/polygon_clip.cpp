@@ -241,7 +241,7 @@ autoware::universe_utils::Polygon2d get_points(const ExtendedPolygon & polygon)
   do {
     const auto & vertex = polygon.vertices[v_index];
     autoware::universe_utils::Point2d point(vertex.x, vertex.y);
-    if (unique_points.insert(std::make_pair(vertex.x, vertex.y)).second) {
+    if (unique_points.emplace(vertex.x, vertex.y).second) {
       outer_ringA.push_back(point);
     }
 
