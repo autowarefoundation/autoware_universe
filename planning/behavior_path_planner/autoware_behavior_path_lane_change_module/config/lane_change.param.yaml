@@ -60,7 +60,7 @@
           lateral_distance_max_threshold: 0.5           # [m]
           longitudinal_distance_min_threshold: 1.0      # [m]
           longitudinal_velocity_delta_time: 0.0         # [s]
-          extended_polygon_policy: "along-path"         # [-] available options are `rectangle` or `along-path`
+          extended_polygon_policy: "along_path"         # [-] available options are `rectangle` or `along_path`
         execution:
           expected_front_deceleration: -1.0
           expected_rear_deceleration: -1.0
