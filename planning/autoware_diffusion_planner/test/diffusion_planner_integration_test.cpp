@@ -50,7 +50,6 @@ protected:
        {"args_path", "/tmp/test_args.json"},
        {"timer_period", 0.1},
        {"ignore_unknown_neighbors", true},
-       {"predict_neighbor_trajectory", false},
        {"publish_debug_markers", false}});
 
     // Note: This will fail to initialize ONNX Runtime without a valid model

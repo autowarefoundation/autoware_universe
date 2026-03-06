@@ -18,6 +18,9 @@
 #include <autoware/pyplot/patches.hpp>
 #include <autoware/pyplot/pyplot.hpp>
 
+#include <pybind11/embed.h>
+#include <pybind11/stl.h>
+
 #include <string>
 #include <vector>
 
@@ -34,7 +37,7 @@
 namespace autoware::boundary_departure_checker
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
-void save_figure(const std::string & sub_dir = "");
+void save_figure(autoware::pyplot::PyPlot & plt, const std::string & sub_dir = "");
 #endif
 }  // namespace autoware::boundary_departure_checker
 #endif  // TEST_PLOT_UTILS_HPP_

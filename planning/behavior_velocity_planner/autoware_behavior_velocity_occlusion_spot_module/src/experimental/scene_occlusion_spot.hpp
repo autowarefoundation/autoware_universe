@@ -15,7 +15,7 @@
 #ifndef EXPERIMENTAL__SCENE_OCCLUSION_SPOT_HPP_
 #define EXPERIMENTAL__SCENE_OCCLUSION_SPOT_HPP_
 
-#include "../occlusion_spot_utils.hpp"
+#include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -27,11 +27,11 @@
 
 namespace autoware::behavior_velocity_planner::experimental
 {
+using occlusion_spot_utils::DebugData;
+using occlusion_spot_utils::PlannerParam;
+
 class OcclusionSpotModule : public SceneModuleInterface
 {
-  using PlannerParam = occlusion_spot_utils::PlannerParam;
-  using DebugData = occlusion_spot_utils::DebugData;
-
 public:
   OcclusionSpotModule(
     const lanelet::Id module_id, const PlannerData & planner_data,
