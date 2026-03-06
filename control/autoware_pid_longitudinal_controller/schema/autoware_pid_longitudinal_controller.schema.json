@@ -221,11 +221,6 @@
           "description": "target acceleration in STOPPED state [m/s^2]",
           "default": "-3.4"
         },
-        "stopped_jerk": {
-          "type": "number",
-          "description": "target jerk in STOPPED state [m/s^3]",
-          "default": "-5.0"
-        },
         "emergency_vel": {
           "type": "number",
           "description": "target velocity in EMERGENCY state [m/s]",
@@ -346,7 +341,6 @@
         "smooth_stop_strong_stop_dist",
         "stopped_vel",
         "stopped_acc",
-        "stopped_jerk",
         "emergency_vel",
         "emergency_acc",
         "emergency_jerk",
