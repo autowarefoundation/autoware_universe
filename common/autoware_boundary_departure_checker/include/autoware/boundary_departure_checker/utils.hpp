@@ -400,6 +400,50 @@ std::optional<std::pair<double, double>> is_point_shifted(
   const autoware::boundary_departure_checker::Pose & prev_iter_pt,
   const autoware::boundary_departure_checker::Pose & curr_iter_pt, const double th_shift_m,
   const double th_yaw_diff_rad);
+
+/**
+ * @brief Evaluates all footprint projections for a specific side and selects the most
+ * critical/closest ones.
+ *
+ * Evaluates multiple abnormality-aware projections (e.g., NORMAL, LOCALIZATION) for each
+ * trajectory index, and selects the best candidate based on lateral distance and classification
+ * logic (CRITICAL/NEAR).
+ *
+ * @param projections_to_bound Footprint sides' projections to boundaries.
+ * @param param Checker parameters.
+ * @param min_braking_dist Minimum braking distance.
+ * @param max_braking_dist Maximum braking distance.
+ * @param side_key Side to process (left or right).
+ * @return Vector of closest projections with departure classification, or std::nullopt on failure.
+ */
+std::optional<ProjectionsToBound> get_closest_projections_for_side(
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key);
+
+/**
+ * @brief Evaluates multiple footprint candidates and selects the projection with the highest
+ * departure priority.
+ *
+ * This function determines the worst-case boundary departure scenario for a specific point in time
+ * by applying a strict safety hierarchy:
+ * 1. Higher severity states (CRITICAL > APPROACHING > NEAR) always override lower ones.
+ * 2. If candidates share the exact same departure type, the one with the shortest lateral distance
+ * to the boundary is selected.
+ *
+ * @param candidate_projections List of projections from various footprint types
+ * @param param Configuration parameters containing safety thresholds
+ * @param min_braking_dist Minimum longitudinal distance required to physically stop the vehicle.
+ * @param max_braking_dist Maximum longitudinal distance threshold to consider a boundary relevant.
+ * @param side_key The lateral side of the ego vehicle being evaluated (LEFT or RIGHT).
+ * @param previous_longitudinal_distance The longitudinal distance of the last recorded projection,
+ * used to safely downsample redundant non-critical points.
+ * @return The projection representing the most severe departure threat, or std::nullopt if no
+ * departure exists or it was filtered out.
+ */
+std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
+  const std::vector<ProjectionToBound> & candidate_projections, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key,
+  const std::optional<double> previous_longitudinal_distance);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
