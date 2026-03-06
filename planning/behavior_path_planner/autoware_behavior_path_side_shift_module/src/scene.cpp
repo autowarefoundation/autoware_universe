@@ -43,9 +43,13 @@ SideShiftModule::SideShiftModule(
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
-  const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
+  const std::shared_ptr<PlanningFactorInterface> planning_factor_interface,
+  const std::shared_ptr<InsertedLateralOffsetState> & inserted_lateral_offset_state,
+  const std::shared_ptr<RequestedLateralOffsetState> & requested_lateral_offset_state)
 : SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
-  parameters_{parameters}
+  parameters_{parameters},
+  inserted_lateral_offset_state_{inserted_lateral_offset_state},
+  requested_lateral_offset_state_{requested_lateral_offset_state}
 {
 }
 
@@ -64,6 +68,12 @@ void SideShiftModule::initVariables()
   path_shifter_ = PathShifter{};
   resetPathCandidate();
   resetPathReference();
+  if (requested_lateral_offset_state_) {
+    requested_lateral_offset_state_->value.store(0.0);
+  }
+  if (inserted_lateral_offset_state_) {
+    inserted_lateral_offset_state_->value.store(0.0);
+  }
 }
 
 void SideShiftModule::processOnEntry()
@@ -180,13 +190,16 @@ bool SideShiftModule::canTransitSuccessState()
 
 void SideShiftModule::updateData()
 {
-  if (
-    planner_data_->lateral_offset != nullptr &&
-    planner_data_->lateral_offset->stamp != latest_lateral_offset_stamp_) {
-    if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
-      lateral_offset_change_request_ = true;
-      requested_lateral_offset_ = planner_data_->lateral_offset->lateral_offset;
-      latest_lateral_offset_stamp_ = planner_data_->lateral_offset->stamp;
+  if (requested_lateral_offset_state_) {
+    const double requested = requested_lateral_offset_state_->value.load();
+    // Only react when the requested value actually changes meaningfully.
+    constexpr double REQUEST_THRESHOLD = 1.0e-4;
+    if (std::fabs(requested - requested_lateral_offset_) > REQUEST_THRESHOLD) {
+      if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
+        lateral_offset_change_request_ = true;
+        requested_lateral_offset_ = requested;
+        latest_lateral_offset_stamp_ = clock_->now();
+      }
     }
   }
 
@@ -259,8 +272,9 @@ void SideShiftModule::replaceShiftLine()
   lateral_offset_change_request_ = false;
   inserted_lateral_offset_ = requested_lateral_offset_;
   inserted_shift_line_ = new_sl;
-
-  return;
+  if (inserted_lateral_offset_state_) {
+    inserted_lateral_offset_state_->value.store(inserted_lateral_offset_);
+  }
 }
 
 BehaviorModuleOutput SideShiftModule::plan()
