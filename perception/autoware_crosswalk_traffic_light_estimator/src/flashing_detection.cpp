@@ -26,10 +26,18 @@ FlashingDetector::FlashingDetector(const FlashingDetectionConfig & config) : con
 uint8_t FlashingDetector::estimate_stable_color(
   const TrafficSignal & signal, const rclcpp::Time & current_time)
 {
+  update_signal_history(signal, current_time);
+  update_flashing_state(signal);
+  return update_and_get_color_state(signal);
+}
+
+void FlashingDetector::update_signal_history(
+  const TrafficSignal & signal, const rclcpp::Time & current_time)
+{
   const auto id = signal.traffic_light_group_id;
   const auto & elements = signal.elements;
 
-  // --- Append this signal to history ---
+  // Append this signal to history.
   // Skip empty signals and occluded signals (UNKNOWN with confidence=1)
   if (
     !elements.empty() && !(elements.front().color == TrafficSignalElement::UNKNOWN &&
@@ -41,7 +49,7 @@ uint8_t FlashingDetector::estimate_stable_color(
     }
   }
 
-  // --- Remove stale entries for this signal ---
+  // Remove stale entries for this signal
   if (signal_history_.count(id) > 0) {
     auto & history = signal_history_.at(id);
     for (auto history_entry = history.begin(); history_entry != history.end();) {
@@ -55,9 +63,6 @@ uint8_t FlashingDetector::estimate_stable_color(
       signal_history_.erase(id);
     }
   }
-
-  update_flashing_state(signal);
-  return update_and_get_color_state(signal);
 }
 
 void FlashingDetector::clear_state(lanelet::Id id)

@@ -55,6 +55,7 @@ public:
   void clear_state(lanelet::Id id);
 
 private:
+  void update_signal_history(const TrafficSignal & signal, const rclcpp::Time & current_time);
   void update_flashing_state(const TrafficSignal & signal);
   uint8_t update_and_get_color_state(const TrafficSignal & signal);
 
