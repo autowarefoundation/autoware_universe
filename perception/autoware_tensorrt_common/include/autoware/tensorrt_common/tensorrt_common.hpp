@@ -312,6 +312,16 @@ public:
   bool enqueueV3(cudaStream_t stream);
 
   /**
+   * @brief Get the underlying TensorRT execution context.
+   *
+   * This is useful for advanced features such as CUDA Graph capture,
+   * where callers need to call context->setAuxStreams() before capture.
+   *
+   * @return Raw pointer to the execution context (owned by TrtCommon).
+   */
+  [[nodiscard]] nvinfer1::IExecutionContext * getContext() const noexcept;
+
+  /**
    * @brief Print per-layer information.
    */
   void printProfiling() const;

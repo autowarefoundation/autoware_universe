@@ -447,6 +447,11 @@ bool TrtCommon::enqueueV3(cudaStream_t stream)
   return context_->enqueueV3(stream);
 }
 
+nvinfer1::IExecutionContext * TrtCommon::getContext() const noexcept
+{
+  return context_.get();
+}
+
 void TrtCommon::printProfiling() const
 {
   logger_->log(
