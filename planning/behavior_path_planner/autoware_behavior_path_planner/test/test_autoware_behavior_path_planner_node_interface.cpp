@@ -29,15 +29,9 @@ using autoware::behavior_path_planner::publishMandatoryTopics;
 class PlanningModuleInterfaceTest : public ::testing::Test
 {
 protected:
-  void SetUp() override
-  {
-    rclcpp::init(0, nullptr);
-  }
+  void SetUp() override { rclcpp::init(0, nullptr); }
 
-  void TearDown() override
-  {
-    (void)rclcpp::shutdown();
-  }
+  void TearDown() override { (void)rclcpp::shutdown(); }
 };
 
 TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
