@@ -29,10 +29,14 @@ inline std::default_random_engine engine(seed_gen());
 
 inline Eigen::Vector2d nrand_2d(const Eigen::Matrix2d & cov)
 {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+  // on NVIDIA DRIVE AGX Thor, Eigen triggers a false positive warning
   Eigen::JacobiSVD<Eigen::Matrix2d> svd;
   svd.compute(cov, Eigen::ComputeFullU | Eigen::ComputeFullV);
   Eigen::Vector2d std = svd.singularValues();
   std = std.cwiseMax(0.01);
+#pragma GCC diagnostic pop
 
   std::normal_distribution<> dist(0.0, 1.0);
   Eigen::Vector2d xy;

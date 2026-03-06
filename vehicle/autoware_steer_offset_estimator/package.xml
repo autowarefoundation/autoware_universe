@@ -23,7 +23,9 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>tl_expected</depend>
+  <depend>yaml_cpp_vendor</depend>
   <exec_depend>autoware_global_parameter_loader</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>

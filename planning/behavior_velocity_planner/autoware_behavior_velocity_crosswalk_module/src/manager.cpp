@@ -82,8 +82,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".obstruction_prevention.enable_obstruction_prevention");
   cp.target_vehicle_velocity =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.target_vehicle_velocity");
-  cp.max_target_vehicle_lateral_offset = get_or_declare_parameter<double>(
-    node, ns + ".obstruction_prevention.max_target_vehicle_lateral_offset");
+  cp.required_lateral_clearance = get_or_declare_parameter<double>(
+    node, ns + ".obstruction_prevention.required_lateral_clearance");
   cp.required_clearance =
     get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.required_clearance");
   cp.min_acc_for_target_vehicle =
@@ -128,6 +128,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".pass_judge.timeout_set_for_no_intention_to_walk");
   cp.timeout_ego_stop_for_yield =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.timeout_ego_stop_for_yield");
+  cp.min_vru_crossing_width =
+    get_or_declare_parameter<double>(node, ns + ".pass_judge.min_vru_crossing_width");
 
   // param for target area & object
   cp.crosswalk_attention_range =
