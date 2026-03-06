@@ -72,9 +72,22 @@ void publishMandatoryTopics(
     autoware_adapi_v1_msgs::msg::OperationModeState{});
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode)
+class PlanningModuleInterfaceTest : public ::testing::Test
 {
-  rclcpp::init(0, nullptr);
+protected:
+  void SetUp() override
+  {
+    rclcpp::init(0, nullptr);
+  }
+
+  void TearDown() override
+  {
+    (void)rclcpp::shutdown();
+  }
+};
+
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode)
+{
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
 
@@ -89,13 +102,10 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode
   // test for trajectory with empty/one point/overlapping point
   ASSERT_NO_THROW(
     test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
-  rclcpp::shutdown();
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
 {
-  rclcpp::init(0, nullptr);
-
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
 
@@ -110,12 +120,10 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
   // test for trajectory with empty/one point/overlapping point
   ASSERT_NO_THROW(
     test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
-  rclcpp::shutdown();
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
-  rclcpp::init(0, nullptr);
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
 
@@ -129,6 +137,5 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
-  rclcpp::shutdown();
 }
 }  // namespace autoware::scenario_selector

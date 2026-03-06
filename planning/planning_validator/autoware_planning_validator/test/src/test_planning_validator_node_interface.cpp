@@ -77,7 +77,21 @@ void publishMandatoryTopics(
     autoware::test_utils::makeBehaviorNormalRoute());
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
+class PlanningModuleInterfaceTest : public ::testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    rclcpp::init(0, nullptr);
+  }
+
+  void TearDown() override
+  {
+    (void)rclcpp::shutdown();
+  }
+};
+
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
@@ -95,7 +109,7 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
     test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
 }
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();

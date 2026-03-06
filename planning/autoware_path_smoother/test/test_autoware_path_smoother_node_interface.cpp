@@ -24,10 +24,22 @@
 #include <string>
 #include <vector>
 
-TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
+class PlanningModuleInterfaceTest : public ::testing::Test
 {
-  rclcpp::init(0, nullptr);
+protected:
+  void SetUp() override
+  {
+    rclcpp::init(0, nullptr);
+  }
 
+  void TearDown() override
+  {
+    (void)rclcpp::shutdown();
+  }
+};
+
+TEST_F(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
+{
   auto test_manager =
     std::make_shared<autoware::planning_test_manager::PlanningInterfaceTestManager>();
 
@@ -68,6 +80,4 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
   // test with trajectory with empty/one point/overlapping point
   ASSERT_NO_THROW_WITH_ERROR_MSG(
     test_manager->testWithAbnormalPath(test_target_node, input_path_topic));
-
-  rclcpp::shutdown();
 }
