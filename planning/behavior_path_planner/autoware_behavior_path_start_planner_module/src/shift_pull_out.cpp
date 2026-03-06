@@ -22,8 +22,8 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -31,10 +31,10 @@
 #include <utility>
 #include <vector>
 
+using autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline;
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -266,7 +266,7 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
 
   // generate road lane reference path
   const auto arc_position_start =
-    getArcCoordinatesOnEgoCenterline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
+    get_arc_coordinates_on_ego_centerline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
   const double s_start = std::max(arc_position_start.length - backward_path_length, 0.0);
   const auto path_end_info =
     autoware::behavior_path_planner::utils::parking_departure::calcEndArcLength(
