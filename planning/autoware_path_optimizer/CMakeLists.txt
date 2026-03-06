@@ -62,9 +62,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} acados_interface)
-if(PATH_OPTIMIZER_HAS_ACADOS_GENERATED)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE HAS_ACADOS_GENERATED)
-endif()
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::path_optimizer::PathOptimizer"

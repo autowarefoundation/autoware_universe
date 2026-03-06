@@ -20,7 +20,6 @@
 #include <iostream>
 #include <sstream>
 
-#ifdef HAS_ACADOS_GENERATED
 AcadosInterface::AcadosInterface(int max_iter, double tol)
 {
   capsule_ = curvilinear_bicycle_model_spatial_acados_create_capsule();
@@ -211,4 +210,3 @@ AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
 
   return solution;
 }
-#endif  // HAS_ACADOS_GENERATED

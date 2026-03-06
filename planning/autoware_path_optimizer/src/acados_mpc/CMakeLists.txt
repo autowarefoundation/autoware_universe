@@ -50,16 +50,12 @@ add_custom_command(
   VERBATIM
 )
 
-# When we build this target, generated code exists; tell parent so it defines HAS_ACADOS_GENERATED too.
-set(PATH_OPTIMIZER_HAS_ACADOS_GENERATED TRUE PARENT_SCOPE)
-
+# Stub header is committed to repo for CI/clang-tidy
 # --- acados_interface library ---
 add_library(acados_interface SHARED
   src/acados_interface.cpp
   ${GENERATED_MPC_FILES}
 )
-
-target_compile_definitions(acados_interface PRIVATE HAS_ACADOS_GENERATED)
 
 target_include_directories(acados_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
