@@ -19,7 +19,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -96,8 +96,9 @@ std::optional<PullOutPath> FreespacePullOut::plan(
   // push back generate road lane path between end pose and goal pose to last path
   const Pose goal_pose = route_handler->getGoalPose();
   constexpr double offset_from_end_pose = 1.0;
-  const auto arc_position_end = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    road_lanes, end_pose, route_handler->getLaneletMapPtr());
+  const auto arc_position_end =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      road_lanes, end_pose, route_handler->getLaneletMapPtr());
   const double s_start = std::max(arc_position_end.length + offset_from_end_pose, 0.0);
   const auto path_end_info =
     autoware::behavior_path_planner::utils::parking_departure::calcEndArcLength(

@@ -23,7 +23,6 @@
 
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -516,7 +515,8 @@ bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
   const lanelet::ConstLanelets current_lanes = utils::getCurrentLanes(planner_data_);
   const double lateral_distance_to_center_lane =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr)
       .distance;
 
   return std::abs(lateral_distance_to_center_lane) < parameters_->th_distance_to_middle_of_the_road;
@@ -1563,7 +1563,8 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const auto arc_position_pose =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr);
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      pull_out_lanes, start_pose, lanelet_map_ptr);
 
   // common buffer distance for both front and back
   static constexpr double buffer = 30.0;
@@ -1609,7 +1610,8 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
   // the lane's rearmost point to prevent lane departure.
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_arc_length =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      pull_out_lanes, start_pose, lanelet_map_ptr)
       .length;
   const double allowed_backward_distance = std::clamp(
     current_arc_length - planner_data_->parameters.base_link2rear, 0.0,
@@ -1626,9 +1628,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
           parameters_->collision_check_margin_from_front_object))
       continue;
 
-    const double backed_pose_arc_length = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-                                            pull_out_lanes, *backed_pose, lanelet_map_ptr)
-                                            .length;
+    const double backed_pose_arc_length =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+        pull_out_lanes, *backed_pose, lanelet_map_ptr)
+        .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
       [](double acc, const auto & lane) { return acc + lanelet::geometry::length2d(lane); });
@@ -1702,9 +1705,11 @@ bool StartPlannerModule::hasReachedPullOutEnd() const
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const auto arclength_current =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr);
-  const auto arclength_pull_out_end = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr);
+  const auto arclength_pull_out_end =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
 
   // offset to not finish the module before engage
   constexpr double offset = 0.1;
@@ -1773,7 +1778,8 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_shift_length =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr)
       .distance;
 
   constexpr bool egos_lane_is_shifted = true;
@@ -1982,8 +1988,9 @@ std::optional<PullOutStatus> StartPlannerModule::planFreespacePath(
     planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto current_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    current_lanes, current_pose, route_handler->getLaneletMapPtr());
+  const auto current_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, route_handler->getLaneletMapPtr());
 
   const double s_start = std::max(0.0, current_arc_coords.length + end_pose_search_start_distance);
   const double s_end = current_arc_coords.length + end_pose_search_end_distance;

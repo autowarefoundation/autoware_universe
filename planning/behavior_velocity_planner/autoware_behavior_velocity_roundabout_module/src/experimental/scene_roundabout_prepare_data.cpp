@@ -325,16 +325,21 @@ std::optional<PathLanelets> RoundaboutModule::generatePathLanelets(
   // entry2ego if exist
   const auto [assigned_lane_start, assigned_lane_end] = assigned_lane_interval;
   if (closest_idx > assigned_lane_start) {
-    path_lanelets.all.push_back(
-      util::generatePathLanelet(
-        path, assigned_lane_start, closest_idx, width, path_lanelet_interval));
+    const auto path_lanelet_entry2ego_opt = util::generatePathLanelet(
+      path, assigned_lane_start, closest_idx, width, path_lanelet_interval);
+    if (path_lanelet_entry2ego_opt.has_value()) {
+      path_lanelets.all.push_back(*path_lanelet_entry2ego_opt);
+    }
   }
 
   // ego_or_entry2exit
   const auto ego_or_entry_start = std::max(closest_idx, assigned_lane_start);
-  path_lanelets.ego_or_entry2exit = util::generatePathLanelet(
+  const auto path_lanelet_ego_or_entry2_exit_opt = util::generatePathLanelet(
     path, ego_or_entry_start, assigned_lane_end, width, path_lanelet_interval);
-  path_lanelets.all.push_back(path_lanelets.ego_or_entry2exit);
+  if (path_lanelet_ego_or_entry2_exit_opt.has_value()) {
+    path_lanelets.ego_or_entry2exit = *path_lanelet_ego_or_entry2_exit_opt;
+    path_lanelets.all.push_back(path_lanelets.ego_or_entry2exit);
+  }
 
   // next
   if (assigned_lane_end < path.points.size() - 1) {
@@ -342,9 +347,12 @@ std::optional<PathLanelets> RoundaboutModule::generatePathLanelets(
     const auto next_lane_interval_opt = util::findLaneIdsInterval(path, {next_id});
     if (next_lane_interval_opt) {
       const auto [next_start, next_end] = next_lane_interval_opt.value();
-      const auto next =
+      const auto next_path_opt =
         util::generatePathLanelet(path, next_start, next_end, width, path_lanelet_interval);
-      path_lanelets.all.push_back(next);
+      if (next_path_opt.has_value()) {
+        const auto & next = *next_path_opt;
+        path_lanelets.all.push_back(next);
+      }
     }
   }
   return path_lanelets;
