@@ -67,7 +67,7 @@ autoware_utils_geometry::Polygon2d createObjPolygon(
 
   autoware_utils_geometry::Polygon2d object_polygon;
   for (const auto & p : transformed_polygon.points) {
-    object_polygon.outer().push_back(autoware_utils_geometry::Point2d(p.x, p.y));
+    object_polygon.outer().emplace_back(p.x, p.y);
   }
 
   bg::correct(object_polygon);
@@ -119,10 +119,10 @@ autoware_utils_geometry::Polygon2d createSelfPolygon(
 
   autoware_utils_geometry::Polygon2d ego_polygon;
 
-  ego_polygon.outer().push_back(autoware_utils_geometry::Point2d(front_m, width_left_m));
-  ego_polygon.outer().push_back(autoware_utils_geometry::Point2d(front_m, width_right_m));
-  ego_polygon.outer().push_back(autoware_utils_geometry::Point2d(rear_m, width_right_m));
-  ego_polygon.outer().push_back(autoware_utils_geometry::Point2d(rear_m, width_left_m));
+  ego_polygon.outer().emplace_back(front_m, width_left_m);
+  ego_polygon.outer().emplace_back(front_m, width_right_m);
+  ego_polygon.outer().emplace_back(rear_m, width_right_m);
+  ego_polygon.outer().emplace_back(rear_m, width_left_m);
 
   bg::correct(ego_polygon);
 
