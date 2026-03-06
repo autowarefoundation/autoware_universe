@@ -24,8 +24,8 @@ CommandFilter::CommandFilter(std::unique_ptr<CommandOutput> && output, rclcpp::N
 {
   enable_command_limit_filter_ = node_.declare_parameter<bool>("enable_command_limit_filter");
   transition_flag_ = false;
-  nominal_filter_.setLogger(node_.get_logger());
-  transition_filter_.setLogger(node_.get_logger());
+  nominal_filter_.setLogger(node_.get_logger(), node_.get_clock());
+  transition_filter_.setLogger(node_.get_logger(), node_.get_clock());
 }
 
 void CommandFilter::set_nominal_filter_params(const VehicleCmdFilterParam & p)

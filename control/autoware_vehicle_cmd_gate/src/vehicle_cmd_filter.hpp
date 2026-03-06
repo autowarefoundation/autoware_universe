@@ -53,7 +53,11 @@ public:
   void setParam(const VehicleCmdFilterParam & p);
   VehicleCmdFilterParam getParam() const;
   void setPrevCmd(const Control & v) { prev_cmd_ = v; }
-  void setLogger(const rclcpp::Logger & logger) { logger_ = logger; }
+  void setLogger(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock)
+  {
+    logger_ = logger;
+    clock_ = clock;
+  }
 
   void limitLongitudinalWithVel(Control & input) const;
   void limitLongitudinalWithAcc(const double dt, Control & input) const;
@@ -74,6 +78,7 @@ private:
   Control prev_cmd_;
   double current_speed_ = 0.0;
   std::optional<rclcpp::Logger> logger_;
+  rclcpp::Clock::SharedPtr clock_;
 
   bool setParameterWithValidation(const VehicleCmdFilterParam & p);
 

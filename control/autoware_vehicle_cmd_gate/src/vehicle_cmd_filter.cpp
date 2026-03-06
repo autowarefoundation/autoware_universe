@@ -61,9 +61,9 @@ void VehicleCmdFilter::limitLongitudinalWithVel(Control & input) const
 {
   const auto input_vel = static_cast<double>(input.longitudinal.velocity);
   input.longitudinal.velocity = std::max(std::min(input_vel, param_.vel_lim), -param_.vel_lim);
-  if (logger_.has_value() && input.longitudinal.velocity != input_vel) {
-    RCLCPP_ERROR(
-      logger_.value(),
+  if (logger_.has_value() && clock_ && input.longitudinal.velocity != input_vel) {
+    RCLCPP_ERROR_THROTTLE(
+      logger_.value(), *clock_, 5000,
       "[VehicleCmdFilter] Velocity limit: constraint=±%.3f [m/s], input=%.3f [m/s], "
       "output=%.3f [m/s]",
       param_.vel_lim, input_vel, static_cast<double>(input.longitudinal.velocity));
@@ -79,18 +79,18 @@ void VehicleCmdFilter::limitLongitudinalWithAcc(const double dt, Control & input
     std::max(std::min(input_acc, lon_acc_lim_for_lon_vel), -lon_acc_lim_for_lon_vel);
   input.longitudinal.velocity = limitDiff(
     input.longitudinal.velocity, prev_cmd_.longitudinal.velocity, lon_acc_lim_for_lon_vel * dt);
-  if (logger_.has_value()) {
+  if (logger_.has_value() && clock_) {
     if (input.longitudinal.acceleration != input_acc) {
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Longitudinal acceleration limit: constraint=±%.3f [m/s^2], "
         "input=%.3f [m/s^2], output=%.3f [m/s^2]",
         lon_acc_lim_for_lon_vel, input_acc, static_cast<double>(input.longitudinal.acceleration));
     }
     if (input.longitudinal.velocity != input_vel) {
       const auto vel_diff_lim = lon_acc_lim_for_lon_vel * dt;
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Velocity change limit by longitudinal acceleration: "
         "constraint(delta)=±%.3f [m/s], input_vel=%.3f [m/s], output_vel=%.3f [m/s]",
         vel_diff_lim, input_vel, static_cast<double>(input.longitudinal.velocity));
@@ -108,18 +108,18 @@ void VehicleCmdFilter::limitLongitudinalWithJerk(const double dt, Control & inpu
     lon_jerk_lim_for_lon_acc * dt);
   input.longitudinal.jerk =
     std::clamp(input_jerk, -lon_jerk_lim_for_lon_acc, lon_jerk_lim_for_lon_acc);
-  if (logger_.has_value()) {
+  if (logger_.has_value() && clock_) {
     if (input.longitudinal.acceleration != input_acc) {
       const auto acc_diff_lim = lon_jerk_lim_for_lon_acc * dt;
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Acceleration change limit by longitudinal jerk: "
         "constraint(delta)=±%.3f [m/s^2], input_acc=%.3f [m/s^2], output_acc=%.3f [m/s^2]",
         acc_diff_lim, input_acc, static_cast<double>(input.longitudinal.acceleration));
     }
     if (input.longitudinal.jerk != input_jerk) {
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Longitudinal jerk limit: constraint=±%.3f [m/s^3], "
         "input=%.3f [m/s^3], output=%.3f [m/s^3]",
         lon_jerk_lim_for_lon_acc, input_jerk, static_cast<double>(input.longitudinal.jerk));
@@ -140,9 +140,9 @@ void VehicleCmdFilter::limitLateralWithLatAcc(
     double v_sq = std::max(static_cast<double>(current_speed_ * current_speed_), 0.001);
     double steer_lim = std::atan(lat_acc_lim_for_steer_cmd * param_.wheel_base / v_sq);
     input.lateral.steering_tire_angle = latacc > 0.0 ? steer_lim : -steer_lim;
-    if (logger_.has_value()) {
-      RCLCPP_ERROR(
-        logger_.value(),
+    if (logger_.has_value() && clock_) {
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Lateral acceleration limit: constraint=±%.3f [m/s^2], "
         "computed_lat_acc=%.3f [m/s^2], input_steer=%.3f [rad], output_steer=%.3f [rad]",
         lat_acc_lim_for_steer_cmd, latacc, static_cast<double>(input_steer),
@@ -166,9 +166,9 @@ void VehicleCmdFilter::limitLateralWithLatJerk(const double dt, Control & input)
   if (curr_latacc > latacc_max) {
     const auto input_steer = input.lateral.steering_tire_angle;
     input.lateral.steering_tire_angle = calcSteerFromLatacc(current_speed_, latacc_max);
-    if (logger_.has_value()) {
-      RCLCPP_ERROR(
-        logger_.value(),
+    if (logger_.has_value() && clock_) {
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Lateral jerk limit (upper): constraint(lat_acc_max)=%.3f [m/s^2], "
         "computed_lat_acc=%.3f [m/s^2], input_steer=%.3f [rad], output_steer=%.3f [rad]",
         latacc_max, curr_latacc, static_cast<double>(input_steer),
@@ -177,9 +177,9 @@ void VehicleCmdFilter::limitLateralWithLatJerk(const double dt, Control & input)
   } else if (curr_latacc < latacc_min) {
     const auto input_steer = input.lateral.steering_tire_angle;
     input.lateral.steering_tire_angle = calcSteerFromLatacc(current_speed_, latacc_min);
-    if (logger_.has_value()) {
-      RCLCPP_ERROR(
-        logger_.value(),
+    if (logger_.has_value() && clock_) {
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Lateral jerk limit (lower): constraint(lat_acc_min)=%.3f [m/s^2], "
         "computed_lat_acc=%.3f [m/s^2], input_steer=%.3f [rad], output_steer=%.3f [rad]",
         latacc_min, curr_latacc, static_cast<double>(input_steer),
@@ -197,9 +197,9 @@ void VehicleCmdFilter::limitActualSteerDiff(const double current_steer_angle, Co
   ds =
     std::clamp(ds, -steer_cmd_diff_lim_from_current_steer, steer_cmd_diff_lim_from_current_steer);
   input.lateral.steering_tire_angle = current_steer_angle + ds;
-  if (logger_.has_value() && input.lateral.steering_tire_angle != input_steer) {
-    RCLCPP_ERROR(
-      logger_.value(),
+  if (logger_.has_value() && clock_ && input.lateral.steering_tire_angle != input_steer) {
+    RCLCPP_ERROR_THROTTLE(
+      logger_.value(), *clock_, 5000,
       "[VehicleCmdFilter] Steer diff limit from actual: constraint(delta)=±%.3f [rad], "
       "current_steer=%.3f [rad], input_steer=%.3f [rad], output_steer=%.3f [rad]",
       steer_cmd_diff_lim_from_current_steer, current_steer_angle, static_cast<double>(input_steer),
@@ -225,9 +225,9 @@ void VehicleCmdFilter::limitLateralSteer(Control & input) const
 
   input.lateral.steering_tire_angle =
     std::clamp(input.lateral.steering_tire_angle, -steer_cmd_limit, steer_cmd_limit);
-  if (logger_.has_value() && input.lateral.steering_tire_angle != input_steer) {
-    RCLCPP_ERROR(
-      logger_.value(),
+  if (logger_.has_value() && clock_ && input.lateral.steering_tire_angle != input_steer) {
+    RCLCPP_ERROR_THROTTLE(
+      logger_.value(), *clock_, 5000,
       "[VehicleCmdFilter] Steering angle limit: constraint=±%.3f [rad], "
       "input=%.3f [rad], output=%.3f [rad]",
       static_cast<double>(steer_cmd_limit), static_cast<double>(input_steer),
@@ -267,18 +267,18 @@ void VehicleCmdFilter::limitLateralSteerRate(const double dt, Control & input) c
   float ds = input.lateral.steering_tire_angle - prev_cmd_.lateral.steering_tire_angle;
   ds = std::clamp(ds, -steer_diff_limit, steer_diff_limit);
   input.lateral.steering_tire_angle = prev_cmd_.lateral.steering_tire_angle + ds;
-  if (logger_.has_value()) {
+  if (logger_.has_value() && clock_) {
     if (input.lateral.steering_tire_rotation_rate != input_steer_rate) {
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Steering rate limit: constraint=±%.3f [rad/s], "
         "input=%.3f [rad/s], output=%.3f [rad/s]",
         static_cast<double>(effective_steer_rate_lim), static_cast<double>(input_steer_rate),
         static_cast<double>(input.lateral.steering_tire_rotation_rate));
     }
     if (input.lateral.steering_tire_angle != input_steer) {
-      RCLCPP_ERROR(
-        logger_.value(),
+      RCLCPP_ERROR_THROTTLE(
+        logger_.value(), *clock_, 5000,
         "[VehicleCmdFilter] Steering angle change rate limit: constraint(delta)=±%.3f [rad], "
         "input_steer=%.3f [rad], output_steer=%.3f [rad]",
         static_cast<double>(steer_diff_limit), static_cast<double>(input_steer),
