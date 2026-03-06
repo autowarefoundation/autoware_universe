@@ -200,7 +200,7 @@ void TrafficLightPublishPanel::onSetTrafficLightState()
 void TrafficLightPublishPanel::onResetTrafficLightState()
 {
   extra_traffic_signals_.traffic_light_groups.clear();
-  enable_publish_ = false;
+  pub_traffic_signals_.reset();
 
   publish_button_->setText("PUBLISH");
   publish_button_->setStyleSheet("background-color: #FFFFFF");
@@ -208,8 +208,8 @@ void TrafficLightPublishPanel::onResetTrafficLightState()
 
 void TrafficLightPublishPanel::onPublishTrafficLightState()
 {
-  enable_publish_ = true;
-
+  pub_traffic_signals_ = raw_node_->create_publisher<TrafficLightGroupArray>(
+    "/perception/traffic_light_recognition/traffic_signals", rclcpp::QoS(1));
   publish_button_->setText("PUBLISHING...");
   publish_button_->setStyleSheet("background-color: #FFBF00");
 }
@@ -219,15 +219,11 @@ void TrafficLightPublishPanel::onInitialize()
   using std::placeholders::_1;
   raw_node_ = this->getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
-  pub_traffic_signals_ = raw_node_->create_publisher<TrafficLightGroupArray>(
-    "/perception/traffic_light_recognition/traffic_signals", rclcpp::QoS(1));
-
   sub_vector_map_ = raw_node_->create_subscription<LaneletMapBin>(
     "/map/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrafficLightPublishPanel::onVectorMap, this, _1));
   createWallTimer();
 
-  enable_publish_ = false;
   received_vector_map_ = false;
 }
 
@@ -248,7 +244,7 @@ void TrafficLightPublishPanel::createWallTimer()
 
 void TrafficLightPublishPanel::onTimer()
 {
-  if (enable_publish_) {
+  if (pub_traffic_signals_) {
     extra_traffic_signals_.stamp = rclcpp::Clock().now();
     pub_traffic_signals_->publish(extra_traffic_signals_);
   }
