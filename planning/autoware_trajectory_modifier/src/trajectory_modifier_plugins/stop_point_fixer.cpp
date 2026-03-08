@@ -38,11 +38,15 @@ StopPointFixer::StopPointFixer(
 
 bool StopPointFixer::is_long_stop_trajectory(const TrajectoryPoints & traj_points) const
 {
-  if (traj_points.empty()) {
+  if (traj_points.empty() || !params_.force_stop_long_stopped_trajectories) {
     return false;
   }
+
   for (const auto & point : traj_points) {
-    if (point.time_from_start.sec > params_.min_stop_duration_s) {
+    const auto time_from_start = static_cast<double>(point.time_from_start.sec) +
+                                 static_cast<double>(point.time_from_start.nanosec) * 1e-9;
+
+    if (time_from_start > params_.min_stop_duration_s) {
       return true;
     }
     if (point.longitudinal_velocity_mps > params_.velocity_threshold_mps) {
@@ -55,6 +59,9 @@ bool StopPointFixer::is_long_stop_trajectory(const TrajectoryPoints & traj_point
 bool StopPointFixer::is_stop_point_close_to_ego(
   const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const
 {
+  if (!params_.force_stop_close_stopped_trajectories) {
+    return false;
+  }
   return utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose) <
          params_.min_distance_threshold_m;
 }
@@ -63,29 +70,16 @@ bool StopPointFixer::is_trajectory_modification_required(
   const TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
   const TrajectoryModifierData & data) const
 {
-  if (!params.use_stop_point_fixer) {
+  if (!params.use_stop_point_fixer || traj_points.empty()) {
     return false;
   }
-  if (traj_points.empty()) {
-    return false;
-  }
+
   if (utils::is_ego_vehicle_moving(
         data.current_odometry.twist.twist, params_.velocity_threshold_mps)) {
     return false;
   }
 
-  if (params_.force_stop_close_stopped_trajectories) {
-    if (is_stop_point_close_to_ego(traj_points, data)) {
-      return true;
-    }
-  }
-
-  if (params_.force_stop_long_stopped_trajectories) {
-    if (is_long_stop_trajectory(traj_points)) {
-      return true;
-    }
-  }
-  return false;
+  return is_stop_point_close_to_ego(traj_points, data) || is_long_stop_trajectory(traj_points);
 }
 
 void StopPointFixer::modify_trajectory(
@@ -97,10 +91,7 @@ void StopPointFixer::modify_trajectory(
     auto clock_ptr = get_node_ptr()->get_clock();
     RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *clock_ptr, 5000,
-      "StopPointFixer: Replaced trajectory with stop point. Distance to last point: %.2f m, is ego "
-      "stopped for long duration: %s",
-      utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose),
-      is_long_stop_trajectory(traj_points) ? "true" : "false");
+      "StopPointFixer: Replaced trajectory with stop point.");
   }
 }
 
@@ -136,7 +127,7 @@ void StopPointFixer::set_up_params()
   stop_duration_desc.description =
     "Minimum duration of stop to consider for trajectory replacement";
   params_.min_stop_duration_s = node->declare_parameter<double>(
-    "stop_point_fixer.min_stop_duration_s", 1.0, stop_duration_desc);
+    "stop_point_fixer.min_stop_duration_s", 0.5, stop_duration_desc);
 }
 
 rcl_interfaces::msg::SetParametersResult StopPointFixer::on_parameter(

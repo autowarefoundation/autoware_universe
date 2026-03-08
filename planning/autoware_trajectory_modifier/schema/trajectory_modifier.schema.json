@@ -39,7 +39,7 @@
             "min_stop_duration_s": {
               "type": "number",
               "description": "Minimum duration of stop to consider for trajectory replacement",
-              "default": 1.0,
+              "default": 0.5,
               "minimum": 0.0
             }
           },
