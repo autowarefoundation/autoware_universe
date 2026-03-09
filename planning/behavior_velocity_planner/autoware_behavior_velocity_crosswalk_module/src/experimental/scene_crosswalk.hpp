@@ -130,7 +130,7 @@ public:
     // param for stuck vehicle
     bool enable_obstruction_prevention{false};
     double target_vehicle_velocity;
-    double max_target_vehicle_lateral_offset;
+    double required_lateral_clearance;
     double required_clearance;
     double min_acc_for_target_vehicle;
     double max_jerk_for_target_vehicle;
@@ -153,6 +153,7 @@ public:
     std::vector<double> distance_set_for_no_intention_to_walk;
     std::vector<double> timeout_set_for_no_intention_to_walk;
     double timeout_ego_stop_for_yield;
+    double min_vru_crossing_width;
     // param for input data
     double traffic_light_state_timeout;
     // param for target area & object
@@ -479,8 +480,9 @@ private:
     const PlannerData & planner_data) const;
 
   Polygon2d getAttentionArea(
-    const Trajectory & ego_path, const std::pair<double, double> & crosswalk_attention_range,
-    const PlannerData & planner_data) const;
+    const Trajectory & ego_path, const std::pair<double, double> & attention_range,
+    const PlannerData & planner_data, const double lateral_margin,
+    std::vector<std::vector<geometry_msgs::msg::Point>> & polygons) const;
 
   void updateObjectState(
     const double dist_ego_to_stop, const Trajectory & ego_path,
@@ -500,7 +502,7 @@ private:
     const double width_m, const double length_m);
 
   static geometry_msgs::msg::Polygon createVehiclePolygon(
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double margin = 0.0);
 
   bool checkRestartSuppression(
     const Trajectory & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor,

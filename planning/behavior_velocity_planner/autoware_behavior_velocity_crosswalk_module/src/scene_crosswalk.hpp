@@ -167,6 +167,7 @@ public:
     std::vector<double> distance_set_for_no_intention_to_walk;
     std::vector<double> timeout_set_for_no_intention_to_walk;
     double timeout_ego_stop_for_yield;
+    double min_vru_crossing_width;
     // param for input data
     double traffic_light_state_timeout;
     // param for target area & object
