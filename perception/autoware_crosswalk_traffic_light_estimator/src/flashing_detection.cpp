@@ -75,8 +75,12 @@ void FlashingDetector::clear_state(lanelet::Id id)
   signal_history_.erase(id);
 }
 
-bool all_history_matches_color(const std::vector<TrafficSignalAndTime> & history, uint8_t color)
+bool all_history_matches_color(
+  const TrafficLightIdArray & signal_history, lanelet::Id id, uint8_t color)
 {
+  const auto history_iter = signal_history.find(id);
+  if (history_iter == signal_history.end()) return false;
+  const auto & history = history_iter->second;
   return std::all_of(history.begin(), history.end(), [color](const auto & entry) {
     return entry.first.elements.front().color == color;
   });
@@ -99,6 +103,12 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
     return;
   }
 
+  // reset flashing if history contains only UNKNOWN entries (no evidence of prior color)
+  if (all_history_matches_color(signal_history_, id, TrafficSignalElement::UNKNOWN)) {
+    is_flashing_.at(id) = false;
+    return;
+  }
+
   // flashing green: UNKNOWN color with non-zero confidence (not occlusion)
   if (
     is_flashing_green_signal(signal) &&
@@ -108,10 +118,7 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
   }
 
   // check history: if all entries match current signal color, flashing has stopped
-  auto history_iter = signal_history_.find(id);
-  if (
-    history_iter != signal_history_.end() &&
-    all_history_matches_color(history_iter->second, signal.elements.front().color)) {
+  if (all_history_matches_color(signal_history_, id, signal.elements.front().color)) {
     is_flashing_.at(id) = false;
   }
 }
