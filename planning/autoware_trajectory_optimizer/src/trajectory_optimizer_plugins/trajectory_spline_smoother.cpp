@@ -35,9 +35,6 @@ void TrajectorySplineSmoother::optimize_trajectory(
     traj_points, spline_params_.interpolation_resolution_m,
     spline_params_.max_distance_discrepancy_m,
     spline_params_.preserve_input_trajectory_orientation);
-
-  autoware::motion_utils::calculate_time_from_start(
-    traj_points, data.current_odometry.pose.pose.position);
 }
 
 void TrajectorySplineSmoother::set_up_params()

@@ -4,3 +4,5 @@
     trajectory_kinematic_feasibility:
       # Maximum yaw rate [rad/s]. See kinematic_feasibility_enforcer.md for details
       max_yaw_rate_rad_s: 0.7
+      # Time discretization
+      time_step_s: 0.1  # Fixed time step for yaw rate calculations [s]
