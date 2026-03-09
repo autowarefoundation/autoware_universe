@@ -103,9 +103,8 @@ void VehicleCmdFilter::limitLongitudinalWithJerk(const double dt, Control & inpu
   const auto lon_jerk_lim_for_lon_acc = getLonJerkLimForLonAcc();
   const auto input_acc = input.longitudinal.acceleration;
   const auto input_jerk = static_cast<double>(input.longitudinal.jerk);
-  input.longitudinal.acceleration = limitDiff(
-    input_acc, prev_cmd_.longitudinal.acceleration,
-    lon_jerk_lim_for_lon_acc * dt);
+  input.longitudinal.acceleration =
+    limitDiff(input_acc, prev_cmd_.longitudinal.acceleration, lon_jerk_lim_for_lon_acc * dt);
   input.longitudinal.jerk =
     std::clamp(input_jerk, -lon_jerk_lim_for_lon_acc, lon_jerk_lim_for_lon_acc);
   if (logger_.has_value() && clock_) {
