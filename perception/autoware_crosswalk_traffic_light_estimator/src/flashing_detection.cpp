@@ -36,9 +36,9 @@ bool is_skippable_signal(const TrafficSignal & signal)
 {
   const auto & elements = signal.elements;
   if (elements.empty()) return true;
-  // Occluded signal: UNKNOWN with confidence=1
+  // Occluded signal: UNKNOWN with confidence=0
   return elements.front().color == TrafficSignalElement::UNKNOWN &&
-         elements.front().confidence == 1;
+         elements.front().confidence == 0;
 }
 
 void FlashingDetector::update_signal_history(
