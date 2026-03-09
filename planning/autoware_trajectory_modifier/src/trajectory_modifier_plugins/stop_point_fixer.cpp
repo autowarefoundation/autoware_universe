@@ -36,23 +36,50 @@ StopPointFixer::StopPointFixer(
   set_up_params();
 }
 
+bool StopPointFixer::is_long_stop_trajectory(const TrajectoryPoints & traj_points) const
+{
+  if (traj_points.empty() || !params_.force_stop_long_stopped_trajectories) {
+    return false;
+  }
+
+  for (const auto & point : traj_points) {
+    const auto time_from_start = static_cast<double>(point.time_from_start.sec) +
+                                 static_cast<double>(point.time_from_start.nanosec) * 1e-9;
+
+    if (time_from_start > params_.min_stop_duration_s) {
+      return true;
+    }
+    if (point.longitudinal_velocity_mps > params_.velocity_threshold_mps) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool StopPointFixer::is_stop_point_close_to_ego(
+  const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const
+{
+  if (!params_.force_stop_close_stopped_trajectories) {
+    return false;
+  }
+  return utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose) <
+         params_.min_distance_threshold_m;
+}
+
 bool StopPointFixer::is_trajectory_modification_required(
   const TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
   const TrajectoryModifierData & data) const
 {
-  if (!params.use_stop_point_fixer) {
+  if (!params.use_stop_point_fixer || traj_points.empty()) {
     return false;
   }
-  if (traj_points.empty()) {
-    return false;
-  }
+
   if (utils::is_ego_vehicle_moving(
         data.current_odometry.twist.twist, params_.velocity_threshold_mps)) {
     return false;
   }
-  const double distance_to_last_point =
-    utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose);
-  return distance_to_last_point < params_.min_distance_threshold_m;
+
+  return is_stop_point_close_to_ego(traj_points, data) || is_long_stop_trajectory(traj_points);
 }
 
 void StopPointFixer::modify_trajectory(
@@ -64,8 +91,7 @@ void StopPointFixer::modify_trajectory(
     auto clock_ptr = get_node_ptr()->get_clock();
     RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *clock_ptr, 5000,
-      "StopPointFixer: Replaced trajectory with stop point. Distance to last point: %.2f m",
-      utils::calculate_distance_to_last_point(traj_points, data.current_odometry.pose.pose));
+      "StopPointFixer: Replaced trajectory with stop point.");
   }
 }
 
@@ -74,6 +100,19 @@ void StopPointFixer::set_up_params()
   auto * node = get_node_ptr();
 
   // Declare plugin parameters with descriptors
+
+  rcl_interfaces::msg::ParameterDescriptor force_long_stop_desc;
+  force_long_stop_desc.description =
+    "Force zero velocity trajectory for trajectories with long stops";
+  params_.force_stop_long_stopped_trajectories = node->declare_parameter<bool>(
+    "stop_point_fixer.force_stop_long_stopped_trajectories", true, force_long_stop_desc);
+
+  rcl_interfaces::msg::ParameterDescriptor force_close_stop_desc;
+  force_close_stop_desc.description =
+    "Force zero velocity trajectory for trajectories with stops close to ego";
+  params_.force_stop_close_stopped_trajectories = node->declare_parameter<bool>(
+    "stop_point_fixer.force_stop_close_stopped_trajectories", true, force_close_stop_desc);
+
   rcl_interfaces::msg::ParameterDescriptor velocity_desc;
   velocity_desc.description = "Velocity threshold below which ego vehicle is considered stationary";
   params_.velocity_threshold_mps =
@@ -83,6 +122,12 @@ void StopPointFixer::set_up_params()
   distance_desc.description = "Minimum distance threshold to trigger trajectory replacement";
   params_.min_distance_threshold_m = node->declare_parameter<double>(
     "stop_point_fixer.min_distance_threshold_m", 1.0, distance_desc);
+
+  rcl_interfaces::msg::ParameterDescriptor stop_duration_desc;
+  stop_duration_desc.description =
+    "Minimum duration of stop to consider for trajectory replacement";
+  params_.min_stop_duration_s = node->declare_parameter<double>(
+    "stop_point_fixer.min_stop_duration_s", 0.5, stop_duration_desc);
 }
 
 rcl_interfaces::msg::SetParametersResult StopPointFixer::on_parameter(
@@ -95,10 +140,18 @@ rcl_interfaces::msg::SetParametersResult StopPointFixer::on_parameter(
   result.reason = "success";
 
   try {
+    update_param<bool>(
+      parameters, "stop_point_fixer.force_stop_long_stopped_trajectories",
+      params_.force_stop_long_stopped_trajectories);
+    update_param<bool>(
+      parameters, "stop_point_fixer.force_stop_close_stopped_trajectories",
+      params_.force_stop_close_stopped_trajectories);
     update_param<double>(
       parameters, "stop_point_fixer.velocity_threshold_mps", params_.velocity_threshold_mps);
     update_param<double>(
       parameters, "stop_point_fixer.min_distance_threshold_m", params_.min_distance_threshold_m);
+    update_param<double>(
+      parameters, "stop_point_fixer.min_stop_duration_s", params_.min_stop_duration_s);
   } catch (const std::exception & e) {
     result.successful = false;
     result.reason = e.what();

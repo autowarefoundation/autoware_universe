@@ -181,7 +181,7 @@ void NoDrivableLaneModule::handle_approaching_state(
     -(planner_param_.stop_margin + planner_data.vehicle_info_.max_longitudinal_offset_m);
   const auto stop_s = *path_polygon_intersection.first_intersection_s + longitudinal_offset;
 
-  path.longitudinal_velocity_mps().range(stop_s, path.length()).set(0.0);
+  path.set_stopline(stop_s);
 
   // Get stop point and stop factor
   planning_factor_interface_->add(
@@ -244,7 +244,7 @@ void NoDrivableLaneModule::handle_stopped_state(
 {
   // Insert stop pose
   const auto ego_s = ego_front_s - planner_data.vehicle_info_.max_longitudinal_offset_m;
-  path.longitudinal_velocity_mps().range(ego_s, path.length()).set(0.0);
+  path.set_stopline(ego_s);
 
   // Get stop point and stop factor
   planning_factor_interface_->add(

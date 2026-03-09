@@ -46,8 +46,7 @@ The yaw rate limit restricts heading changes over time:
 Δψ_rate = ψ_dot_max * Δt
 ```
 
-where `Δt` is a single average time step computed from all `time_from_start` deltas across
-the trajectory (fallback: 0.1 s). The same value is used for every segment.
+where `Δt` is a the time_step_s parameter defined in the trajectory_kinematic_enforcer parameter file. The same value is used for every segment.
 
 #### 3. Combined Constraint
 
@@ -84,8 +83,7 @@ vehicle pose:
 
 ### Key Algorithm Properties
 
-- **Arc length preservation**: Segment distances are preserved; timing uses a single
-  `avg_dt` averaged from `time_from_start` deltas across the whole trajectory
+- **Arc length preservation**: Segment distances are preserved
 - **Forward causality**: Each point depends only on previous points (no
   backward propagation)
 - **Velocity preservation**: Original velocity profile unchanged
@@ -162,18 +160,14 @@ by the smoothing. Both passes use the same parameter set and operate independent
 1. **Path deviation**: Kinematic constraints may cause significant deviation
    from the original planner path, especially for aggressive maneuvers.
 
-2. **Single average dt**: The yaw rate constraint uses one `avg_dt` averaged from all
-   `time_from_start` deltas. In practice this equals the configured upstream `time_step_s`
-   since the input has constant dt and `time_from_start` is not modified by preceding plugins.
-
-3. **Steering dynamics**: Does not model steering rate limits or steering
+2. **Steering dynamics**: Does not model steering rate limits or steering
    system dynamics - only considers geometric and yaw rate constraints.
 
-4. **Lateral acceleration**: Does not directly constrain lateral acceleration
+3. **Lateral acceleration**: Does not directly constrain lateral acceleration
    (though indirectly limited by yaw rate constraint).
 
-5. **Reverse driving**: Assumes forward motion. May need special handling for
+4. **Reverse driving**: Assumes forward motion. May need special handling for
    reverse trajectories.
 
-6. **Computation time**: Forward propagation through entire trajectory adds
+5. **Computation time**: Forward propagation through entire trajectory adds
    overhead (typically < 1 ms for 100-point trajectory).
