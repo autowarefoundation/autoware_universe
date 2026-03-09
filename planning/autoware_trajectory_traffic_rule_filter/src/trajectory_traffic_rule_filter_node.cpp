@@ -17,9 +17,8 @@
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/logging.hpp>
-
-#include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -27,9 +26,41 @@
 #include <lanelet2_routing/Forward.h>
 
 #include <algorithm>
+#include <ctime>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
+
+namespace
+{
+// for error diagnostic. Will be removed once node is combined.
+std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
+{
+  std::unordered_map<std::string, std::string> uuid_to_name;
+  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
+  for (const auto & info : candidate_trajectories.generator_info) {
+    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
+  }
+  return uuid_to_name;
+}
+
+bool has_trajectory_from_generator(
+  const std::unordered_map<std::string, std::string> & uuid_to_generator_name_map,
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories,
+  const std::string & generator_name_prefix)
+{
+  return std::any_of(
+    trajectories.candidate_trajectories.cbegin(), trajectories.candidate_trajectories.cend(),
+    [&](const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
+      const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+      const auto generator_name_it = uuid_to_generator_name_map.find(generator_id_str);
+      return generator_name_it != uuid_to_generator_name_map.end() &&
+             generator_name_it->second.rfind(generator_name_prefix, 0) == 0;
+    });
+}
+}  // namespace
 
 namespace autoware::trajectory_traffic_rule_filter
 {
@@ -41,8 +72,8 @@ TrajectoryTrafficRuleFilter::TrajectoryTrafficRuleFilter(const rclcpp::NodeOptio
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()},
   listener_{std::make_unique<traffic_rule_filter::ParamListener>(get_node_parameters_interface())}
 {
-  const auto filters = listener_->get_params().filter_names;
-  for (const auto & filter : filters) {
+  const auto params = listener_->get_params();
+  for (const auto & filter : params.filter_names) {
     load_metric(filter);
   }
 
@@ -66,7 +97,9 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  constexpr auto log_throttle_ms = 5000;
   if (!lanelet_map_ptr_) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), log_throttle_ms, "waiting for lanelet_map");
     return;
   }
 
@@ -78,13 +111,22 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
     }
   }
 
+  diagnostics_interface_.clear();
   auto filtered_msg = std::make_shared<CandidateTrajectories>();
 
   for (const auto & trajectory : msg->candidate_trajectories) {
-    const bool is_feasible = std::all_of(
-      plugins_.begin(), plugins_.end(),
-      [&](const auto & plugin) { return plugin->is_feasible(trajectory.points); });
-    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+    bool is_feasible = true;
+    for (const auto & plugin : plugins_) {
+      if (const auto res = plugin->is_feasible(trajectory.points); !res) {
+        is_feasible = false;
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), log_throttle_ms, "Not feasible: %s", res.error().c_str());
+        diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
+      }
+    }
+    if (is_feasible) {
+      filtered_msg->candidate_trajectories.push_back(trajectory);
+    }
   }
 
   std::unordered_set<std::string> kept_generator_ids;
@@ -106,7 +148,26 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
     }
   }
 
+  update_diagnostic(*filtered_msg);
   pub_trajectories_->publish(*filtered_msg);
+}
+
+void TrajectoryTrafficRuleFilter::update_diagnostic(
+  const CandidateTrajectories & filtered_trajectories)
+{
+  const auto uuid_to_name_map = get_generator_uuid_to_name_map(filtered_trajectories);
+  if (filtered_trajectories.candidate_trajectories.empty()) {
+    diagnostics_interface_.update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
+  } else if (!has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion")) {
+    diagnostics_interface_.update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "All diffusion planner trajectories are infeasible");
+  } else {
+    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+  }
+
+  diagnostics_interface_.publish(get_clock()->now());
 }
 
 void TrajectoryTrafficRuleFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)
@@ -141,6 +202,8 @@ void TrajectoryTrafficRuleFilter::load_metric(const std::string & name)
     }
 
     plugin->set_vehicle_info(vehicle_info_);
+    plugin->set_parameters(listener_->get_params());
+    plugin->set_logger(get_logger().get_child(name));
     plugins_.push_back(plugin);
 
     RCLCPP_INFO_STREAM(

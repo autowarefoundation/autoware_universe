@@ -12,59 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "detected_object_feature_remover_node.hpp"
+#include "autoware/detected_object_feature_remover/convert.hpp"
 
-#include <autoware_test_utils/autoware_test_utils.hpp>
-#include <rclcpp/time.hpp>
-
-#include "tier4_perception_msgs/msg/detail/detected_object_with_feature__struct.hpp"
+#include <autoware_perception_msgs/msg/detected_object.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
+#include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 
 #include <gtest/gtest.h>
 
-#include <memory>
-#include <string>
+#include <vector>
 
 namespace
 {
-using autoware::detected_object_feature_remover::DetectedObjectFeatureRemover;
-using autoware::test_utils::AutowareTestManager;
+using autoware::detected_object_feature_remover::convert::ConvertParams;
+using autoware::detected_object_feature_remover::convert::convertToDetectedObjects;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using tier4_perception_msgs::msg::DetectedObjectWithFeature;
 
-/**
- * @brief Return a new `autoware::test_utils::AutowareTestManager` instance as a shared pointer.
- *
- * @return Shared pointer of `autoware::test_utils::AutowareTestManager`.
- */
-std::shared_ptr<AutowareTestManager> generate_test_manager()
-{
-  return std::make_shared<AutowareTestManager>();
-}
-
-/**
- * @brief Return a new `autoware::detected_object_feature_remover::DetectedObjectFeatureRemover`
- * instance as a shared pointer.
- *
- * @return Shared pointer of
- * `autoware::detected_object_feature_remover::DetectedObjectFeatureRemover`.
- */
-std::shared_ptr<DetectedObjectFeatureRemover> generate_node(
-  const std::string & input_topic, const std::string & output_topic)
-{
-  auto node_options = rclcpp::NodeOptions{};
-  node_options.arguments(
-    {"--ros-args", "-r", "~/input:=" + input_topic, "-r", "~/output:=" + output_topic});
-
-  return std::make_shared<DetectedObjectFeatureRemover>(node_options);
-}
-
-/**
- * @brief Return a new `autoware_perception_msgs::msg::DetectedObject` instance.
- *
- * @return New instance of `autoware_perception_msgs::msg::DetectedObject`.
- */
 DetectedObject generate_detected_object()
 {
   DetectedObject output;
@@ -78,12 +45,6 @@ DetectedObject generate_detected_object()
   return output;
 }
 
-/**
- * @brief Return a new `tier4_perception_msgs::msg::DetectedObjectWithFeature` instance.
- * @details Return a object including a single object created by `generate_detected_object`.
- *
- * @return New instance of `tier4_perception_msgs::msg::DetectedObjectWithFeature`.
- */
 DetectedObjectWithFeature generate_feature_object()
 {
   DetectedObjectWithFeature output;
@@ -91,20 +52,10 @@ DetectedObjectWithFeature generate_feature_object()
   return output;
 }
 
-/**
- * @brief Return a new `tier4_perception_msgs::msg::DetectedObjectsWithFeature` instance.
- * @details If `as_emtpy=true`, returns a instance without any objects. Otherwise, returns a
- * instance including a single object created by `generate_feature_object`.
- *
- * @param stamp Timestamp of the message.
- * @param as_empty Whether to return a instance without any objects.
- * @return New instance of `tier4_perception_mgs::msg::DetectedObjectsWIthFeature`.
- */
-DetectedObjectsWithFeature generate_feature_objects(const rclcpp::Time & stamp, bool as_empty)
+DetectedObjectsWithFeature generate_feature_objects(bool as_empty)
 {
   DetectedObjectsWithFeature output;
   output.header.frame_id = "base_link";
-  output.header.stamp = stamp;
   if (!as_empty) {
     auto object = generate_feature_object();
     output.feature_objects.emplace_back(object);
@@ -113,73 +64,32 @@ DetectedObjectsWithFeature generate_feature_objects(const rclcpp::Time & stamp, 
 }
 }  // namespace
 
-/**
- * Test suite of DetectedObjectFeatureRemover.
- *
- * This test case checks whether the node works if the arbitrary object is input.
- */
-TEST(FeatureRemoverTest, TestArbitraryObject)
+TEST(ConvertTest, TestArbitraryObject)
 {
-  const std::string input_topic = "/detected_object_feature_remover/input";
-  const std::string output_topic = "/detected_object_feature_remover/output";
-  auto test_manager = generate_test_manager();
-  auto node = generate_node(input_topic, output_topic);
+  ConvertParams params;
+  params.run_convex_hull_conversion = false;
 
-  // set output subscriber
-  DetectedObjects output;
-  auto callback = [&output](const DetectedObjects::ConstSharedPtr msg) {
-    output.header = msg->header;
-    output.objects = msg->objects;
-  };
-  test_manager->set_subscriber<DetectedObjects>(output_topic, callback);
-
-  // prepare input
-  auto stamp = node->get_clock()->now();
   constexpr bool as_empty = false;
-  auto input = generate_feature_objects(stamp, as_empty);
-  test_manager->test_pub_msg<DetectedObjectsWithFeature>(node, input_topic, input);
+  const auto input = generate_feature_objects(as_empty);
+  DetectedObjects output;
 
-  // Check output
+  convertToDetectedObjects(input, output, params);
+
   auto expect = generate_detected_object();
-  EXPECT_EQ(1, output.objects.size());
+  EXPECT_EQ(1U, output.objects.size());
   EXPECT_EQ(expect, output.objects.front());
 }
 
-/**
- * Test suite of DetectedObjectFeatureRemover.
- *
- * This test case checks whether the node works if the empty object is input.
- */
-TEST(FeatureRemoverTest, TestEmptyObject)
+TEST(ConvertTest, TestEmptyObject)
 {
-  const std::string input_topic = "/detected_object_feature_remover/input";
-  const std::string output_topic = "/detected_object_feature_remover/output";
-  auto test_manager = generate_test_manager();
-  auto node = generate_node(input_topic, output_topic);
+  ConvertParams params;
+  params.run_convex_hull_conversion = false;
 
-  // set output subscriber
-  DetectedObjects output;
-  auto callback = [&output](const DetectedObjects::ConstSharedPtr msg) {
-    output.header = msg->header;
-    output.objects = msg->objects;
-  };
-  test_manager->set_subscriber<DetectedObjects>(output_topic, callback);
-
-  // prepare input
-  auto stamp = node->get_clock()->now();
   constexpr bool as_empty = true;
-  auto input = generate_feature_objects(stamp, as_empty);
-  test_manager->test_pub_msg<DetectedObjectsWithFeature>(node, input_topic, input);
+  const auto input = generate_feature_objects(as_empty);
+  DetectedObjects output;
 
-  // Check output
-  EXPECT_EQ(0, output.objects.size());
-}
+  convertToDetectedObjects(input, output, params);
 
-int main(int argc, char ** argv)
-{
-  testing::InitGoogleTest(&argc, argv);
-  rclcpp::init(argc, argv);
-  bool result = RUN_ALL_TESTS();
-  rclcpp::shutdown();
-  return result;
+  EXPECT_EQ(0U, output.objects.size());
 }

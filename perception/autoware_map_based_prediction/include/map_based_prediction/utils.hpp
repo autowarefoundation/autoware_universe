@@ -83,12 +83,12 @@ std::unordered_set<std::string> removeOldObjectsHistory(
   const double current_time, const double buffer_time,
   std::unordered_map<std::string, std::deque<T>> & target_objects);
 
-extern template std::unordered_set<std::string> removeOldObjectsHistory<ObjectData>(
+extern template std::unordered_set<std::string> removeOldObjectsHistory<RoadUser>(
   const double current_time, const double buffer_time,
-  std::unordered_map<std::string, std::deque<ObjectData>> & target_objects);
-extern template std::unordered_set<std::string> removeOldObjectsHistory<CrosswalkUserData>(
+  std::unordered_map<std::string, std::deque<RoadUser>> & target_objects);
+extern template std::unordered_set<std::string> removeOldObjectsHistory<CrosswalkUser>(
   const double current_time, const double buffer_time,
-  std::unordered_map<std::string, std::deque<CrosswalkUserData>> & target_objects);
+  std::unordered_map<std::string, std::deque<CrosswalkUser>> & target_objects);
 
 PredictedObjectKinematics convertToPredictedKinematics(
   const TrackedObjectKinematics & tracked_object);
@@ -96,7 +96,7 @@ PredictedObjectKinematics convertToPredictedKinematics(
 PredictedObject convertToPredictedObject(const TrackedObject & tracked_object);
 
 double calculateLocalLikelihood(
-  const lanelet::Lanelet & current_lanelet, const TrackedObject & object,
+  const lanelet::ConstLanelet & current_lanelet, const TrackedObject & object,
   const double sigma_lateral_offset, const double sigma_yaw_angle_deg);
 
 bool isDuplicated(
@@ -107,8 +107,8 @@ bool isDuplicated(
   const PredictedPath & predicted_path, const std::vector<PredictedPath> & predicted_paths);
 
 bool checkCloseLaneletCondition(
-  const std::pair<double, lanelet::Lanelet> & lanelet, const TrackedObject & object,
-  const std::unordered_map<std::string, std::deque<ObjectData>> & road_users_history,
+  const std::pair<double, lanelet::ConstLanelet> & lanelet, const TrackedObject & object,
+  const std::unordered_map<std::string, std::deque<RoadUser>> & road_users_history,
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet);
 
@@ -123,7 +123,7 @@ lanelet::Lanelets getLeftOppositeLanelets(
 
 LaneletsData getCurrentLanelets(
   const TrackedObject & object, lanelet::LaneletMapPtr lanelet_map_ptr,
-  const std::unordered_map<std::string, std::deque<ObjectData>> & road_users_history,
+  const std::unordered_map<std::string, std::deque<RoadUser>> & road_users_history,
   const double dist_threshold_for_searching_lanelet,
   const double delta_yaw_threshold_for_searching_lanelet, const double sigma_lateral_offset,
   const double sigma_yaw_angle_deg);

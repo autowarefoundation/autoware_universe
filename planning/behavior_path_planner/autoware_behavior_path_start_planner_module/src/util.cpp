@@ -19,9 +19,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/universe_utils/math/normalization.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -49,10 +49,12 @@ PathWithLaneId getBackwardPath(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & shoulder_lanes,
   const Pose & current_pose, const Pose & backed_pose, const double velocity)
 {
-  const auto current_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
-  const auto backed_pose_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
+  const auto current_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, current_pose, route_handler.getLaneletMapPtr());
+  const auto backed_pose_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      shoulder_lanes, backed_pose, route_handler.getLaneletMapPtr());
 
   const double s_start = backed_pose_arc_coords.length;
   const double s_end = current_pose_arc_coords.length;
@@ -231,7 +233,7 @@ std::vector<int64_t> get_lane_ids_from_pose(
   // 1. First, find all lanes containing the pose
   bool found_containing_lane = false;
   for (const auto & lane : candidate_lanes) {
-    if (lanelet::utils::isInLanelet(pose, lane)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(pose, lane)) {
       lane_ids.push_back(lane.id());
       found_containing_lane = true;
     }
@@ -267,6 +269,47 @@ void set_lane_ids_to_path_point(
   const std::vector<int64_t> & previous_lane_ids)
 {
   point.lane_ids = get_lane_ids_from_pose(point.point.pose, road_lanes, previous_lane_ids);
+}
+
+std::pair<double, double> calc_start_and_end_shift_length(
+  const lanelet::ConstLanelets & pull_out_lanes, const Pose & start_pose, const Pose & end_pose)
+{
+  const double start_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, start_pose)
+      .distance;
+  const double finish_shift_length =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, end_pose).distance;
+  return {start_shift_length, finish_shift_length};
+}
+
+bool has_collision_between_shifted_path_footprints_and_objects(
+  const PathWithLaneId & ego_path, const autoware_utils::LinearRing2d & local_vehicle_footprint,
+  const PredictedObjects & dynamic_objects, const double margin, const double th_stopped_obj_vel,
+  const double shift_length, const double th_min_shift_length, const bool enable_back)
+{
+  if (shift_length < th_min_shift_length) {
+    return false;
+  }
+
+  const auto & objects = dynamic_objects.objects;
+
+  std::vector<autoware_utils::Polygon2d> active_polygons;
+  active_polygons.reserve(objects.size());
+  for (const auto & obj : objects) {
+    const double obj_speed = obj.kinematics.initial_twist_with_covariance.twist.linear.x;
+    if (obj_speed >= th_stopped_obj_vel || enable_back) {
+      active_polygons.push_back(autoware_utils::to_polygon2d(obj));
+    }
+  }
+
+  const auto & pts = ego_path.points;
+  return std::any_of(pts.cbegin(), pts.cend(), [&](const auto & pt) {
+    const auto vehicle_footprint = autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(pt.point.pose));
+    return std::any_of(active_polygons.cbegin(), active_polygons.cend(), [&](const auto & polygon) {
+      return boost::geometry::distance(polygon, vehicle_footprint) < margin;
+    });
+  });
 }
 
 }  // namespace autoware::behavior_path_planner::start_planner_utils

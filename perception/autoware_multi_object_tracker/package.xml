@@ -21,7 +21,6 @@
   <depend>autoware_utils_math</depend>
   <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
-  <depend>glog</depend>
   <depend>mussp</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>

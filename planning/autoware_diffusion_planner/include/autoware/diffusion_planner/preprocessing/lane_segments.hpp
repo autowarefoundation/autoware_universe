@@ -20,6 +20,7 @@
 #include "autoware/diffusion_planner/preprocessing/traffic_signals.hpp"
 #include "autoware/traffic_light_utils/traffic_light_utils.hpp"
 
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
@@ -106,6 +107,21 @@ public:
     const Eigen::Matrix4d & transform_matrix,
     const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map,
     const std::vector<int64_t> & segment_indices, const int64_t max_segments) const;
+
+  /**
+   * @brief Get the first traffic light on the route from ego position forward.
+   *
+   * @param route The lanelet route.
+   * @param center_x X-coordinate of ego center.
+   * @param center_y Y-coordinate of ego center.
+   * @param center_z Z-coordinate of ego center.
+   * @param traffic_light_id_map Map of traffic light IDs to signal data.
+   * @return TrafficLightGroup: cached signal if perception available, UNKNOWN element if not, or
+   *         empty (traffic_light_group_id=0, elements empty) if no traffic light on route.
+   */
+  autoware_perception_msgs::msg::TrafficLightGroup get_first_traffic_light_on_route(
+    const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+    const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const;
 
   /**
    * @brief Get the mapping from lanelet ID to array index.

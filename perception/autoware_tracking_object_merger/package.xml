@@ -18,7 +18,6 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_universe_utils</depend>
   <depend>eigen</depend>
-  <depend>glog</depend>
   <depend>mussp</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

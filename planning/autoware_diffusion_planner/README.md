@@ -23,7 +23,7 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 Make sure that the directory specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml` points to the correct model version and contains the required model weight and parameter files.
 
 ```bash
-$ ls ~/autoware_data/diffusion_planner/v3.0/
+$ ls ~/autoware_data/diffusion_planner/v3.1/
 diffusion_planner.onnx diffusion_planner.param.json
 ```
 
@@ -189,14 +189,15 @@ Parameters can be set via YAML (see `config/diffusion_planner.param.yaml`).
 
 ## Outputs
 
-| Topic                        | Message Type                                              | Description                                |
-| ---------------------------- | --------------------------------------------------------- | ------------------------------------------ |
-| `~/output/trajectory`        | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle     |
-| `~/output/trajectories`      | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories            |
-| `~/output/predicted_objects` | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects |
-| `~/output/turn_indicators`   | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command             |
-| `~/debug/lane_marker`        | visualization_msgs/msg/MarkerArray                        | Lane debug markers                         |
-| `~/debug/route_marker`       | visualization_msgs/msg/MarkerArray                        | Route debug markers                        |
+| Topic                           | Message Type                                              | Description                                                |
+| ------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| `~/output/trajectory`           | autoware_planning_msgs/msg/Trajectory                     | Planned trajectory for the ego vehicle                     |
+| `~/output/trajectories`         | autoware_internal_planning_msgs/msg/CandidateTrajectories | Multiple candidate trajectories                            |
+| `~/output/predicted_objects`    | autoware_perception_msgs/msg/PredictedObjects             | Predicted future states of dynamic objects                 |
+| `~/output/turn_indicators`      | autoware_vehicle_msgs/msg/TurnIndicatorsCommand           | Planned turn indicator command                             |
+| `~/output/debug/traffic_signal` | autoware_perception_msgs/msg/TrafficLightGroup            | First traffic light on route (ego forward) for RViz/ad_api |
+| `~/debug/lane_marker`           | visualization_msgs/msg/MarkerArray                        | Lane debug markers                                         |
+| `~/debug/route_marker`          | visualization_msgs/msg/MarkerArray                        | Route debug markers                                        |
 
 ---
 
@@ -237,6 +238,7 @@ To download the latest model, simply run the provided setup script:
 | **1.0** | 2025/09/12   | - Route Termination learning<br>- Output turn-signal (indicator) <br>- Lane type integration in HD map for improved accuracy<br>- Added datasets:<br>&nbsp;&nbsp;- Synthetic Data: **4.0M points**<br>&nbsp;&nbsp;- Real Data: **1.5M points**                                                                                                                                                                                           | NG                     |
 | **2.0** | 2025/11/26   | - Increased the number of acceptable lane types ("crosswalk", "pedestrian_lane" and "walkway") for left and right boundaries. <br>- Added `Polygon` and `LineString` as acceptable input types. <br>- Increased the maximum length of each history record to 3 seconds. <br>- Added support for turn_indicator as an input (this is just an interface, not used in v2.0 weights). <br>- Increased `NUM_SEGMENTS_IN_LANE` from 70 to 140. | NG                     |
 | **3.0** | 2026/01/09   | - Added `TURN_INDICATOR_OUTPUT_KEEP` to allow the model to focus on the timing of status change. <br>- Conducted Supervised Fine-Tuning (SFT) with carefully filtered data. <br>- Increased the encoder layers from 3 to 6.                                                                                                                                                                                                              | OK                     |
+| **3.1** | 2026/03/05   | - ONNX simplified model for faster TRT engine build and reduced GPU memory. <br>- Same weights as v3.0 (no retraining).                                                                                                                                                                                                                                                                                                                  | OK                     |
 
 ---
 

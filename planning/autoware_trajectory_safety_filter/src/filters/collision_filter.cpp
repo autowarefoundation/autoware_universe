@@ -18,13 +18,12 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
-#include <any>
 #include <cmath>
 #include <limits>
-#include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -241,29 +240,18 @@ bool CollisionFilter::check_collision(
   return ttc >= 0.0 && ttc < params_.min_ttc;
 }
 
-void CollisionFilter::set_parameters(const std::unordered_map<std::string, std::any> & params)
+void CollisionFilter::set_parameters(rclcpp::Node & node)
 {
-  auto get_value = [&params](const std::string & key, auto & value) {
-    auto it = params.find(key);
-    if (it != params.end()) {
-      try {
-        value = std::any_cast<std::decay_t<decltype(value)>>(it->second);
-      } catch (const std::bad_any_cast &) {
-        // Keep default value if cast fails
-      }
-    }
-  };
-
-  // Map from parameter structure
-  get_value("time", params_.max_check_time);
-  get_value("min_value", params_.min_ttc);
+  using autoware_utils_rclcpp::get_or_declare_parameter;
+  params_.max_check_time = get_or_declare_parameter<double>(node, "collision.time");
+  params_.min_ttc = get_or_declare_parameter<double>(node, "collision.min_value");
 }
 
-bool CollisionFilter::is_feasible(
+tl::expected<void, std::string> CollisionFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   if (!context.predicted_objects || context.predicted_objects->objects.empty()) {
-    return true;  // No objects to check collision with
+    return {};  // No objects to check collision with
   }
 
   const auto cache =
@@ -279,12 +267,21 @@ bool CollisionFilter::is_feasible(
     // Check collision with each cached object
     for (size_t obj_idx = 0; obj_idx < cache.size(); ++obj_idx) {
       if (check_collision(point, cache, obj_idx, time_from_start)) {
-        return false;
+        return tl::make_unexpected(
+          fmt::format("Collision with object at time {:.2f}s", time_from_start));
       }
     }
   }
 
-  return true;
+  return {};
+}
+
+void CollisionFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+{
+  using autoware_utils_rclcpp::update_param;
+
+  update_param<double>(parameters, "collision.time", params_.max_check_time);
+  update_param<double>(parameters, "collision.min_value", params_.min_ttc);
 }
 }  // namespace autoware::trajectory_safety_filter::plugin
 

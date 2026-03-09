@@ -5,6 +5,7 @@
   <arg name="output_trajectories" default="~/output/trajectories"/>
   <arg name="output_predicted_objects" default="~/output/predicted_objects"/>
   <arg name="output_turn_indicators" default="~/output/turn_indicators"/>
+  <arg name="debug/output_traffic_signal" default="~/output/debug/traffic_signal"/>
   <arg name="input_odometry" default="~/input/odometry"/>
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_route" default="~/input/route"/>
@@ -20,6 +21,7 @@
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/output/predicted_objects" to="$(var output_predicted_objects)"/>
     <remap from="~/output/turn_indicators" to="$(var output_turn_indicators)"/>
+    <remap from="~/output/debug/traffic_signal" to="$(var debug/output_traffic_signal)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/input/route" to="$(var input_route)"/>

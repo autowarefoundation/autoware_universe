@@ -102,11 +102,13 @@ RadarTracksMsgsConverterNode::RadarTracksMsgsConverterNode(const rclcpp::NodeOpt
 
 void RadarTracksMsgsConverterNode::onRadarTracks(const RadarTracks::ConstSharedPtr msg)
 {
+  std::lock_guard<std::mutex> lock(mutex_);
   radar_data_ = msg;
 }
 
 void RadarTracksMsgsConverterNode::onTwist(const Odometry::ConstSharedPtr msg)
 {
+  std::lock_guard<std::mutex> lock(mutex_);
   odometry_data_ = msg;
 }
 
@@ -140,6 +142,7 @@ rcl_interfaces::msg::SetParametersResult RadarTracksMsgsConverterNode::onSetPara
 
 bool RadarTracksMsgsConverterNode::isDataReady()
 {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (!radar_data_) {
     RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for radar msg...");
     return false;
@@ -150,14 +153,24 @@ bool RadarTracksMsgsConverterNode::isDataReady()
 
 void RadarTracksMsgsConverterNode::onTimer()
 {
-  if (!isDataReady()) {
-    return;
+  RadarTracks::ConstSharedPtr local_radar_data;
+  Odometry::ConstSharedPtr local_odometry_data;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!radar_data_) {
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for radar msg...");
+      return;
+    }
+    local_radar_data = radar_data_;
+    local_odometry_data = odometry_data_;
   }
-  const auto & header = radar_data_->header;
+
+  const auto & header = local_radar_data->header;
   transform_ = transform_listener_->get_transform(
     node_param_.new_frame_id, header.frame_id, header.stamp, rclcpp::Duration::from_seconds(0.01));
 
-  TrackedObjects tracked_objects = convertRadarTrackToTrackedObjects();
+  TrackedObjects tracked_objects =
+    convertRadarTrackToTrackedObjects(local_radar_data, local_odometry_data);
   DetectedObjects detected_objects = convertTrackedObjectsToDetectedObjects(tracked_objects);
   pub_tracked_objects_->publish(tracked_objects);
   pub_detected_objects_->publish(detected_objects);
@@ -193,9 +206,10 @@ DetectedObjects RadarTracksMsgsConverterNode::convertTrackedObjectsToDetectedObj
 
 bool RadarTracksMsgsConverterNode::isStaticObject(
   const radar_msgs::msg::RadarTrack & radar_track,
-  const geometry_msgs::msg::Vector3 & compensated_velocity)
+  const geometry_msgs::msg::Vector3 & compensated_velocity,
+  const Odometry::ConstSharedPtr & odometry_data)
 {
-  if (!(node_param_.use_twist_compensation && odometry_data_)) {
+  if (!(node_param_.use_twist_compensation && odometry_data)) {
     return false;
   }
 
@@ -212,13 +226,14 @@ bool RadarTracksMsgsConverterNode::isStaticObject(
   return std::abs(longitudinal_speed) < node_param_.static_object_speed_threshold;
 }
 
-TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects()
+TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects(
+  const RadarTracks::ConstSharedPtr & radar_data, const Odometry::ConstSharedPtr & odometry_data)
 {
   TrackedObjects tracked_objects;
-  tracked_objects.header = radar_data_->header;
+  tracked_objects.header = radar_data->header;
   tracked_objects.header.frame_id = node_param_.new_frame_id;
 
-  for (const auto & radar_track : radar_data_->tracks) {
+  for (const auto & radar_track : radar_data->tracks) {
     TrackedObject tracked_object;
 
     tracked_object.object_id = radar_track.uuid;
@@ -246,9 +261,10 @@ TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects()
     // compensate radar coordinate to vehicle coordinate
     auto compensated_velocity = compensateVelocitySensorPosition(radar_track);
     // 2: Compensate ego motion
-    if (node_param_.use_twist_compensation && odometry_data_) {
-      compensated_velocity = compensateVelocityEgoMotion(compensated_velocity, position_from_veh);
-    } else if (node_param_.use_twist_compensation && !odometry_data_) {
+    if (node_param_.use_twist_compensation && odometry_data) {
+      compensated_velocity =
+        compensateVelocityEgoMotion(compensated_velocity, position_from_veh, odometry_data);
+    } else if (node_param_.use_twist_compensation && !odometry_data) {
       RCLCPP_WARN_THROTTLE(
         get_logger(), *get_clock(), 5000,
         "Odometry data is not available. Radar track velocity will not be compensated.");
@@ -261,7 +277,7 @@ TrackedObjects RadarTracksMsgsConverterNode::convertRadarTrackToTrackedObjects()
     // kinematics setting
     TrackedObjectKinematics kinematics;
     kinematics.orientation_availability = TrackedObjectKinematics::AVAILABLE;
-    kinematics.is_stationary = isStaticObject(radar_track, compensated_velocity);
+    kinematics.is_stationary = isStaticObject(radar_track, compensated_velocity, odometry_data);
     kinematics.pose_with_covariance.pose = transformed_pose_stamped.pose;
     kinematics.pose_with_covariance.covariance = convertPoseCovarianceMatrix(radar_track);
     // velocity of object is defined in the object coordinate
@@ -309,16 +325,17 @@ geometry_msgs::msg::Vector3 RadarTracksMsgsConverterNode::compensateVelocitySens
 
 geometry_msgs::msg::Vector3 RadarTracksMsgsConverterNode::compensateVelocityEgoMotion(
   const geometry_msgs::msg::Vector3 & velocity_in,
-  const geometry_msgs::msg::Point & position_from_veh)
+  const geometry_msgs::msg::Point & position_from_veh,
+  const Odometry::ConstSharedPtr & odometry_data)
 {
   geometry_msgs::msg::Vector3 velocity = velocity_in;
   // linear compensation
-  velocity.x += odometry_data_->twist.twist.linear.x;
-  velocity.y += odometry_data_->twist.twist.linear.y;
-  velocity.z += odometry_data_->twist.twist.linear.z;
+  velocity.x += odometry_data->twist.twist.linear.x;
+  velocity.y += odometry_data->twist.twist.linear.y;
+  velocity.z += odometry_data->twist.twist.linear.z;
   if (node_param_.use_twist_yaw_compensation) {
     // angular compensation
-    const double veh_yaw = odometry_data_->twist.twist.angular.z;
+    const double veh_yaw = odometry_data->twist.twist.angular.z;
     velocity.x += -position_from_veh.y * veh_yaw;
     velocity.y += position_from_veh.x * veh_yaw;
   }

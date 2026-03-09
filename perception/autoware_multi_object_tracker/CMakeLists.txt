@@ -24,8 +24,6 @@ endif()
 ### Find Eigen Dependencies
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(glog REQUIRED)
-
 include_directories(
   SYSTEM
     ${EIGEN3_INCLUDE_DIR}
@@ -34,6 +32,7 @@ include_directories(
 # Generate exe file
 set(${PROJECT_NAME}_src
   src/multi_object_tracker_node.cpp
+  src/multi_object_tracker_core.cpp
   src/debugger/debugger.cpp
   src/debugger/debug_object.cpp
   src/processor/processor.cpp
@@ -55,7 +54,7 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/multiple_vehicle_tracker.cpp
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
-  lib/tracker/model/unknown_tracker.cpp
+  lib/tracker/model/polygon_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
@@ -68,7 +67,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
-  glog::glog
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
 )

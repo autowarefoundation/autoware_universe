@@ -80,7 +80,7 @@ void TrafficLightSelectorNode::objectsCallback(
     const auto & expect_roi = expected_rois_msg_rois.roi;
 
     for (const auto & detected_roi : detected_rois) {
-      if (!utils::isInsideRoughRoi(detected_roi, rough_roi)) {
+      if (!utils::isCenterInsideRoughRoi(detected_roi, rough_roi)) {
         continue;
       }
 
@@ -155,7 +155,7 @@ void TrafficLightSelectorNode::evaluateWholeRois(
     double max_iou = 0.0;
     RegionOfInterest max_iou_roi;
     for (const auto & detected_roi : detected_rois) {
-      const double iou = utils::getIoU(expect_roi_shifted.second, detected_roi);
+      const double iou = utils::getGenIoU(expect_roi_shifted.second, detected_roi);
       if (iou > max_iou) {
         max_iou = iou;
         max_iou_roi = detected_roi;
