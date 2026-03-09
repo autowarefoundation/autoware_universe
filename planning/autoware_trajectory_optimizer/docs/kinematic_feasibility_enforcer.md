@@ -46,7 +46,8 @@ The yaw rate limit restricts heading changes over time:
 Δψ_rate = ψ_dot_max * Δt
 ```
 
-where `Δt` is the time interval between trajectory points.
+where `Δt` is a single average time step computed from all `time_from_start` deltas across
+the trajectory (fallback: 0.1 s). The same value is used for every segment.
 
 #### 3. Combined Constraint
 
@@ -83,8 +84,8 @@ vehicle pose:
 
 ### Key Algorithm Properties
 
-- **Arc length preservation**: Maintains `dt = s / v` relationship for each
-  segment
+- **Arc length preservation**: Segment distances are preserved; timing uses a single
+  `avg_dt` averaged from `time_from_start` deltas across the whole trajectory
 - **Forward causality**: Each point depends only on previous points (no
   backward propagation)
 - **Velocity preservation**: Original velocity profile unchanged
@@ -105,8 +106,8 @@ for (size_t i = 0; i < traj_points.size() - 1; ++i) {
 }
 ```
 
-This ensures arc lengths remain constant during forward propagation, preserving
-the implicit timing: `dt_i = s_i / v_i`.
+This ensures arc lengths remain constant during forward propagation. Timing is determined
+by the single `avg_dt` computed from `time_from_start` deltas, not per-segment kinematics.
 
 ### Heading Update Logic
 
@@ -151,20 +152,19 @@ These are automatically loaded from vehicle configuration:
 
 ### Plugin Execution Order
 
-The kinematic feasibility enforcer should run **before** the QP smoother in
-the plugin pipeline to ensure:
-
-1. Trajectory points respect kinematic constraints
-2. QP smoother operates on kinematically feasible input
-3. Arc lengths and timing structure are preserved for QP optimization
+In the default pipeline the kinematic feasibility enforcer runs **twice**: once before the QP
+smoother and once after. The first pass pre-conditions the path so the QP solver operates on
+a kinematically plausible input. The second pass catches any constraint violations reintroduced
+by the smoothing. Both passes use the same parameter set and operate independently.
 
 ## Limitations
 
 1. **Path deviation**: Kinematic constraints may cause significant deviation
    from the original planner path, especially for aggressive maneuvers.
 
-2. **Velocity-time assumptions**: Algorithm assumes constant velocity within
-   each segment (`dt = s / v`). Large velocity changes may affect accuracy.
+2. **Single average dt**: The yaw rate constraint uses one `avg_dt` averaged from all
+   `time_from_start` deltas. In practice this equals the configured upstream `time_step_s`
+   since the input has constant dt and `time_from_start` is not modified by preceding plugins.
 
 3. **Steering dynamics**: Does not model steering rate limits or steering
    system dynamics - only considers geometric and yaw rate constraints.

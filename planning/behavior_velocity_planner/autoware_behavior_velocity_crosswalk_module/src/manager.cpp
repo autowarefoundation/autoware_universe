@@ -128,6 +128,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     node, ns + ".pass_judge.timeout_set_for_no_intention_to_walk");
   cp.timeout_ego_stop_for_yield =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.timeout_ego_stop_for_yield");
+  cp.min_vru_crossing_width =
+    get_or_declare_parameter<double>(node, ns + ".pass_judge.min_vru_crossing_width");
 
   // param for target area & object
   cp.crosswalk_attention_range =
