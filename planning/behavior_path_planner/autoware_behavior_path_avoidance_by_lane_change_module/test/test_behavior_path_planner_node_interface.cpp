@@ -42,7 +42,7 @@ protected:
     (void)rclcpp::shutdown();
   }
 
-private:
+protected:
   std::shared_ptr<PlanningInterfaceTestManager> test_manager_;
   std::shared_ptr<BehaviorPathPlannerNode> test_target_node_;
 };
