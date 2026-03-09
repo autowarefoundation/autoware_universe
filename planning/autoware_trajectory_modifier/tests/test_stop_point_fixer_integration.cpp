@@ -528,6 +528,21 @@ TEST_F(StopPointFixerIntegrationTest, IsLongStopTrajectory_StopAt1p2sFollowedByM
   EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
 }
 
+TEST_F(
+  StopPointFixerIntegrationTest,
+  IsLongStopTrajectory_StoppedBelowThresholdThenMovingAfterThreshold_ReturnsTrue)
+{
+  // Stopped at 0.5s (below min_stop_duration_s=0.5), moving at 0.6s (after the threshold).
+  // The trajectory did not begin moving before min_stop_duration_s elapsed, so it is nuked.
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_time(0.0, 0.0, 0.0, 0, 300000000));
+  trajectory.push_back(create_trajectory_point_with_time(0.0, 0.0, 0.0, 0, 400000000));
+  trajectory.push_back(create_trajectory_point_with_time(5.0, 0.0, 0.0, 0, 500000000));
+  trajectory.push_back(create_trajectory_point_with_time(5.0, 0.0, 1.0, 0, 600000000));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
 // Long-stop flag parameter update is reflected in behavior
 
 TEST_F(StopPointFixerIntegrationTest, ParameterUpdate_LongStopFlagCanBeToggledAtRuntime)
