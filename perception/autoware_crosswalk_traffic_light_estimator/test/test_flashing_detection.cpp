@@ -108,7 +108,7 @@ TEST(FlashingDetectorTest, FlashingTransition_GreenToRed)
 TEST(FlashingDetectorTest, EstimateStableColor_PrunesOldEntries)
 {
   // Arrange
-  FlashingDetectorDriver driver;
+  FlashingDetectorDriver driver(FlashingDetectionConfig{1.0});
 
   // Build state and trigger flashing
   driver.estimate(0.0, TrafficSignalElement::GREEN);
