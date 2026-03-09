@@ -113,12 +113,13 @@ TEST(FlashingDetectorTest, EstimateStableColor_PrunesOldEntries)
   // Build state and trigger flashing
   driver.estimate(0.0, TrafficSignalElement::GREEN);
   driver.estimate(0.1, TrafficSignalElement::UNKNOWN, 0.5);
+  driver.estimate(0.2, TrafficSignalElement::GREEN);
 
-  // Act: feed RED at time > hold_time, old GREEN/UNKNOWN entries are pruned
-  const uint8_t color = driver.estimate(2.0, TrafficSignalElement::RED);
+  // Act: feed UNKNOWN at time > hold_time, old flashing entries are pruned
+  const uint8_t color = driver.estimate(2.0, TrafficSignalElement::UNKNOWN, 0.5);
 
-  // Assert: flashing was reset because old entries were pruned, only RED remains
-  EXPECT_EQ(color, TrafficSignalElement::RED);
+  // Assert: flashing was reset because old entries were pruned, only UNKNOWN remains
+  EXPECT_EQ(color, TrafficSignalElement::UNKNOWN);
 }
 
 // --- clear_state tests ---
