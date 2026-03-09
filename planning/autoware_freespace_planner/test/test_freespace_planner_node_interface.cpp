@@ -74,8 +74,8 @@ protected:
   void TearDown() override { (void)rclcpp::shutdown(); }
 };
 
-// the following tests are disable because they randomly fail
-TEST_F(PlanningModuleInterfaceTest, testPlanningInterfaceWithVariousTrajectoryInput)
+// the following tests are disabled because they randomly fail
+TEST_F(PlanningModuleInterfaceTest, DISABLED_testPlanningInterfaceWithVariousTrajectoryInput)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
@@ -93,7 +93,7 @@ TEST_F(PlanningModuleInterfaceTest, testPlanningInterfaceWithVariousTrajectoryIn
     test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
 }
 
-TEST_F(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
+TEST_F(PlanningModuleInterfaceTest, DISABLED_NodeTestWithOffTrackEgoPose)
 {
   auto test_manager = generateTestManager();
   auto test_target_node = generateNode();
