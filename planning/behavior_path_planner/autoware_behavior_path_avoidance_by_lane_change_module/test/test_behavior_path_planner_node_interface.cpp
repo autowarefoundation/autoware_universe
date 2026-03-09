@@ -28,7 +28,8 @@ using autoware::behavior_path_planner::publishMandatoryTopics;
 class PlanningModuleInterfaceTest : public ::testing::Test
 {
 protected:
-  void SetUp() override {
+  void SetUp() override
+  {
     rclcpp::init(0, nullptr);
     test_manager_ = generateTestManager();
     test_target_node_ = generateNode(
@@ -36,7 +37,8 @@ protected:
       {"autoware::behavior_path_planner::AvoidanceByLaneChangeModuleManager"});
   }
 
-  void TearDown() override {
+  void TearDown() override
+  {
     test_target_node_.reset();
     test_manager_.reset();
     (void)rclcpp::shutdown();
