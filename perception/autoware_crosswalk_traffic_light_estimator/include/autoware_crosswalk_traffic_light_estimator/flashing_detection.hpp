@@ -24,7 +24,6 @@
 #include <lanelet2_core/Forward.h>
 
 #include <cstdint>
-#include <map>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -61,8 +60,8 @@ private:
   uint8_t update_and_get_color_state(const TrafficSignal & signal);
 
   FlashingDetectionConfig config_{};
-  std::map<lanelet::Id, bool> is_flashing_;
-  std::map<lanelet::Id, uint8_t> current_color_state_;
+  std::unordered_map<lanelet::Id, bool> is_flashing_;
+  std::unordered_map<lanelet::Id, uint8_t> current_color_state_;
   TrafficLightIdArray signal_history_;
 };
 
