@@ -184,6 +184,9 @@ void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
   feasibility_params_.max_yaw_rate_rad_s = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s");
 
+  feasibility_params_.time_step_s =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_kinematic_feasibility.time_step_s");
+
   // Log configuration
   RCLCPP_INFO(
     node_ptr->get_logger(),
@@ -202,6 +205,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer:
   update_param<double>(
     parameters, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s",
     feasibility_params_.max_yaw_rate_rad_s);
+
+  update_param<double>(
+    parameters, "trajectory_kinematic_feasibility.time_step_s", feasibility_params_.time_step_s);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

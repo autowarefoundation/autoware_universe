@@ -160,7 +160,7 @@ and invalidates the curvature penalty scaling.
 Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
 (`interpolation_resolution_m`, default: 0.2 m).
 `preserve_input_trajectory_orientation` is available but **disabled by default**; orientations
-are computed from the spline geometry.
+are computed from the spline geometry. After resampling, `time_from_start` is recomputed for all trajectory points; any `time_from_start` values supplied by upstream modules are therefore overwritten.
 
 This plugin **breaks the constant-dt property**. After it runs, points are no longer at uniform
 time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
