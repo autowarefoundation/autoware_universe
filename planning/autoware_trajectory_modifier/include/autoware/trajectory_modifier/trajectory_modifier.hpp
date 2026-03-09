@@ -20,16 +20,18 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
@@ -40,10 +42,12 @@ namespace autoware::trajectory_modifier
 
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class TrajectoryModifier : public rclcpp::Node
@@ -57,6 +61,7 @@ private:
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
   void reset_previous_data();
+  void set_data();
   bool initialized_modifiers_{false};
 
   std::unique_ptr<trajectory_modifier_params::ParamListener> param_listener_;
@@ -73,6 +78,10 @@ private:
     this, "~/input/odometry"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_current_acceleration_{this, "~/input/acceleration"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
+    this, "~/input/objects"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
 
   Odometry::ConstSharedPtr current_odometry_ptr_;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;
@@ -84,7 +93,7 @@ private:
   pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
 
-  TrajectoryModifierData data_;
+  std::shared_ptr<TrajectoryModifierData> data_;
 };
 
 }  // namespace autoware::trajectory_modifier

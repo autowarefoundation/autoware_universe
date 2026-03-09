@@ -46,25 +46,27 @@ public:
   void initialize(
     std::string name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
+    const std::shared_ptr<TrajectoryModifierData> & data,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
     name_ = std::move(name);
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
+    data_ = data;
     RCLCPP_DEBUG(
       node_ptr_->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name_.c_str());
     on_initialize(params);
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual void modify_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryModifierData & data) = 0;
-  virtual bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const = 0;
+  virtual void modify_trajectory(TrajectoryPoints & traj_points) = 0;
+  virtual bool is_trajectory_modification_required(const TrajectoryPoints & traj_points) = 0;
   std::string get_name() const { return name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   virtual void update_params(const TrajectoryModifierParams & params) = 0;
+
+  virtual void publish_debug_data([[maybe_unused]] const std::string & ns) const {}
 
   virtual void publish_planning_factor()
   {
@@ -84,7 +86,11 @@ protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
+  std::shared_ptr<TrajectoryModifierData> data_;
   bool enabled_{true};
+  double trajectory_time_step_{0.1};
+
+  rclcpp::Clock::SharedPtr get_clock() const { return node_ptr_->get_clock(); }
 
 private:
   std::string name_;

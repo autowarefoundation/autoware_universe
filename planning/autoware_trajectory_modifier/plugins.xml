@@ -6,4 +6,10 @@
       Modifies the stop point of a trajectory to align with the obstacle stop point
     </description>
   </class>
+  <class type="autoware::trajectory_modifier::plugin::ObstacleStop"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Modifies the trajectory to avoid obstacles by stopping
+    </description>
+  </class>
 </library>

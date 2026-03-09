@@ -4,6 +4,18 @@ trajectory_modifier_params:
     default_value: false
     description: Enable the use of stop point fixer
     read_only: false
+  use_obstacle_stop:
+    type: bool
+    default_value: false
+    description: Enable the use of obstacle stop
+    read_only: false
+  trajectory_time_step:
+    type: double
+    default_value: 0.1
+    description: Time step for trajectory modification [s]
+    read_only: false
+    validation:
+      gt_eq<>: [0.0]
 
   stop_point_fixer:
     velocity_threshold_mps:
@@ -20,3 +32,159 @@ trajectory_modifier_params:
       read_only: false
       validation:
         gt_eq<>: [0.0]
+
+  obstacle_stop:
+    use_objects:
+      type: bool
+      default_value: false
+      description: Enable the use of objects for obstacle stop
+      read_only: false
+    use_pointcloud:
+      type: bool
+      default_value: false
+      description: Enable the use of pointcloud for obstacle stop
+      read_only: false
+    stop_margin_m:
+      type: double
+      default_value: 6.0
+      description: Distance to maintain from an obstacle when stopped [m]
+      validation:
+        gt_eq<>: [0.0]
+      read_only: false
+    nom_stopping_decel:
+      type: double
+      default_value: -2.0
+      description: Nominal deceleration during stopping [m/s^2]
+      validation:
+        lt<>: [0.0]
+      read_only: false
+    nom_stopping_jerk:
+      type: double
+      default_value: -3.0
+      description: Nominal jerk during stopping [m/s^3]
+      validation:
+        lt<>: [0.0]
+      read_only: false
+    max_stopping_decel:
+      type: double
+      default_value: -4.0
+      description: Maximum deceleration during stopping [m/s^2]
+      validation:
+        lt<>: [0.0]
+      read_only: false
+    max_stopping_jerk:
+      type: double
+      default_value: -8.0
+      description: Maximum jerk during stopping [m/s^3]
+      validation:
+        lt<>: [0.0]
+      read_only: false
+    on_time_buffer:
+      type: double
+      default_value: 0.5
+      description: Duration an obstacle must be detected before stopping [s]
+      validation:
+        gt_eq<>: [0.0]
+      read_only: false
+    off_time_buffer:
+      type: double
+      default_value: 1.0
+      description: Duration an obstacle must be gone before removing stop [s]
+      validation:
+        gt_eq<>: [0.0]
+      read_only: false
+    lateral_margin_m:
+      type: double
+      default_value: 0.5
+      description: Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      validation:
+        gt_eq<>: [0.0]
+      read_only: false
+    duplicate_check_threshold_m:
+      type: double
+      default_value: 1.0
+      description: Threshold to check if the stop point is already in the trajectory [m]
+      validation:
+        gt_eq<>: [0.0]
+      read_only: false
+
+    objects:
+      object_types:
+        type: string_array
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, unknown]
+        description: Types of objects to consider for obstacle stop
+        read_only: false
+      max_velocity_th:
+        type: double
+        default_value: 1.0
+        description: Maximum velocity threshold for target object to be considered for obstacle stop [m/s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+
+    pointcloud:
+      height_buffer:
+        type: double
+        default_value: 0.5
+        description: Height buffer to add above ego height [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      min_height:
+        type: double
+        default_value: 0.2
+        description: Minimum height of pointcloud [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      detection_range:
+        type: double
+        default_value: 100.0
+        description: Detection range [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      voxel_grid_filter:
+        x:
+          type: double
+          validation:
+            gt<>: [0.0]
+          read_only: false
+        y:
+          type: double
+          validation:
+            gt<>: [0.0]
+          read_only: false
+        z:
+          type: double
+          validation:
+            gt<>: [0.0]
+          read_only: false
+        min_size:
+          type: int
+          validation:
+            gt<>: [0]
+          read_only: false
+      clustering:
+        tolerance:
+          type: double
+          default_value: 0.2
+          description: Distance threshold for clustering points [m]
+          validation:
+            gt<>: [0.0]
+          read_only: false
+        min_height:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        min_size:
+          type: int
+          validation:
+            gt<>: [0]
+          read_only: false
+        max_size:
+          type: int
+          validation:
+            gt<>: [0]
+          read_only: false

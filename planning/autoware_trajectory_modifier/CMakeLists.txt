@@ -9,13 +9,18 @@ generate_parameter_library(trajectory_modifier_param
   param/trajectory_modifier_parameter_struct.yaml
 )
 
+ament_auto_add_library(${PROJECT_NAME}_utils SHARED
+  src/trajectory_modifier_utils/utils.cpp
+  src/trajectory_modifier_utils/obstacle_stop_utils.cpp
+)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/trajectory_modifier.cpp
-  src/utils.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
   trajectory_modifier_param
+  ${PROJECT_NAME}_utils
 )
 
 target_compile_options(${PROJECT_NAME} PUBLIC
@@ -29,10 +34,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
 
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   src/trajectory_modifier_plugins/stop_point_fixer.cpp
+  src/trajectory_modifier_plugins/obstacle_stop.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins
   ${PROJECT_NAME}
+  ${PROJECT_NAME}_utils
   trajectory_modifier_param
 )
 
@@ -47,6 +54,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_autoware_trajectory_modifier
     ${PROJECT_NAME}
     ${PROJECT_NAME}_plugins
+    ${PROJECT_NAME}_utils
   )
 endif()
 

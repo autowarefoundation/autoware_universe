@@ -29,14 +29,12 @@ class StopPointFixer : public TrajectoryModifierPluginBase
 public:
   StopPointFixer() = default;
 
-  void modify_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryModifierData & data) override;
+  void modify_trajectory(TrajectoryPoints & traj_points) override;
 
   bool is_long_stop_trajectory(const TrajectoryPoints & traj_points) const;
-  bool is_stop_point_close_to_ego(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const;
+  bool is_stop_point_close_to_ego(const TrajectoryPoints & traj_points) const;
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const override;
+    const TrajectoryPoints & traj_points) override;
 
   void update_params(const TrajectoryModifierParams & params) override
   {
