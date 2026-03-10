@@ -14,12 +14,12 @@
 
 #include "autoware/universe_utils/geometry/alt_geometry.hpp"
 
+#include <stdio.h>
+
 #include <algorithm>
 #include <limits>
 #include <utility>
 #include <vector>
-
-#include <stdio.h>
 
 namespace autoware::universe_utils
 {
@@ -187,8 +187,9 @@ std::optional<alt::ConvexPolygon2d> convex_hull(const alt::Points2d & points)
       if (points.empty()) {
         return;
       }
-      printf("make_hull: p1=(%f, %f), p2=(%f, %f), points.size=%zu\n", p1.x(), p1.y(), p2.x(),
-             p2.y(), points.size());
+      printf(
+        "make_hull: p1=(%f, %f), p2=(%f, %f), points.size=%zu\n", p1.x(), p1.y(), p2.x(), p2.y(),
+        points.size());
       fflush(stdout);
 
       const auto & farthest = *find_farthest(points, p1, p2);
