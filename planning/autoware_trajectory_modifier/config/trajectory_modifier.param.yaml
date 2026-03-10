@@ -6,6 +6,6 @@
     stop_point_fixer:
       force_stop_long_stopped_trajectories: true     # Force zero velocity trajectory for trajectories with long stops
       force_stop_close_stopped_trajectories: true    # Force zero velocity trajectory for trajectories with stops close to ego
-      velocity_threshold_mps: 0.1
+      velocity_threshold_mps: 0.25
       min_distance_threshold_m: 1.0
       min_stop_duration_s: 0.5
