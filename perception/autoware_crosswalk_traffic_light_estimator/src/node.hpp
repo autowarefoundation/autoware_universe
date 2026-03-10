@@ -60,7 +60,7 @@ private:
   void on_map(const LaneletMapBin::ConstSharedPtr msg);
   void on_traffic_light_array(const TrafficSignalArray::ConstSharedPtr msg);
 
-  void update_last_detected_signal(const TrafficLightIdMap & traffic_signals);
+  void update_last_detected_signal(const TrafficLightIdMap & traffic_light_id_map);
   /// @brief update the overrides of crosswalk signals from the lanelet map for the given traffic
   /// light id
   void update_crosswalk_overrides_from_map(
