@@ -98,8 +98,8 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
   const auto id = signal.traffic_light_group_id;
 
   // no record of detected color in history
-  if (is_flashing_.count(id) == 0) {
-    is_flashing_.emplace(id, false);
+  const auto [_, inserted] = is_flashing_.try_emplace(id, false);
+  if (inserted) {
     return;
   }
 
