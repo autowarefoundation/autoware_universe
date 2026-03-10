@@ -141,12 +141,10 @@ struct DynamicObjectList
   uint channel_index;
   std::vector<DynamicObject> objects;
 
-  mutable std::unordered_map<
-    unique_identifier_msgs::msg::UUID, size_t, UUIDHash, UUIDEqual>
+  mutable std::unordered_map<unique_identifier_msgs::msg::UUID, size_t, UUIDHash, UUIDEqual>
     uuid_to_index_;
 
-  std::optional<size_t> getObjectIndexByUuid(
-    const unique_identifier_msgs::msg::UUID & uuid) const;
+  std::optional<size_t> getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const;
   void buildUuidIndex() const;
 };
 
