@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_crosswalk_traffic_light_estimator/flashing_detection.hpp"
+#include "flashing_detection.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -98,8 +98,8 @@ void FlashingDetector::update_flashing_state(const TrafficSignal & signal)
   const auto id = signal.traffic_light_group_id;
 
   // no record of detected color in history
-  if (is_flashing_.count(id) == 0) {
-    is_flashing_.emplace(id, false);
+  const auto [_, inserted] = is_flashing_.try_emplace(id, false);
+  if (inserted) {
     return;
   }
 

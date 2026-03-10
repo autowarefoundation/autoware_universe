@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "autoware_crosswalk_traffic_light_estimator/node.hpp"
+#include "node.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
@@ -34,7 +34,7 @@ namespace autoware::crosswalk_traffic_light_estimator
 namespace
 {
 
-bool hasMergeLane(
+bool has_merge_lane(
   const lanelet::ConstLanelet & lanelet_1, const lanelet::ConstLanelet & lanelet_2,
   const lanelet::routing::RoutingGraphPtr & routing_graph_ptr)
 {
@@ -52,7 +52,7 @@ bool hasMergeLane(
   return false;
 }
 
-bool hasMergeLane(
+bool has_merge_lane(
   const lanelet::ConstLanelets & lanelets,
   const lanelet::routing::RoutingGraphPtr & routing_graph_ptr)
 {
@@ -71,7 +71,7 @@ bool hasMergeLane(
         continue;
       }
 
-      if (!hasMergeLane(lanelet_1, lanelet_2, routing_graph_ptr)) {
+      if (!has_merge_lane(lanelet_1, lanelet_2, routing_graph_ptr)) {
         continue;
       }
 
@@ -172,17 +172,17 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
 
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&CrosswalkTrafficLightEstimatorNode::onMap, this, _1));
+    std::bind(&CrosswalkTrafficLightEstimatorNode::on_map, this, _1));
   sub_traffic_light_array_ = create_subscription<TrafficSignalArray>(
     "~/input/classified/traffic_signals", rclcpp::QoS{1},
-    std::bind(&CrosswalkTrafficLightEstimatorNode::onTrafficLightArray, this, _1));
+    std::bind(&CrosswalkTrafficLightEstimatorNode::on_traffic_light_array, this, _1));
 
   pub_traffic_light_array_ =
     this->create_publisher<TrafficSignalArray>("~/output/traffic_signals", rclcpp::QoS{1});
   pub_processing_time_ = std::make_shared<DebugPublisher>(this, "~/debug");
 }
 
-void CrosswalkTrafficLightEstimatorNode::onMap(const LaneletMapBin::ConstSharedPtr msg)
+void CrosswalkTrafficLightEstimatorNode::on_map(const LaneletMapBin::ConstSharedPtr msg)
 {
   RCLCPP_DEBUG(get_logger(), "[CrosswalkTrafficLightEstimatorNode]: Start loading lanelet");
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
@@ -211,7 +211,7 @@ void CrosswalkTrafficLightEstimatorNode::onMap(const LaneletMapBin::ConstSharedP
   const auto all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   const auto crosswalk_lanelets = lanelet::utils::query::crosswalkLanelets(all_lanelets);
 
-  constexpr int VEHICLE_GRAPH_INDEX = 0;
+  const int VEHICLE_GRAPH_INDEX = 0;
   for (const auto & crosswalk : crosswalk_lanelets) {
     const auto traffic_light_reg_elems =
       crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
@@ -253,7 +253,7 @@ void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
   }
   const auto & traffic_light = *traffic_light_it;
   const auto current_vehicle_traffic_light_color =
-    getHighestConfidenceTrafficSignal(traffic_light->id(), traffic_light_id_map);
+    get_highest_confidence_traffic_signal(traffic_light->id(), traffic_light_id_map);
   for (const auto & attribute : traffic_light->attributes()) {
     const auto & color_mapping = parse_signal_estimation_rules(attribute.first);
     if (!color_mapping) {
@@ -269,7 +269,7 @@ void CrosswalkTrafficLightEstimatorNode::update_crosswalk_overrides_from_map(
   }
 }
 
-void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
+void CrosswalkTrafficLightEstimatorNode::on_traffic_light_array(
   const TrafficSignalArray::ConstSharedPtr msg)
 {
   if (lanelet_map_ptr_ == nullptr) {
@@ -322,16 +322,16 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   for (const auto & crosswalk_id : crosswalk_ids_to_process) {
     const auto & crosswalk = lanelet_map_ptr_->laneletLayer.get(crosswalk_id);
     const auto & conflict_lls = crosswalk_to_vehicle_lanelets_.at(crosswalk_id);
-    const auto non_red_lanelets = getNonRedLanelets(conflict_lls, traffic_light_id_map);
+    const auto non_red_lanelets = get_non_red_lanelets(conflict_lls, traffic_light_id_map);
 
-    const auto crosswalk_tl_color = estimateCrosswalkTrafficSignal(crosswalk, non_red_lanelets);
-    setCrosswalkTrafficSignal(
+    const auto crosswalk_tl_color = estimate_crosswalk_traffic_signal(crosswalk, non_red_lanelets);
+    set_crosswalk_traffic_signal(
       crosswalk, crosswalk_tl_color, *msg, output, crosswalk_traffic_signal_overrides);
   }
 
-  removeDuplicateIds(output);
+  remove_duplicate_ids(output);
 
-  updateLastDetectedSignal(traffic_light_id_map);
+  update_last_detected_signal(traffic_light_id_map);
 
   pub_traffic_light_array_->publish(output);
   pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch.toc("Total"));
@@ -339,7 +339,7 @@ void CrosswalkTrafficLightEstimatorNode::onTrafficLightArray(
   return;
 }
 
-void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignal(
+void CrosswalkTrafficLightEstimatorNode::update_last_detected_signal(
   const TrafficLightIdMap & traffic_light_id_map)
 {
   for (const auto & input_traffic_signal : traffic_light_id_map) {
@@ -355,12 +355,7 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignal(
 
     const auto & id = input_traffic_signal.second.first.traffic_light_group_id;
 
-    if (last_detect_color_.count(id) == 0) {
-      last_detect_color_.emplace(id, input_traffic_signal.second);
-      continue;
-    }
-
-    last_detect_color_.at(id) = input_traffic_signal.second;
+    last_detect_color_.insert_or_assign(id, input_traffic_signal.second);
   }
 
   std::vector<int32_t> erase_id_list;
@@ -382,7 +377,7 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignal(
   }
 }
 
-void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
+void CrosswalkTrafficLightEstimatorNode::set_crosswalk_traffic_signal(
   const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
   TrafficSignalArray & output,
   const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides)
@@ -441,7 +436,7 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
     if (auto it = valid_id2idx_map.find(id); it != valid_id2idx_map.end()) {
       const auto & detected = msg.traffic_light_groups[it->second];
 
-      if (!use_pedestrian_signal_detect_ || isInvalidDetectionStatus(detected)) {
+      if (!use_pedestrian_signal_detect_ || is_invalid_detection_status(detected)) {
         // Replace detection with estimated base color
         replace_out_signal_elements(base_traffic_signal_element);
         continue;
@@ -462,7 +457,7 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
   }
 }
 
-bool CrosswalkTrafficLightEstimatorNode::isInvalidDetectionStatus(
+bool CrosswalkTrafficLightEstimatorNode::is_invalid_detection_status(
   const TrafficSignal & signal) const
 {
   if (signal.elements.empty()) {
@@ -476,7 +471,7 @@ bool CrosswalkTrafficLightEstimatorNode::isInvalidDetectionStatus(
   return false;
 }
 
-lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::getNonRedLanelets(
+lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::get_non_red_lanelets(
   const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const
 {
   lanelet::ConstLanelets non_red_lanelets{};
@@ -490,7 +485,7 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::getNonRedLanelets(
 
     const auto tl_reg_elem = tl_reg_elems.front();
     const auto current_detected_signal =
-      getHighestConfidenceTrafficSignal(tl_reg_elem->id(), traffic_light_id_map);
+      get_highest_confidence_traffic_signal(tl_reg_elem->id(), traffic_light_id_map);
 
     if (!current_detected_signal && !use_last_detect_color_) {
       continue;
@@ -506,7 +501,7 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::getNonRedLanelets(
                               : true;
 
     const auto last_detected_signal =
-      getHighestConfidenceTrafficSignal(tl_reg_elem->id(), last_detect_color_);
+      get_highest_confidence_traffic_signal(tl_reg_elem->id(), last_detect_color_);
 
     if (!last_detected_signal) {
       continue;
@@ -527,7 +522,7 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimatorNode::getNonRedLanelets(
   return non_red_lanelets;
 }
 
-uint8_t CrosswalkTrafficLightEstimatorNode::estimateCrosswalkTrafficSignal(
+uint8_t CrosswalkTrafficLightEstimatorNode::estimate_crosswalk_traffic_signal(
   const lanelet::ConstLanelet & crosswalk, const lanelet::ConstLanelets & non_red_lanelets) const
 {
   bool has_left_non_red_lane = false;
@@ -558,13 +553,13 @@ uint8_t CrosswalkTrafficLightEstimatorNode::estimateCrosswalkTrafficSignal(
     return TrafficSignalElement::RED;
   }
 
-  const auto has_merge_lane = hasMergeLane(non_red_lanelets, routing_graph_ptr_);
-  return !has_merge_lane && has_left_non_red_lane && has_right_non_red_lane
+  const auto merge_lane_exists = has_merge_lane(non_red_lanelets, routing_graph_ptr_);
+  return !merge_lane_exists && has_left_non_red_lane && has_right_non_red_lane
            ? TrafficSignalElement::RED
            : TrafficSignalElement::UNKNOWN;
 }
 
-boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenceTrafficSignal(
+boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::get_highest_confidence_traffic_signal(
   const lanelet::ConstLineStringsOrPolygons3d & traffic_lights,
   const TrafficLightIdMap & traffic_light_id_map) const
 {
@@ -599,7 +594,7 @@ boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenc
   return ret;
 }
 
-boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenceTrafficSignal(
+boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::get_highest_confidence_traffic_signal(
   const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map) const
 {
   boost::optional<uint8_t> ret{boost::none};
@@ -621,7 +616,8 @@ boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::getHighestConfidenc
   return ret;
 }
 
-void CrosswalkTrafficLightEstimatorNode::removeDuplicateIds(TrafficSignalArray & signal_array) const
+void CrosswalkTrafficLightEstimatorNode::remove_duplicate_ids(
+  TrafficSignalArray & signal_array) const
 {
   auto & signals = signal_array.traffic_light_groups;
   std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {

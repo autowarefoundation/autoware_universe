@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_crosswalk_traffic_light_estimator/node.hpp"
+#include "../src/node.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -101,7 +101,7 @@ protected:
   ///   Vehicle lanelet: subtype="road", turn_direction="straight", TL=vehicle_tl_re_id_
   ///   Crosswalk lanelet: subtype="crosswalk", TL=crosswalk_tl_re_id_
   ///   (VTL): vehicle traffic light + stop line at x=13
-  LaneletMapBin createMap()
+  LaneletMapBin create_map()
   {
     auto map = std::make_shared<lanelet::LaneletMap>();
 
@@ -164,7 +164,7 @@ protected:
     return msg;
   }
 
-  TrafficLightGroupArray createTrafficSignal(lanelet::Id tl_id, uint8_t color)
+  TrafficLightGroupArray create_traffic_signal(lanelet::Id tl_id, uint8_t color)
   {
     TrafficLightGroupArray msg;
     msg.stamp = node_->now();
@@ -183,7 +183,7 @@ protected:
     return msg;
   }
 
-  bool waitForMessage(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
+  bool wait_for_message(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
   {
     auto start = std::chrono::steady_clock::now();
     message_received_ = false;
@@ -197,7 +197,7 @@ protected:
     return true;
   }
 
-  void spinFor(std::chrono::milliseconds duration)
+  void spin_for(std::chrono::milliseconds duration)
   {
     auto start = std::chrono::steady_clock::now();
     while (std::chrono::steady_clock::now() - start < duration) {
@@ -219,23 +219,23 @@ protected:
   lanelet::Id vehicle_tl_re_id_{0};
   lanelet::Id crosswalk_tl_re_id_{0};
 
-  void publishMap()
+  void publish_map()
   {
-    auto map_msg = createMap();
+    auto map_msg = create_map();
     map_pub_->publish(map_msg);
-    spinFor(std::chrono::milliseconds(500));
+    spin_for(std::chrono::milliseconds(500));
   }
 
-  void publishTrafficSignal(uint8_t vehicle_color)
+  void publish_traffic_signal(uint8_t vehicle_color)
   {
-    auto signal = createTrafficSignal(vehicle_tl_re_id_, vehicle_color);
+    auto signal = create_traffic_signal(vehicle_tl_re_id_, vehicle_color);
     signal_pub_->publish(signal);
-    ASSERT_TRUE(waitForMessage());
+    ASSERT_TRUE(wait_for_message());
   }
 
   /// @brief Find the crosswalk signal color in received_msg_.
   /// Fails the test if not found.
-  uint8_t getCrosswalkColor() const
+  uint8_t get_crosswalk_color() const
   {
     for (const auto & group : received_msg_->traffic_light_groups) {
       if (group.traffic_light_group_id == crosswalk_tl_re_id_) {
@@ -252,28 +252,28 @@ protected:
 TEST_F(CrosswalkTrafficLightEstimatorIntegrationTest, StraightGreenEstimatesRed)
 {
   // Arrange
-  publishMap();
+  publish_map();
 
   // Act
-  publishTrafficSignal(TrafficLightElement::GREEN);
-  publishTrafficSignal(TrafficLightElement::GREEN);
+  publish_traffic_signal(TrafficLightElement::GREEN);
+  publish_traffic_signal(TrafficLightElement::GREEN);
 
   // Assert
-  EXPECT_EQ(getCrosswalkColor(), TrafficLightElement::RED);
+  EXPECT_EQ(get_crosswalk_color(), TrafficLightElement::RED);
 }
 
 /// @brief Vehicle signal RED → all vehicle lanelets are RED → crosswalk is estimated as UNKNOWN.
 TEST_F(CrosswalkTrafficLightEstimatorIntegrationTest, AllRedEstimatesUnknown)
 {
   // Arrange
-  publishMap();
+  publish_map();
 
   // Act
-  publishTrafficSignal(TrafficLightElement::RED);
-  publishTrafficSignal(TrafficLightElement::RED);
+  publish_traffic_signal(TrafficLightElement::RED);
+  publish_traffic_signal(TrafficLightElement::RED);
 
   // Assert
-  EXPECT_EQ(getCrosswalkColor(), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(get_crosswalk_color(), TrafficLightElement::UNKNOWN);
 }
 
 int main(int argc, char ** argv)
