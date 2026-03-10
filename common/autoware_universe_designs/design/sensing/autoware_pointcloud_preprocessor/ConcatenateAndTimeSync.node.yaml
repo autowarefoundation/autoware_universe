@@ -12,7 +12,6 @@ launch:
   executable: concatenate_and_time_sync_node
   node_output: screen
   use_container: true
-  container_name: pointcloud_container
 
 # interfaces
 subscribers:

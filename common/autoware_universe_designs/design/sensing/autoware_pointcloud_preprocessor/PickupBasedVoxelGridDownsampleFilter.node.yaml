@@ -12,7 +12,6 @@ launch:
   executable: pickup_based_voxel_grid_downsample_filter_node
   node_output: screen
   use_container: true
-  container_name: pointcloud_container
 
 # interface
 subscribers:

@@ -13,7 +13,6 @@ launch:
   executable: low_intensity_cluster_filter_node
   node_output: screen
   use_container: false
-  container_name: pointcloud_container
 
 # interfaces
 subscribers:

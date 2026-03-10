@@ -12,7 +12,6 @@ launch:
   executable: roi_cluster_fusion_node
   node_output: screen
   use_container: true
-  container_name: pointcloud_container
 
 # interfaces
 subscribers:
