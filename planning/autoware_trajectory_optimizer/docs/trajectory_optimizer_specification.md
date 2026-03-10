@@ -158,10 +158,9 @@ and invalidates the curvature penalty scaling.
 #### TrajectorySplineSmoother (enabled)
 
 Resamples the trajectory using Akima spline interpolation at a fixed arc-length resolution
-(`interpolation_resolution_m`, default: 0.2 m). After resampling, `time_from_start` is
-recomputed from the velocity profile and arc length via `calculate_time_from_start`.
+(`interpolation_resolution_m`, default: 0.2 m).
 `preserve_input_trajectory_orientation` is available but **disabled by default**; orientations
-are computed from the spline geometry.
+are computed from the spline geometry. After resampling, `time_from_start` is recomputed for all trajectory points; any `time_from_start` values supplied by upstream modules are therefore overwritten.
 
 This plugin **breaks the constant-dt property**. After it runs, points are no longer at uniform
 time intervals - they are at uniform arc-length intervals. This is intentional and necessary:
@@ -180,8 +179,7 @@ Responsibilities:
 
 - **Speed cap** (`limit_speed`, enabled by default): applies a global maximum speed from an
   external velocity limit topic or the configured default.
-- **Lateral acceleration limiting** (`limit_lateral_acceleration`, disabled by default): first
-  calls `calculate_time_from_start` to refresh timing, then for each consecutive point pair
+- **Lateral acceleration limiting** (`limit_lateral_acceleration`, disabled by default): for each consecutive point pair, it
   computes `yaw_rate = |delta_yaw / delta_time|` from orientation differences and
   `time_from_start`. If `v * yaw_rate > a_lat_max`, the point's speed is capped to
   `v_limit = a_lat_max / yaw_rate`.
