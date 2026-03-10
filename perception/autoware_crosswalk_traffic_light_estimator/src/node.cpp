@@ -211,14 +211,14 @@ void CrosswalkTrafficLightEstimatorNode::on_map(const LaneletMapBin::ConstShared
   const auto all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
   const auto crosswalk_lanelets = lanelet::utils::query::crosswalkLanelets(all_lanelets);
 
-  constexpr int vehicle_graph_index = 0;
+  const int VEHICLE_GRAPH_INDEX = 0;
   for (const auto & crosswalk : crosswalk_lanelets) {
     const auto traffic_light_reg_elems =
       crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
     if (traffic_light_reg_elems.empty()) {
       continue;
     }
-    const auto vehicle_lanelets = overall_graphs.conflictingInGraph(crosswalk, vehicle_graph_index);
+    const auto vehicle_lanelets = overall_graphs.conflictingInGraph(crosswalk, VEHICLE_GRAPH_INDEX);
     if (vehicle_lanelets.empty()) {
       continue;
     }
