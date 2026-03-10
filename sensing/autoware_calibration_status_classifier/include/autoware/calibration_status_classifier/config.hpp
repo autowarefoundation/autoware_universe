@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__CALIBRATION_STATUS_CLASSIFIER__CONFIG_HPP_
 #define AUTOWARE__CALIBRATION_STATUS_CLASSIFIER__CONFIG_HPP_
 
+#include <algorithm>
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
@@ -39,7 +40,7 @@ struct CalibrationStatusClassifierConfig
    */
   CalibrationStatusClassifierConfig(
     const double max_depth, const int64_t dilation_size, const std::vector<int64_t> & height,
-    const std::vector<int64_t> & width)
+    const std::vector<int64_t> & width, const std::vector<double> & ego_box = {})
   {
     if (max_depth <= 0.0) {
       throw std::invalid_argument("Lidar range must be positive");
@@ -69,6 +70,21 @@ struct CalibrationStatusClassifierConfig
     if (width[0] > width[1] || width[1] > width[2]) {
       throw std::invalid_argument("Width values must be in ascending order: min <= opt <= max");
     }
+    if (!ego_box.empty() && ego_box.size() != 6) {
+      throw std::invalid_argument(
+        "ego_box must have exactly 6 elements [x_min, y_min, z_min, x_max, y_max, z_max]");
+    }
+    if (ego_box.size() == 6) {
+      // All-zeros means disabled
+      const bool all_zeros =
+        std::all_of(ego_box.begin(), ego_box.end(), [](double v) { return v == 0.0; });
+      if (!all_zeros) {
+        if (ego_box[0] >= ego_box[3] || ego_box[1] >= ego_box[4] || ego_box[2] >= ego_box[5]) {
+          throw std::invalid_argument("ego_box min values must be less than max values");
+        }
+        this->ego_box = ego_box;
+      }
+    }
 
     this->max_depth = max_depth;
     this->dilation_size = static_cast<uint32_t>(dilation_size);
@@ -83,6 +99,7 @@ struct CalibrationStatusClassifierConfig
   uint32_t dilation_size;
   std::vector<int32_t> height;
   std::vector<int32_t> width;
+  std::vector<double> ego_box;
   int32_t channels{5};
 };
 

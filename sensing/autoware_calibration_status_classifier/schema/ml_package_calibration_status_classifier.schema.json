@@ -35,9 +35,19 @@
           "maxItems": 3,
           "description": "The width of the input image for the optimization profile of the ML model, specified as [min, opt, max].",
           "default": [1920, 2880, 3840]
+        },
+        "ego_box": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Ego vehicle bounding box in lidar frame [x_min, y_min, z_min, x_max, y_max, z_max]. Used to generate an occlusion mask that prevents projecting LiDAR points through the vehicle chassis onto the image. Set all values to 0.0 to disable.",
+          "default": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         }
       },
-      "required": ["max_depth", "dilation_size", "height", "width"],
+      "required": ["max_depth", "dilation_size", "height", "width", "ego_box"],
       "additionalProperties": false
     }
   },
