@@ -186,8 +186,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     for (auto & plugin : plugins_) {
       plugin->optimize_trajectory(trajectory.points, params_, data);
     }
-    motion_utils::calculate_time_from_start(
-      trajectory.points, current_odometry_ptr_->pose.pose.position);
   }
 
   trajectories_pub_->publish(output_trajectories);

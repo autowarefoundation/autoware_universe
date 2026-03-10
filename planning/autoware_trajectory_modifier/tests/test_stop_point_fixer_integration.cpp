@@ -40,6 +40,7 @@ protected:
     TrajectoryModifierParams params;
     plugin_ =
       std::make_unique<StopPointFixer>("test_stop_point_fixer", node_.get(), time_keeper_, params);
+    min_stop_duration_s_ = node_->get_parameter("stop_point_fixer.min_stop_duration_s").as_double();
   }
 
   void TearDown() override
@@ -75,9 +76,27 @@ protected:
     return data;
   }
 
+  TrajectoryPoint create_trajectory_point_with_time(
+    double x, double y, double velocity, int32_t sec, uint32_t nanosec = 0)
+  {
+    auto point = create_trajectory_point(x, y, velocity);
+    point.time_from_start.sec = sec;
+    point.time_from_start.nanosec = nanosec;
+    return point;
+  }
+
+  TrajectoryPoint create_trajectory_point_with_duration(
+    double x, double y, double velocity, double time_s)
+  {
+    const auto sec = static_cast<int32_t>(time_s);
+    const auto nanosec = static_cast<uint32_t>((time_s - static_cast<double>(sec)) * 1e9);
+    return create_trajectory_point_with_time(x, y, velocity, sec, nanosec);
+  }
+
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<StopPointFixer> plugin_;
+  double min_stop_duration_s_{0.0};
 };
 
 // Test is_trajectory_modification_required method
@@ -295,4 +314,283 @@ TEST_F(StopPointFixerIntegrationTest, ThreeDimensionalVelocity)
 
   bool required = plugin_->is_trajectory_modification_required(trajectory, params, data);
   EXPECT_FALSE(required);  // Should detect vehicle as moving due to 3D velocity
+}
+
+// Tests for is_long_stop_trajectory
+
+TEST_F(
+  StopPointFixerIntegrationTest, IsLongStopTrajectory_ReturnsTrueWhenTimeExceedsMinStopDuration)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(
+    create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(StopPointFixerIntegrationTest, IsLongStopTrajectory_ReturnsFalseWhenMovingPointEncountered)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_time(5.0, 0.0, 1.0, 0));
+
+  EXPECT_FALSE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(StopPointFixerIntegrationTest, IsLongStopTrajectory_ReturnsFalseForEmptyTrajectory)
+{
+  TrajectoryPoints trajectory;
+  EXPECT_FALSE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(StopPointFixerIntegrationTest, IsLongStopTrajectory_ReturnsTrueWhenAllPointsStoppedNoTime)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_time(5.0, 0.0, 0.0, 0));
+  trajectory.push_back(create_trajectory_point_with_time(6.0, 0.0, 0.0, 0));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(
+  StopPointFixerIntegrationTest, IsLongStopTrajectory_MovingPointBeforeStoppedLongPointReturnsFalse)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_duration(2.0, 0.0, 1.0, 0.0));
+  trajectory.push_back(
+    create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  EXPECT_FALSE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+// Tests for force_stop_long_stopped_trajectories flag
+
+TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_False_LongStopConditionDoesNotTrigger)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", false);
+  plugin_->on_parameter(parameters);
+
+  TrajectoryPoints trajectory;
+  trajectory.push_back(
+    create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_True_LongStopConditionTriggers)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", true);
+  parameters.emplace_back("stop_point_fixer.force_stop_close_stopped_trajectories", false);
+  plugin_->on_parameter(parameters);
+
+  TrajectoryPoints trajectory;
+  trajectory.push_back(
+    create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+// Tests for force_stop_close_stopped_trajectories flag
+
+TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_False_CloseStopConditionDoesNotTrigger)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  parameters.emplace_back("stop_point_fixer.force_stop_close_stopped_trajectories", false);
+  parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", true);
+  plugin_->on_parameter(parameters);
+
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_time(0.5, 0.0, 1.0, 0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_True_CloseStopConditionTriggers)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  parameters.emplace_back("stop_point_fixer.force_stop_close_stopped_trajectories", true);
+  parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", false);
+  plugin_->on_parameter(parameters);
+
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0, 1.0));
+  trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+TEST_F(StopPointFixerIntegrationTest, BothFlags_False_NeitherConditionTriggers)
+{
+  std::vector<rclcpp::Parameter> parameters;
+  parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", false);
+  parameters.emplace_back("stop_point_fixer.force_stop_close_stopped_trajectories", false);
+  plugin_->on_parameter(parameters);
+
+  TrajectoryPoints trajectory;
+  trajectory.push_back(
+    create_trajectory_point_with_duration(0.5, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+// Velocity threshold boundary tests at runtime default (0.1 mps from set_up_params).
+// Uses two trajectory points so calcSignedArcLength produces a valid close-stop distance.
+
+TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_StationaryEgo_TriggersModification)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0, 1.0));
+  trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_MovingEgoAboveThreshold_SuppressesModification)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0, 1.0));
+  trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.15);
+
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+TEST_F(
+  StopPointFixerIntegrationTest,
+  RuntimeDefault_VelocityBetweenStructAndRuntimeDefault_TreatedAsMoving)
+{
+  // ego velocity = 0.15 is above the runtime default (0.1) but below the struct field default
+  // (0.25), verifying that the runtime-declared value is used
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point(0.0, 0.0, 1.0));
+  trajectory.push_back(create_trajectory_point(0.5, 0.0, 1.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.15);
+
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+}
+
+// Decimal time tests for is_long_stop_trajectory.
+// The implementation computes time_from_start = sec + nanosec * 1e-9 and compares against
+// min_stop_duration_s with sub-second precision. Times are expressed as multiples of
+// min_stop_duration_s so the tests remain valid if the default is changed.
+
+TEST_F(
+  StopPointFixerIntegrationTest,
+  IsLongStopTrajectory_StopBelowThresholdWithMovementAlsoBelowThreshold_ReturnsFalse)
+{
+  const double T = min_stop_duration_s_;
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_duration(0.0, 0.0, 0.0, T * 0.6));
+  trajectory.push_back(create_trajectory_point_with_duration(5.0, 0.0, 1.0, T * 0.8));
+
+  EXPECT_FALSE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(
+  StopPointFixerIntegrationTest,
+  IsLongStopTrajectory_StopJustAboveThresholdFollowedByMovement_ReturnsTrue)
+{
+  const double T = min_stop_duration_s_;
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_duration(0.0, 0.0, 0.0, T * 1.4));
+  trajectory.push_back(create_trajectory_point_with_duration(5.0, 0.0, 1.0, T * 1.6));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(
+  StopPointFixerIntegrationTest,
+  IsLongStopTrajectory_StopWellAboveThresholdFollowedByMovement_ReturnsTrue)
+{
+  const double T = min_stop_duration_s_;
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_duration(0.0, 0.0, 0.0, T * 2.4));
+  trajectory.push_back(create_trajectory_point_with_duration(5.0, 0.0, 1.0, T * 4.0));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+TEST_F(
+  StopPointFixerIntegrationTest,
+  IsLongStopTrajectory_StoppedBelowThresholdThenMovingAfterThreshold_ReturnsTrue)
+{
+  // Stopped points at 0.6*T, 0.8*T, and exactly T (not > T so no early exit yet),
+  // then a moving point at 1.2*T (past the threshold). The trajectory did not begin
+  // moving before min_stop_duration_s elapsed, so it is nuked.
+  const double T = min_stop_duration_s_;
+  TrajectoryPoints trajectory;
+  trajectory.push_back(create_trajectory_point_with_duration(0.0, 0.0, 0.0, T * 0.6));
+  trajectory.push_back(create_trajectory_point_with_duration(0.0, 0.0, 0.0, T * 0.8));
+  trajectory.push_back(create_trajectory_point_with_duration(5.0, 0.0, 0.0, T * 1.0));
+  trajectory.push_back(create_trajectory_point_with_duration(5.0, 0.0, 1.0, T * 1.2));
+
+  EXPECT_TRUE(plugin_->is_long_stop_trajectory(trajectory));
+}
+
+// Long-stop flag parameter update is reflected in behavior
+
+TEST_F(StopPointFixerIntegrationTest, ParameterUpdate_LongStopFlagCanBeToggledAtRuntime)
+{
+  TrajectoryPoints trajectory;
+  trajectory.push_back(
+    create_trajectory_point_with_duration(5.0, 0.0, 0.0, min_stop_duration_s_ * 2.0));
+
+  TrajectoryModifierParams params;
+  params.use_stop_point_fixer = true;
+
+  auto data = create_data(0.0, 0.0, 0.05);
+
+  {
+    std::vector<rclcpp::Parameter> parameters;
+    parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", false);
+    parameters.emplace_back("stop_point_fixer.force_stop_close_stopped_trajectories", false);
+    plugin_->on_parameter(parameters);
+    EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+  }
+
+  {
+    std::vector<rclcpp::Parameter> parameters;
+    parameters.emplace_back("stop_point_fixer.force_stop_long_stopped_trajectories", true);
+    plugin_->on_parameter(parameters);
+    EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, params, data));
+  }
 }

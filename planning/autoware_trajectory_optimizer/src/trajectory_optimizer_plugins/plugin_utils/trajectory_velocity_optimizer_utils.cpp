@@ -163,10 +163,7 @@ void limit_lateral_acceleration(
   };
 
   const auto & current_position = current_odometry.pose.pose.position;
-  motion_utils::calculate_time_from_start(input_trajectory_array, current_position);
-
   const auto start_index = motion_utils::findNearestIndex(input_trajectory_array, current_position);
-
   const size_t end_index = traj_size - 1;
 
   // Ensure we have a valid range
@@ -223,8 +220,6 @@ void limit_lateral_acceleration(
       itr->longitudinal_velocity_mps = static_cast<float>(max_velocity_per_point.at(current_index));
     }
   }
-
-  return;
 }
 
 void filter_velocity(
