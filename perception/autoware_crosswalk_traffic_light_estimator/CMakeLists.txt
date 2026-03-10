@@ -13,6 +13,7 @@ include_directories()
 ament_auto_add_library(autoware_crosswalk_traffic_light_estimator SHARED
   src/crosswalk_traffic_light_estimator.cpp
   src/flashing_detection.cpp
+  src/node.cpp
 )
 
 rclcpp_components_register_node(autoware_crosswalk_traffic_light_estimator
