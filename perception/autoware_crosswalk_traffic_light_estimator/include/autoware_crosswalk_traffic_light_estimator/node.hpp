@@ -57,37 +57,37 @@ private:
   std::unordered_map<lanelet::Id, lanelet::ConstLanelets> traffic_light_id_to_crosswalks_;
   std::unordered_map<lanelet::Id, lanelet::ConstLanelets> crosswalk_to_vehicle_lanelets_;
 
-  void onMap(const LaneletMapBin::ConstSharedPtr msg);
-  void onTrafficLightArray(const TrafficSignalArray::ConstSharedPtr msg);
+  void on_map(const LaneletMapBin::ConstSharedPtr msg);
+  void on_traffic_light_array(const TrafficSignalArray::ConstSharedPtr msg);
 
-  void updateLastDetectedSignal(const TrafficLightIdMap & traffic_signals);
+  void update_last_detected_signal(const TrafficLightIdMap & traffic_signals);
   /// @brief update the overrides of crosswalk signals from the lanelet map for the given traffic
   /// light id
   void update_crosswalk_overrides_from_map(
     std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
     const lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map);
 
-  void setCrosswalkTrafficSignal(
+  void set_crosswalk_traffic_signal(
     const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
     TrafficSignalArray & output,
     const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides);
 
-  lanelet::ConstLanelets getNonRedLanelets(
+  lanelet::ConstLanelets get_non_red_lanelets(
     const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const;
 
-  uint8_t estimateCrosswalkTrafficSignal(
+  uint8_t estimate_crosswalk_traffic_signal(
     const lanelet::ConstLanelet & crosswalk, const lanelet::ConstLanelets & non_red_lanelets) const;
 
-  boost::optional<uint8_t> getHighestConfidenceTrafficSignal(
+  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
     const lanelet::ConstLineStringsOrPolygons3d & traffic_lights,
     const TrafficLightIdMap & traffic_light_id_map) const;
 
-  boost::optional<uint8_t> getHighestConfidenceTrafficSignal(
+  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
     const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map) const;
 
-  void removeDuplicateIds(TrafficSignalArray & signal_array) const;
+  void remove_duplicate_ids(TrafficSignalArray & signal_array) const;
 
-  bool isInvalidDetectionStatus(const TrafficSignal & signal) const;
+  bool is_invalid_detection_status(const TrafficSignal & signal) const;
 
   // Node param
   bool use_last_detect_color_;
