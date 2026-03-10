@@ -621,7 +621,8 @@ boost::optional<uint8_t> CrosswalkTrafficLightEstimatorNode::get_highest_confide
   return ret;
 }
 
-void CrosswalkTrafficLightEstimatorNode::remove_duplicate_ids(TrafficSignalArray & signal_array) const
+void CrosswalkTrafficLightEstimatorNode::remove_duplicate_ids(
+  TrafficSignalArray & signal_array) const
 {
   auto & signals = signal_array.traffic_light_groups;
   std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
-#define AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
+#ifndef NODE_HPP_
+#define NODE_HPP_
 
 #include "flashing_detection.hpp"
 
@@ -109,4 +109,4 @@ private:
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
 
-#endif  // AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
+#endif  // NODE_HPP_
