@@ -147,7 +147,7 @@ bool ContinuousJerkSmoother::apply(
   const uint32_t IDX_GAMMA0 = 4 * N;
 
   const uint32_t l_variables = 5 * N;        // gamma has N-1 elements
-  const uint32_t l_constraints = 4 * N - 1;  // N + N + (N-1) + (N-1) + 1 = 4N - 1
+  const uint32_t l_constraints = 4 * N - 2;  // N + N + (N-1) + (N-1) + 1 = 4N - 1
 
   // Allocate matrices
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(l_constraints, l_variables);
@@ -244,14 +244,6 @@ bool ContinuousJerkSmoother::apply(
     upper_bound[constr_idx] = 0.0;
     lower_bound[constr_idx] = 0.0;
   }
-
-  // Initial condition constraints
-  {
-    const double v0 = std::min(v_ref_arr.at(0), v_max_arr.at(0)) A(constr_idx, IDX_B0) = 1.0;  // b0
-    upper_bound[constr_idx] = v0 * v0;
-    lower_bound[constr_idx] = v0 * v0;
-  }
-
   // Execute optimization
   const auto optval = qp_interface_->optimize(P, A, q, lower_bound, upper_bound);
 
