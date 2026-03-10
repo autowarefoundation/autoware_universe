@@ -14,12 +14,12 @@
 
 #include "autoware/universe_utils/geometry/alt_geometry.hpp"
 
+#include <stdio.h>
+
 #include <algorithm>
 #include <limits>
 #include <utility>
 #include <vector>
-
-#include <stdio.h>
 
 namespace autoware::universe_utils
 {
