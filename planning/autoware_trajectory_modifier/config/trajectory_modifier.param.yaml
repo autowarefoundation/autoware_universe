@@ -1,4 +1,4 @@
-/trajectory_modifier:
+/**:
   ros__parameters:
     use_stop_point_fixer: true
 
