@@ -60,7 +60,7 @@ std::vector<double> ContinuousJerkSmoother::calc_trajectory_interval_distance(
 }
 
 bool ContinuousJerkSmoother::apply(
-  const double v0, const double a0, const TrajectoryPoints & input, TrajectoryPoints & output,
+  const TrajectoryPoints & input, TrajectoryPoints & output,
   const std::vector<double> & max_velocity_per_point)
 {
   output = input;
@@ -72,8 +72,6 @@ bool ContinuousJerkSmoother::apply(
 
   if (input.size() == 1) {
     // No need to do optimization
-    output.front().longitudinal_velocity_mps = v0;
-    output.front().acceleration_mps2 = a0;
     return true;
   }
 
@@ -148,8 +146,8 @@ bool ContinuousJerkSmoother::apply(
   const uint32_t IDX_SIGMA0 = 3 * N;
   const uint32_t IDX_GAMMA0 = 4 * N;
 
-  const uint32_t l_variables = 5 * N;    // gamma has N-1 elements
-  const uint32_t l_constraints = 4 * N;  // N + N + (N-1) + (N-1) + 2 = 4N - 2
+  const uint32_t l_variables = 5 * N;        // gamma has N-1 elements
+  const uint32_t l_constraints = 4 * N - 1;  // N + N + (N-1) + (N-1) + 1 = 4N - 1
 
   // Allocate matrices
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(l_constraints, l_variables);
@@ -249,15 +247,9 @@ bool ContinuousJerkSmoother::apply(
 
   // Initial condition constraints
   {
-    A(constr_idx, IDX_B0) = 1.0;  // b0
+    const double v0 = std::min(v_ref_arr.at(0), v_max_arr.at(0)) A(constr_idx, IDX_B0) = 1.0;  // b0
     upper_bound[constr_idx] = v0 * v0;
     lower_bound[constr_idx] = v0 * v0;
-    ++constr_idx;
-
-    A(constr_idx, IDX_A0) = 1.0;  // a0
-    upper_bound[constr_idx] = a0;
-    lower_bound[constr_idx] = a0;
-    // ++constr_idx;  // Not needed as this is the last constraint
   }
 
   // Execute optimization
