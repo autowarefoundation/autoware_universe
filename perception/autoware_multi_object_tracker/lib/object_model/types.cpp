@@ -108,17 +108,30 @@ DynamicObjectList toDynamicObjectList(
   for (const auto & det_object : det_objects.objects) {
     dynamic_objects.objects.emplace_back(toDynamicObject(det_object, channel_index));
   }
+  dynamic_objects.buildUuidIndex();
   return dynamic_objects;
 }
 
-int DynamicObjectList::getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const
+void DynamicObjectList::buildUuidIndex() const
 {
+  uuid_to_index_.clear();
+  uuid_to_index_.reserve(objects.size());
   for (size_t i = 0; i < objects.size(); ++i) {
-    if (UUIDEqual()(objects[i].uuid, uuid)) {
-      return static_cast<int>(i);
-    }
+    uuid_to_index_.emplace(objects[i].uuid, i);
   }
-  return -1;
+}
+
+std::optional<size_t> DynamicObjectList::getObjectIndexByUuid(
+  const unique_identifier_msgs::msg::UUID & uuid) const
+{
+  if (uuid_to_index_.size() != objects.size()) {
+    buildUuidIndex();
+  }
+  const auto it = uuid_to_index_.find(uuid);
+  if (it != uuid_to_index_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)

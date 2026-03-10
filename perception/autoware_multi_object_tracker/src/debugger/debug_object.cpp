@@ -104,10 +104,10 @@ void TrackerObjectDebugger::collect(
 
     if (association_result.tracker_to_measurement.count(tracker_uuid)) {
       const auto & measurement_uuid = association_result.tracker_to_measurement.at(tracker_uuid);
-      const int measurement_idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
+      const auto measurement_idx_opt = detected_objects.getObjectIndexByUuid(measurement_uuid);
 
-      if (measurement_idx != -1) {
-        const auto & associated_object = detected_objects.objects.at(measurement_idx);
+      if (measurement_idx_opt) {
+        const auto & associated_object = detected_objects.objects.at(*measurement_idx_opt);
         detection_point.x = associated_object.pose.position.x;
         detection_point.y = associated_object.pose.position.y;
         detection_point.z = associated_object.pose.position.z;

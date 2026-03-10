@@ -35,6 +35,7 @@
 #include <boost/optional.hpp>
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -112,15 +113,6 @@ struct DynamicObject
   double area;
 };
 
-struct DynamicObjectList
-{
-  std_msgs::msg::Header header;
-  uint channel_index;
-  std::vector<DynamicObject> objects;
-
-  int getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const;
-};
-
 struct UUIDHash
 {
   std::size_t operator()(const unique_identifier_msgs::msg::UUID & u) const
@@ -141,6 +133,21 @@ struct UUIDEqual
   {
     return std::equal(std::begin(u1.uuid), std::end(u1.uuid), std::begin(u2.uuid));
   }
+};
+
+struct DynamicObjectList
+{
+  std_msgs::msg::Header header;
+  uint channel_index;
+  std::vector<DynamicObject> objects;
+
+  mutable std::unordered_map<
+    unique_identifier_msgs::msg::UUID, size_t, UUIDHash, UUIDEqual>
+    uuid_to_index_;
+
+  std::optional<size_t> getObjectIndexByUuid(
+    const unique_identifier_msgs::msg::UUID & uuid) const;
+  void buildUuidIndex() const;
 };
 
 struct AssociationEntry

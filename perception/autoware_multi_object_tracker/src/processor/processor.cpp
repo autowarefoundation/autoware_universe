@@ -102,10 +102,9 @@ void TrackerProcessor::update(const types::AssociatedObjects & associated_object
     if (association_result.tracker_to_measurement.count(tracker_uuid)) {
       unique_identifier_msgs::msg::UUID measurement_uuid =
         association_result.tracker_to_measurement.at(tracker_uuid);
-      // Find index
-      const int idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
-      if (idx != -1) {
-        measurement_idx = idx;
+      const auto idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
+      if (idx) {
+        measurement_idx = *idx;
         found = true;
       }
     }
