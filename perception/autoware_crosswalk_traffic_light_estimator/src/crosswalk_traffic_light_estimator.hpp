@@ -17,10 +17,7 @@
 
 #include "flashing_detection.hpp"
 
-#include <boost/optional.hpp>
-
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/LineStringOrPolygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <cstdint>
@@ -75,17 +72,6 @@ private:
 
   uint8_t estimate_crosswalk_traffic_signal(
     const lanelet::ConstLanelet & crosswalk, const lanelet::ConstLanelets & non_red_lanelets) const;
-
-  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
-    const lanelet::ConstLineStringsOrPolygons3d & traffic_lights,
-    const TrafficLightIdMap & traffic_light_id_map) const;
-
-  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
-    const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map) const;
-
-  void remove_duplicate_ids(TrafficSignalArray & signal_array) const;
-
-  bool is_invalid_detection_status(const TrafficSignal & signal) const;
 
   CrosswalkTrafficLightEstimatorConfig config_{};
 

@@ -16,6 +16,8 @@
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
+#include <boost/optional.hpp>
+
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
@@ -154,6 +156,57 @@ lanelet::Ids parse_ids(std::string_view input)
   }
   return ids;
 }
+bool is_invalid_detection_status(const TrafficSignal & signal)
+{
+  if (signal.elements.empty()) {
+    return true;
+  }
+  if (
+    signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
+    signal.elements.front().confidence == 0.0) {
+    return true;
+  }
+  return false;
+}
+
+boost::optional<uint8_t> get_highest_confidence_traffic_signal(
+  const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map)
+{
+  boost::optional<uint8_t> ret{boost::none};
+
+  double highest_confidence = 0.0;
+  if (traffic_light_id_map.count(id) == 0) {
+    return ret;
+  }
+
+  for (const auto & element : traffic_light_id_map.at(id).first.elements) {
+    if (element.confidence < highest_confidence) {
+      continue;
+    }
+
+    highest_confidence = element.confidence;
+    ret = element.color;
+  }
+
+  return ret;
+}
+
+void remove_duplicate_ids(TrafficSignalArray & signal_array)
+{
+  auto & signals = signal_array.traffic_light_groups;
+  std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
+    return s1.traffic_light_group_id < s2.traffic_light_group_id;
+  });
+
+  signals.erase(
+    std::unique(
+      signals.begin(), signals.end(),
+      [](const auto & s1, const auto s2) {
+        return s1.traffic_light_group_id == s2.traffic_light_group_id;
+      }),
+    signals.end());
+}
+
 }  // namespace
 
 CrosswalkTrafficLightEstimator::CrosswalkTrafficLightEstimator(
@@ -435,19 +488,6 @@ void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
   }
 }
 
-bool CrosswalkTrafficLightEstimator::is_invalid_detection_status(const TrafficSignal & signal) const
-{
-  if (signal.elements.empty()) {
-    return true;
-  }
-  if (
-    signal.elements.front().color == TrafficSignalElement::UNKNOWN &&
-    signal.elements.front().confidence == 0.0) {
-    return true;
-  }
-  return false;
-}
-
 lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
   const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const
 {
@@ -534,79 +574,6 @@ uint8_t CrosswalkTrafficLightEstimator::estimate_crosswalk_traffic_signal(
   return !merge_lane_exists && has_left_non_red_lane && has_right_non_red_lane
            ? TrafficSignalElement::RED
            : TrafficSignalElement::UNKNOWN;
-}
-
-boost::optional<uint8_t> CrosswalkTrafficLightEstimator::get_highest_confidence_traffic_signal(
-  const lanelet::ConstLineStringsOrPolygons3d & traffic_lights,
-  const TrafficLightIdMap & traffic_light_id_map) const
-{
-  boost::optional<uint8_t> ret{boost::none};
-
-  double highest_confidence = 0.0;
-  for (const auto & traffic_light : traffic_lights) {
-    if (!traffic_light.isLineString()) {
-      continue;
-    }
-
-    const int id = static_cast<lanelet::ConstLineString3d>(traffic_light).id();
-    if (traffic_light_id_map.count(id) == 0) {
-      continue;
-    }
-
-    const auto & elements = traffic_light_id_map.at(id).first.elements;
-    if (elements.empty()) {
-      continue;
-    }
-
-    const auto & color = elements.front().color;
-    const auto & confidence = elements.front().confidence;
-    if (confidence < highest_confidence) {
-      continue;
-    }
-
-    highest_confidence = confidence;
-    ret = color;
-  }
-
-  return ret;
-}
-
-boost::optional<uint8_t> CrosswalkTrafficLightEstimator::get_highest_confidence_traffic_signal(
-  const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map) const
-{
-  boost::optional<uint8_t> ret{boost::none};
-
-  double highest_confidence = 0.0;
-  if (traffic_light_id_map.count(id) == 0) {
-    return ret;
-  }
-
-  for (const auto & element : traffic_light_id_map.at(id).first.elements) {
-    if (element.confidence < highest_confidence) {
-      continue;
-    }
-
-    highest_confidence = element.confidence;
-    ret = element.color;
-  }
-
-  return ret;
-}
-
-void CrosswalkTrafficLightEstimator::remove_duplicate_ids(TrafficSignalArray & signal_array) const
-{
-  auto & signals = signal_array.traffic_light_groups;
-  std::stable_sort(signals.begin(), signals.end(), [](const auto & s1, const auto & s2) {
-    return s1.traffic_light_group_id < s2.traffic_light_group_id;
-  });
-
-  signals.erase(
-    std::unique(
-      signals.begin(), signals.end(),
-      [](const auto & s1, const auto s2) {
-        return s1.traffic_light_group_id == s2.traffic_light_group_id;
-      }),
-    signals.end());
 }
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
