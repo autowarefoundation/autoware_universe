@@ -117,7 +117,7 @@ public:
 
   TurnSignalInfo get_current_turn_signal_info() const final;
 
-  bool hasMissedLaneChangePath() const;
+  bool hasMissedLaneChangePath() const override;
 
 protected:
   lanelet::ConstLanelets get_lane_change_lanes(const lanelet::ConstLanelets & current_lanes) const;

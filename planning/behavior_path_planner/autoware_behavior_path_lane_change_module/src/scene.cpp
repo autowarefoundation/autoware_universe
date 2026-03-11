@@ -2106,7 +2106,7 @@ bool NormalLaneChange::hasMissedLaneChangePath() const
   const auto lateral_deviation =
     autoware::motion_utils::calcLateralOffset(path_points, current_pose.position);
 
-  const auto dynamic_lateral_threshold = [this, lateral_deviation]() -> double {
+  const auto dynamic_lateral_threshold = [this]() -> double {
     const double ego_velocity = getEgoVelocity();
 
     const std::vector<double> velocity_points =
