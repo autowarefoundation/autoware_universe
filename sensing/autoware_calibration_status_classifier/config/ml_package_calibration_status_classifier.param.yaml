@@ -4,4 +4,3 @@
     dilation_size: 1
     height: [1080, 1860, 2160]  # [min, opt, max]
     width: [1920, 2880, 3840]  # [min, opt, max]
-    ego_box: [-1.53, -1.15, -0.1, 5.72, 1.15, 3.1]
