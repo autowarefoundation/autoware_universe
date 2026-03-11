@@ -1546,10 +1546,6 @@ CrosswalkModule::getNearestStopFactorAndReason(
     1.0;  // [m] reuse the previous stop pose if it is within the margin
   const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
   if (previous_stop_pose_) {
-    const auto previous_stop_arc_length = calc_signed_arc_length(
-      ego_path, geometry_msgs::msg::Point(), previous_stop_pose_->stop_pose.position);
-    previous_stop_pose_->stop_pose =
-      autoware_utils_geometry::get_pose(ego_path.compute(previous_stop_arc_length));
     const auto dist_to_previous_stop = get_distance_to_stop(previous_stop_pose_);
     const auto use_previous_stop_pose =
       dist_to_stop > dist_to_previous_stop &&
