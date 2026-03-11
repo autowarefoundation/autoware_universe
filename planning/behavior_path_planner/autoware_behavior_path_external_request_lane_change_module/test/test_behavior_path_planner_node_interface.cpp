@@ -50,7 +50,6 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
   // Explicitly reset the node to ensure plugins are unloaded
   // before the ClassLoader is destroyed effectively.
   test_target_node.reset();
-  test_manager.reset();
   rclcpp::shutdown();
 }
 
@@ -81,6 +80,5 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   // Explicitly reset the node to ensure plugins are unloaded
   // before the ClassLoader is destroyed effectively.
   test_target_node.reset();
-  test_manager.reset();
   rclcpp::shutdown();
 }
