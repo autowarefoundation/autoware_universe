@@ -45,10 +45,6 @@ BEVFusionTRT::BEVFusionTRT(
 {
   // Create and init cuda streams
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  camera_streams_.resize(config_.num_cameras_);
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    CHECK_CUDA_ERROR(cudaStreamCreate(&camera_streams_[i]));
-  }
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
 
   stop_watch_ptr_ =
@@ -64,13 +60,6 @@ BEVFusionTRT::~BEVFusionTRT()
   if (stream_) {
     cudaStreamSynchronize(stream_);
     cudaStreamDestroy(stream_);
-  }
-
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    if (camera_streams_[i]) {
-      cudaStreamSynchronize(camera_streams_[i]);
-      cudaStreamDestroy(camera_streams_[i]);
-    }
   }
 }
 
@@ -112,11 +101,6 @@ void BEVFusionTRT::initPtr()
     roi_tensor_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
       config_.num_cameras_ * config_.roi_height_ * config_.roi_width_ *
       BEVFusionConfig::kNumRGBChannels);
-    for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      image_buffers_d_.emplace_back(
-        autoware::cuda_utils::make_unique<std::uint8_t[]>(
-          config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels));
-    }
     camera_masks_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_cameras_);
 
     // buffers for fusion model with separate image backbone
@@ -368,13 +352,14 @@ void BEVFusionTRT::setSensorFusionTensorAddresses()
 
 bool BEVFusionTRT::detect(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
-  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
   const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
   std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing,
   bool & is_num_voxels_within_range)
 {
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preProcess(pc_msg_ptr, image_msgs, camera_masks, tf_buffer, is_num_voxels_within_range)) {
+  if (!preProcess(
+        pc_msg_ptr, camera_data_ptrs, camera_masks, tf_buffer, is_num_voxels_within_range)) {
     RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Pre-process failed. Skipping detection.");
     return false;
   }
@@ -515,41 +500,26 @@ void BEVFusionTRT::clearDeviceMemory()
 }
 
 void BEVFusionTRT::processImages(
-  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
   const std::vector<float> & camera_masks)
 {
+  // TODO(KokSeang): Move this to each camera_data_ptrs preprocess_image
   if (!config_.sensor_fusion_) {
     return;
   }
 
-  // TODO(knzo25): move this to each image callback
-  const int start_x =
-    std::max(0, static_cast<int>(config_.resized_width_) - static_cast<int>(config_.roi_width_)) /
-    2;
-
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-    const int start_y = roi_start_y_vector_[camera_id];
-    cudaMemcpyAsync(
-      image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
-      config_.raw_image_height_ * config_.raw_image_width_ * BEVFusionConfig::kNumRGBChannels,
-      cudaMemcpyHostToDevice, stream_);
-
-    pre_ptr_->resizeAndExtractRoi_launch(
-      image_buffers_d_[camera_id].get(),
-      &roi_tensor_d_
-        [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
-      config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
-      config_.resized_width_, config_.roi_height_, config_.roi_width_, start_y, start_x,
-      camera_streams_[camera_id]);
-  }
-
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    cudaStreamSynchronize(camera_streams_[i]);
+    auto roi_tensor_offset = camera_data_ptrs[camera_id]->output_img_offset();
+    camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset]);
   }
 
   cudaMemcpyAsync(
     camera_masks_d_.get(), camera_masks.data(), config_.num_cameras_ * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
+
+  for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(camera_data_ptrs[camera_id]->stream()));
+  }
 }
 
 std::int64_t BEVFusionTRT::processPointCloudVoxelization(
@@ -628,7 +598,7 @@ void BEVFusionTRT::configureTensorRTInputs(std::int64_t num_voxels, std::size_t 
 
 bool BEVFusionTRT::preProcess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
-  const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
   const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
   bool & is_num_voxels_within_range)
 {
@@ -643,7 +613,7 @@ bool BEVFusionTRT::preProcess(
   }
 
   clearDeviceMemory();
-  processImages(image_msgs, camera_masks);
+  processImages(camera_data_ptrs, camera_masks);
 
   const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
   if (num_points == 0) {

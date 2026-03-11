@@ -24,3 +24,4 @@
     features_width: 0
     num_depth_features: 0
     image_feature_channel: 0
+    flip_image_channels: false

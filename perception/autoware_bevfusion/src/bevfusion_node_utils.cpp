@@ -41,7 +41,8 @@ void BEVFusionNode::validateParameters(
   }
 }
 
-void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
+void BEVFusionNode::initializeSensorFusionSubscribers(
+  std::int64_t num_cameras, const ImagePreProcessingParams & image_pre_processing_params)
 {
   if (!sensor_fusion_) {
     return;
@@ -49,9 +50,8 @@ void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
 
   image_subs_.resize(num_cameras);
   camera_info_subs_.resize(num_cameras);
-  image_msgs_.resize(num_cameras);
-  camera_info_msgs_.resize(num_cameras);
   lidar2camera_extrinsics_.resize(num_cameras);
+  camera_data_ptrs_.reserve(num_cameras);
 
   auto resolve_topic_name = [this](const std::string & query) {
     return this->get_node_topics_interface()->resolve_topic_name(query);
@@ -59,6 +59,10 @@ void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
   const std::string transport = use_compressed_images_ ? "compressed" : "raw";
 
   for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
+    // Construct CameraData
+    camera_data_ptrs_.emplace_back(
+      std::make_unique<CameraData>(this, static_cast<int>(camera_id), image_pre_processing_params));
+
     // Explicitly resolve the topic name using the node name and namespace, please check
     // https://github.com/ros-perception/image_transport_plugins/issues/155
     const std::string base_topic = resolve_topic_name("~/input/image" + std::to_string(camera_id));
@@ -111,8 +115,8 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
   std::vector<Matrix4f> lidar2camera_extrinsics;
 
   std::transform(
-    camera_info_msgs_.begin(), camera_info_msgs_.end(), std::back_inserter(camera_info_msgs),
-    [](const auto & opt) { return *opt; });
+    camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
+    [](const auto & camera_data) { return camera_data->camera_info_value(); });
 
   std::transform(
     lidar2camera_extrinsics_.begin(), lidar2camera_extrinsics_.end(),
@@ -124,12 +128,11 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
 
 void BEVFusionNode::computeCameraMasks(double lidar_stamp)
 {
-  camera_masks_.resize(camera_info_msgs_.size());
+  camera_masks_.resize(camera_data_ptrs_.size());
   for (std::size_t i = 0; i < camera_masks_.size(); ++i) {
+    auto camera_mask_timestamp = rclcpp::Time(camera_data_ptrs_[i]->image_msg()->header.stamp);
     camera_masks_[i] =
-      (lidar_stamp - rclcpp::Time(image_msgs_[i]->header.stamp).seconds()) < max_camera_lidar_delay_
-        ? 1.0
-        : 0.f;
+      (lidar_stamp - camera_mask_timestamp.seconds()) < max_camera_lidar_delay_ ? 1.0 : 0.f;
   }
 }
 
