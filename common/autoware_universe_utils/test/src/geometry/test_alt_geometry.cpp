@@ -33,7 +33,7 @@
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
 #endif
 
-constexpr double epsilon = 1e-4;
+constexpr double epsilon = 1e-6;
 
 TEST(alt_geometry, area)
 {
