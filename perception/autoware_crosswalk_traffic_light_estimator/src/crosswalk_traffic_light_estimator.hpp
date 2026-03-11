@@ -62,7 +62,7 @@ private:
     lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map);
 
   void set_crosswalk_traffic_signal(
-    const lanelet::ConstLanelet & crosswalk, uint8_t color, const TrafficSignalArray & msg,
+    const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
     TrafficSignalArray & output,
     const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
     const rclcpp::Time & current_time);
