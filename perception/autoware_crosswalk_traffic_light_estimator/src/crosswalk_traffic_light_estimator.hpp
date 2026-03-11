@@ -87,7 +87,7 @@ private:
 
   bool is_invalid_detection_status(const TrafficSignal & signal) const;
 
-  CrosswalkTrafficLightEstimatorConfig config_;
+  CrosswalkTrafficLightEstimatorConfig config_{};
 
   // Map data
   lanelet::LaneletMapPtr lanelet_map_ptr_;
