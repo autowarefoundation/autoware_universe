@@ -15,6 +15,7 @@
 #ifndef EXPERIMENTAL__MANAGER_HPP_
 #define EXPERIMENTAL__MANAGER_HPP_
 
+#include "autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp"
 #include "scene.hpp"
 
 #include <autoware/behavior_velocity_planner_common/experimental/plugin_wrapper.hpp>
@@ -69,6 +70,9 @@ private:
   bool hasSameTrafficLight(
     const lanelet::TrafficLightConstPtr element,
     const lanelet::TrafficLightConstPtr registered_element) const;
+
+  bool hasStaticArrow(
+    const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem) const;
 
   // Debug
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr pub_tl_state_;
