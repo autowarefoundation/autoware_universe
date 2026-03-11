@@ -122,6 +122,7 @@ types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detec
       autoware::object_recognition_utils::getHighestProbClassification(object.classification);
     updating_objects.objects.push_back(modelUncertaintyByClass(object, object_class));
   }
+  updating_objects.buildUuidIndex();
   return updating_objects;
 }
 
