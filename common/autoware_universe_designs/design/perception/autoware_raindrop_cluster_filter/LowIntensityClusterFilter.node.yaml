@@ -9,7 +9,7 @@ package:
 
 launch:
   package: autoware_raindrop_cluster_filter
-  plugin: autoware::raindrop_cluster_filter::LowIntensityClusterFilterNode
+  plugin: autoware::low_intensity_cluster_filter::LowIntensityClusterFilter
   executable: low_intensity_cluster_filter_node
   node_output: screen
 
