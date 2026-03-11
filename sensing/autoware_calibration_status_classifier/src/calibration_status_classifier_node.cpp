@@ -49,13 +49,13 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
   const CalibrationStatusClassifierConfig calibration_status_classifier_config(
     this->declare_parameter<double>("max_depth"), this->declare_parameter<int64_t>("dilation_size"),
     this->declare_parameter<std::vector<int64_t>>("height"),
-    this->declare_parameter<std::vector<int64_t>>("width"),
-    this->declare_parameter<std::vector<double>>("ego_box"));
+    this->declare_parameter<std::vector<int64_t>>("width"));
 
   calibration_status_classifier_ = std::make_unique<CalibrationStatusClassifier>(
     this->declare_parameter<std::string>("onnx_path"),
     this->declare_parameter<std::string>("trt_precision"),
-    this->declare_parameter<std::int64_t>("cloud_capacity"), calibration_status_classifier_config);
+    this->declare_parameter<std::int64_t>("cloud_capacity"),
+    this->declare_parameter<std::vector<double>>("ego_box"), calibration_status_classifier_config);
 
   // Runtime mode configuration
   runtime_mode_ = string_to_runtime_mode(this->declare_parameter<std::string>("runtime_mode"));

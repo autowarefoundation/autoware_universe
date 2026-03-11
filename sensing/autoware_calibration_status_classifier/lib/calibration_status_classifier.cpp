@@ -37,9 +37,24 @@ namespace autoware::calibration_status_classifier
 
 CalibrationStatusClassifier::CalibrationStatusClassifier(
   const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
-  const CalibrationStatusClassifierConfig & config)
-: cloud_capacity_(static_cast<size_t>(cloud_capacity)), config_(config)
+  const std::vector<double> & ego_box, const CalibrationStatusClassifierConfig & config)
+: cloud_capacity_(static_cast<size_t>(cloud_capacity)), ego_box_(), config_(config)
 {
+  if (!ego_box.empty() && ego_box.size() != 6) {
+    throw std::invalid_argument(
+      "ego_box must have exactly 6 elements [x_min, y_min, z_min, x_max, y_max, z_max]");
+  }
+  if (ego_box.size() == 6) {
+    const bool all_zeros =
+      std::all_of(ego_box.begin(), ego_box.end(), [](double v) { return v == 0.0; });
+    if (!all_zeros) {
+      if (ego_box[0] >= ego_box[3] || ego_box[1] >= ego_box[4] || ego_box[2] >= ego_box[5]) {
+        throw std::invalid_argument("ego_box min values must be less than max values");
+      }
+      ego_box_ = ego_box;
+    }
+  }
+
   tensorrt_common::TrtCommonConfig trt_config(onnx_path, trt_precision);
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io{
@@ -135,7 +150,7 @@ CalibrationStatusClassifierResult CalibrationStatusClassifier::process(
 
   // Generate ego occlusion mask on first call per pair (lazy init)
   const uint8_t * ego_mask_ptr = nullptr;
-  if (!config_.ego_box.empty()) {
+  if (!ego_box_.empty()) {
     const std::string mask_key =
       camera_lidar_info.camera_frame_id + "_" + camera_lidar_info.lidar_frame_id;
 
@@ -207,7 +222,7 @@ std::vector<uint8_t> CalibrationStatusClassifier::generate_ego_occlusion_mask(
 
   std::vector<uint8_t> mask(image_width * image_height, 1);
 
-  if (config_.ego_box.empty()) {
+  if (ego_box_.empty()) {
     return mask;
   }
 
@@ -220,8 +235,8 @@ std::vector<uint8_t> CalibrationStatusClassifier::generate_ego_occlusion_mask(
   Eigen::Vector3d camera_center_lidar = -R.transpose() * t;
 
   // Prepare box bounds (copy to allow adjustment)
-  Eigen::Vector3d box_min(config_.ego_box[0], config_.ego_box[1], config_.ego_box[2]);
-  Eigen::Vector3d box_max(config_.ego_box[3], config_.ego_box[4], config_.ego_box[5]);
+  Eigen::Vector3d box_min(ego_box_[0], ego_box_[1], ego_box_[2]);
+  Eigen::Vector3d box_max(ego_box_[3], ego_box_[4], ego_box_[5]);
 
   // Adjust box if camera is inside it (shrink closest X/Y wall)
   if (

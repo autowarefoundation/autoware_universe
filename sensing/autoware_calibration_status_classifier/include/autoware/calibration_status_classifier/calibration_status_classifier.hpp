@@ -57,12 +57,13 @@ public:
    * @param onnx_path Path to the ONNX model file for TensorRT engine creation
    * @param trt_precision TensorRT precision mode
    * @param cloud_capacity Maximum number of LiDAR points to process
+   * @param ego_box Ego vehicle bounding box in lidar frame
    * @param config Configuration parameters for processing
    * @throws std::runtime_error if TensorRT engine setup fails
    */
   explicit CalibrationStatusClassifier(
     const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
-    const CalibrationStatusClassifierConfig & config);
+    const std::vector<double> & ego_box, const CalibrationStatusClassifierConfig & config);
 
   /**
    * @brief Destructor
@@ -175,6 +176,7 @@ private:
   std::map<std::string, autoware::cuda_utils::CudaUniquePtr<uint8_t[]>> ego_masks_d_;
   cudaStream_t stream_{nullptr};
   size_t cloud_capacity_;
+  std::vector<double> ego_box_;
   const CalibrationStatusClassifierConfig config_;
 };
 
