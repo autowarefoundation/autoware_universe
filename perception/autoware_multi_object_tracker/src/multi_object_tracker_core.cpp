@@ -383,7 +383,8 @@ OptionalPublishingData prepare_optional_publishing_data(
   }
 
   // Calculate min_extrapolation_time
-  result.min_extrapolation_time = (object_time - state.last_tracker_time).seconds();
+  const double dt = (object_time - state.last_tracker_time).seconds();
+  result.min_extrapolation_time = dt > 0.0 ? dt : 0.0;
 
   // Prepare tentative objects
   if (debugger.shouldPublishTentativeObjects()) {
