@@ -1,0 +1,159 @@
+// Copyright 2026 TIER IV
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/bevfusion/camera/camera_data.hpp"
+
+#include "autoware/bevfusion/bevfusion_config.hpp"
+#include "autoware/bevfusion/camera/camera_preprocess.hpp"
+
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.h>
+#endif
+
+#include <opencv2/opencv.hpp>
+
+#include <algorithm>
+#include <memory>
+
+namespace autoware::bevfusion
+{
+
+ImagePreProcessingParams::ImagePreProcessingParams(
+  const std::int64_t image_height, const std::int64_t image_width, const std::int64_t roi_height,
+  const std::int64_t roi_width, const float image_aug_scale_y, const float image_aug_scale_x,
+  const bool run_image_undistortion, const bool flip_image_channels)
+: original_image_height(image_height),
+  original_image_width(image_width),
+  roi_height(roi_height),
+  roi_width(roi_width),
+  image_aug_scale_y(image_aug_scale_y),
+  image_aug_scale_x(image_aug_scale_x),
+  run_image_undistortion(run_image_undistortion),
+  flip_image_channels(flip_image_channels)
+{
+  resized_height = original_image_height * image_aug_scale_y;
+  resized_width = original_image_width * image_aug_scale_x;
+  crop_height = resized_height - roi_height;
+  crop_width = std::max(
+    static_cast<std::int64_t>(0), static_cast<std::int64_t>((resized_width - roi_width) / 2));
+
+  roi_start_x = std::max(static_cast<std::int64_t>(0), crop_width);
+  roi_start_y = std::max(static_cast<std::int64_t>(0), crop_height);
+}
+
+CameraData::CameraData(
+  rclcpp::Node * node, const int camera_id,
+  const ImagePreProcessingParams & image_pre_processing_params)
+: logger_(node->get_logger()),
+  camera_id_(camera_id),
+  image_pre_processing_params_(image_pre_processing_params)
+{
+  // Initialization cuda stream
+  cudaStreamCreate(&stream_);
+
+  camera_preprocess_ptr_ =
+    std::make_unique<CameraPreprocess>(stream_, image_pre_processing_params_);
+  image_buffer_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
+    image_pre_processing_params_.original_image_height *
+    image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels);
+  output_img_offset_ = camera_id_ * BEVFusionConfig::kNumRGBChannels *
+                       image_pre_processing_params_.roi_height *
+                       image_pre_processing_params_.roi_width;
+}
+
+CameraData::~CameraData()
+{
+  if (stream_ != nullptr) {
+    // 1. Wait for ALL pending GPU work to finish
+    cudaStreamSynchronize(stream_);
+
+    // 2. Destroy the stream handle
+    cudaStreamDestroy(stream_);
+
+    // 3. Mark it as null
+    stream_ = nullptr;
+  }
+}
+
+void CameraData::update_image_msg(
+  const sensor_msgs::msg::Image::ConstSharedPtr & input_camera_image_msg)
+{
+  // Update image message
+  image_msg_ = input_camera_image_msg;
+}
+
+void CameraData::update_camera_info(const sensor_msgs::msg::CameraInfo & input_camera_info_msg)
+{
+  // Update camera info message
+  camera_info_ = input_camera_info_msg;
+}
+
+bool CameraData::is_image_msg_available() const
+{
+  return image_msg_ != nullptr;
+}
+
+bool CameraData::is_camera_info_available() const
+{
+  return camera_info_.has_value();
+}
+
+std::optional<sensor_msgs::msg::CameraInfo> CameraData::camera_info() const
+{
+  return camera_info_;
+}
+
+sensor_msgs::msg::CameraInfo CameraData::camera_info_value() const
+{
+  return *(camera_info_);
+}
+
+sensor_msgs::msg::Image::ConstSharedPtr CameraData::image_msg() const
+{
+  return image_msg_;
+}
+
+std::size_t CameraData::output_img_offset() const
+{
+  return output_img_offset_;
+}
+
+void CameraData::preprocess_image(std::uint8_t * output_img)
+{
+  // 1. Copy image from CPU to GPU
+  cudaMemcpyAsync(
+    image_buffer_d_.get(), image_msg_->data.data(),
+    image_pre_processing_params_.original_image_height *
+      image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels,
+    cudaMemcpyHostToDevice, stream_);
+
+  // 2. Resize and extract ROI, and then saving to output_img
+  // output_img is expected to be in the size of roi_height * roi_width * image channels (usually,
+  // 3)
+  camera_preprocess_ptr_->resizeAndExtractRoi_launch(
+    image_buffer_d_.get(), output_img, image_pre_processing_params_.original_image_height,
+    image_pre_processing_params_.original_image_width, image_pre_processing_params_.resized_height,
+    image_pre_processing_params_.resized_width, image_pre_processing_params_.roi_height,
+    image_pre_processing_params_.roi_width, image_pre_processing_params_.roi_start_y,
+    image_pre_processing_params_.roi_start_x, image_pre_processing_params_.flip_image_channels);
+}
+
+cudaError_t CameraData::sync_cuda_stream()
+{
+  return cudaStreamSynchronize(stream_);
+}
+
+}  // namespace autoware::bevfusion
