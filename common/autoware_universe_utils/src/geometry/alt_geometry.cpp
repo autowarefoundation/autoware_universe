@@ -69,7 +69,7 @@ std::optional<Polygon2d> Polygon2d::create(
 {
   PointList2d outer;
   for (const auto & point : polygon.outer()) {
-    outer.push_back(Point2d(point));
+    outer.emplace_back(point);
   }
 
   std::vector<PointList2d> inners;
@@ -79,7 +79,7 @@ std::optional<Polygon2d> Polygon2d::create(
       continue;
     }
     for (const auto & point : inner) {
-      _inner.push_back(Point2d(point));
+      _inner.emplace_back(point);
     }
     inners.push_back(_inner);
   }
@@ -143,7 +143,7 @@ std::optional<ConvexPolygon2d> ConvexPolygon2d::create(
 {
   PointList2d vertices;
   for (const auto & point : polygon.outer()) {
-    vertices.push_back(Point2d(point));
+    vertices.emplace_back(point);
   }
 
   return ConvexPolygon2d::create(vertices);
