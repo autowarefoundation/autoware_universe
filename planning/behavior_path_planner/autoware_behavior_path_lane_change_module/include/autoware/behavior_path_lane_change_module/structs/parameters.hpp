@@ -191,6 +191,15 @@ struct Parameters
   double th_finish_judge_lateral_diff{0.2};
   double th_finish_judge_yaw_diff{autoware_utils::deg2rad(3.0)};
 
+  // path miss detection parameters
+  double path_miss_threshold_lateral{1.0};
+  double path_miss_threshold_longitudinal{5.0};
+  bool enable_path_miss_detection{false};
+
+  // path miss velocity scaling parameters
+  std::vector<double> path_miss_velocity_points{0.0, 20.0};
+  std::vector<double> path_miss_scale_factors{2.0, 0.8};
+
   // debug marker
   bool publish_debug_marker{false};
 };

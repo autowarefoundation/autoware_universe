@@ -355,6 +355,10 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Cancel, "EgoOutOfLanes"};
   }
 
+  if (module_type_->hasMissedLaneChangePath()) {
+    return {LaneChangeStates::Cancel, "MissedLaneChangePath"};
+  }
+
   if (isWaitingApproval()) {
     if (module_type_->is_near_regulatory_element()) {
       return {LaneChangeStates::Cancel, "CloseToRegElement"};

@@ -15,6 +15,7 @@
 #include "autoware/behavior_path_lane_change_module/manager.hpp"
 
 #include "autoware/behavior_path_lane_change_module/interface.hpp"
+#include "autoware/interpolation/interpolation_utils.hpp"
 #include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
@@ -256,6 +257,36 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
     get_or_declare_parameter<double>(*node, parameter("finish_judge_lateral_angle_deviation"));
   p.th_finish_judge_yaw_diff = autoware_utils::deg2rad(finish_judge_lateral_angle_deviation);
 
+  // path miss detection parameters
+  p.path_miss_threshold_lateral =
+    get_or_declare_parameter<double>(*node, parameter("path_miss.threshold_lateral"));
+  p.path_miss_threshold_longitudinal =
+    get_or_declare_parameter<double>(*node, parameter("path_miss.threshold_longitudinal"));
+  p.enable_path_miss_detection =
+    get_or_declare_parameter<bool>(*node, parameter("path_miss.enable_path_miss_detection"));
+
+  // path miss velocity scaling parameters
+  p.path_miss_velocity_points =
+    get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.velocity_points"));
+  p.path_miss_scale_factors =
+    get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.scale_factors"));
+
+  if (p.path_miss_velocity_points.size() != p.path_miss_scale_factors.size()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name),
+      "Path miss velocity scaling parameters have mismatched sizes: velocity_points=%zu, "
+      "scale_factors=%zu",
+      p.path_miss_velocity_points.size(), p.path_miss_scale_factors.size());
+    exit(EXIT_FAILURE);
+  }
+
+  if (!interpolation::isIncreasing(p.path_miss_velocity_points)) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name),
+      "Path miss velocity points must be in ascending order.");
+    exit(EXIT_FAILURE);
+  }
+
   // debug marker
   p.publish_debug_marker = get_or_declare_parameter<bool>(*node, parameter("publish_debug_marker"));
 
@@ -347,6 +378,12 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     update_param<double>(
       parameters, ns + "finish_judge_lateral_threshold", p->th_finish_judge_lateral_diff);
     update_param<bool>(parameters, ns + "publish_debug_marker", p->publish_debug_marker);
+    update_param<double>(
+      parameters, ns + "path_miss.threshold_lateral", p->path_miss_threshold_lateral);
+    update_param<double>(
+      parameters, ns + "path_miss.threshold_longitudinal", p->path_miss_threshold_longitudinal);
+    update_param<bool>(
+      parameters, ns + "path_miss.enable_path_miss_detection", p->enable_path_miss_detection);
     update_param<double>(
       parameters, ns + "min_length_for_turn_signal_activation",
       p->min_length_for_turn_signal_activation);
