@@ -152,7 +152,8 @@ CalibrationStatusClassifierResult CalibrationStatusClassifier::process(
   const uint8_t * ego_mask_ptr = nullptr;
   if (!ego_box_.empty()) {
     const std::string mask_key =
-      camera_lidar_info.camera_frame_id + "_" + camera_lidar_info.lidar_frame_id;
+      camera_lidar_info.camera_frame_id + "_" + camera_lidar_info.lidar_frame_id + "_" +
+      std::to_string(image_msg->width) + "x" + std::to_string(image_msg->height);
 
     auto it = ego_masks_d_.find(mask_key);
     if (it == ego_masks_d_.end()) {  // lazy init, only generate mask if not already stored
