@@ -16,7 +16,6 @@
 #define LANELET_FILTER__LANELET_FILTER_BASE_HPP_
 
 #include "autoware/detected_object_validation/utils/utils.hpp"
-#include "autoware_lanelet2_extension/utility/utilities.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/ros/published_time_publisher.hpp"
