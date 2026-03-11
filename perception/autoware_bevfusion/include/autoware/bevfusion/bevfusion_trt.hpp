@@ -88,7 +88,7 @@ public:
 
   bool detect(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
-    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
     std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing,
     bool & is_num_voxels_within_range);

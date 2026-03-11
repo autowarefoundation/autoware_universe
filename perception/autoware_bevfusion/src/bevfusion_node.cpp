@@ -219,7 +219,7 @@ void BEVFusionNode::cloudCallback(
   std::unordered_map<std::string, double> proc_timing;
   bool is_num_voxels_within_range = true;
   const bool is_success = detector_ptr_->detect(
-    pc_msg_ptr, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
+    pc_msg_ptr, camera_data_ptrs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
     is_num_voxels_within_range);
 
   if (!is_success) {
