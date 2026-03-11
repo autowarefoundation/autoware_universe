@@ -64,8 +64,7 @@ CameraData::CameraData(
   // Initialization cuda stream
   cudaStreamCreate(&stream_);
 
-  camera_preprocess_ptr_ =
-    std::make_unique<CameraPreprocess>(stream_, image_pre_processing_params_);
+  camera_preprocess_ptr_ = std::make_unique<CameraPreprocess>(stream_, camera_id_);
   image_buffer_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
     image_pre_processing_params_.original_image_height *
     image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels);

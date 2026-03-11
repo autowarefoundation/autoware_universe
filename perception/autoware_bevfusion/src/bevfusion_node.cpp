@@ -150,6 +150,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
       : TrtBEVFusionConfig{trt_main_config, std::nullopt};
 
   // Build Image Preprocessing Parameters
+  // TODO(KokSeang): Remove image preprocessing parameters out of BEVFusionConfig
   auto image_pre_processing_params = ImagePreProcessingParams(
         raw_image_height,
         raw_image_width,

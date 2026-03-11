@@ -27,8 +27,7 @@ namespace autoware::bevfusion
 class CameraPreprocess
 {
 public:
-  CameraPreprocess(
-    cudaStream_t stream, const ImagePreProcessingParams & image_pre_processing_params);
+  CameraPreprocess(cudaStream_t stream, const int camera_id);
   ~CameraPreprocess();
 
   cudaError_t resizeAndExtractRoi_launch(
@@ -43,7 +42,7 @@ public:
 
 private:
   cudaStream_t stream_;
-  ImagePreProcessingParams image_pre_processing_params_;
+  int camera_id_;
 };
 }  // namespace autoware::bevfusion
 #endif  // AUTOWARE__BEVFUSION__CAMERA__CAMERA_PREPROCESS_HPP_

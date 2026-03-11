@@ -39,9 +39,8 @@
 namespace autoware::bevfusion
 {
 
-CameraPreprocess::CameraPreprocess(
-  cudaStream_t stream, const ImagePreProcessingParams & image_pre_processing_params)
-: stream_(stream), image_pre_processing_params_(image_pre_processing_params)
+CameraPreprocess::CameraPreprocess(cudaStream_t stream, const int camera_id)
+: stream_(stream), camera_id_(camera_id)
 {
 }
 
