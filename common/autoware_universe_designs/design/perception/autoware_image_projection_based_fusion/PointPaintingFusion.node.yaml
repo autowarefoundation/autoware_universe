@@ -12,7 +12,6 @@ launch:
   plugin: autoware::image_projection_based_fusion::PointPaintingFusionNode
   executable: pointpainting_fusion_node
   node_output: screen
-  use_container: true
 
 # interfaces
 subscribers:

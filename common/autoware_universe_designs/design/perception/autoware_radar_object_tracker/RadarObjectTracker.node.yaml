@@ -11,7 +11,6 @@ launch:
   plugin: autoware::radar_object_tracker::RadarObjectTrackerNode
   executable: radar_object_tracker_node
   node_output: screen
-  use_container: false
 
 # interface
 subscribers:

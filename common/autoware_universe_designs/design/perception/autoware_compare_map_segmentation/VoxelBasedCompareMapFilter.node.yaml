@@ -11,7 +11,6 @@ launch:
   plugin: autoware::compare_map_segmentation::VoxelBasedCompareMapFilterComponent
   executable: voxel_based_compare_map_filter_node
   node_output: screen
-  use_container: true
 
 # interfaces
 subscribers:

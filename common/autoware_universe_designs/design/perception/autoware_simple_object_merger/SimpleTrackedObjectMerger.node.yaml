@@ -11,7 +11,6 @@ launch:
   plugin: autoware::simple_object_merger::SimpleTrackedObjectMergerNode
   executable: simple_tracked_object_merger_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:

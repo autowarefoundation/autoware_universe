@@ -11,7 +11,6 @@ launch:
   plugin: autoware::pointcloud_preprocessor::CropBoxFilterComponent
   executable: crop_box_filter_node
   node_output: screen
-  use_container: true
 
 # interfaces
 subscribers:

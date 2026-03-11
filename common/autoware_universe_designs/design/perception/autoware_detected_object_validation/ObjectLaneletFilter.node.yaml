@@ -11,7 +11,6 @@ launch:
   plugin: autoware::detected_object_validation::DetectedObjectLaneletFilterNode
   executable: object_lanelet_filter_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:

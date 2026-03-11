@@ -11,7 +11,6 @@ launch:
   plugin: autoware::object_sorter::TrackedObjectSorterNode
   executable: tracked_object_sorter_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:

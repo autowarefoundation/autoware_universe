@@ -11,7 +11,6 @@ launch:
   plugin: autoware::imu_corrector::GyroBiasEstimator
   executable: gyro_bias_estimator_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:

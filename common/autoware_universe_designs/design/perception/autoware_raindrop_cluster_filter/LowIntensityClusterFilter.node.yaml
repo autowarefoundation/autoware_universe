@@ -12,7 +12,6 @@ launch:
   plugin: autoware::raindrop_cluster_filter::LowIntensityClusterFilterNode
   executable: low_intensity_cluster_filter_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:

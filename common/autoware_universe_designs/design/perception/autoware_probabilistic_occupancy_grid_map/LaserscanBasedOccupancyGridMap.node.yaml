@@ -11,7 +11,6 @@ launch:
   plugin: autoware::occupancy_grid_map::LaserscanBasedOccupancyGridMapNode
   executable: laserscan_based_occupancy_grid_map_node
   node_output: screen
-  use_container: true
 
 # interface
 subscribers:

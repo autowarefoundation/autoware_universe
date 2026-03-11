@@ -11,7 +11,6 @@ launch:
   plugin: autoware::lidar_centerpoint::LidarCenterPointNode
   executable: autoware_lidar_centerpoint_node
   node_output: screen
-  use_container: false
 
 # interfaces
 subscribers:
