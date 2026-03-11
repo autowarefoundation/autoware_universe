@@ -245,11 +245,10 @@ The `STOPPED` state assumes that the vehicle is completely stopped with the brak
 Therefore, `stopped_acc` should be set to a value that allows the vehicle to apply the strongest possible brake.
 If `stopped_acc` is not sufficiently low, there is a possibility of sliding down on steep slopes.
 
-| Name         | Type   | Description                                  | Default value |
-| :----------- | :----- | :------------------------------------------- | :------------ |
-| stopped_vel  | double | target velocity in STOPPED state [m/s]       | 0.0           |
-| stopped_acc  | double | target acceleration in STOPPED state [m/s^2] | -3.4          |
-| stopped_jerk | double | target jerk in STOPPED state [m/s^3]         | -5.0          |
+| Name        | Type   | Description                                  | Default value |
+| :---------- | :----- | :------------------------------------------- | :------------ |
+| stopped_vel | double | target velocity in STOPPED state [m/s]       | 0.0           |
+| stopped_acc | double | target acceleration in STOPPED state [m/s^2] | -3.4          |
 
 ### EMERGENCY Parameter
 
