@@ -271,8 +271,11 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
 {
+  if (!data_->obstacle_pointcloud || data_->obstacle_pointcloud->data.empty()){
+    return std::nullopt;
+  }
+
   const auto & pointcloud = data_->obstacle_pointcloud;
-  if (pointcloud->data.empty()) return std::nullopt;
 
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   pcl::fromROSMsg(*pointcloud, *filtered_pointcloud);
