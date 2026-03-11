@@ -51,7 +51,6 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
   // before the ClassLoader is destroyed effectively.
   test_target_node.reset();
   test_manager.reset();
-
   rclcpp::shutdown();
 }
 
@@ -83,6 +82,5 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   // before the ClassLoader is destroyed effectively.
   test_target_node.reset();
   test_manager.reset();
-
   rclcpp::shutdown();
 }
