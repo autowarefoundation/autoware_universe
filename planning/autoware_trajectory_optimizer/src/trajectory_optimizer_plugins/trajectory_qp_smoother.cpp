@@ -422,7 +422,7 @@ void TrajectoryQPSmoother::post_process_trajectory(
 
   // Use fixed time step for velocity/acceleration derivation
   const double dt = qp_params_.time_step_s;
-
+  double accumulated_time_s = dt;
   // First pass: Update positions and orientations
   for (size_t i = 0; i < N; ++i) {
     // Copy input trajectory data
@@ -435,6 +435,8 @@ void TrajectoryQPSmoother::post_process_trajectory(
     output_trajectory[i].pose.position.x = x;
     output_trajectory[i].pose.position.y = y;
     output_trajectory[i].pose.position.z = input_trajectory[i].pose.position.z;
+    output_trajectory[i].time_from_start = rclcpp::Duration::from_seconds(accumulated_time_s);
+    accumulated_time_s += dt;
 
     // Recalculate orientation from smoothed path
     if (i < N - 1) {

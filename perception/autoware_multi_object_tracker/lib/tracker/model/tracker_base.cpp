@@ -15,6 +15,7 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -23,7 +24,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <random>
 #include <vector>
 
 namespace
@@ -62,12 +62,8 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   last_update_with_measurement_time_(time),
   object_(detected_object)
 {
-  // Generate random number
-  std::mt19937 gen(std::random_device{}());
-  std::independent_bits_engine<std::mt19937, 8, uint8_t> bit_eng(gen);
-  unique_identifier_msgs::msg::UUID uuid_msg;
-  std::generate(uuid_msg.uuid.begin(), uuid_msg.uuid.end(), bit_eng);
-  object_.uuid = uuid_msg;
+  // Assign a persistent tracker UUID (separate from measurement UUIDs).
+  object_.uuid = object_model::generate_uuid();
 
   // Initialize existence probabilities
   total_existence_probability_ = 0.001;

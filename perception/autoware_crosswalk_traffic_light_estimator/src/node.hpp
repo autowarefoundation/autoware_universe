@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
-#define AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
+#ifndef NODE_HPP_
+#define NODE_HPP_
+
+#include "flashing_detection.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -21,7 +23,6 @@
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
-#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <lanelet2_core/Attribute.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -30,10 +31,8 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
-#include <map>
 #include <memory>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 namespace autoware::crosswalk_traffic_light_estimator
 {
@@ -42,13 +41,6 @@ using autoware_internal_debug_msgs::msg::Float64Stamped;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_utils::DebugPublisher;
 using autoware_utils::StopWatch;
-using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
-using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
-using TrafficSignalElement = autoware_perception_msgs::msg::TrafficLightElement;
-using TrafficSignalAndTime = std::pair<TrafficSignal, rclcpp::Time>;
-using TrafficLightIdMap = std::unordered_map<lanelet::Id, TrafficSignalAndTime>;
-
-using TrafficLightIdArray = std::unordered_map<lanelet::Id, std::vector<TrafficSignalAndTime>>;
 
 class CrosswalkTrafficLightEstimatorNode : public rclcpp::Node
 {
@@ -65,55 +57,48 @@ private:
   std::unordered_map<lanelet::Id, lanelet::ConstLanelets> traffic_light_id_to_crosswalks_;
   std::unordered_map<lanelet::Id, lanelet::ConstLanelets> crosswalk_to_vehicle_lanelets_;
 
-  void onMap(const LaneletMapBin::ConstSharedPtr msg);
-  void onTrafficLightArray(const TrafficSignalArray::ConstSharedPtr msg);
+  void on_map(const LaneletMapBin::ConstSharedPtr msg);
+  void on_traffic_light_array(const TrafficSignalArray::ConstSharedPtr msg);
 
-  void updateLastDetectedSignal(const TrafficLightIdMap & traffic_signals);
-  void updateLastDetectedSignals(const TrafficLightIdMap & traffic_signals);
-  void updateFlashingState(const TrafficSignal & signal);
-
-  uint8_t updateAndGetColorState(const TrafficSignal & signal);
+  void update_last_detected_signal(const TrafficLightIdMap & traffic_light_id_map);
   /// @brief update the overrides of crosswalk signals from the lanelet map for the given traffic
   /// light id
   void update_crosswalk_overrides_from_map(
     std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides,
     const lanelet::Id traffic_light_group_id, const TrafficLightIdMap & traffic_light_id_map);
 
-  void setCrosswalkTrafficSignal(
+  void set_crosswalk_traffic_signal(
     const lanelet::ConstLanelet & crosswalk, const uint8_t color, const TrafficSignalArray & msg,
     TrafficSignalArray & output,
     const std::unordered_map<lanelet::Id, uint8_t> & crosswalk_traffic_signal_overrides);
 
-  lanelet::ConstLanelets getNonRedLanelets(
+  lanelet::ConstLanelets get_non_red_lanelets(
     const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const;
 
-  uint8_t estimateCrosswalkTrafficSignal(
+  uint8_t estimate_crosswalk_traffic_signal(
     const lanelet::ConstLanelet & crosswalk, const lanelet::ConstLanelets & non_red_lanelets) const;
 
-  boost::optional<uint8_t> getHighestConfidenceTrafficSignal(
+  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
     const lanelet::ConstLineStringsOrPolygons3d & traffic_lights,
     const TrafficLightIdMap & traffic_light_id_map) const;
 
-  boost::optional<uint8_t> getHighestConfidenceTrafficSignal(
+  boost::optional<uint8_t> get_highest_confidence_traffic_signal(
     const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map) const;
 
-  void removeDuplicateIds(TrafficSignalArray & signal_array) const;
+  void remove_duplicate_ids(TrafficSignalArray & signal_array) const;
 
-  bool isInvalidDetectionStatus(const TrafficSignal & signal) const;
+  bool is_invalid_detection_status(const TrafficSignal & signal) const;
 
   // Node param
   bool use_last_detect_color_;
   bool use_pedestrian_signal_detect_;
   double last_detect_color_hold_time_;
-  double last_colors_hold_time_;
 
   // Signal history
   TrafficLightIdMap last_detect_color_;
-  TrafficLightIdArray last_colors_;
 
-  // State
-  std::map<lanelet::Id, bool> is_flashing_;
-  std::map<lanelet::Id, uint8_t> current_color_state_;
+  // Flashing detection
+  FlashingDetector flashing_detector_;
 
   // Stop watch
   StopWatch<std::chrono::milliseconds> stop_watch_;
@@ -124,4 +109,4 @@ private:
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
 
-#endif  // AUTOWARE_CROSSWALK_TRAFFIC_LIGHT_ESTIMATOR__NODE_HPP_
+#endif  // NODE_HPP_
