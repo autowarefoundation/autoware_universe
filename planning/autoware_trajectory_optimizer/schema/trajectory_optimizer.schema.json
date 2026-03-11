@@ -95,9 +95,16 @@
               "minimum": 0.1,
               "maximum": 2.0,
               "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            },
+            "time_step_s": {
+              "type": "number",
+              "default": 0.1,
+              "minimum": 0.01,
+              "maximum": 1.0,
+              "description": "Time step for kinematic feasibility enforcement [s]. Default: 0.1 s."
             }
           },
-          "required": ["max_yaw_rate_rad_s"]
+          "required": ["max_yaw_rate_rad_s", "time_step_s"]
         },
         "trajectory_mpt_optimizer": {
           "type": "object",

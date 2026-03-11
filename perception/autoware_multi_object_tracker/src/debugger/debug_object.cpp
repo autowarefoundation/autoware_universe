@@ -72,11 +72,12 @@ void TrackerObjectDebugger::reset()
 
 void TrackerObjectDebugger::collect(
   const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-  const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & direct_assignment,
-  const std::unordered_map<int, int> & /*reverse_assignment*/)
+  const types::AssociatedObjects & associated_objects)
 {
   is_initialized_ = true;
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   message_time_ = message_time;
 
@@ -99,14 +100,22 @@ void TrackerObjectDebugger::collect(
     tracker_point.z = tracked_object.pose.position.z;
 
     // associated detection
-    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
-      const auto & associated_object =
-        detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
-      detection_point.x = associated_object.pose.position.x;
-      detection_point.y = associated_object.pose.position.y;
-      detection_point.z = associated_object.pose.position.z;
-      is_associated = true;
-    } else {
+    unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
+
+    if (association_result.tracker_to_measurement.count(tracker_uuid)) {
+      const auto & measurement_uuid = association_result.tracker_to_measurement.at(tracker_uuid);
+      const auto measurement_idx_opt = detected_objects.getObjectIndexByUuid(measurement_uuid);
+
+      if (measurement_idx_opt) {
+        const auto & associated_object = detected_objects.objects.at(*measurement_idx_opt);
+        detection_point.x = associated_object.pose.position.x;
+        detection_point.y = associated_object.pose.position.y;
+        detection_point.z = associated_object.pose.position.z;
+        is_associated = true;
+      }
+    }
+
+    if (!is_associated) {
       // no detection
       detection_point.x = tracker_point.x;
       detection_point.y = tracker_point.y;

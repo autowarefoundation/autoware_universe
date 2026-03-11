@@ -42,6 +42,7 @@ using nav_msgs::msg::Odometry;
 struct TrajectoryKinematicFeasibilityParams
 {
   double max_yaw_rate_rad_s{0.7};  // Maximum yaw rate [rad/s], default from MPC controller
+  double time_step_s{0.1};         // Fixed time step for yaw rate calculations [s]
 };
 
 /**
@@ -83,10 +84,9 @@ private:
    *
    * @param traj_points Trajectory points to adjust (modified in-place)
    * @param ego_odometry Starting anchor pose (ego vehicle pose)
-   * @param dt Average time step between points [s]
    */
   void enforce_ackermann_yaw_rate_constraints(
-    TrajectoryPoints & traj_points, const Odometry & ego_odometry, const double dt) const;
+    TrajectoryPoints & traj_points, const Odometry & ego_odometry) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin

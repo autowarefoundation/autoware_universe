@@ -35,7 +35,9 @@ void TrajectorySplineSmoother::optimize_trajectory(
     traj_points, spline_params_.interpolation_resolution_m,
     spline_params_.max_distance_discrepancy_m,
     spline_params_.preserve_input_trajectory_orientation);
-
+  // TODO(Daniel): The spline should recalculate time_from_start based on the new trajectory points
+  // and the current vehicle position. This is necessary to ensure that the time_from_start values
+  // are consistent with the new trajectory. For now, we will use the motion_utils function.
   autoware::motion_utils::calculate_time_from_start(
     traj_points, data.current_odometry.pose.pose.position);
 }
