@@ -85,7 +85,13 @@
               "default": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             }
           },
-          "required": ["cloud_topics", "image_topics", "approx_deltas", "already_rectified", "ego_box"],
+          "required": [
+            "cloud_topics",
+            "image_topics",
+            "approx_deltas",
+            "already_rectified",
+            "ego_box"
+          ],
           "additionalProperties": false
         },
         "prerequisite": {
