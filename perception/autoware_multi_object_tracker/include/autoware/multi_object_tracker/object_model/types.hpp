@@ -34,7 +34,11 @@
 
 #include <boost/optional.hpp>
 
+#include <functional>
+#include <optional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -109,12 +113,147 @@ struct DynamicObject
   double area;
 };
 
+struct UUIDHash
+{
+  std::size_t operator()(const unique_identifier_msgs::msg::UUID & u) const
+  {
+    std::size_t seed = 0;
+    for (const auto & b : u.uuid) {
+      seed ^= std::hash<uint8_t>{}(b) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+
+struct UUIDEqual
+{
+  bool operator()(
+    const unique_identifier_msgs::msg::UUID & u1,
+    const unique_identifier_msgs::msg::UUID & u2) const
+  {
+    return std::equal(std::begin(u1.uuid), std::end(u1.uuid), std::begin(u2.uuid));
+  }
+};
+
 struct DynamicObjectList
 {
   std_msgs::msg::Header header;
   uint channel_index;
   std::vector<DynamicObject> objects;
+
+  mutable std::unordered_map<unique_identifier_msgs::msg::UUID, size_t, UUIDHash, UUIDEqual>
+    uuid_to_index_;
+
+  std::optional<size_t> getObjectIndexByUuid(const unique_identifier_msgs::msg::UUID & uuid) const;
+  void buildUuidIndex() const;
 };
+
+struct AssociationEntry
+{
+  size_t tracker_idx;
+  size_t measurement_idx;
+  double score;
+  bool has_significant_shape_change;
+};
+
+struct AssociationData
+{
+  std::vector<AssociationEntry> entries;
+  std::vector<unique_identifier_msgs::msg::UUID> tracker_uuids;
+  std::vector<unique_identifier_msgs::msg::UUID> measurement_uuids;
+};
+
+struct AssociationResult
+{
+  std::unordered_map<
+    unique_identifier_msgs::msg::UUID, unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    tracker_to_measurement;
+  std::unordered_map<
+    unique_identifier_msgs::msg::UUID, unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    measurement_to_tracker;
+  std::vector<unique_identifier_msgs::msg::UUID> unassigned_trackers;
+  std::vector<unique_identifier_msgs::msg::UUID> unassigned_measurements;
+  std::unordered_set<unique_identifier_msgs::msg::UUID, UUIDHash, UUIDEqual>
+    trackers_with_shape_change;
+
+  void add(
+    const unique_identifier_msgs::msg::UUID & tracker_uuid,
+    const unique_identifier_msgs::msg::UUID & measurement_uuid)
+  {
+    tracker_to_measurement[tracker_uuid] = measurement_uuid;
+    measurement_to_tracker[measurement_uuid] = tracker_uuid;
+  }
+
+  void remove(const unique_identifier_msgs::msg::UUID & tracker_uuid)
+  {
+    if (tracker_to_measurement.count(tracker_uuid)) {
+      measurement_to_tracker.erase(tracker_to_measurement[tracker_uuid]);
+      tracker_to_measurement.erase(tracker_uuid);
+      trackers_with_shape_change.erase(tracker_uuid);
+    }
+  }
+
+  bool wasShapeChanged(const unique_identifier_msgs::msg::UUID & tracker_uuid) const
+  {
+    return trackers_with_shape_change.count(tracker_uuid) > 0;
+  }
+
+  unique_identifier_msgs::msg::UUID findMeasurement(
+    const unique_identifier_msgs::msg::UUID & tracker_uuid) const
+  {
+    if (tracker_to_measurement.count(tracker_uuid)) {
+      return tracker_to_measurement.at(tracker_uuid);
+    }
+    return unique_identifier_msgs::msg::UUID();
+  }
+
+  unique_identifier_msgs::msg::UUID findTracker(
+    const unique_identifier_msgs::msg::UUID & measurement_uuid) const
+  {
+    if (measurement_to_tracker.count(measurement_uuid)) {
+      return measurement_to_tracker.at(measurement_uuid);
+    }
+    return unique_identifier_msgs::msg::UUID();
+  }
+
+  std::vector<unique_identifier_msgs::msg::UUID> getTrackerAssignments() const
+  {
+    std::vector<unique_identifier_msgs::msg::UUID> trackers;
+    for (const auto & pair : tracker_to_measurement) {
+      trackers.push_back(pair.first);
+    }
+    return trackers;
+  }
+
+  std::vector<unique_identifier_msgs::msg::UUID> getMeasurementAssignments() const
+  {
+    std::vector<unique_identifier_msgs::msg::UUID> measurements;
+    for (const auto & pair : measurement_to_tracker) {
+      measurements.push_back(pair.first);
+    }
+    return measurements;
+  }
+};
+
+struct AssociatedObjects
+{
+  const DynamicObjectList & objects;
+  const AssociationResult & association;
+};
+
+struct ObjectsWithAssociation
+{
+  DynamicObjectList objects;
+  AssociationResult association;
+
+  rclcpp::Time getTimestamp() const { return rclcpp::Time(objects.header.stamp); }
+  rclcpp::Time getTimestamp(rcl_clock_type_t clock_type) const
+  {
+    return rclcpp::Time(objects.header.stamp, clock_type);
+  }
+};
+
+using ObjectsWithAssociationList = std::vector<ObjectsWithAssociation>;
 
 DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index = 0);
