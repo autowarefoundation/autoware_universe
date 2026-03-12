@@ -26,48 +26,94 @@
 
 namespace autoware::calibration_status_classifier
 {
+
+/// @brief ROS message type for the linear velocity subscriber
+enum class LinearVelocitySource : int {
+  TWIST_STAMPED = 0,
+  TWIST_WITH_COV_STAMPED = 1,
+  ODOMETRY = 2
+};
+
+inline LinearVelocitySource string_to_linear_velocity_source(const std::string & source_str)
+{
+  if (source_str == "twist_stamped") return LinearVelocitySource::TWIST_STAMPED;
+  if (source_str == "twist_with_cov_stamped") return LinearVelocitySource::TWIST_WITH_COV_STAMPED;
+  if (source_str == "odometry") return LinearVelocitySource::ODOMETRY;
+  throw std::invalid_argument("Invalid linear velocity source: " + source_str);
+}
+
+inline std::string linear_velocity_source_to_string(LinearVelocitySource source)
+{
+  switch (source) {
+    case LinearVelocitySource::TWIST_STAMPED:
+      return "twist_stamped";
+    case LinearVelocitySource::TWIST_WITH_COV_STAMPED:
+      return "twist_with_cov_stamped";
+    case LinearVelocitySource::ODOMETRY:
+      return "odometry";
+    default:
+      throw std::invalid_argument("Unknown linear velocity source");
+  }
+}
+
+/// @brief ROS message type for the angular velocity subscriber
+enum class AngularVelocitySource : int {
+  TWIST_STAMPED = 0,
+  TWIST_WITH_COV_STAMPED = 1,
+  ODOMETRY = 2
+};
+
+inline AngularVelocitySource string_to_angular_velocity_source(const std::string & source_str)
+{
+  if (source_str == "twist_stamped") return AngularVelocitySource::TWIST_STAMPED;
+  if (source_str == "twist_with_cov_stamped") return AngularVelocitySource::TWIST_WITH_COV_STAMPED;
+  if (source_str == "odometry") return AngularVelocitySource::ODOMETRY;
+  throw std::invalid_argument("Invalid angular velocity source: " + source_str);
+}
+
+inline std::string angular_velocity_source_to_string(AngularVelocitySource source)
+{
+  switch (source) {
+    case AngularVelocitySource::TWIST_STAMPED:
+      return "twist_stamped";
+    case AngularVelocitySource::TWIST_WITH_COV_STAMPED:
+      return "twist_with_cov_stamped";
+    case AngularVelocitySource::ODOMETRY:
+      return "odometry";
+    default:
+      throw std::invalid_argument("Unknown angular velocity source");
+  }
+}
+
+/// @brief ROS message type for the object detection subscriber
+enum class ObjectsSource : int { PREDICTED_OBJECTS = 0, TRACKED_OBJECTS = 1, DETECTED_OBJECTS = 2 };
+
+inline ObjectsSource string_to_objects_source(const std::string & source_str)
+{
+  if (source_str == "predicted_objects") return ObjectsSource::PREDICTED_OBJECTS;
+  if (source_str == "tracked_objects") return ObjectsSource::TRACKED_OBJECTS;
+  if (source_str == "detected_objects") return ObjectsSource::DETECTED_OBJECTS;
+  throw std::invalid_argument("Invalid objects source: " + source_str);
+}
+
+inline std::string objects_source_to_string(ObjectsSource source)
+{
+  switch (source) {
+    case ObjectsSource::PREDICTED_OBJECTS:
+      return "predicted_objects";
+    case ObjectsSource::TRACKED_OBJECTS:
+      return "tracked_objects";
+    case ObjectsSource::DETECTED_OBJECTS:
+      return "detected_objects";
+    default:
+      throw std::invalid_argument("Unknown objects source");
+  }
+}
+
 /**
  * @brief Runtime operation modes for calibration status monitoring
  */
 enum class RuntimeMode { MANUAL, PERIODIC, ACTIVE };
-
-/**
- * @brief Supported velocity message source types
- */
-enum class VelocitySource {
-  TWIST,
-  TWIST_WITH_COV,
-  TWIST_STAMPED,
-  TWIST_WITH_COV_STAMPED,
-  ODOMETRY
-};
-
-/**
- * @brief Check status for calibration prerequisites
- */
-template <typename T>
-struct FilterStatus
-{
-  bool is_activated;
-  T current_state;
-  bool is_threshold_met;
-  double state_age;
-};
-
-/**
- * @brief Camera and LiDAR topic information for sensor pairs
- *
- * Contains the necessary topic names and configuration for a specific
- * camera-LiDAR pair used in calibration status monitoring.
- */
-struct InputMetadata
-{
-  FilterStatus<double> velocity_filter_status;
-  FilterStatus<size_t> objects_filter_status;
-  rclcpp::Time cloud_stamp;
-  rclcpp::Time image_stamp;
-  rclcpp::Time common_stamp;
-};
 
 /**
  * @brief Convert string to RuntimeMode enum
@@ -106,56 +152,6 @@ inline std::string runtime_mode_to_string(RuntimeMode mode)
       return "active";
     default:
       throw std::invalid_argument("Unknown runtime mode");
-  }
-}
-
-/**
- * @brief Convert string to VelocitySource enum
- * @param source_str String representation of velocity source
- * @return VelocitySource enum value
- * @throws std::invalid_argument for invalid source strings
- */
-inline VelocitySource string_to_velocity_source(const std::string & source_str)
-{
-  if (source_str == "twist") {
-    return VelocitySource::TWIST;
-  }
-  if (source_str == "twist_with_cov") {
-    return VelocitySource::TWIST_WITH_COV;
-  }
-  if (source_str == "twist_stamped") {
-    return VelocitySource::TWIST_STAMPED;
-  }
-  if (source_str == "twist_with_cov_stamped") {
-    return VelocitySource::TWIST_WITH_COV_STAMPED;
-  }
-  if (source_str == "odometry") {
-    return VelocitySource::ODOMETRY;
-  }
-  throw std::invalid_argument("Invalid velocity source: " + source_str);
-}
-
-/**
- * @brief Convert VelocitySource enum to string representation
- * @param source VelocitySource enum value
- * @return String representation of the velocity source
- * @throws std::invalid_argument for unknown source values
- */
-inline std::string velocity_source_to_string(VelocitySource source)
-{
-  switch (source) {
-    case VelocitySource::TWIST:
-      return "twist";
-    case VelocitySource::TWIST_WITH_COV:
-      return "twist_with_cov";
-    case VelocitySource::TWIST_STAMPED:
-      return "twist_stamped";
-    case VelocitySource::TWIST_WITH_COV_STAMPED:
-      return "twist_with_cov_stamped";
-    case VelocitySource::ODOMETRY:
-      return "odometry";
-    default:
-      throw std::invalid_argument("Unknown velocity source");
   }
 }
 

@@ -91,41 +91,98 @@
         "prerequisite": {
           "type": "object",
           "properties": {
-            "check_velocity": {
-              "type": "boolean",
-              "description": "Flag to enable or disable velocity check for calibration status verification. If enabled, the node will subscribe to the specified velocity source topics and verify that the vehicle is moving at maximum velocity defined by velocity_threshold.",
-              "default": true
+            "linear_velocity_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable linear velocity check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The twist message type to subscribe for linear velocity check.",
+                  "enum": ["twist_stamped", "twist_with_cov_stamped", "odometry"],
+                  "default": "twist_with_cov_stamped"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "The linear velocity threshold in meters per second. If exceeded, calibration check is skipped.",
+                  "default": 3.0,
+                  "minimum": 0.0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             },
-            "velocity_source": {
-              "type": "string",
-              "description": "The msg type to subscribe for velocity check. Available options are 'twist', 'twist_stamped', 'twist_with_cov', 'twist_with_cov_stamped', 'odometry'.",
-              "enum": [
-                "twist",
-                "twist_with_cov",
-                "twist_stamped",
-                "twist_with_cov_stamped",
-                "odometry"
-              ],
-              "default": "twist_with_cov_stamped"
+            "angular_velocity_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable angular velocity check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The twist message type to subscribe for angular velocity check.",
+                  "enum": ["twist_stamped", "twist_with_cov_stamped", "odometry"],
+                  "default": "twist_with_cov_stamped"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "The angular velocity magnitude threshold in radians per second. If exceeded, calibration check is skipped.",
+                  "default": 0.1745,
+                  "minimum": 0.0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             },
-            "velocity_threshold": {
-              "type": "number",
-              "description": "The maximum velocity threshold in meters per second for the vehicle to be considered moving. If the vehicle's velocity is below this threshold, the calibration status verification will not be performed.",
-              "default": 5.0
-            },
-            "check_objects": {
-              "type": "boolean",
-              "description": "Flag to enable or disable object check for calibration status verification. If enabled, the node will subscribe to the specified object source topics and verify that the number of objects is within the defined limit.",
-              "default": true
-            },
-            "objects_limit": {
-              "type": "integer",
-              "description": "The maximum number of objects allowed for the vehicle to be considered in a valid state for calibration status verification. If the number of detected objects exceeds this limit, the calibration status verification will not be performed.",
-              "default": 100,
-              "minimum": 0
+            "objects_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable object count check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The object message type to subscribe for object count check.",
+                  "enum": ["predicted_objects", "tracked_objects", "detected_objects"],
+                  "default": "predicted_objects"
+                },
+                "threshold": {
+                  "type": "integer",
+                  "description": "The maximum number of objects allowed. If exceeded, calibration check is skipped.",
+                  "default": 100,
+                  "minimum": 0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             }
           },
-          "required": ["check_velocity", "velocity_source", "velocity_threshold"],
+          "required": ["linear_velocity_check", "angular_velocity_check", "objects_check"],
           "additionalProperties": false
         },
         "miscalibration_confidence_threshold": {

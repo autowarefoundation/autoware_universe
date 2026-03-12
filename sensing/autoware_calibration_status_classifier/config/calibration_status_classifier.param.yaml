@@ -16,9 +16,19 @@
       approx_deltas: [0.1]
       already_rectified: [false]
     prerequisite:
-      check_velocity: true
-      velocity_source: twist_with_cov_stamped
-      velocity_threshold: 10.0
-      check_objects: true
-      objects_limit: 100
+      linear_velocity_check:
+        enabled: true
+        source: twist_with_cov_stamped
+        threshold: 3.0
+        timeout: 1.0
+      angular_velocity_check:
+        enabled: true
+        source: twist_with_cov_stamped
+        threshold: 0.1745  # 10 degrees in radians
+        timeout: 1.0
+      objects_check:
+        enabled: true
+        source: predicted_objects
+        threshold: 100
+        timeout: 1.0
     miscalibration_confidence_threshold: 0.0
