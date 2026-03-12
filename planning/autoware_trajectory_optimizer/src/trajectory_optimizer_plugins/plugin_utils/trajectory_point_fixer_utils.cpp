@@ -212,7 +212,7 @@ void resample_close_proximity_points(
       std::abs(traj_points[cluster_of_indices.front()].longitudinal_velocity_mps);
     const float v_back = std::abs(traj_points[cluster_of_indices.back()].longitudinal_velocity_mps);
     if (v_back < v_front && v_back < static_cast<float>(stop_velocity_threshold_mps)) {
-      semantic_speed_tracker.stop_points.push_back(cluster_of_indices.back());
+      semantic_speed_tracker.stop_point_candidates.push_back(cluster_of_indices.back());
     }
   }
 }
@@ -221,7 +221,7 @@ void detect_velocity_based_stop(
   const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
   const double stop_velocity_threshold_mps)
 {
-  if (!semantic_speed_tracker.stop_points.empty()) {
+  if (!semantic_speed_tracker.stop_point_candidates.empty()) {
     return;
   }
 
@@ -231,7 +231,7 @@ void detect_velocity_based_stop(
     const float v = traj_points[i].longitudinal_velocity_mps;
     const float v_prev = traj_points[i - 1].longitudinal_velocity_mps;
     if (std::abs(v) < threshold && v < v_prev) {
-      semantic_speed_tracker.stop_points.push_back(i);
+      semantic_speed_tracker.stop_point_candidates.push_back(i);
       break;
     }
   }
@@ -240,7 +240,7 @@ void detect_velocity_based_stop(
 void build_stop_approach_ranges(
   const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker)
 {
-  const std::vector<size_t> stop_pts = semantic_speed_tracker.stop_points;
+  const std::vector<size_t> stop_pts = semantic_speed_tracker.stop_point_candidates;
   semantic_speed_tracker.clear_stop_approaches();
 
   std::vector<double> cumulative_s(traj_points.size(), 0.0);
@@ -267,19 +267,8 @@ void build_stop_approach_ranges(
       --decel_start;
     }
 
-    const double duration_s = traj_points[stop_idx].time_from_start.sec +
-                              traj_points[stop_idx].time_from_start.nanosec * 1e-9 -
-                              (traj_points[decel_start].time_from_start.sec +
-                               traj_points[decel_start].time_from_start.nanosec * 1e-9);
-
-    SemanticSpeedTracker::SlowSpeedInfo info;
-    info.start_index = decel_start;
-    info.end_index = stop_idx;
-    info.duration_s = duration_s;
-    info.start_s_m = cumulative_s[decel_start];
-    info.end_s_m = cumulative_s[stop_idx];
-    info.is_stop_approach = true;
-    semantic_speed_tracker.add_stop_approach(info);
+    semantic_speed_tracker.add_stop_approach(
+      {decel_start, stop_idx, cumulative_s[decel_start], cumulative_s[stop_idx]});
   }
 }
 
@@ -332,7 +321,7 @@ void remove_close_proximity_points(
       continue;
     }  // Avoid marking multiple close points as stop points
     // Mark semantic speed stop point
-    semantic_speed_tracker.stop_points.push_back(last_valid_idx);
+    semantic_speed_tracker.stop_point_candidates.push_back(last_valid_idx);
     last_stop_point_idx = last_valid_idx;
   }
 

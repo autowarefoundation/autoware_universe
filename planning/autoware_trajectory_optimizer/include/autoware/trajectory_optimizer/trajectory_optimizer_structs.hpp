@@ -39,12 +39,10 @@ struct TrajectoryOptimizerData
   AccelWithCovarianceStamped current_acceleration;
 };
 
-// Struct that tracks model-predicted intentions for slow down or stopping of the ego vehicle across
-// multiple plugins. This can be used to coordinate between plugins and ensure consistent behavior
-// when the ego vehicle is predicted to slow down or stop. Point ranges and durations can be tracked
-// to determine when to apply certain optimizations or modifications. Stops are determined by a
-// single point (there can be several stop points in a single trajectory though), while slow downs
-// are tracked by a vector with ranges of points and duration.
+// Tracks detected stop approaches in the trajectory for use across plugins.
+// A stop approach is a deceleration zone leading to a full stop: it has a start index
+// (onset of deceleration), an end index (stop point), and arc length coordinates for
+// remapping after resampling.
 struct SemanticSpeedTracker
 {
 public:
@@ -52,13 +50,9 @@ public:
   {
     size_t start_index{0};
     size_t end_index{0};
-    double duration_s{0.0};
     double start_s_m{0.0};
     double end_s_m{0.0};
-    bool is_stop_approach{false};
   };
-
-  std::vector<size_t> stop_points;
 
   void remap_to_trajectory(const std::vector<double> & new_arc_lengths)
   {
@@ -83,17 +77,10 @@ public:
                : static_cast<size_t>(std::distance(new_arc_lengths.begin(), it));
     };
 
-    stop_points.clear();
     for (auto & range : slow_down_ranges) {
       range.start_index = find_nearest_index(range.start_s_m);
       range.end_index = find_nearest_index(range.end_s_m);
-      stop_points.push_back(range.end_index);
     }
-  }
-
-  [[nodiscard]] bool is_stop_point(size_t index) const
-  {
-    return std::find(stop_points.begin(), stop_points.end(), index) != stop_points.end();
   }
 
   [[nodiscard]] const std::vector<SlowSpeedInfo> & get_slow_down_ranges() const
@@ -101,17 +88,13 @@ public:
     return slow_down_ranges;
   }
 
-  void add_stop_approach(const SlowSpeedInfo & info)
-  {
-    slow_down_ranges.push_back(info);
-    stop_points.push_back(info.end_index);
-  }
+  void add_stop_approach(const SlowSpeedInfo & info) { slow_down_ranges.push_back(info); }
 
-  void clear_stop_approaches()
-  {
-    slow_down_ranges.clear();
-    stop_points.clear();
-  }
+  void clear_stop_approaches() { slow_down_ranges.clear(); }
+
+  // Staging area: detection functions push candidate stop indices here before
+  // build_stop_approach_ranges() processes them into slow_down_ranges.
+  std::vector<size_t> stop_point_candidates;
 
 private:
   std::vector<SlowSpeedInfo> slow_down_ranges;
