@@ -33,7 +33,6 @@ protected:
   // Test parameters for LocalLowSpeedConstraint test case
   static constexpr size_t kConstraintStartIndex = 20;
   static constexpr size_t kConstraintEndIndex = 60;
-  static constexpr size_t kConstraintNumPoints = kConstraintEndIndex - kConstraintStartIndex;
 
   ContinuousJerkSmootherParams get_default_params() const
   {
@@ -206,7 +205,7 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
   for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex && i < output.size(); ++i) {
     avg_middle_velocity += output[i].longitudinal_velocity_mps;
   }
-  avg_middle_velocity /= kConstraintNumPoints;
+  avg_middle_velocity /= kConstraintEndIndex - kConstraintStartIndex;
 
   // Soft constraint: middle section should have lower velocity than outside
   // but may not strictly enforce the limit
