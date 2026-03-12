@@ -213,9 +213,3 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
   EXPECT_LT(avg_middle_velocity, v_constant)
     << "Middle section should have reduced velocity due to constraint";
 }
-
-int main(int argc, char ** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
