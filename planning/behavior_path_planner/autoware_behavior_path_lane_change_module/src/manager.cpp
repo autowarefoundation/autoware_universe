@@ -258,18 +258,30 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
   p.th_finish_judge_yaw_diff = autoware_utils::deg2rad(finish_judge_lateral_angle_deviation);
 
   // path miss detection parameters
+  p.enable_path_miss_detection =
+    get_or_declare_parameter<bool>(*node, parameter("path_miss.enable_path_miss_detection"));
   p.path_miss_threshold_lateral =
     get_or_declare_parameter<double>(*node, parameter("path_miss.threshold_lateral"));
   p.path_miss_threshold_longitudinal =
     get_or_declare_parameter<double>(*node, parameter("path_miss.threshold_longitudinal"));
-  p.enable_path_miss_detection =
-    get_or_declare_parameter<bool>(*node, parameter("path_miss.enable_path_miss_detection"));
 
   // path miss velocity scaling parameters
   p.path_miss_velocity_points =
     get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.velocity_points"));
   p.path_miss_scale_factors =
     get_or_declare_parameter<std::vector<double>>(*node, parameter("path_miss.scale_factors"));
+
+  if (p.path_miss_velocity_points.empty()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name), "Path miss velocity_points cannot be empty.");
+    exit(EXIT_FAILURE);
+  }
+
+  if (p.path_miss_scale_factors.empty()) {
+    RCLCPP_ERROR(
+      node->get_logger().get_child(node_name), "Path miss scale_factors cannot be empty.");
+    exit(EXIT_FAILURE);
+  }
 
   if (p.path_miss_velocity_points.size() != p.path_miss_scale_factors.size()) {
     RCLCPP_ERROR(
@@ -630,14 +642,32 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
 
   {
     const std::string ns = "lane_change.path_miss.";
+
+    update_param<bool>(
+      parameters, ns + "enable_path_miss_detection", p->enable_path_miss_detection);
     update_param<double>(parameters, ns + "threshold_lateral", p->path_miss_threshold_lateral);
     update_param<double>(
       parameters, ns + "threshold_longitudinal", p->path_miss_threshold_longitudinal);
-    update_param<bool>(
-      parameters, ns + "enable_path_miss_detection", p->enable_path_miss_detection);
-    update_param<std::vector<double>>(
-      parameters, ns + "velocity_points", p->path_miss_velocity_points);
-    update_param<std::vector<double>>(parameters, ns + "scale_factors", p->path_miss_scale_factors);
+
+    std::vector<double> velocity_points;
+    update_param<std::vector<double>>(parameters, ns + "velocity_points", velocity_points);
+    if (!velocity_points.empty()) {
+      p->path_miss_velocity_points = velocity_points;
+    } else {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "Parameter 'velocity_points' is not updated because the given parameter array is empty.");
+    }
+
+    std::vector<double> scale_factors;
+    update_param<std::vector<double>>(parameters, ns + "scale_factors", scale_factors);
+    if (!velocity_points.empty()) {
+      p->path_miss_scale_factors = scale_factors;
+    } else {
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "Parameter 'scale_factors' is not updated because the given parameter array is empty.");
+    }
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
