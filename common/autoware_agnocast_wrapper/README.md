@@ -21,8 +21,8 @@ pub_output_ = AUTOWARE_CREATE_PUBLISHER3(
   pub_options
 );
 
-void onPointCloud(const AUTOWARE_MESSAGE_PTR(const PointCloud2) input_msg) {
-  auto output = ALLOCATE_OUTPUT_MESSAGE(pub_output_);
+void onPointCloud(AUTOWARE_MESSAGE_UNIQUE_PTR(const PointCloud2) && input_msg) {
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_output_);
   ...
   pub_output_->publish(std::move(output));
 }
@@ -33,7 +33,7 @@ To use the macros provided by this package in your own package, include the foll
 ```cmake
 find_package(autoware_agnocast_wrapper REQUIRED)
 ament_target_dependencies(target autoware_agnocast_wrapper)
-target_include_directories(target ${autoware_agnocast_wrapper_INCLUDE_DIRS})
+target_include_directories(target PRIVATE ${autoware_agnocast_wrapper_INCLUDE_DIRS})
 autoware_agnocast_wrapper_setup(target)
 ```
 
