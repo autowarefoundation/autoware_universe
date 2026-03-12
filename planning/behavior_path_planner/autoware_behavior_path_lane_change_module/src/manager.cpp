@@ -379,12 +379,6 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
       parameters, ns + "finish_judge_lateral_threshold", p->th_finish_judge_lateral_diff);
     update_param<bool>(parameters, ns + "publish_debug_marker", p->publish_debug_marker);
     update_param<double>(
-      parameters, ns + "path_miss.threshold_lateral", p->path_miss_threshold_lateral);
-    update_param<double>(
-      parameters, ns + "path_miss.threshold_longitudinal", p->path_miss_threshold_longitudinal);
-    update_param<bool>(
-      parameters, ns + "path_miss.enable_path_miss_detection", p->enable_path_miss_detection);
-    update_param<double>(
       parameters, ns + "min_length_for_turn_signal_activation",
       p->min_length_for_turn_signal_activation);
   }
@@ -632,6 +626,18 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     update_param<double>(parameters, ns + "overhang_tolerance", p->cancel.overhang_tolerance);
     update_param<int>(
       parameters, ns + "unsafe_hysteresis_threshold", p->cancel.th_unsafe_hysteresis);
+  }
+
+  {
+    const std::string ns = "lane_change.path_miss.";
+    update_param<double>(parameters, ns + "threshold_lateral", p->path_miss_threshold_lateral);
+    update_param<double>(
+      parameters, ns + "threshold_longitudinal", p->path_miss_threshold_longitudinal);
+    update_param<bool>(
+      parameters, ns + "enable_path_miss_detection", p->enable_path_miss_detection);
+    update_param<std::vector<double>>(
+      parameters, ns + "velocity_points", p->path_miss_velocity_points);
+    update_param<std::vector<double>>(parameters, ns + "scale_factors", p->path_miss_scale_factors);
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
