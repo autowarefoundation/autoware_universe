@@ -294,6 +294,7 @@ private:
    * @brief insert stop point in output path.
    * @param flag. if it is true, the ego decelerates within accel/jerk constraints.
    * @param target path.
+   * @return if the point is successfully inserted, return true.
    */
   bool insertWaitPoint(const bool use_constraints_for_decel, ShiftedPath & shifted_path) const;
 
@@ -302,6 +303,7 @@ private:
    * initiated.)
    * @param flag. if it is true, the ego decelerates within accel/jerk constraints.
    * @param target path.
+   * @return if the point is successfully inserted, return true.
    */
   bool insertStopPoint(const bool use_constraints_for_decel, ShiftedPath & shifted_path) const;
 
