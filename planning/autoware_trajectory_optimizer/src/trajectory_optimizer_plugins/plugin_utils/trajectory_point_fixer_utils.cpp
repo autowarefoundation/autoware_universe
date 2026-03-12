@@ -221,16 +221,12 @@ void detect_velocity_based_stop(
   const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
   const double stop_velocity_threshold_mps)
 {
-  if (!semantic_speed_tracker.stop_point_candidates.empty()) {
-    return;
-  }
-
   const float threshold = static_cast<float>(stop_velocity_threshold_mps);
 
   for (size_t i = 1; i < traj_points.size(); ++i) {
-    const float v = traj_points[i].longitudinal_velocity_mps;
-    const float v_prev = traj_points[i - 1].longitudinal_velocity_mps;
-    if (std::abs(v) < threshold && v < v_prev) {
+    const float speed = std::abs(traj_points[i].longitudinal_velocity_mps);
+    const float prev_speed = std::abs(traj_points[i - 1].longitudinal_velocity_mps);
+    if (speed < threshold && speed < prev_speed) {
       semantic_speed_tracker.stop_point_candidates.push_back(i);
       break;
     }
@@ -253,11 +249,11 @@ void build_stop_approach_ranges(
     if (stop_idx == 0 || stop_idx >= traj_points.size()) {
       continue;
     }
-    // Velocity is decreasing toward this point → stop approach.
-    // Velocity is increasing toward this point → take-off, skip.
+    // Speed is decreasing toward this point → stop approach.
+    // Speed is increasing toward this point → take-off, skip.
     if (
-      traj_points[stop_idx].longitudinal_velocity_mps >=
-      traj_points[stop_idx - 1].longitudinal_velocity_mps) {
+      std::abs(traj_points[stop_idx].longitudinal_velocity_mps) >=
+      std::abs(traj_points[stop_idx - 1].longitudinal_velocity_mps)) {
       continue;
     }
 

@@ -120,7 +120,8 @@ private:
   /**
    * @brief Construct matrices for OSQP solver
    * @param input_trajectory Original trajectory for fidelity term
-   * @param semantic_speed_tracker Tracker for velocity-based fidelity weighting
+   * @param semantic_speed_tracker Tracker used to add hard equality constraints at detected stop
+   *        positions (pinning them in place regardless of smoothness weight)
    * @param H Hessian matrix (objective quadratic term)
    * @param A Constraint matrix
    * @param f_vec Gradient vector (objective linear term)

@@ -44,10 +44,15 @@ void TrajectoryPointFixer::optimize_trajectory(
       fixer_params_.min_dist_to_resample_m, fixer_params_.stop_detection_velocity_threshold_mps);
   }
 
-  trajectory_point_fixer_utils::detect_velocity_based_stop(
-    traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
-
   trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
+
+  // Velocity-based fallback: if geometric detection produced candidates but none passed the
+  // direction check in build_stop_approach_ranges, try a direct velocity profile scan instead.
+  if (semantic_speed_tracker.get_slow_down_ranges().empty()) {
+    trajectory_point_fixer_utils::detect_velocity_based_stop(
+      traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
+    trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
+  }
 }
 
 void TrajectoryPointFixer::set_up_params()

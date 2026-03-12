@@ -366,6 +366,10 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
       stop_constraint_indices.push_back(idx);
     }
   }
+  std::sort(stop_constraint_indices.begin(), stop_constraint_indices.end());
+  stop_constraint_indices.erase(
+    std::unique(stop_constraint_indices.begin(), stop_constraint_indices.end()),
+    stop_constraint_indices.end());
 
   const int num_constraints =
     2 * (num_points_start + num_points_end + static_cast<int>(stop_constraint_indices.size()));

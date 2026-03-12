@@ -87,7 +87,7 @@
               "type": "number",
               "default": 0.3,
               "minimum": 0,
-              "description": "Velocity threshold for fallback stop detection: if remove_close_proximity_points did not fire, any slow cluster whose minimum velocity is below this threshold is treated as a stop approach [m/s]"
+              "description": "Velocity threshold used by the stop-detection logic: points whose speed falls below this value while decelerating are treated as stop candidates by both the cluster-based and velocity-profile-based detectors [m/s]"
             }
           },
           "required": [
