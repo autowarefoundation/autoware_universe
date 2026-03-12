@@ -38,7 +38,7 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE decorative_tracker_merger_node
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
