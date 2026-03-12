@@ -32,6 +32,8 @@ CameraMatrices::CameraMatrices()
   P = cv::Mat::zeros(3, 4, CV_64F);
   map_width = 0;
   map_height = 0;
+
+  matrices_ready = false;
 }
 
 void CameraMatrices::update_camera_matrices(const sensor_msgs::msg::CameraInfo & camera_info)
