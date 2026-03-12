@@ -60,7 +60,7 @@ void BEVFusionNode::initializeSensorFusionSubscribers(
   const std::string transport = use_compressed_images_ ? "compressed" : "raw";
 
   for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
-    // First construct CamearaMatrices, CameraMatrices is shared by multiple CameraData for the same
+    // First construct CameraMatrices, CameraMatrices is shared by multiple CameraData for the same
     // camera_id
     camera_matrices_ptrs_[camera_id] = std::make_shared<CameraMatrices>();
 

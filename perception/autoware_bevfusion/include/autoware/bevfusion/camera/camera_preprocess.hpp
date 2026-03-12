@@ -28,7 +28,6 @@ class CameraPreprocess
 {
 public:
   CameraPreprocess(cudaStream_t stream, const int camera_id);
-  ~CameraPreprocess();
 
   cudaError_t resizeAndExtractRoi_launch(
     const std::uint8_t * input_img, std::uint8_t * output_img, int H,

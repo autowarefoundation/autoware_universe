@@ -43,14 +43,6 @@ CameraPreprocess::CameraPreprocess(cudaStream_t stream, const int camera_id)
 {
 }
 
-CameraPreprocess::~CameraPreprocess()
-{
-  if (stream_ != nullptr) {
-    cudaStreamDestroy(stream_);
-    stream_ = nullptr;
-  }
-}
-
 __global__ void remap_kernel(
   const std::uint8_t * __restrict__ input_img, std::uint8_t * __restrict__ output_img,
   int output_height, int output_width,  // Output (destination) image dimensions
