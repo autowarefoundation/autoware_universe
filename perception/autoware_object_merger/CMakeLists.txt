@@ -33,7 +33,7 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE object_association_merger_node
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
