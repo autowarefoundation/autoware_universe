@@ -96,10 +96,28 @@ void CameraData::update_image_msg(
   image_msg_ = input_camera_image_msg;
 }
 
-void CameraData::update_camera_info(const sensor_msgs::msg::CameraInfo & input_camera_info_msg)
+void CameraData::update_camera_info(const sensor_msgs::msg::CameraInfo & camera_info_msg)
 {
   // Update camera info message
-  camera_info_ = input_camera_info_msg;
+  camera_info_ = camera_info_msg;
+
+  // Dont need to compute matrices and undistortion if it's not enabled
+  if (!image_pre_processing_params_.run_image_undistortion) {
+    return;
+  }
+
+  // Check if undistorted map x and y are already computed
+  if (
+    camera_matrices_ptr_->undistorted_map_x_d_ != nullptr &&
+    camera_matrices_ptr_->undistorted_map_y_d_ != nullptr) {
+    return;
+  }
+
+  // Update camera matrices
+  camera_matrices_ptr_->update_camera_matrices(camera_info_msg);
+
+  // Compute undistorted map x and y
+  camera_matrices_ptr_->compute_undistorted_map_x_y();
 }
 
 bool CameraData::is_image_msg_available() const
@@ -141,15 +159,37 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
       image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels,
     cudaMemcpyHostToDevice, stream_);
 
-  // 2. Resize and extract ROI, and then saving to output_img
-  // output_img is expected to be in the size of roi_height * roi_width * image channels (usually,
-  // 3)
-  camera_preprocess_ptr_->resizeAndExtractRoi_launch(
-    image_buffer_d_.get(), output_img, image_pre_processing_params_.original_image_height,
-    image_pre_processing_params_.original_image_width, image_pre_processing_params_.resized_height,
-    image_pre_processing_params_.resized_width, image_pre_processing_params_.roi_height,
-    image_pre_processing_params_.roi_width, image_pre_processing_params_.roi_start_y,
-    image_pre_processing_params_.roi_start_x, image_pre_processing_params_.flip_image_channels);
+  if (image_pre_processing_params_.run_image_undistortion) {
+    // 2. Launch remap kernel for undistortion
+    camera_preprocess_ptr_->remap_launch(
+      image_buffer_d_.get(), undistorted_image_buffer_d_.get(),
+      image_pre_processing_params_.original_image_height,
+      image_pre_processing_params_.original_image_width,
+      image_pre_processing_params_.original_image_height,
+      image_pre_processing_params_.original_image_width,
+      camera_matrices_ptr_->undistorted_map_x_d_.get(),
+      camera_matrices_ptr_->undistorted_map_y_d_.get());
+
+    // 3. Resize and extract ROI, and then saving to output_img
+    // output_img is expected to be in the size of roi_height * roi_width * image channels (usually,
+    camera_preprocess_ptr_->resizeAndExtractRoi_launch(
+      undistorted_image_buffer_d_.get(), output_img,
+      image_pre_processing_params_.original_image_height,
+      image_pre_processing_params_.original_image_width,
+      image_pre_processing_params_.resized_height, image_pre_processing_params_.resized_width,
+      image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
+      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x,
+      image_pre_processing_params_.flip_image_channels);
+  } else {
+    // Skip the undistortion step and directly resize and extract ROI
+    camera_preprocess_ptr_->resizeAndExtractRoi_launch(
+      image_buffer_d_.get(), output_img, image_pre_processing_params_.original_image_height,
+      image_pre_processing_params_.original_image_width,
+      image_pre_processing_params_.resized_height, image_pre_processing_params_.resized_width,
+      image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
+      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x,
+      image_pre_processing_params_.flip_image_channels);
+  }
 }
 
 cudaError_t CameraData::sync_cuda_stream()
