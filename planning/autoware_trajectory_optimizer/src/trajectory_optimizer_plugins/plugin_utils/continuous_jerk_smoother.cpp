@@ -147,7 +147,7 @@ bool ContinuousJerkSmoother::apply(
   const uint32_t IDX_GAMMA0 = 4 * N;
 
   const uint32_t l_variables = 5 * N;        // gamma has N-1 elements
-  const uint32_t l_constraints = 4 * N - 2;  // N + N + (N-1) + (N-1) + 1 = 4N - 1
+  const uint32_t l_constraints = 4 * N - 2;  // N + N + (N-1) + (N-1) = 4N - 2
 
   // Allocate matrices
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(l_constraints, l_variables);
