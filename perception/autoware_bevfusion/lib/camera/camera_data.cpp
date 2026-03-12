@@ -70,6 +70,13 @@ CameraData::CameraData(
   image_buffer_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
     image_pre_processing_params_.original_image_height *
     image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels);
+
+  if (image_pre_processing_params_.run_image_undistortion) {
+    undistorted_image_buffer_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
+      image_pre_processing_params_.original_image_height *
+      image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels);
+  }
+
   output_img_offset_ = camera_id_ * BEVFusionConfig::kNumRGBChannels *
                        image_pre_processing_params_.roi_height *
                        image_pre_processing_params_.roi_width;
@@ -189,6 +196,15 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
       image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
       image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x,
       image_pre_processing_params_.flip_image_channels);
+  }
+}
+
+bool CameraData::is_camera_matrices_ready() const
+{
+  if (!image_pre_processing_params_.run_image_undistortion) {
+    return true;
+  } else {
+    return camera_matrices_ptr_->matrices_ready;
   }
 }
 

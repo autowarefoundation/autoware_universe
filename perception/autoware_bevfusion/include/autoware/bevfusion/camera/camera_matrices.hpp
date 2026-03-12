@@ -38,6 +38,7 @@ struct CameraMatrices
   cv::Mat P;
   int map_width;
   int map_height;
+  bool matrices_ready{false};
 
   // GPU Memory for undistortion maps and they only need to be computed once for each camera
   CudaUniquePtr<float[]> undistorted_map_x_d_{nullptr};

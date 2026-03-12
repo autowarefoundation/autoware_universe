@@ -78,6 +78,8 @@ void CameraMatrices::compute_undistorted_map_x_y()
   cudaMemcpy(
     undistorted_map_y_d_.get(), undistort_map_y.data, map_width * map_height * sizeof(float),
     cudaMemcpyHostToDevice);
+
+  matrices_ready = true;
 }
 
 }  // namespace autoware::bevfusion

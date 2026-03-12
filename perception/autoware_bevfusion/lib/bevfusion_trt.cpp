@@ -509,6 +509,9 @@ void BEVFusionTRT::processImages(
   }
 
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+    if (!camera_data_ptrs[camera_id]->is_camera_matrices_ready()) {
+      return;
+    }
     auto roi_tensor_offset = camera_data_ptrs[camera_id]->output_img_offset();
     camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset]);
   }
