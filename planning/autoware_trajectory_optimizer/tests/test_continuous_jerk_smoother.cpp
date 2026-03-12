@@ -17,6 +17,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <vector>
 
 using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
@@ -87,7 +90,8 @@ TEST_F(ContinuousJerkSmootherTest, NormalDrivingNoConstraint)
   // the output should closely track the input velocity profile
   double max_velocity_diff = 0.0;
   for (size_t i = 0; i < output.size(); ++i) {
-    const double diff = std::abs(output[i].longitudinal_velocity_mps - input[i].longitudinal_velocity_mps);
+    const double diff =
+      std::abs(output[i].longitudinal_velocity_mps - input[i].longitudinal_velocity_mps);
     max_velocity_diff = std::max(max_velocity_diff, diff);
   }
 
@@ -131,8 +135,7 @@ TEST_F(ContinuousJerkSmootherTest, NormalDrivingWithMaxVelocityCap)
   }
 
   // Most points should respect the constraint (soft)
-  EXPECT_LT(violations, output.size() / 2)
-    << "Most velocities should respect the soft constraint";
+  EXPECT_LT(violations, output.size() / 2) << "Most velocities should respect the soft constraint";
 }
 
 // Test Case 3: Deceleration from 15 km/h to 0 (stop)
@@ -140,7 +143,7 @@ TEST_F(ContinuousJerkSmootherTest, DecelerationToStop)
 {
   const size_t num_points = 80;
   const double v_start = 15.0 / 3.6;  // 15 km/h -> 4.167 m/s
-  const double v_end = 0.0;            // 0 m/s (stop)
+  const double v_end = 0.0;           // 0 m/s (stop)
 
   auto input = create_linear_velocity_trajectory(v_start, v_end, num_points);
   std::vector<TrajectoryPoint> output;
@@ -175,7 +178,7 @@ TEST_F(ContinuousJerkSmootherTest, DecelerationToStop)
 TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
 {
   const size_t num_points = 80;
-  const double v_constant = 25.0 / 3.6;   // 25 km/h -> 6.944 m/s
+  const double v_constant = 25.0 / 3.6;  // 25 km/h -> 6.944 m/s
   const double v_low = 15.0 / 3.6;       // 15 km/h -> 4.167 m/s
 
   auto input = create_constant_velocity_trajectory(v_constant, num_points);
