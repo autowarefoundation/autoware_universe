@@ -67,8 +67,6 @@ struct QPSmootherParams
   double sigmoid_sharpness{40.0};           // Sigmoid steepness (higher = sharper)
   double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
   double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
-  bool use_arc_length_preservation{true};
-  double arc_length_preservation_weight{5.0};
 
   // Point constraints
   // Number of points from start to constrain (preserve initial state)
@@ -153,10 +151,6 @@ private:
    */
   std::vector<double> compute_velocity_based_weights(
     const TrajectoryPoints & input_trajectory) const;
-
-  void add_arc_length_preservation_terms(
-    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
-    Eigen::MatrixXd & H, std::vector<double> & f_vec) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin
