@@ -183,9 +183,9 @@ public:
 
   MessageT * operator->() const noexcept { return ptr_->as_ptr(); }
 
-  explicit operator bool() const noexcept { return static_cast<bool>(ptr_->as_ptr()); }
+  explicit operator bool() const noexcept { return ptr_ && static_cast<bool>(ptr_->as_ptr()); }
 
-  MessageT * get() const noexcept { return ptr_->as_ptr(); }
+  MessageT * get() const noexcept { return ptr_ ? ptr_->as_ptr() : nullptr; }
 };
 
 // Defaults to zero if the environment variable is missing or invalid.
@@ -394,12 +394,12 @@ public:
     return AUTOWARE_MESSAGE_SHARED_PTR(MessageT){publisher_->borrow_loaned_message()};
   }
 
-  void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message)
+  void publish(AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) && message) override
   {
     publisher_->publish(std::move(message).move_agnocast_ptr());
   }
 
-  void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message)
+  void publish(AUTOWARE_MESSAGE_SHARED_PTR(MessageT) && message) override
   {
     publisher_->publish(std::move(message).move_agnocast_ptr());
   }
@@ -506,6 +506,7 @@ typename Publisher<MessageT>::SharedPtr create_publisher(
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
+#include <type_traits>
 
 #define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) std::unique_ptr<MessageT>
 #define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) std::shared_ptr<MessageT>
