@@ -18,6 +18,7 @@
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_QP_SMOOTHER_HPP_
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
 #include <Eigen/Dense>
 #include <autoware/osqp_interface/osqp_interface.hpp>
@@ -66,6 +67,8 @@ struct QPSmootherParams
   double sigmoid_sharpness{40.0};           // Sigmoid steepness (higher = sharper)
   double min_fidelity_weight{0.1};          // Minimum fidelity at very low speeds
   double max_fidelity_weight{1.0};          // Maximum fidelity at high speeds
+  bool use_arc_length_preservation{true};
+  double arc_length_preservation_weight{5.0};
 
   // Point constraints
   // Number of points from start to constrain (preserve initial state)
@@ -93,8 +96,8 @@ public:
   ~TrajectoryQPSmoother() = default;
 
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) override;
+    TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+    const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data) override;
 
   void set_up_params() override;
 
@@ -108,15 +111,18 @@ private:
   /**
    * @brief Solve the QP problem for trajectory smoothing
    * @param input_trajectory Original trajectory from planner
+   * @param semantic_speed_tracker Tracker containing semantic speed information (e.g., stop points)
    * @param output_trajectory Smoothed trajectory (output)
    * @return true if optimization succeeded, false otherwise
    */
   bool solve_qp_problem(
-    const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory);
+    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+    TrajectoryPoints & output_trajectory) const;
 
   /**
    * @brief Construct matrices for OSQP solver
    * @param input_trajectory Original trajectory for fidelity term
+   * @param semantic_speed_tracker Tracker for velocity-based fidelity weighting
    * @param H Hessian matrix (objective quadratic term)
    * @param A Constraint matrix
    * @param f_vec Gradient vector (objective linear term)
@@ -124,8 +130,9 @@ private:
    * @param u_vec Upper bounds for constraints
    */
   void prepare_osqp_matrices(
-    const TrajectoryPoints & input_trajectory, Eigen::MatrixXd & H, Eigen::MatrixXd & A,
-    std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec) const;
+    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+    Eigen::MatrixXd & H, Eigen::MatrixXd & A, std::vector<double> & f_vec,
+    std::vector<double> & l_vec, std::vector<double> & u_vec) const;
 
   /**
    * @brief Convert QP solution back to trajectory format
@@ -145,6 +152,10 @@ private:
    */
   std::vector<double> compute_velocity_based_weights(
     const TrajectoryPoints & input_trajectory) const;
+
+  void add_arc_length_preservation_terms(
+    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+    Eigen::MatrixXd & H, std::vector<double> & f_vec) const;
 };
 
 }  // namespace autoware::trajectory_optimizer::plugin

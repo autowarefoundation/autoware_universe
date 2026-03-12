@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -67,6 +68,10 @@ void TrajectoryQPSmoother::set_up_params()
     get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.min_fidelity_weight");
   qp_params_.max_fidelity_weight =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_qp_smoother.max_fidelity_weight");
+  qp_params_.use_arc_length_preservation =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_qp_smoother.use_arc_length_preservation");
+  qp_params_.arc_length_preservation_weight = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_qp_smoother.arc_length_preservation_weight");
 
   // Point constraint parameters
   qp_params_.num_constrained_points_start =
@@ -123,6 +128,12 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
     parameters, "trajectory_qp_smoother.min_fidelity_weight", qp_params_.min_fidelity_weight);
   update_param<double>(
     parameters, "trajectory_qp_smoother.max_fidelity_weight", qp_params_.max_fidelity_weight);
+  update_param<bool>(
+    parameters, "trajectory_qp_smoother.use_arc_length_preservation",
+    qp_params_.use_arc_length_preservation);
+  update_param<double>(
+    parameters, "trajectory_qp_smoother.arc_length_preservation_weight",
+    qp_params_.arc_length_preservation_weight);
 
   // Point constraint parameter updates
   update_param<int>(
@@ -139,8 +150,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 }
 
 void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  [[maybe_unused]] const TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
+  const TrajectoryOptimizerParams & params, [[maybe_unused]] const TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
@@ -180,7 +191,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   // Solve QP problem
   TrajectoryPoints smoothed_trajectory;
-  if (!solve_qp_problem(traj_points, smoothed_trajectory)) {
+  if (!solve_qp_problem(traj_points, semantic_speed_tracker, smoothed_trajectory)) {
     RCLCPP_ERROR_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
       "QP Smoother: Optimization FAILED, using original trajectory. Check previous error "
@@ -197,7 +208,8 @@ void TrajectoryQPSmoother::optimize_trajectory(
 }
 
 bool TrajectoryQPSmoother::solve_qp_problem(
-  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory)
+  const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+  TrajectoryPoints & output_trajectory) const
 {
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;  // [x, y] for each point (path-only optimization)
@@ -209,21 +221,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   std::vector<double> l_vec;
   std::vector<double> u_vec;
 
-  prepare_osqp_matrices(input_trajectory, H, A, f_vec, l_vec, u_vec);
-
-  // Log weight statistics if velocity-based fidelity is enabled
-  if (qp_params_.use_velocity_based_fidelity) {
-    const std::vector<double> weights = compute_velocity_based_weights(input_trajectory);
-    const double min_weight = *std::min_element(weights.begin(), weights.end());
-    const double max_weight = *std::max_element(weights.begin(), weights.end());
-    const double avg_weight =
-      std::accumulate(weights.begin(), weights.end(), 0.0) / static_cast<double>(weights.size());
-
-    RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "QP Smoother: Fidelity weights: min=%.3f, max=%.3f, avg=%.3f (N=%d points)", min_weight,
-      max_weight, avg_weight, N);
-  }
+  prepare_osqp_matrices(input_trajectory, semantic_speed_tracker, H, A, f_vec, l_vec, u_vec);
 
   // Create OSQP solver with settings
   autoware::osqp_interface::OSQPInterface osqp_solver(qp_params_.osqp_eps_abs, true);
@@ -298,8 +296,9 @@ bool TrajectoryQPSmoother::solve_qp_problem(
 }
 
 void TrajectoryQPSmoother::prepare_osqp_matrices(
-  const TrajectoryPoints & input_trajectory, Eigen::MatrixXd & H, Eigen::MatrixXd & A,
-  std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec) const
+  const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+  Eigen::MatrixXd & H, Eigen::MatrixXd & A, std::vector<double> & f_vec,
+  std::vector<double> & l_vec, std::vector<double> & u_vec) const
 {
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;
@@ -411,6 +410,8 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
     constraint_idx++;
   }
+
+  add_arc_length_preservation_terms(input_trajectory, semantic_speed_tracker, H, f_vec);
 }
 
 void TrajectoryQPSmoother::post_process_trajectory(
@@ -534,6 +535,68 @@ std::vector<double> TrajectoryQPSmoother::compute_velocity_based_weights(
   }
 
   return weights;
+}
+
+void TrajectoryQPSmoother::add_arc_length_preservation_terms(
+  const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+  Eigen::MatrixXd & H, std::vector<double> & f_vec) const
+{
+  if (!qp_params_.use_arc_length_preservation) {
+    return;
+  }
+
+  const double w = qp_params_.arc_length_preservation_weight;
+  constexpr double min_segment_length = 1e-6;
+
+  for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
+    for (size_t i = range.start_index; i < range.end_index; ++i) {
+      const double dx =
+        input_trajectory[i + 1].pose.position.x - input_trajectory[i].pose.position.x;
+      const double dy =
+        input_trajectory[i + 1].pose.position.y - input_trajectory[i].pose.position.y;
+      const double d_orig = std::hypot(dx, dy);
+
+      if (d_orig < min_segment_length) {
+        continue;
+      }
+
+      const double t_x = dx / d_orig;
+      const double t_y = dy / d_orig;
+
+      const int xi = 2 * static_cast<int>(i);
+      const int yi = 2 * static_cast<int>(i) + 1;
+      const int xip1 = 2 * static_cast<int>(i + 1);
+      const int yip1 = 2 * static_cast<int>(i + 1) + 1;
+
+      H(xi, xi) += w * t_x * t_x;
+      H(yi, yi) += w * t_y * t_y;
+      H(xip1, xip1) += w * t_x * t_x;
+      H(yip1, yip1) += w * t_y * t_y;
+
+      H(xi, yi) += w * t_x * t_y;
+      H(yi, xi) += w * t_x * t_y;
+
+      H(xi, xip1) -= w * t_x * t_x;
+      H(xip1, xi) -= w * t_x * t_x;
+
+      H(xi, yip1) -= w * t_x * t_y;
+      H(yip1, xi) -= w * t_x * t_y;
+
+      H(yi, xip1) -= w * t_y * t_x;
+      H(xip1, yi) -= w * t_y * t_x;
+
+      H(yi, yip1) -= w * t_y * t_y;
+      H(yip1, yi) -= w * t_y * t_y;
+
+      H(xip1, yip1) += w * t_x * t_y;
+      H(yip1, xip1) += w * t_x * t_y;
+
+      f_vec[xi] += w * d_orig * t_x;
+      f_vec[yi] += w * d_orig * t_y;
+      f_vec[xip1] -= w * d_orig * t_x;
+      f_vec[yip1] -= w * d_orig * t_y;
+    }
+  }
 }
 
 }  // namespace autoware::trajectory_optimizer::plugin

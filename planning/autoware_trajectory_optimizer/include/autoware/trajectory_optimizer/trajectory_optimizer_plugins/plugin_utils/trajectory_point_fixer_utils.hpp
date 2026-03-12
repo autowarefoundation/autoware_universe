@@ -17,6 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -103,11 +105,13 @@ void resample_single_cluster(
  * them along a line direction while preserving arc length ratios.
  *
  * @param traj_points Trajectory to resample (modified in place)
+ * @param semantic_speed_tracker Tracker for semantic speed information (modified in place)
  * @param current_odometry Current ego vehicle odometry
  * @param min_dist_m Minimum distance threshold for clustering
  */
 void resample_close_proximity_points(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m);
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const Odometry & current_odometry, const double min_dist_m);
 
 /**
  * @brief Removes invalid points from the trajectory.
@@ -126,10 +130,12 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory);
  * than the minimum distance threshold. Always keeps the first point.
  *
  * @param input_trajectory_array The trajectory points to be cleaned (modified in place)
+ * @param semantic_speed_tracker Tracker for semantic speed information (modified in place)
  * @param min_dist The minimum distance between points (default: 1E-2)
  */
 void remove_close_proximity_points(
-  TrajectoryPoints & input_trajectory_array, const double min_dist = 1e-2);
+  TrajectoryPoints & input_trajectory_array, SemanticSpeedTracker & semantic_speed_tracker,
+  const double min_dist = 1e-2);
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
 

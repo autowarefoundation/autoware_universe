@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <Eigen/Core>
@@ -188,7 +189,8 @@ void resample_single_cluster(
 }
 
 void resample_close_proximity_points(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m)
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const Odometry & current_odometry, const double min_dist_m)
 {
   if (traj_points.size() < 2) {
     return;
@@ -203,7 +205,17 @@ void resample_close_proximity_points(
 
   for (const auto & cluster_of_indices : clusters_of_indices) {
     resample_single_cluster(cluster_of_indices, traj_points, ego_point);
+
+    const auto duration_s =
+      traj_points[cluster_of_indices.back()].time_from_start.sec +
+      traj_points[cluster_of_indices.back()].time_from_start.nanosec * 1e-9 -
+      (traj_points[cluster_of_indices.front()].time_from_start.sec +
+       traj_points[cluster_of_indices.front()].time_from_start.nanosec * 1e-9);
+    semantic_speed_tracker.slow_speed_ranges.push_back(
+      SemanticSpeedTracker::SlowSpeedInfo{
+        cluster_of_indices.front(), cluster_of_indices.back(), duration_s});
   }
+  semantic_speed_tracker.update_slow_down_ranges_and_stop_points();
 }
 
 void remove_invalid_points(TrajectoryPoints & input_trajectory)
@@ -226,7 +238,9 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
   }
 }
 
-void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
+void remove_close_proximity_points(
+  TrajectoryPoints & input_trajectory_array, SemanticSpeedTracker & semantic_speed_tracker,
+  const double min_dist)
 {
   if (input_trajectory_array.size() < 2) {
     return;
@@ -234,6 +248,7 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
 
   // Keep the first point
   size_t last_valid_idx = 0;
+  size_t last_stop_point_idx = 0;
 
   for (size_t i = 1; i < input_trajectory_array.size(); ++i) {
     const double dist = autoware_utils_geometry::calc_distance2d(
@@ -245,7 +260,15 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
       ++last_valid_idx;
       // Overwrite the next slot in the same vector
       input_trajectory_array[last_valid_idx] = input_trajectory_array[i];
+      continue;
     }
+
+    if (last_valid_idx == last_stop_point_idx) {
+      continue;
+    }  // Avoid marking multiple close points as stop points
+    // Mark semantic speed stop point
+    semantic_speed_tracker.stop_points.push_back(last_valid_idx);
+    last_stop_point_idx = last_valid_idx;
   }
 
   // Shrink vector to the new size

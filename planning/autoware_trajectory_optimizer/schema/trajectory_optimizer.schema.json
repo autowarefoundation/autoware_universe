@@ -342,6 +342,17 @@
               "minimum": 0,
               "description": "Maximum fidelity weight at high speeds [dimensionless]"
             },
+            "use_arc_length_preservation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Preserve arc length between consecutive points in slowdown-to-stop regions"
+            },
+            "arc_length_preservation_weight": {
+              "type": "number",
+              "default": 5.0,
+              "minimum": 0,
+              "description": "Weight for the linearized arc length soft constraint in slowdown regions [dimensionless]"
+            },
             "num_constrained_points_start": {
               "type": "integer",
               "default": 3,
@@ -370,6 +381,8 @@
             "sigmoid_sharpness",
             "min_fidelity_weight",
             "max_fidelity_weight",
+            "use_arc_length_preservation",
+            "arc_length_preservation_weight",
             "num_constrained_points_start",
             "num_constrained_points_end"
           ]

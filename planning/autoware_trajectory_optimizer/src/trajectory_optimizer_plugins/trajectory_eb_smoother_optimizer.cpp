@@ -27,8 +27,8 @@ namespace autoware::trajectory_optimizer::plugin
 {
 
 void TrajectoryEBSmootherOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
+  const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data)
 {
   if (!params.use_eb_smoother) {
     return;

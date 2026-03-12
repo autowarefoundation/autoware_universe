@@ -25,8 +25,8 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
+  const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data)
 {
   if (!params.use_trajectory_point_fixer) {
     return;
@@ -35,12 +35,13 @@ void TrajectoryPointFixer::optimize_trajectory(
 
   if (fixer_params_.remove_close_points) {
     trajectory_point_fixer_utils::remove_close_proximity_points(
-      traj_points, fixer_params_.min_dist_to_remove_m);
+      traj_points, semantic_speed_tracker, fixer_params_.min_dist_to_remove_m);
   }
 
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(
-      traj_points, data.current_odometry, fixer_params_.min_dist_to_resample_m);
+      traj_points, semantic_speed_tracker, data.current_odometry,
+      fixer_params_.min_dist_to_resample_m);
   }
 }
 

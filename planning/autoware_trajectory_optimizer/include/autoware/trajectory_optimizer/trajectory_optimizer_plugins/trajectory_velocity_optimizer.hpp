@@ -68,8 +68,8 @@ public:
     const std::string & name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper) override;
   void optimize_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) override;
+    TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+    const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;
