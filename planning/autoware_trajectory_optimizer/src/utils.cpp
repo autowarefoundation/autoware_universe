@@ -39,9 +39,9 @@ rclcpp::Logger get_logger()
 TrajectoryPoints generate_three_point_stopped_trajectory(
   const TrajectoryPoints & input_traj, const Odometry & odom)
 {
-  constexpr double moving_threshold{0.1};
-  if (odom.twist.twist.linear.x > moving_threshold) {
-    // ego vehicle is moving
+  // ego vehicle is moving, returning a dummy trajectory might be dangerous
+  constexpr double moving_threshold_mps{0.1};
+  if (odom.twist.twist.linear.x > moving_threshold_mps) {
     return input_traj;
   }
   TrajectoryPoint base_link_point;
@@ -53,10 +53,13 @@ TrajectoryPoints generate_three_point_stopped_trajectory(
   TrajectoryPoint offset_point_1 = base_link_point;
   TrajectoryPoint offset_point_2 = base_link_point;
 
-  offset_point_1.pose =
-    autoware_utils_geometry::calc_offset_pose(base_link_point.pose, 0.5, 0., 0.);
-  offset_point_2.pose =
-    autoware_utils_geometry::calc_offset_pose(base_link_point.pose, 1.0, 0., 0.);
+  constexpr double offset_x1{0.5};
+  constexpr double offset_x2{1.0};
+
+  offset_point_1.pose = autoware_utils_geometry::calc_offset_pose(
+    base_link_point.pose, /*offset_x*/ offset_x1, /*offset_y*/ 0., /*offset_z*/ 0.);
+  offset_point_2.pose = autoware_utils_geometry::calc_offset_pose(
+    base_link_point.pose, /*offset_x*/ offset_x2, /*offset_y*/ 0., /*offset_z*/ 0.);
   return {base_link_point, offset_point_1, offset_point_2};
 }
 

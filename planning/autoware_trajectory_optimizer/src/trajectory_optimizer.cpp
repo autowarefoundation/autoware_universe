@@ -188,6 +188,9 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     for (auto & plugin : plugins_) {
       plugin->optimize_trajectory(trajectory.points, params_, data);
     }
+
+    // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we
+    // return a dummy stopped trajectory instead.
     if (trajectory.points.size() < 3) {
       trajectory.points =
         utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
