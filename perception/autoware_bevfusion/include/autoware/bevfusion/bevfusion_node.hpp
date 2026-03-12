@@ -105,6 +105,8 @@ private:
   // unique_ptr to avoid copying the actual camera data in memory since there's gpu buffer in the
   // camera data
   std::vector<std::unique_ptr<CameraData>> camera_data_ptrs_;
+  // One CameraMatrices object can be shared by several CameraData
+  std::vector<std::shared_ptr<CameraMatrices>> camera_matrices_ptrs_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_{tf_buffer_};

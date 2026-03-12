@@ -56,10 +56,12 @@ ImagePreProcessingParams::ImagePreProcessingParams(
 
 CameraData::CameraData(
   rclcpp::Node * node, const int camera_id,
-  const ImagePreProcessingParams & image_pre_processing_params)
+  const ImagePreProcessingParams & image_pre_processing_params,
+  const std::shared_ptr<CameraMatrices> & camera_matrices_ptr)
 : logger_(node->get_logger()),
   camera_id_(camera_id),
-  image_pre_processing_params_(image_pre_processing_params)
+  image_pre_processing_params_(image_pre_processing_params),
+  camera_matrices_ptr_(camera_matrices_ptr)
 {
   // Initialization cuda stream
   cudaStreamCreate(&stream_);

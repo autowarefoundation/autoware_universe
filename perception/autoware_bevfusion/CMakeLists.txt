@@ -121,6 +121,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     lib/preprocess/precomputed_features.cpp
     lib/ros_utils.cpp
     lib/bevfusion_trt.cpp
+	lib/camera/camera_matrices.cpp
 	lib/camera/camera_data.cpp
   )
 

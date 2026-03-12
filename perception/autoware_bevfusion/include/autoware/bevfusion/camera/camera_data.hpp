@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__BEVFUSION__CAMERA__CAMERA_DATA_HPP_
 #define AUTOWARE__BEVFUSION__CAMERA__CAMERA_DATA_HPP_
 
+#include "autoware/bevfusion/camera/camera_matrices.hpp"
 #include "autoware/bevfusion/camera/camera_preprocess.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
@@ -61,7 +62,8 @@ class CameraData
 public:
   CameraData(
     rclcpp::Node * node, const int camera_id,
-    const ImagePreProcessingParams & image_pre_processing_params);
+    const ImagePreProcessingParams & image_pre_processing_params,
+    const std::shared_ptr<CameraMatrices> & camera_matrices_ptr);
   ~CameraData();
 
   void update_image_msg(const sensor_msgs::msg::Image::ConstSharedPtr & input_camera_image_msg);
@@ -85,10 +87,6 @@ private:
   // TODO(KokSeang): Remove this once we move preprocessing to subscribers
   sensor_msgs::msg::Image::ConstSharedPtr image_msg_;
 
-  // GPU Memory for undistortion maps
-  CudaUniquePtr<float[]> undistorted_map_x_d_{nullptr};
-  CudaUniquePtr<float[]> undistorted_map_y_d_{nullptr};
-
   // GPU Memory for preprocessed image
   // image buffers
   CudaUniquePtr<std::uint8_t[]> image_buffer_d_{nullptr};
@@ -100,6 +98,7 @@ private:
 
   cudaStream_t stream_{nullptr};
   std::unique_ptr<CameraPreprocess> camera_preprocess_ptr_{nullptr};
+  std::shared_ptr<CameraMatrices> camera_matrices_ptr_{nullptr};
 };
 }  // namespace autoware::bevfusion
 #endif  // AUTOWARE__BEVFUSION__CAMERA__CAMERA_DATA_HPP_

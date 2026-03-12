@@ -51,7 +51,8 @@ void BEVFusionNode::initializeSensorFusionSubscribers(
   image_subs_.resize(num_cameras);
   camera_info_subs_.resize(num_cameras);
   lidar2camera_extrinsics_.resize(num_cameras);
-  camera_data_ptrs_.reserve(num_cameras);
+  camera_data_ptrs_.resize(num_cameras);
+  camera_matrices_ptrs_.resize(num_cameras);
 
   auto resolve_topic_name = [this](const std::string & query) {
     return this->get_node_topics_interface()->resolve_topic_name(query);
@@ -59,9 +60,14 @@ void BEVFusionNode::initializeSensorFusionSubscribers(
   const std::string transport = use_compressed_images_ ? "compressed" : "raw";
 
   for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
-    // Construct CameraData
-    camera_data_ptrs_.emplace_back(
-      std::make_unique<CameraData>(this, static_cast<int>(camera_id), image_pre_processing_params));
+    // First construct CamearaMatrices, CameraMatrices is shared by multiple CameraData for the same
+    // camera_id
+    camera_matrices_ptrs_[camera_id] = std::make_shared<CameraMatrices>();
+
+    // Then construct CameraData
+    camera_data_ptrs_[camera_id] = std::make_unique<CameraData>(
+      this, static_cast<int>(camera_id), image_pre_processing_params,
+      camera_matrices_ptrs_[camera_id]);
 
     // Explicitly resolve the topic name using the node name and namespace, please check
     // https://github.com/ros-perception/image_transport_plugins/issues/155
