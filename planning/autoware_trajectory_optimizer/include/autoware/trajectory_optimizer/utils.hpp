@@ -84,6 +84,12 @@ void copy_trajectory_orientation(
 rclcpp::Logger get_logger();
 
 /**
+ * @brief generates a 3 point trajectory to prevent downstream issues
+ */
+TrajectoryPoints generate_three_point_stopped_trajectory(
+  const TrajectoryPoints & input_traj, const Odometry & odom);
+
+/**
  * @brief Compute time difference between consecutive trajectory points
  *
  * @param current Current trajectory point

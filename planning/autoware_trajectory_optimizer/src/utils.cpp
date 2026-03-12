@@ -17,7 +17,10 @@
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
+
+#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -31,6 +34,30 @@ namespace autoware::trajectory_optimizer::utils
 rclcpp::Logger get_logger()
 {
   return rclcpp::get_logger("trajectory_optimizer");
+}
+
+TrajectoryPoints generate_three_point_stopped_trajectory(
+  const TrajectoryPoints & input_traj, const Odometry & odom)
+{
+  constexpr double moving_threshold{0.1};
+  if (odom.twist.twist.linear.x > moving_threshold) {
+    // ego vehicle is moving
+    return input_traj;
+  }
+  TrajectoryPoint base_link_point;
+  base_link_point.time_from_start = rclcpp::Duration::from_seconds(0.);
+  base_link_point.pose = odom.pose.pose;
+  base_link_point.longitudinal_velocity_mps = 0.0;
+  base_link_point.acceleration_mps2 = 0.0;
+
+  TrajectoryPoint offset_point_1 = base_link_point;
+  TrajectoryPoint offset_point_2 = base_link_point;
+
+  offset_point_1.pose =
+    autoware_utils_geometry::calc_offset_pose(base_link_point.pose, 0.5, 0., 0.);
+  offset_point_2.pose =
+    autoware_utils_geometry::calc_offset_pose(base_link_point.pose, 1.0, 0., 0.);
+  return {base_link_point, offset_point_1, offset_point_2};
 }
 
 void log_error_throttle(const std::string & message)
