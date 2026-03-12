@@ -191,7 +191,7 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
 
   // Apply low speed constraint in middle section (indices 20-60)
   std::vector<double> max_velocity_per_point(num_points, v_constant);
-  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex && i < num_points; ++i) {
+  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex; ++i) {
     max_velocity_per_point[i] = v_low;
   }
 
@@ -203,7 +203,7 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
 
   // Check that velocities are reduced in the constrained middle section
   double avg_middle_velocity = 0.0;
-  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex && i < output.size(); ++i) {
+  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex; ++i) {
     avg_middle_velocity += output[i].longitudinal_velocity_mps;
   }
   avg_middle_velocity /= kConstraintNumPoints;
