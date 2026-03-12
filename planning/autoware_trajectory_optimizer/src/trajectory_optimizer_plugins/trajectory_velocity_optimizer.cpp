@@ -52,7 +52,7 @@ void TrajectoryVelocityOptimizer::initialize(
 }
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
-  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
   const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data)
 {
   if (!params.use_velocity_optimizer) {
@@ -113,14 +113,6 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
   }
 
   if (velocity_params_.smooth_velocities) {
-    if (velocity_params_.use_semantic_stop_points) {
-      for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
-        if (range.end_index < max_velocity_per_point.size()) {
-          max_velocity_per_point[range.end_index] = 0.0;
-        }
-      }
-    }
-
     if (!continuous_jerk_smoother_) {
       continuous_jerk_smoother_ =
         std::make_shared<ContinuousJerkSmoother>(velocity_params_.continuous_jerk_smoother_params);
@@ -160,8 +152,6 @@ void TrajectoryVelocityOptimizer::set_up_params()
     *node_ptr, "trajectory_velocity_optimizer.limit_lateral_acceleration");
   velocity_params_.smooth_velocities =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_velocity_optimizer.smooth_velocities");
-  velocity_params_.use_semantic_stop_points = get_or_declare_parameter<bool>(
-    *node_ptr, "trajectory_velocity_optimizer.use_semantic_stop_points");
 
   // Continuous jerk smoother parameters - QP weights
   auto & cjs = velocity_params_.continuous_jerk_smoother_params;
@@ -219,9 +209,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryVelocityOptimizer::on_paramet
   update_param(
     parameters, "trajectory_velocity_optimizer.smooth_velocities",
     velocity_params_.smooth_velocities);
-  update_param(
-    parameters, "trajectory_velocity_optimizer.use_semantic_stop_points",
-    velocity_params_.use_semantic_stop_points);
 
   // Continuous jerk smoother parameters - QP weights
   auto & cjs = velocity_params_.continuous_jerk_smoother_params;

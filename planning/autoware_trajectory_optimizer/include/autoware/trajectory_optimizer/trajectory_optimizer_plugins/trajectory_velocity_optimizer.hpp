@@ -53,7 +53,6 @@ struct TrajectoryVelocityOptimizerParams
   bool limit_speed{true};
   bool limit_lateral_acceleration{false};
   bool smooth_velocities{false};
-  bool use_semantic_stop_points{true};
 
   // Continuous jerk smoother parameters
   ContinuousJerkSmootherParams continuous_jerk_smoother_params;

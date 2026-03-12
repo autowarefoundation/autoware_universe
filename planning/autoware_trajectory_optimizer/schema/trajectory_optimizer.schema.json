@@ -437,11 +437,6 @@
               "type": "boolean",
               "default": false,
               "description": "Enable jerk-filtered velocity smoothing"
-            },
-            "use_semantic_stop_points": {
-              "type": "boolean",
-              "default": true,
-              "description": "Force zero velocity at detected stop positions and cap approach velocity to input reference when smooth_velocities is enabled"
             }
           },
           "required": [
@@ -453,8 +448,7 @@
             "set_engage_speed",
             "limit_speed",
             "limit_lateral_acceleration",
-            "smooth_velocities",
-            "use_semantic_stop_points"
+            "smooth_velocities"
           ]
         },
         "elastic_band_params": {
