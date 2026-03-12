@@ -30,6 +30,11 @@ using trajectory_optimizer_test_utils::create_point;
 class ContinuousJerkSmootherTest : public ::testing::Test
 {
 protected:
+  // Test parameters for LocalLowSpeedConstraint test case
+  static constexpr size_t kConstraintStartIndex = 20;
+  static constexpr size_t kConstraintEndIndex = 60;
+  static constexpr size_t kConstraintNumPoints = kConstraintEndIndex - kConstraintStartIndex;
+
   ContinuousJerkSmootherParams get_default_params() const
   {
     ContinuousJerkSmootherParams params;
@@ -186,7 +191,7 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
 
   // Apply low speed constraint in middle section (indices 20-60)
   std::vector<double> max_velocity_per_point(num_points, v_constant);
-  for (size_t i = 20; i < 60 && i < num_points; ++i) {
+  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex && i < num_points; ++i) {
     max_velocity_per_point[i] = v_low;
   }
 
@@ -198,10 +203,10 @@ TEST_F(ContinuousJerkSmootherTest, LocalLowSpeedConstraint)
 
   // Check that velocities are reduced in the constrained middle section
   double avg_middle_velocity = 0.0;
-  for (size_t i = 20; i < 60 && i < output.size(); ++i) {
+  for (size_t i = kConstraintStartIndex; i < kConstraintEndIndex && i < output.size(); ++i) {
     avg_middle_velocity += output[i].longitudinal_velocity_mps;
   }
-  avg_middle_velocity /= 40.0;
+  avg_middle_velocity /= kConstraintNumPoints;
 
   // Soft constraint: middle section should have lower velocity than outside
   // but may not strictly enforce the limit
