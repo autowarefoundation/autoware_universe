@@ -142,6 +142,7 @@ private:
    */
   void post_process_trajectory(
     const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
+    const SemanticSpeedTracker & semantic_speed_tracker,
     TrajectoryPoints & output_trajectory) const;
 
   /**

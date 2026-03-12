@@ -255,7 +255,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   // Post-process to create output trajectory
   Eigen::VectorXd solution =
     Eigen::Map<Eigen::VectorXd>(result.primal_solution.data(), result.primal_solution.size());
-  post_process_trajectory(solution, input_trajectory, output_trajectory);
+  post_process_trajectory(solution, input_trajectory, semantic_speed_tracker, output_trajectory);
 
   // Calculate path deviation metrics
   double max_deviation = 0.0;
@@ -365,9 +365,20 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   const int num_points_start = std::max(0, qp_params_.num_constrained_points_start);
   const int num_points_end = std::max(0, qp_params_.num_constrained_points_end);
 
-  // Constraints: fix points from start and end
-  // Each point has 2 constraints (x, y)
-  const int num_constraints = 2 * (num_points_start + num_points_end);
+  // Collect stop point indices from slowdown ranges, skipping any already covered by
+  // the start/end hard-constraint windows to avoid duplicate constraints.
+  std::vector<int> stop_constraint_indices;
+  for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
+    const int idx = static_cast<int>(range.end_index);
+    const bool in_start_window = idx < num_points_start;
+    const bool in_end_window = idx >= N - num_points_end;
+    if (!in_start_window && !in_end_window) {
+      stop_constraint_indices.push_back(idx);
+    }
+  }
+
+  const int num_constraints =
+    2 * (num_points_start + num_points_end + static_cast<int>(stop_constraint_indices.size()));
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
@@ -379,13 +390,11 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     const int x_idx = 2 * i;
     const int y_idx = 2 * i + 1;
 
-    // Constrain x coordinate
     A(constraint_idx, x_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[i].pose.position.x;
     u_vec[constraint_idx] = input_trajectory[i].pose.position.x;
     constraint_idx++;
 
-    // Constrain y coordinate
     A(constraint_idx, y_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[i].pose.position.y;
     u_vec[constraint_idx] = input_trajectory[i].pose.position.y;
@@ -398,13 +407,27 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     const int x_idx = 2 * point_idx;
     const int y_idx = 2 * point_idx + 1;
 
-    // Constrain x coordinate
     A(constraint_idx, x_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
     u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
     constraint_idx++;
 
-    // Constrain y coordinate
+    A(constraint_idx, y_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    constraint_idx++;
+  }
+
+  // Hard-constrain stop points from slowdown ranges
+  for (const int point_idx : stop_constraint_indices) {
+    const int x_idx = 2 * point_idx;
+    const int y_idx = 2 * point_idx + 1;
+
+    A(constraint_idx, x_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    constraint_idx++;
+
     A(constraint_idx, y_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
     u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
@@ -416,7 +439,7 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
 
 void TrajectoryQPSmoother::post_process_trajectory(
   const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
-  TrajectoryPoints & output_trajectory) const
+  const SemanticSpeedTracker & semantic_speed_tracker, TrajectoryPoints & output_trajectory) const
 {
   const size_t N = input_trajectory.size();
   output_trajectory.resize(N);
@@ -496,6 +519,16 @@ void TrajectoryQPSmoother::post_process_trajectory(
     const float last_smoothed_vel = smoothed_velocities[N - velocity_smoothing_window];
     for (size_t i = N - velocity_smoothing_window + 1; i < N; ++i) {
       output_trajectory[i].longitudinal_velocity_mps = last_smoothed_vel;
+    }
+  }
+
+  // Restore input velocity at stop points — the moving average would otherwise blur the
+  // near-zero geometric velocity with higher-velocity approach points.
+  for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
+    const size_t stop_idx = range.end_index;
+    if (stop_idx < N) {
+      output_trajectory[stop_idx].longitudinal_velocity_mps =
+        input_trajectory[stop_idx].longitudinal_velocity_mps;
     }
   }
 
