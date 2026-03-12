@@ -18,6 +18,7 @@
 
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 
 #include <vector>
@@ -25,7 +26,7 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectorySplineSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
   const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data)
 {
   if (!params.use_akima_spline_interpolation) {
@@ -40,6 +41,13 @@ void TrajectorySplineSmoother::optimize_trajectory(
   // are consistent with the new trajectory. For now, we will use the motion_utils function.
   autoware::motion_utils::calculate_time_from_start(
     traj_points, data.current_odometry.pose.pose.position);
+
+  std::vector<double> arc_lengths(traj_points.size(), 0.0);
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    arc_lengths[i] = arc_lengths[i - 1] +
+                     autoware_utils_geometry::calc_distance2d(traj_points[i - 1], traj_points[i]);
+  }
+  semantic_speed_tracker.remap_to_trajectory(arc_lengths);
 }
 
 void TrajectorySplineSmoother::set_up_params()

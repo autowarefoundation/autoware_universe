@@ -444,15 +444,13 @@ void TrajectoryQPSmoother::post_process_trajectory(
   const size_t N = input_trajectory.size();
   output_trajectory.resize(N);
 
-  // Use fixed time step for velocity/acceleration derivation
   const double dt = qp_params_.time_step_s;
   double accumulated_time_s = dt;
-  // First pass: Update positions and orientations
+
+  // First pass: update positions and orientations from QP solution.
   for (size_t i = 0; i < N; ++i) {
-    // Copy input trajectory data
     output_trajectory[i] = input_trajectory[i];
 
-    // Update with smoothed positions
     const double x = solution[2 * i];
     const double y = solution[2 * i + 1];
 
@@ -462,7 +460,6 @@ void TrajectoryQPSmoother::post_process_trajectory(
     output_trajectory[i].time_from_start = rclcpp::Duration::from_seconds(accumulated_time_s);
     accumulated_time_s += dt;
 
-    // Recalculate orientation from smoothed path
     if (i < N - 1) {
       geometry_msgs::msg::Point p_from;
       geometry_msgs::msg::Point p_to;
@@ -480,59 +477,52 @@ void TrajectoryQPSmoother::post_process_trajectory(
     }
   }
 
-  // Second pass: Recalculate velocities from smoothed positions
-  // velocity[i] = ||position[i+1] - position[i]|| / dt
-  // Note: Start from index 1 to use previous position
+  // Second pass: recalculate velocities from smoothed positions (geometric).
   double prev_x = output_trajectory[0].pose.position.x;
   double prev_y = output_trajectory[0].pose.position.y;
   output_trajectory[0].longitudinal_velocity_mps = input_trajectory[0].longitudinal_velocity_mps;
-
   for (size_t i = 1; i < N; ++i) {
     const double curr_x = output_trajectory[i].pose.position.x;
     const double curr_y = output_trajectory[i].pose.position.y;
-    const double distance = std::hypot(curr_x - prev_x, curr_y - prev_y);
-    output_trajectory[i].longitudinal_velocity_mps = static_cast<float>(distance / dt);
+    output_trajectory[i].longitudinal_velocity_mps =
+      static_cast<float>(std::hypot(curr_x - prev_x, curr_y - prev_y) / dt);
     prev_x = curr_x;
     prev_y = curr_y;
   }
 
-  // Third pass: Smooth velocities with moving average
-  // This helps reduce noise from numerical differentiation
-  constexpr size_t velocity_smoothing_window = 3;  // Small window for light smoothing
+  // Third pass: moving average to reduce geometric differentiation noise.
+  constexpr size_t velocity_smoothing_window = 3;
   if (N >= velocity_smoothing_window) {
-    std::vector<float> smoothed_velocities(N);
+    std::vector<float> smoothed(N);
     for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
-      double sum_velocity = 0.0;
+      double sum = 0.0;
       for (size_t w = 0; w < velocity_smoothing_window; ++w) {
-        sum_velocity += output_trajectory[i + w].longitudinal_velocity_mps;
+        sum += output_trajectory[i + w].longitudinal_velocity_mps;
       }
-      smoothed_velocities[i] =
-        static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+      smoothed[i] = static_cast<float>(sum / static_cast<double>(velocity_smoothing_window));
     }
-
-    // Apply smoothed velocities
     for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
-      output_trajectory[i].longitudinal_velocity_mps = smoothed_velocities[i];
+      output_trajectory[i].longitudinal_velocity_mps = smoothed[i];
     }
-
-    // Keep last smoothed velocity for remaining points
-    const float last_smoothed_vel = smoothed_velocities[N - velocity_smoothing_window];
+    const float last_val = smoothed[N - velocity_smoothing_window];
     for (size_t i = N - velocity_smoothing_window + 1; i < N; ++i) {
-      output_trajectory[i].longitudinal_velocity_mps = last_smoothed_vel;
+      output_trajectory[i].longitudinal_velocity_mps = last_val;
     }
   }
 
-  // Restore input velocity at stop points — the moving average would otherwise blur the
-  // near-zero geometric velocity with higher-velocity approach points.
+  // Fourth pass: overwrite slow_down_range velocities with input (planner's original profile).
+  // The geometric recalculation corrupts the deceleration curve — the velocity optimizer needs
+  // correct v_ref values to plan a proper stop. Force the stop point to zero unconditionally.
   for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
-    const size_t stop_idx = range.end_index;
-    if (stop_idx < N) {
-      output_trajectory[stop_idx].longitudinal_velocity_mps =
-        input_trajectory[stop_idx].longitudinal_velocity_mps;
+    for (size_t i = range.start_index; i <= range.end_index && i < N; ++i) {
+      output_trajectory[i].longitudinal_velocity_mps =
+        input_trajectory[i].longitudinal_velocity_mps;
+    }
+    if (range.end_index < N) {
+      output_trajectory[range.end_index].longitudinal_velocity_mps = 0.0f;
     }
   }
 
-  // Fourth pass: Recalculate accelerations from velocities using constant dt
   utils::recalculate_longitudinal_acceleration(output_trajectory, true, dt);
 }
 

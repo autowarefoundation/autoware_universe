@@ -20,6 +20,7 @@
 
       # Velocity smoothing
       smooth_velocities: false        # Enable jerk-filtered velocity smoothing
+      use_semantic_stop_points: true  # Force stop at detected slowdown-to-stop positions and cap approach velocity
 
       # Continuous jerk smoother settings
       # Note: Kinematic limits (max_accel, min_decel, max_jerk, min_jerk) are loaded

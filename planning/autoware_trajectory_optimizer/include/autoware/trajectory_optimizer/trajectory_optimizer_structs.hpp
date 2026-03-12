@@ -53,36 +53,42 @@ public:
     size_t start_index{0};
     size_t end_index{0};
     double duration_s{0.0};
+    double start_s_m{0.0};
+    double end_s_m{0.0};
+    bool is_stop_approach{false};
   };
 
-  std::vector<SlowSpeedInfo> slow_speed_ranges;
   std::vector<size_t> stop_points;
 
-  [[nodiscard]] bool is_slowing_down_to_a_stop(const SlowSpeedInfo & info) const
+  void remap_to_trajectory(const std::vector<double> & new_arc_lengths)
   {
-    if (stop_points.empty()) {
-      return false;
+    if (new_arc_lengths.empty() || slow_down_ranges.empty()) {
+      return;
     }
-    return std::any_of(stop_points.begin(), stop_points.end(), [&info](size_t stop_index) {
-      return stop_index >= info.start_index && stop_index <= info.end_index;
-    });
-  }
 
-  // When slow speed ranges coincide with stop points, we consider that the vehicle is slowing down
-  // to a stop. This function updates the slow down ranges and stop points accordingly, so that
-  // plugins can use this information to adjust their behavior (e.g., apply more aggressive
-  // smoothing when slowing down to a stop).
-  void update_slow_down_ranges_and_stop_points()
-  {
-    slow_down_ranges.clear();
-    std::vector<size_t> new_stop_points;
-    for (const auto & range : slow_speed_ranges) {
-      if (is_slowing_down_to_a_stop(range)) {
-        slow_down_ranges.push_back(range);
-        new_stop_points.push_back(range.end_index);
+    const double max_s = new_arc_lengths.back();
+
+    auto find_nearest_index = [&](double target_s) -> size_t {
+      target_s = std::max(0.0, std::min(target_s, max_s));
+      const auto it = std::lower_bound(new_arc_lengths.begin(), new_arc_lengths.end(), target_s);
+      if (it == new_arc_lengths.end()) {
+        return new_arc_lengths.size() - 1;
       }
+      if (it == new_arc_lengths.begin()) {
+        return 0;
+      }
+      const auto prev_it = std::prev(it);
+      return (target_s - *prev_it <= *it - target_s)
+               ? static_cast<size_t>(std::distance(new_arc_lengths.begin(), prev_it))
+               : static_cast<size_t>(std::distance(new_arc_lengths.begin(), it));
+    };
+
+    stop_points.clear();
+    for (auto & range : slow_down_ranges) {
+      range.start_index = find_nearest_index(range.start_s_m);
+      range.end_index = find_nearest_index(range.end_s_m);
+      stop_points.push_back(range.end_index);
     }
-    stop_points = new_stop_points;
   }
 
   [[nodiscard]] bool is_stop_point(size_t index) const
@@ -93,6 +99,18 @@ public:
   [[nodiscard]] const std::vector<SlowSpeedInfo> & get_slow_down_ranges() const
   {
     return slow_down_ranges;
+  }
+
+  void add_stop_approach(const SlowSpeedInfo & info)
+  {
+    slow_down_ranges.push_back(info);
+    stop_points.push_back(info.end_index);
+  }
+
+  void clear_stop_approaches()
+  {
+    slow_down_ranges.clear();
+    stop_points.clear();
   }
 
 private:

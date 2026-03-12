@@ -190,7 +190,8 @@ void resample_single_cluster(
 
 void resample_close_proximity_points(
   TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
-  const Odometry & current_odometry, const double min_dist_m)
+  const Odometry & current_odometry, const double min_dist_m,
+  const double stop_velocity_threshold_mps)
 {
   if (traj_points.size() < 2) {
     return;
@@ -206,16 +207,80 @@ void resample_close_proximity_points(
   for (const auto & cluster_of_indices : clusters_of_indices) {
     resample_single_cluster(cluster_of_indices, traj_points, ego_point);
 
-    const auto duration_s =
-      traj_points[cluster_of_indices.back()].time_from_start.sec +
-      traj_points[cluster_of_indices.back()].time_from_start.nanosec * 1e-9 -
-      (traj_points[cluster_of_indices.front()].time_from_start.sec +
-       traj_points[cluster_of_indices.front()].time_from_start.nanosec * 1e-9);
-    semantic_speed_tracker.slow_speed_ranges.push_back(
-      SemanticSpeedTracker::SlowSpeedInfo{
-        cluster_of_indices.front(), cluster_of_indices.back(), duration_s});
+    // Mark potential stop points from decelerating clusters for later classification.
+    const float v_front =
+      std::abs(traj_points[cluster_of_indices.front()].longitudinal_velocity_mps);
+    const float v_back = std::abs(traj_points[cluster_of_indices.back()].longitudinal_velocity_mps);
+    if (v_back < v_front && v_back < static_cast<float>(stop_velocity_threshold_mps)) {
+      semantic_speed_tracker.stop_points.push_back(cluster_of_indices.back());
+    }
   }
-  semantic_speed_tracker.update_slow_down_ranges_and_stop_points();
+}
+
+void detect_velocity_based_stop(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const double stop_velocity_threshold_mps)
+{
+  if (!semantic_speed_tracker.stop_points.empty()) {
+    return;
+  }
+
+  const float threshold = static_cast<float>(stop_velocity_threshold_mps);
+
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    const float v = traj_points[i].longitudinal_velocity_mps;
+    const float v_prev = traj_points[i - 1].longitudinal_velocity_mps;
+    if (std::abs(v) < threshold && v < v_prev) {
+      semantic_speed_tracker.stop_points.push_back(i);
+      break;
+    }
+  }
+}
+
+void build_stop_approach_ranges(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker)
+{
+  const std::vector<size_t> stop_pts = semantic_speed_tracker.stop_points;
+  semantic_speed_tracker.clear_stop_approaches();
+
+  std::vector<double> cumulative_s(traj_points.size(), 0.0);
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    cumulative_s[i] = cumulative_s[i - 1] +
+                      autoware_utils_geometry::calc_distance2d(traj_points[i - 1], traj_points[i]);
+  }
+
+  for (const size_t stop_idx : stop_pts) {
+    if (stop_idx == 0 || stop_idx >= traj_points.size()) {
+      continue;
+    }
+    // Velocity is decreasing toward this point → stop approach.
+    // Velocity is increasing toward this point → take-off, skip.
+    if (
+      traj_points[stop_idx].longitudinal_velocity_mps >=
+      traj_points[stop_idx - 1].longitudinal_velocity_mps) {
+      continue;
+    }
+
+    size_t decel_start = stop_idx;
+    while (decel_start > 0 && std::abs(traj_points[decel_start - 1].longitudinal_velocity_mps) >
+                                std::abs(traj_points[decel_start].longitudinal_velocity_mps)) {
+      --decel_start;
+    }
+
+    const double duration_s = traj_points[stop_idx].time_from_start.sec +
+                              traj_points[stop_idx].time_from_start.nanosec * 1e-9 -
+                              (traj_points[decel_start].time_from_start.sec +
+                               traj_points[decel_start].time_from_start.nanosec * 1e-9);
+
+    SemanticSpeedTracker::SlowSpeedInfo info;
+    info.start_index = decel_start;
+    info.end_index = stop_idx;
+    info.duration_s = duration_s;
+    info.start_s_m = cumulative_s[decel_start];
+    info.end_s_m = cumulative_s[stop_idx];
+    info.is_stop_approach = true;
+    semantic_speed_tracker.add_stop_approach(info);
+  }
 }
 
 void remove_invalid_points(TrajectoryPoints & input_trajectory)

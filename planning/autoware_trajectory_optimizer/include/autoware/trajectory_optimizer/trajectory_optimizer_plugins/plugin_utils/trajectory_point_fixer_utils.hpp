@@ -111,7 +111,8 @@ void resample_single_cluster(
  */
 void resample_close_proximity_points(
   TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
-  const Odometry & current_odometry, const double min_dist_m);
+  const Odometry & current_odometry, const double min_dist_m,
+  const double stop_velocity_threshold_mps = 0.3);
 
 /**
  * @brief Removes invalid points from the trajectory.
@@ -136,6 +137,36 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory);
 void remove_close_proximity_points(
   TrajectoryPoints & input_trajectory_array, SemanticSpeedTracker & semantic_speed_tracker,
   const double min_dist = 1e-2);
+
+/**
+ * @brief Detects stop-approach zones from velocity profile when geometric detection missed them.
+ *
+ * Runs only when slow_down_ranges is still empty after geometric cluster detection.
+ * Handles constant-spacing trajectories (e.g. Akima-resampled) where no close proximity
+ * clusters exist but the velocity profile clearly shows a deceleration to stop.
+ * Take-off zones (accelerating from rest) are explicitly excluded.
+ *
+ * @param traj_points Trajectory to scan
+ * @param semantic_speed_tracker Tracker (modified in place)
+ * @param stop_velocity_threshold_mps Velocity below which a point is considered a stop
+ */
+void detect_velocity_based_stop(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const double stop_velocity_threshold_mps);
+
+/**
+ * @brief Builds slow_down_ranges from stop_points using velocity direction.
+ *
+ * For each stop point, checks whether velocity is decreasing toward it (stop approach)
+ * or increasing (take-off). For stop approaches, traces back to find the deceleration
+ * onset and creates a SlowSpeedInfo entry with arc length data for remap support.
+ * Replaces the slow_speed_ranges cross-validation mechanism entirely.
+ *
+ * @param traj_points Trajectory with velocity profile
+ * @param semantic_speed_tracker Tracker whose stop_points are processed (slow_down_ranges rebuilt)
+ */
+void build_stop_approach_ranges(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker);
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
 

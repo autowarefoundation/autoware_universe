@@ -25,7 +25,7 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
   const TrajectoryOptimizerParams & params, const TrajectoryOptimizerData & data)
 {
   if (!params.use_trajectory_point_fixer) {
@@ -41,8 +41,13 @@ void TrajectoryPointFixer::optimize_trajectory(
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(
       traj_points, semantic_speed_tracker, data.current_odometry,
-      fixer_params_.min_dist_to_resample_m);
+      fixer_params_.min_dist_to_resample_m, fixer_params_.stop_detection_velocity_threshold_mps);
   }
+
+  trajectory_point_fixer_utils::detect_velocity_based_stop(
+    traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
+
+  trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
 }
 
 void TrajectoryPointFixer::set_up_params()
@@ -58,6 +63,8 @@ void TrajectoryPointFixer::set_up_params()
     get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_remove_m");
   fixer_params_.min_dist_to_resample_m =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_resample_m");
+  fixer_params_.stop_detection_velocity_threshold_mps = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_point_fixer.stop_detection_velocity_threshold_mps");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
@@ -75,6 +82,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
   update_param<double>(
     parameters, "trajectory_point_fixer.min_dist_to_resample_m",
     fixer_params_.min_dist_to_resample_m);
+  update_param<double>(
+    parameters, "trajectory_point_fixer.stop_detection_velocity_threshold_mps",
+    fixer_params_.stop_detection_velocity_threshold_mps);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

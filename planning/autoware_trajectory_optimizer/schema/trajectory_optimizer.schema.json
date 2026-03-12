@@ -82,9 +82,20 @@
               "default": 0.05,
               "minimum": 0,
               "description": "Minimum distance threshold for merging close proximity points [m]"
+            },
+            "stop_detection_velocity_threshold_mps": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0,
+              "description": "Velocity threshold for fallback stop detection: if remove_close_proximity_points did not fire, any slow cluster whose minimum velocity is below this threshold is treated as a stop approach [m/s]"
             }
           },
-          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_resample_m"]
+          "required": [
+            "resample_close_points",
+            "min_dist_to_remove_m",
+            "min_dist_to_resample_m",
+            "stop_detection_velocity_threshold_mps"
+          ]
         },
         "trajectory_kinematic_feasibility": {
           "type": "object",
@@ -439,6 +450,11 @@
               "type": "boolean",
               "default": false,
               "description": "Enable jerk-filtered velocity smoothing"
+            },
+            "use_semantic_stop_points": {
+              "type": "boolean",
+              "default": true,
+              "description": "Force zero velocity at detected stop positions and cap approach velocity to input reference when smooth_velocities is enabled"
             }
           },
           "required": [
@@ -450,7 +466,8 @@
             "set_engage_speed",
             "limit_speed",
             "limit_lateral_acceleration",
-            "smooth_velocities"
+            "smooth_velocities",
+            "use_semantic_stop_points"
           ]
         },
         "elastic_band_params": {

@@ -29,7 +29,7 @@
       min_fidelity_weight: 0.01                # Minimum fidelity at very low speeds
       max_fidelity_weight: 1.0                # Maximum fidelity at high speeds
       use_arc_length_preservation: true       # Preserve arc length between points in slowdown-to-stop regions
-      arc_length_preservation_weight: 5.0    # Weight for the linearized arc length soft constraint in slowdown regions
+      arc_length_preservation_weight: 1000.0    # Weight for the linearized arc length soft constraint in slowdown regions
 
       # Point constraints
       num_constrained_points_start: 3        # Number of points from start to constrain (preserves initial state)
