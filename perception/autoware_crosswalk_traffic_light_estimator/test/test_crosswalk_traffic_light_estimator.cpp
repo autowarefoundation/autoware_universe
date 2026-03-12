@@ -22,6 +22,7 @@
 #include <lanelet2_core/primitives/Point.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 using autoware::crosswalk_traffic_light_estimator::CrosswalkTrafficLightEstimator;
@@ -91,7 +92,7 @@ TrafficSignalArray make_signal_array(const std::vector<TrafficSignal> & signals)
 ///                  TL ID=200
 ///                  Crosswalk
 ///                  (ID=2000)
-lanelet::LaneletMapPtr create_test_map()
+lanelet::LaneletMapPtr create_test_map(const lanelet::AttributeMap & vehicle_tl_extra_attrs = {})
 {
   // Vehicle lanelet bounds (going east)
   lanelet::Point3d vehicle_right_start(1, 0.0, 0.0, 0.0);
@@ -117,7 +118,7 @@ lanelet::LaneletMapPtr create_test_map()
 
   // Create traffic light regulatory elements
   auto vehicle_traffic_light = lanelet::TrafficLight::make(
-    VEHICLE_TL_REG_ELEM_ID, lanelet::AttributeMap{}, {vehicle_tl_linestring});
+    VEHICLE_TL_REG_ELEM_ID, vehicle_tl_extra_attrs, {vehicle_tl_linestring});
   auto crosswalk_traffic_light = lanelet::TrafficLight::make(
     CROSSWALK_TL_REG_ELEM_ID, lanelet::AttributeMap{}, {crosswalk_tl_linestring});
 
@@ -164,6 +165,22 @@ CrosswalkTrafficLightEstimator make_estimator_with_map()
 {
   CrosswalkTrafficLightEstimator estimator(make_default_config());
   estimator.update_map(create_test_map());
+  return estimator;
+}
+
+lanelet::LaneletMapPtr create_test_map_with_vehicle_tl_rule(
+  const std::string & rule_attribute_key, const std::string & crosswalk_tl_ids_value)
+{
+  lanelet::AttributeMap vehicle_tl_attrs;
+  vehicle_tl_attrs[rule_attribute_key] = crosswalk_tl_ids_value;
+  return create_test_map(vehicle_tl_attrs);
+}
+
+CrosswalkTrafficLightEstimator make_estimator_with_rule(const std::string & rule_attribute_key)
+{
+  CrosswalkTrafficLightEstimator estimator(make_default_config());
+  estimator.update_map(create_test_map_with_vehicle_tl_rule(
+    rule_attribute_key, std::to_string(CROSSWALK_TL_REG_ELEM_ID)));
   return estimator;
 }
 
@@ -298,6 +315,23 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_EmptyInput_ReturnsEmpty)
 
   // Assert
   EXPECT_TRUE(result.traffic_light_groups.empty());
+}
+
+TEST(
+  CrosswalkTrafficLightEstimatorTest,
+  ParseSignalEstimationRules_ValidGreenToGreen_OverridesEstimation)
+{
+  // Arrange: rule "signal_color_relation:green:green" → crosswalk TL ID 200
+  // Normal estimation: GREEN vehicle + straight lane → crosswalk RED
+  // With override:     green matches, crosswalk becomes GREEN
+  auto estimator = make_estimator_with_rule("signal_color_relation:green:green");
+  TrafficSignalArray input = make_signal_array({make_vehicle_signal(TrafficSignalElement::GREEN)});
+
+  // Act
+  const auto result = estimator.estimate(input, make_time(0.0));
+
+  // Assert: override (GREEN) wins over normal estimation (RED)
+  assert_crosswalk_color(result, TrafficSignalElement::GREEN);
 }
 
 int main(int argc, char ** argv)
