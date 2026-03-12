@@ -90,6 +90,7 @@ private:
   // GPU Memory for preprocessed image
   // image buffers
   CudaUniquePtr<std::uint8_t[]> image_buffer_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> undistorted_image_buffer_d_{nullptr};
 
   rclcpp::Logger logger_;
   int camera_id_;
