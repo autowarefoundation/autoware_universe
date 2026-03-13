@@ -1,0 +1,5 @@
+# acados
+
+acados_mpc/acados_ocp.json
+# Ignore all generated code files
+acados_mpc/c_generated_code/*
