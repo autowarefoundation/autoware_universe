@@ -179,27 +179,17 @@ double getPitchByTraj(
 }
 
 double getPitchByTraj(
-  const TrajectoryExperimental & trajectory, const size_t start_idx, const double wheel_base)
+  const TrajectoryExperimental & trajectory, const double start_base, const double wheel_base)
 {
-  const auto bases = trajectory.get_underlying_bases();
-  if (bases.size() <= 1 || start_idx >= bases.size()) {
+  if (trajectory.get_underlying_bases().size() <= 1) {
     return 0.0;
   }
 
-  const auto start_point = trajectory.compute(bases.at(start_idx));
-  for (size_t i = start_idx + 1; i < bases.size(); ++i) {
-    const auto next_point = trajectory.compute(bases.at(i));
-    const double dist = autoware_utils::calc_distance3d(start_point, next_point);
-    if (dist > wheel_base) {
-      return autoware_utils::calc_elevation_angle(
-        start_point.pose.position, next_point.pose.position);
-    }
-  }
-
-  const size_t prev_idx = std::min(start_idx, bases.size() - 2);
-  const auto prev_point = trajectory.compute(bases.at(prev_idx));
-  const auto end_point = trajectory.compute(bases.back());
-  return autoware_utils::calc_elevation_angle(prev_point.pose.position, end_point.pose.position);
+  const double clamped_start_base = std::clamp(start_base, 0.0, trajectory.length());
+  const double end_base = std::clamp(clamped_start_base + wheel_base, 0.0, trajectory.length());
+  const auto start_point = trajectory.compute(clamped_start_base);
+  const auto end_point = trajectory.compute(end_base);
+  return autoware_utils::calc_elevation_angle(start_point.pose.position, end_point.pose.position);
 }
 
 Pose calcPoseAfterTimeDelay(
@@ -281,17 +271,5 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   return p;
 }
 
-geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
-  const size_t src_idx, const double distance, const TrajectoryExperimental & trajectory)
-{
-  const auto bases = trajectory.get_underlying_bases();
-  if (bases.empty()) {
-    return geometry_msgs::msg::Pose{};
-  }
-
-  const size_t clamped_idx = std::min(src_idx, bases.size() - 1);
-  const double target_s = std::clamp(bases.at(clamped_idx) + distance, 0.0, trajectory.length());
-  return trajectory.compute(target_s).pose;
-}
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller

@@ -76,7 +76,7 @@ double getPitchByPose(const Quaternion & quaternion);
 double getPitchByTraj(
   const Trajectory & trajectory, const size_t start_idx, const double wheel_base);
 double getPitchByTraj(
-  const TrajectoryExperimental & trajectory, const size_t start_idx, const double wheel_base);
+  const TrajectoryExperimental & trajectory, const double start_base, const double wheel_base);
 
 /**
  * @brief calculate vehicle pose after time delay by moving the vehicle at current velocity and
@@ -161,8 +161,6 @@ double applyDiffLimitFilter(
 geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   const size_t src_idx, const double distance,
   const autoware_planning_msgs::msg::Trajectory & trajectory);
-geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
-  const size_t src_idx, const double distance, const TrajectoryExperimental & trajectory);
 
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller

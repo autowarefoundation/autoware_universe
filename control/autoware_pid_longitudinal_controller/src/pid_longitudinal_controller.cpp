@@ -37,75 +37,6 @@ namespace autoware::motion::control::pid_longitudinal_controller
 {
 namespace
 {
-autoware_planning_msgs::msg::TrajectoryPoint computeTrajectoryPointAtIndex(
-  const TrajectoryExperimental & trajectory, const size_t idx)
-{
-  const auto bases = trajectory.get_underlying_bases();
-  if (bases.empty()) {
-    return autoware_planning_msgs::msg::TrajectoryPoint{};
-  }
-
-  const size_t clamped_idx = std::min(idx, bases.size() - 1);
-  return trajectory.compute(bases.at(clamped_idx));
-}
-
-size_t findNearestBaseIndex(const std::vector<double> & bases, const double s)
-{
-  if (bases.empty()) {
-    return 0;
-  }
-
-  const auto upper = std::lower_bound(bases.begin(), bases.end(), s);
-  if (upper == bases.begin()) {
-    return 0;
-  }
-  if (upper == bases.end()) {
-    return bases.size() - 1;
-  }
-
-  const size_t upper_idx = std::distance(bases.begin(), upper);
-  const size_t lower_idx = upper_idx - 1;
-  return (std::abs(bases.at(upper_idx) - s) < std::abs(s - bases.at(lower_idx))) ? upper_idx
-                                                                                 : lower_idx;
-}
-
-std::optional<TrajectoryExperimental> buildTrajectoryWithSamples(
-  const TrajectoryExperimental & trajectory,
-  std::vector<std::pair<double, autoware_planning_msgs::msg::TrajectoryPoint>> inserted_samples)
-{
-  const auto bases = trajectory.get_underlying_bases();
-  if (bases.empty()) {
-    return std::nullopt;
-  }
-
-  std::vector<std::pair<double, autoware_planning_msgs::msg::TrajectoryPoint>> all_samples;
-  all_samples.reserve(bases.size() + inserted_samples.size());
-
-  for (const double base : bases) {
-    all_samples.emplace_back(base, trajectory.compute(base));
-  }
-  for (auto & inserted_sample : inserted_samples) {
-    all_samples.push_back(std::move(inserted_sample));
-  }
-
-  std::sort(all_samples.begin(), all_samples.end(), [](const auto & lhs, const auto & rhs) {
-    return lhs.first < rhs.first;
-  });
-
-  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> points;
-  points.reserve(all_samples.size());
-  for (const auto & [sample_s, sample_point] : all_samples) {
-    (void)sample_s;
-    points.push_back(sample_point);
-  }
-
-  points = autoware::motion_utils::removeOverlapPoints(points);
-  const auto built = autoware::experimental::trajectory::pretty_build(points);
-  if (!built) {
-    return std::nullopt;
-  }
-  return built.value();
-}
 }  // namespace
 
 PidLongitudinalController::PidLongitudinalController(
@@ -498,7 +429,7 @@ bool PidLongitudinalController::isReady(
 {
   return true;
 }
-homdgcat.wiki trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
+trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   trajectory_follower::InputData const & input_data)
 {
   // set input data
@@ -721,9 +652,7 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
     return ExperimentalControlData{};
   }
 
-  const auto nearest_point = control_data.interpolated_traj.compute(*current_s);
   double target_s = *current_s;
-  auto target_point = nearest_point;
 
   control_data.state_after_delay =
     predictedStateAfterDelay(control_data.current_motion, m_delay_compensation_time);
@@ -733,19 +662,8 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
     target_s = std::clamp(
       *current_s + control_data.state_after_delay.running_distance, 0.0,
       control_data.interpolated_traj.length());
-    target_point = control_data.interpolated_traj.compute(target_s);
   }
 
-  auto interpolated_traj_opt = buildTrajectoryWithSamples(
-    control_data.interpolated_traj, {{*current_s, nearest_point}, {target_s, target_point}});
-  if (!interpolated_traj_opt) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 3000, "failed to rebuild experimental control trajectory");
-    return ExperimentalControlData{};
-  }
-  control_data.interpolated_traj = interpolated_traj_opt.value();
-
-  const auto interpolated_bases = control_data.interpolated_traj.get_underlying_bases();
   control_data.nearest_base = std::clamp(*current_s, 0.0, control_data.interpolated_traj.length());
   control_data.target_base = std::clamp(target_s, 0.0, control_data.interpolated_traj.length());
 
@@ -769,8 +687,7 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   const double raw_pitch = (-1.0) * longitudinal_utils::getPitchByPose(current_pose.orientation);
   m_lpf_pitch->filter(raw_pitch);
   const double traj_pitch = longitudinal_utils::getPitchByTraj(
-    control_data.interpolated_traj,
-    findNearestBaseIndex(interpolated_bases, control_data.target_base), m_wheel_base);
+    control_data.interpolated_traj, control_data.target_base, m_wheel_base);
 
   if (m_slope_source == SlopeSource::RAW_PITCH) {
     control_data.slope_angle = m_lpf_pitch->getValue();
@@ -1604,12 +1521,24 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
     return output_motion;
   }
 
-  const size_t stop_idx = findNearestBaseIndex(bases, *stop_s);
+  const auto stop_it = std::lower_bound(bases.begin(), bases.end(), *stop_s);
+  const auto nearest_stop_it = [&]() {
+    if (stop_it == bases.begin()) {
+      return stop_it;
+    }
+    if (stop_it == bases.end()) {
+      return std::prev(bases.end());
+    }
+    return std::abs(*stop_it - *stop_s) < std::abs(*stop_s - *std::prev(stop_it))
+             ? stop_it
+             : std::prev(stop_it);
+  }();
+
+  const size_t stop_idx = static_cast<size_t>(std::distance(bases.begin(), nearest_stop_it));
   double min_acc_before_stop = std::numeric_limits<double>::max();
   size_t min_acc_idx = std::numeric_limits<size_t>::max();
   for (int i = static_cast<int>(stop_idx); i >= 0; --i) {
-    const auto point =
-      computeTrajectoryPointAtIndex(control_data.interpolated_traj, static_cast<size_t>(i));
+    const auto point = control_data.interpolated_traj.compute(bases.at(static_cast<size_t>(i)));
     if (point.acceleration_mps2 > static_cast<float>(min_acc_before_stop)) {
       break;
     }
@@ -1636,35 +1565,6 @@ PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
   // apply linear interpolation
   return longitudinal_utils::lerpTrajectoryPoint(
     traj.points, pose, m_ego_nearest_dist_threshold, m_ego_nearest_yaw_threshold);
-}
-
-std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
-PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
-  const TrajectoryExperimental & traj, const geometry_msgs::msg::Pose & pose) const
-{
-  const auto bases = traj.get_underlying_bases();
-  if (bases.empty()) {
-    return {autoware_planning_msgs::msg::TrajectoryPoint{}, 0};
-  }
-  if (bases.size() == 1) {
-    return {traj.compute(bases.front()), 0};
-  }
-
-  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
-    traj, pose, m_ego_nearest_dist_threshold, m_ego_nearest_yaw_threshold);
-  if (!nearest_s) {
-    return {autoware_planning_msgs::msg::TrajectoryPoint{}, 0};
-  }
-
-  const auto point = traj.compute(*nearest_s);
-  const auto upper = std::upper_bound(bases.begin(), bases.end(), *nearest_s);
-  if (upper == bases.begin()) {
-    return {point, 0};
-  }
-
-  const size_t seg_idx =
-    std::min(static_cast<size_t>(std::distance(bases.begin(), upper) - 1), bases.size() - 2);
-  return {point, seg_idx};
 }
 
 PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedStateAfterDelay(

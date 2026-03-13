@@ -421,9 +421,6 @@ private:
   calcInterpolatedTrajPointAndSegment(
     const autoware_planning_msgs::msg::Trajectory & traj,
     const geometry_msgs::msg::Pose & pose) const;
-  std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
-  calcInterpolatedTrajPointAndSegment(
-    const TrajectoryExperimental & traj, const geometry_msgs::msg::Pose & pose) const;
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
