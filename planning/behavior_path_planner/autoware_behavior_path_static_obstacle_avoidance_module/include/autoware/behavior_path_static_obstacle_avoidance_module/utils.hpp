@@ -170,8 +170,9 @@ lanelet::ConstLanelets getExtendLanes(
  * @param target velocity.
  * @param target path.
  * @param insert point.
+ * @return if the point is successfully inserted, return true.
  */
-void insertDecelPoint(
+bool insertDecelPoint(
   const Point & p_src, const double offset, const double velocity, PathWithLaneId & path,
   PoseWithDetailOpt & p_out);
 
