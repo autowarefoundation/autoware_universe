@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -141,6 +141,8 @@ public:
     return (current_time - last_update_with_measurement_time_).seconds();
   }
   rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
+
+  unique_identifier_msgs::msg::UUID getUUID() const { return object_.uuid; }
 
   std::string getUuidString() const
   {

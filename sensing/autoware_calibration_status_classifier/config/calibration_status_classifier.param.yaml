@@ -6,6 +6,7 @@
     runtime_mode: active
     period: 5.0
     queue_size: 5
+    ego_box: [-1.53, -1.15, -0.1, 5.72, 1.15, 3.1]
     input:
       cloud_topics: ["/sensing/lidar/concatenated/pointcloud"]
       image_topics:
