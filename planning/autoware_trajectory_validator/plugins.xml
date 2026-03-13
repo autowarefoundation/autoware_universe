@@ -18,4 +18,20 @@
       Filters trajectories that violate vehicle constraints such as maximum speed, acceleration, and steering angle
     </description>
   </class>
+<<<<<<< HEAD
+=======
+  <class type="safety::CollisionCheckFilter"
+         base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>
+      Filters trajectories based on collision checks with predicted objects
+    </description>
+  </class>
+  <class type="traffic_rule::TrafficLightFilter"
+         base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>
+      Filter for checking traffic light violations.
+      Rejects trajectories that would pass through red or amber traffic lights.
+    </description>
+  </class>
+>>>>>>> a564e0a0eb (feat(trajectory_validator): move traffic_light_filter (#2762))
 </library>

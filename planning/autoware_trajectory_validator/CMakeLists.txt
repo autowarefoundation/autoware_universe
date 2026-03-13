@@ -34,6 +34,7 @@ ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
   src/filters/safety/out_of_lane_filter.cpp
   src/filters/safety/collision_filter.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
+  src/filters/traffic_rule/traffic_light_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_validator_plugins
@@ -85,6 +86,14 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_trajectory_validator_node
     autoware_test_utils
   )
+
+  ament_add_gtest(test_traffic_light_filter
+    test/plugins/test_traffic_light_filter.cpp
+  )
+  target_link_libraries(test_traffic_light_filter
+    autoware_trajectory_validator_plugins
+  )
+
 
 endif()
 

@@ -117,6 +117,11 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     return;
   }
 
+  context.traffic_light_signals = sub_traffic_lights_.take_data();
+  if (!context.traffic_light_signals) {
+    return;
+  }
+
   context.lanelet_map = lanelet_map_ptr_;
   if (!context.lanelet_map) {
     return;
