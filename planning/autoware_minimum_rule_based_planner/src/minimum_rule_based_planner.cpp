@@ -290,7 +290,7 @@ void MinimumRuleBasedPlannerNode::on_timer()
   // 5. Smooth path
   auto smoothed_path = [&]() {
     autoware_utils_debug::ScopedTimeTrack st("smoothing_path", *time_keeper_);
-    const auto optimizer_data = make_optimizer_data(input_data);
+    auto optimizer_data = make_optimizer_data(input_data);
 
     trajectory_optimizer::TrajectoryOptimizerParams optimizer_params;
     optimizer_params.use_eb_smoother = true;
