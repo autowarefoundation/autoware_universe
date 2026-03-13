@@ -14,7 +14,7 @@
 
 #include "autoware/calibration_status_classifier/calibration_status_classifier_filters.hpp"
 
-#include <mutex>
+#include <shared_mutex>
 #include <utility>
 #include <vector>
 
@@ -47,7 +47,7 @@ CalibrationStatusClassifierFilters::CalibrationStatusClassifierFilters(
 
 FiltersResult CalibrationStatusClassifierFilters::evaluate(double stamp) const
 {
-  std::unique_lock lock(mutex_);
+  std::shared_lock lock(mutex_);
   FiltersResult result;
   result.all_passed = true;
   result.filter_results.reserve(filters_.size());

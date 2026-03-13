@@ -18,6 +18,7 @@
 #include "autoware/calibration_status_classifier/filter.hpp"
 
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
@@ -35,8 +36,8 @@ struct FiltersResult
 /**
  * @brief Thread-safe container for prerequisite filters
  *
- * Manages a collection of Filter instances with thread-safe update (shared lock)
- * and evaluate (exclusive lock) operations. Filters are stored as unique_ptr<Filter>
+ * Manages a collection of Filter instances with thread-safe update (exclusive lock)
+ * and evaluate (shared lock) operations. Filters are stored as unique_ptr<Filter>
  * and accessed by type via dynamic_cast.
  */
 class CalibrationStatusClassifierFilters
@@ -60,11 +61,11 @@ public:
 
   explicit CalibrationStatusClassifierFilters(std::vector<std::unique_ptr<Filter>> filters);
 
-  /// Thread-safe update: shared lock (concurrent updates to different filters are safe)
+  /// Thread-safe update: exclusive lock (writes filter state)
   template <typename FilterT, typename... Args>
   bool update(Args &&... args)
   {
-    std::shared_lock lock(mutex_);
+    std::unique_lock lock(mutex_);
     if (auto * f = get_impl<FilterT>()) {
       f->update(std::forward<Args>(args)...);
       return true;
@@ -72,7 +73,7 @@ public:
     return false;
   }
 
-  /// Thread-safe evaluate: exclusive lock (consistent snapshot of all filter states)
+  /// Thread-safe evaluate: shared lock (read-only access to filter states)
   [[nodiscard]] FiltersResult evaluate(double stamp) const;
 
   /// Non-locked accessor - use only during single-threaded setup (e.g. constructor)
