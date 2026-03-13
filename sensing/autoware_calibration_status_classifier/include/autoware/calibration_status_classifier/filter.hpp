@@ -108,19 +108,23 @@ public:
   {
     current_value_ = value;
     last_update_time_ = stamp;
-    if (last_exceeded_time_ > stamp) {
-      last_exceeded_time_.reset();
+    if (recovery_start_time_ > stamp) {  // handle time going backwards (e.g., due to clock reset)
+      recovery_start_time_.reset();
     }
     if (exceeds_threshold(value)) {
-      last_exceeded_time_ = stamp;
+      threshold_exceeded_ = true;
+      recovery_start_time_.reset();
+    } else if (threshold_exceeded_) {
+      threshold_exceeded_ = false;
+      recovery_start_time_ = stamp;
     }
   }
 
   [[nodiscard]] bool is_passed(double stamp) const override
   {
     if (exceeds_threshold(current_value_)) return false;
-    if (!last_exceeded_time_.has_value()) return true;
-    return (stamp - last_exceeded_time_.value()) >= timeout_sec_;
+    if (!recovery_start_time_.has_value()) return true;
+    return (stamp - recovery_start_time_.value()) >= timeout_sec_;
   }
 
   [[nodiscard]] FilterResult get_result(double stamp) const override
@@ -147,8 +151,9 @@ protected:
   ValueT threshold_;
   double timeout_sec_;
   ValueT current_value_;
+  bool threshold_exceeded_{false};
   std::optional<double> last_update_time_;
-  std::optional<double> last_exceeded_time_;
+  std::optional<double> recovery_start_time_;
 };
 
 /**
