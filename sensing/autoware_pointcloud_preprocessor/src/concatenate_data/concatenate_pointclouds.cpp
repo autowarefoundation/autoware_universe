@@ -126,7 +126,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
     // First input_topics_.size () filters are valid
     for (size_t d = 0; d < input_topics_.size(); ++d) {
-      cloud_stdmap_.insert(std::make_pair(input_topics_[d], nullptr));
+      cloud_stdmap_.emplace(input_topics_[d], nullptr);
       cloud_stdmap_tmp_ = cloud_stdmap_;
 
       // CAN'T use auto type here.

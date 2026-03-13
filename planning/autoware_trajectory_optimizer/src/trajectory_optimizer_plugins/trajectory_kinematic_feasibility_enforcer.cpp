@@ -35,7 +35,7 @@ namespace autoware::trajectory_optimizer::plugin
 
 void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   // Check if plugin is enabled
   if (!params.use_kinematic_feasibility_enforcer) {
