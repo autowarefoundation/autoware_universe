@@ -60,8 +60,6 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
   runtime_mode_ = string_to_runtime_mode(this->declare_parameter<std::string>("runtime_mode"));
   period_ = this->declare_parameter<double>("period");
   queue_size_ = this->declare_parameter<int64_t>("queue_size");
-  miscalibration_confidence_threshold_ =
-    this->declare_parameter<double>("miscalibration_confidence_threshold");
 
   // Prerequisite filter configuration
   const auto linear_velocity_enabled =
@@ -123,6 +121,7 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
     this->declare_parameter<std::vector<std::string>>("input.cloud_topics"),
     this->declare_parameter<std::vector<std::string>>("input.image_topics"),
     this->declare_parameter<std::vector<double>>("input.approx_deltas"),
+    this->declare_parameter<std::vector<double>>("input.miscalibration_confidence_thresholds"),
     this->declare_parameter<std::vector<bool>>("input.already_rectified"));
 
   auto camera_lidar_info_collector =
@@ -429,9 +428,11 @@ void CalibrationStatusClassifierNode::publish_diagnostic_status(
 {
   diagnostics_interfaces_.at(pair_idx)->clear();
   auto now = this->get_clock()->now();
+  const auto miscalibration_confidence_threshold =
+    camera_lidar_in_out_info_.at(pair_idx).miscalibration_confidence_threshold;
   auto is_calibrated =
     (result.calibration_confidence >
-     result.miscalibration_confidence + miscalibration_confidence_threshold_);
+     result.miscalibration_confidence + miscalibration_confidence_threshold);
 
   if (!input_metadata.filters_result.all_passed) {
     diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
@@ -472,6 +473,8 @@ void CalibrationStatusClassifierNode::publish_diagnostic_status(
 
   // Calibration result diagnostics
   diagnostics_interfaces_.at(pair_idx)->add_key_value("Is calibrated", is_calibrated);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Miscalibration confidence threshold", miscalibration_confidence_threshold);
   diagnostics_interfaces_.at(pair_idx)->add_key_value(
     "Calibration confidence", result.calibration_confidence);
   diagnostics_interfaces_.at(pair_idx)->add_key_value(

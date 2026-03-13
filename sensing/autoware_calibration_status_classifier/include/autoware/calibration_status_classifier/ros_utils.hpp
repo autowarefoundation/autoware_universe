@@ -17,8 +17,6 @@
 
 #include "autoware/calibration_status_classifier/data_type.hpp"
 
-#include <rclcpp/time.hpp>
-
 #include <algorithm>
 #include <stdexcept>
 #include <string>
@@ -165,18 +163,22 @@ inline std::string runtime_mode_to_string(RuntimeMode mode)
  * @param lidar_topics List of LiDAR point cloud topic names
  * @param camera_topics List of camera image topic names
  * @param approx_deltas Approximate time synchronization deltas for each pair
+ * @param miscalibration_confidence_thresholds Decision thresholds for each pair
  * @param already_rectified Flags indicating whether camera images are already rectified
  * @return Vector of CameraLidarTopicsInfo for each sensor pair
  * @throws std::invalid_argument if topic configurations are invalid
  */
 inline std::vector<CameraLidarTopicsInfo> compose_in_out_topics(
   const std::vector<std::string> & lidar_topics, const std::vector<std::string> & camera_topics,
-  const std::vector<double> & approx_deltas, const std::vector<bool> & already_rectified)
+  const std::vector<double> & approx_deltas,
+  const std::vector<double> & miscalibration_confidence_thresholds,
+  const std::vector<bool> & already_rectified)
 {
   std::vector<CameraLidarTopicsInfo> inputs;
   const auto num_lidars = lidar_topics.size();
   const auto num_cameras = camera_topics.size();
   const auto num_deltas = approx_deltas.size();
+  const auto num_thresholds = miscalibration_confidence_thresholds.size();
   const auto num_pairs = std::max(num_cameras, num_lidars);
   bool use_lidar_ns = num_lidars > 1 && num_cameras == 1;
 
@@ -191,6 +193,12 @@ inline std::vector<CameraLidarTopicsInfo> compose_in_out_topics(
   if (num_deltas != 1 && num_deltas != num_pairs) {
     throw std::invalid_argument(
       "Invalid approx_delta configuration: must be 1 or match number of sensor pairs");
+  }
+
+  if (num_thresholds != 1 && num_thresholds != num_pairs) {
+    throw std::invalid_argument(
+      "Invalid miscalibration_confidence_thresholds configuration: "
+      "must be 1 or match number of sensor pairs");
   }
 
   if (already_rectified.size() != 1 && already_rectified.size() != num_cameras) {
@@ -232,6 +240,9 @@ inline std::vector<CameraLidarTopicsInfo> compose_in_out_topics(
     input.lidar_topic = lidar_topics.at(lidar_idx);
     input.projected_points_topic = preview_image_topic;
     input.approx_delta = (num_deltas == 1) ? approx_deltas.at(0) : approx_deltas.at(i);
+    input.miscalibration_confidence_threshold = (num_thresholds == 1)
+                                                  ? miscalibration_confidence_thresholds.at(0)
+                                                  : miscalibration_confidence_thresholds.at(i);
     input.already_rectified =
       (already_rectified.size() == 1) ? already_rectified.at(0) : already_rectified.at(camera_idx);
 

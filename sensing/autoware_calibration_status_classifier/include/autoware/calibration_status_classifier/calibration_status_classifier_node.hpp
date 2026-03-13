@@ -82,7 +82,6 @@ private:
   RuntimeMode runtime_mode_;
   double period_;
   int64_t queue_size_;
-  double miscalibration_confidence_threshold_;
 
   // Prerequisite filters
   CalibrationStatusClassifierFilters filters_;

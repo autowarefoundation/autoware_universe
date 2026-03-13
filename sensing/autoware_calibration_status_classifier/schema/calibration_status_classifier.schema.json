@@ -76,6 +76,15 @@
               "description": "The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays or be a single value which will be applied to all topic pairs.",
               "default": ["0.1"]
             },
+            "miscalibration_confidence_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 1,
+              "description": "Per-pair confidence threshold for determining miscalibration. The length must be 1 (applied to all pairs) or match the number of LiDAR-camera pairs. Positive values shift the decision boundary towards detecting miscalibration, while negative values shift it towards detecting proper calibration. A value of 0.0 means the decision is based solely on the model output without bias.",
+              "default": [0.0]
+            },
             "already_rectified": {
               "type": "array",
               "items": {
@@ -85,7 +94,13 @@
               "default": [true]
             }
           },
-          "required": ["cloud_topics", "image_topics", "approx_deltas", "already_rectified"],
+          "required": [
+            "cloud_topics",
+            "image_topics",
+            "approx_deltas",
+            "miscalibration_confidence_thresholds",
+            "already_rectified"
+          ],
           "additionalProperties": false
         },
         "prerequisite": {
@@ -184,11 +199,6 @@
           },
           "required": ["linear_velocity_check", "angular_velocity_check", "objects_check"],
           "additionalProperties": false
-        },
-        "miscalibration_confidence_threshold": {
-          "type": "number",
-          "description": "The confidence threshold for determining miscalibration. Positive values shifts the decision boundary towards detecting miscalibration, while negative values shifts it towards detecting proper calibration. A value of 0.0 means that the decision is based solely on the model's output without any bias.",
-          "default": "0.0"
         }
       },
       "required": [
@@ -200,8 +210,7 @@
         "queue_size",
         "ego_box",
         "input",
-        "prerequisite",
-        "miscalibration_confidence_threshold"
+        "prerequisite"
       ],
       "additionalProperties": false
     }

@@ -14,6 +14,7 @@
           "/sensing/camera/camera8/image_raw",
         ]
       approx_deltas: [0.1]
+      miscalibration_confidence_thresholds: [0.0]
       already_rectified: [false]
     prerequisite:
       linear_velocity_check:
@@ -31,4 +32,3 @@
         source: predicted_objects
         threshold: 100
         timeout: 1.0
-    miscalibration_confidence_threshold: 0.0

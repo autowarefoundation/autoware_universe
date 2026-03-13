@@ -228,6 +228,18 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       COMMAND "$<TARGET_FILE:test_filters>"
     )
 
+    add_executable(test_ros_utils
+      test/test_ros_utils.cpp
+    )
+    target_link_libraries(test_ros_utils
+      gtest
+      gtest_main
+    )
+    ament_add_test(test_ros_utils
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      COMMAND "$<TARGET_FILE:test_ros_utils>"
+    )
+
     # Suppress pedantic warnings for test target (PCL)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       target_compile_options(test_preprocessing PRIVATE -Wno-pedantic)
