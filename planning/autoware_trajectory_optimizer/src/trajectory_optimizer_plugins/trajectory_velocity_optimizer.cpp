@@ -117,10 +117,9 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
       continuous_jerk_smoother_ =
         std::make_shared<ContinuousJerkSmoother>(velocity_params_.continuous_jerk_smoother_params);
     }
-    InitialMotion initial_motion{initial_motion_speed, initial_motion_acc};
     // Pass max velocity per point to enforce lateral acceleration as hard constraint in QP
     trajectory_velocity_optimizer_utils::filter_velocity(
-      traj_points, initial_motion, velocity_params_.nearest_dist_threshold_m,
+      traj_points, velocity_params_.nearest_dist_threshold_m,
       autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
       continuous_jerk_smoother_, current_odometry, max_velocity_per_point);
   }
