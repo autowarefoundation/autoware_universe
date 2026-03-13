@@ -129,6 +129,8 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory);
  *
  * Iterates through the trajectory and removes consecutive points that are closer
  * than the minimum distance threshold. Always keeps the first point.
+ * At constant time-step spacing, close proximity implies low speed, so the retained
+ * point at the end of each removed cluster is registered as a stop candidate.
  *
  * @param input_trajectory_array The trajectory points to be cleaned (modified in place)
  * @param semantic_speed_tracker Tracker for semantic speed information (modified in place)

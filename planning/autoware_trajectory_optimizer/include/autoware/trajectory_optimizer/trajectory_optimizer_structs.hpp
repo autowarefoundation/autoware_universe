@@ -87,7 +87,7 @@ public:
   // Appends a candidate stop index to the staging area for build_stop_approach_ranges().
   void add_stop_candidate(size_t idx) { stop_point_candidates_.push_back(idx); }
 
-  // Returns the staged stop candidates and clears the staging area atomically.
+  // Returns the staged stop candidates and clears the staging area in a single O(1) swap.
   // Used by build_stop_approach_ranges() to consume and reset pending candidates.
   std::vector<size_t> take_stop_point_candidates()
   {
