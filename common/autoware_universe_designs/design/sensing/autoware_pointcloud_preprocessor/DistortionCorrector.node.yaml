@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::pointcloud_preprocessor::DistortionCorrectorComponent
-  executable: crop_box_filter_node
+  executable: distortion_corrector_node
   node_output: screen
   use_container: true
   container_name: pointcloud_container

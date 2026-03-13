@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::pointcloud_preprocessor::ConcatenatePointcloudComponent
+  plugin: autoware::pointcloud_preprocessor::PointCloudConcatenationComponent
   executable: concatenate_pointcloud_node
   node_output: screen
   use_container: true
