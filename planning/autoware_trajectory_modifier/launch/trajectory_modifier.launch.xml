@@ -12,13 +12,13 @@
   <arg name="trajectory_modifier_launch_modules" default="["/>
   <let
     name="trajectory_modifier_launch_modules"
-    value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + 'autoware::trajectory_modifier::plugin::StopPointFixer, '&quot;)"
-    if="$(var launch_stop_point_fixer)"
+    value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + 'autoware::trajectory_modifier::plugin::ObstacleStop, '&quot;)"
+    if="$(var launch_obstacle_stop)"
   />
   <let
     name="trajectory_modifier_launch_modules"
-    value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + 'autoware::trajectory_modifier::plugin::ObstacleStop, '&quot;)"
-    if="$(var launch_obstacle_stop)"
+    value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + 'autoware::trajectory_modifier::plugin::StopPointFixer, '&quot;)"
+    if="$(var launch_stop_point_fixer)"
   />
   <let name="trajectory_modifier_launch_modules" value="$(eval &quot;'$(var trajectory_modifier_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
 

@@ -80,14 +80,22 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   }
 
   auto trajectory_count = 0;
+  std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : plugins_) {
-      modifier->modify_trajectory(trajectory.points);
+      if (!modifier->modify_trajectory(trajectory.points)) continue;
       modifier->publish_planning_factor();
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
-      trajectory_count++;
+      if (!modified_plugins_str.empty()) modified_plugins_str += ", ";
+      modified_plugins_str += modifier->get_name();
     }
+    trajectory_count++;
+  }
+  if (!modified_plugins_str.empty()) {
+    RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 1000, "[TM] Trajectory was modified by %s",
+      modified_plugins_str.c_str());
   }
 
   trajectories_pub_->publish(output_trajectories);

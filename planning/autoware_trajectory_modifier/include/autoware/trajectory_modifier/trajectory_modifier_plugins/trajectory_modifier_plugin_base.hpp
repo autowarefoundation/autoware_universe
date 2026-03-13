@@ -49,7 +49,10 @@ public:
     const std::shared_ptr<TrajectoryModifierData> & data,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
-    name_ = std::move(name);
+    name_ = std::invoke([&name]() {
+      const auto npos = name.find_last_of(':');
+      return npos != std::string::npos ? name.substr(npos + 1) : name;
+    });
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
     data_ = data;
@@ -59,7 +62,7 @@ public:
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual void modify_trajectory(TrajectoryPoints & traj_points) = 0;
+  virtual bool modify_trajectory(TrajectoryPoints & traj_points) = 0;
   virtual bool is_trajectory_modification_required(const TrajectoryPoints & traj_points) = 0;
   std::string get_name() const { return name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }

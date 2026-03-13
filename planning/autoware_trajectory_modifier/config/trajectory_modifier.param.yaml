@@ -17,14 +17,12 @@
       use_objects: true
       use_pointcloud: true
       stop_margin_m: 6.0
-      nom_stopping_decel: -2.0 # [m/s^2]
-      nom_stopping_jerk: -3.0 # [m/s^3]
-      max_stopping_decel: -4.0 # [m/s^2]
-      max_stopping_jerk: -8.0 # [m/s^3]
-      on_time_buffer: 0.5 # [s]
-      off_time_buffer: 1.0 # [s]
+      nom_stopping_decel: 1.0 # [m/s^2]
+      max_stopping_decel: 4.0 # [m/s^2]
+      stopping_jerk: 3.0 # [m/s^3]
       lateral_margin_m: 0.5     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       duplicate_check_threshold_m: 1.0 # threshold to check if the stop point is already in the trajectory [m]
+      arrived_distance_threshold_m: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"] # object types to consider for obstacle stop

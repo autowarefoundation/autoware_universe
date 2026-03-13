@@ -42,7 +42,7 @@ class ObstacleStop : public TrajectoryModifierPluginBase
 public:
   ObstacleStop() = default;
 
-  void modify_trajectory(TrajectoryPoints & traj_points) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
     const TrajectoryPoints & traj_points) override;
@@ -63,7 +63,6 @@ protected:
 private:
   TrajectoryModifierParams::ObstacleStop params_;
 
-  std::vector<CollisionPoint> collision_points_buffer_;
   std::optional<CollisionPoint> nearest_collision_point_;
 
   DebugData debug_data_;
@@ -79,19 +78,10 @@ private:
   std::optional<CollisionPoint> check_pointcloud(
     const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);
 
-  // void update_collision_points_buffer(
-  //   const TrajectoryPoints & traj_points, const std::optional<CollisionPoint> & collision_point);
-
-  // std::optional<CollisionPoint> get_nearest_collision_point() const;
-
-  void set_stop_point(TrajectoryPoints & traj_points);
+  bool set_stop_point(TrajectoryPoints & traj_points);
 
   bool apply_stopping(
-    TrajectoryPoints & traj_points, const double target_stop_point_arc_length,
-    const float max_lon_velocity, const float max_lon_accel) const;
-
-  static constexpr double ego_low_speed_threshold = 1.0;
-  static constexpr double ego_stop_point_distance_threshold = 1.0;
+    TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin
