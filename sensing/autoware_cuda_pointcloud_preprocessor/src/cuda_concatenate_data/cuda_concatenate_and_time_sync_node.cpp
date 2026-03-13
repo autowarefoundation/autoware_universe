@@ -45,7 +45,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
     auto publisher =
       std::make_shared<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
         *this, new_topic);
-    topic_to_transformed_cloud_publisher_map_.insert({topic, publisher});
+    topic_to_transformed_cloud_publisher_map_.emplace(topic, publisher);
   }
 
   for (const std::string & topic : params_.input_topics) {

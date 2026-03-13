@@ -20,6 +20,7 @@
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -48,7 +49,27 @@ InputStream::InputStream(
   latest_message_time_ = clock_->now();
 }
 
-void InputStream::onMessage(
+void InputStream::push(
+  const types::DynamicObjectList & objects, const types::AssociationResult & association)
+{
+  // Move the objects_with_uncertainty to the objects queue
+  objects_que_.push_back(types::ObjectsWithAssociation{objects, association});
+  while (objects_que_.size() > que_size_) {
+    objects_que_.pop_front();
+  }
+
+  // update the timing statistics
+  rclcpp::Time now = clock_->now();
+  rclcpp::Time objects_time(objects.header.stamp);
+  updateTimingStatus(now, objects_time);
+
+  // trigger the function if it is set
+  if (func_trigger_) {
+    func_trigger_(channel_.index);
+  }
+}
+
+std::optional<types::DynamicObjectList> InputStream::processMessage(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
@@ -71,7 +92,7 @@ void InputStream::onMessage(
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 1000, "InputManager::onMessage %s: Failed to transform objects.",
       channel_.long_name.c_str());
-    return;
+    return std::nullopt;
   }
   dynamic_objects = transformed_objects.value();
 
@@ -110,21 +131,7 @@ void InputStream::onMessage(
     }
   }
 
-  // Move the objects_with_uncertainty to the objects queue
-  objects_que_.push_back(std::move(dynamic_objects));
-  while (objects_que_.size() > que_size_) {
-    objects_que_.pop_front();
-  }
-
-  // update the timing statistics
-  rclcpp::Time now = clock_->now();
-  rclcpp::Time objects_time(objects.header.stamp);
-  updateTimingStatus(now, objects_time);
-
-  // trigger the function if it is set
-  if (func_trigger_) {
-    func_trigger_(channel_.index);
-  }
+  return dynamic_objects;
 }
 
 void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time)
@@ -198,7 +205,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
 
 void InputStream::getObjectsOlderThan(
   const rclcpp::Time & object_latest_time, const rclcpp::Time & object_earliest_time,
-  ObjectsList & objects_list)
+  types::ObjectsWithAssociationList & objects_with_associations)
 {
   if (object_latest_time < object_earliest_time) {
     RCLCPP_WARN(
@@ -209,8 +216,8 @@ void InputStream::getObjectsOlderThan(
     return;
   }
 
-  for (const auto & objects : objects_que_) {
-    const rclcpp::Time object_time = rclcpp::Time(objects.header.stamp);
+  for (const auto & objects_pair : objects_que_) {
+    const rclcpp::Time object_time = objects_pair.getTimestamp();
     // ignore objects older than the specified duration
     if (object_time < object_earliest_time) {
       continue;
@@ -218,13 +225,13 @@ void InputStream::getObjectsOlderThan(
 
     // Add the object if the object is older than the specified latest time
     if (object_time <= object_latest_time) {
-      objects_list.push_back(objects);
+      objects_with_associations.push_back(objects_pair);
     }
   }
 
   // remove objects older than 'object_latest_time'
   while (!objects_que_.empty()) {
-    const rclcpp::Time object_time = rclcpp::Time(objects_que_.front().header.stamp);
+    const rclcpp::Time object_time = objects_que_.front().getTimestamp();
     if (object_time < object_latest_time) {
       objects_que_.pop_front();
     } else {
@@ -256,8 +263,6 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
   bool is_any_spawn_enabled = false;
   for (size_t i = 0; i < input_size_; i++) {
     InputStream input_stream(input_channels[i], odometry_, logger_, clock_);
-    input_stream.setTriggerFunction(
-      std::bind(&InputManager::onTrigger, this, std::placeholders::_1));
     input_streams_.push_back(std::make_shared<InputStream>(input_stream));
     is_any_spawn_enabled |= input_streams_.at(i)->isSpawnEnabled();
 
@@ -274,24 +279,37 @@ void InputManager::init(const std::vector<types::InputChannel> & input_channels)
   is_initialized_ = true;
 }
 
-void InputManager::onMessage(
+void InputManager::push(
+  const size_t channel_index, const types::DynamicObjectList & objects,
+  const types::AssociationResult & association)
+{
+  if (channel_index >= input_streams_.size()) {
+    RCLCPP_WARN(
+      logger_, "InputManager::push Invalid channel index: %lu, input_streams_ size: %lu",
+      channel_index, input_streams_.size());
+    return;
+  }
+  input_streams_.at(channel_index)->push(objects, association);
+}
+
+std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(
-      logger_, "InputManager::onMessage Invalid channel index: %lu, input_streams_ size: %lu",
+      logger_, "InputManager::processMessage Invalid channel index: %lu, input_streams_ size: %lu",
       channel_index, input_streams_.size());
-    return;
+    return std::nullopt;
   }
-  input_streams_.at(channel_index)->onMessage(msg);
+  return input_streams_.at(channel_index)->processMessage(msg);
 }
 
-void InputManager::onTrigger(const uint & index) const
+void InputManager::setTriggerFunction(std::function<void(size_t)> func_trigger)
 {
-  // when the target stream triggers, call the trigger function
-  if (index == target_stream_idx_ && func_trigger_) {
-    func_trigger_();
+  func_trigger_ = func_trigger;
+  for (const auto & input_stream : input_streams_) {
+    input_stream->setTriggerFunction(func_trigger);
   }
 }
 
@@ -367,7 +385,8 @@ void InputManager::optimizeTimings()
   target_stream_interval_std_ = selected_stream_interval_std;
 }
 
-bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_list)
+bool InputManager::getObjects(
+  const rclcpp::Time & now, types::ObjectsWithAssociationList & objects_with_associations)
 {
   if (!is_initialized_) {
     RCLCPP_INFO(logger_, "InputManager::getObjects Input manager is not initialized");
@@ -375,7 +394,7 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   }
 
   // Clear the objects
-  objects_list.clear();
+  objects_with_associations.clear();
 
   // Get the time interval for the objects
   rclcpp::Time object_latest_time;
@@ -390,20 +409,21 @@ bool InputManager::getObjects(const rclcpp::Time & now, ObjectsList & objects_li
   // Get objects from all input streams
   // adds up to the objects vector for efficient processing
   for (const auto & input_stream : input_streams_) {
-    input_stream->getObjectsOlderThan(object_latest_time, object_earliest_time, objects_list);
+    input_stream->getObjectsOlderThan(
+      object_latest_time, object_earliest_time, objects_with_associations);
   }
 
   // Sort objects by timestamp
   std::sort(
-    objects_list.begin(), objects_list.end(),
-    [](const types::DynamicObjectList & a, const types::DynamicObjectList & b) {
-      return (rclcpp::Time(a.header.stamp) - rclcpp::Time(b.header.stamp)).seconds() < 0;
+    objects_with_associations.begin(), objects_with_associations.end(),
+    [](const auto & a, const auto & b) {
+      return (a.getTimestamp() - b.getTimestamp()).seconds() < 0;
     });
 
   // Update the latest exported object time
-  bool is_any_object = !objects_list.empty();
+  bool is_any_object = !objects_with_associations.empty();
   if (is_any_object) {
-    latest_exported_object_time_ = rclcpp::Time(objects_list.back().header.stamp);
+    latest_exported_object_time_ = objects_with_associations.back().getTimestamp();
   } else {
     // check time jump back
     if (now < latest_exported_object_time_) {

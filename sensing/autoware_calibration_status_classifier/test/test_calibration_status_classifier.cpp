@@ -65,7 +65,8 @@ protected:
       std::vector<int64_t>{
         data_utils::width - 1, data_utils::width, data_utils::width + 1});  // Dummy shape diffs
     calibration_status_classifier = std::make_unique<CalibrationStatusClassifier>(
-      onnx_path.string(), "fp16", cloud_capacity, calibration_status_classifier_config);
+      onnx_path.string(), "fp16", cloud_capacity, std::vector<double>{},
+      calibration_status_classifier_config);
   }
 
   static void TearDownTestSuite()
