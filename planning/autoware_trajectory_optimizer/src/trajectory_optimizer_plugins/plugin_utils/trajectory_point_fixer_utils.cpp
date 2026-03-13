@@ -212,7 +212,7 @@ void resample_close_proximity_points(
       std::abs(traj_points[cluster_of_indices.front()].longitudinal_velocity_mps);
     const float v_back = std::abs(traj_points[cluster_of_indices.back()].longitudinal_velocity_mps);
     if (v_back < v_front && v_back < static_cast<float>(stop_velocity_threshold_mps)) {
-      semantic_speed_tracker.stop_point_candidates.push_back(cluster_of_indices.back());
+      semantic_speed_tracker.add_stop_candidate(cluster_of_indices.back());
     }
   }
 }
@@ -227,7 +227,7 @@ void detect_velocity_based_stop(
     const float speed = std::abs(traj_points[i].longitudinal_velocity_mps);
     const float prev_speed = std::abs(traj_points[i - 1].longitudinal_velocity_mps);
     if (speed < threshold && speed < prev_speed) {
-      semantic_speed_tracker.stop_point_candidates.push_back(i);
+      semantic_speed_tracker.add_stop_candidate(i);
       break;
     }
   }
@@ -236,7 +236,7 @@ void detect_velocity_based_stop(
 void build_stop_approach_ranges(
   const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker)
 {
-  const std::vector<size_t> stop_pts = semantic_speed_tracker.stop_point_candidates;
+  const std::vector<size_t> stop_pts = semantic_speed_tracker.take_stop_point_candidates();
   semantic_speed_tracker.clear_stop_approaches();
 
   std::vector<double> cumulative_s(traj_points.size(), 0.0);
@@ -317,7 +317,7 @@ void remove_close_proximity_points(
       continue;
     }  // Avoid marking multiple close points as stop points
     // Mark semantic speed stop point
-    semantic_speed_tracker.stop_point_candidates.push_back(last_valid_idx);
+    semantic_speed_tracker.add_stop_candidate(last_valid_idx);
     last_stop_point_idx = last_valid_idx;
   }
 

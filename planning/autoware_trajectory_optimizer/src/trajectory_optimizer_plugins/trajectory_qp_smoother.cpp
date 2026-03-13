@@ -140,8 +140,8 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 }
 
 void TrajectoryQPSmoother::optimize_trajectory(
-  TrajectoryPoints & traj_points, [[maybe_unused]] SemanticSpeedTracker & semantic_speed_tracker,
-  const TrajectoryOptimizerParams & params, [[maybe_unused]] const TrajectoryOptimizerData & data)
+  TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
+  TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
@@ -181,7 +181,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   // Solve QP problem
   TrajectoryPoints smoothed_trajectory;
-  if (!solve_qp_problem(traj_points, semantic_speed_tracker, smoothed_trajectory)) {
+  if (!solve_qp_problem(traj_points, data.semantic_speed_tracker, smoothed_trajectory)) {
     RCLCPP_ERROR_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
       "QP Smoother: Optimization FAILED, using original trajectory. Check previous error "

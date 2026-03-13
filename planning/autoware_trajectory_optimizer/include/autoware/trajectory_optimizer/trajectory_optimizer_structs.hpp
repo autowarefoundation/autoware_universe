@@ -31,14 +31,6 @@ struct InitialMotion
   double acc_mps2{0.0};
 };
 
-// Runtime data struct - contains vehicle state updated each cycle from topics
-// This is NOT configuration, it's runtime state passed to plugins
-struct TrajectoryOptimizerData
-{
-  Odometry current_odometry;
-  AccelWithCovarianceStamped current_acceleration;
-};
-
 // Tracks detected stop approaches in the trajectory for use across plugins.
 // A stop approach is a deceleration zone leading to a full stop: it has a start index
 // (onset of deceleration), an end index (stop point), and arc length coordinates for
@@ -56,7 +48,7 @@ public:
 
   void remap_to_trajectory(const std::vector<double> & new_arc_lengths)
   {
-    if (new_arc_lengths.empty() || slow_down_ranges.empty()) {
+    if (new_arc_lengths.empty() || slow_down_ranges_.empty()) {
       return;
     }
 
@@ -77,7 +69,7 @@ public:
                : static_cast<size_t>(std::distance(new_arc_lengths.begin(), it));
     };
 
-    for (auto & range : slow_down_ranges) {
+    for (auto & range : slow_down_ranges_) {
       range.start_index = find_nearest_index(range.start_s_m);
       range.end_index = find_nearest_index(range.end_s_m);
     }
@@ -85,19 +77,39 @@ public:
 
   [[nodiscard]] const std::vector<SlowSpeedInfo> & get_slow_down_ranges() const
   {
-    return slow_down_ranges;
+    return slow_down_ranges_;
   }
 
-  void add_stop_approach(const SlowSpeedInfo & info) { slow_down_ranges.push_back(info); }
+  void add_stop_approach(const SlowSpeedInfo & info) { slow_down_ranges_.push_back(info); }
 
-  void clear_stop_approaches() { slow_down_ranges.clear(); }
+  void clear_stop_approaches() { slow_down_ranges_.clear(); }
 
-  // Staging area: detection functions push candidate stop indices here before
-  // build_stop_approach_ranges() processes them into slow_down_ranges.
-  std::vector<size_t> stop_point_candidates;
+  // Appends a candidate stop index to the staging area for build_stop_approach_ranges().
+  void add_stop_candidate(size_t idx) { stop_point_candidates_.push_back(idx); }
+
+  // Returns the staged stop candidates and clears the staging area atomically.
+  // Used by build_stop_approach_ranges() to consume and reset pending candidates.
+  std::vector<size_t> take_stop_point_candidates()
+  {
+    std::vector<size_t> result;
+    result.swap(stop_point_candidates_);
+    return result;
+  }
 
 private:
-  std::vector<SlowSpeedInfo> slow_down_ranges;
+  std::vector<size_t> stop_point_candidates_;
+  std::vector<SlowSpeedInfo> slow_down_ranges_;
+};
+
+// Runtime data struct - contains vehicle state updated each cycle from topics
+// and per-trajectory semantic tracking state shared across plugins.
+// A fresh instance is created for each candidate trajectory so semantic_speed_tracker
+// is automatically reset between trajectories.
+struct TrajectoryOptimizerData
+{
+  Odometry current_odometry;
+  AccelWithCovarianceStamped current_acceleration;
+  SemanticSpeedTracker semantic_speed_tracker;
 };
 
 // Main node parameters struct - contains only plugin activation flags
