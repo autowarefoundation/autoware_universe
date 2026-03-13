@@ -46,7 +46,25 @@ if(ACADOS_DEPS_INCLUDE_DIRS)
 endif()
 
 find_package(ament_cmake_export_dependencies REQUIRED)
+find_package(ament_cmake_export_link_flags REQUIRED)
 ament_export_dependencies(acados)
+
+# Propagate acados link flags so downstream (e.g. static_centerline_generator) that
+# links to path_optimizer can resolve libacados transitively without linking to acados explicitly.
+get_target_property(_acados_location acados IMPORTED_LOCATION)
+if(NOT _acados_location)
+  get_target_property(_acados_location acados IMPORTED_LOCATION_RELEASE)
+endif()
+if(_acados_location)
+  get_filename_component(_acados_lib_dir "${_acados_location}" DIRECTORY)
+  ament_export_link_flags(-L"${_acados_lib_dir}" -lacados)
+else()
+  # Fallback when acados is not an imported target (e.g. in-tree)
+  set(_acados_lib_dir "$ENV{ACADOS_SOURCE_DIR}/lib")
+  if(_acados_lib_dir AND EXISTS "${_acados_lib_dir}")
+    ament_export_link_flags(-L"${_acados_lib_dir}" -lacados)
+  endif()
+endif()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/node.cpp
