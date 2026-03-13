@@ -14,6 +14,8 @@
 
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 
+#include "autoware/trajectory/utils/find_nearest.hpp"
+#include "autoware/trajectory/utils/velocity.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <experimental/optional>  // NOLINT
@@ -23,7 +25,9 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <algorithm>
+#include <exception>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace autoware::motion::control::pid_longitudinal_controller
@@ -53,6 +57,55 @@ bool isValidTrajectory(const Trajectory & traj)
   return true;
 }
 
+bool isValidTrajectory(const TrajectoryExperimental & traj)
+{
+  const auto bases = traj.get_underlying_bases();
+  if (bases.empty()) {
+    return false;
+  }
+
+  const double trajectory_length = traj.length();
+  if (!isfinite(trajectory_length) || trajectory_length < 0.0) {
+    return false;
+  }
+
+  constexpr double eps = 1e-6;
+  for (size_t i = 0; i < bases.size(); ++i) {
+    const double base = bases.at(i);
+    if (!isfinite(base)) {
+      return false;
+    }
+
+    if (i > 0 && base <= bases.at(i - 1)) {
+      return false;
+    }
+
+    if (base < -eps || base > trajectory_length + eps) {
+      return false;
+    }
+
+    const double clamped_base = std::clamp(base, 0.0, trajectory_length);
+    TrajectoryPoint p{};
+    try {
+      p = traj.compute(clamped_base);
+    } catch (const std::exception &) {
+      return false;
+    }
+
+    if (
+      !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
+      !isfinite(p.pose.position.z) || !isfinite(p.pose.orientation.w) ||
+      !isfinite(p.pose.orientation.x) || !isfinite(p.pose.orientation.y) ||
+      !isfinite(p.pose.orientation.z) || !isfinite(p.longitudinal_velocity_mps) ||
+      !isfinite(p.lateral_velocity_mps) || !isfinite(p.acceleration_mps2) ||
+      !isfinite(p.heading_rate_rps)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 double calcStopDistance(
   const Pose & current_pose, const Trajectory & traj, const double max_dist, const double max_yaw)
 {
@@ -69,6 +122,24 @@ double calcStopDistance(
     return 0.0;
   }
   return signed_length_on_traj;
+}
+
+double calcStopDistance(
+  const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
+  const double max_yaw)
+{
+  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
+    traj, current_pose, max_dist, max_yaw);
+  if (!nearest_s) {
+    return 0.0;
+  }
+
+  const auto stop_s = autoware::experimental::trajectory::search_zero_velocity_position(traj);
+  if (!stop_s) {
+    return traj.length() - *nearest_s;
+  }
+
+  return *stop_s - *nearest_s;
 }
 
 double getPitchByPose(const Quaternion & quaternion_msg)
@@ -105,6 +176,30 @@ double getPitchByTraj(
 
   return autoware_utils::calc_elevation_angle(
     trajectory.points.at(prev_idx).pose.position, trajectory.points.at(next_idx).pose.position);
+}
+
+double getPitchByTraj(
+  const TrajectoryExperimental & trajectory, const size_t start_idx, const double wheel_base)
+{
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.size() <= 1 || start_idx >= bases.size()) {
+    return 0.0;
+  }
+
+  const auto start_point = trajectory.compute(bases.at(start_idx));
+  for (size_t i = start_idx + 1; i < bases.size(); ++i) {
+    const auto next_point = trajectory.compute(bases.at(i));
+    const double dist = autoware_utils::calc_distance3d(start_point, next_point);
+    if (dist > wheel_base) {
+      return autoware_utils::calc_elevation_angle(
+        start_point.pose.position, next_point.pose.position);
+    }
+  }
+
+  const size_t prev_idx = std::min(start_idx, bases.size() - 2);
+  const auto prev_point = trajectory.compute(bases.at(prev_idx));
+  const auto end_point = trajectory.compute(bases.back());
+  return autoware_utils::calc_elevation_angle(prev_point.pose.position, end_point.pose.position);
 }
 
 Pose calcPoseAfterTimeDelay(
@@ -184,6 +279,19 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
     remain_dist -= dist;
   }
   return p;
+}
+
+geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
+  const size_t src_idx, const double distance, const TrajectoryExperimental & trajectory)
+{
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.empty()) {
+    return geometry_msgs::msg::Pose{};
+  }
+
+  const size_t clamped_idx = std::min(src_idx, bases.size() - 1);
+  const double target_s = std::clamp(bases.at(clamped_idx) + distance, 0.0, trajectory.length());
+  return trajectory.compute(target_s).pose;
 }
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller

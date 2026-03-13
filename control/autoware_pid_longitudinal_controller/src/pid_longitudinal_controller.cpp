@@ -16,12 +16,17 @@
 
 #include "autoware/motion_utils/marker/marker_helper.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
+#include "autoware/trajectory/utils/find_nearest.hpp"
+#include "autoware/trajectory/utils/pretty_build.hpp"
+#include "autoware/trajectory/utils/velocity.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/math/normalization.hpp"
 
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cmath>
+#include <exception>
 #include <limits>
 #include <memory>
 #include <string>
@@ -30,6 +35,79 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
+namespace
+{
+autoware_planning_msgs::msg::TrajectoryPoint computeTrajectoryPointAtIndex(
+  const TrajectoryExperimental & trajectory, const size_t idx)
+{
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.empty()) {
+    return autoware_planning_msgs::msg::TrajectoryPoint{};
+  }
+
+  const size_t clamped_idx = std::min(idx, bases.size() - 1);
+  return trajectory.compute(bases.at(clamped_idx));
+}
+
+size_t findNearestBaseIndex(const std::vector<double> & bases, const double s)
+{
+  if (bases.empty()) {
+    return 0;
+  }
+
+  const auto upper = std::lower_bound(bases.begin(), bases.end(), s);
+  if (upper == bases.begin()) {
+    return 0;
+  }
+  if (upper == bases.end()) {
+    return bases.size() - 1;
+  }
+
+  const size_t upper_idx = std::distance(bases.begin(), upper);
+  const size_t lower_idx = upper_idx - 1;
+  return (std::abs(bases.at(upper_idx) - s) < std::abs(s - bases.at(lower_idx))) ? upper_idx
+                                                                                 : lower_idx;
+}
+
+std::optional<TrajectoryExperimental> buildTrajectoryWithSamples(
+  const TrajectoryExperimental & trajectory,
+  std::vector<std::pair<double, autoware_planning_msgs::msg::TrajectoryPoint>> inserted_samples)
+{
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.empty()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::pair<double, autoware_planning_msgs::msg::TrajectoryPoint>> all_samples;
+  all_samples.reserve(bases.size() + inserted_samples.size());
+
+  for (const double base : bases) {
+    all_samples.emplace_back(base, trajectory.compute(base));
+  }
+  for (auto & inserted_sample : inserted_samples) {
+    all_samples.push_back(std::move(inserted_sample));
+  }
+
+  std::sort(all_samples.begin(), all_samples.end(), [](const auto & lhs, const auto & rhs) {
+    return lhs.first < rhs.first;
+  });
+
+  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> points;
+  points.reserve(all_samples.size());
+  for (const auto & [sample_s, sample_point] : all_samples) {
+    (void)sample_s;
+    points.push_back(sample_point);
+  }
+
+  points = autoware::motion_utils::removeOverlapPoints(points);
+  const auto built = autoware::experimental::trajectory::pretty_build(points);
+  if (!built) {
+    return std::nullopt;
+  }
+  return built.value();
+}
+}  // namespace
+
 PidLongitudinalController::PidLongitudinalController(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : node_parameters_(node.get_node_parameters_interface()),
@@ -259,6 +337,21 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
   m_trajectory = msg;
 }
 
+void PidLongitudinalController::setTrajectory(const TrajectoryExperimental & trajectory)
+{
+  if (!longitudinal_utils::isValidTrajectory(trajectory)) {
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
+    return;
+  }
+
+  if (trajectory.get_underlying_bases().size() < 2) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "Unexpected trajectory size < 2. Ignored.");
+    return;
+  }
+
+  m_trajectory_experimental = trajectory;
+}
+
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
@@ -405,20 +498,52 @@ bool PidLongitudinalController::isReady(
 {
   return true;
 }
-
-trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
+homdgcat.wiki trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   trajectory_follower::InputData const & input_data)
 {
   // set input data
-  setTrajectory(input_data.current_trajectory);
   setKinematicState(input_data.current_odometry);
   setCurrentAcceleration(input_data.current_accel);
   setCurrentOperationMode(input_data.current_operation_mode);
 
   // calculate current pose and control data
   geometry_msgs::msg::Pose current_pose = m_current_kinematic_state.pose.pose;
+  const auto experimental_trajectory =
+    autoware::experimental::trajectory::pretty_build(input_data.current_trajectory.points);
+  if (!experimental_trajectory) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000,
+      "failed to build experimental trajectory from input trajectory. Falling back to discrete "
+      "controller path.");
 
-  const auto control_data = getControlData(current_pose);
+    setTrajectory(input_data.current_trajectory);
+
+    const auto control_data = getControlData(current_pose);
+
+    // update control state
+    updateControlState(control_data);
+
+    // calculate control command
+    const Motion ctrl_cmd = calcCtrlCmd(control_data);
+
+    // create control command
+    const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
+    trajectory_follower::LongitudinalOutput output;
+    output.control_cmd = cmd_msg;
+
+    // create control command horizon
+    output.control_cmd_horizon.controls.push_back(cmd_msg);
+    output.control_cmd_horizon.time_step_ms = 0.0;
+
+    // publish debug data
+    publishDebugData(ctrl_cmd, control_data);
+
+    return output;
+  }
+
+  setTrajectory(*experimental_trajectory);
+
+  const auto control_data = getExperimentalControlData(current_pose);
 
   // update control state
   updateControlState(control_data);
@@ -546,6 +671,117 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
     const double goal_dist = autoware::motion_utils::calcSignedArcLength(
       control_data.interpolated_traj.points, current_pose.position,
       control_data.interpolated_traj.points.size() - 1);
+    const bool is_close_to_trajectory_end =
+      goal_dist < m_wheel_base && m_slope_source == SlopeSource::TRAJECTORY_GOAL_ADAPTIVE;
+
+    control_data.slope_angle =
+      (is_close_to_trajectory_end || is_vel_slow) ? m_lpf_pitch->getValue() : traj_pitch;
+
+    if (m_previous_slope_angle.has_value()) {
+      constexpr double gravity_const = 9.8;
+      control_data.slope_angle = std::clamp(
+        control_data.slope_angle,
+        m_previous_slope_angle.value() + m_min_jerk * control_data.dt / gravity_const,
+        m_previous_slope_angle.value() + m_max_jerk * control_data.dt / gravity_const);
+    }
+    m_previous_slope_angle = control_data.slope_angle;
+  } else {
+    RCLCPP_ERROR_THROTTLE(
+      logger_, *clock_, 3000, "Slope source is not valid. Using raw_pitch option as default");
+    control_data.slope_angle = m_lpf_pitch->getValue();
+  }
+
+  updatePitchDebugValues(control_data.slope_angle, traj_pitch, raw_pitch, m_lpf_pitch->getValue());
+
+  return control_data;
+}
+
+PidLongitudinalController::ExperimentalControlData
+PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose)
+{
+  ExperimentalControlData control_data{};
+
+  control_data.dt = getDt();
+  control_data.current_motion.vel = m_current_kinematic_state.twist.twist.linear.x;
+  control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
+  control_data.interpolated_traj = m_trajectory_experimental;
+
+  const auto bases = control_data.interpolated_traj.get_underlying_bases();
+  if (bases.size() < 2) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "experimental trajectory size is smaller than 2");
+    return ExperimentalControlData{};
+  }
+
+  const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
+    control_data.interpolated_traj, current_pose, m_ego_nearest_dist_threshold,
+    m_ego_nearest_yaw_threshold);
+  if (!current_s) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000, "failed to find nearest point on experimental trajectory");
+    return ExperimentalControlData{};
+  }
+
+  const auto nearest_point = control_data.interpolated_traj.compute(*current_s);
+  double target_s = *current_s;
+  auto target_point = nearest_point;
+
+  control_data.state_after_delay =
+    predictedStateAfterDelay(control_data.current_motion, m_delay_compensation_time);
+
+  constexpr double min_running_dist = 0.01;
+  if (control_data.state_after_delay.running_distance > min_running_dist) {
+    target_s = std::clamp(
+      *current_s + control_data.state_after_delay.running_distance, 0.0,
+      control_data.interpolated_traj.length());
+    target_point = control_data.interpolated_traj.compute(target_s);
+  }
+
+  auto interpolated_traj_opt = buildTrajectoryWithSamples(
+    control_data.interpolated_traj, {{*current_s, nearest_point}, {target_s, target_point}});
+  if (!interpolated_traj_opt) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000, "failed to rebuild experimental control trajectory");
+    return ExperimentalControlData{};
+  }
+  control_data.interpolated_traj = interpolated_traj_opt.value();
+
+  const auto interpolated_bases = control_data.interpolated_traj.get_underlying_bases();
+  control_data.nearest_base = std::clamp(*current_s, 0.0, control_data.interpolated_traj.length());
+  control_data.target_base = std::clamp(target_s, 0.0, control_data.interpolated_traj.length());
+
+  const auto control_target_point =
+    control_data.interpolated_traj.compute(control_data.target_base);
+
+  m_debug_values.setValues(DebugValues::TYPE::PREDICTED_VEL, control_data.state_after_delay.vel);
+  m_debug_values.setValues(
+    DebugValues::TYPE::TARGET_VEL, control_target_point.longitudinal_velocity_mps);
+
+  control_data.shift = getCurrentShift(control_data);
+  if (control_data.shift != m_prev_shift) {
+    m_pid_vel.reset();
+  }
+  m_prev_shift = control_data.shift;
+
+  control_data.stop_dist = longitudinal_utils::calcStopDistance(
+    current_pose, control_data.interpolated_traj, m_ego_nearest_dist_threshold,
+    m_ego_nearest_yaw_threshold);
+
+  const double raw_pitch = (-1.0) * longitudinal_utils::getPitchByPose(current_pose.orientation);
+  m_lpf_pitch->filter(raw_pitch);
+  const double traj_pitch = longitudinal_utils::getPitchByTraj(
+    control_data.interpolated_traj,
+    findNearestBaseIndex(interpolated_bases, control_data.target_base), m_wheel_base);
+
+  if (m_slope_source == SlopeSource::RAW_PITCH) {
+    control_data.slope_angle = m_lpf_pitch->getValue();
+  } else if (m_slope_source == SlopeSource::TRAJECTORY_PITCH) {
+    control_data.slope_angle = traj_pitch;
+  } else if (
+    m_slope_source == SlopeSource::TRAJECTORY_ADAPTIVE ||
+    m_slope_source == SlopeSource::TRAJECTORY_GOAL_ADAPTIVE) {
+    const bool is_vel_slow = control_data.current_motion.vel < m_adaptive_trajectory_velocity_th &&
+                             m_slope_source == SlopeSource::TRAJECTORY_ADAPTIVE;
+    const double goal_dist = control_data.interpolated_traj.length() - control_data.nearest_base;
     const bool is_close_to_trajectory_end =
       goal_dist < m_wheel_base && m_slope_source == SlopeSource::TRAJECTORY_GOAL_ADAPTIVE;
 
@@ -796,6 +1032,160 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
   return;
 }
 
+void PidLongitudinalController::updateControlState(const ExperimentalControlData & control_data)
+{
+  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
+    return;
+  }
+
+  const double current_vel = control_data.current_motion.vel;
+  const double stop_dist = control_data.stop_dist;
+  const auto & p = m_state_transition_params;
+
+  const bool departure_condition_from_stopping =
+    stop_dist > p.drive_state_stop_dist + p.drive_state_offset_stop_dist;
+  const bool departure_condition_from_stopped = stop_dist > p.drive_state_stop_dist;
+
+  static constexpr double vel_epsilon = 1e-3;
+  const bool stopping_condition = stop_dist < p.stopping_state_stop_dist;
+  const bool is_stopped = std::abs(current_vel) < p.stopped_state_entry_vel;
+
+  const bool is_not_running = [&]() {
+    if (control_data.shift == Shift::Forward) {
+      return is_stopped || current_vel < 0.0;
+    }
+    return is_stopped || 0.0 < current_vel;
+  }();
+  if (!is_not_running) {
+    m_last_running_time = std::make_shared<rclcpp::Time>(clock_->now());
+  }
+  const bool stopped_condition =
+    m_last_running_time
+      ? (clock_->now() - *m_last_running_time).seconds() > p.stopped_state_entry_duration_time
+      : false;
+
+  const double current_vel_cmd = std::fabs(
+    control_data.interpolated_traj.compute(control_data.nearest_base).longitudinal_velocity_mps);
+  const auto emergency_condition = [&]() {
+    if (
+      m_enable_overshoot_emergency && stop_dist < -p.emergency_state_overshoot_stop_dist &&
+      current_vel_cmd < vel_epsilon) {
+      return ResultWithReason{
+        true, fmt::format("the target velocity {} is less than {}", current_vel_cmd, vel_epsilon)};
+    }
+    return ResultWithReason{false};
+  }();
+  const bool has_nonzero_target_vel = std::abs(current_vel_cmd) > 1.0e-5;
+
+  const auto debug_msg_once = [this](const auto & s) { RCLCPP_DEBUG_ONCE(logger_, "%s", s); };
+
+  const bool is_under_control = m_current_operation_mode.is_autoware_control_enabled &&
+                                m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+
+  if (is_under_control != m_prev_vehicle_is_under_control) {
+    m_prev_vehicle_is_under_control = is_under_control;
+    m_under_control_starting_time =
+      is_under_control ? std::make_shared<rclcpp::Time>(clock_->now()) : nullptr;
+  }
+
+  if (m_control_state != ControlState::STOPPED) {
+    m_prev_keep_stopped_condition = std::nullopt;
+  }
+
+  if (m_control_state == ControlState::DRIVE) {
+    if (emergency_condition.result) {
+      return changeControlState(ControlState::EMERGENCY, emergency_condition.reason);
+    }
+    if (!is_under_control && stopped_condition) {
+      return changeControlState(ControlState::STOPPED);
+    }
+
+    if (m_enable_smooth_stop) {
+      if (stopping_condition) {
+        const double pred_vel_in_target = control_data.state_after_delay.vel;
+        const double pred_stop_dist =
+          control_data.stop_dist -
+          0.5 * (pred_vel_in_target + current_vel) * m_delay_compensation_time;
+        m_smooth_stop.init(pred_vel_in_target, pred_stop_dist);
+        return changeControlState(ControlState::STOPPING);
+      }
+    } else {
+      if (stopped_condition && !departure_condition_from_stopped) {
+        return changeControlState(ControlState::STOPPED);
+      }
+    }
+    return;
+  }
+
+  if (m_control_state == ControlState::STOPPING) {
+    if (emergency_condition.result) {
+      return changeControlState(ControlState::EMERGENCY, emergency_condition.reason);
+    }
+    if (stopped_condition) {
+      return changeControlState(ControlState::STOPPED);
+    }
+
+    if (departure_condition_from_stopping) {
+      m_pid_vel.reset();
+      m_lpf_vel_error->reset(0.0);
+      m_prev_raw_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
+      return changeControlState(ControlState::DRIVE);
+    }
+    return;
+  }
+
+  if (m_control_state == ControlState::STOPPED) {
+    if (!is_under_control && stopped_condition) return;
+
+    if (has_nonzero_target_vel && !departure_condition_from_stopped) {
+      debug_msg_once("target speed > 0, but departure condition is not met. Keep STOPPED.");
+    }
+
+    if (departure_condition_from_stopped) {
+      const bool current_keep_stopped_condition =
+        std::fabs(current_vel) < vel_epsilon && !lateral_sync_data_.is_steer_converged;
+      const bool keep_stopped_condition =
+        !m_prev_keep_stopped_condition ||
+        (current_keep_stopped_condition || *m_prev_keep_stopped_condition);
+      m_prev_keep_stopped_condition = current_keep_stopped_condition;
+      if (m_enable_keep_stopped_until_steer_convergence && keep_stopped_condition) {
+        if (has_nonzero_target_vel) {
+          debug_msg_once("target speed > 0, but keep stop condition is met. Keep STOPPED.");
+        }
+
+        if (is_under_control) {
+          const auto virtual_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
+            m_current_kinematic_state.pose.pose, "velocity control\n(steering not converged)",
+            clock_->now(), 0, m_wheel_base + m_front_overhang);
+          m_pub_virtual_wall_marker->publish(virtual_wall_marker);
+        }
+
+        return;
+      }
+
+      m_pid_vel.reset();
+      m_lpf_vel_error->reset(0.0);
+      m_lpf_acc_error->reset(0.0);
+      return changeControlState(ControlState::DRIVE);
+    }
+
+    return;
+  }
+
+  if (m_control_state == ControlState::EMERGENCY) {
+    if (stopped_condition) {
+      return changeControlState(ControlState::STOPPED);
+    }
+
+    if (!emergency_condition.result && !is_under_control) {
+      return changeControlState(ControlState::DRIVE);
+    }
+    return;
+  }
+
+  RCLCPP_FATAL(logger_, "invalid state found.");
+}
+
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
   const ControlData & control_data)
 {
@@ -816,12 +1206,6 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
 
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, ctrl_cmd_as_pedal_pos.acc);
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, ctrl_cmd_as_pedal_pos.acc);
-
-    if (m_enable_slope_compensation) {
-      const double pitch_limited =
-        std::clamp(control_data.slope_angle, m_min_pitch_rad, m_max_pitch_rad);
-      ctrl_cmd_as_pedal_pos.acc -= 9.81 * std::sin(std::abs(pitch_limited));
-    }
     m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_SLOPE_APPLIED, ctrl_cmd_as_pedal_pos.acc);
 
     RCLCPP_DEBUG(
@@ -906,6 +1290,104 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
   return ctrl_cmd_as_pedal_pos;
 }
 
+PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
+  const ExperimentalControlData & control_data)
+{
+  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
+    return Motion{};
+  }
+
+  const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
+
+  Motion ctrl_cmd_as_pedal_pos{
+    target_point.longitudinal_velocity_mps, target_point.acceleration_mps2};
+
+  if (m_control_state == ControlState::STOPPED) {
+    const auto & p = m_stopped_state_params;
+    ctrl_cmd_as_pedal_pos.vel = p.vel;
+    ctrl_cmd_as_pedal_pos.acc = p.acc;
+
+    m_prev_raw_ctrl_cmd.vel = 0.0;
+    m_prev_raw_ctrl_cmd.acc = 0.0;
+
+    m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, ctrl_cmd_as_pedal_pos.acc);
+    m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, ctrl_cmd_as_pedal_pos.acc);
+    m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_SLOPE_APPLIED, ctrl_cmd_as_pedal_pos.acc);
+
+    RCLCPP_DEBUG(
+      logger_, "[Stopped]. vel: %3.3f, acc: %3.3f", ctrl_cmd_as_pedal_pos.vel,
+      ctrl_cmd_as_pedal_pos.acc);
+  } else {
+    Motion raw_ctrl_cmd{target_point.longitudinal_velocity_mps, target_point.acceleration_mps2};
+    if (m_control_state == ControlState::EMERGENCY) {
+      raw_ctrl_cmd = calcEmergencyCtrlCmd(control_data.dt);
+    } else {
+      if (m_control_state == ControlState::DRIVE) {
+        raw_ctrl_cmd.vel = target_point.longitudinal_velocity_mps;
+        raw_ctrl_cmd.acc = applyVelocityFeedback(control_data);
+        raw_ctrl_cmd = keepBrakeBeforeStop(control_data, raw_ctrl_cmd);
+
+        RCLCPP_DEBUG(
+          logger_,
+          "[feedback control]  vel: %3.3f, acc: %3.3f, dt: %3.3f, v_curr: %3.3f, v_ref: %3.3f "
+          "feedback_ctrl_cmd.ac: %3.3f",
+          raw_ctrl_cmd.vel, raw_ctrl_cmd.acc, control_data.dt, control_data.current_motion.vel,
+          target_point.longitudinal_velocity_mps, raw_ctrl_cmd.acc);
+      } else if (m_control_state == ControlState::STOPPING) {
+        raw_ctrl_cmd.acc = m_smooth_stop.calculate(
+          control_data.stop_dist, control_data.current_motion.vel, control_data.current_motion.acc,
+          m_vel_hist, m_delay_compensation_time, m_debug_values);
+        raw_ctrl_cmd.vel = m_stopped_state_params.vel;
+
+        RCLCPP_DEBUG(
+          logger_, "[smooth stop]: Smooth stopping. vel: %3.3f, acc: %3.3f", raw_ctrl_cmd.vel,
+          raw_ctrl_cmd.acc);
+      }
+      raw_ctrl_cmd.acc = std::clamp(raw_ctrl_cmd.acc, m_min_acc, m_max_acc);
+      m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_LIMITED, raw_ctrl_cmd.acc);
+      raw_ctrl_cmd.acc = longitudinal_utils::applyDiffLimitFilter(
+        raw_ctrl_cmd.acc, m_prev_raw_ctrl_cmd.acc, control_data.dt, m_max_jerk, m_min_jerk);
+      m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_JERK_LIMITED, raw_ctrl_cmd.acc);
+    }
+
+    m_prev_raw_ctrl_cmd = raw_ctrl_cmd;
+
+    const double vel_sign = (control_data.shift == Shift::Forward)
+                              ? 1.0
+                              : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+    const double acc_err = control_data.current_motion.acc * vel_sign - raw_ctrl_cmd.acc;
+    m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC, acc_err);
+    m_lpf_acc_error->filter(acc_err);
+    m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC_FILTERED, m_lpf_acc_error->getValue());
+
+    const double acc_cmd = raw_ctrl_cmd.acc - m_lpf_acc_error->getValue() * m_acc_feedback_gain;
+    m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_ACC_FB_APPLIED, acc_cmd);
+    RCLCPP_DEBUG(
+      logger_,
+      "[acc feedback]: raw_ctrl_cmd.acc: %1.3f, control_data.current_motion.acc: %1.3f, acc_cmd: "
+      "%1.3f",
+      raw_ctrl_cmd.acc, control_data.current_motion.acc, acc_cmd);
+
+    ctrl_cmd_as_pedal_pos.acc =
+      applySlopeCompensation(acc_cmd, control_data.slope_angle, control_data.shift);
+    m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_SLOPE_APPLIED, ctrl_cmd_as_pedal_pos.acc);
+    ctrl_cmd_as_pedal_pos.vel = raw_ctrl_cmd.vel;
+  }
+
+  storeAccelCmd(m_prev_raw_ctrl_cmd.acc);
+
+  ctrl_cmd_as_pedal_pos.acc = longitudinal_utils::applyDiffLimitFilter(
+    ctrl_cmd_as_pedal_pos.acc, m_prev_ctrl_cmd.acc, control_data.dt, m_max_acc_cmd_diff);
+
+  updateDebugVelAcc(control_data);
+
+  RCLCPP_DEBUG(
+    logger_, "[final output]: acc: %3.3f, v_curr: %3.3f", ctrl_cmd_as_pedal_pos.acc,
+    control_data.current_motion.vel);
+
+  return ctrl_cmd_as_pedal_pos;
+}
+
 // Do not use nearest_idx here
 autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCmdMsg(
   const Motion & ctrl_cmd, const double & current_vel)
@@ -955,6 +1437,30 @@ void PidLongitudinalController::publishDebugData(
   m_pub_slope->publish(slope_msg);
 }
 
+void PidLongitudinalController::publishDebugData(
+  const Motion & ctrl_cmd, const ExperimentalControlData & control_data)
+{
+  m_debug_values.setValues(DebugValues::TYPE::DT, control_data.dt);
+  m_debug_values.setValues(DebugValues::TYPE::CALCULATED_ACC, control_data.current_motion.acc);
+  m_debug_values.setValues(DebugValues::TYPE::SHIFT, static_cast<double>(control_data.shift));
+  m_debug_values.setValues(DebugValues::TYPE::STOP_DIST, control_data.stop_dist);
+  m_debug_values.setValues(DebugValues::TYPE::CONTROL_STATE, static_cast<double>(m_control_state));
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_PUBLISHED, ctrl_cmd.acc);
+
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
+  debug_msg.stamp = clock_->now();
+  for (const auto & v : m_debug_values.getValues()) {
+    debug_msg.data.push_back(static_cast<decltype(debug_msg.data)::value_type>(v));
+  }
+  m_pub_debug->publish(debug_msg);
+
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_msg{};
+  slope_msg.stamp = clock_->now();
+  slope_msg.data.push_back(
+    static_cast<decltype(slope_msg.data)::value_type>(control_data.slope_angle));
+  m_pub_slope->publish(slope_msg);
+}
+
 double PidLongitudinalController::getDt()
 {
   double dt;
@@ -977,6 +1483,26 @@ enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift
 
   const double target_vel =
     control_data.interpolated_traj.points.at(control_data.target_idx).longitudinal_velocity_mps;
+
+  if (target_vel > epsilon) {
+    return Shift::Forward;
+  } else if (target_vel < -epsilon) {
+    return Shift::Reverse;
+  }
+
+  return m_prev_shift;
+}
+
+enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift(
+  const ExperimentalControlData & control_data) const
+{
+  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
+    return m_prev_shift;
+  }
+
+  constexpr double epsilon = 1e-5;
+  const double target_vel =
+    control_data.interpolated_traj.compute(control_data.target_base).longitudinal_velocity_mps;
 
   if (target_vel > epsilon) {
     return Shift::Forward;
@@ -1059,6 +1585,46 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
   return output_motion;
 }
 
+PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop(
+  const ExperimentalControlData & control_data, const Motion & target_motion) const
+{
+  const auto bases = control_data.interpolated_traj.get_underlying_bases();
+  if (bases.empty()) {
+    return target_motion;
+  }
+
+  Motion output_motion = target_motion;
+  if (!m_enable_brake_keeping_before_stop) {
+    return output_motion;
+  }
+
+  const auto stop_s = autoware::experimental::trajectory::search_zero_velocity_position(
+    control_data.interpolated_traj);
+  if (!stop_s) {
+    return output_motion;
+  }
+
+  const size_t stop_idx = findNearestBaseIndex(bases, *stop_s);
+  double min_acc_before_stop = std::numeric_limits<double>::max();
+  size_t min_acc_idx = std::numeric_limits<size_t>::max();
+  for (int i = static_cast<int>(stop_idx); i >= 0; --i) {
+    const auto point =
+      computeTrajectoryPointAtIndex(control_data.interpolated_traj, static_cast<size_t>(i));
+    if (point.acceleration_mps2 > static_cast<float>(min_acc_before_stop)) {
+      break;
+    }
+    min_acc_before_stop = point.acceleration_mps2;
+    min_acc_idx = static_cast<size_t>(i);
+  }
+
+  const double brake_keeping_acc = std::max(m_brake_keeping_acc, min_acc_before_stop);
+  if (control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
+    output_motion.acc = brake_keeping_acc;
+  }
+
+  return output_motion;
+}
+
 std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
 PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
   const autoware_planning_msgs::msg::Trajectory & traj, const geometry_msgs::msg::Pose & pose) const
@@ -1070,6 +1636,35 @@ PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
   // apply linear interpolation
   return longitudinal_utils::lerpTrajectoryPoint(
     traj.points, pose, m_ego_nearest_dist_threshold, m_ego_nearest_yaw_threshold);
+}
+
+std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
+PidLongitudinalController::calcInterpolatedTrajPointAndSegment(
+  const TrajectoryExperimental & traj, const geometry_msgs::msg::Pose & pose) const
+{
+  const auto bases = traj.get_underlying_bases();
+  if (bases.empty()) {
+    return {autoware_planning_msgs::msg::TrajectoryPoint{}, 0};
+  }
+  if (bases.size() == 1) {
+    return {traj.compute(bases.front()), 0};
+  }
+
+  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
+    traj, pose, m_ego_nearest_dist_threshold, m_ego_nearest_yaw_threshold);
+  if (!nearest_s) {
+    return {autoware_planning_msgs::msg::TrajectoryPoint{}, 0};
+  }
+
+  const auto point = traj.compute(*nearest_s);
+  const auto upper = std::upper_bound(bases.begin(), bases.end(), *nearest_s);
+  if (upper == bases.begin()) {
+    return {point, 0};
+  }
+
+  const size_t seg_idx =
+    std::min(static_cast<size_t>(std::distance(bases.begin(), upper) - 1), bases.size() - 2);
+  return {point, seg_idx};
 }
 
 PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedStateAfterDelay(
@@ -1179,6 +1774,58 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
   return feedback_acc;
 }
 
+double PidLongitudinalController::applyVelocityFeedback(
+  const ExperimentalControlData & control_data)
+{
+  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
+    return 0.0;
+  }
+
+  const double vel_sign = (control_data.shift == Shift::Forward)
+                            ? 1.0
+                            : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+  const double current_vel = control_data.current_motion.vel;
+  const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
+  const auto target_motion =
+    Motion{target_point.longitudinal_velocity_mps, target_point.acceleration_mps2};
+  const double diff_vel = (target_motion.vel - current_vel) * vel_sign;
+  const bool is_under_control = m_current_operation_mode.is_autoware_control_enabled &&
+                                m_current_operation_mode.mode == OperationModeState::AUTONOMOUS;
+
+  const bool vehicle_is_moving = std::abs(current_vel) > m_current_vel_threshold_pid_integrate;
+  const double time_under_control = getTimeUnderControl();
+  const bool vehicle_is_stuck =
+    !vehicle_is_moving && time_under_control > m_time_threshold_before_pid_integrate;
+
+  const bool enable_integration =
+    (vehicle_is_moving || (m_enable_integration_at_low_speed && vehicle_is_stuck)) &&
+    is_under_control;
+
+  const double error_vel_filtered = m_lpf_vel_error->filter(diff_vel);
+
+  std::vector<double> pid_contributions(3);
+  const double pid_acc =
+    m_pid_vel.calculate(error_vel_filtered, control_data.dt, enable_integration, pid_contributions);
+
+  constexpr double ff_scale_max = 2.0;
+  constexpr double ff_scale_min = 0.5;
+  const double ff_scale = std::clamp(
+    std::abs(current_vel) / std::max(std::abs(target_motion.vel), 0.1), ff_scale_min, ff_scale_max);
+  const double ff_acc = target_motion.acc * ff_scale;
+
+  const double feedback_acc = ff_acc + pid_acc;
+
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_PID_APPLIED, feedback_acc);
+  m_debug_values.setValues(DebugValues::TYPE::ERROR_VEL_FILTERED, error_vel_filtered);
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_FB_P_CONTRIBUTION, pid_contributions.at(0));
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_FB_I_CONTRIBUTION, pid_contributions.at(1));
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_FB_D_CONTRIBUTION, pid_contributions.at(2));
+  m_debug_values.setValues(DebugValues::TYPE::FF_SCALE, ff_scale);
+  m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_FF, ff_acc);
+
+  return feedback_acc;
+}
+
 void PidLongitudinalController::updatePitchDebugValues(
   const double pitch_using, const double traj_pitch, const double localization_pitch,
   const double localization_pitch_lpf)
@@ -1213,6 +1860,25 @@ void PidLongitudinalController::updateDebugVelAcc(const ControlData & control_da
     DebugValues::TYPE::ERROR_VEL,
     control_data.interpolated_traj.points.at(control_data.nearest_idx).longitudinal_velocity_mps -
       control_data.current_motion.vel);
+}
+
+void PidLongitudinalController::updateDebugVelAcc(const ExperimentalControlData & control_data)
+{
+  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
+    return;
+  }
+
+  const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
+  const auto nearest_point = control_data.interpolated_traj.compute(control_data.nearest_base);
+
+  m_debug_values.setValues(DebugValues::TYPE::CURRENT_VEL, control_data.current_motion.vel);
+  m_debug_values.setValues(DebugValues::TYPE::TARGET_VEL, target_point.longitudinal_velocity_mps);
+  m_debug_values.setValues(DebugValues::TYPE::TARGET_ACC, target_point.acceleration_mps2);
+  m_debug_values.setValues(DebugValues::TYPE::NEAREST_VEL, nearest_point.longitudinal_velocity_mps);
+  m_debug_values.setValues(DebugValues::TYPE::NEAREST_ACC, nearest_point.acceleration_mps2);
+  m_debug_values.setValues(
+    DebugValues::TYPE::ERROR_VEL,
+    nearest_point.longitudinal_velocity_mps - control_data.current_motion.vel);
 }
 
 void PidLongitudinalController::setupDiagnosticUpdater()

@@ -20,6 +20,7 @@
 #include "autoware/pid_longitudinal_controller/lowpass_filter.hpp"
 #include "autoware/pid_longitudinal_controller/pid.hpp"
 #include "autoware/pid_longitudinal_controller/smooth_stop.hpp"
+#include "autoware/trajectory/trajectory_point.hpp"
 #include "autoware/trajectory_follower_base/longitudinal_controller_base.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
@@ -52,6 +53,8 @@ namespace autoware::motion::control::pid_longitudinal_controller
 {
 using autoware_adapi_v1_msgs::msg::OperationModeState;
 using visualization_msgs::msg::MarkerArray;
+using TrajectoryExperimental =
+  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
 
 namespace trajectory_follower = ::autoware::motion::control::trajectory_follower;
 
@@ -94,6 +97,20 @@ private:
     double slope_angle{0.0};
     double dt{0.0};
   };
+
+  struct ExperimentalControlData
+  {
+    TrajectoryExperimental interpolated_traj{};
+    double nearest_base{0.0};
+    double target_base{0.0};
+    StateAfterDelay state_after_delay{0.0, 0.0, 0.0};
+    Motion current_motion{};
+    Shift shift{Shift::Forward};  // shift is used only to calculate the sign of pitch compensation
+    double stop_dist{0.0};  // signed distance that is positive when car is before the stopline
+    double slope_angle{0.0};
+    double dt{0.0};
+  };
+
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
@@ -112,6 +129,7 @@ private:
   nav_msgs::msg::Odometry m_current_kinematic_state;
   geometry_msgs::msg::AccelWithCovarianceStamped m_current_accel;
   autoware_planning_msgs::msg::Trajectory m_trajectory;
+  TrajectoryExperimental m_trajectory_experimental;
   OperationModeState m_current_operation_mode;
 
   // vehicle info
@@ -280,6 +298,12 @@ private:
    */
   void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
 
+  /**
+   * @brief set reference trajectory from experimental trajectory
+   * @param [in] trajectory experimental trajectory
+   */
+  void setTrajectory(const TrajectoryExperimental & trajectory);
+
   bool isReady(const trajectory_follower::InputData & input_data) override;
 
   /**
@@ -293,6 +317,7 @@ private:
    * @param [in] current_pose current ego pose
    */
   ControlData getControlData(const geometry_msgs::msg::Pose & current_pose);
+  ExperimentalControlData getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose);
 
   /**
    * @brief calculate control command in emergency state
@@ -312,12 +337,14 @@ private:
    * @param [in] control_data control data
    */
   void updateControlState(const ControlData & control_data);
+  void updateControlState(const ExperimentalControlData & control_data);
 
   /**
    * @brief calculate control command based on the current control state
    * @param [in] control_data control data
    */
   Motion calcCtrlCmd(const ControlData & control_data);
+  Motion calcCtrlCmd(const ExperimentalControlData & control_data);
 
   /**
    * @brief publish control command
@@ -333,6 +360,7 @@ private:
    * @param [in] control_data data for control calculation
    */
   void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
+  void publishDebugData(const Motion & ctrl_cmd, const ExperimentalControlData & control_data);
 
   /**
    * @brief calculate time between current and previous one
@@ -349,6 +377,7 @@ private:
    * @param [in] control_data data for control calculation
    */
   enum Shift getCurrentShift(const ControlData & control_data) const;
+  enum Shift getCurrentShift(const ExperimentalControlData & control_data) const;
 
   /**
    * @brief filter acceleration command with limitation of acceleration and jerk, and slope
@@ -379,6 +408,8 @@ private:
    */
   Motion keepBrakeBeforeStop(
     const ControlData & control_data, const Motion & target_motion, const size_t nearest_idx) const;
+  Motion keepBrakeBeforeStop(
+    const ExperimentalControlData & control_data, const Motion & target_motion) const;
 
   /**
    * @brief interpolate trajectory point that is nearest to vehicle
@@ -390,6 +421,9 @@ private:
   calcInterpolatedTrajPointAndSegment(
     const autoware_planning_msgs::msg::Trajectory & traj,
     const geometry_msgs::msg::Pose & pose) const;
+  std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
+  calcInterpolatedTrajPointAndSegment(
+    const TrajectoryExperimental & traj, const geometry_msgs::msg::Pose & pose) const;
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
@@ -404,6 +438,7 @@ private:
    * @param [in] control_data data for control calculation
    */
   double applyVelocityFeedback(const ControlData & control_data);
+  double applyVelocityFeedback(const ExperimentalControlData & control_data);
 
   /**
    * @brief update variables for debugging about pitch
@@ -422,6 +457,7 @@ private:
    * @param [in] control_data data for control calculation
    */
   void updateDebugVelAcc(const ControlData & control_data);
+  void updateDebugVelAcc(const ExperimentalControlData & control_data);
 
   double getTimeUnderControl();
 };

@@ -19,6 +19,7 @@
 #include "autoware/interpolation/spherical_linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
+#include "autoware/trajectory/trajectory_point.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -39,6 +40,8 @@ namespace longitudinal_utils
 
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using TrajectoryExperimental =
+  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Quaternion;
@@ -47,12 +50,16 @@ using geometry_msgs::msg::Quaternion;
  * @brief check if trajectory is invalid or not
  */
 bool isValidTrajectory(const Trajectory & traj);
+bool isValidTrajectory(const TrajectoryExperimental & traj);
 
 /**
  * @brief calculate distance to stopline from current vehicle position where velocity is 0
  */
 double calcStopDistance(
   const Pose & current_pose, const Trajectory & traj, const double max_dist, const double max_yaw);
+double calcStopDistance(
+  const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
+  const double max_yaw);
 
 /**
  * @brief calculate pitch angle from estimated current pose
@@ -68,6 +75,8 @@ double getPitchByPose(const Quaternion & quaternion);
  */
 double getPitchByTraj(
   const Trajectory & trajectory, const size_t start_idx, const double wheel_base);
+double getPitchByTraj(
+  const TrajectoryExperimental & trajectory, const size_t start_idx, const double wheel_base);
 
 /**
  * @brief calculate vehicle pose after time delay by moving the vehicle at current velocity and
@@ -152,6 +161,8 @@ double applyDiffLimitFilter(
 geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   const size_t src_idx, const double distance,
   const autoware_planning_msgs::msg::Trajectory & trajectory);
+geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
+  const size_t src_idx, const double distance, const TrajectoryExperimental & trajectory);
 
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
