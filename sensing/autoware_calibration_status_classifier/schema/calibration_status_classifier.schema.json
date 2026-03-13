@@ -39,6 +39,16 @@
           "description": "The queue size in synchronized callbacks.",
           "default": 5
         },
+        "ego_box": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Ego vehicle bounding box in lidar frame [x_min, y_min, z_min, x_max, y_max, z_max]. Used to generate an occlusion mask that prevents projecting LiDAR points through the vehicle chassis onto the image. Set all values to 0.0 to disable.",
+          "default": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        },
         "input": {
           "type": "object",
           "properties": {
@@ -131,6 +141,7 @@
         "runtime_mode",
         "period",
         "queue_size",
+        "ego_box",
         "input",
         "prerequisite",
         "miscalibration_confidence_threshold"
