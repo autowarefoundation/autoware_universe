@@ -152,6 +152,9 @@ private:
   // Flag indicating whether auto steering offset removal is enabled.
   bool enable_auto_steering_offset_removal_;
 
+  // Threshold for maximum change in steering offset to prevent large updates.
+  double m_steer_offset_max_update_th_;
+
   /**
    * @brief Initialize the timer
    * @param period_s Control period in seconds.
