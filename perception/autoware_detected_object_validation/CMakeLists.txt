@@ -17,6 +17,9 @@ find_package(Eigen3 REQUIRED)
 ### Find Boost Dependencies
 find_package(Boost REQUIRED)
 
+find_package(agnocastlib REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
+
 include_directories(
   include
   SYSTEM
@@ -47,6 +50,18 @@ target_link_libraries(obstacle_pointcloud_based_validator
   Eigen3::Eigen
 )
 
+target_include_directories(obstacle_pointcloud_based_validator PRIVATE
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+
+ament_target_dependencies(obstacle_pointcloud_based_validator
+  agnocastlib
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(obstacle_pointcloud_based_validator)
+
 ament_auto_add_library(object_lanelet_filter SHARED
   src/lanelet_filter/debug.cpp
   src/lanelet_filter/lanelet_filter_base.cpp
@@ -64,9 +79,10 @@ ament_auto_add_library(object_position_filter SHARED
   lib/utils/utils.cpp
 )
 
-rclcpp_components_register_node(obstacle_pointcloud_based_validator
+autoware_agnocast_wrapper_register_node(obstacle_pointcloud_based_validator
   PLUGIN "autoware::detected_object_validation::obstacle_pointcloud::ObstaclePointCloudBasedValidator"
   EXECUTABLE obstacle_pointcloud_based_validator_node
+  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
 )
 
 rclcpp_components_register_node(object_lanelet_filter

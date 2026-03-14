@@ -294,11 +294,12 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
 
   using_2d_validator_ = declare_parameter<bool>("using_2d_validator");
 
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-
   sync_.registerCallback(
-    std::bind(&ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud, this, _1, _2));
+    [this](
+      AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) && objects,
+      AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) && pointcloud) {
+      this->onObjectsAndObstaclePointCloud(std::move(objects), std::move(pointcloud));
+    });
   if (using_2d_validator_) {
     validator_ = std::make_unique<Validator2D>(points_num_threshold_param_);
   } else {
@@ -315,8 +316,8 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects,
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_obstacle_pointcloud)
+  AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) input_objects,
+  AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud)
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stopwatch;
   autoware_perception_msgs::msg::DetectedObjects output, removed_objects;
@@ -331,8 +332,12 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
     // objects_pub_->publish(*input_objects);
     return;
   }
+  // Create a non-owning shared_ptr for the Validator interface
+  const auto input_obstacle_pointcloud_shared =
+    sensor_msgs::msg::PointCloud2::ConstSharedPtr(
+      sensor_msgs::msg::PointCloud2::ConstSharedPtr{}, input_obstacle_pointcloud.get());
   bool validation_is_ready = true;
-  if (!validator_->setKdtreeInputCloud(input_obstacle_pointcloud)) {
+  if (!validator_->setKdtreeInputCloud(input_obstacle_pointcloud_shared)) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 5,
       "obstacle pointcloud is empty! Can not validate objects.");

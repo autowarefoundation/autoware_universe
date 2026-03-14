@@ -22,14 +22,11 @@
 #include "autoware_utils/system/stop_watch.hpp"
 #include "debugger.hpp"
 
+#include <autoware/agnocast_wrapper/message_filters.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
@@ -141,16 +138,19 @@ public:
 
 private:
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
-  message_filters::Subscriber<autoware_perception_msgs::msg::DetectedObjects> objects_sub_;
-  message_filters::Subscriber<sensor_msgs::msg::PointCloud2> obstacle_pointcloud_sub_;
+  autoware::agnocast_wrapper::message_filters::Subscriber<
+    autoware_perception_msgs::msg::DetectedObjects>
+    objects_sub_;
+  autoware::agnocast_wrapper::message_filters::Subscriber<sensor_msgs::msg::PointCloud2>
+    obstacle_pointcloud_sub_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_{nullptr};
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  typedef message_filters::sync_policies::ApproximateTime<
+  typedef autoware::agnocast_wrapper::message_filters::sync_policies::ApproximateTime<
     autoware_perception_msgs::msg::DetectedObjects, sensor_msgs::msg::PointCloud2>
     SyncPolicy;
-  typedef message_filters::Synchronizer<SyncPolicy> Sync;
+  typedef autoware::agnocast_wrapper::message_filters::Synchronizer<SyncPolicy> Sync;
   Sync sync_;
   PointsNumThresholdParam points_num_threshold_param_;
   double validate_max_distance_sq_;  // maximum object distance to validate, squared [m^2]
@@ -162,8 +162,9 @@ private:
 
 private:
   void onObjectsAndObstaclePointCloud(
-    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_obstacle_pointcloud);
+    AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) input_objects,
+    AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2)
+      input_obstacle_pointcloud);
 };
 
 }  // namespace obstacle_pointcloud
