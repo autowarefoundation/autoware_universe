@@ -17,7 +17,6 @@ find_package(Eigen3 REQUIRED)
 ### Find Boost Dependencies
 find_package(Boost REQUIRED)
 
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 
 include_directories(
@@ -51,12 +50,10 @@ target_link_libraries(obstacle_pointcloud_based_validator
 )
 
 target_include_directories(obstacle_pointcloud_based_validator PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
   ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(obstacle_pointcloud_based_validator
-  agnocastlib
   autoware_agnocast_wrapper
 )
 
