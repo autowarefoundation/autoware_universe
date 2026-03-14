@@ -53,7 +53,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
-  find_package(agnocastlib REQUIRED)
   find_package(autoware_agnocast_wrapper REQUIRED)
 
   include_directories(
@@ -127,12 +126,10 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   target_include_directories(${PROJECT_NAME}_component PRIVATE
-    ${agnocastlib_INCLUDE_DIRS}
     ${autoware_agnocast_wrapper_INCLUDE_DIRS}
   )
 
   ament_target_dependencies(${PROJECT_NAME}_component
-    agnocastlib
     autoware_agnocast_wrapper
   )
 
