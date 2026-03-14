@@ -169,8 +169,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
       std::bind(&LidarCenterPointNode::pointCloudCallback, this, std::placeholders::_1));
-  objects_pub_ =
-    AUTOWARE_CREATE_PUBLISHER2(autoware_perception_msgs::msg::DetectedObjects, "~/output/objects", rclcpp::QoS{1});
+  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "~/output/objects", rclcpp::QoS{1});
 
   // initialize debug tool
   {
