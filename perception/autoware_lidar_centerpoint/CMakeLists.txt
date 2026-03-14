@@ -53,6 +53,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
+  find_package(agnocastlib REQUIRED)
+  find_package(autoware_agnocast_wrapper REQUIRED)
+
   include_directories(
     include
     ${CUDA_INCLUDE_DIRS}
@@ -123,9 +126,22 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${PROJECT_NAME}_lib
   )
 
-  rclcpp_components_register_node(${PROJECT_NAME}_component
+  target_include_directories(${PROJECT_NAME}_component PRIVATE
+    ${agnocastlib_INCLUDE_DIRS}
+    ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+  )
+
+  ament_target_dependencies(${PROJECT_NAME}_component
+    agnocastlib
+    autoware_agnocast_wrapper
+  )
+
+  autoware_agnocast_wrapper_setup(${PROJECT_NAME}_component)
+
+  autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
     PLUGIN "autoware::lidar_centerpoint::LidarCenterPointNode"
     EXECUTABLE ${PROJECT_NAME}_node
+    AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
   )
 
   ament_export_dependencies(ament_cmake_python)

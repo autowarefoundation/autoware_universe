@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input/pointcloud" default="/sensing/lidar/pointcloud"/>
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
@@ -34,6 +35,7 @@
   </group>
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_lidar_centerpoint" exec="autoware_lidar_centerpoint_node" name="$(var node_name)" output="screen">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
       <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>

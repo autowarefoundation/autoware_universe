@@ -169,8 +169,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
       std::bind(&LidarCenterPointNode::pointCloudCallback, this, std::placeholders::_1));
-  objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/objects", rclcpp::QoS{1});
+  objects_pub_ =
+    AUTOWARE_CREATE_PUBLISHER2(autoware_perception_msgs::msg::DetectedObjects, "~/output/objects", rclcpp::QoS{1});
 
   // initialize debug tool
   {
@@ -240,15 +240,16 @@ void LidarCenterPointNode::pointCloudCallback(
     raw_objects.emplace_back(obj);
   }
 
-  autoware_perception_msgs::msg::DetectedObjects output_msg;
-  output_msg.header = input_pointcloud_msg->header;
-  output_msg.objects = iou_bev_nms_.apply(raw_objects);
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
+  output_msg->header = input_pointcloud_msg->header;
+  output_msg->objects = iou_bev_nms_.apply(raw_objects);
 
-  detection_class_remapper_.mapClasses(output_msg);
+  detection_class_remapper_.mapClasses(*output_msg);
 
   if (objects_sub_count > 0) {
-    objects_pub_->publish(output_msg);
-    published_time_publisher_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
+    const auto header_stamp = output_msg->header.stamp;
+    objects_pub_->publish(std::move(output_msg));
+    published_time_publisher_->publish_if_subscribed(objects_pub_, header_stamp);
   }
   diagnostics_centerpoint_trt_->publish(input_pointcloud_msg->header.stamp);
 
@@ -259,7 +260,7 @@ void LidarCenterPointNode::pointCloudCallback(
     const double pipeline_latency_ms =
       std::chrono::duration<double, std::milli>(
         std::chrono::nanoseconds(
-          (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
+          (this->get_clock()->now() - input_pointcloud_msg->header.stamp).nanoseconds()))
         .count();
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
