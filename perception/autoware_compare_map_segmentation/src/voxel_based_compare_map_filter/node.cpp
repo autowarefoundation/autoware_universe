@@ -78,8 +78,8 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   tf_input_frame_ = *(voxel_grid_map_loader_->tf_map_input_frame_);
   RCLCPP_INFO(this->get_logger(), "tf_map_input_frame: %s", tf_input_frame_.c_str());
 
-  agnocast_pub_output_ =
-    AUTOWARE_CREATE_PUBLISHER2(PointCloud2, "output", rclcpp::SensorDataQoS().keep_last(max_queue_size_));
+  agnocast_pub_output_ = AUTOWARE_CREATE_PUBLISHER2(
+    PointCloud2, "output", rclcpp::SensorDataQoS().keep_last(max_queue_size_));
 }
 
 void VoxelBasedCompareMapFilterComponent::checkStatus(
