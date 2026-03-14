@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 find_package(OpenMP)
 
@@ -36,7 +35,6 @@ add_library(${PROJECT_NAME} SHARED
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
   ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
@@ -48,7 +46,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
-  agnocastlib
   autoware_agnocast_wrapper
   autoware_qos_utils
   grid_map_pcl
