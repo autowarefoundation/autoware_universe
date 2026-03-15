@@ -59,7 +59,10 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   max_object_size_ = declare_parameter<double>("max_object_size");
 
   // publisher
-  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // TODO: replace pub_ptr_ in FusionNode with agnocast_wrapper
+  agnocast_pub_ptr_ =
+      autoware::agnocast_wrapper::create_publisher<ClusterMsgType>(this, "output", rclcpp::QoS{1});
   cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }
 
@@ -208,12 +211,12 @@ void RoiPointCloudFusionNode::postprocess(
 
 void RoiPointCloudFusionNode::publish(const ClusterMsgType & output_msg)
 {
-  const auto objects_sub_count =
-    pub_ptr_->get_subscription_count() + pub_ptr_->get_intra_process_subscription_count();
+  const auto objects_sub_count = agnocast_pub_ptr_->get_subscription_count() +
+                                 agnocast_pub_ptr_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
     return;
   }
-  pub_ptr_->publish(output_msg);
+  agnocast_pub_ptr_->publish(output_msg);
 }
 }  // namespace autoware::image_projection_based_fusion
 
