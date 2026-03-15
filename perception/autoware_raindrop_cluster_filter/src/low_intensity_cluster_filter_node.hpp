@@ -18,6 +18,7 @@
 #include "autoware/detected_object_validation/utils/utils.hpp"
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
+#include <autoware/agnocast_wrapper/node.hpp>
 
 #include <Eigen/Eigen>
 #include <rclcpp/rclcpp.hpp>
@@ -43,7 +44,7 @@ private:
     const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg);
   bool isValidatedCluster(const sensor_msgs::msg::PointCloud2 & cluster);
 
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr object_pub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_pub_;
   rclcpp::Subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
     object_sub_;
 
