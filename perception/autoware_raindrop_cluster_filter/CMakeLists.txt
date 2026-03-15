@@ -34,7 +34,7 @@ autoware_agnocast_wrapper_register_node(low_intensity_cluster_filter
 )
 
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
