@@ -75,8 +75,8 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ =
-    std::make_unique<autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 }
 
 static autoware_perception_msgs::msg::ObjectClassification::_label_type get_label(
@@ -95,7 +95,8 @@ static bool label_is_vehicle(
          Label::TRAILER == label;
 }
 
-void ShapeEstimationNode::callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg)
+void ShapeEstimationNode::callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
   // Guard

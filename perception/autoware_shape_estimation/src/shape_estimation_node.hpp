@@ -24,9 +24,9 @@
 #endif
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/published_time_publisher.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -45,7 +45,8 @@ private:
   // ros
   AUTOWARE_PUBLISHER_PTR(DetectedObjectsWithFeature) pub_;
   AUTOWARE_SUBSCRIPTION_PTR(DetectedObjectsWithFeature) sub_;
-  std::unique_ptr<autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+  std::unique_ptr<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
     published_time_publisher_;
 
   // debug publisher
