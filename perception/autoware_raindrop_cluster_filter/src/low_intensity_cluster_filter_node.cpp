@@ -52,8 +52,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
   object_sub_ = this->create_subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
     "input/objects", rclcpp::QoS{1},
     std::bind(&LowIntensityClusterFilter::objectCallback, this, _1));
-  object_pub_ = autoware::agnocast_wrapper::create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-    this, "output/objects", rclcpp::QoS{1});
+  object_pub_ = autoware::agnocast_wrapper::create_publisher<
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature>(this, "output/objects", rclcpp::QoS{1});
   // initialize debug tool
   {
     using autoware_utils::DebugPublisher;
