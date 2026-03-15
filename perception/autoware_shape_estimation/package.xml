@@ -25,6 +25,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
   <depend>eigen</depend>
   <depend>libopencv-dev</depend>
   <depend>libpcl-all-dev</depend>

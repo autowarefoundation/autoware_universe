@@ -24,8 +24,8 @@
 #endif
 
 #include <autoware/agnocast_wrapper/node.hpp>
-#include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
+#include <autoware_utils_debug/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -43,15 +43,17 @@ class ShapeEstimationNode : public autoware::agnocast_wrapper::Node
 {
 private:
   // ros
-  rclcpp::Publisher<DetectedObjectsWithFeature>::SharedPtr pub_;
-  rclcpp::Subscription<DetectedObjectsWithFeature>::SharedPtr sub_;
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(DetectedObjectsWithFeature) pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(DetectedObjectsWithFeature) sub_;
+  std::unique_ptr<autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+    published_time_publisher_;
 
   // debug publisher
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    processing_time_publisher_;
 
-  void callback(const DetectedObjectsWithFeature::ConstSharedPtr input_msg);
+  void callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg);
 
   std::unique_ptr<ShapeEstimator> estimator_;
   bool use_vehicle_reference_yaw_;
