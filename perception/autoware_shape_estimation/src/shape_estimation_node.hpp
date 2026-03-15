@@ -23,6 +23,7 @@
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #endif
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -38,7 +39,7 @@ namespace autoware::shape_estimation
 
 using autoware_perception_msgs::msg::DetectedObjects;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
-class ShapeEstimationNode : public rclcpp::Node
+class ShapeEstimationNode : public autoware::agnocast_wrapper::Node
 {
 private:
   // ros
