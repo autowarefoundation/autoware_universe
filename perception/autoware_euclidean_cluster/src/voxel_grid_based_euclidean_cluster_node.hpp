@@ -16,8 +16,8 @@
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -28,21 +28,23 @@
 
 namespace autoware::euclidean_cluster
 {
-class VoxelGridBasedEuclideanClusterNode : public rclcpp::Node
+class VoxelGridBasedEuclideanClusterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit VoxelGridBasedEuclideanClusterNode(const rclcpp::NodeOptions & options);
 
 private:
-  void onPointCloud(const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
+  void onPointCloud(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_msg);
 
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr cluster_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
+  AUTOWARE_PUBLISHER_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) cluster_pub_;
+  AUTOWARE_PUBLISHER_PTR(sensor_msgs::msg::PointCloud2) debug_pub_;
 
   std::shared_ptr<VoxelGridBasedEuclideanCluster> cluster_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_publisher_;
 };
 
 }  // namespace autoware::euclidean_cluster

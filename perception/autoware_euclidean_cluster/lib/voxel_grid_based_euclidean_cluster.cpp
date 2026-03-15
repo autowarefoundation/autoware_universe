@@ -62,14 +62,14 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 }
 
 bool VoxelGridBasedEuclideanCluster::cluster(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg,
+  const sensor_msgs::msg::PointCloud2 & pointcloud_msg,
   tier4_perception_msgs::msg::DetectedObjectsWithFeature & objects)
 {
   // TODO(Saito) implement use_height is false version
   // 1) Convert ROS PointCloud2 to PCL cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
-  int point_step = pointcloud_msg->point_step;
-  pcl::fromROSMsg(*pointcloud_msg, *pointcloud);
+  int point_step = pointcloud_msg.point_step;
+  pcl::fromROSMsg(pointcloud_msg, *pointcloud);
   // 2) Voxel grid filtering
   pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
@@ -114,8 +114,8 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     for (const auto & point_idx : cluster.indices) {
       voxel_to_cluster_map[point_idx] = cluster_idx;
     }
-    temporary_cluster.height = pointcloud_msg->height;
-    temporary_cluster.fields = pointcloud_msg->fields;
+    temporary_cluster.height = pointcloud_msg.height;
+    temporary_cluster.fields = pointcloud_msg.fields;
     temporary_cluster.point_step = point_step;
     temporary_cluster.data.resize(cluster.indices.size() * point_step);
     clusters_data_size.push_back(0);
@@ -170,7 +170,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       auto & cluster_data_size = clusters_data_size.at(voxel_to_cluster_map_it->second);
       std::memcpy(
         &temporary_clusters.at(voxel_to_cluster_map_it->second).data[cluster_data_size],
-        &pointcloud_msg->data[random_index * point_step], point_step);
+        &pointcloud_msg.data[random_index * point_step], point_step);
       cluster_data_size += point_step;
       if (cluster_data_size == temporary_clusters.at(voxel_to_cluster_map_it->second).data.size()) {
         temporary_clusters.at(voxel_to_cluster_map_it->second)
@@ -192,13 +192,13 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       tier4_perception_msgs::msg::DetectedObjectWithFeature feature_object;
       feature_object.feature.cluster = cluster;
       feature_object.feature.cluster.data.resize(i_cluster_data_size);
-      feature_object.feature.cluster.header = pointcloud_msg->header;
-      feature_object.feature.cluster.is_bigendian = pointcloud_msg->is_bigendian;
-      feature_object.feature.cluster.is_dense = pointcloud_msg->is_dense;
+      feature_object.feature.cluster.header = pointcloud_msg.header;
+      feature_object.feature.cluster.is_bigendian = pointcloud_msg.is_bigendian;
+      feature_object.feature.cluster.is_dense = pointcloud_msg.is_dense;
       feature_object.feature.cluster.point_step = point_step;
-      feature_object.feature.cluster.row_step = i_cluster_data_size / pointcloud_msg->height;
+      feature_object.feature.cluster.row_step = i_cluster_data_size / pointcloud_msg.height;
       feature_object.feature.cluster.width =
-        i_cluster_data_size / point_step / pointcloud_msg->height;
+        i_cluster_data_size / point_step / pointcloud_msg.height;
 
       feature_object.object.kinematics.pose_with_covariance.pose.position =
         getCentroid(feature_object.feature.cluster);
@@ -209,7 +209,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 
       objects.feature_objects.push_back(feature_object);
     }
-    objects.header = pointcloud_msg->header;
+    objects.header = pointcloud_msg.header;
   }
 
   return true;

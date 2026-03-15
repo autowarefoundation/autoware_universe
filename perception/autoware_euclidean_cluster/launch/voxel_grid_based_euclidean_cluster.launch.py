@@ -12,17 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
 import yaml
+
+use_agnocast = os.getenv("ENABLE_AGNOCAST") == "1"
 
 
 def launch_setup(context, *args, **kwargs):
@@ -33,6 +40,76 @@ def launch_setup(context, *args, **kwargs):
 
     ns = ""
     pkg = "autoware_euclidean_cluster"
+
+    if use_agnocast:
+        ld_preload = LaunchConfiguration("ld_preload_value").perform(context)
+        container_package = LaunchConfiguration("container_package").perform(context)
+        container_executable = LaunchConfiguration("container_executable").perform(context)
+
+        use_low_height = IfCondition(LaunchConfiguration("use_low_height_cropbox")).evaluate(
+            context
+        )
+
+        euclidean_input = (
+            "low_height/pointcloud"
+            if use_low_height
+            else LaunchConfiguration("input_pointcloud").perform(context)
+        )
+
+        euclidean_cluster_node = Node(
+            package=pkg,
+            executable="voxel_grid_based_euclidean_cluster_node",
+            name="euclidean_cluster",
+            namespace=ns,
+            remappings=[
+                ("input", euclidean_input),
+                ("output", LaunchConfiguration("output_clusters")),
+            ],
+            parameters=[load_composable_node_param("voxel_grid_based_euclidean_param_path")],
+            output="screen",
+            additional_env={"LD_PRELOAD": ld_preload},
+        )
+
+        actions = [euclidean_cluster_node]
+
+        if use_low_height:
+            low_height_cropbox_filter_component = ComposableNode(
+                package="autoware_pointcloud_preprocessor",
+                namespace=ns,
+                plugin="autoware::pointcloud_preprocessor::CropBoxFilterComponent",
+                name="low_height_crop_box_filter",
+                remappings=[
+                    ("input", LaunchConfiguration("input_pointcloud")),
+                    ("output", "low_height/pointcloud"),
+                ],
+                parameters=[load_composable_node_param("voxel_grid_based_euclidean_param_path")],
+            )
+
+            container = ComposableNodeContainer(
+                name="euclidean_cluster_container",
+                package=container_package,
+                namespace=ns,
+                executable=container_executable,
+                composable_node_descriptions=[],
+                output="screen",
+                condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
+            )
+
+            target_container = (
+                LaunchConfiguration("pointcloud_container_name")
+                if IfCondition(LaunchConfiguration("use_pointcloud_container")).evaluate(context)
+                else container
+            )
+
+            actions.append(container)
+            actions.append(
+                LoadComposableNodes(
+                    composable_node_descriptions=[low_height_cropbox_filter_component],
+                    target_container=target_container,
+                )
+            )
+
+        return actions
 
     low_height_cropbox_filter_component = ComposableNode(
         package="autoware_pointcloud_preprocessor",
@@ -113,6 +190,14 @@ def generate_launch_description():
 
     return launch.LaunchDescription(
         [
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [
+                        FindPackageShare("autoware_agnocast_wrapper"),
+                        "/launch/agnocast_env.launch.py",
+                    ]
+                ),
+            ),
             add_launch_arg("input_pointcloud", "/perception/obstacle_segmentation/pointcloud"),
             add_launch_arg("input_map", "/map/pointcloud_map"),
             add_launch_arg("output_clusters", "clusters"),

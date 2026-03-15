@@ -45,7 +45,7 @@ public:
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) = 0;
 
   virtual bool cluster(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_msg,
+    const sensor_msgs::msg::PointCloud2 & input_msg,
     tier4_perception_msgs::msg::DetectedObjectsWithFeature & output_clusters) = 0;
 
 protected:

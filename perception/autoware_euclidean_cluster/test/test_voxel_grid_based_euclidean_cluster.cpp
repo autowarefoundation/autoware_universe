@@ -123,7 +123,7 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase1)
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
-  if (cluster_->cluster(pointcloud_msg, output)) {
+  if (cluster_->cluster(*pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
     std::cout << "cluster failed" << std::endl;
@@ -161,7 +161,7 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
-  if (cluster_->cluster(pointcloud_msg, output)) {
+  if (cluster_->cluster(*pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
     std::cout << "cluster failed" << std::endl;
@@ -196,7 +196,7 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
-  if (cluster_->cluster(pointcloud_msg, output)) {
+  if (cluster_->cluster(*pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
     std::cout << "cluster failed" << std::endl;
@@ -233,7 +233,7 @@ TEST(VoxelGridBasedEuclideanClusterTest, EmptyPointCloud)
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
 
   // Should not crash and should return empty output
-  EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
+  EXPECT_TRUE(cluster_->cluster(*pointcloud_msg, output));
   EXPECT_EQ(output.feature_objects.size(), 0);
 }
 
