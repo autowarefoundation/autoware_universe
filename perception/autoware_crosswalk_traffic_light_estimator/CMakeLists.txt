@@ -39,6 +39,13 @@ if(BUILD_TESTING)
   target_link_libraries(test_flashing_detection
     autoware_crosswalk_traffic_light_estimator
   )
+
+  ament_add_gtest(test_crosswalk_traffic_light_estimator
+    test/test_crosswalk_traffic_light_estimator.cpp
+  )
+  target_link_libraries(test_crosswalk_traffic_light_estimator
+    autoware_crosswalk_traffic_light_estimator
+  )
 endif()
 
 #############
