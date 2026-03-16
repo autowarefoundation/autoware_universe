@@ -153,10 +153,9 @@ private:
 
   /**
    * @brief Check if an offset update should be published
-   * @param result The latest steer offset estimation result
-   * @return true if the offset should be published, false otherwise
+   * @return true if offset update should be published, false otherwise
    */
-  bool is_publish_update(const SteerOffsetEstimationUpdated & result) const;
+  bool is_publish_update() const;
 
   /**
    * @brief Log value of most recent offset update
