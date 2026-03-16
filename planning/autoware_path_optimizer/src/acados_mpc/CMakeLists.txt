@@ -67,7 +67,7 @@ target_include_directories(acados_interface PUBLIC
   ${ACADOS_SOURCE_DIR}/include/hpipm/include
 )
 
-target_link_libraries(acados_interface PRIVATE acados)
+target_link_libraries(acados_interface PUBLIC acados)
 
 # 5. Suppress warnings on generated C code
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
