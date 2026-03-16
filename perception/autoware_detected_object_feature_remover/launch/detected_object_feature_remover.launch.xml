@@ -1,8 +1,8 @@
 <launch>
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
-  <arg name="input" default="~/input"/>
-  <arg name="output" default="~/output"/>
+  <arg name="input"/>
+  <arg name="output"/>
   <arg name="node_name" default="detected_object_feature_remover"/>
   <arg name="run_convex_hull_conversion" default="false"/>
 
