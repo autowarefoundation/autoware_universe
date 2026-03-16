@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(autoware_command_mode_switcher)
 
 find_package(autoware_cmake REQUIRED)
+find_package(agnocast_components REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -10,12 +11,22 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/plugin/command_plugin.cpp"
   "src/command_mode_switcher.cpp"
 )
-target_include_directories(${PROJECT_NAME} PRIVATE "src")
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "src"
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::command_mode_switcher::CommandModeSwitcher"
   EXECUTABLE "command_mode_switcher_node"
-  EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)
