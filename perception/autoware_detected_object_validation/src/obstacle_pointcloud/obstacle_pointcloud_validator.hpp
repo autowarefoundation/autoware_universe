@@ -163,8 +163,8 @@ private:
 
 private:
   void onObjectsAndObstaclePointCloud(
-    AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) input_objects,
-    AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) input_objects,
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud);
 };
 
 }  // namespace obstacle_pointcloud

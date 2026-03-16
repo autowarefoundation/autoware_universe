@@ -296,9 +296,9 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
 
   sync_.registerCallback(
     [this](
-      const AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) &
+      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) &
         objects,
-      const AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) & pointcloud) {
+      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & pointcloud) {
       this->onObjectsAndObstaclePointCloud(objects, pointcloud);
     });
   if (using_2d_validator_) {
@@ -317,8 +317,8 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
-  AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) input_objects,
-  AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) input_objects,
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud)
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stopwatch;
   autoware_perception_msgs::msg::DetectedObjects output, removed_objects;
