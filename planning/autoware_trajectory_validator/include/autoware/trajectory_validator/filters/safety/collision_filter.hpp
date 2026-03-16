@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_
-#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__COLLISION_FILTER_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__COLLISION_FILTER_HPP_
 
-#include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+#include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <rclcpp/duration.hpp>
 
@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
 
 // Parameters for CollisionFilter
@@ -36,10 +36,10 @@ struct CollisionParams
   double min_ttc = 2.0;         // seconds - minimum acceptable time to collision
 };
 
-class CollisionFilter : public SafetyFilterInterface
+class CollisionFilter : public ValidatorInterface
 {
 public:
-  CollisionFilter() : SafetyFilterInterface("CollisionFilter") {}
+  CollisionFilter() : ValidatorInterface("CollisionFilter") {}
 
   tl::expected<void, std::string> is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) final;
@@ -71,6 +71,6 @@ private:
     double time_from_start) const;
 };
 
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
-#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__COLLISION_FILTER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__COLLISION_FILTER_HPP_

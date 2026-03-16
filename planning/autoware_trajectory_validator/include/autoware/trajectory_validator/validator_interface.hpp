@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__SAFETY_FILTER_INTERFACE_HPP_
-#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__SAFETY_FILTER_INTERFACE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_
 
-#include "autoware/trajectory_safety_filter/filter_context.hpp"
+#include "autoware/trajectory_validator/filter_context.hpp"
 
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -29,22 +29,22 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
 
-class SafetyFilterInterface
+class ValidatorInterface
 {
 public:
-  explicit SafetyFilterInterface(std::string name) : name_(std::move(name)) {}
+  explicit ValidatorInterface(std::string name) : name_(std::move(name)) {}
 
-  virtual ~SafetyFilterInterface() = default;
-  SafetyFilterInterface(const SafetyFilterInterface &) = delete;
-  SafetyFilterInterface & operator=(const SafetyFilterInterface &) = delete;
-  SafetyFilterInterface(SafetyFilterInterface &&) = delete;
-  SafetyFilterInterface & operator=(SafetyFilterInterface &&) = delete;
+  virtual ~ValidatorInterface() = default;
+  ValidatorInterface(const ValidatorInterface &) = delete;
+  ValidatorInterface & operator=(const ValidatorInterface &) = delete;
+  ValidatorInterface(ValidatorInterface &&) = delete;
+  ValidatorInterface & operator=(ValidatorInterface &&) = delete;
 
   // Main filter method with context for plugin-specific data
   virtual tl::expected<void, std::string> is_feasible(
@@ -66,7 +66,7 @@ protected:
   std::string name_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
 };
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
 // NOLINTNEXTLINE
-#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__SAFETY_FILTER_INTERFACE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_

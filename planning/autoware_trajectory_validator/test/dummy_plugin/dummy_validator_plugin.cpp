@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+#include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <pluginlib/class_list_macros.hpp>
 
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
-class DummyFilter : public SafetyFilterInterface
+class DummyFilter : public ValidatorInterface
 {
   struct DummyFilterParam
   {
@@ -29,7 +29,7 @@ class DummyFilter : public SafetyFilterInterface
   };
 
 public:
-  DummyFilter() : SafetyFilterInterface("DummyFilter") {}
+  DummyFilter() : ValidatorInterface("DummyFilter") {}
 
   tl::expected<void, std::string> is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & /*context*/) final
@@ -62,8 +62,8 @@ public:
 private:
   DummyFilterParam params_;
 };
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_safety_filter::plugin::DummyFilter,
-  autoware::trajectory_safety_filter::plugin::SafetyFilterInterface)
+  autoware::trajectory_validator::plugin::DummyFilter,
+  autoware::trajectory_validator::plugin::ValidatorInterface)

@@ -1,4 +1,4 @@
-safety_filter:
+validator:
   filter_names:
     type: string_array
     default_value: []

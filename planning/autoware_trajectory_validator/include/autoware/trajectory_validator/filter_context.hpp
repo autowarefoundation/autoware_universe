@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTER_CONTEXT_HPP_
-#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTER_CONTEXT_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__FILTER_CONTEXT_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__FILTER_CONTEXT_HPP_
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -29,7 +29,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace autoware::trajectory_safety_filter
+namespace autoware::trajectory_validator
 {
 
 // Base context that all filters can access
@@ -40,6 +40,6 @@ struct FilterContext
   std::shared_ptr<lanelet::LaneletMap> lanelet_map;
   autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr predicted_objects;
 };
-}  // namespace autoware::trajectory_safety_filter
+}  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTER_CONTEXT_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTER_CONTEXT_HPP_

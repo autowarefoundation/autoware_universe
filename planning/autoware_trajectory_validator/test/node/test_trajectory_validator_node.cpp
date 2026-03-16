@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/trajectory_safety_filter_node.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_node.hpp"
 
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -23,10 +23,10 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter
+namespace autoware::trajectory_validator
 {
 
-class TrajectorySafetyFilterNodeTest : public ::testing::Test
+class TrajectoryValidatorNodeTest : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -34,7 +34,7 @@ protected:
     rclcpp::init(0, nullptr);
     node_options_.append_parameter_override(
       "filter_names",
-      std::vector<std::string>{"autoware::trajectory_safety_filter::plugin::DummyFilter"});
+      std::vector<std::string>{"autoware::trajectory_validator::plugin::DummyFilter"});
     node_options_.append_parameter_override("dummy.dummy_param", 0.0);
 
     const auto test_pkg_share = ament_index_cpp::get_package_share_directory("autoware_test_utils");
@@ -43,25 +43,25 @@ protected:
 
     autoware::test_utils::updateNodeOptions(node_options_, {vehicle_info_param_path});
 
-    node_under_test_ = std::make_shared<TrajectorySafetyFilter>(node_options_);
+    node_under_test_ = std::make_shared<TrajectoryValidator>(node_options_);
     test_node_ = std::make_shared<rclcpp::Node>("test_helper_node");
 
     map_pub_ = test_node_->create_publisher<autoware_map_msgs::msg::LaneletMapBin>(
-      "/trajectory_safety_filter_node/input/lanelet2_map", rclcpp::QoS{1}.transient_local());
+      "/trajectory_validator_node/input/lanelet2_map", rclcpp::QoS{1}.transient_local());
     odom_pub_ = test_node_->create_publisher<nav_msgs::msg::Odometry>(
-      "/trajectory_safety_filter_node/input/odometry", 1);
+      "/trajectory_validator_node/input/odometry", 1);
     accel_pub_ = test_node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "/trajectory_safety_filter_node/input/acceleration", 1);
+      "/trajectory_validator_node/input/acceleration", 1);
     obj_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::PredictedObjects>(
-      "/trajectory_safety_filter_node/input/objects", 1);
+      "/trajectory_validator_node/input/objects", 1);
 
     traj_pub_ =
       test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_safety_filter_node/input/trajectories", 1);
+        "/trajectory_validator_node/input/trajectories", 1);
 
     output_sub_ =
       test_node_->create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_safety_filter_node/output/trajectories", 1,
+        "/trajectory_validator_node/output/trajectories", 1,
         [this](
           const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg) {
           last_output_ = msg;
@@ -126,7 +126,7 @@ protected:
 
   rclcpp::NodeOptions node_options_;
   rclcpp::Node::SharedPtr test_node_;
-  std::shared_ptr<TrajectorySafetyFilter> node_under_test_;
+  std::shared_ptr<TrajectoryValidator> node_under_test_;
 
   rclcpp::Publisher<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
@@ -140,7 +140,7 @@ protected:
   autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr last_output_;
 };
 
-TEST_F(TrajectorySafetyFilterNodeTest, FiltersTrajectoriesViaPlugin)
+TEST_F(TrajectoryValidatorNodeTest, FiltersTrajectoriesViaPlugin)
 {
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
@@ -160,7 +160,7 @@ TEST_F(TrajectorySafetyFilterNodeTest, FiltersTrajectoriesViaPlugin)
   EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
 }
 
-TEST_F(TrajectorySafetyFilterNodeTest, UpdateParametersDynamically)
+TEST_F(TrajectoryValidatorNodeTest, UpdateParametersDynamically)
 {
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
@@ -183,7 +183,7 @@ TEST_F(TrajectorySafetyFilterNodeTest, UpdateParametersDynamically)
   EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
 }
 
-TEST_F(TrajectorySafetyFilterNodeTest, HandlesPluginRejection)
+TEST_F(TrajectoryValidatorNodeTest, HandlesPluginRejection)
 {
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
@@ -196,4 +196,4 @@ TEST_F(TrajectorySafetyFilterNodeTest, HandlesPluginRejection)
   ASSERT_TRUE(spin_until([this] { return last_output_ != nullptr; }));
   EXPECT_EQ(last_output_->candidate_trajectories.size(), 0u);
 }
-}  // namespace autoware::trajectory_safety_filter
+}  // namespace autoware::trajectory_validator

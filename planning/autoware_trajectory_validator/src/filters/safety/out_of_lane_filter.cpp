@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/filters/out_of_lane_filter.hpp"
+#include "autoware/trajectory_validator/filters/safety/out_of_lane_filter.hpp"
 
 #include <rclcpp/duration.hpp>
 
@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
 
 namespace
@@ -60,7 +60,7 @@ autoware_internal_planning_msgs::msg::PathWithLaneId convert_to_path_with_lane_i
 }
 }  // namespace
 
-OutOfLaneFilter::OutOfLaneFilter() : SafetyFilterInterface("OutOfLaneFilter")
+OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("OutOfLaneFilter")
 {
   // BoundaryDepartureChecker will be initialized when vehicle_info is set
 }
@@ -109,9 +109,9 @@ tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
   return {};
 }
 
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_safety_filter::plugin::OutOfLaneFilter,
-  autoware::trajectory_safety_filter::plugin::SafetyFilterInterface)
+  autoware::trajectory_validator::plugin::OutOfLaneFilter,
+  autoware::trajectory_validator::plugin::ValidatorInterface)

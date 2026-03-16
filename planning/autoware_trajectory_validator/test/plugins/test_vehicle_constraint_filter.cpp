@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/filters/vehicle_constraint_filter.hpp"
+#include "autoware/trajectory_validator/filters/safety/vehicle_constraint_filter.hpp"
 
 #include <gtest/gtest.h>
 
@@ -36,7 +36,7 @@ autoware_planning_msgs::msg::TrajectoryPoint create_trajectory_point(
 }
 }  // namespace
 
-namespace autoware::trajectory_safety_filter::plugin::testing
+namespace autoware::trajectory_validator::plugin::testing
 {
 TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
 {
@@ -308,4 +308,4 @@ TEST(IsSteeringRateOkTest, FalseWhenAnySteeringRateAboveMax)
 
   EXPECT_FALSE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
 }
-}  // namespace autoware::trajectory_safety_filter::plugin::testing
+}  // namespace autoware::trajectory_validator::plugin::testing

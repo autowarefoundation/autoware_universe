@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/filters/collision_filter.hpp"
+#include "autoware/trajectory_validator/filters/safety/collision_filter.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -27,7 +27,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
 
 namespace
@@ -283,9 +283,9 @@ void CollisionFilter::update_parameters(const std::vector<rclcpp::Parameter> & p
   update_param<double>(parameters, "collision.time", params_.max_check_time);
   update_param<double>(parameters, "collision.min_value", params_.min_ttc);
 }
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_safety_filter::plugin::CollisionFilter,
-  autoware::trajectory_safety_filter::plugin::SafetyFilterInterface)
+  autoware::trajectory_validator::plugin::CollisionFilter,
+  autoware::trajectory_validator::plugin::ValidatorInterface)

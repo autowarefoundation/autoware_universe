@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
-#define AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__OUT_OF_LANE_FILTER_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__OUT_OF_LANE_FILTER_HPP_
 
-#include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+#include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_safety_filter::plugin
+namespace autoware::trajectory_validator::plugin
 {
 
 // Parameters for OutOfLaneFilter
@@ -38,7 +38,7 @@ struct OutOfLaneParams
   double min_value = 0.0;       // meters - minimum distance to lane boundary
 };
 
-class OutOfLaneFilter : public SafetyFilterInterface
+class OutOfLaneFilter : public ValidatorInterface
 {
 public:
   OutOfLaneFilter();
@@ -55,6 +55,6 @@ private:
   std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
     boundary_departure_checker_;
 };
-}  // namespace autoware::trajectory_safety_filter::plugin
+}  // namespace autoware::trajectory_validator::plugin
 
-#endif  // AUTOWARE__TRAJECTORY_SAFETY_FILTER__FILTERS__OUT_OF_LANE_FILTER_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__OUT_OF_LANE_FILTER_HPP_

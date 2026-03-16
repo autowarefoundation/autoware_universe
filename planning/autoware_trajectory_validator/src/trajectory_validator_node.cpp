@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_safety_filter/trajectory_safety_filter_node.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_node.hpp"
 
-#include "autoware/trajectory_safety_filter/filter_context.hpp"
-#include "autoware/trajectory_safety_filter/safety_filter_interface.hpp"
+#include "autoware/trajectory_validator/filter_context.hpp"
+#include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware_utils_uuid/uuid_helper.hpp>
 
@@ -61,15 +61,14 @@ bool has_trajectory_from_generator(
 }
 }  // namespace
 
-namespace autoware::trajectory_safety_filter
+namespace autoware::trajectory_validator
 {
 
-TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & options)
-: Node{"trajectory_safety_filter_node", options},
-  listener_{std::make_unique<safety_filter::ParamListener>(get_node_parameters_interface())},
+TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
+: Node{"trajectory_validator_node", options},
+  listener_{std::make_unique<validator::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
-    "autoware_trajectory_safety_filter",
-    "autoware::trajectory_safety_filter::plugin::SafetyFilterInterface"),
+    "autoware_trajectory_validator", "autoware::trajectory_validator::plugin::ValidatorInterface"),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   const auto filters = listener_->get_params().filter_names;
@@ -79,11 +78,11 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
 
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&TrajectorySafetyFilter::map_callback, this, std::placeholders::_1));
+    std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
 
   sub_trajectories_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories", 1,
-    std::bind(&TrajectorySafetyFilter::process, this, std::placeholders::_1));
+    std::bind(&TrajectoryValidator::process, this, std::placeholders::_1));
 
   pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
 
@@ -93,10 +92,10 @@ TrajectorySafetyFilter::TrajectorySafetyFilter(const rclcpp::NodeOptions & optio
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&TrajectorySafetyFilter::on_parameter, this, std::placeholders::_1));
+    std::bind(&TrajectoryValidator::on_parameter, this, std::placeholders::_1));
 }
 
-void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -159,7 +158,7 @@ void TrajectorySafetyFilter::process(const CandidateTrajectories::ConstSharedPtr
   pub_trajectories_->publish(*filtered_msg);
 }
 
-void TrajectorySafetyFilter::map_callback(const LaneletMapBin::ConstSharedPtr msg)
+void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -167,7 +166,7 @@ void TrajectorySafetyFilter::map_callback(const LaneletMapBin::ConstSharedPtr ms
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrajectorySafetyFilter::load_metric(const std::string & name)
+void TrajectoryValidator::load_metric(const std::string & name)
 {
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
@@ -188,19 +187,18 @@ void TrajectorySafetyFilter::load_metric(const std::string & name)
       get_logger(), "The scene plugin '" << name << "' is loaded and initialized.");
   } catch (const pluginlib::CreateClassException & e) {
     RCLCPP_ERROR_STREAM(
-      get_logger(),
-      "[safety_filter] createSharedInstance failed for '" << name << "': " << e.what());
+      get_logger(), "[validator] createSharedInstance failed for '" << name << "': " << e.what());
   } catch (const std::exception & e) {
     RCLCPP_ERROR_STREAM(
-      get_logger(), "[safety_filter] unexpected exception for '" << name << "': " << e.what());
+      get_logger(), "[validator] unexpected exception for '" << name << "': " << e.what());
   }
 }
 
-void TrajectorySafetyFilter::unload_metric(const std::string & name)
+void TrajectoryValidator::unload_metric(const std::string & name)
 {
   auto it = std::remove_if(
     plugins_.begin(), plugins_.end(),
-    [&](const std::shared_ptr<plugin::SafetyFilterInterface> & plugin) {
+    [&](const std::shared_ptr<plugin::ValidatorInterface> & plugin) {
       return plugin->get_name() == name;
     });
 
@@ -230,7 +228,7 @@ void TrajectorySafetyFilter::update_diagnostic(const CandidateTrajectories & fil
   diagnostics_interface_.publish(this->get_clock()->now());
 }
 
-rcl_interfaces::msg::SetParametersResult TrajectorySafetyFilter::on_parameter(
+rcl_interfaces::msg::SetParametersResult TrajectoryValidator::on_parameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
   rcl_interfaces::msg::SetParametersResult result;
@@ -250,7 +248,7 @@ rcl_interfaces::msg::SetParametersResult TrajectorySafetyFilter::on_parameter(
 
   return result;
 }
-}  // namespace autoware::trajectory_safety_filter
+}  // namespace autoware::trajectory_validator
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::trajectory_safety_filter::TrajectorySafetyFilter)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::trajectory_validator::TrajectoryValidator)
