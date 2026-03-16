@@ -15,7 +15,6 @@
 #include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
