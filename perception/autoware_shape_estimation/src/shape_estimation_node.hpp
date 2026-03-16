@@ -23,10 +23,10 @@
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #endif
 
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
-#include <autoware_utils_debug/debug_publisher.hpp>
-#include <autoware_utils_debug/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -45,14 +45,11 @@ private:
   // ros
   AUTOWARE_PUBLISHER_PTR(DetectedObjectsWithFeature) pub_;
   AUTOWARE_SUBSCRIPTION_PTR(DetectedObjectsWithFeature) sub_;
-  std::unique_ptr<
-    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
-    published_time_publisher_;
+  std::unique_ptr<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>> published_time_publisher_;
 
   // debug publisher
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
-    processing_time_publisher_;
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>> processing_time_publisher_;
 
   void callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg);
 
