@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_detected_object_feature_remover)
 
 find_package(autoware_cmake REQUIRED)
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
