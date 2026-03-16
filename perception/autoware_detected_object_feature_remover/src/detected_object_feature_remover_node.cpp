@@ -25,11 +25,12 @@ DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOpt
 {
   pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
   AUTOWARE_SUBSCRIPTION_OPTIONS options;
-  sub_ = AUTOWARE_CREATE_SUBSCRIPTION(DetectedObjectsWithFeature,
-    "~/input", 1,
+  sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    DetectedObjectsWithFeature, "~/input", 1,
     [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input) {
       this->objectCallback(input);
-    }, options);
+    },
+    options);
   convert_params_.run_convex_hull_conversion =
     this->declare_parameter<bool>("run_convex_hull_conversion", false);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
