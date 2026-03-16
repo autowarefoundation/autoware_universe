@@ -211,7 +211,7 @@ void TrajectoryValidator::unload_metric(const std::string & name)
   }
 }
 
-void TrajectorySafetyFilter::update_diagnostic(const CandidateTrajectories & filtered_trajectories)
+void TrajectoryValidator::update_diagnostic(const CandidateTrajectories & filtered_trajectories)
 {
   const auto uuid_to_name_map = get_generator_uuid_to_name_map(filtered_trajectories);
   if (filtered_trajectories.candidate_trajectories.empty()) {

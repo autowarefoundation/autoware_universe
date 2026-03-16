@@ -31,9 +31,9 @@ rclcpp_components_register_node(${PROJECT_NAME}
 )
 
 ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
-  src/filters/out_of_lane_filter.cpp
-  src/filters/collision_filter.cpp
-  src/filters/vehicle_constraint_filter.cpp
+  src/filters/safety/out_of_lane_filter.cpp
+  src/filters/safety/collision_filter.cpp
+  src/filters/safety/vehicle_constraint_filter.cpp
 )
 
 target_link_libraries(autoware_trajectory_validator_plugins
