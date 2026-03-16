@@ -14,7 +14,9 @@
 
 #include "autoware/calibration_status_classifier/calibration_status_classifier_node.hpp"
 
+#include "autoware/calibration_status_classifier/calibration_status_classifier_filters.hpp"
 #include "autoware/calibration_status_classifier/camera_lidar_info_collector.hpp"
+#include "autoware/calibration_status_classifier/filter.hpp"
 #include "autoware/calibration_status_classifier/ros_utils.hpp"
 
 #include <rclcpp/qos.hpp>
@@ -40,10 +42,7 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
   const rclcpp::NodeOptions & options)
 : rclcpp::Node("calibration_status_classifier", options),
   tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_),
-  current_velocity_(0.0),
-  last_velocity_update_(this->get_clock()->now()),
-  last_objects_update_(this->get_clock()->now())
+  tf_listener_(tf_buffer_)
 {
   // Core library for calibration status
   const CalibrationStatusClassifierConfig calibration_status_classifier_config(
@@ -61,22 +60,60 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
   runtime_mode_ = string_to_runtime_mode(this->declare_parameter<std::string>("runtime_mode"));
   period_ = this->declare_parameter<double>("period");
   queue_size_ = this->declare_parameter<int64_t>("queue_size");
-  miscalibration_confidence_threshold_ =
-    this->declare_parameter<double>("miscalibration_confidence_threshold");
 
-  // Prerequisite configuration for calibration check
-  check_velocity_ = this->declare_parameter<bool>("prerequisite.check_velocity");
-  velocity_source_ =
-    string_to_velocity_source(this->declare_parameter<std::string>("prerequisite.velocity_source"));
-  velocity_threshold_ = this->declare_parameter<double>("prerequisite.velocity_threshold");
-  if (check_velocity_) {
-    setup_velocity_source_interface();
+  // Prerequisite filter configuration
+  const auto linear_velocity_enabled =
+    this->declare_parameter<bool>("prerequisite.linear_velocity_check.enabled");
+  const auto linear_velocity_source_str =
+    this->declare_parameter<std::string>("prerequisite.linear_velocity_check.source");
+  const auto linear_velocity_threshold =
+    this->declare_parameter<double>("prerequisite.linear_velocity_check.threshold");
+  const auto linear_velocity_timeout =
+    this->declare_parameter<double>("prerequisite.linear_velocity_check.timeout");
+
+  const auto angular_velocity_enabled =
+    this->declare_parameter<bool>("prerequisite.angular_velocity_check.enabled");
+  const auto angular_velocity_source_str =
+    this->declare_parameter<std::string>("prerequisite.angular_velocity_check.source");
+  const auto angular_velocity_threshold =
+    this->declare_parameter<double>("prerequisite.angular_velocity_check.threshold");
+  const auto angular_velocity_timeout =
+    this->declare_parameter<double>("prerequisite.angular_velocity_check.timeout");
+
+  const auto objects_enabled = this->declare_parameter<bool>("prerequisite.objects_check.enabled");
+  const auto objects_source_str =
+    this->declare_parameter<std::string>("prerequisite.objects_check.source");
+  const auto objects_threshold =
+    static_cast<size_t>(this->declare_parameter<int64_t>("prerequisite.objects_check.threshold"));
+  const auto objects_timeout =
+    this->declare_parameter<double>("prerequisite.objects_check.timeout");
+
+  std::vector<std::unique_ptr<Filter>> filters;
+  if (linear_velocity_enabled) {
+    filters.push_back(
+      std::make_unique<LinearVelocityFilter>(linear_velocity_threshold, linear_velocity_timeout));
   }
-  check_objects_ = this->declare_parameter<bool>("prerequisite.check_objects");
-  objects_limit_ =
-    static_cast<std::size_t>(this->declare_parameter<std::int64_t>("prerequisite.objects_limit"));
-  if (check_objects_) {
-    setup_object_detection_interface();
+  if (angular_velocity_enabled) {
+    filters.push_back(
+      std::make_unique<AngularVelocityFilter>(
+        angular_velocity_threshold, angular_velocity_timeout));
+  }
+  if (objects_enabled) {
+    filters.push_back(std::make_unique<ObjectsFilter>(objects_threshold, objects_timeout));
+  }
+  filters_ = CalibrationStatusClassifierFilters(std::move(filters));
+
+  // Setup subscribers
+  if (linear_velocity_enabled) {
+    setup_linear_velocity_source_interface(
+      string_to_linear_velocity_source(linear_velocity_source_str));
+  }
+  if (angular_velocity_enabled) {
+    setup_angular_velocity_source_interface(
+      string_to_angular_velocity_source(angular_velocity_source_str));
+  }
+  if (objects_enabled) {
+    setup_object_detection_interface(string_to_objects_source(objects_source_str));
   }
 
   // Input configuration
@@ -84,6 +121,7 @@ CalibrationStatusClassifierNode::CalibrationStatusClassifierNode(
     this->declare_parameter<std::vector<std::string>>("input.cloud_topics"),
     this->declare_parameter<std::vector<std::string>>("input.image_topics"),
     this->declare_parameter<std::vector<double>>("input.approx_deltas"),
+    this->declare_parameter<std::vector<double>>("input.miscalibration_confidence_thresholds"),
     this->declare_parameter<std::vector<bool>>("input.already_rectified"));
 
   auto camera_lidar_info_collector =
@@ -116,50 +154,130 @@ void CalibrationStatusClassifierNode::setup_runtime_mode_interface()
   }
 }
 
-void CalibrationStatusClassifierNode::setup_velocity_source_interface()
+void CalibrationStatusClassifierNode::setup_linear_velocity_source_interface(
+  LinearVelocitySource source)
 {
-  switch (velocity_source_) {
-    case VelocitySource::TWIST:
-      twist_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(&CalibrationStatusClassifierNode::twist_callback, this, std::placeholders::_1));
+  const std::string topic = "~/input/linear_velocity";
+  switch (source) {
+    case LinearVelocitySource::TWIST_STAMPED:
+      linear_velocity_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+        topic, rclcpp::SensorDataQoS(),
+        [this](const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
+          filters_.update<LinearVelocityFilter>(
+            LinearVelocityInfo{msg->twist.linear.x, msg->twist.linear.y, msg->twist.linear.z},
+            rclcpp::Time(msg->header.stamp).seconds());
+        });
       break;
-    case VelocitySource::TWIST_STAMPED:
-      twist_stamped_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
-        "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(
-          &CalibrationStatusClassifierNode::twist_stamped_callback, this, std::placeholders::_1));
-      break;
-    case VelocitySource::TWIST_WITH_COV:
-      twist_with_cov_sub_ = this->create_subscription<geometry_msgs::msg::TwistWithCovariance>(
-        "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(
-          &CalibrationStatusClassifierNode::twist_with_cov_callback, this, std::placeholders::_1));
-      break;
-    case VelocitySource::TWIST_WITH_COV_STAMPED:
-      twist_with_cov_stamped_sub_ =
+    case LinearVelocitySource::TWIST_WITH_COV_STAMPED:
+      linear_velocity_sub_ =
         this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
-          "~/input/velocity", rclcpp::SensorDataQoS(),
-          std::bind(
-            &CalibrationStatusClassifierNode::twist_with_cov_stamped_callback, this,
-            std::placeholders::_1));
+          topic, rclcpp::SensorDataQoS(),
+          [this](const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg) {
+            filters_.update<LinearVelocityFilter>(
+              LinearVelocityInfo{
+                msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z},
+              rclcpp::Time(msg->header.stamp).seconds());
+          });
       break;
-    case VelocitySource::ODOMETRY:
-      odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "~/input/velocity", rclcpp::SensorDataQoS(),
-        std::bind(
-          &CalibrationStatusClassifierNode::odometry_callback, this, std::placeholders::_1));
+    case LinearVelocitySource::ODOMETRY:
+      linear_velocity_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        topic, rclcpp::SensorDataQoS(), [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
+          filters_.update<LinearVelocityFilter>(
+            LinearVelocityInfo{
+              msg->twist.twist.linear.x, msg->twist.twist.linear.y, msg->twist.twist.linear.z},
+            rclcpp::Time(msg->header.stamp).seconds());
+        });
       break;
     default:
-      throw std::invalid_argument("Unsupported velocity source");
+      throw std::invalid_argument("Unsupported linear velocity source");
   }
 }
 
-void CalibrationStatusClassifierNode::setup_object_detection_interface()
+void CalibrationStatusClassifierNode::setup_angular_velocity_source_interface(
+  AngularVelocitySource source)
 {
-  objects_sub_ = this->create_subscription<autoware_perception_msgs::msg::PredictedObjects>(
-    "~/input/objects", rclcpp::SensorDataQoS(),
-    std::bind(&CalibrationStatusClassifierNode::objects_callback, this, std::placeholders::_1));
+  const std::string topic = "~/input/angular_velocity";
+  switch (source) {
+    case AngularVelocitySource::TWIST_STAMPED:
+      angular_velocity_sub_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+        topic, rclcpp::SensorDataQoS(),
+        [this](const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
+          filters_.update<AngularVelocityFilter>(
+            AngularVelocityInfo{msg->twist.angular.x, msg->twist.angular.y, msg->twist.angular.z},
+            rclcpp::Time(msg->header.stamp).seconds());
+        });
+      break;
+    case AngularVelocitySource::TWIST_WITH_COV_STAMPED:
+      angular_velocity_sub_ =
+        this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
+          topic, rclcpp::SensorDataQoS(),
+          [this](const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg) {
+            filters_.update<AngularVelocityFilter>(
+              AngularVelocityInfo{
+                msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z},
+              rclcpp::Time(msg->header.stamp).seconds());
+          });
+      break;
+    case AngularVelocitySource::ODOMETRY:
+      angular_velocity_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        topic, rclcpp::SensorDataQoS(), [this](const nav_msgs::msg::Odometry::SharedPtr msg) {
+          filters_.update<AngularVelocityFilter>(
+            AngularVelocityInfo{
+              msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z},
+            rclcpp::Time(msg->header.stamp).seconds());
+        });
+      break;
+    default:
+      throw std::invalid_argument("Unsupported angular velocity source");
+  }
+}
+
+void CalibrationStatusClassifierNode::setup_object_detection_interface(ObjectsSource source)
+{
+  const std::string topic = "~/input/objects";
+  switch (source) {
+    case ObjectsSource::PREDICTED_OBJECTS:
+      objects_sub_ = this->create_subscription<autoware_perception_msgs::msg::PredictedObjects>(
+        topic, rclcpp::SensorDataQoS(),
+        [this](const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg) {
+          std::vector<ObjectInfo> objects;
+          objects.reserve(msg->objects.size());
+          for (const auto & obj : msg->objects) {
+            const auto & p = obj.kinematics.initial_pose_with_covariance.pose.position;
+            objects.push_back({p.x, p.y, p.z});
+          }
+          filters_.update<ObjectsFilter>(objects, rclcpp::Time(msg->header.stamp).seconds());
+        });
+      break;
+    case ObjectsSource::TRACKED_OBJECTS:
+      objects_sub_ = this->create_subscription<autoware_perception_msgs::msg::TrackedObjects>(
+        topic, rclcpp::SensorDataQoS(),
+        [this](const autoware_perception_msgs::msg::TrackedObjects::SharedPtr msg) {
+          std::vector<ObjectInfo> objects;
+          objects.reserve(msg->objects.size());
+          for (const auto & obj : msg->objects) {
+            const auto & p = obj.kinematics.pose_with_covariance.pose.position;
+            objects.push_back({p.x, p.y, p.z});
+          }
+          filters_.update<ObjectsFilter>(objects, rclcpp::Time(msg->header.stamp).seconds());
+        });
+      break;
+    case ObjectsSource::DETECTED_OBJECTS:
+      objects_sub_ = this->create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
+        topic, rclcpp::SensorDataQoS(),
+        [this](const autoware_perception_msgs::msg::DetectedObjects::SharedPtr msg) {
+          std::vector<ObjectInfo> objects;
+          objects.reserve(msg->objects.size());
+          for (const auto & obj : msg->objects) {
+            const auto & p = obj.kinematics.pose_with_covariance.pose.position;
+            objects.push_back({p.x, p.y, p.z});
+          }
+          filters_.update<ObjectsFilter>(objects, rclcpp::Time(msg->header.stamp).seconds());
+        });
+      break;
+    default:
+      throw std::invalid_argument("Unsupported objects source");
+  }
 }
 
 void CalibrationStatusClassifierNode::setup_input_synchronization()
@@ -236,53 +354,6 @@ void CalibrationStatusClassifierNode::periodic_callback()
   }
 }
 
-void CalibrationStatusClassifierNode::twist_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
-{
-  double velocity = std::sqrt(msg->linear.x * msg->linear.x + msg->linear.y * msg->linear.y);
-  update_vehicle_velocity(velocity);
-}
-
-void CalibrationStatusClassifierNode::twist_stamped_callback(
-  const geometry_msgs::msg::TwistStamped::SharedPtr msg)
-{
-  double velocity = std::sqrt(
-    msg->twist.linear.x * msg->twist.linear.x + msg->twist.linear.y * msg->twist.linear.y);
-  update_vehicle_velocity(velocity);
-}
-
-void CalibrationStatusClassifierNode::twist_with_cov_callback(
-  const geometry_msgs::msg::TwistWithCovariance::SharedPtr msg)
-{
-  double velocity = std::sqrt(
-    msg->twist.linear.x * msg->twist.linear.x + msg->twist.linear.y * msg->twist.linear.y);
-  update_vehicle_velocity(velocity);
-}
-
-void CalibrationStatusClassifierNode::twist_with_cov_stamped_callback(
-  const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg)
-{
-  double velocity = std::sqrt(
-    msg->twist.twist.linear.x * msg->twist.twist.linear.x +
-    msg->twist.twist.linear.y * msg->twist.twist.linear.y);
-  update_vehicle_velocity(velocity);
-}
-
-void CalibrationStatusClassifierNode::odometry_callback(
-  const nav_msgs::msg::Odometry::SharedPtr msg)
-{
-  double velocity = std::sqrt(
-    msg->twist.twist.linear.x * msg->twist.twist.linear.x +
-    msg->twist.twist.linear.y * msg->twist.twist.linear.y);
-  update_vehicle_velocity(velocity);
-}
-
-void CalibrationStatusClassifierNode::objects_callback(
-  const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg)
-{
-  current_objects_count_ = msg->objects.size();
-  last_objects_update_ = this->get_clock()->now();
-}
-
 void CalibrationStatusClassifierNode::synchronized_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
   const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx)
@@ -294,36 +365,6 @@ void CalibrationStatusClassifierNode::synchronized_callback(
   if (runtime_mode_ == RuntimeMode::ACTIVE) {
     run(pair_idx);
   }
-}
-
-void CalibrationStatusClassifierNode::update_vehicle_velocity(double velocity)
-{
-  current_velocity_ = velocity;
-  last_velocity_update_ = this->get_clock()->now();
-}
-
-FilterStatus<double> CalibrationStatusClassifierNode::get_velocity_filter_status(
-  const rclcpp::Time & time_ref)
-{
-  if (!check_velocity_) {
-    return {false, 0.0, false, 0.0};
-  }
-
-  auto velocity_age = (time_ref - last_velocity_update_).seconds();
-
-  return {true, current_velocity_, current_velocity_ > velocity_threshold_, velocity_age};
-}
-
-FilterStatus<size_t> CalibrationStatusClassifierNode::get_objects_filter_status(
-  const rclcpp::Time & time_ref)
-{
-  if (!check_objects_) {
-    return {false, 0, false, 0.0};
-  }
-
-  auto objects_age = (time_ref - last_objects_update_).seconds();
-
-  return {true, current_objects_count_, current_objects_count_ > objects_limit_, objects_age};
 }
 
 bool CalibrationStatusClassifierNode::run(std::size_t pair_idx)
@@ -340,17 +381,14 @@ bool CalibrationStatusClassifierNode::run(std::size_t pair_idx)
   const auto cloud_stamp = rclcpp::Time(cloud_msg->header.stamp);
   const auto image_stamp = rclcpp::Time(image_msg->header.stamp);
   const auto common_stamp = std::max(cloud_stamp, image_stamp);
-  const auto velocity_check_status = get_velocity_filter_status(common_stamp);
-  const auto objects_check_status = get_objects_filter_status(common_stamp);
 
   InputMetadata input_metadata;
   input_metadata.cloud_stamp = cloud_stamp;
   input_metadata.image_stamp = image_stamp;
-  input_metadata.velocity_filter_status = velocity_check_status;
-  input_metadata.objects_filter_status = objects_check_status;
   input_metadata.common_stamp = common_stamp;
+  input_metadata.filters_result = filters_.evaluate(common_stamp.seconds());
 
-  if (velocity_check_status.is_threshold_met || objects_check_status.is_threshold_met) {
+  if (!input_metadata.filters_result.all_passed) {
     publish_diagnostic_status(input_metadata, pair_idx);
     return true;
   }
@@ -390,16 +428,16 @@ void CalibrationStatusClassifierNode::publish_diagnostic_status(
 {
   diagnostics_interfaces_.at(pair_idx)->clear();
   auto now = this->get_clock()->now();
+  const auto miscalibration_confidence_threshold =
+    camera_lidar_in_out_info_.at(pair_idx).miscalibration_confidence_threshold;
   auto is_calibrated =
     (result.calibration_confidence >
-     result.miscalibration_confidence + miscalibration_confidence_threshold_);
+     result.miscalibration_confidence + miscalibration_confidence_threshold);
 
-  if (
-    input_metadata.velocity_filter_status.is_threshold_met ||
-    input_metadata.objects_filter_status.is_threshold_met) {
+  if (!input_metadata.filters_result.all_passed) {
     diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::OK,
-      "Calibration check skipped due to prerequisite not met.");
+      "Calibration check skipped due to filter not passed.");
   } else if (is_calibrated) {
     diagnostics_interfaces_.at(pair_idx)->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::OK, "Calibration is valid");
@@ -419,25 +457,24 @@ void CalibrationStatusClassifierNode::publish_diagnostic_status(
   diagnostics_interfaces_.at(pair_idx)->add_key_value(
     "Point cloud and image time difference (ms)",
     std::abs((input_metadata.cloud_stamp - input_metadata.image_stamp).seconds()) * 1e3);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Is velocity check activated", input_metadata.velocity_filter_status.is_activated);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Current velocity", input_metadata.velocity_filter_status.current_state);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value("Velocity threshold", velocity_threshold_);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Is vehicle moving", input_metadata.velocity_filter_status.is_threshold_met);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Velocity age (ms)", input_metadata.velocity_filter_status.state_age * 1e3);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Is object count check activated", input_metadata.objects_filter_status.is_activated);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Current object count", input_metadata.objects_filter_status.current_state);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value("Object count threshold", objects_limit_);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Is object count limit exceeded", input_metadata.objects_filter_status.is_threshold_met);
-  diagnostics_interfaces_.at(pair_idx)->add_key_value(
-    "Object count age (ms)", input_metadata.objects_filter_status.state_age * 1e3);
+
+  // Standardized filter diagnostics
+  for (const auto & fr : input_metadata.filters_result.filter_results) {
+    diagnostics_interfaces_.at(pair_idx)->add_key_value("Is " + fr.name + " check activated", true);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value("Current " + fr.name, fr.current_value);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value(fr.name + " unit", fr.unit);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value(fr.name + " threshold", fr.threshold);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value(
+      "Is " + fr.name + " threshold exceeded", fr.is_threshold_exceeded);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value("Is " + fr.name + " passed", fr.is_passed);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value(fr.name + " timeout (s)", fr.timeout_sec);
+    diagnostics_interfaces_.at(pair_idx)->add_key_value(fr.name + " age (ms)", fr.state_age * 1e3);
+  }
+
+  // Calibration result diagnostics
   diagnostics_interfaces_.at(pair_idx)->add_key_value("Is calibrated", is_calibrated);
+  diagnostics_interfaces_.at(pair_idx)->add_key_value(
+    "Miscalibration confidence threshold", miscalibration_confidence_threshold);
   diagnostics_interfaces_.at(pair_idx)->add_key_value(
     "Calibration confidence", result.calibration_confidence);
   diagnostics_interfaces_.at(pair_idx)->add_key_value(
