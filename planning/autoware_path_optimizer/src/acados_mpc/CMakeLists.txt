@@ -56,6 +56,12 @@ add_library(acados_interface SHARED
 # Ensure the library waits for the generator to finish
 add_dependencies(acados_interface generate_acados_code)
 
+# Restore placeholder after build so git status stays clean (generator overwrites it)
+add_custom_command(TARGET acados_interface POST_BUILD
+  COMMAND git -C ${CMAKE_CURRENT_SOURCE_DIR} checkout -- c_generated_code/acados_solver_${MODEL}.h
+  COMMENT "Restore placeholder so git status is clean"
+)
+
 target_include_directories(acados_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> # Required for #include "c_generated_code/..."
