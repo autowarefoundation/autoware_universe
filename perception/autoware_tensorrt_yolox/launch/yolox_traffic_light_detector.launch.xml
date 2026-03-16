@@ -10,7 +10,7 @@
   <arg name="label_path" default="$(var data_path)/tensorrt_yolox/car_ped_tl_detector_labels.txt" description="path name for traffic light detection"/>
   <arg name="semantic_segmentation_color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="sematic segmentation color map path"/>
   <arg name="roi_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/traffic_light_roi_label_remap.csv" description="path of ROI label remap information"/>
-  <arg name="semantic_segmentation_remap_path" default="" description="path of ROI to semantic segmentation label remap information"/>
+  <arg name="roi_to_semantic_segmentation_remap_path" default="" description="path of ROI to semantic segmentation label remap information"/>
 
   <arg name="use_decompress" default="true" description="use image decompress"/>
   <arg name="build_only" default="false" description="exit after trt engine is built"/>
@@ -30,7 +30,7 @@
     <param name="label_path" value="$(var label_path)"/>
     <param name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
     <param name="roi_remap_path" value="$(var roi_remap_path)"/>
-    <param name="semantic_segmentation_remap_path" value="$(var semantic_segmentation_remap_path)"/>
+    <param name="roi_to_semantic_segmentation_remap_path" value="$(var roi_to_semantic_segmentation_remap_path)"/>
     <param name="build_only" value="$(var build_only)"/>
   </node>
 </launch>

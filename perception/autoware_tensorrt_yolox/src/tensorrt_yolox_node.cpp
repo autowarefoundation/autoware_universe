@@ -67,7 +67,7 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   // if the remap file path is an empty string, it will not do remap the labels
   const std::string roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
   const std::string roi_to_semseg_remap_path =
-    this->declare_parameter<std::string>("semantic_segmentation_remap_path", "");
+    this->declare_parameter<std::string>("roi_to_semantic_segmentation_remap_path", "");
 
   is_roi_overlap_semseg_ = declare_parameter<bool>("is_roi_overlap_segmentation");
   is_publish_color_mask_ = declare_parameter<bool>("is_publish_color_mask");
@@ -96,7 +96,7 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 
   if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()) {
     std::stringstream error_msg;
-    error_msg << "semantic_segmentation_remap_path must be specified"
+    error_msg << "roi_to_semantic_segmentation_remap_path must be specified"
               << "when `is_roi_overlap_segmentation` is true.";
     throw std::runtime_error{error_msg.str()};
   }
