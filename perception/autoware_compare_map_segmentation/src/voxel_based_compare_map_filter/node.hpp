@@ -47,6 +47,7 @@ protected:
     const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices) override;
 
   bool convert_output_costly(std::unique_ptr<PointCloud2> & output) override;
+  // TODO(Koichi98): Remove this override once the filter base class supports agnocast_wrapper::Node.
   void compute_publish(const PointCloud2ConstPtr & input, const IndicesPtr & indices) override;
 
 private:

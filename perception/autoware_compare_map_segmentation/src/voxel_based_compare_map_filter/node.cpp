@@ -211,6 +211,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
   return true;
 }
 
+// TODO(Koichi98): Remove this override once the filter base class supports agnocast_wrapper::Node.
 void VoxelBasedCompareMapFilterComponent::compute_publish(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices)
 {
