@@ -89,14 +89,14 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 
   if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
     std::stringstream error_msg;
-    error_msg << "semseg_color_map_path must be specified"
+    error_msg << "semseg_color_map_path must be specified "
               << "when `is_publish_color_mask_` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
   if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()) {
     std::stringstream error_msg;
-    error_msg << "roi_to_semantic_segmentation_remap_path must be specified"
+    error_msg << "roi_to_semantic_segmentation_remap_path must be specified "
               << "when `is_roi_overlap_segmentation` is true.";
     throw std::runtime_error{error_msg.str()};
   }
