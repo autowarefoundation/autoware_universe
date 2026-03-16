@@ -22,7 +22,7 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::topic_relay_controller::TopicRelayController"
   EXECUTABLE ${PROJECT_NAME}_node
-  AGNOCAST_EXECUTOR CallbackIsoratecAgnocastExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR MultiThreadedExecutor
 )
 
