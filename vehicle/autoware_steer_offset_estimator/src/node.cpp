@@ -192,10 +192,10 @@ void SteerOffsetEstimatorNode::publish_data(const SteerOffsetEstimationUpdated &
   pub_float(pub_steer_offset_, result.offset);
   pub_float(pub_steer_offset_covariance_, result.covariance);
 
-  if (is_publish_update(result)) {
-    pub_float(pub_steer_offset_update_, result.offset);
-    last_offset_update_ = result.offset;
-    log_offset_update(result);
+  if (is_publish_update()) {
+    pub_float(pub_steer_offset_update_, latest_reliable_result_->offset);
+    last_offset_update_ = latest_reliable_result_->offset;
+    log_offset_update(latest_reliable_result_.value());
   }
 
   autoware_internal_debug_msgs::msg::StringStamped debug_info;
@@ -210,11 +210,13 @@ void SteerOffsetEstimatorNode::publish_data(const SteerOffsetEstimationUpdated &
   pub_debug_info_->publish(debug_info);
 }
 
-bool SteerOffsetEstimatorNode::is_publish_update(const SteerOffsetEstimationUpdated & result) const
+bool SteerOffsetEstimatorNode::is_publish_update() const
 {
-  const double diff = std::abs(result.offset - last_offset_update_);
-  return diff > calibration_params_.update_offset_th &&
-         result.covariance < calibration_params_.covariance_th;
+  if (!latest_reliable_result_) {
+    return false;
+  }
+  const double diff = std::abs(latest_reliable_result_->offset - last_offset_update_);
+  return diff > calibration_params_.update_offset_th;
 }
 
 void SteerOffsetEstimatorNode::log_offset_update(const SteerOffsetEstimationUpdated & result) const
