@@ -296,9 +296,10 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
 
   sync_.registerCallback(
     [this](
-      AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) && objects,
-      AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) && pointcloud) {
-      this->onObjectsAndObstaclePointCloud(std::move(objects), std::move(pointcloud));
+      const AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) &
+        objects,
+      const AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) & pointcloud) {
+      this->onObjectsAndObstaclePointCloud(objects, pointcloud);
     });
   if (using_2d_validator_) {
     validator_ = std::make_unique<Validator2D>(points_num_threshold_param_);
