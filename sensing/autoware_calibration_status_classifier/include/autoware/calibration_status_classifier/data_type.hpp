@@ -84,6 +84,7 @@ struct CameraLidarTopicsInfo
   std::string lidar_topic;
   std::string projected_points_topic;
   double approx_delta;
+  double miscalibration_confidence_threshold;
   bool already_rectified;
 };
 
