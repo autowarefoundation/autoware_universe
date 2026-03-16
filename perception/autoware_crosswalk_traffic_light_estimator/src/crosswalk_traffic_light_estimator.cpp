@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "crosswalk_traffic_light_estimator.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
@@ -215,9 +216,14 @@ CrosswalkTrafficLightEstimator::CrosswalkTrafficLightEstimator(
 {
 }
 
-void CrosswalkTrafficLightEstimator::update_map(
-  lanelet::LaneletMapPtr lanelet_map_ptr, lanelet::routing::RoutingGraphPtr routing_graph_ptr)
+void CrosswalkTrafficLightEstimator::update_map(lanelet::LaneletMapPtr lanelet_map_ptr)
 {
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map_ptr);
+  auto routing_graph_ptr =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+
   lanelet_map_ptr_ = lanelet_map_ptr;
   routing_graph_ptr_ = routing_graph_ptr;
 
@@ -520,11 +526,7 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
     const auto last_detected_signal =
       get_highest_confidence_traffic_signal(tl_reg_elem->id(), last_detect_color_);
 
-    if (!last_detected_signal) {
-      continue;
-    }
-
-    const auto was_not_red = current_is_unknown_or_none &&
+    const auto was_not_red = current_is_unknown_or_none && last_detected_signal &&
                              (last_detected_signal.get() == TrafficSignalElement::GREEN ||
                               last_detected_signal.get() == TrafficSignalElement::AMBER) &&
                              config_.use_last_detect_color;
