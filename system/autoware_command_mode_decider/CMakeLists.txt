@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(autoware_command_mode_decider)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -9,12 +10,23 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/plugin/status.cpp"
   "src/command_mode_decider_base.cpp"
 )
-target_include_directories(${PROJECT_NAME} PRIVATE "src")
 
-rclcpp_components_register_node(${PROJECT_NAME}
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "src"
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::command_mode_decider::CommandModeDeciderBase"
   EXECUTABLE "command_mode_decider_node"
-  EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)
