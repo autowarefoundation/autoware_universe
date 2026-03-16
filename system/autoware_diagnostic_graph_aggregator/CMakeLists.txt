@@ -3,6 +3,7 @@ project(autoware_diagnostic_graph_aggregator)
 
 find_package(autoware_cmake REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -33,9 +34,20 @@ ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
-target_include_directories(aggregator PRIVATE "src/common")
+target_include_directories(aggregator PRIVATE "src/common" ${autoware_agnocast_wrapper_INCLUDE_DIRS})
+target_include_directories(converter PRIVATE ${autoware_agnocast_wrapper_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
 target_link_libraries(aggregator yaml-cpp)
+
+ament_target_dependencies(aggregator
+  autoware_agnocast_wrapper
+)
+ament_target_dependencies(converter
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(aggregator)
+autoware_agnocast_wrapper_setup(converter)
 
 ament_auto_add_executable(tree "src/tool/tree.cpp")
 target_include_directories(tree PRIVATE "src/common")
@@ -46,14 +58,18 @@ ament_auto_add_library(${PROJECT_NAME}_test SHARED
 )
 target_include_directories(${PROJECT_NAME}_test PRIVATE src/common)
 
-rclcpp_components_register_node(aggregator
+autoware_agnocast_wrapper_register_node(aggregator
   PLUGIN "autoware::diagnostic_graph_aggregator::AggregatorNode"
   EXECUTABLE "aggregator_node"
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
-rclcpp_components_register_node(converter
+autoware_agnocast_wrapper_register_node(converter
   PLUGIN "autoware::diagnostic_graph_aggregator::ConverterNode"
   EXECUTABLE "converter_node"
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)
