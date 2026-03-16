@@ -21,13 +21,13 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_validator::plugin
+namespace autoware::trajectory_validator::plugin::safety
 {
 /**
  * @brief VehicleConstraintFilter class - checks if the trajectory respects vehicle constraints
  * (e.g., max speed, max acceleration/deceleration).
  */
-class VehicleConstraintFilter final : public ValidatorInterface
+class VehicleConstraintFilter final : public plugin::ValidatorInterface
 {
 public:
   using result_t = tl::expected<void, std::string>;
@@ -122,5 +122,5 @@ bool is_steering_angle_ok(
  */
 bool is_steering_rate_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_rate);
-}  // namespace autoware::trajectory_validator::plugin
+}  // namespace autoware::trajectory_validator::plugin::safety
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__VEHICLE_CONSTRAINT_FILTER_HPP_

@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_validator::plugin
+namespace autoware::trajectory_validator::plugin::safety
 {
 namespace
 {
@@ -259,9 +259,10 @@ bool is_steering_rate_ok(
   }
   return true;
 }
-}  // namespace autoware::trajectory_validator::plugin
+}  // namespace autoware::trajectory_validator::plugin::safety
 
 #include <pluginlib/class_list_macros.hpp>
+namespace safety = autoware::trajectory_validator::plugin::safety;
+
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_validator::plugin::VehicleConstraintFilter,
-  autoware::trajectory_validator::plugin::ValidatorInterface)
+  safety::VehicleConstraintFilter, autoware::trajectory_validator::plugin::ValidatorInterface)

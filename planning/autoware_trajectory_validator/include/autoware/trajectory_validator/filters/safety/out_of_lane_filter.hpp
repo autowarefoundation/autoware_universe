@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_validator::plugin
+namespace autoware::trajectory_validator::plugin::safety
 {
 
 // Parameters for OutOfLaneFilter
@@ -38,7 +38,7 @@ struct OutOfLaneParams
   double min_value = 0.0;       // meters - minimum distance to lane boundary
 };
 
-class OutOfLaneFilter : public ValidatorInterface
+class OutOfLaneFilter : public plugin::ValidatorInterface
 {
 public:
   OutOfLaneFilter();
@@ -55,6 +55,6 @@ private:
   std::unique_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
     boundary_departure_checker_;
 };
-}  // namespace autoware::trajectory_validator::plugin
+}  // namespace autoware::trajectory_validator::plugin::safety
 
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__OUT_OF_LANE_FILTER_HPP_

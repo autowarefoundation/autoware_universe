@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_validator::plugin
+namespace autoware::trajectory_validator::plugin::safety
 {
 
 // Parameters for CollisionFilter
@@ -36,7 +36,7 @@ struct CollisionParams
   double min_ttc = 2.0;         // seconds - minimum acceptable time to collision
 };
 
-class CollisionFilter : public ValidatorInterface
+class CollisionFilter : public plugin::ValidatorInterface
 {
 public:
   CollisionFilter() : ValidatorInterface("CollisionFilter") {}
@@ -71,6 +71,6 @@ private:
     double time_from_start) const;
 };
 
-}  // namespace autoware::trajectory_validator::plugin
+}  // namespace autoware::trajectory_validator::plugin::safety
 
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__COLLISION_FILTER_HPP_

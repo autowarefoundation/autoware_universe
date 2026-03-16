@@ -36,7 +36,7 @@ autoware_planning_msgs::msg::TrajectoryPoint create_trajectory_point(
 }
 }  // namespace
 
-namespace autoware::trajectory_validator::plugin::testing
+namespace autoware::trajectory_validator::plugin::safety::testing
 {
 TEST(VehicleConstraintFilterTest, FeasibleWhenAllConstraintsSatisfied)
 {
@@ -308,4 +308,4 @@ TEST(IsSteeringRateOkTest, FalseWhenAnySteeringRateAboveMax)
 
   EXPECT_FALSE(is_steering_rate_ok(traj_points, vehicle_info, max_steering_rate));
 }
-}  // namespace autoware::trajectory_validator::plugin::testing
+}  // namespace autoware::trajectory_validator::plugin::safety::testing

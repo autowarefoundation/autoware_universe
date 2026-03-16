@@ -2,14 +2,14 @@
   ros__parameters:
     filter_names:
       [
-        "autoware::trajectory_validator::plugin::OutOfLaneFilter",
-        "autoware::trajectory_validator::plugin::CollisionFilter",
-        "autoware::trajectory_validator::plugin::VehicleConstraintFilter",
+        "safety::OutOfLaneFilter",
+        "safety::CollisionFilter",
+        "safety::VehicleConstraintFilter",
       ]
     # available filters:
-    #  "autoware::trajectory_validator::plugin::OutOfLaneFilter"
-    #  "autoware::trajectory_validator::plugin::CollisionFilter"
-    #  "autoware::trajectory_validator::plugin::VehicleConstraintFilter"
+    #  "safety::OutOfLaneFilter"
+    #  "safety::CollisionFilter"
+    #  "safety::VehicleConstraintFilter"
 
     out_of_lane:
       time: 2.0

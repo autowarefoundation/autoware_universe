@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::trajectory_validator::plugin
+namespace autoware::trajectory_validator::plugin::safety
 {
 
 namespace
@@ -109,9 +109,10 @@ tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
   return {};
 }
 
-}  // namespace autoware::trajectory_validator::plugin
+}  // namespace autoware::trajectory_validator::plugin::safety
 
 #include <pluginlib/class_list_macros.hpp>
+namespace safety = autoware::trajectory_validator::plugin::safety;
+
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_validator::plugin::OutOfLaneFilter,
-  autoware::trajectory_validator::plugin::ValidatorInterface)
+  safety::OutOfLaneFilter, autoware::trajectory_validator::plugin::ValidatorInterface)
