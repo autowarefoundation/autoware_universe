@@ -1,6 +1,4 @@
 <launch>
-  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
-
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
   <arg name="input/rois_number" default="6"/>
   <arg name="input/rois0" default="rois0"/>
