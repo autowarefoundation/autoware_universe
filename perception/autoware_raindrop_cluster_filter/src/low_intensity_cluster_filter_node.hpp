@@ -19,9 +19,8 @@
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
-
 #include <Eigen/Eigen>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
