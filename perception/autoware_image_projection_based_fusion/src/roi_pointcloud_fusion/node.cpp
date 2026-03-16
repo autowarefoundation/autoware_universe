@@ -61,8 +61,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   // publisher
   // pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
   // TODO: replace pub_ptr_ in FusionNode with agnocast_wrapper
-  agnocast_pub_ptr_ =
-    AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
+  agnocast_pub_ptr_ = AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
   cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }
 
