@@ -158,7 +158,6 @@
       # path miss detection
       path_miss:
         enable_path_miss_detection: false  # enable/disable path miss detection
-        threshold_lateral: 1.0            # [m] - base lateral deviation allowed (will be scaled by velocity)
         threshold_longitudinal: 1.0       # [m] - max longitudinal deviation from lc end allowed (fixed, no scaling)
 
         # path miss velocity scaling parameters
@@ -167,7 +166,7 @@
         # At low speeds: higher tolerance (to allow ego to follow lc path)
         # At high speeds: stricter tolerance (to update lc path when ego is moving)
         velocity_points: [ 0.0, 0.1, 0.11, 2.77, 2.78, 20.0 ]   # [m/s] - velocity points for interpolation
-        scale_factors: [ 3.0, 3.0, 5.0,  5.0,  1.5,   0.8 ]     # scale factors - multiply path_miss_threshold_lateral
+        lateral_thresholds: [ 3.0, 3.0, 5.0,  5.0,  1.5,   0.8 ]     # corresponding lateral thresholds [m]
 
       # debug
       publish_debug_marker: true

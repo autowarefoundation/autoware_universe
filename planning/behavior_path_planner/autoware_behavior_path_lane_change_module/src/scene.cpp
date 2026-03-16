@@ -2111,15 +2111,14 @@ bool NormalLaneChange::hasMissedLaneChangePath() const
 
     const std::vector<double> velocity_points =
       lane_change_parameters_->path_miss_velocity_points;  // m/s
-    const std::vector<double> scale_factors =
-      lane_change_parameters_->path_miss_scale_factors;  // scale factors
+    const std::vector<double> lateral_thresholds =
+      lane_change_parameters_->path_miss_lateral_thresholds;
 
-    const double base_threshold = lane_change_parameters_->path_miss_threshold_lateral;
-    const double scale_factor = autoware::interpolation::lerp(
-      velocity_points, scale_factors,
+    const double lateral_threshold = autoware::interpolation::lerp(
+      velocity_points, lateral_thresholds,
       std::clamp(ego_velocity, velocity_points.front(), velocity_points.back()));
 
-    return base_threshold * scale_factor;
+    return lateral_threshold;
   }();
 
   // Check if lateral deviation exceeds threshold
