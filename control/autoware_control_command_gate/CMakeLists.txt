@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(autoware_control_command_gate)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -21,11 +22,22 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/common/vehicle_status.cpp"
   "src/common/timeout_diagnostics.cpp"
 )
-target_include_directories(${PROJECT_NAME} PRIVATE "src")
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "src"
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::control_command_gate::ControlCmdGate"
   EXECUTABLE "control_command_gate_node"
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)
