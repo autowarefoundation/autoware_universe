@@ -12,7 +12,6 @@ find_package(pcl_conversions REQUIRED)
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 
 find_package(CUDA)
@@ -80,13 +79,11 @@ target_include_directories(${PROJECT_NAME}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
-  ${agnocastlib_INCLUDE_DIRS}
   ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
   ${SHAPE_ESTIMATION_DEPENDENCIES}
-  agnocastlib
   autoware_agnocast_wrapper
 )
 
