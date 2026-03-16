@@ -6,7 +6,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 # find dependencies
 find_package(autoware_cmake REQUIRED)
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
@@ -21,7 +20,6 @@ target_include_directories(low_intensity_cluster_filter PRIVATE
 )
 
 ament_target_dependencies(low_intensity_cluster_filter
-  agnocastlib
   autoware_agnocast_wrapper
 )
 
