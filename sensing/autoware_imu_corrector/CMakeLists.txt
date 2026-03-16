@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_imu_corrector)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(imu_corrector SHARED
@@ -13,20 +14,37 @@ ament_auto_add_library(gyro_bias_estimator SHARED
   src/gyro_bias_estimation_module.cpp
 )
 
+target_include_directories(imu_corrector
+  PUBLIC include
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
 target_include_directories(gyro_bias_estimator
   PUBLIC include
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
-rclcpp_components_register_node(imu_corrector
+ament_target_dependencies(imu_corrector
+  autoware_agnocast_wrapper
+)
+ament_target_dependencies(gyro_bias_estimator
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(imu_corrector)
+autoware_agnocast_wrapper_setup(gyro_bias_estimator)
+
+autoware_agnocast_wrapper_register_node(imu_corrector
   PLUGIN "autoware::imu_corrector::ImuCorrector"
   EXECUTABLE imu_corrector_node
-  EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
-rclcpp_components_register_node(gyro_bias_estimator
+autoware_agnocast_wrapper_register_node(gyro_bias_estimator
   PLUGIN "autoware::imu_corrector::GyroBiasEstimator"
   EXECUTABLE gyro_bias_estimator_node
-  EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 function(add_testcase filepath)
