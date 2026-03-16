@@ -60,6 +60,17 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     set(CUDA_NVCC_FLAGS "-g -G")
   endif()
 
+  ament_auto_add_library(${PROJECT_NAME}_filters_lib SHARED
+    lib/filter.cpp
+    lib/calibration_status_classifier_filters.cpp
+  )
+
+  target_include_directories(${PROJECT_NAME}_filters_lib
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+  )
+
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/calibration_status_classifier.cpp
   )
@@ -118,6 +129,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   target_link_libraries(${PROJECT_NAME}_component
     ${PROJECT_NAME}_lib
+    ${PROJECT_NAME}_filters_lib
   )
 
   rclcpp_components_register_node(${PROJECT_NAME}_component
@@ -201,6 +213,31 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ament_add_test(test_calibration_status_classifier
       GENERATE_RESULT_FOR_RETURN_CODE_ZERO
       COMMAND "$<TARGET_FILE:test_calibration_status_classifier>"
+    )
+
+    add_executable(test_filters
+      test/test_filters.cpp
+    )
+    target_link_libraries(test_filters
+      ${PROJECT_NAME}_filters_lib
+      gtest
+      gtest_main
+    )
+    ament_add_test(test_filters
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      COMMAND "$<TARGET_FILE:test_filters>"
+    )
+
+    add_executable(test_ros_utils
+      test/test_ros_utils.cpp
+    )
+    target_link_libraries(test_ros_utils
+      gtest
+      gtest_main
+    )
+    ament_add_test(test_ros_utils
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      COMMAND "$<TARGET_FILE:test_ros_utils>"
     )
 
     # Suppress pedantic warnings for test target (PCL)
