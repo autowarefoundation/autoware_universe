@@ -38,7 +38,7 @@ namespace autoware::calibration_status_classifier
 CalibrationStatusClassifier::CalibrationStatusClassifier(
   const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
   const std::vector<double> & ego_box, const CalibrationStatusClassifierConfig & config)
-: cloud_capacity_(static_cast<size_t>(cloud_capacity)), ego_box_(), config_(config)
+: cloud_capacity_(static_cast<size_t>(cloud_capacity)), config_(config)
 {
   if (!ego_box.empty() && ego_box.size() != 6) {
     throw std::invalid_argument(
