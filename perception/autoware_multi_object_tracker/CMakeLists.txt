@@ -43,6 +43,7 @@ set(${PROJECT_NAME}_lib
   lib/association/association.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
   lib/object_model/types.cpp
+  lib/object_model/uuid.cpp
   lib/object_model/shapes.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
   # cspell: ignore ctrv
@@ -90,6 +91,7 @@ if(BUILD_TESTING)
     test/test_utils.cpp
     test/test_bench_association.cpp
     test/test_vehicle_tracker.cpp
+    test/test_uuid_generator.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
@@ -100,7 +102,7 @@ if(BUILD_TESTING)
   )
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
