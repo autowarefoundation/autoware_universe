@@ -6,7 +6,6 @@ add_compile_options(-Wno-unknown-pragmas -fopenmp)
 find_package(autoware_cmake REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(agnocastlib REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
@@ -37,12 +36,10 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
   ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
-  agnocastlib
   autoware_agnocast_wrapper
 )
 
