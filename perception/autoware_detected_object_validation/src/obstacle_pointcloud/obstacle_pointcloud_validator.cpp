@@ -295,12 +295,9 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
   using_2d_validator_ = declare_parameter<bool>("using_2d_validator");
 
   sync_.registerCallback(
-    [this](
-      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) &
-        objects,
-      const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & pointcloud) {
-      this->onObjectsAndObstaclePointCloud(objects, pointcloud);
-    });
+    std::bind(
+      &ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud, this,
+      std::placeholders::_1, std::placeholders::_2));
   if (using_2d_validator_) {
     validator_ = std::make_unique<Validator2D>(points_num_threshold_param_);
   } else {

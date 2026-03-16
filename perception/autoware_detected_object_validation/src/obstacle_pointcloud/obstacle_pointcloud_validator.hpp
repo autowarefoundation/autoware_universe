@@ -162,7 +162,6 @@ private:
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
 private:
-  // cppcheck-suppress unknownMacro
   void onObjectsAndObstaclePointCloud(
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) input_objects,
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud);
