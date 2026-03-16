@@ -278,8 +278,8 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
  *  3. Read the color map and remap files for semantic segmentation output.
  *  4. Create a remap from ROI to segmentation label based on the remap information.
  *
- * you still need to use the original label name even you remap the ROI label for
- * remapping segmentation label.
+ * You still need to use the original label name,
+ * even if you remap the ROI label when remapping the segmentation label.
  *
  * @param[in] roi_label_path file path of label file for ROI
  * @param[in] semseg_color_map_path file path of color map file for segmentation
