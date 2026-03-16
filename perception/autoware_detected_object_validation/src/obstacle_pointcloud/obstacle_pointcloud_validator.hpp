@@ -27,6 +27,7 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
 #include <pcl/filters/crop_hull.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
@@ -163,8 +164,7 @@ private:
 private:
   void onObjectsAndObstaclePointCloud(
     AUTOWARE_MESSAGE_SHARED_PTR(const autoware_perception_msgs::msg::DetectedObjects) input_objects,
-    AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2)
-      input_obstacle_pointcloud);
+    AUTOWARE_MESSAGE_SHARED_PTR(const sensor_msgs::msg::PointCloud2) input_obstacle_pointcloud);
 };
 
 }  // namespace obstacle_pointcloud

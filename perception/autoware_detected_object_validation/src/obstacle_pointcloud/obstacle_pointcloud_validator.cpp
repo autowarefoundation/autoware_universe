@@ -334,9 +334,8 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
     return;
   }
   // Create a non-owning shared_ptr for the Validator interface
-  const auto input_obstacle_pointcloud_shared =
-    sensor_msgs::msg::PointCloud2::ConstSharedPtr(
-      sensor_msgs::msg::PointCloud2::ConstSharedPtr{}, input_obstacle_pointcloud.get());
+  const auto input_obstacle_pointcloud_shared = sensor_msgs::msg::PointCloud2::ConstSharedPtr(
+    sensor_msgs::msg::PointCloud2::ConstSharedPtr{}, input_obstacle_pointcloud.get());
   bool validation_is_ready = true;
   if (!validator_->setKdtreeInputCloud(input_obstacle_pointcloud_shared)) {
     RCLCPP_WARN_THROTTLE(
