@@ -17,7 +17,6 @@
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_detected_object_validation</depend>
-  <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_utils</depend>
