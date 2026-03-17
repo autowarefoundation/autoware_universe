@@ -6,3 +6,4 @@
       resample_close_points: true     # Enable resampling of close proximity points
       min_dist_to_remove_m: 0.01  # [m] Minimum distance to remove close proximity points
       min_dist_to_resample_m: 0.05   # [m] Minimum distance to merge close proximity points
+      stop_detection_velocity_threshold_mps: 0.3  # [m/s] Velocity threshold for fallback stop detection in slow clusters

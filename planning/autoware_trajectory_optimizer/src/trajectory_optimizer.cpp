@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
 
+#include "autoware/trajectory_optimizer/utils.hpp"
+
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -175,16 +177,22 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
-  // Create runtime data struct
-  TrajectoryOptimizerData data;
-  data.current_odometry = *current_odometry_ptr_;
-  data.current_acceleration = *current_acceleration_ptr_;
-
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
+    // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
+    TrajectoryOptimizerData data;
+    data.current_odometry = *current_odometry_ptr_;
+    data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
       plugin->optimize_trajectory(trajectory.points, params_, data);
+    }
+
+    // Downstream Autoware modules dont properly support trajectories with less than 3 points. So we
+    // return a dummy stopped trajectory instead.
+    if (trajectory.points.size() < 3) {
+      trajectory.points =
+        utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
     }
   }
 

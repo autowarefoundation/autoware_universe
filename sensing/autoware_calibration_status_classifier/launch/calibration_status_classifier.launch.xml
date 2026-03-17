@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="input_velocity" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="input_linear_velocity" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+  <arg name="input_angular_velocity" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
   <arg name="input_objects" default="/perception/object_recognition/objects"/>
   <arg name="validate_calibration_srv" default="validate_calibration"/>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
@@ -22,7 +23,8 @@
   <node pkg="autoware_calibration_status_classifier" exec="calibration_status_classifier_node" name="calibration_status_classifier" output="both">
     <param from="$(var model_param_path)" allow_substs="true"/>
     <param from="$(var ml_package_param_path)"/>
-    <remap from="~/input/velocity" to="$(var input_velocity)"/>
+    <remap from="~/input/linear_velocity" to="$(var input_linear_velocity)"/>
+    <remap from="~/input/angular_velocity" to="$(var input_angular_velocity)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/validate_calibration_srv" to="$(var validate_calibration_srv)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
