@@ -76,9 +76,11 @@ autoware_agnocast_wrapper_register_node(object_lanelet_filter
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
-rclcpp_components_register_node(object_lanelet_filter
+autoware_agnocast_wrapper_register_node(object_lanelet_filter
   PLUGIN "autoware::detected_object_validation::lanelet_filter::TrackedObjectLaneletFilterNode"
   EXECUTABLE tracked_object_lanelet_filter_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 rclcpp_components_register_node(object_position_filter
