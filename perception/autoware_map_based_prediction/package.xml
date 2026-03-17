@@ -22,6 +22,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

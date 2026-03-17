@@ -26,9 +26,11 @@ target_link_libraries(map_based_prediction_node
   tf2_geometry_msgs::tf2_geometry_msgs
 )
 
-rclcpp_components_register_node(map_based_prediction_node
+autoware_agnocast_wrapper_register_node(map_based_prediction_node
   PLUGIN "autoware::map_based_prediction::MapBasedPredictionNode"
   EXECUTABLE map_based_prediction
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ## Tests
