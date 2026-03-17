@@ -27,6 +27,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::image_projection_based_fusion
