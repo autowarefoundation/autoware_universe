@@ -21,9 +21,11 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE simple_object_merger_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simple_object_merger::SimpleTrackedObjectMergerNode"
   EXECUTABLE simple_tracked_object_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 # Tests
