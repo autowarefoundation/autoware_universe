@@ -18,7 +18,6 @@
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cuda_dependency_meta</depend>
-  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_euclidean_cluster</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lidar_centerpoint</depend>
