@@ -14,6 +14,8 @@ ament_target_dependencies(${PROJECT_NAME}
   yaml_cpp_vendor
 )
 
+target_link_libraries(${PROJECT_NAME} yaml-cpp)
+
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::steer_offset_estimator::SteerOffsetEstimatorNode"
   EXECUTABLE steer_offset_estimator_node
