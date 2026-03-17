@@ -101,6 +101,36 @@ std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString
   }
   return local_segments;
 }
+
+bool is_valid_footprints(
+  const autoware::boundary_departure_checker::FootprintMap<
+    autoware::boundary_departure_checker::Side<
+      autoware::boundary_departure_checker::ProjectionsToBound>> & projections_to_bound,
+  const std::vector<autoware::boundary_departure_checker::FootprintType> & footprint_type_order,
+  const autoware::boundary_departure_checker::SideKey side_key)
+{
+  if (footprint_type_order.empty()) {
+    return false;
+  }
+
+  const auto is_empty = std::any_of(
+    footprint_type_order.begin(), footprint_type_order.end(),
+    [&projections_to_bound, &side_key](const auto footprint_type) {
+      return projections_to_bound[footprint_type][side_key].empty();
+    });
+
+  if (is_empty) {
+    return false;
+  }
+
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
+  const auto check_size = [&](const auto footprint_type) {
+    return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
+  };
+
+  return !std::any_of(
+    std::next(footprint_type_order.begin()), footprint_type_order.end(), check_size);
+}
 }  // namespace
 
 namespace autoware::boundary_departure_checker::utils
@@ -771,5 +801,132 @@ std::optional<std::pair<double, double>> is_point_shifted(
     return std::make_pair(dist_m, yaw_diff_rad);
   }
   return std::nullopt;
+}
+
+std::optional<ProjectionsToBound> get_closest_projections_for_side(
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
+{
+  const auto & footprint_type_order = param.footprint_types_to_check;
+
+  if (!is_valid_footprints(projections_to_bound, footprint_type_order, side_key)) {
+    return std::nullopt;
+  }
+
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
+
+  ProjectionsToBound min_to_bound;
+  const auto fp_size = fr_proj_to_bound.size();
+  min_to_bound.reserve(fp_size);
+
+  for (size_t idx = 0; idx < fp_size; ++idx) {
+    std::vector<ProjectionToBound> candidate_projections;
+    candidate_projections.reserve(footprint_type_order.size());
+
+    for (const auto footprint_type : footprint_type_order) {
+      auto candidate = projections_to_bound[footprint_type][side_key][idx];
+      if (candidate.ego_sides_idx != idx) continue;
+
+      candidate.footprint_type_opt = footprint_type;
+      candidate_projections.push_back(candidate);
+    }
+
+    std::optional<double> previous_longitudinal_distance =
+      min_to_bound.empty() ? std::nullopt
+                           : std::make_optional(min_to_bound.back().lon_dist_on_pred_traj);
+
+    auto closest_projection = get_closest_projection_by_departure_severity(
+      candidate_projections, param, min_braking_dist, max_braking_dist, side_key,
+      previous_longitudinal_distance);
+
+    if (closest_projection) {
+      min_to_bound.push_back(*closest_projection);
+      if (closest_projection->is_critical_departure()) {
+        break;
+      }
+    }
+  }
+
+  // If the last point is a critical departure, mark preceding points within max_braking_dist as
+  // approaching
+  if (min_to_bound.size() > 1 && min_to_bound.back().is_critical_departure()) {
+    for (auto itr = std::next(min_to_bound.rbegin()); itr != min_to_bound.rend(); ++itr) {
+      if (
+        min_to_bound.back().lon_dist_on_pred_traj - itr->lon_dist_on_pred_traj < max_braking_dist) {
+        itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
+      }
+    }
+  }
+
+  return min_to_bound;
+}
+
+std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
+  const std::vector<ProjectionToBound> & candidate_projections, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key,
+  const std::optional<double> previous_longitudinal_distance)
+{
+  std::optional<ProjectionToBound> closest_projection;
+
+  const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
+  const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
+
+  // 1. Evaluate all candidates to find the most critical or closest one
+  for (auto candidate : candidate_projections) {
+    if (!candidate.footprint_type_opt) continue;
+
+    // If the normal footprint crosses the critical threshold, it takes absolute priority
+    if (
+      candidate.footprint_type_opt.value() == FootprintType::NORMAL &&
+      candidate.lat_dist < th_dist_critical) {
+      candidate.departure_type_opt = DepartureType::CRITICAL_DEPARTURE;
+      closest_projection = candidate;
+      break;
+    }
+
+    // Ignore candidates that are too far away
+    if (candidate.lat_dist > th_dist_near) continue;
+
+    // Keep the candidate that is closest to the boundary
+    if (!closest_projection || candidate.lat_dist < closest_projection->lat_dist) {
+      candidate.departure_type_opt = DepartureType::NEAR_BOUNDARY;
+      closest_projection = candidate;
+    }
+  }
+
+  if (!closest_projection || !closest_projection->departure_type_opt) {
+    return std::nullopt;
+  }
+
+  // 2. Filter out non-critical points that are longitudinally too close to the previously accepted
+  // point
+  if (
+    previous_longitudinal_distance && !closest_projection->is_critical_departure() &&
+    std::abs(*previous_longitudinal_distance - closest_projection->lon_dist_on_pred_traj) <=
+      param.th_point_merge_distance_m) {
+    return std::nullopt;
+  }
+
+  const auto exceeds_time_and_distance_cutoff =
+    [&closest_projection](const auto target_type, const auto braking_dist, const auto cutoff_time) {
+      return closest_projection->departure_type_opt.value() == target_type &&
+             closest_projection->lon_dist_on_pred_traj > braking_dist &&
+             closest_projection->time_from_start > cutoff_time;
+    };
+
+  // 3. Apply time and distance cutoffs
+  if (exceeds_time_and_distance_cutoff(
+        DepartureType::NEAR_BOUNDARY, max_braking_dist, param.th_cutoff_time_near_boundary_s)) {
+    return std::nullopt;
+  }
+
+  // If a critical departure is too far away/too far in the future, downgrade it to just
+  // "approaching"
+  if (exceeds_time_and_distance_cutoff(
+        DepartureType::CRITICAL_DEPARTURE, min_braking_dist, param.th_cutoff_time_departure_s)) {
+    closest_projection->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
+  }
+
+  return closest_projection;
 }
 }  // namespace autoware::boundary_departure_checker::utils
