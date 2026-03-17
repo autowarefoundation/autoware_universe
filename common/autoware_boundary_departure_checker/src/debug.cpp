@@ -176,6 +176,52 @@ Marker create_footprint_marker(
   return marker_ll;
 }
 
+MarkerArray create_departure_footprint_marker(
+  const ProjectionsToBound & projections_to_bound, const FootprintMap<Footprints> & footprints,
+  const rclcpp::Time & curr_time, const double base_link_z)
+{
+  int32_t id{0};
+  const auto add_marker = [&](
+                            const auto color, const ProjectionToBound & projection_to_bound,
+                            const std::string & type) -> Marker {
+    auto marker_ll = autoware_utils_visualization::create_default_marker(
+      "map", curr_time, "footprint_" + type, ++id, visualization_msgs::msg::Marker::LINE_LIST,
+      autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
+
+    if (!projection_to_bound.footprint_type_opt) {
+      return marker_ll;
+    }
+
+    const auto & footprint =
+      footprints[*projection_to_bound.footprint_type_opt].at(projection_to_bound.ego_sides_idx);
+    for (size_t i = 0; i + 1 < footprint.size(); ++i) {
+      const auto & p1 = footprint.at(i);
+      const auto & p2 = footprint.at(i + 1);
+
+      marker_ll.points.push_back(autoware_utils_geometry::to_msg(p1.to_3d(base_link_z)));
+      marker_ll.points.push_back(autoware_utils_geometry::to_msg(p2.to_3d(base_link_z)));
+    }
+    return marker_ll;
+  };
+
+  MarkerArray marker_array;
+  marker_array.markers.reserve(footprints[FootprintType::NORMAL].size());
+
+  for (const auto & pt : projections_to_bound) {
+    if (!pt.departure_type_opt) {
+      continue;
+    }
+    if (pt.is_near_boundary()) {
+      marker_array.markers.push_back(add_marker(color::green(), pt, "near"));
+    } else if (pt.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
+      marker_array.markers.push_back(add_marker(color::yellow(), pt, "approaching"));
+    } else if (pt.is_critical_departure()) {
+      marker_array.markers.push_back(add_marker(color::magenta(), pt, "critical"));
+    }
+  }
+  return marker_array;
+}
+
 Marker create_boundary_segments_marker(
   const BoundarySideWithIdx & boundaries, Marker marker, std::string && ns,
   const double base_link_z)
@@ -229,16 +275,20 @@ MarkerArray create_debug_marker_array(
   marker_array.markers.push_back(create_boundary_segments_marker(
     departure_data.boundary_segments, marker, "boundary_segments", base_link_z));
 
+  constexpr auto enable_footprint_markers = false;
+
   for (const auto type : bdc_param.footprint_types_to_check) {
     const auto type_str = get_type_str(type);
-    marker_array.markers.push_back(create_footprint_marker(
-      departure_data.footprints[type], curr_time, type_str, base_link_z, color::aqua()));
+    if (enable_footprint_markers) {
+      marker_array.markers.push_back(create_footprint_marker(
+        departure_data.footprints[type], curr_time, type_str, base_link_z, color::aqua()));
 
-    for (const auto side_key : g_side_keys) {
-      const auto side_key_str = get_side_key_str(side_key);
-      marker_array.markers.push_back(create_projections_to_bound_marker(
-        departure_data.projections_to_bound[type][side_key], marker, type_str, side_key_str,
-        base_link_z));
+      for (const auto side_key : g_side_keys) {
+        const auto side_key_str = get_side_key_str(side_key);
+        marker_array.markers.push_back(create_projections_to_bound_marker(
+          departure_data.projections_to_bound[type][side_key], marker, type_str, side_key_str,
+          base_link_z));
+      }
     }
   }
 
@@ -253,6 +303,11 @@ MarkerArray create_debug_marker_array(
     autoware_utils_visualization::append_marker_array(
       create_projections_type_wall_marker(
         departure_data.closest_projections_to_bound[side_key], ego_traj, curr_time, side_key_str,
+        base_link_z),
+      &marker_array);
+    autoware_utils_visualization::append_marker_array(
+      create_departure_footprint_marker(
+        departure_data.closest_projections_to_bound[side_key], departure_data.footprints, curr_time,
         base_link_z),
       &marker_array);
   }

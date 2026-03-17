@@ -253,8 +253,8 @@ INSTANTIATE_TEST_SUITE_P(
       "OutsideNearThreshold",
       {create_mock_projection(FootprintType::NORMAL, 3.0, 5.0, 1.0)},
       std::nullopt,
-      std::nullopt,
-      std::nullopt},
+      DepartureType::NONE,  // CHANGED: Now expects the safe NONE skeleton
+      3.0},                 // CHANGED: The distance of the skeleton
     ProjectionAtIndexTestParam{
       "ClosestNearBoundary",
       {create_mock_projection(FootprintType::NORMAL, 1.5, 5.0, 1.0),
@@ -267,7 +267,7 @@ INSTANTIATE_TEST_SUITE_P(
       "FilteredByPreviousLongitudinalDistance",
       {create_mock_projection(FootprintType::LOCALIZATION, 0.8, 5.2, 1.0)},
       5.0,
-      std::nullopt,
+      std::nullopt,  // Remains nullopt (Filtered out by downsampler)
       std::nullopt},
     ProjectionAtIndexTestParam{
       "CriticalNotFilteredByPreviousDistance",
@@ -280,8 +280,8 @@ INSTANTIATE_TEST_SUITE_P(
       {create_mock_projection(
         FootprintType::NORMAL, 1.0, braking_dist_max + 1.0, cutoff_time_near + 0.5)},
       std::nullopt,
-      std::nullopt,
-      std::nullopt},
+      DepartureType::NONE,  // CHANGED: Now expects the safe NONE skeleton
+      1.0},                 // CHANGED: The distance of the skeleton
     ProjectionAtIndexTestParam{
       "CriticalDowngradedToApproaching",
       {create_mock_projection(
@@ -409,4 +409,67 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
   });
 }
 
+TEST_F(GetClosestProjectionsForSideTest, TestBackwardBufferAndCleanup)
+{
+  FootprintMap<Side<ProjectionsToBound>> projections;
+
+  // We simulate a physical crash at s = 20.0m.
+  // min_braking = 10.0, max_braking = 15.0, cutoff = 2.0 (from mock param)
+  // Buffer is 1.0m. Therefore:
+  // - CRITICAL zone: 19.0m to 20.0m
+  // - APPROACHING zone: 4.0m to 19.0m (20.0 - 15.0 - 1.0 = 4.0)
+  projections[FootprintType::NORMAL][SideKey::LEFT] = {
+    create_mock_projection(
+      std::nullopt, 1.5, 0.0, 0.0, 0),  // dist_to_crash = 20.0 (> 16.0) -> NEAR
+    create_mock_projection(
+      std::nullopt, 1.5, 10.0, 1.0, 1),  // dist_to_crash = 10.0 (<= 16.0) -> APPROACHING
+    create_mock_projection(
+      std::nullopt, 1.5, 19.0, 1.9,
+      2),  // dist_to_crash = 1.0  (<= 1.0) -> CRITICAL (Earliest buffered point!)
+    create_mock_projection(
+      std::nullopt, 1.5, 19.5, 1.95,
+      3),  // dist_to_crash = 0.5  (<= 1.0) -> CRITICAL (Will be erased)
+    create_mock_projection(
+      std::nullopt, 0.1, 20.0, 2.0,
+      4)  // dist_to_crash = 0.0  -> CRITICAL (Original crash, will be erased)
+  };
+
+  // Dummy data so map matches sizes
+  projections[FootprintType::LOCALIZATION][SideKey::LEFT] =
+    projections[FootprintType::NORMAL][SideKey::LEFT];
+  projections[FootprintType::STEERING_STUCK][SideKey::LEFT] =
+    projections[FootprintType::NORMAL][SideKey::LEFT];
+
+  auto result = utils::get_closest_projections_for_side(
+    projections, param, braking_dist_min, braking_dist_max, SideKey::LEFT);
+
+  ASSERT_TRUE(result.has_value());
+  const auto & res_vec = result.value();
+
+  // 1. Verify Cleanup: Original size was 5. The last two (indices 3 and 4) should be erased.
+  ASSERT_EQ(res_vec.size(), 3);
+
+  // 2. Verify States
+  EXPECT_EQ(res_vec[0].ego_sides_idx, 0);
+  EXPECT_EQ(res_vec[0].departure_type_opt.value(), DepartureType::NEAR_BOUNDARY);
+
+  EXPECT_EQ(res_vec[1].ego_sides_idx, 1);
+  EXPECT_EQ(res_vec[1].departure_type_opt.value(), DepartureType::APPROACHING_DEPARTURE);
+
+  // 3. Verify the Buffered Critical Point
+  EXPECT_EQ(res_vec[2].ego_sides_idx, 2);
+  EXPECT_EQ(res_vec[2].departure_type_opt.value(), DepartureType::CRITICAL_DEPARTURE);
+
+  // 4. Verify the math: The new CRITICAL point must be exactly at the 1.0m buffer line (s = 19.0)
+  EXPECT_DOUBLE_EQ(res_vec.back().lon_dist_on_pred_traj, 19.0);
+
+  // Plot it using our shiny new helper!
+  BDC_PLOT_RESULT({
+    // Calculate the original braking start line based on the original crash point (20.0)
+    double original_crash_s = 20.0;
+    double braking_start = original_crash_s - braking_dist_max;
+    plot_trajectory_evaluation(
+      res_vec, "Backward Buffer and Cleanup Logic", nullptr, braking_start);
+  });
+}
 }  // namespace autoware::boundary_departure_checker

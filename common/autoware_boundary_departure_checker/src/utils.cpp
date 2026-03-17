@@ -840,16 +840,40 @@ std::optional<ProjectionsToBound> get_closest_projections_for_side(
     }
   }
 
-  // If the last point is a critical departure, mark preceding points within max_braking_dist as
-  // approaching
-  if (min_to_bound.size() > 1 && min_to_bound.back().is_critical_departure()) {
-    for (auto itr = std::next(min_to_bound.rbegin()); itr != min_to_bound.rend(); ++itr) {
-      if (
-        min_to_bound.back().lon_dist_on_pred_traj - itr->lon_dist_on_pred_traj < max_braking_dist) {
-        itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
+  if (!min_to_bound.empty() && min_to_bound.back().is_critical_departure()) {
+    const double crash_s =
+      min_to_bound.back().lon_dist_on_pred_traj - min_to_bound.back().lon_offset;
+    constexpr double longitudinal_buffer_m = 1.0;
+
+    auto earliest_critical_it = min_to_bound.end() - 1;
+
+    for (auto itr = min_to_bound.rbegin(); itr != min_to_bound.rend(); ++itr) {
+      if (itr->footprint_type_opt == FootprintType::NORMAL) {
+        const double dist_to_crash = crash_s - itr->lon_dist_on_pred_traj;
+
+        if (dist_to_crash <= longitudinal_buffer_m) {
+          itr->departure_type_opt = DepartureType::CRITICAL_DEPARTURE;
+          earliest_critical_it = itr.base() - 1;
+        } else if (dist_to_crash <= max_braking_dist + longitudinal_buffer_m) {
+          itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
+        }
       }
     }
+
+    // Erase the physical crash points, keeping ONLY the newly buffered critical point
+    if (earliest_critical_it != min_to_bound.end() - 1) {
+      min_to_bound.erase(earliest_critical_it + 1, min_to_bound.end());
+    }
   }
+
+  // NEW STEP 3: Sweep up! Remove any points that are still NONE
+  // (These are the safe points we temporarily kept to ensure the backward loop had physical
+  // indices)
+  min_to_bound.erase(
+    std::remove_if(
+      min_to_bound.begin(), min_to_bound.end(),
+      [](const ProjectionToBound & p) { return p.departure_type_opt == DepartureType::NONE; }),
+    min_to_bound.end());
 
   return min_to_bound;
 }
@@ -860,6 +884,10 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
   const std::optional<double> previous_longitudinal_distance)
 {
   std::optional<ProjectionToBound> best_projection;
+  std::optional<ProjectionToBound> fallback_normal;  // Store the skeleton!
+
+  const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
+  const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
 
   const auto get_severity = [](const DepartureType type) -> uint8_t {
     switch (type) {
@@ -869,23 +897,26 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
         return 2;
       case DepartureType::NEAR_BOUNDARY:
         return 1;
-      default:
+      case DepartureType::NONE:
         return 0;
     }
+    return 0;
   };
-
-  const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
-  const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
 
   for (auto candidate : candidate_projections) {
     if (!candidate.footprint_type_opt) continue;
+
+    // Save the NORMAL footprint to act as our physical skeleton
+    if (candidate.footprint_type_opt.value() == FootprintType::NORMAL) {
+      fallback_normal = candidate;
+    }
 
     candidate.departure_type_opt = assign_departure_type(
       candidate.lon_dist_on_pred_traj, candidate.lon_offset, min_braking_dist, max_braking_dist,
       param.th_cutoff_time_departure_s, candidate.time_from_start, candidate.lat_dist, th_dist_near,
       th_dist_critical, candidate.footprint_type_opt.value());
 
-    if (candidate.departure_type_opt.value_or(DepartureType::NONE) == DepartureType::NONE) {
+    if (candidate.departure_type_opt.value() == DepartureType::NONE) {
       continue;
     }
 
@@ -895,27 +926,31 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
       const uint8_t cand_severity = get_severity(candidate.departure_type_opt.value());
       const uint8_t best_severity = get_severity(best_projection->departure_type_opt.value());
 
-      if (cand_severity > best_severity) {  // Priority 1: Threat Dominance
+      if (cand_severity > best_severity) {
         best_projection = candidate;
-      } else if (cand_severity == best_severity) {  // Priority 2: If same level, pick the closest
-                                                    // one.
+      } else if (cand_severity == best_severity) {
         if (candidate.lat_dist < best_projection->lat_dist) {
           best_projection = candidate;
         }
       }
     }
 
-    // Optimization: If we found the absolute worst-case scenario, break straight away!
     if (best_projection->is_critical_departure()) {
       break;
     }
   }
 
+  // If no threats were found, return the safe NORMAL skeleton as NONE!
   if (!best_projection) {
-    return std::nullopt;
+    if (fallback_normal) {
+      fallback_normal->departure_type_opt = DepartureType::NONE;
+      best_projection = fallback_normal;
+    } else {
+      return std::nullopt;
+    }
   }
 
-  // Filter out redundant safe points to keep data sparse, but NEVER filter a critical threat.
+  // Downsampling logic (Bypassed if CRITICAL)
   if (
     previous_longitudinal_distance && !best_projection->is_critical_departure() &&
     std::abs(*previous_longitudinal_distance - best_projection->lon_dist_on_pred_traj) <=
