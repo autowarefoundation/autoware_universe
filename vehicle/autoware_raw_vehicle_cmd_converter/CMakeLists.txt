@@ -41,7 +41,7 @@ autoware_agnocast_wrapper_register_node(autoware_raw_vehicle_cmd_converter_node_
   PLUGIN "autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode"
   EXECUTABLE autoware_raw_vehicle_cmd_converter_node
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
-  ROS2_EXECUTOR MultiThreadedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
