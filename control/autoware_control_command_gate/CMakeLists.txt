@@ -37,7 +37,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::control_command_gate::ControlCmdGate"
   EXECUTABLE "control_command_gate_node"
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
-  ROS2_EXECUTOR MultiThreadedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
