@@ -318,6 +318,8 @@ bool ObstacleStop::apply_stopping(
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
 {
+  if (!params_.use_objects) return std::nullopt;
+
   if (!data_->predicted_objects || data_->predicted_objects->objects.empty()) return std::nullopt;
   auto predicted_objects = *data_->predicted_objects;
 
@@ -330,6 +332,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
 {
+  if (!params_.use_pointcloud) return std::nullopt;
+
   if (!data_->obstacle_pointcloud || data_->obstacle_pointcloud->data.empty()) {
     return std::nullopt;
   }
