@@ -265,14 +265,11 @@ void SideShiftModule::replaceShiftLine()
 
 BehaviorModuleOutput SideShiftModule::plan()
 {
-  bool shift_line_replaced = false;
-
   // Replace shift line
   if (
     lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
                                        (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
     replaceShiftLine();
-    shift_line_replaced = true;
   } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
     RCLCPP_DEBUG(getLogger(), "ego is shifting");
   } else {
@@ -286,12 +283,6 @@ BehaviorModuleOutput SideShiftModule::plan()
   if (shifted_path.path.points.empty()) {
     RCLCPP_ERROR(getLogger(), "Generated shift_path has no points");
     return {};
-  }
-
-  // Keep previous path shape when no new shift line was inserted.
-  // Trim already-traversed portion and extend forward with newly generated points.
-  if (!shift_line_replaced && !prev_output_.path.points.empty()) {
-    shifted_path = keepPrevPathShape(shifted_path);
   }
 
   // Reset orientation
@@ -466,46 +457,6 @@ PathWithLaneId SideShiftModule::extendBackwardLength(const PathWithLaneId & orig
   }
 
   return extended_path;
-}
-
-ShiftedPath SideShiftModule::keepPrevPathShape(const ShiftedPath & new_shifted_path) const
-{
-  const auto & ego_position = getEgoPose().position;
-
-  // Find the ego nearest segment in the previous output path
-  const size_t prev_ego_seg_idx = findNearestSegmentIndex(prev_output_.path.points, ego_position);
-
-  // Trim already-traversed portion, keeping a small backward margin for continuity
-  constexpr size_t backward_margin_points = 3;
-  const size_t trim_start_idx =
-    (prev_ego_seg_idx > backward_margin_points) ? prev_ego_seg_idx - backward_margin_points : 0;
-
-  ShiftedPath result;
-  result.path.header = new_shifted_path.path.header;
-
-  // Copy remaining (not-yet-traversed) points from the previous output to preserve shape
-  for (size_t i = trim_start_idx; i < prev_output_.path.points.size(); ++i) {
-    result.path.points.push_back(prev_output_.path.points.at(i));
-    result.shift_length.push_back(prev_output_.shift_length.at(i));
-  }
-
-  if (result.path.points.empty()) {
-    return new_shifted_path;
-  }
-
-  // Extend the tail: find the end of the preserved path in the newly generated path,
-  // then append any additional forward points from the new path.
-  const auto & last_prev_pos = result.path.points.back().point.pose.position;
-  const size_t new_match_idx = findNearestIndex(new_shifted_path.path.points, last_prev_pos);
-
-  if (new_match_idx + 1 < new_shifted_path.path.points.size()) {
-    for (size_t i = new_match_idx + 1; i < new_shifted_path.path.points.size(); ++i) {
-      result.path.points.push_back(new_shifted_path.path.points.at(i));
-      result.shift_length.push_back(new_shifted_path.shift_length.at(i));
-    }
-  }
-
-  return result;
 }
 
 void SideShiftModule::setDebugMarkersVisualization() const

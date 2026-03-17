@@ -85,9 +85,6 @@ private:
 
   void replaceShiftLine();
 
-  // Preserve previous shifted path shape, trimming traversed portion and extending forward
-  ShiftedPath keepPrevPathShape(const ShiftedPath & new_shifted_path) const;
-
   // const methods
   void publishPath(const PathWithLaneId & path) const;
 
