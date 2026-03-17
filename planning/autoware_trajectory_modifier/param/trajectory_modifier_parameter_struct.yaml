@@ -61,6 +61,11 @@ trajectory_modifier_params:
       default_value: false
       description: Enable the use of pointcloud for obstacle stop
       read_only: false
+    enable_stop:
+      type: bool
+      default_value: true
+      description: Enable stopping behavior when obstacle is detected
+      read_only: false
     stop_margin_m:
       type: double
       default_value: 6.0

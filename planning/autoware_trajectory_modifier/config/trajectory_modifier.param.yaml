@@ -16,6 +16,7 @@
     obstacle_stop:
       use_objects: true
       use_pointcloud: true
+      enable_stop: true
       stop_margin_m: 6.0
       nom_stopping_decel: 1.0 # [m/s^2]
       max_stopping_decel: 4.0 # [m/s^2]

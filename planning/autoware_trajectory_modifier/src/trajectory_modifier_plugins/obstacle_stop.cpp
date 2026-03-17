@@ -113,6 +113,8 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
     "[TM ObstacleStop] Detected collision point at arc length %f m",
     nearest_collision_point_->arc_length);
 
+  if (!params_.enable_stop) return false;
+
   return set_stop_point(traj_points);
 }
 
