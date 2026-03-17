@@ -89,7 +89,7 @@ void FaultInjectionNode::on_diagnostics(const DiagnosticArray::ConstSharedPtr ms
 {
   DiagnosticArray updated;
   {
-    std::lock_guard<std::mutex> lock(data_mutex_);
+    std::lock_guard<std::mutex> lock(diagnostics_state_mutex_);
     last_diagnostics_ = *msg;
     has_last_diagnostics_ = true;
     updated = *msg;
