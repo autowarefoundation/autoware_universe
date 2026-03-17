@@ -69,9 +69,11 @@ rclcpp_components_register_node(obstacle_pointcloud_based_validator
   EXECUTABLE obstacle_pointcloud_based_validator_node
 )
 
-rclcpp_components_register_node(object_lanelet_filter
+autoware_agnocast_wrapper_register_node(object_lanelet_filter
   PLUGIN "autoware::detected_object_validation::lanelet_filter::DetectedObjectLaneletFilterNode"
   EXECUTABLE object_lanelet_filter_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 rclcpp_components_register_node(object_lanelet_filter
