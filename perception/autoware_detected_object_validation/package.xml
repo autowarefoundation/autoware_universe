@@ -18,12 +18,12 @@
 
   <build_depend>libopencv-dev</build_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_test_utils</depend>
-  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_utils</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>
