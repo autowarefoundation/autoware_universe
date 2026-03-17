@@ -859,49 +859,71 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
   const double min_braking_dist, const double max_braking_dist, const SideKey side_key,
   const std::optional<double> previous_longitudinal_distance)
 {
-  std::optional<ProjectionToBound> closest_projection;
+  std::optional<ProjectionToBound> best_projection;
+
+  const auto get_severity = [](const DepartureType type) -> uint8_t {
+    switch (type) {
+      case DepartureType::CRITICAL_DEPARTURE:
+        return 3;
+      case DepartureType::APPROACHING_DEPARTURE:
+        return 2;
+      case DepartureType::NEAR_BOUNDARY:
+        return 1;
+      default:
+        return 0;
+    }
+  };
 
   const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
   const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
 
-  // 1. Evaluate all candidates to find the most critical or closest one
   for (auto candidate : candidate_projections) {
     if (!candidate.footprint_type_opt) continue;
 
     candidate.departure_type_opt = assign_departure_type(
-      candidate.lon_dist_on_pred_traj, 0.5, min_braking_dist, max_braking_dist,
+      candidate.lon_dist_on_pred_traj, candidate.lon_offset, min_braking_dist, max_braking_dist,
       param.th_cutoff_time_departure_s, candidate.time_from_start, candidate.lat_dist, th_dist_near,
       th_dist_critical, candidate.footprint_type_opt.value());
 
-    if (candidate.departure_type_opt.value() == DepartureType::NONE) {
+    if (candidate.departure_type_opt.value_or(DepartureType::NONE) == DepartureType::NONE) {
       continue;
     }
 
-    if (!closest_projection) {
-      closest_projection = candidate;
+    if (!best_projection) {
+      best_projection = candidate;
+    } else {
+      const uint8_t cand_severity = get_severity(candidate.departure_type_opt.value());
+      const uint8_t best_severity = get_severity(best_projection->departure_type_opt.value());
+
+      if (cand_severity > best_severity) {  // Priority 1: Threat Dominance
+        best_projection = candidate;
+      } else if (cand_severity == best_severity) {  // Priority 2: If same level, pick the closest
+                                                    // one.
+        if (candidate.lat_dist < best_projection->lat_dist) {
+          best_projection = candidate;
+        }
+      }
     }
 
-    if (closest_projection->is_critical_departure()) {
+    // Optimization: If we found the absolute worst-case scenario, break straight away!
+    if (best_projection->is_critical_departure()) {
       break;
-    }
-
-    if (candidate.lat_dist < closest_projection->lat_dist) {
-      closest_projection = candidate;
     }
   }
 
-  if (!closest_projection || !closest_projection->departure_type_opt) {
+  if (!best_projection) {
     return std::nullopt;
   }
 
+  // Filter out redundant safe points to keep data sparse, but NEVER filter a critical threat.
   if (
-    previous_longitudinal_distance && !closest_projection->is_critical_departure() &&
-    std::abs(*previous_longitudinal_distance - closest_projection->lon_dist_on_pred_traj) <=
+    previous_longitudinal_distance && !best_projection->is_critical_departure() &&
+    std::abs(*previous_longitudinal_distance - best_projection->lon_dist_on_pred_traj) <=
       param.th_point_merge_distance_m) {
     return std::nullopt;
   }
 
-  return closest_projection;
+  return best_projection;
 }
 
 DepartureType assign_departure_type(
