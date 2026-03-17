@@ -20,7 +20,6 @@
 
   <depend>angles</depend>
   <depend>autoware_adapi_v1_msgs</depend>
-  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_factor_interface</depend>
@@ -44,6 +43,7 @@
   <test_depend>autoware_lint_common</test_depend>
   <test_depend>autoware_planning_validator_test_utils</test_depend>
 
+  <exec_depend>autoware_agnocast_wrapper</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
