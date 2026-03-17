@@ -109,9 +109,26 @@ independently.
 #### TrajectoryPointFixer (enabled)
 
 Removes duplicate or numerically degenerate points (zero-distance, NaN positions). Optionally
-resamples points that are too close together. Runs at the start of the pipeline.
+resamples closely-spaced points. Also runs stop-approach detection and populates the shared
+`SemanticSpeedTracker` for use by downstream plugins.
 
 Does not modify velocities or time stamps.
+
+**Stop-approach detection:** Points that are much closer together than normal represent a stop
+zone. With a constant `dt`, `v = ds/dt` approaches zero as `ds` approaches zero, so geometric
+proximity IS a reliable stop indicator. Detection runs in three stages:
+
+1. `remove_close_proximity_points`: marks points that are geometric near-duplicates (`ds <
+min_dist_to_remove_m`) as stop candidates.
+2. `resample_close_proximity_points`: resamples clusters of closely-spaced points and marks the
+   cluster endpoint as a stop candidate if the speed is decreasing.
+3. `build_stop_approach_ranges`: processes all candidates, confirms speed is decreasing toward
+   the candidate (not increasing — that would be a take-off), traces back the deceleration onset,
+   and stores the resulting range in `SemanticSpeedTracker.slow_down_ranges`.
+
+If no candidates produce valid stop approach ranges, a velocity-profile scan
+(`detect_velocity_based_stop`) is run as a fallback for constant-spacing trajectories where no
+geometric clusters exist.
 
 #### TrajectoryKinematicFeasibilityEnforcer (enabled, runs twice)
 
@@ -143,13 +160,17 @@ The primary path smoother. Solves a quadratic program that minimizes path curvat
 Decision variables: `[x_0, y_0, ..., x_{N-1}, y_{N-1}]` - positions only.
 
 Hard constraints: the first `num_constrained_points_start` and last `num_constrained_points_end`
-points are fixed to their input positions (defaults: start = 3, end = 0). Only the start anchor
-is active by default, keeping the trajectory pinned at the ego vehicle's immediate vicinity.
+points are fixed to their input positions (defaults: start = 3, end = 0). Additionally, any
+stop points detected by `TrajectoryPointFixer` (via `SemanticSpeedTracker`) are added as hard
+equality constraints, pinning their positions regardless of smoothness weight.
 
 After solving, velocities and accelerations are recomputed from the smoothed positions as
-described above. Orientations are recalculated from the smoothed path geometry. Optionally,
-orientations can instead be copied from the original input trajectory via nearest-neighbor
-matching (`preserve_input_trajectory_orientation`), but this is **disabled by default**.
+described above. For points within detected stop approach ranges, the planner's original velocity
+profile is restored after the moving average step, preserving the intended deceleration curve.
+The stop point itself is forced to zero velocity unconditionally. Orientations are recalculated
+from the smoothed path geometry. Optionally, orientations can instead be copied from the original
+input trajectory via nearest-neighbor matching (`preserve_input_trajectory_orientation`), but
+this is **disabled by default**.
 
 **The QP smoother must run before any plugin that resamples the trajectory.** Resampling
 (changing the number of points or their spacing in arc length) breaks the constant-dt assumption
@@ -309,10 +330,11 @@ acceptable.
 
 ## Known Limitations
 
-1. **Stop velocities are overwritten by the QP smoother.** If the upstream planner encodes a stop
-   by setting `longitudinal_velocity_mps = 0` at a specific point, that value is lost after QP
-   smoothing. The velocity optimizer does not know about intended stop points. Stop behavior must
-   be handled by a separate mechanism or enforced upstream of this node.
+1. **Stop velocity preservation depends on detection.** Stop points are detected from geometric
+   proximity (`ds < min_dist_to_remove_m`) and velocity profile. If a planner encodes a stop
+   zone with point spacings above the detection threshold and no near-zero velocities below
+   `stop_detection_velocity_threshold_mps`, the stop will not be detected and the QP smoother
+   will overwrite the velocity profile as normal.
 
 2. **Constant-dt is broken at the pipeline end.** The spline smoother as the last geometric step
    converts the trajectory to arc-length parameterization. Downstream consumers receive a
@@ -324,11 +346,11 @@ acceptable.
    `time_step_s` uniformly. If the input trajectory has a different dt (e.g., because a resampler
    ran earlier), the QP smoother will produce incorrect velocities without warning.
 
-4. **No velocity value from the input is fully preserved.** The QP smoother copies
-   `input_trajectory[0].longitudinal_velocity_mps` to `output_trajectory[0]` before the moving
-   average, but the moving average immediately overwrites it with
-   `(v_input[0] + v_geom[1] + v_geom[2]) / 3`. Every velocity in the output is therefore a
-   function of smoothed geometry, not the planner's intent.
+4. **Velocities outside detected stop zones are geometric.** For points not in a detected stop
+   approach range, velocities are recomputed from position differences and blended through a
+   3-point moving average. The planner's velocity values are not preserved there. For detected
+   stop approach zones, the planner's original velocity profile is restored after the moving
+   average and the stop point is forced to zero (see TrajectoryQPSmoother section).
 
 5. **Trajectory extender discontinuity is unresolved.** The history-based backward extension
    creates a positional gap at the junction point that propagates through the smoothers. No fix
