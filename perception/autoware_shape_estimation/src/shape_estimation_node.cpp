@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace autoware::shape_estimation
 {
