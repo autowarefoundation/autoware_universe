@@ -65,7 +65,7 @@ void FaultInjectionNode::on_simulation_events(const SimulationEvents::ConstShare
   bool should_publish = false;
 
   {
-    std::lock_guard<std::mutex> lock(data_mutex_);
+    std::lock_guard<std::mutex> lock(diagnostics_state_mutex_);
     for (const auto & event : msg->fault_injection_events) {
       const auto mapped = event_to_diag_map_.find(event.name);
       if (mapped == event_to_diag_map_.end()) {
