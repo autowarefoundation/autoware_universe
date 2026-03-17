@@ -34,6 +34,7 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using TrajectoryModifierParams = trajectory_modifier_params::Params;

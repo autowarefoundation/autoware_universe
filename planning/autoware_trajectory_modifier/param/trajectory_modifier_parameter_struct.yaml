@@ -18,6 +18,16 @@ trajectory_modifier_params:
       gt_eq<>: [0.0]
 
   stop_point_fixer:
+    force_stop_long_stopped_trajectories:
+      type: bool
+      default_value: true
+      description: Force zero velocity trajectory for trajectories with long stops
+      read_only: false
+    force_stop_close_stopped_trajectories:
+      type: bool
+      default_value: true
+      description: Force zero velocity trajectory for trajectories with stops close to ego
+      read_only: false
     velocity_threshold_mps:
       type: double
       default_value: 0.1
@@ -29,6 +39,13 @@ trajectory_modifier_params:
       type: double
       default_value: 1.0
       description: Minimum distance threshold to trigger trajectory replacement [m]
+      read_only: false
+      validation:
+        gt_eq<>: [0.0]
+    min_stop_duration_s:
+      type: double
+      default_value: 0.5
+      description: Minimum duration of stop to trigger trajectory replacement [s]
       read_only: false
       validation:
         gt_eq<>: [0.0]
@@ -69,20 +86,6 @@ trajectory_modifier_params:
       type: double
       default_value: 3.0
       description: Jerk during stopping [m/s^3]
-      validation:
-        gt_eq<>: [0.0]
-      read_only: false
-    on_time_buffer:
-      type: double
-      default_value: 0.5
-      description: Duration an obstacle must be detected before stopping [s]
-      validation:
-        gt_eq<>: [0.0]
-      read_only: false
-    off_time_buffer:
-      type: double
-      default_value: 1.0
-      description: Duration an obstacle must be gone before removing stop [s]
       validation:
         gt_eq<>: [0.0]
       read_only: false
