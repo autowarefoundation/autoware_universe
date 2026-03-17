@@ -17,9 +17,11 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE detected_object_sorter_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::object_sorter::TrackedObjectSorterNode"
   EXECUTABLE tracked_object_sorter_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 # Tests
