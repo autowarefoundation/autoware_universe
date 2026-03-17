@@ -46,7 +46,7 @@
 
   <group>
     <node_container pkg="$(var container_package)" exec="$(var container_executable)" name="planning_validator_container" namespace="" args="" output="both">
-      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
       <composable_node pkg="autoware_planning_validator" plugin="autoware::planning_validator::PlanningValidatorNode" name="planning_validator" namespace="">
         <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
         <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
