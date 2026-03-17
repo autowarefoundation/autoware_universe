@@ -56,7 +56,7 @@ private:
   std::unordered_map<std::string, int8_t> diag_override_levels_;
   DiagnosticArray last_diagnostics_;
   bool has_last_diagnostics_{false};
-  std::mutex data_mutex_;
+  std::mutex diagnostics_state_mutex_;
 };
 
 }  // namespace autoware::simulator::fault_injection
