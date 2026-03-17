@@ -62,6 +62,87 @@ Param create_mock_param()
   p.th_cutoff_time_near_boundary_s = cutoff_time_near;
   return p;
 }
+#ifdef EXPORT_TEST_PLOT_FIGURE
+void plot_trajectory_evaluation(
+  const std::vector<ProjectionToBound> & res_vec, const std::string & title,
+  const FootprintMap<Side<ProjectionsToBound>> * all_projections = nullptr,
+  const std::optional<double> braking_zone_start = std::nullopt)
+{
+  auto plt = autoware::pyplot::import();
+
+  // 1. Plot safety thresholds
+  plt.axhline(
+    Args(th_critical),
+    Kwargs("color"_a = "red", "linestyle"_a = "--", "label"_a = "Critical Thresh"));
+  plt.axhline(
+    Args(th_near), Kwargs("color"_a = "orange", "linestyle"_a = "--", "label"_a = "Near Thresh"));
+  plt.axvline(
+    Args(braking_dist_max),
+    Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Max Braking"));
+
+  // Optional: Plot the start of the braking zone
+  if (braking_zone_start) {
+    plt.axvline(
+      Args(*braking_zone_start),
+      Kwargs("color"_a = "orange", "linestyle"_a = ":", "label"_a = "Braking Zone Start"));
+  }
+
+  // 2. Plot ALL initial candidates as gray 'x' marks
+  if (all_projections) {
+    std::vector<double> cand_x;
+    std::vector<double> cand_y;
+    for (const auto & [type, side_map] : all_projections->data) {
+      // Use .at() or [] safely because we know it's a test environment
+      if (side_map.right.empty() && side_map.left.empty()) continue;
+      for (const auto & cand : side_map[SideKey::LEFT]) {
+        cand_x.push_back(cand.lon_dist_on_pred_traj);
+        cand_y.push_back(cand.lat_dist);
+      }
+    }
+    if (!cand_x.empty()) {
+      plt.scatter(
+        Args(cand_x, cand_y), Kwargs(
+                                "color"_a = "gray", "marker"_a = "x", "s"_a = 60,
+                                "label"_a = "All Candidates", "alpha"_a = 0.5));
+    }
+  }
+
+  // 3. Plot the selected winners as solid circles
+  std::vector<double> near_x;
+  std::vector<double> near_y;
+  std::vector<double> app_x;
+  std::vector<double> app_y;
+  std::vector<double> crit_x;
+  std::vector<double> crit_y;
+  for (const auto & res : res_vec) {
+    if (res.departure_type_opt == DepartureType::NEAR_BOUNDARY) {
+      near_x.push_back(res.lon_dist_on_pred_traj);
+      near_y.push_back(res.lat_dist);
+    } else if (res.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
+      app_x.push_back(res.lon_dist_on_pred_traj);
+      app_y.push_back(res.lat_dist);
+    } else if (res.departure_type_opt == DepartureType::CRITICAL_DEPARTURE) {
+      crit_x.push_back(res.lon_dist_on_pred_traj);
+      crit_y.push_back(res.lat_dist);
+    }
+  }
+
+  if (!near_x.empty())
+    plt.scatter(Args(near_x, near_y), Kwargs("color"_a = "green", "label"_a = "Selected (Near)"));
+  if (!app_x.empty())
+    plt.scatter(
+      Args(app_x, app_y), Kwargs("color"_a = "orange", "label"_a = "Selected (Approaching)"));
+  if (!crit_x.empty())
+    plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Selected (Critical)"));
+
+  plt.xlabel(Args("Longitudinal Distance [m]"));
+  plt.ylabel(Args("Lateral Distance [m]"));
+  plt.title(Args(title));
+  plt.legend();
+
+  save_figure(plt, "test_get_closest_projections");
+}
+#endif
 }  // namespace
 
 // ==============================================================================
@@ -278,64 +359,8 @@ TEST_F(GetClosestProjectionsForSideTest, TestValidFootprintsWithoutCritical)
   EXPECT_EQ(res_vec[1].departure_type_opt.value(), DepartureType::NEAR_BOUNDARY);
 
   BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    plt.axhline(
-      Args(th_critical),
-      Kwargs("color"_a = "red", "linestyle"_a = "--", "label"_a = "Critical Thresh"));
-    plt.axhline(
-      Args(th_near), Kwargs("color"_a = "orange", "linestyle"_a = "--", "label"_a = "Near Thresh"));
-    plt.axvline(
-      Args(braking_dist_max),
-      Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Max Braking"));
-
-    std::vector<double> cand_x;
-    std::vector<double> cand_y;
-    for (const auto & [type, side_map] : projections.data) {
-      for (const auto & cand : side_map[SideKey::LEFT]) {
-        cand_x.push_back(cand.lon_dist_on_pred_traj);
-        cand_y.push_back(cand.lat_dist);
-      }
-    }
-    plt.scatter(
-      Args(cand_x, cand_y), Kwargs(
-                              "color"_a = "gray", "marker"_a = "x", "s"_a = 60,
-                              "label"_a = "All Candidates", "alpha"_a = 0.5));
-
-    std::vector<double> near_x;
-    std::vector<double> near_y;
-    std::vector<double> app_x;
-    std::vector<double> app_y;
-    std::vector<double> crit_x;
-    std::vector<double> crit_y;
-    for (const auto & res : res_vec) {
-      if (res.departure_type_opt == DepartureType::NEAR_BOUNDARY) {
-        near_x.push_back(res.lon_dist_on_pred_traj);
-        near_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
-        app_x.push_back(res.lon_dist_on_pred_traj);
-        app_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::CRITICAL_DEPARTURE) {
-        crit_x.push_back(res.lon_dist_on_pred_traj);
-        crit_y.push_back(res.lat_dist);
-      }
-    }
-
-    if (!near_x.empty())
-      plt.scatter(Args(near_x, near_y), Kwargs("color"_a = "green", "label"_a = "Selected (Near)"));
-    if (!app_x.empty())
-      plt.scatter(
-        Args(app_x, app_y), Kwargs("color"_a = "orange", "label"_a = "Selected (Approaching)"));
-    if (!crit_x.empty())
-      plt.scatter(
-        Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Selected (Critical)"));
-
-    plt.xlabel(Args("Longitudinal Distance [m]"));
-    plt.ylabel(Args("Lateral Distance [m]"));
-    plt.title(Args("Trajectory Filtering: Valid Footprints w/o Critical"));
-    plt.legend();
-
-    save_figure(plt, "test_get_closest_projections");
+    plot_trajectory_evaluation(
+      res_vec, "Trajectory Filtering: Valid Footprints w/o Critical", &projections);
   });
 }
 
@@ -347,8 +372,8 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
   // CRITICAL threshold = 0.5, braking_dist_max = 15.0
   projections[FootprintType::NORMAL][SideKey::LEFT] = {
     create_mock_projection(std::nullopt, 1.5, 0.0, 1.0, 0),   // Index 0: 30m away from wall
-    create_mock_projection(std::nullopt, 1.5, 16.0, 1.0, 1),  // Index 1: 14m away from wall
-    create_mock_projection(std::nullopt, 0.1, 30.0, 1.0, 2),  // Index 2: Hits wall (Critical)
+    create_mock_projection(std::nullopt, 1.5, 14.0, 1.0, 1),  // Index 1: 14m away from wall
+    create_mock_projection(std::nullopt, 0.1, 28.0, 1.0, 2),  // Index 2: Hits wall (Critical)
     create_mock_projection(std::nullopt, 0.1, 40.0, 1.0, 3)   // Index 3: Past wall
   };
 
@@ -362,7 +387,7 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
     projections, param, braking_dist_min, braking_dist_max, SideKey::LEFT);
 
   ASSERT_TRUE(result.has_value());
-  auto res_vec = result.value();
+  const auto & res_vec = result.value();
 
   ASSERT_EQ(res_vec.size(), 3);  // Breaks after index 2
 
@@ -379,51 +404,8 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
   EXPECT_EQ(res_vec[2].departure_type_opt.value(), DepartureType::CRITICAL_DEPARTURE);
 
   BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    std::vector<double> near_x;
-    std::vector<double> near_y;
-    std::vector<double> app_x;
-    std::vector<double> app_y;
-    std::vector<double> crit_x;
-    std::vector<double> crit_y;
-
-    for (const auto & res : res_vec) {
-      if (res.departure_type_opt == DepartureType::NEAR_BOUNDARY) {
-        near_x.push_back(res.lon_dist_on_pred_traj);
-        near_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
-        app_x.push_back(res.lon_dist_on_pred_traj);
-        app_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::CRITICAL_DEPARTURE) {
-        crit_x.push_back(res.lon_dist_on_pred_traj);
-        crit_y.push_back(res.lat_dist);
-      }
-    }
-
-    plt.axhline(
-      Args(th_critical),
-      Kwargs("color"_a = "red", "linestyle"_a = "--", "label"_a = "Critical Thresh"));
-
-    // Plot the start of the braking zone relative to the critical point
     double braking_start = res_vec.back().lon_dist_on_pred_traj - braking_dist_max;
-    plt.axvline(
-      Args(braking_start),
-      Kwargs("color"_a = "orange", "linestyle"_a = ":", "label"_a = "Braking Zone Start"));
-
-    if (!near_x.empty())
-      plt.scatter(Args(near_x, near_y), Kwargs("color"_a = "green", "label"_a = "Near"));
-    if (!app_x.empty())
-      plt.scatter(Args(app_x, app_y), Kwargs("color"_a = "orange", "label"_a = "Approaching"));
-    if (!crit_x.empty())
-      plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Critical"));
-
-    plt.xlabel(Args("Longitudinal Distance [m]"));
-    plt.ylabel(Args("Lateral Distance [m]"));
-    plt.title(Args("Trajectory Downgrade Logic"));
-    plt.legend();
-
-    save_figure(plt, "test_get_closest_projections");
+    plot_trajectory_evaluation(res_vec, "Trajectory Downgrade Logic", nullptr, braking_start);
   });
 }
 
