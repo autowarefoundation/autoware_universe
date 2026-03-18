@@ -30,12 +30,14 @@ The calibration status detection system operates through the following pipeline:
 
 ### Input
 
-| Name                 | Type                                     | Description                                             |
-| -------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| `~/input/velocity`   | `prerequisite.velocity_source` parameter | Vehicle velocity (multiple message types supported)     |
-| `input.cloud_topics` | `sensor_msgs::msg::PointCloud2`          | LiDAR point cloud data                                  |
-| `input.image_topics` | `sensor_msgs::msg::Image`                | Camera image data (BGR8 format)                         |
-| Camera info topics   | `sensor_msgs::msg::CameraInfo`           | Camera intrinsic parameters and distortion coefficients |
+| Name                       | Type                                                   | Description                                                                 |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `~/input/linear_velocity`  | `prerequisite.linear_velocity_check.source` parameter  | Vehicle twist for linear velocity check (multiple message types supported)  |
+| `~/input/angular_velocity` | `prerequisite.angular_velocity_check.source` parameter | Vehicle twist for angular velocity check (multiple message types supported) |
+| `~/input/objects`          | `prerequisite.objects_check.source` parameter          | Detected objects for objects check (multiple message types supported)       |
+| `input.cloud_topics`       | `sensor_msgs::msg::PointCloud2`                        | LiDAR point cloud data                                                      |
+| `input.image_topics`       | `sensor_msgs::msg::Image`                              | Camera image data (BGR8 format)                                             |
+| Camera info topics         | `sensor_msgs::msg::CameraInfo`                         | Camera intrinsic parameters and distortion coefficients                     |
 
 ### Output
 

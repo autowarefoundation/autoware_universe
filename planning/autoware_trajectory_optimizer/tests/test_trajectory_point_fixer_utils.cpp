@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "test_utils.hpp"
 
 #include <gtest/gtest.h>
@@ -256,7 +257,8 @@ TEST_F(PointFixerUtilsTest, ResampleCloseProximityPoints_NoClosePoints)
   const auto odom = create_odometry(0.0, 0.0, 0.0, 1.0);
   const auto original_points = points;
 
-  resample_close_proximity_points(points, odom, 0.5);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  resample_close_proximity_points(points, tracker, odom, 0.5);
 
   // Points should be unchanged
   ASSERT_EQ(points.size(), original_points.size());
@@ -276,7 +278,8 @@ TEST_F(PointFixerUtilsTest, ResampleCloseProximityPoints_WithClosePoints)
 
   const auto odom = create_odometry(0.0, 0.0, 0.0, 1.0);
 
-  resample_close_proximity_points(points, odom, 0.5);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  resample_close_proximity_points(points, tracker, odom, 0.5);
 
   // Points should still exist and have valid positions
   EXPECT_EQ(points.size(), 4);
@@ -297,7 +300,8 @@ TEST_F(PointFixerUtilsTest, ResampleCloseProximityPoints_EmptyTrajectory)
   std::vector<TrajectoryPoint> points;
   const auto odom = create_odometry(0.0, 0.0, 0.0, 1.0);
 
-  resample_close_proximity_points(points, odom, 0.1);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  resample_close_proximity_points(points, tracker, odom, 0.1);
 
   EXPECT_TRUE(points.empty());
 }
@@ -309,7 +313,8 @@ TEST_F(PointFixerUtilsTest, ResampleCloseProximityPoints_SinglePoint)
 
   const auto odom = create_odometry(0.0, 0.0, 0.0, 1.0);
 
-  resample_close_proximity_points(points, odom, 0.1);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  resample_close_proximity_points(points, tracker, odom, 0.1);
 
   EXPECT_EQ(points.size(), 1);
 }
@@ -378,7 +383,6 @@ TEST_F(PointFixerUtilsTest, RemoveInvalidPoints_InvalidOrientation)
   EXPECT_EQ(points.size(), 2);
 }
 
-// Tests for remove_close_proximity_points
 TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_NoClosePoints)
 {
   std::vector<TrajectoryPoint> points;
@@ -387,7 +391,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_NoClosePoints)
   points.push_back(create_point(2.0, 0.0));
 
   const size_t original_size = points.size();
-  remove_close_proximity_points(points, 0.1);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker, 0.1);
 
   EXPECT_EQ(points.size(), original_size);
 }
@@ -399,7 +404,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_WithClosePoints)
   points.push_back(create_point(0.001, 0.0));  // Very close
   points.push_back(create_point(1.0, 0.0));
 
-  remove_close_proximity_points(points, 0.01);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker, 0.01);
 
   EXPECT_EQ(points.size(), 2);
   EXPECT_DOUBLE_EQ(points[0].pose.position.x, 0.0);
@@ -414,7 +420,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_AllClose)
   points.push_back(create_point(0.002, 0.0));
   points.push_back(create_point(0.003, 0.0));
 
-  remove_close_proximity_points(points, 0.01);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker, 0.01);
 
   // Should keep only the first point
   EXPECT_EQ(points.size(), 1);
@@ -424,7 +431,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_AllClose)
 TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_EmptyTrajectory)
 {
   std::vector<TrajectoryPoint> points;
-  remove_close_proximity_points(points, 0.1);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker, 0.1);
   EXPECT_TRUE(points.empty());
 }
 
@@ -433,7 +441,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_SinglePoint)
   std::vector<TrajectoryPoint> points;
   points.push_back(create_point(0.0, 0.0));
 
-  remove_close_proximity_points(points, 0.1);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker, 0.1);
 
   EXPECT_EQ(points.size(), 1);
 }
@@ -446,7 +455,8 @@ TEST_F(PointFixerUtilsTest, RemoveCloseProximityPoints_DefaultThreshold)
   points.push_back(create_point(1.0, 0.0));
 
   // Use default threshold
-  remove_close_proximity_points(points);
+  autoware::trajectory_optimizer::SemanticSpeedTracker tracker;  // Empty tracker for this test
+  remove_close_proximity_points(points, tracker);
 
   EXPECT_EQ(points.size(), 2);
 }

@@ -17,6 +17,9 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <algorithm>
+#include <vector>
+
 namespace autoware::trajectory_optimizer
 {
 using geometry_msgs::msg::AccelWithCovarianceStamped;
@@ -28,12 +31,85 @@ struct InitialMotion
   double acc_mps2{0.0};
 };
 
+// Tracks detected stop approaches in the trajectory for use across plugins.
+// A stop approach is a deceleration zone leading to a full stop: it has a start index
+// (onset of deceleration), an end index (stop point), and arc length coordinates for
+// remapping after resampling.
+struct SemanticSpeedTracker
+{
+public:
+  struct SlowSpeedInfo
+  {
+    size_t start_index{0};
+    size_t end_index{0};
+    double start_s_m{0.0};
+    double end_s_m{0.0};
+  };
+
+  void remap_to_trajectory(const std::vector<double> & new_arc_lengths)
+  {
+    if (new_arc_lengths.empty() || slow_down_ranges_.empty()) {
+      return;
+    }
+
+    const double max_s = new_arc_lengths.back();
+
+    auto find_nearest_index = [&](double target_s) -> size_t {
+      target_s = std::max(0.0, std::min(target_s, max_s));
+      const auto it = std::lower_bound(new_arc_lengths.begin(), new_arc_lengths.end(), target_s);
+      if (it == new_arc_lengths.end()) {
+        return new_arc_lengths.size() - 1;
+      }
+      if (it == new_arc_lengths.begin()) {
+        return 0;
+      }
+      const auto prev_it = std::prev(it);
+      return (target_s - *prev_it <= *it - target_s)
+               ? static_cast<size_t>(std::distance(new_arc_lengths.begin(), prev_it))
+               : static_cast<size_t>(std::distance(new_arc_lengths.begin(), it));
+    };
+
+    for (auto & range : slow_down_ranges_) {
+      range.start_index = find_nearest_index(range.start_s_m);
+      range.end_index = find_nearest_index(range.end_s_m);
+    }
+  }
+
+  [[nodiscard]] const std::vector<SlowSpeedInfo> & get_slow_down_ranges() const
+  {
+    return slow_down_ranges_;
+  }
+
+  void add_stop_approach(const SlowSpeedInfo & info) { slow_down_ranges_.push_back(info); }
+
+  void clear_stop_approaches() { slow_down_ranges_.clear(); }
+
+  // Appends a candidate stop index to the staging area for build_stop_approach_ranges().
+  void add_stop_candidate(size_t idx) { stop_point_candidates_.push_back(idx); }
+
+  // Returns the staged stop candidates and clears the staging area in a single O(1) swap.
+  // Used by build_stop_approach_ranges() to consume and reset pending candidates.
+  std::vector<size_t> take_stop_point_candidates()
+  {
+    std::vector<size_t> result;
+    result.swap(stop_point_candidates_);
+    return result;
+  }
+
+private:
+  std::vector<size_t> stop_point_candidates_;
+  std::vector<SlowSpeedInfo> slow_down_ranges_;
+};
+
 // Runtime data struct - contains vehicle state updated each cycle from topics
-// This is NOT configuration, it's runtime state passed to plugins
+// and per-trajectory semantic tracking state shared across plugins.
+// A fresh instance is created for each candidate trajectory so semantic_speed_tracker
+// is automatically reset between trajectories.
 struct TrajectoryOptimizerData
 {
   Odometry current_odometry;
   AccelWithCovarianceStamped current_acceleration;
+  SemanticSpeedTracker semantic_speed_tracker;
 };
 
 // Main node parameters struct - contains only plugin activation flags
