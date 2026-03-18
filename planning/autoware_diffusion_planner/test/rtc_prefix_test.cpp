@@ -20,7 +20,9 @@
 #include <random>
 #include <vector>
 
-using namespace autoware::diffusion_planner;
+using autoware::diffusion_planner::MAX_NUM_AGENTS;
+using autoware::diffusion_planner::OUTPUT_T;
+using autoware::diffusion_planner::POSE_DIM;
 
 namespace
 {
@@ -93,8 +95,8 @@ void verify_prefix_constraint(int delay)
       }
     }
 
-    EXPECT_TRUE(has_difference)
-      << "Non-prefix values should be independent at delay=" << delay << ", t=" << t;
+    EXPECT_TRUE(has_difference) << "Non-prefix values should be independent at delay=" << delay
+                                << ", t=" << t;
   }
 }
 
