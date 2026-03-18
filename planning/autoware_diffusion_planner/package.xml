@@ -41,12 +41,10 @@
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <depend>rosbag2_cpp</depend>
   <depend>std_msgs</depend>
   <depend>visualization_msgs</depend>
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
-  <exec_depend>rosbag2_storage_mcap</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
