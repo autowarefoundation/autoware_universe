@@ -19,6 +19,8 @@
 #include "autoware/image_projection_based_fusion/utils/size_validation.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+
 #include <map>
 #include <memory>
 #include <string>
@@ -39,6 +41,7 @@ private:
     const RoiMsgType & input_rois_msg, ClusterMsgType & output_cluster_msg) override;
 
   void postprocess(const ClusterMsgType & output_cluster_msg, ClusterMsgType & output_msg) override;
+  void publish(const ClusterMsgType & output_msg) override;
 
   std::string strict_iou_match_mode_{"iou"};
   bool use_cluster_semantic_type_{false};
@@ -54,6 +57,9 @@ private:
 
   // Pedestrian size validation parameters
   PedestrianSizeValidationParams pedestrian_size_params_;
+
+  AUTOWARE_PUBLISHER_PTR(ClusterMsgType) agnocast_pub_ptr_;
+  AUTOWARE_SUBSCRIPTION_PTR(ClusterMsgType) agnocast_msg3d_sub_;
 
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
   bool out_of_scope(const ClusterObjType & obj);

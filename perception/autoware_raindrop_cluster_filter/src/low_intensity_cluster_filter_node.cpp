@@ -23,6 +23,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
+#include <utility>
 
 namespace autoware::low_intensity_cluster_filter
 {
@@ -49,11 +50,13 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
 
   using std::placeholders::_1;
   // Set publisher/subscriber
-  object_sub_ = this->create_subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-    "input/objects", rclcpp::QoS{1},
-    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1));
-  object_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-    "output/objects", rclcpp::QoS{1});
+  // cppcheck-suppress unknownMacro
+  object_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "input/objects", rclcpp::QoS{1},
+    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1),
+    AUTOWARE_SUBSCRIPTION_OPTIONS{});
+  object_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "output/objects", rclcpp::QoS{1});
   // initialize debug tool
   {
     using autoware_utils::DebugPublisher;
@@ -66,15 +69,15 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
   }
 }
 
-void LowIntensityClusterFilter::objectCallback(
-  const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg)
+void LowIntensityClusterFilter::objectCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature) input_msg)
 {
   // Guard
   stop_watch_ptr_->toc("processing_time", true);
   if (object_pub_->get_subscription_count() < 1) return;
 
-  tier4_perception_msgs::msg::DetectedObjectsWithFeature output_object_msg;
-  output_object_msg.header = input_msg->header;
+  auto output_object_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(object_pub_);
+  output_object_msg->header = input_msg->header;
   geometry_msgs::msg::TransformStamped transform_stamp;
   try {
     transform_stamp = tf_buffer_.lookupTransform(
@@ -108,9 +111,9 @@ void LowIntensityClusterFilter::objectCallback(
       !isValidatedCluster(cluster) && existence_probability < existence_probability_threshold_) {
       continue;
     }
-    output_object_msg.feature_objects.emplace_back(feature_object);
+    output_object_msg->feature_objects.emplace_back(feature_object);
   }
-  object_pub_->publish(output_object_msg);
+  object_pub_->publish(std::move(output_object_msg));
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
