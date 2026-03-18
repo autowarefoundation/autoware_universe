@@ -107,24 +107,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       autoware_test_utils
     )
   endif()
-
-  if(BUILD_TOOL)
-    add_executable(data_converter
-      tool/data_converter.cpp
-    )
-    target_include_directories(data_converter PUBLIC
-      ${CUDA_INCLUDE_DIRS}
-      ${autoware_cuda_utils_INCLUDE_DIRS}
-    )
-    target_link_libraries(data_converter
-      autoware_diffusion_planner_component
-      ${NVINFER}
-      ${NVONNXPARSER}
-      ${CUDA_LIBRARIES}
-      ${CUBLAS_LIBRARIES}
-      ${CUDNN_LIBRARY}
-    )
-  endif()
 endif()
 ament_auto_package(
   INSTALL_TO_SHARE
