@@ -1,5 +1,4 @@
 ### Automatically generated from package.xml ###
-common/autoware_agnocast_wrapper/** sykwer@gmail.com
 common/autoware_boundary_departure_checker/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
 common/autoware_component_interface_specs_universe/** isamu.takagi@tier4.jp yukihiro.saito@tier4.jp
 common/autoware_component_interface_tools/** isamu.takagi@tier4.jp

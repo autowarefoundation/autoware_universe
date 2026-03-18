@@ -359,6 +359,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
       get_or_declare_parameter<bool>(*node, ns + "use_shorten_margin_immediately");
     p.policy_candidate_path_turn_signal =
       get_or_declare_parameter<std::string>(*node, ns + "candidate_path_turn_signal");
+    p.turn_signal_on_approval_hold_duration =
+      get_or_declare_parameter<double>(*node, ns + "turn_signal_on_approval_hold_duration");
 
     if (p.policy_approval != "per_shift_line" && p.policy_approval != "per_avoidance_maneuver") {
       throw std::domain_error("invalid policy. please select 'best_effort' or 'reliable'.");
@@ -375,9 +377,11 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
     if (
       p.policy_candidate_path_turn_signal != "none" &&
       p.policy_candidate_path_turn_signal != "stopped_candidate" &&
-      p.policy_candidate_path_turn_signal != "all_candidate") {
+      p.policy_candidate_path_turn_signal != "all_candidate" &&
+      p.policy_candidate_path_turn_signal != "stop_on_approval") {
       throw std::domain_error(
-        "invalid policy. please select 'none', 'stopped_candidate' or 'all_candidate'.");
+        "invalid policy. please select 'none', 'stopped_candidate', 'all_candidate' or "
+        "'stop_on_approval'.");
     }
   }
 

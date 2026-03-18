@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<library path="dummy_validator_plugin">
+  <class type="autoware::trajectory_validator::plugin::DummyFilter"
+         base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>A predictable dummy filter for testing the main node</description>
+  </class>
+</library>
