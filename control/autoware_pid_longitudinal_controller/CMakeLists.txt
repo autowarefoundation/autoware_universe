@@ -25,4 +25,5 @@ endif()
 ament_auto_package(
   INSTALL_TO_SHARE
   config
+  USE_SCOPED_HEADER_INSTALL_DIR
 )
