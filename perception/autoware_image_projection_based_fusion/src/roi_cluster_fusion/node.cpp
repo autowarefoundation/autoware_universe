@@ -359,11 +359,6 @@ bool RoiClusterFusionNode::validateSizeForClass(
 
 void RoiClusterFusionNode::publish(const ClusterMsgType & output_msg)
 {
-  const auto objects_sub_count = agnocast_pub_ptr_->get_subscription_count() +
-                                 agnocast_pub_ptr_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
-    return;
-  }
   // TODO(Koichi98): replace publish function in FusionNode with agnocast_wrapper
   auto agnocast_output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_ptr_);
   *agnocast_output_msg = output_msg;
