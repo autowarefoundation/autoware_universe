@@ -14,6 +14,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__KALMAN_FILTER_TEMPLATE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__KALMAN_FILTER_TEMPLATE_HPP_
 
+#include <Eigen/Cholesky>
 #include <Eigen/Core>
 
 namespace autoware::multi_object_tracker
@@ -221,16 +222,33 @@ public:
    */
   bool update(const MeasVec & y, const MeasVec & y_pred, const MeasModelMat & C, const MeasMat & R)
   {
-    const MeasModelMat PCT = P_ * C.transpose();
-    const MeasMat S = C * PCT + R;
-    const MeasModelMat K = PCT * S.inverse();
+    // Enforce symmetry to reduce numerical drift.
+    P_ = Scalar(0.5) * (P_ + P_.transpose());
 
-    if (!K.allFinite()) {
+    const MeasMat r_sym = Scalar(0.5) * (R + R.transpose());
+    const MeasModelMat p_ct = P_ * C.transpose();
+    const MeasMat s = C * p_ct + r_sym;
+
+    Eigen::LDLT<MeasMat> ldlt(s);
+    if (ldlt.info() != Eigen::Success) {
       return false;
     }
-    x_ += K * (y - y_pred);
-    P_ -= K * (C * P_);
-    return true;
+
+    const MeasMat i_meas = MeasMat::Identity();
+    const MeasModelMat k = p_ct * ldlt.solve(i_meas);
+    if (!k.allFinite()) {
+      return false;
+    }
+
+    x_ += k * (y - y_pred);
+
+    // Joseph stabilized covariance update: preserves PSD better than P = (I-KC)P.
+    const StateMat i_state = StateMat::Identity();
+    const StateMat i_kc = i_state - k * C;
+    P_ = i_kc * P_ * i_kc.transpose() + k * r_sym * k.transpose();
+    P_ = Scalar(0.5) * (P_ + P_.transpose());
+
+    return P_.allFinite();
   }
 
   /**
@@ -247,18 +265,39 @@ public:
     const Eigen::Matrix<Scalar, DynamicMeasurementSize, StateSize> & C,
     const Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize> & R)
   {
-    const Eigen::Matrix<Scalar, DynamicMeasurementSize, 1> y_pred = C * x_;
-    const Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize> S =
-      C * P_ * C.transpose() + R;
-    const Eigen::Matrix<Scalar, StateSize, DynamicMeasurementSize> K =
-      P_ * C.transpose() * S.inverse();
+    // Enforce symmetry to reduce numerical drift.
+    P_ = Scalar(0.5) * (P_ + P_.transpose());
 
-    if (!K.allFinite()) {
+    const Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize> r_sym =
+      Scalar(0.5) * (R + R.transpose());
+
+    const Eigen::Matrix<Scalar, DynamicMeasurementSize, 1> y_pred = C * x_;
+    const Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize> s =
+      C * P_ * C.transpose() + r_sym;
+
+    Eigen::LDLT<Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize>> ldlt(s);
+    if (ldlt.info() != Eigen::Success) {
       return false;
     }
-    x_ += K * (y - y_pred);
-    P_ -= K * C * P_;
-    return true;
+
+    const Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize> i_meas =
+      Eigen::Matrix<Scalar, DynamicMeasurementSize, DynamicMeasurementSize>::Identity();
+    const Eigen::Matrix<Scalar, StateSize, DynamicMeasurementSize> k =
+      (P_ * C.transpose()) * ldlt.solve(i_meas);
+
+    if (!k.allFinite()) {
+      return false;
+    }
+
+    x_ += k * (y - y_pred);
+
+    // Joseph stabilized covariance update.
+    const StateMat i_state = StateMat::Identity();
+    const StateMat i_kc = i_state - k * C;
+    P_ = i_kc * P_ * i_kc.transpose() + k * r_sym * k.transpose();
+    P_ = Scalar(0.5) * (P_ + P_.transpose());
+
+    return P_.allFinite();
   }
 
   /**
