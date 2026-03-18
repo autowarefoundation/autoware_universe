@@ -346,21 +346,41 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
   LaneletRoute route_msg;
   RouteSections route_sections;
 
-  lanelet::ConstLanelets all_route_lanelets;
+  lanelet::ConstLaneletOrAreas all_route_lanelets_or_areas;
   for (std::size_t i = 1; i < points.size(); i++) {
     const auto start_check_point = points.at(i - 1);
     const auto goal_check_point = points.at(i);
 
-    lanelet::ConstLanelets path_lanelets;
+    lanelet::ConstLaneletOrAreas path_lanelets_or_areas;
     if (!route_handler_.planPathLaneletsBetweenCheckpoints(
-          start_check_point, goal_check_point, &path_lanelets, param_.consider_no_drivable_lanes)) {
+          start_check_point, goal_check_point, &path_lanelets_or_areas,
+          param_.consider_no_drivable_lanes)) {
       RCLCPP_WARN(logger, "Failed to plan route.");
       return route_msg;
     }
 
-    for (const auto & lane : path_lanelets) {
-      if (!all_route_lanelets.empty() && lane.id() == all_route_lanelets.back().id()) continue;
-      all_route_lanelets.push_back(lane);
+    for (const auto & elem : path_lanelets_or_areas) {
+      if (
+        !all_route_lanelets_or_areas.empty() &&
+        elem.id() == all_route_lanelets_or_areas.back().id())
+        continue;
+      all_route_lanelets_or_areas.push_back(elem);
+    }
+  }
+
+  for (const auto & elem : all_route_lanelets_or_areas) {
+    if (elem.isLanelet()) {
+      RCLCPP_INFO(logger, "Planned lanelet id: %ld", elem.id());
+    } else if (elem.isArea()) {
+      RCLCPP_INFO(logger, "Planned area id: %ld", elem.id());
+    }
+  }
+
+  // Extract only lanelets for setRouteLanelets (it requires ConstLanelets)
+  lanelet::ConstLanelets all_route_lanelets;
+  for (const auto & elem : all_route_lanelets_or_areas) {
+    if (elem.isLanelet()) {
+      all_route_lanelets.push_back(static_cast<const lanelet::ConstLanelet &>(elem));
     }
   }
   route_handler_.setRouteLanelets(all_route_lanelets);
