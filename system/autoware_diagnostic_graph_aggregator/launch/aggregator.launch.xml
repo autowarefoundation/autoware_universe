@@ -10,21 +10,22 @@
   <arg name="~/reset" default="/diagnostics_graph/reset"/>
   <arg name="~/availability" default="/system/command_mode/availability"/>
 
-  <node pkg="autoware_diagnostic_graph_aggregator" exec="aggregator_node">
-    <param from="$(var param_file)"/>
-    <param name="graph_file" value="$(var graph_file)"/>
-    <param name="graph_vars" value="$(var graph_vars)"/>
-    <remap from="~/diagnostics" to="$(var ~/diagnostics)"/>
-    <remap from="~/struct" to="$(var ~/struct)"/>
-    <remap from="~/status" to="$(var ~/status)"/>
-    <remap from="~/unknowns" to="$(var ~/unknowns)"/>
-    <remap from="~/reset" to="$(var ~/reset)"/>
-    <remap from="~/availability" to="$(var ~/availability)"/>
-  </node>
-
-  <node pkg="autoware_diagnostic_graph_aggregator" exec="converter_node">
-    <param from="$(var converter_param_file)"/>
-    <remap from="~/command_mode/availability" to="/system/command_mode/availability"/>
-    <remap from="~/operation_mode/availability" to="/system/operation_mode/availability"/>
-  </node>
+  <node_container pkg="rclcpp_components" exec="component_container" name="diagnostic_graph_container" namespace="">
+    <composable_node pkg="autoware_diagnostic_graph_aggregator" plugin="autoware::diagnostic_graph_aggregator::AggregatorNode" name="aggregator" namespace="">
+      <param from="$(var param_file)"/>
+      <param name="graph_file" value="$(var graph_file)"/>
+      <param name="graph_vars" value="$(var graph_vars)"/>
+      <remap from="~/diagnostics" to="$(var ~/diagnostics)"/>
+      <remap from="~/struct" to="$(var ~/struct)"/>
+      <remap from="~/status" to="$(var ~/status)"/>
+      <remap from="~/unknowns" to="$(var ~/unknowns)"/>
+      <remap from="~/reset" to="$(var ~/reset)"/>
+      <remap from="~/availability" to="$(var ~/availability)"/>
+    </composable_node>
+    <composable_node pkg="autoware_diagnostic_graph_aggregator" plugin="autoware::diagnostic_graph_aggregator::ConverterNode" name="converter" namespace="">
+      <param from="$(var converter_param_file)"/>
+      <remap from="~/command_mode/availability" to="/system/command_mode/availability"/>
+      <remap from="~/operation_mode/availability" to="/system/operation_mode/availability"/>
+    </composable_node>
+  </node_container>
 </launch>
