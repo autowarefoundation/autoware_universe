@@ -33,7 +33,6 @@ ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"
 )
 target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
-target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
 target_include_directories(aggregator PRIVATE "src/common")
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
 target_link_libraries(aggregator yaml-cpp)
