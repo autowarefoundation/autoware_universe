@@ -16,12 +16,12 @@ ament_auto_add_library(gyro_bias_estimator SHARED
 
 target_include_directories(imu_corrector
   PUBLIC include
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 target_include_directories(gyro_bias_estimator
   PUBLIC include
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
+
+
 
 ament_target_dependencies(imu_corrector
   autoware_agnocast_wrapper
