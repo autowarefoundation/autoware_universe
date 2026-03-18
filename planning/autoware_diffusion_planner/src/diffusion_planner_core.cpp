@@ -49,6 +49,7 @@ DiffusionPlannerCore::DiffusionPlannerCore(
 void DiffusionPlannerCore::load_model()
 {
   tensorrt_inference_.reset();
+  last_agent_poses_map_.clear();
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
   tensorrt_inference_ = std::make_unique<TensorrtInference>(
@@ -156,7 +157,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   // random sample trajectories
   int64_t delay_step = 0;
   {
-    const int64_t copy_steps = std::min<int64_t>(params_.delay_step, OUTPUT_T);
+    const int64_t copy_steps = std::clamp<int64_t>(params_.delay_step, 0, OUTPUT_T / 2);
     const bool has_previous_output = !last_agent_poses_map_.empty();
 
     for (int64_t b = 0; b < params_.batch_size; b++) {
@@ -165,7 +166,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 
       if (has_previous_output) {
         constexpr int64_t agent_idx = 0;
-        delay_step = params_.delay_step;
+        delay_step = copy_steps;
         for (int64_t t = 0; t <= copy_steps; ++t) {
           const size_t dst_base = agent_idx * (OUTPUT_T + 1) * POSE_DIM + (t)*POSE_DIM;
           const Eigen::Matrix4d pose_ego =
@@ -306,7 +307,7 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 
   // control delay
   {
-    std::vector<float> single_delay = {static_cast<float>(delay_step)};
+    const std::vector<float> single_delay = {static_cast<float>(delay_step)};
     input_data_map["delay"] = utils::replicate_for_batch(single_delay, params_.batch_size);
   }
 

@@ -127,7 +127,8 @@ std::vector<std::vector<LanePoint>> resample_line_string(
 
   // Determine the number of output segments needed to satisfy the resolution bound
   const double step_m = total_length / static_cast<double>(num_points - 1);
-  const auto n_segments = static_cast<size_t>(std::max(1.0, std::ceil(step_m / max_step_m)));
+  const double safe_max_step_m = std::max(max_step_m, k_epsilon);
+  const auto n_segments = static_cast<size_t>(std::max(1.0, std::ceil(step_m / safe_max_step_m)));
 
   // Extract per-axis value arrays for interpolator construction
   std::vector<double> x_vals(input.size());
