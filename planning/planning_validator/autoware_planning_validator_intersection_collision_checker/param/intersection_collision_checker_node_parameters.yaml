@@ -82,7 +82,7 @@ intersection_collision_checker_node:
         min_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       clustering:
         tolerance:
           type: double
@@ -95,11 +95,11 @@ intersection_collision_checker_node:
         min_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
         max_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       velocity_estimation:
         max_acceleration:
           type: double
@@ -120,7 +120,7 @@ intersection_collision_checker_node:
         buffer_size:
           type: int
           validation:
-            gt<>: [0]
+            bounds<>: [1, 2147483647]
       latency:
         type: double
         validation:
