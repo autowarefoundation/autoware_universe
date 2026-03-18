@@ -317,7 +317,8 @@ private:
    * @param [in] current_pose current ego pose
    */
   ControlData getControlData(const geometry_msgs::msg::Pose & current_pose);
-  ExperimentalControlData getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose);
+  std::optional<ExperimentalControlData> getExperimentalControlData(
+    const geometry_msgs::msg::Pose & current_pose);
 
   /**
    * @brief calculate control command in emergency state
