@@ -11,10 +11,6 @@ ament_auto_add_library(${CONTROLLER_NODE} SHARED
   src/controller_node.cpp
 )
 
-target_include_directories(${CONTROLLER_NODE} PRIVATE
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-
 ament_target_dependencies(${CONTROLLER_NODE}
   autoware_agnocast_wrapper
 )
@@ -33,10 +29,6 @@ set(SIMPLE_TRAJECTORY_FOLLOWER_NODE simple_trajectory_follower)
 ament_auto_add_library(${SIMPLE_TRAJECTORY_FOLLOWER_NODE} SHARED
   include/autoware/trajectory_follower_node/simple_trajectory_follower.hpp
   src/simple_trajectory_follower.cpp
-)
-
-target_include_directories(${SIMPLE_TRAJECTORY_FOLLOWER_NODE} PRIVATE
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
