@@ -61,7 +61,8 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
-  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{this, "~/input/route"};
+  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{
+    this, "~/input/route", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
     this, "~/input/reference_trajectory"};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{
