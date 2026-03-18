@@ -18,6 +18,7 @@
 
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 
 #include <vector>
@@ -26,7 +27,7 @@ namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectorySplineSmoother::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   if (!params.use_akima_spline_interpolation) {
     return;
