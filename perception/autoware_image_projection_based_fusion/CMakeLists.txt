@@ -61,9 +61,10 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE segmentation_pointcloud_fusion_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiPointCloudFusionNode"
   EXECUTABLE roi_pointcloud_fusion_node
+  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
 )
 
 set(CUDA_VERBOSE OFF)
