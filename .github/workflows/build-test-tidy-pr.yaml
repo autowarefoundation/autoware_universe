@@ -44,9 +44,20 @@ jobs:
     if: ${{ always() }}
     needs:
       - require-label
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+
     uses: ./.github/workflows/build-and-test-differential.yaml
     with:
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
@@ -55,9 +66,20 @@ jobs:
     if: ${{ always() }}
     needs:
       - require-label
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+
     uses: ./.github/workflows/build-and-test-packages-above-differential.yaml
     with:
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
     secrets:
@@ -66,9 +88,20 @@ jobs:
   build-and-test-differential-cuda:
     if: ${{ always() }}
     needs: check-if-cuda-job-is-needed
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+
     uses: ./.github/workflows/build-and-test-differential.yaml
     with:
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
@@ -80,9 +113,20 @@ jobs:
     needs:
       - check-if-cuda-job-is-needed
       - build-and-test-differential
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'false' && needs.build-and-test-differential.result == 'success' }}
 
   clang-tidy-differential-cuda:
@@ -90,9 +134,20 @@ jobs:
     needs:
       - check-if-cuda-job-is-needed
       - build-and-test-differential-cuda
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        include:
+          - rosdistro: humble
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
+          - rosdistro: jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container }}
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' && needs.build-and-test-differential-cuda.result == 'success' }}
       runner: "['self-hosted', 'Linux', 'X64']"
