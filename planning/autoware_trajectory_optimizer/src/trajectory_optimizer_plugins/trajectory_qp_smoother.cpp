@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_qp_smoother.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -140,7 +141,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryQPSmoother::on_parameter(
 
 void TrajectoryQPSmoother::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  [[maybe_unused]] const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
@@ -180,7 +181,7 @@ void TrajectoryQPSmoother::optimize_trajectory(
 
   // Solve QP problem
   TrajectoryPoints smoothed_trajectory;
-  if (!solve_qp_problem(traj_points, smoothed_trajectory)) {
+  if (!solve_qp_problem(traj_points, data.semantic_speed_tracker, smoothed_trajectory)) {
     RCLCPP_ERROR_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 1000,
       "QP Smoother: Optimization FAILED, using original trajectory. Check previous error "
@@ -197,7 +198,8 @@ void TrajectoryQPSmoother::optimize_trajectory(
 }
 
 bool TrajectoryQPSmoother::solve_qp_problem(
-  const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory)
+  const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+  TrajectoryPoints & output_trajectory) const
 {
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;  // [x, y] for each point (path-only optimization)
@@ -209,21 +211,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   std::vector<double> l_vec;
   std::vector<double> u_vec;
 
-  prepare_osqp_matrices(input_trajectory, H, A, f_vec, l_vec, u_vec);
-
-  // Log weight statistics if velocity-based fidelity is enabled
-  if (qp_params_.use_velocity_based_fidelity) {
-    const std::vector<double> weights = compute_velocity_based_weights(input_trajectory);
-    const double min_weight = *std::min_element(weights.begin(), weights.end());
-    const double max_weight = *std::max_element(weights.begin(), weights.end());
-    const double avg_weight =
-      std::accumulate(weights.begin(), weights.end(), 0.0) / static_cast<double>(weights.size());
-
-    RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 5000,
-      "QP Smoother: Fidelity weights: min=%.3f, max=%.3f, avg=%.3f (N=%d points)", min_weight,
-      max_weight, avg_weight, N);
-  }
+  prepare_osqp_matrices(input_trajectory, semantic_speed_tracker, H, A, f_vec, l_vec, u_vec);
 
   // Create OSQP solver with settings
   autoware::osqp_interface::OSQPInterface osqp_solver(qp_params_.osqp_eps_abs, true);
@@ -257,7 +245,7 @@ bool TrajectoryQPSmoother::solve_qp_problem(
   // Post-process to create output trajectory
   Eigen::VectorXd solution =
     Eigen::Map<Eigen::VectorXd>(result.primal_solution.data(), result.primal_solution.size());
-  post_process_trajectory(solution, input_trajectory, output_trajectory);
+  post_process_trajectory(solution, input_trajectory, semantic_speed_tracker, output_trajectory);
 
   // Calculate path deviation metrics
   double max_deviation = 0.0;
@@ -298,8 +286,9 @@ bool TrajectoryQPSmoother::solve_qp_problem(
 }
 
 void TrajectoryQPSmoother::prepare_osqp_matrices(
-  const TrajectoryPoints & input_trajectory, Eigen::MatrixXd & H, Eigen::MatrixXd & A,
-  std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec) const
+  const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+  Eigen::MatrixXd & H, Eigen::MatrixXd & A, std::vector<double> & f_vec,
+  std::vector<double> & l_vec, std::vector<double> & u_vec) const
 {
   const int N = static_cast<int>(input_trajectory.size());
   const int num_variables = 2 * N;
@@ -366,9 +355,24 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
   const int num_points_start = std::max(0, qp_params_.num_constrained_points_start);
   const int num_points_end = std::max(0, qp_params_.num_constrained_points_end);
 
-  // Constraints: fix points from start and end
-  // Each point has 2 constraints (x, y)
-  const int num_constraints = 2 * (num_points_start + num_points_end);
+  // Collect stop point indices from slowdown ranges, skipping any already covered by
+  // the start/end hard-constraint windows to avoid duplicate constraints.
+  std::vector<int> stop_constraint_indices;
+  for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
+    const int idx = static_cast<int>(range.end_index);
+    const bool in_start_window = idx < num_points_start;
+    const bool in_end_window = idx >= N - num_points_end;
+    if (!in_start_window && !in_end_window) {
+      stop_constraint_indices.push_back(idx);
+    }
+  }
+  std::sort(stop_constraint_indices.begin(), stop_constraint_indices.end());
+  stop_constraint_indices.erase(
+    std::unique(stop_constraint_indices.begin(), stop_constraint_indices.end()),
+    stop_constraint_indices.end());
+
+  const int num_constraints =
+    2 * (num_points_start + num_points_end + static_cast<int>(stop_constraint_indices.size()));
   A = Eigen::MatrixXd::Zero(num_constraints, num_variables);
   l_vec.resize(num_constraints);
   u_vec.resize(num_constraints);
@@ -380,13 +384,11 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     const int x_idx = 2 * i;
     const int y_idx = 2 * i + 1;
 
-    // Constrain x coordinate
     A(constraint_idx, x_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[i].pose.position.x;
     u_vec[constraint_idx] = input_trajectory[i].pose.position.x;
     constraint_idx++;
 
-    // Constrain y coordinate
     A(constraint_idx, y_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[i].pose.position.y;
     u_vec[constraint_idx] = input_trajectory[i].pose.position.y;
@@ -399,13 +401,27 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
     const int x_idx = 2 * point_idx;
     const int y_idx = 2 * point_idx + 1;
 
-    // Constrain x coordinate
     A(constraint_idx, x_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
     u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
     constraint_idx++;
 
-    // Constrain y coordinate
+    A(constraint_idx, y_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
+    constraint_idx++;
+  }
+
+  // Hard-constrain stop points from slowdown ranges
+  for (const int point_idx : stop_constraint_indices) {
+    const int x_idx = 2 * point_idx;
+    const int y_idx = 2 * point_idx + 1;
+
+    A(constraint_idx, x_idx) = 1.0;
+    l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.x;
+    constraint_idx++;
+
     A(constraint_idx, y_idx) = 1.0;
     l_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
     u_vec[constraint_idx] = input_trajectory[point_idx].pose.position.y;
@@ -415,20 +431,18 @@ void TrajectoryQPSmoother::prepare_osqp_matrices(
 
 void TrajectoryQPSmoother::post_process_trajectory(
   const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
-  TrajectoryPoints & output_trajectory) const
+  const SemanticSpeedTracker & semantic_speed_tracker, TrajectoryPoints & output_trajectory) const
 {
   const size_t N = input_trajectory.size();
   output_trajectory.resize(N);
 
-  // Use fixed time step for velocity/acceleration derivation
   const double dt = qp_params_.time_step_s;
   double accumulated_time_s = dt;
-  // First pass: Update positions and orientations
+
+  // First pass: update positions and orientations from QP solution.
   for (size_t i = 0; i < N; ++i) {
-    // Copy input trajectory data
     output_trajectory[i] = input_trajectory[i];
 
-    // Update with smoothed positions
     const double x = solution[2 * i];
     const double y = solution[2 * i + 1];
 
@@ -438,7 +452,6 @@ void TrajectoryQPSmoother::post_process_trajectory(
     output_trajectory[i].time_from_start = rclcpp::Duration::from_seconds(accumulated_time_s);
     accumulated_time_s += dt;
 
-    // Recalculate orientation from smoothed path
     if (i < N - 1) {
       geometry_msgs::msg::Point p_from;
       geometry_msgs::msg::Point p_to;
@@ -456,49 +469,52 @@ void TrajectoryQPSmoother::post_process_trajectory(
     }
   }
 
-  // Second pass: Recalculate velocities from smoothed positions
-  // velocity[i] = ||position[i+1] - position[i]|| / dt
-  // Note: Start from index 1 to use previous position
+  // Second pass: recalculate velocities from smoothed positions (geometric).
   double prev_x = output_trajectory[0].pose.position.x;
   double prev_y = output_trajectory[0].pose.position.y;
   output_trajectory[0].longitudinal_velocity_mps = input_trajectory[0].longitudinal_velocity_mps;
-
   for (size_t i = 1; i < N; ++i) {
     const double curr_x = output_trajectory[i].pose.position.x;
     const double curr_y = output_trajectory[i].pose.position.y;
-    const double distance = std::hypot(curr_x - prev_x, curr_y - prev_y);
-    output_trajectory[i].longitudinal_velocity_mps = static_cast<float>(distance / dt);
+    output_trajectory[i].longitudinal_velocity_mps =
+      static_cast<float>(std::hypot(curr_x - prev_x, curr_y - prev_y) / dt);
     prev_x = curr_x;
     prev_y = curr_y;
   }
 
-  // Third pass: Smooth velocities with moving average
-  // This helps reduce noise from numerical differentiation
-  constexpr size_t velocity_smoothing_window = 3;  // Small window for light smoothing
+  // Third pass: moving average to reduce geometric differentiation noise.
+  constexpr size_t velocity_smoothing_window = 3;
   if (N >= velocity_smoothing_window) {
-    std::vector<float> smoothed_velocities(N);
+    std::vector<float> smoothed(N);
     for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
-      double sum_velocity = 0.0;
+      double sum = 0.0;
       for (size_t w = 0; w < velocity_smoothing_window; ++w) {
-        sum_velocity += output_trajectory[i + w].longitudinal_velocity_mps;
+        sum += output_trajectory[i + w].longitudinal_velocity_mps;
       }
-      smoothed_velocities[i] =
-        static_cast<float>(sum_velocity / static_cast<double>(velocity_smoothing_window));
+      smoothed[i] = static_cast<float>(sum / static_cast<double>(velocity_smoothing_window));
     }
-
-    // Apply smoothed velocities
     for (size_t i = 0; i + velocity_smoothing_window <= N; ++i) {
-      output_trajectory[i].longitudinal_velocity_mps = smoothed_velocities[i];
+      output_trajectory[i].longitudinal_velocity_mps = smoothed[i];
     }
-
-    // Keep last smoothed velocity for remaining points
-    const float last_smoothed_vel = smoothed_velocities[N - velocity_smoothing_window];
+    const float last_val = smoothed[N - velocity_smoothing_window];
     for (size_t i = N - velocity_smoothing_window + 1; i < N; ++i) {
-      output_trajectory[i].longitudinal_velocity_mps = last_smoothed_vel;
+      output_trajectory[i].longitudinal_velocity_mps = last_val;
     }
   }
 
-  // Fourth pass: Recalculate accelerations from velocities using constant dt
+  // Fourth pass: overwrite slow_down_range velocities with input (planner's original profile).
+  // The geometric recalculation corrupts the deceleration curve — the velocity optimizer needs
+  // correct v_ref values to plan a proper stop. Force the stop point to zero unconditionally.
+  for (const auto & range : semantic_speed_tracker.get_slow_down_ranges()) {
+    for (size_t i = range.start_index; i <= range.end_index && i < N; ++i) {
+      output_trajectory[i].longitudinal_velocity_mps =
+        input_trajectory[i].longitudinal_velocity_mps;
+    }
+    if (range.end_index < N) {
+      output_trajectory[range.end_index].longitudinal_velocity_mps = 0.0f;
+    }
+  }
+
   utils::recalculate_longitudinal_acceleration(output_trajectory, true, dt);
 }
 

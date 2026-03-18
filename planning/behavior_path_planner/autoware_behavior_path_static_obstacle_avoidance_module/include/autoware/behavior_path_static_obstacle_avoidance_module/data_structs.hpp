@@ -335,7 +335,16 @@ struct AvoidanceParameters
   std::string policy_lateral_margin{"best_effort"};
 
   // policy for turn signal output during candidate path (waiting approval)
+  // "none"             : never output turn signal for candidate paths.
+  // "stopped_candidate": output turn signal only when vehicle is stopped and candidate path exists.
+  // "all_candidate"    : always output turn signal whenever a candidate path exists.
+  // "stop_on_approval" : no turn signal during candidate phase; after approval, stop for
+  //                      `turn_signal_on_approval_hold_duration` seconds while outputting turn
+  //                      signal, then proceed with avoidance.
   std::string policy_candidate_path_turn_signal{"stopped_candidate"};
+
+  // duration [s] to hold stop and turn signal after approval (used by "stop_on_approval" policy)
+  double turn_signal_on_approval_hold_duration{3.0};
 
   // path generation method.
   std::string path_generation_method{"shift_line_base"};

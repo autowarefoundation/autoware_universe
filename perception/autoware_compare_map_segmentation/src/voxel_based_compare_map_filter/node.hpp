@@ -18,6 +18,7 @@
 #include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -46,8 +47,12 @@ protected:
     const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices) override;
 
   bool convert_output_costly(std::unique_ptr<PointCloud2> & output) override;
+  // TODO(Koichi98): Remove this override once the filter base class
+  // supports agnocast_wrapper::Node.
+  void compute_publish(const PointCloud2ConstPtr & input, const IndicesPtr & indices) override;
 
 private:
+  AUTOWARE_PUBLISHER_PTR(PointCloud2) agnocast_pub_output_;
   // pcl::SegmentDifferences<pcl::PointXYZ> impl_;
 
   // interfaces

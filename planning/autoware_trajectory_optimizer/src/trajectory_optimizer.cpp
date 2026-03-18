@@ -177,13 +177,12 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
-  // Create runtime data struct
-  TrajectoryOptimizerData data;
-  data.current_odometry = *current_odometry_ptr_;
-  data.current_acceleration = *current_acceleration_ptr_;
-
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
+    // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
+    TrajectoryOptimizerData data;
+    data.current_odometry = *current_odometry_ptr_;
+    data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
       plugin->optimize_trajectory(trajectory.points, params_, data);

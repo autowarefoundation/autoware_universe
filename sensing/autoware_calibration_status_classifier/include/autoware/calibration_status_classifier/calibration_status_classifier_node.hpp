@@ -16,6 +16,7 @@
 #define AUTOWARE__CALIBRATION_STATUS_CLASSIFIER__CALIBRATION_STATUS_CLASSIFIER_NODE_HPP_
 
 #include "autoware/calibration_status_classifier/calibration_status_classifier.hpp"
+#include "autoware/calibration_status_classifier/calibration_status_classifier_filters.hpp"
 #include "autoware/calibration_status_classifier/data_type.hpp"
 #include "autoware/calibration_status_classifier/data_type_eigen.hpp"
 #include "autoware/calibration_status_classifier/ros_utils.hpp"
@@ -23,10 +24,10 @@
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/twist.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -45,6 +46,14 @@
 
 namespace autoware::calibration_status_classifier
 {
+
+struct InputMetadata
+{
+  FiltersResult filters_result;
+  rclcpp::Time cloud_stamp;
+  rclcpp::Time image_stamp;
+  rclcpp::Time common_stamp;
+};
 
 /**
  * @brief A node for LiDAR-camera calibration status monitoring
@@ -71,14 +80,11 @@ public:
 private:
   // Parameters
   RuntimeMode runtime_mode_;
-  VelocitySource velocity_source_;
   double period_;
   int64_t queue_size_;
-  bool check_velocity_;
-  bool check_objects_;
-  double velocity_threshold_;
-  std::size_t objects_limit_;
-  double miscalibration_confidence_threshold_;
+
+  // Prerequisite filters
+  CalibrationStatusClassifierFilters filters_;
 
   std::vector<CameraLidarTopicsInfo> camera_lidar_in_out_info_;
   std::vector<CameraLidarInfo> camera_lidar_info_;
@@ -89,14 +95,14 @@ private:
   tf2_ros::TransformListener tf_listener_;
   std::vector<std::unique_ptr<autoware_utils::DiagnosticsInterface>> diagnostics_interfaces_;
 
-  // Velocity monitoring
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr twist_stamped_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::TwistWithCovariance>::SharedPtr twist_with_cov_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
-    twist_with_cov_stamped_sub_;
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr objects_sub_;
+  // Linear velocity monitoring
+  rclcpp::SubscriptionBase::SharedPtr linear_velocity_sub_;
+
+  // Angular velocity monitoring
+  rclcpp::SubscriptionBase::SharedPtr angular_velocity_sub_;
+
+  // Object detection monitoring
+  rclcpp::SubscriptionBase::SharedPtr objects_sub_;
 
   // Input synchronization
   std::vector<std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>>
@@ -117,12 +123,6 @@ private:
   // Core library
   std::unique_ptr<CalibrationStatusClassifier> calibration_status_classifier_;
 
-  // Current state
-  double current_velocity_;
-  rclcpp::Time last_velocity_update_;
-  size_t current_objects_count_;
-  rclcpp::Time last_objects_update_;
-
   // Methods
   /**
    * @brief Setup runtime mode-specific interfaces (service/timer/synchronization)
@@ -130,14 +130,22 @@ private:
   void setup_runtime_mode_interface();
 
   /**
-   * @brief Setup velocity source subscriber based on configured source type
+   * @brief Setup linear velocity source subscriber
+   * @param source Linear velocity source type determining which message type to subscribe to
    */
-  void setup_velocity_source_interface();
+  void setup_linear_velocity_source_interface(LinearVelocitySource source);
 
   /**
-   * @brief Setup object detection subscriber for object count monitoring
+   * @brief Setup angular velocity source subscriber
+   * @param source Angular velocity source type determining which message type to subscribe to
    */
-  void setup_object_detection_interface();
+  void setup_angular_velocity_source_interface(AngularVelocitySource source);
+
+  /**
+   * @brief Setup object detection subscriber based on configured source type
+   * @param source Object message source type
+   */
+  void setup_object_detection_interface(ObjectsSource source);
 
   /**
    * @brief Setup input synchronization for LiDAR and camera topics
@@ -160,44 +168,6 @@ private:
    */
   void periodic_callback();
 
-  // Velocity callbacks
-  /**
-   * @brief Process twist velocity messages
-   * @param msg Twist message containing linear and angular velocities
-   */
-  void twist_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
-
-  /**
-   * @brief Process stamped twist velocity messages
-   * @param msg TwistStamped message with header and twist data
-   */
-  void twist_stamped_callback(const geometry_msgs::msg::TwistStamped::SharedPtr msg);
-
-  /**
-   * @brief Process twist with covariance velocity messages
-   * @param msg TwistWithCovariance message including uncertainty data
-   */
-  void twist_with_cov_callback(const geometry_msgs::msg::TwistWithCovariance::SharedPtr msg);
-
-  /**
-   * @brief Process stamped twist with covariance velocity messages
-   * @param msg TwistWithCovarianceStamped message with header and covariance
-   */
-  void twist_with_cov_stamped_callback(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::SharedPtr msg);
-
-  /**
-   * @brief Process odometry messages for velocity extraction
-   * @param msg Odometry message containing pose and twist data
-   */
-  void odometry_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
-
-  /**
-   * @brief Process detected objects messages for object count monitoring
-   * @param msg PredictedObjects message containing a list of objects
-   */
-  void objects_callback(const autoware_perception_msgs::msg::PredictedObjects::SharedPtr msg);
-
   // Sensor synchronization callback
   /**
    * @brief Process synchronized LiDAR and camera data for calibration validation
@@ -208,27 +178,6 @@ private:
   void synchronized_callback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud_msg,
     const sensor_msgs::msg::Image::ConstSharedPtr & image_msg, size_t pair_idx);
-
-  // Utility methods
-  /**
-   * @brief Update current vehicle velocity from sensor data
-   * @param velocity Linear velocity in m/s
-   */
-  void update_vehicle_velocity(double velocity);
-
-  /**
-   * @brief Get current velocity check status for calibration prerequisites
-   * @param time_ref Reference time for age calculation
-   * @return VelocityFilterStatus containing velocity state and thresholds
-   */
-  FilterStatus<double> get_velocity_filter_status(const rclcpp::Time & time_ref);
-
-  /**
-   * @brief Get current object count check status for calibration prerequisites
-   * @param time_ref Reference time for age calculation
-   * @return ObjectsFilterStatus containing object count state and thresholds
-   */
-  FilterStatus<size_t> get_objects_filter_status(const rclcpp::Time & time_ref);
 
   /**
    * @brief Main execution for the node
