@@ -83,7 +83,8 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     AUTOWARE_SUBSCRIPTION_OPTIONS{});
 
   // publisher
-  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper
+  agnocast_pub_ptr_ = AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
 }
 
 void RoiClusterFusionNode::preprocess(ClusterMsgType & output_cluster_msg)
@@ -354,6 +355,19 @@ bool RoiClusterFusionNode::validateSizeForClass(
     default:
       return true;
   }
+}
+
+void RoiClusterFusionNode::publish(const ClusterMsgType & output_msg)
+{
+  const auto objects_sub_count = agnocast_pub_ptr_->get_subscription_count() +
+                                 agnocast_pub_ptr_->get_intra_process_subscription_count();
+  if (objects_sub_count < 1) {
+    return;
+  }
+  // TODO(Koichi98): replace publish function in FusionNode with agnocast_wrapper
+  auto agnocast_output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_ptr_);
+  *agnocast_output_msg = output_msg;
+  agnocast_pub_ptr_->publish(std::move(agnocast_output_msg));
 }
 
 }  // namespace autoware::image_projection_based_fusion

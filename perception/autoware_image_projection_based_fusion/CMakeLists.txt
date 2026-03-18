@@ -50,9 +50,10 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE roi_detected_object_fusion_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiClusterFusionNode"
   EXECUTABLE roi_cluster_fusion_node
+  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
