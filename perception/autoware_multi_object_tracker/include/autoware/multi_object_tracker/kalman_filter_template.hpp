@@ -222,7 +222,8 @@ public:
    */
   bool update(const MeasVec & y, const MeasVec & y_pred, const MeasModelMat & C, const MeasMat & R)
   {
-    if (!x_.allFinite() || !P_.allFinite() || !y.allFinite() || !y_pred.allFinite() ||
+    if (
+      !x_.allFinite() || !P_.allFinite() || !y.allFinite() || !y_pred.allFinite() ||
       !C.allFinite() || !R.allFinite()) {
       return false;
     }
