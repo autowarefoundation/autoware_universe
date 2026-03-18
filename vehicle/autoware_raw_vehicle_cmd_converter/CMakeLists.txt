@@ -31,8 +31,6 @@ ament_target_dependencies(autoware_raw_vehicle_cmd_converter_node_component
   autoware_agnocast_wrapper
 )
 
-autoware_agnocast_wrapper_setup(autoware_raw_vehicle_cmd_converter_node_component)
-
 autoware_agnocast_wrapper_register_node(autoware_raw_vehicle_cmd_converter_node_component
   PLUGIN "autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode"
   EXECUTABLE autoware_raw_vehicle_cmd_converter_node
