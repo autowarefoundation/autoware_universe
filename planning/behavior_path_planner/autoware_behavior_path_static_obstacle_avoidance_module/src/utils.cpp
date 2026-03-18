@@ -105,7 +105,7 @@ Polygon2d createOneStepPolygon(
     tf2::doTransform(base_polygon, out_polygon, geometry_tf);
 
     for (const auto & p : out_polygon.points) {
-      one_step_polygon.outer().push_back(Point2d(p.x, p.y));
+      one_step_polygon.outer().emplace_back(p.x, p.y);
     }
   }
 
@@ -116,7 +116,7 @@ Polygon2d createOneStepPolygon(
     tf2::doTransform(base_polygon, out_polygon, geometry_tf);
 
     for (const auto & p : out_polygon.points) {
-      one_step_polygon.outer().push_back(Point2d(p.x, p.y));
+      one_step_polygon.outer().emplace_back(p.x, p.y);
     }
   }
 
@@ -127,7 +127,7 @@ Polygon2d createOneStepPolygon(
     tf2::doTransform(base_polygon, out_polygon, geometry_tf);
 
     for (const auto & p : out_polygon.points) {
-      one_step_polygon.outer().push_back(Point2d(p.x, p.y));
+      one_step_polygon.outer().emplace_back(p.x, p.y);
     }
   }
 
@@ -138,7 +138,7 @@ Polygon2d createOneStepPolygon(
     tf2::doTransform(base_polygon, out_polygon, geometry_tf);
 
     for (const auto & p : out_polygon.points) {
-      one_step_polygon.outer().push_back(Point2d(p.x, p.y));
+      one_step_polygon.outer().emplace_back(p.x, p.y);
     }
   }
 
@@ -1653,7 +1653,7 @@ Polygon2d createEnvelopePolygon(
     Polygon2d ret{};
 
     for (const auto & p : polygon.points) {
-      ret.outer().push_back(Point2d(p.x, p.y));
+      ret.outer().emplace_back(p.x, p.y);
     }
 
     return ret;
@@ -1783,7 +1783,7 @@ lanelet::ConstLanelets getExtendLanes(
   return extend_lanelets;
 }
 
-void insertDecelPoint(
+bool insertDecelPoint(
   const Point & p_src, const double offset, const double velocity, PathWithLaneId & path,
   PoseWithDetailOpt & p_out)
 {
@@ -1792,7 +1792,7 @@ void insertDecelPoint(
 
   if (!decel_point) {
     // TODO(Satoshi OTA)  Think later the process in the case of no decel point found.
-    return;
+    return false;
   }
 
   const auto seg_idx =
@@ -1802,7 +1802,7 @@ void insertDecelPoint(
 
   if (!insert_idx) {
     // TODO(Satoshi OTA)  Think later the process in the case of no decel point found.
-    return;
+    return false;
   }
 
   const auto insertVelocity = [&insert_idx](PathWithLaneId & path, const float v) {
@@ -1815,6 +1815,7 @@ void insertDecelPoint(
   insertVelocity(path, velocity);
 
   p_out = PoseWithDetail(autoware_utils::get_pose(path.points.at(insert_idx.value())));
+  return true;
 }
 
 void fillObjectEnvelopePolygon(

@@ -33,38 +33,9 @@
 namespace autoware::trajectory_optimizer::plugin
 {
 
-namespace
-{
-double compute_average_dt(const TrajectoryPoints & traj_points)
-{
-  constexpr double default_dt = 0.1;  // Fallback value [s]
-
-  if (traj_points.size() < 2) {
-    return default_dt;
-  }
-
-  // Compute average dt across all segments
-  double total_dt = 0.0;
-  for (size_t i = 0; i + 1 < traj_points.size(); ++i) {
-    total_dt +=
-      autoware::trajectory_optimizer::utils::compute_dt(traj_points[i], traj_points[i + 1]);
-  }
-
-  const double avg_dt = total_dt / static_cast<double>(traj_points.size() - 1);
-
-  // Sanity check: dt should be reasonable (1 microsecond to 1 second)
-  if (avg_dt < 1e-6 || avg_dt > 1.0) {
-    return default_dt;
-  }
-
-  return avg_dt;
-}
-
-}  // namespace
-
 void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   // Check if plugin is enabled
   if (!params.use_kinematic_feasibility_enforcer) {
@@ -79,17 +50,14 @@ void TrajectoryKinematicFeasibilityEnforcer::optimize_trajectory(
   // Always use ego pose as anchor (current vehicle state)
   const auto & ego_odometry = data.current_odometry;
 
-  // Compute average dt from trajectory time stamps
-  const double avg_dt = compute_average_dt(traj_points);
-
   // Apply kinematic feasibility constraints
   // This adjusts positions and headings while preserving segment distances
   // Velocities and time stamps remain unchanged to preserve dt structure for QP smoother
-  enforce_ackermann_yaw_rate_constraints(traj_points, ego_odometry, avg_dt);
+  enforce_ackermann_yaw_rate_constraints(traj_points, ego_odometry);
 }
 
 void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constraints(
-  TrajectoryPoints & traj_points, const Odometry & ego_odometry, const double dt) const
+  TrajectoryPoints & traj_points, const Odometry & ego_odometry) const
 {
   if (traj_points.size() < 2) {
     return;
@@ -101,6 +69,7 @@ void TrajectoryKinematicFeasibilityEnforcer::enforce_ackermann_yaw_rate_constrai
   const double wheelbase = vehicle_info_.wheel_base_m;
   const double max_steer_rad = vehicle_info_.max_steer_angle_rad;
   const double max_yaw_rate = feasibility_params_.max_yaw_rate_rad_s;
+  const double dt = feasibility_params_.time_step_s;
 
   if (wheelbase < 1e-3 || max_steer_rad < 1e-3 || max_yaw_rate < 1e-3) {
     RCLCPP_WARN_THROTTLE(
@@ -215,6 +184,9 @@ void TrajectoryKinematicFeasibilityEnforcer::set_up_params()
   feasibility_params_.max_yaw_rate_rad_s = get_or_declare_parameter<double>(
     *node_ptr, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s");
 
+  feasibility_params_.time_step_s =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_kinematic_feasibility.time_step_s");
+
   // Log configuration
   RCLCPP_INFO(
     node_ptr->get_logger(),
@@ -233,6 +205,9 @@ rcl_interfaces::msg::SetParametersResult TrajectoryKinematicFeasibilityEnforcer:
   update_param<double>(
     parameters, "trajectory_kinematic_feasibility.max_yaw_rate_rad_s",
     feasibility_params_.max_yaw_rate_rad_s);
+
+  update_param<double>(
+    parameters, "trajectory_kinematic_feasibility.time_step_s", feasibility_params_.time_step_s);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

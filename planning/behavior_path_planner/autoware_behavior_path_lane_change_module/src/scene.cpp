@@ -24,6 +24,7 @@
 #include "autoware/behavior_path_planner_common/utils/traffic_light_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
@@ -31,8 +32,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
 #include <autoware_frenet_planner/structures.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -1598,14 +1597,14 @@ bool NormalLaneChange::isValidPath(const PathWithLaneId & path) const
 
   // check path points are in any lanelets
   for (const auto & point : path.points) {
-    bool is_in_lanelet = false;
+    bool is_inside_lanelet = false;
     for (const auto & lanelet : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lanelet)) {
-        is_in_lanelet = true;
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(point.point.pose, lanelet)) {
+        is_inside_lanelet = true;
         break;
       }
     }
-    if (!is_in_lanelet) {
+    if (!is_inside_lanelet) {
       return false;
     }
   }
@@ -2088,5 +2087,68 @@ bool NormalLaneChange::is_ego_in_current_or_target_lanes() const
     utils::lane_change::is_lanelet_in_lanelet_collections(target_lanes, current_lane);
 
   return in_target;
+}
+
+bool NormalLaneChange::hasMissedLaneChangePath() const
+{
+  if (!lane_change_parameters_->enable_path_miss_detection) {
+    return false;
+  }
+
+  if (status_.lane_change_path.path.points.empty()) {
+    return false;
+  }
+
+  const auto & current_pose = getEgoPose();
+  const auto & path_points = status_.lane_change_path.path.points;
+
+  // Check lateral deviation from planned path
+  const auto lateral_deviation =
+    autoware::motion_utils::calcLateralOffset(path_points, current_pose.position);
+
+  const auto dynamic_lateral_threshold = [this]() -> double {
+    const double ego_velocity = getEgoVelocity();
+
+    const std::vector<double> velocity_points =
+      lane_change_parameters_->path_miss_velocity_points;  // m/s
+    const std::vector<double> lateral_thresholds =
+      lane_change_parameters_->path_miss_lateral_thresholds;
+
+    const double lateral_threshold = autoware::interpolation::lerp(
+      velocity_points, lateral_thresholds,
+      std::clamp(ego_velocity, velocity_points.front(), velocity_points.back()));
+
+    return lateral_threshold;
+  }();
+
+  // Check if lateral deviation exceeds threshold
+  if (std::abs(lateral_deviation) > dynamic_lateral_threshold) {
+    RCLCPP_WARN(
+      logger_, "Path miss detected: lateral deviation %.2f > threshold %.2f",
+      std::abs(lateral_deviation), dynamic_lateral_threshold);
+    return true;
+  }
+
+  // Check longitudinal deviation - if ego has passed the end but is not in target lane
+  const auto dist_to_end = utils::getSignedDistance(
+    current_pose, status_.lane_change_path.info.shift_line.end, get_target_lanes());
+
+  if (dist_to_end < -lane_change_parameters_->path_miss_threshold_longitudinal) {
+    // Passed end pose significantly
+    const auto & target_lanes_poly = common_data_ptr_->lanes_polygon_ptr->target;
+
+    const auto ego_footprint = utils::lane_change::get_ego_footprint(
+      current_pose, common_data_ptr_->bpp_param_ptr->vehicle_info);
+    const auto ego_in_target_lane = !boost::geometry::disjoint(target_lanes_poly, ego_footprint);
+
+    if (!ego_in_target_lane) {
+      RCLCPP_WARN(
+        logger_, "Path miss detected: passed end pose by %.2f but ego footprint not in target lane",
+        std::abs(dist_to_end));
+      return true;
+    }
+  }
+
+  return false;
 }
 }  // namespace autoware::behavior_path_planner

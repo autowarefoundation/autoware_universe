@@ -16,8 +16,8 @@
 #include <autoware/behavior_path_lane_change_module/utils/calculation.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 
@@ -118,7 +118,8 @@ double calc_dist_to_last_fit_width(
   if (lanelets.empty()) return 0.0;
 
   const auto lane_polygon = lanelets.back().polygon2d().basicPolygon();
-  const auto center_line = lanelet::utils::generateFineCenterline(lanelets.back(), 1.0);
+  const auto center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(lanelets.back(), 1.0);
 
   if (center_line.size() <= 1) return 0.0;
 
