@@ -36,9 +36,7 @@ public:
 
   result_t is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) final;
 
-  void set_parameters(rclcpp::Node & node) final;
-
-  void update_parameters(const std::vector<rclcpp::Parameter> & parameters) final;
+  void update_parameters(const validator::Params & params) final;
 
 private:
   result_t check_speed(const TrajectoryPoints & traj_points) const;
@@ -66,7 +64,7 @@ private:
     double max_steering_rate = 0.3;   //!< rad/s
   };
 
-  Params params_;  //!< Parameters for this filter
+  validator::Params::VehicleConstraint params_;  //!< Parameters for this filter
 };
 
 // --- Helper functions for constraint checks ---
