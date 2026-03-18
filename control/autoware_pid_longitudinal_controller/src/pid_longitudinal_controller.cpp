@@ -15,10 +15,10 @@
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller.hpp"
 
 #include "autoware/motion_utils/marker/marker_helper.hpp"
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/trajectory/utils/find_nearest.hpp"
 #include "autoware/trajectory/utils/pretty_build.hpp"
 #include "autoware/trajectory/utils/velocity.hpp"
+#include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/math/normalization.hpp"
 
@@ -281,6 +281,7 @@ void PidLongitudinalController::setTrajectory(const TrajectoryExperimental & tra
   }
 
   m_trajectory_experimental = trajectory;
+
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -628,7 +629,8 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
 }
 
 PidLongitudinalController::ExperimentalControlData
-PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose)
+PidLongitudinalController::getExperimentalControlData(
+  const geometry_msgs::msg::Pose & current_pose)
 {
   ExperimentalControlData control_data{};
 
@@ -639,7 +641,8 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
 
   const auto bases = control_data.interpolated_traj.get_underlying_bases();
   if (bases.size() < 2) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "experimental trajectory size is smaller than 2");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000, "experimental trajectory size is smaller than 2");
     return ExperimentalControlData{};
   }
 
@@ -1533,7 +1536,7 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
              ? stop_it
              : std::prev(stop_it);
   }();
-
+  
   const size_t stop_idx = static_cast<size_t>(std::distance(bases.begin(), nearest_stop_it));
   double min_acc_before_stop = std::numeric_limits<double>::max();
   size_t min_acc_idx = std::numeric_limits<size_t>::max();
@@ -1547,7 +1550,8 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
   }
 
   const double brake_keeping_acc = std::max(m_brake_keeping_acc, min_acc_before_stop);
-  if (control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
+  if (
+    control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
     output_motion.acc = brake_keeping_acc;
   }
 

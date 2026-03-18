@@ -189,7 +189,8 @@ double getPitchByTraj(
   const double end_base = std::clamp(clamped_start_base + wheel_base, 0.0, trajectory.length());
   const auto start_point = trajectory.compute(clamped_start_base);
   const auto end_point = trajectory.compute(end_base);
-  return autoware_utils::calc_elevation_angle(start_point.pose.position, end_point.pose.position);
+  return autoware_utils::calc_elevation_angle(
+    start_point.pose.position, end_point.pose.position);
 }
 
 Pose calcPoseAfterTimeDelay(
