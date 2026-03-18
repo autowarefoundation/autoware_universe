@@ -27,10 +27,6 @@ target_link_libraries(autoware_raw_vehicle_cmd_converter_node_component
   vehicle_adaptor
 )
 
-target_include_directories(autoware_raw_vehicle_cmd_converter_node_component PRIVATE
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-
 ament_target_dependencies(autoware_raw_vehicle_cmd_converter_node_component
   autoware_agnocast_wrapper
 )
