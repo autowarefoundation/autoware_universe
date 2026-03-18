@@ -69,9 +69,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
   }
 }
 
-void LowIntensityClusterFilter::objectCallback(
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
-    input_msg)
+void LowIntensityClusterFilter::objectCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature) input_msg)
 {
   // Guard
   stop_watch_ptr_->toc("processing_time", true);
