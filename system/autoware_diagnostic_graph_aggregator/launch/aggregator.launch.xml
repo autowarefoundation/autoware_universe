@@ -1,6 +1,6 @@
 <launch>
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml">
-    <arg name="use_multithread" value="false"/>
+    <arg name="use_multithread" value="true"/>
   </include>
 
   <arg name="converter_param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
