@@ -70,6 +70,18 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     get_logger(), "Pedestrian size validation: %s",
     pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled");
 
+  // Replace base class subscription with Agnocast subscription
+  // TODO(Koichi98): replace sub_callback in FusionNode with agnocast_wrapper to avoid copy
+  msg3d_sub_.reset();
+  agnocast_msg3d_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    ClusterMsgType, "input", rclcpp::QoS(1).best_effort(),
+    // cppcheck-suppress unknownMacro
+    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(ClusterMsgType) msg) {
+      auto ros2_msg = std::make_shared<const ClusterMsgType>(*msg);
+      this->sub_callback(ros2_msg);
+    },
+    AUTOWARE_SUBSCRIPTION_OPTIONS{});
+
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
 }

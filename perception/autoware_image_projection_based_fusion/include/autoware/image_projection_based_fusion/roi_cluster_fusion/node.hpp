@@ -19,6 +19,8 @@
 #include "autoware/image_projection_based_fusion/utils/size_validation.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+
 #include <map>
 #include <memory>
 #include <string>
@@ -54,6 +56,8 @@ private:
 
   // Pedestrian size validation parameters
   PedestrianSizeValidationParams pedestrian_size_params_;
+
+  AUTOWARE_SUBSCRIPTION_PTR(ClusterMsgType) agnocast_msg3d_sub_;
 
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
   bool out_of_scope(const ClusterObjType & obj);
