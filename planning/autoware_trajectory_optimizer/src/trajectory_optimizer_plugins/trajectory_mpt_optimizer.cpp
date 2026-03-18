@@ -174,7 +174,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryMPTOptimizer::on_parameter(
 
 void TrajectoryMPTOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *get_time_keeper());
 
