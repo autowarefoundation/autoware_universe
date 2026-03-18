@@ -53,7 +53,7 @@ void TrajectoryVelocityOptimizer::initialize(
 
 void TrajectoryVelocityOptimizer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
   if (!params.use_velocity_optimizer) {
     return;
