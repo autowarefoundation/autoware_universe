@@ -15,8 +15,6 @@ ament_target_dependencies(${CONTROLLER_NODE}
   autoware_agnocast_wrapper
 )
 
-autoware_agnocast_wrapper_setup(${CONTROLLER_NODE})
-
 autoware_agnocast_wrapper_register_node(${CONTROLLER_NODE}
   PLUGIN "autoware::motion::control::trajectory_follower_node::Controller"
   EXECUTABLE ${CONTROLLER_NODE}_exe
@@ -34,8 +32,6 @@ ament_auto_add_library(${SIMPLE_TRAJECTORY_FOLLOWER_NODE} SHARED
 ament_target_dependencies(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
   autoware_agnocast_wrapper
 )
-
-autoware_agnocast_wrapper_setup(${SIMPLE_TRAJECTORY_FOLLOWER_NODE})
 
 autoware_agnocast_wrapper_register_node(${SIMPLE_TRAJECTORY_FOLLOWER_NODE}
   PLUGIN "simple_trajectory_follower::SimpleTrajectoryFollower"
