@@ -15,10 +15,10 @@ jobs:
         include:
           # ROS distribution specific configurations
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-cuda
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
 
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64-cuda
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
 
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
