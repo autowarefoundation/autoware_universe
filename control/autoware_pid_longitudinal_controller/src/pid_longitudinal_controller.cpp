@@ -15,10 +15,10 @@
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller.hpp"
 
 #include "autoware/motion_utils/marker/marker_helper.hpp"
+#include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/trajectory/utils/find_nearest.hpp"
 #include "autoware/trajectory/utils/pretty_build.hpp"
 #include "autoware/trajectory/utils/velocity.hpp"
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/math/normalization.hpp"
 
@@ -37,6 +37,36 @@ namespace autoware::motion::control::pid_longitudinal_controller
 {
 namespace
 {
+bool check_trajectory(const TrajectoryExperimental & trajectory)
+{
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.size() < 2) {
+    return false;
+  }
+
+  const double trajectory_length = trajectory.length();
+  if (!std::isfinite(trajectory_length) || trajectory_length <= 0.0) {
+    return false;
+  }
+
+  constexpr double eps = 1e-6;
+  for (size_t i = 0; i < bases.size(); ++i) {
+    const double base = bases.at(i);
+    if (!std::isfinite(base)) {
+      return false;
+    }
+
+    if (i > 0 && base <= bases.at(i - 1)) {
+      return false;
+    }
+
+    if (base < -eps || base > trajectory_length + eps) {
+      return false;
+    }
+  }
+
+  return true;
+}
 }  // namespace
 
 PidLongitudinalController::PidLongitudinalController(
@@ -281,7 +311,6 @@ void PidLongitudinalController::setTrajectory(const TrajectoryExperimental & tra
   }
 
   m_trajectory_experimental = trajectory;
-
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -440,6 +469,26 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
 
   // calculate current pose and control data
   geometry_msgs::msg::Pose current_pose = m_current_kinematic_state.pose.pose;
+  const auto run_discrete_controller = [&]() {
+    setTrajectory(input_data.current_trajectory);
+
+    const auto control_data = getControlData(current_pose);
+
+    updateControlState(control_data);
+
+    const Motion ctrl_cmd = calcCtrlCmd(control_data);
+    const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
+
+    trajectory_follower::LongitudinalOutput output;
+    output.control_cmd = cmd_msg;
+    output.control_cmd_horizon.controls.push_back(cmd_msg);
+    output.control_cmd_horizon.time_step_ms = 0.0;
+
+    publishDebugData(ctrl_cmd, control_data);
+
+    return output;
+  };
+
   const auto experimental_trajectory =
     autoware::experimental::trajectory::pretty_build(input_data.current_trajectory.points);
   if (!experimental_trajectory) {
@@ -447,44 +496,35 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
       logger_, *clock_, 3000,
       "failed to build experimental trajectory from input trajectory. Falling back to discrete "
       "controller path.");
+    return run_discrete_controller();
+  }
 
-    setTrajectory(input_data.current_trajectory);
-
-    const auto control_data = getControlData(current_pose);
-
-    // update control state
-    updateControlState(control_data);
-
-    // calculate control command
-    const Motion ctrl_cmd = calcCtrlCmd(control_data);
-
-    // create control command
-    const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
-    trajectory_follower::LongitudinalOutput output;
-    output.control_cmd = cmd_msg;
-
-    // create control command horizon
-    output.control_cmd_horizon.controls.push_back(cmd_msg);
-    output.control_cmd_horizon.time_step_ms = 0.0;
-
-    // publish debug data
-    publishDebugData(ctrl_cmd, control_data);
-
-    return output;
+  if (!check_trajectory(*experimental_trajectory)) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000,
+      "built experimental trajectory is structurally invalid. Falling back to discrete "
+      "controller path.");
+    return run_discrete_controller();
   }
 
   setTrajectory(*experimental_trajectory);
 
   const auto control_data = getExperimentalControlData(current_pose);
+  if (!control_data) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 3000,
+      "failed to generate experimental control data. Falling back to discrete controller path.");
+    return run_discrete_controller();
+  }
 
   // update control state
-  updateControlState(control_data);
+  updateControlState(*control_data);
 
   // calculate control command
-  const Motion ctrl_cmd = calcCtrlCmd(control_data);
+  const Motion ctrl_cmd = calcCtrlCmd(*control_data);
 
   // create control command
-  const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
+  const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data->current_motion.vel);
   trajectory_follower::LongitudinalOutput output;
   output.control_cmd = cmd_msg;
 
@@ -493,7 +533,7 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   output.control_cmd_horizon.time_step_ms = 0.0;
 
   // publish debug data
-  publishDebugData(ctrl_cmd, control_data);
+  publishDebugData(ctrl_cmd, *control_data);
 
   return output;
 }
@@ -628,9 +668,8 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   return control_data;
 }
 
-PidLongitudinalController::ExperimentalControlData
-PidLongitudinalController::getExperimentalControlData(
-  const geometry_msgs::msg::Pose & current_pose)
+std::optional<PidLongitudinalController::ExperimentalControlData>
+PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose)
 {
   ExperimentalControlData control_data{};
 
@@ -639,11 +678,9 @@ PidLongitudinalController::getExperimentalControlData(
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory_experimental;
 
-  const auto bases = control_data.interpolated_traj.get_underlying_bases();
-  if (bases.size() < 2) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 3000, "experimental trajectory size is smaller than 2");
-    return ExperimentalControlData{};
+  if (!check_trajectory(control_data.interpolated_traj)) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "experimental trajectory is structurally invalid");
+    return std::nullopt;
   }
 
   const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
@@ -652,7 +689,7 @@ PidLongitudinalController::getExperimentalControlData(
   if (!current_s) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 3000, "failed to find nearest point on experimental trajectory");
-    return ExperimentalControlData{};
+    return std::nullopt;
   }
 
   double target_s = *current_s;
@@ -954,10 +991,6 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
 
 void PidLongitudinalController::updateControlState(const ExperimentalControlData & control_data)
 {
-  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
-    return;
-  }
-
   const double current_vel = control_data.current_motion.vel;
   const double stop_dist = control_data.stop_dist;
   const auto & p = m_state_transition_params;
@@ -1213,10 +1246,6 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
   const ExperimentalControlData & control_data)
 {
-  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
-    return Motion{};
-  }
-
   const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
 
   Motion ctrl_cmd_as_pedal_pos{
@@ -1416,10 +1445,6 @@ enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift
 enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift(
   const ExperimentalControlData & control_data) const
 {
-  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
-    return m_prev_shift;
-  }
-
   constexpr double epsilon = 1e-5;
   const double target_vel =
     control_data.interpolated_traj.compute(control_data.target_base).longitudinal_velocity_mps;
@@ -1509,9 +1534,6 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
   const ExperimentalControlData & control_data, const Motion & target_motion) const
 {
   const auto bases = control_data.interpolated_traj.get_underlying_bases();
-  if (bases.empty()) {
-    return target_motion;
-  }
 
   Motion output_motion = target_motion;
   if (!m_enable_brake_keeping_before_stop) {
@@ -1536,7 +1558,7 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
              ? stop_it
              : std::prev(stop_it);
   }();
-  
+
   const size_t stop_idx = static_cast<size_t>(std::distance(bases.begin(), nearest_stop_it));
   double min_acc_before_stop = std::numeric_limits<double>::max();
   size_t min_acc_idx = std::numeric_limits<size_t>::max();
@@ -1550,8 +1572,7 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
   }
 
   const double brake_keeping_acc = std::max(m_brake_keeping_acc, min_acc_before_stop);
-  if (
-    control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
+  if (control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
     output_motion.acc = brake_keeping_acc;
   }
 
@@ -1681,10 +1702,6 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
 double PidLongitudinalController::applyVelocityFeedback(
   const ExperimentalControlData & control_data)
 {
-  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
-    return 0.0;
-  }
-
   const double vel_sign = (control_data.shift == Shift::Forward)
                             ? 1.0
                             : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
@@ -1768,10 +1785,6 @@ void PidLongitudinalController::updateDebugVelAcc(const ControlData & control_da
 
 void PidLongitudinalController::updateDebugVelAcc(const ExperimentalControlData & control_data)
 {
-  if (control_data.interpolated_traj.get_underlying_bases().empty()) {
-    return;
-  }
-
   const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
   const auto nearest_point = control_data.interpolated_traj.compute(control_data.nearest_base);
 
