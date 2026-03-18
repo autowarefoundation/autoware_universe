@@ -234,11 +234,12 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     if (
       p->policy_candidate_path_turn_signal != "none" &&
       p->policy_candidate_path_turn_signal != "stopped_candidate" &&
-      p->policy_candidate_path_turn_signal != "all_candidate") {
+      p->policy_candidate_path_turn_signal != "all_candidate" &&
+      p->policy_candidate_path_turn_signal != "stop_on_approval") {
       RCLCPP_ERROR(
         rclcpp::get_logger(__func__),
-        "invalid candidate_path_turn_signal policy. Please select 'none', 'stopped_candidate' or "
-        "'all_candidate'.");
+        "invalid candidate_path_turn_signal policy. Please select 'none', 'stopped_candidate', "
+        "'all_candidate' or 'stop_on_approval'.");
     }
   }
 

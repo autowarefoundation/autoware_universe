@@ -110,7 +110,7 @@ void offsetPolygon2d(
     const auto offset_pos =
       autoware_utils::calc_offset_pose(origin_point, polygon_point.x, polygon_point.y, 0.0)
         .position;
-    offset_polygon.outer().push_back(Point2d(offset_pos.x, offset_pos.y));
+    offset_polygon.outer().emplace_back(offset_pos.x, offset_pos.y);
   }
 }
 
@@ -338,6 +338,15 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
   // Calculate attention range for crosswalk
   const auto crosswalk_attention_range = getAttentionRange(
     sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk);
+
+  const auto base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  const auto remaining_width = crosswalk_attention_range.second - base_link2front;
+  if (remaining_width < planner_param_.min_vru_crossing_width) {
+    RCLCPP_DEBUG(
+      logger_, "Stop decision skipped: remaining crosswalk width (%.2f) <= threshold (%.2f)",
+      remaining_width, planner_param_.min_vru_crossing_width);
+    return {};
+  }
 
   // Get attention area, which is ego's footprints on the crosswalk
   const auto attention_area = getAttentionArea(

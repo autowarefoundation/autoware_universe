@@ -14,6 +14,8 @@
 
 #include "manager.hpp"
 
+#include <autoware/lanelet2_utils/intersection.hpp>
+
 #include <limits>
 #include <memory>
 #include <set>
@@ -41,6 +43,8 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".yellow_lamp_period");
   planner_param_.yellow_light_stop_velocity =
     get_or_declare_parameter<double>(node, ns + ".yellow_light_stop_velocity");
+  planner_param_.enable_arrow_aware_yellow_passing =
+    get_or_declare_parameter<bool>(node, ns + ".enable_arrow_aware_yellow_passing");
   planner_param_.min_behind_dist_to_stop_for_restart_suppression =
     get_or_declare_parameter<double>(node, ns + ".restart_suppression.min_behind_distance_to_stop");
   planner_param_.max_behind_dist_to_stop_for_restart_suppression =
@@ -101,7 +105,8 @@ void TrafficLightModuleManager::launchNewModules(
   PathWithLaneId path_msg;
   path_msg.points = path.restore();
 
-  for (const auto & traffic_light_reg_elem : planning_utils::getRegElemMapOnPath<TrafficLight>(
+  for (const auto & traffic_light_reg_elem :
+       planning_utils::getRegElemMapOnPath<lanelet::autoware::AutowareTrafficLight>(
          path_msg, planner_data.route_handler_->getLaneletMapPtr(),
          planner_data.current_odometry->pose)) {
     const auto stop_line = traffic_light_reg_elem.first->stopLine();
@@ -113,15 +118,19 @@ void TrafficLightModuleManager::launchNewModules(
       continue;
     }
 
-    // Use lanelet_id to unregister module when the route is changed
+    const auto & lane = traffic_light_reg_elem.second;
+    const bool is_turn_lane = autoware::experimental::lanelet2_utils::is_left_direction(lane) ||
+                              autoware::experimental::lanelet2_utils::is_right_direction(lane);
+
+    const bool has_static_arrow = hasStaticArrow(traffic_light_reg_elem.first);
     const auto module_id = traffic_light_reg_elem.second.id();
-    auto existing_module = getRegisteredAssociatedModule(module_id, planner_data);
+    auto existing_module = this->getRegisteredAssociatedModule(module_id, planner_data);
     if (!existing_module) {
       registerModule(
         std::make_shared<TrafficLightModule>(
           module_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, *stop_line,
-          planner_param_, logger_.get_child("traffic_light_module"), clock_, time_keeper_,
-          planning_factor_interface_),
+          is_turn_lane, has_static_arrow, planner_param_, logger_.get_child("traffic_light_module"),
+          clock_, time_keeper_, planning_factor_interface_),
         planner_data);
       generate_uuid(module_id);
       updateRTCStatus(
@@ -147,7 +156,7 @@ TrafficLightModuleManager::getModuleExpiredFunction(
   return [this, lanelet_id_set, planner_data](
            [[maybe_unused]] const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
     for (const auto & id : lanelet_id_set) {
-      if (getRegisteredAssociatedModule(id, planner_data)) {
+      if (this->getRegisteredAssociatedModule(id, planner_data)) {
         return false;
       }
     }
@@ -207,6 +216,31 @@ bool TrafficLightModuleManager::hasSameTrafficLight(
       }
     }
   }
+  return false;
+}
+
+bool TrafficLightModuleManager::hasStaticArrow(
+  const std::shared_ptr<const lanelet::autoware::AutowareTrafficLight> & reg_elem) const
+{
+  for (const auto & light : reg_elem->trafficLights()) {
+    const auto & attributes = light.attributes();
+    if (attributes.find("subtype") != attributes.end()) {
+      const std::string subtype = attributes.at("subtype").value();
+      if (subtype.find("arrow") != std::string::npos) {
+        return true;
+      }
+    }
+  }
+
+  for (const auto & light_bulb_ls : reg_elem->lightBulbs()) {
+    for (const auto & node : light_bulb_ls) {
+      const auto & attributes = node.attributes();
+      if (attributes.find("arrow") != attributes.end()) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 

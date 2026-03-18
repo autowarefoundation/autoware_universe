@@ -141,7 +141,7 @@ TEST_F(PreprocessingTest, TestPreprocessing)
     CHECK_CUDA_ERROR(preprocess_ptr->project_points_launch(
       cloud_d.get(), image_undistorted_d.get(), tf_matrix_d.get(), projection_matrix_d.get(),
       sample.pointcloud->width * sample.pointcloud->height, sample.image_bgr->width,
-      sample.image_bgr->height, in_d.get(), num_points_projected_d.get()));
+      sample.image_bgr->height, in_d.get(), num_points_projected_d.get(), nullptr));
     uint32_t num_points_projected = 0;
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
