@@ -50,9 +50,11 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
 
   using std::placeholders::_1;
   // Set publisher/subscriber
-  object_sub_ = this->create_subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-    "input/objects", rclcpp::QoS{1},
-    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1));
+  // cppcheck-suppress unknownMacro
+  object_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "input/objects", rclcpp::QoS{1},
+    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1),
+    AUTOWARE_SUBSCRIPTION_OPTIONS{});
   object_pub_ = AUTOWARE_CREATE_PUBLISHER2(
     tier4_perception_msgs::msg::DetectedObjectsWithFeature, "output/objects", rclcpp::QoS{1});
   // initialize debug tool
@@ -68,7 +70,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
 }
 
 void LowIntensityClusterFilter::objectCallback(
-  const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
+    input_msg)
 {
   // Guard
   stop_watch_ptr_->toc("processing_time", true);

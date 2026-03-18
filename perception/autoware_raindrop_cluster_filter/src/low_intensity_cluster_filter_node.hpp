@@ -41,12 +41,12 @@ public:
 
 private:
   void objectCallback(
-    const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
+      input_msg);
   bool isValidatedCluster(const sensor_msgs::msg::PointCloud2 & cluster);
 
   AUTOWARE_PUBLISHER_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_pub_;
-  rclcpp::Subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
-    object_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature) object_sub_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
