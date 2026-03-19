@@ -34,9 +34,9 @@ public:
   PTv3Config(
     const std::string & plugins_path, const std::int64_t cloud_capacity,
     const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
-    const std::vector<float> & voxel_size, const std::vector<std::int64_t> & colors_red,
-    const std::vector<std::int64_t> & colors_green, const std::vector<std::int64_t> & colors_blue,
-    const std::vector<std::string> & class_names, const float ground_prob_threshold)
+    const std::vector<float> & voxel_size, const std::vector<std::string> & class_names,
+    const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
+    const std::vector<std::string> & filter_classes, const std::string & filter_output_format)
   {
     plugins_path_ = plugins_path;
 
@@ -81,44 +81,67 @@ public:
 
     class_names_ = class_names;
 
-    if (
-      colors_red.size() != class_names_.size() || colors_green.size() != class_names_.size() ||
-      colors_blue.size() != class_names_.size()) {
-      throw std::runtime_error(
-        "The size of colors_red, colors_green, and colors_blue must be the same as class_names");
-    }
+    colors_rgb_ = make_palette(class_names_, palette);
 
-    for (std::size_t i = 0; i < class_names_.size(); ++i) {
-      auto r = static_cast<std::uint8_t>(colors_red[i]);
-      auto g = static_cast<std::uint8_t>(colors_green[i]);
-      auto b = static_cast<std::uint8_t>(colors_blue[i]);
-      std::uint32_t rgb = (r << 16) | (g << 8) | b;
-      float rgb_float;
-      memcpy(&rgb_float, &rgb, sizeof(rgb_float));
-      colors_rgb_.push_back(rgb_float);
-
-      std::string class_name = class_names_[i];
+    for (auto class_name : class_names_) {
       std::transform(class_name.begin(), class_name.end(), class_name.begin(), [](unsigned char c) {
         return std::tolower(c);
       });
+    }
+    filter_class_probability_threshold_ = filter_class_probability_threshold;
+    filter_class_indices_ = make_filter_class_indices(class_names_, filter_classes);
+    filter_output_format_ = filter_output_format;
+  }
 
-      if (class_name == "ground") {
-        ground_label_ = static_cast<std::int32_t>(i);
+  static std::vector<std::uint32_t> make_filter_class_indices(
+    const std::vector<std::string> & class_names, const std::vector<std::string> & filter_classes)
+  {
+    std::vector<std::uint32_t> indices;
+    for (const auto & filter_class : filter_classes) {
+      auto it = std::find(class_names.begin(), class_names.end(), filter_class);
+      if (it == class_names.end()) {
+        throw std::runtime_error("Filter class '" + filter_class + "' not found in class names.");
       }
+      indices.push_back(static_cast<std::uint32_t>(std::distance(class_names.begin(), it)));
+    }
+    return indices;
+  }
+
+  static std::vector<float> make_palette(
+    const std::vector<std::string> & class_names, const std::vector<std::int64_t> & palette)
+  {
+    if (palette.size() % 3 != 0) {
+      throw std::runtime_error("Palette size must be a multiple of 3.");
+    }
+    if (palette.size() != class_names.size() * 3) {
+      throw std::runtime_error("Palette size does not match class names size.");
     }
 
-    if (ground_label_ == -1) {
-      throw std::runtime_error("Ground label not found in class names");
-    }
+    std::vector<float> colors;
+    colors.reserve(class_names.size());
+    for (size_t i = 0; i < palette.size(); i += 3) {
+      const auto r = palette[i];
+      const auto g = palette[i + 1];
+      const auto b = palette[i + 2];
+      if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+        throw std::runtime_error("Color values must be within 0-255 range.");
+      }
 
-    ground_prob_threshold_ = ground_prob_threshold;
+      const std::uint32_t rgb = (static_cast<std::uint32_t>(r) << 16u) |
+                                (static_cast<std::uint32_t>(g) << 8u) |
+                                static_cast<std::uint32_t>(b);
+      float rgb_float = 0.0f;
+      memcpy(&rgb_float, &rgb, sizeof(rgb_float));
+      colors.push_back(rgb_float);
+    }
+    return colors;
   }
 
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
 
   // TensorRT parameters
-  std::string plugins_path_{};
+  std::string plugins_path_;
 
   // Preprocess parameters
   bool use_64bit_hash_{};
@@ -127,10 +150,11 @@ public:
   ///// NETWORK PARAMETERS /////
 
   // Head parameters
-  std::vector<std::string> class_names_{};
-  std::vector<float> colors_rgb_{};
-  float ground_prob_threshold_{};
-  std::int32_t ground_label_{-1};
+  std::vector<std::string> class_names_;
+  std::vector<float> colors_rgb_;
+  float filter_class_probability_threshold_{};
+  std::vector<std::uint32_t> filter_class_indices_;
+  std::string filter_output_format_;
 
   // Common network parameters
   std::int64_t cloud_capacity_{};
