@@ -26,10 +26,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   "src"
 )
 
-ament_target_dependencies(${PROJECT_NAME}
-  autoware_agnocast_wrapper
-)
-
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::control_command_gate::ControlCmdGate"
   EXECUTABLE "control_command_gate_node"
