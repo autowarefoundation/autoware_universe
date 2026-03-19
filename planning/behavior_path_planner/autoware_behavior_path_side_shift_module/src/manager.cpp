@@ -88,9 +88,8 @@ void SideShiftModuleManager::onSetLateralOffset(
   const double current_inserted =
     inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
 
-  const auto [status_code, lateral_offset] = validateAndComputeLateralOffset(
-    *request, current_inserted, parameters_->unit_shift_amount, parameters_->max_shift_magnitude,
-    parameters_->min_shift_gap);
+  const auto [status_code, lateral_offset] =
+    validateAndComputeLateralOffset(*request, current_inserted, parameters_);
 
   // WARN_EXCEEDED_LIMIT will be treated as success since the shift itself will be performed
   response->status.success =
@@ -106,9 +105,6 @@ void SideShiftModuleManager::onSetLateralOffset(
 
 void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
 {
-  if (!lateral_offset_publisher_ || !inserted_lateral_offset_state_) {
-    return;
-  }
   tier4_planning_msgs::msg::LateralOffset msg;
   msg.stamp = node_->now();
   msg.lateral_offset = static_cast<float>(inserted_lateral_offset_state_->value.load());
@@ -118,35 +114,22 @@ void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
 void SideShiftModuleManager::onLateralOffset(
   const tier4_planning_msgs::msg::LateralOffset::ConstSharedPtr msg)
 {
-  if (!requested_lateral_offset_state_) {
-    return;
-  }
+  const auto new_offset = static_cast<double>(msg->lateral_offset);
 
-  const double new_offset = static_cast<double>(msg->lateral_offset);
-  const double current = requested_lateral_offset_state_->value.load();
+  const auto validation_result =
+    validateRawValue(inserted_lateral_offset_state_->value.load(), new_offset, parameters_);
 
-  if (std::abs(new_offset) > parameters_->max_shift_magnitude) {
-    return;
-  }
-
-  if (std::abs(new_offset - current) < parameters_->min_shift_gap) {
-    return;
-  }
-
-  requested_lateral_offset_state_->value.store(new_offset);
+  requested_lateral_offset_state_->value.store(validation_result.second);
 }
 
-void SideShiftModuleManager::updateModuleParams(const std::vector<rclcpp::Parameter> & parameters)
+void SideShiftModuleManager::updateModuleParams(
+  [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils::update_param;
 
-  auto p = parameters_;
-  const std::string ns = "side_shift.";
-  update_param<double>(parameters, ns + "unit_shift_amount", p->unit_shift_amount);
-
-  std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
-    if (!observer.expired()) observer.lock()->updateModuleParams(p);
-  });
+  [[maybe_unused]] auto p = parameters_;
+  [[maybe_unused]] const std::string ns = "side_shift.";
+  // update_param<bool>(parameters, ns + ..., ...);
 }
 
 }  // namespace autoware::behavior_path_planner

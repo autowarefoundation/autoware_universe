@@ -19,6 +19,7 @@
 #include <autoware_common_msgs/msg/response_status.hpp>
 
 #include <cmath>
+#include <memory>
 #include <utility>
 
 namespace autoware::behavior_path_planner
@@ -26,20 +27,12 @@ namespace autoware::behavior_path_planner
 using ResponseStatus = autoware_common_msgs::msg::ResponseStatus;
 
 std::pair<uint16_t, double> validateAndComputeLateralOffset(
-  const SetLateralOffset::Request & request, double current_inserted_lateral_offset,
-  double unit_shift_amount, double max_shift_magnitude, double min_shift_gap)
+  const SetLateralOffset::Request & request, const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters)
 {
   if (request.shift_mode == SetLateralOffset::Request::RAW_VALUE) {
-    if (std::fabs(static_cast<double>(request.shift_value)) > max_shift_magnitude) {
-      return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, 0.0};
-    }
-    if (
-      std::fabs(static_cast<double>(request.shift_value) - current_inserted_lateral_offset) <
-      min_shift_gap) {
-      return {
-        SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
-    }
-    return {SetLateralOffset::Response::SUCCESS, static_cast<double>(request.shift_value)};
+    return validateRawValue(
+      current_inserted_lateral_offset, static_cast<double>(request.shift_value), parameters);
   }
 
   if (request.shift_mode == SetLateralOffset::Request::DIRECTION) {
@@ -47,48 +40,77 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
       return {SetLateralOffset::Response::SUCCESS, 0.0};
     }
 
-    if (unit_shift_amount < 0.0) {
+    if (parameters->unit_shift_amount <= 0.0) {
       return {ResponseStatus::PARAMETER_ERROR, 0.0};
     }
 
     if (request.shift_direction_value == SetLateralOffset::Request::LEFT) {
-      if (current_inserted_lateral_offset >= max_shift_magnitude) {
-        return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, max_shift_magnitude};
-      }
-
-      const double request_offset = current_inserted_lateral_offset + unit_shift_amount;
-      if (std::fabs(request_offset) >= max_shift_magnitude) {
-        return {SetLateralOffset::Response::WARN_EXCEEDED_LIMIT, max_shift_magnitude};
-      }
-      if (std::fabs(request_offset - current_inserted_lateral_offset) < min_shift_gap) {
-        return {
-          SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
-      }
-
-      return {SetLateralOffset::Response::SUCCESS, request_offset};
+      return validateShiftLeft(current_inserted_lateral_offset, parameters);
     }
 
     if (request.shift_direction_value == SetLateralOffset::Request::RIGHT) {
-      if (current_inserted_lateral_offset <= -max_shift_magnitude) {
-        return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, -max_shift_magnitude};
-      }
-
-      const double request_offset = current_inserted_lateral_offset - unit_shift_amount;
-      if (std::fabs(request_offset) >= max_shift_magnitude) {
-        return {SetLateralOffset::Response::WARN_EXCEEDED_LIMIT, -max_shift_magnitude};
-      }
-      if (std::fabs(request_offset - current_inserted_lateral_offset) < min_shift_gap) {
-        return {
-          SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
-      }
-
-      return {SetLateralOffset::Response::SUCCESS, request_offset};
+      return validateShiftRight(current_inserted_lateral_offset, parameters);
     }
 
     return {SetLateralOffset::Response::ERROR_INVALID_DIRECTION, 0.0};
   }
 
   return {SetLateralOffset::Response::ERROR_INVALID_MODE, 0.0};
+}
+
+std::pair<uint16_t, double> validateRawValue(
+  const double current_inserted_lateral_offset, const double lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters)
+{
+  if (std::fabs(lateral_offset) > parameters->max_shift_magnitude) {
+    return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, current_inserted_lateral_offset};
+  }
+
+  if (std::fabs(lateral_offset - current_inserted_lateral_offset) < parameters->min_shift_gap) {
+    return {SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
+  }
+
+  return {SetLateralOffset::Response::SUCCESS, lateral_offset};
+}
+
+std::pair<uint16_t, double> validateShiftLeft(
+  const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters)
+{
+  if (current_inserted_lateral_offset >= parameters->max_shift_magnitude) {
+    return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, parameters->max_shift_magnitude};
+  }
+
+  const double request_offset = current_inserted_lateral_offset + parameters->unit_shift_amount;
+  if (std::fabs(request_offset) >= parameters->max_shift_magnitude) {
+    return {SetLateralOffset::Response::WARN_EXCEEDED_LIMIT, parameters->max_shift_magnitude};
+  }
+
+  if (std::fabs(request_offset - current_inserted_lateral_offset) < parameters->min_shift_gap) {
+    return {SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
+  }
+
+  return {SetLateralOffset::Response::SUCCESS, request_offset};
+}
+
+std::pair<uint16_t, double> validateShiftRight(
+  const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters)
+{
+  if (current_inserted_lateral_offset <= -parameters->max_shift_magnitude) {
+    return {SetLateralOffset::Response::ERROR_EXCEEDED_LIMIT, -parameters->max_shift_magnitude};
+  }
+
+  const double request_offset = current_inserted_lateral_offset - parameters->unit_shift_amount;
+  if (std::fabs(request_offset) >= parameters->max_shift_magnitude) {
+    return {SetLateralOffset::Response::WARN_EXCEEDED_LIMIT, -parameters->max_shift_magnitude};
+  }
+
+  if (std::fabs(request_offset - current_inserted_lateral_offset) < parameters->min_shift_gap) {
+    return {SetLateralOffset::Response::ERROR_SHIFT_GAP_TOO_SMALL, current_inserted_lateral_offset};
+  }
+
+  return {SetLateralOffset::Response::SUCCESS, request_offset};
 }
 
 const char * getStatusMessage(uint16_t status_code)

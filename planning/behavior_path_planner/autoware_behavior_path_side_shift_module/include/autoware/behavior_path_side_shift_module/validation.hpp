@@ -15,11 +15,14 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_SIDE_SHIFT_MODULE__VALIDATION_HPP_
 
+#include "autoware/behavior_path_side_shift_module/data_structs.hpp"
 #include "autoware/behavior_path_side_shift_module/manager.hpp"
 
 #include <tier4_planning_msgs/srv/detail/set_lateral_offset__struct.hpp>
 #include <tier4_planning_msgs/srv/set_lateral_offset.hpp>
 
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <utility>
 
@@ -37,8 +40,20 @@ using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateAndComputeLateralOffset(
-  const SetLateralOffset::Request & request, double current_inserted_lateral_offset,
-  double unit_shift_amount, double max_shift_magnitude, double min_shift_gap);
+  const SetLateralOffset::Request & request, const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters);
+
+std::pair<uint16_t, double> validateRawValue(
+  const double current_inserted_lateral_offset, const double lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters);
+
+std::pair<uint16_t, double> validateShiftLeft(
+  const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters);
+
+std::pair<uint16_t, double> validateShiftRight(
+  const double current_inserted_lateral_offset,
+  const std::shared_ptr<SideShiftParameters> & parameters);
 
 /**
  * @brief Get the status message identical to te status code
