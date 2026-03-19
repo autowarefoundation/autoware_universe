@@ -9,12 +9,16 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/plugin/status.cpp"
   "src/command_mode_decider_base.cpp"
 )
-target_include_directories(${PROJECT_NAME} PRIVATE "src")
 
-rclcpp_components_register_node(${PROJECT_NAME}
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "src"
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::command_mode_decider::CommandModeDeciderBase"
   EXECUTABLE "command_mode_decider_node"
-  EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)

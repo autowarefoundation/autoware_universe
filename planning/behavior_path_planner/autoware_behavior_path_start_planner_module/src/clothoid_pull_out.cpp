@@ -30,7 +30,6 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
