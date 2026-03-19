@@ -78,6 +78,9 @@ def launch_setup(context, *args, **kwargs):
         composable_node_descriptions=[],
         output="screen",
         condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
+        additional_env={
+            "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
+        },
     )
 
     target_container = (
