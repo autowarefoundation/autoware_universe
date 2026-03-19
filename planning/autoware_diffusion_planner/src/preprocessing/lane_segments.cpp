@@ -18,8 +18,6 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
 #include <lanelet2_core/Forward.h>
