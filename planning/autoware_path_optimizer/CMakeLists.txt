@@ -14,18 +14,6 @@ include(CheckCXXCompilerFlag)
 
 find_package(autoware_cmake REQUIRED)
 
-# Exclude generated acados code from copyright checking
-# Must be set before autoware_package() is called (when lint hooks are registered)
-# Use glob patterns to exclude all generated files (they're created during build)
-if(NOT DEFINED AMENT_LINT_AUTO_FILE_EXCLUDE)
-  set(AMENT_LINT_AUTO_FILE_EXCLUDE "" CACHE INTERNAL "")
-endif()
-list(APPEND AMENT_LINT_AUTO_FILE_EXCLUDE
-  "src/acados_mpc/c_generated_code/**"
-  "src/acados_mpc/c_generated_code/**/*"
-  "src/acados_mpc/c_generated_code/**/*.*"
-)
-
 autoware_package()
 
 find_package(Eigen3 REQUIRED)
@@ -98,8 +86,9 @@ install(TARGETS acados_interface LIBRARY DESTINATION lib)
 install(FILES src/acados_mpc/include/acados_interface.hpp DESTINATION include/autoware/path_optimizer)
 
 # Downstream (e.g. autoware_trajectory_optimizer) includes acados_interface.hpp -> c_generated_code/...
+# Generated code lives in binary dir (see src/acados_mpc/CMakeLists.txt).
 set(MODEL "curvilinear_bicycle_model_spatial")
-set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/acados_mpc/c_generated_code")
+set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/src/acados_mpc/c_generated_code")
 install(FILES
   ${GEN_DIR}/acados_solver_${MODEL}.h
   ${GEN_DIR}/${MODEL}_model/${MODEL}_model.h
