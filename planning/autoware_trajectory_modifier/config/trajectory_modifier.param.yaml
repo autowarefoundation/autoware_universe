@@ -8,31 +8,32 @@
     stop_point_fixer:
       force_stop_long_stopped_trajectories: true     # Force zero velocity trajectory for trajectories with long stops
       force_stop_close_stopped_trajectories: true    # Force zero velocity trajectory for trajectories with stops close to ego
-      velocity_threshold_mps: 0.25
-      min_distance_threshold_m: 1.0
-      min_stop_duration_s: 0.5
+      velocity_threshold: 0.25 # [m/s]
+      min_distance_threshold: 1.0 # [m]
+      min_stop_duration: 0.5 # [s]
 
     # Obstacle Stop Plugin Parameters
     obstacle_stop:
       use_objects: true
       use_pointcloud: true
-      enable_stop: true
-      stop_margin_m: 6.0
-      nom_stopping_decel: 1.0 # [m/s^2]
-      max_stopping_decel: 4.0 # [m/s^2]
+      enable_stop_for_objects: false
+      enable_stop_for_pointcloud: false
+      stop_margin: 6.0 # [m]
+      nominal_stopping_decel: 1.0 # [m/s^2]
+      maximum_stopping_decel: 4.0 # [m/s^2]
       stopping_jerk: 3.0 # [m/s^3]
-      lateral_margin_m: 0.5     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
-      duplicate_check_threshold_m: 1.0 # threshold to check if the stop point is already in the trajectory [m]
-      arrived_distance_threshold_m: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
+      lateral_margin: 0.0     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      duplicate_check_threshold: 1.0 # threshold to check if the stop point is already in the trajectory [m]
+      arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
 
       objects:
-        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"] # object types to consider for obstacle stop
+        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop
         max_velocity_th: 1.0      # maximum velocity threshold for target object [m/s]
 
       pointcloud:
         height_buffer: 0.5  # height buffer to add above ego height [m]
         min_height: 0.2  # minimum height of pointcloud [m]
-        detection_range: 100.0 # detection range [m]
+        detection_range: 50.0 # detection range [m]
         voxel_grid_filter:
           x: 0.2
           y: 0.2

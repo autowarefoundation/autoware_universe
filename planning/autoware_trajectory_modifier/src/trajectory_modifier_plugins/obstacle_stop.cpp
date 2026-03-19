@@ -80,21 +80,36 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
 {
   debug_data_ = DebugData();
   debug_data_.trajectory_polygon = get_trajectory_polygon(
-    traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, params_.lateral_margin_m);
-  const auto collision_point_pcd = check_pointcloud(traj_points, debug_data_.trajectory_polygon);
+    traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, params_.lateral_margin);
   const auto collision_point_objects =
     check_predicted_objects(traj_points, debug_data_.trajectory_polygon);
-  if (!collision_point_pcd && !collision_point_objects) return false;
+  const auto collision_point_pcd = check_pointcloud(traj_points, debug_data_.trajectory_polygon);
 
-  if (!collision_point_pcd) {
-    nearest_collision_point_ = collision_point_objects;
-  } else if (!collision_point_objects) {
-    nearest_collision_point_ = collision_point_pcd;
-  } else {
-    nearest_collision_point_ = collision_point_pcd->arc_length < collision_point_objects->arc_length
-                                 ? collision_point_pcd
-                                 : collision_point_objects;
+  if (collision_point_objects) {
+    RCLCPP_WARN_THROTTLE(
+      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      "[TM ObstacleStop] Detected collision with object at arc length %f m",
+      collision_point_objects->arc_length);
   }
+
+  if (collision_point_pcd) {
+    RCLCPP_WARN_THROTTLE(
+      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      "[TM ObstacleStop] Detected collision with pointcloud at arc length %f m",
+      collision_point_pcd->arc_length);
+  }
+
+  nearest_collision_point_ = std::invoke([&]() -> std::optional<CollisionPoint> {
+    const auto is_collision_point_pcd = params_.enable_stop_for_pointcloud && collision_point_pcd;
+    const auto is_collision_point_objects =
+      params_.enable_stop_for_objects && collision_point_objects;
+    if (!is_collision_point_pcd && !is_collision_point_objects) return std::nullopt;
+    if (!is_collision_point_pcd) return collision_point_objects.value();
+    if (!is_collision_point_objects) return collision_point_pcd.value();
+    return collision_point_pcd->arc_length < collision_point_objects->arc_length
+             ? collision_point_pcd.value()
+             : collision_point_objects.value();
+  });
 
   debug_data_.active_collision_point =
     nearest_collision_point_ ? nearest_collision_point_->point : geometry_msgs::msg::Point();
@@ -108,19 +123,12 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
 
   if (!nearest_collision_point_) return false;
 
-  RCLCPP_WARN_THROTTLE(
-    get_node_ptr()->get_logger(), *get_clock(), 500,
-    "[TM ObstacleStop] Detected collision point at arc length %f m",
-    nearest_collision_point_->arc_length);
-
-  if (!params_.enable_stop) return false;
-
   return set_stop_point(traj_points);
 }
 
 bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 {
-  const auto stop_margin = params_.stop_margin_m + data_->vehicle_info.max_longitudinal_offset_m;
+  const auto stop_margin = params_.stop_margin + data_->vehicle_info.max_longitudinal_offset_m;
   const auto target_stop_point_arc_length =
     std::max(nearest_collision_point_->arc_length - stop_margin, 0.0);
 
@@ -133,7 +141,7 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 
   constexpr double stop_velocity_threshold = 0.01;
 
-  if (params_.duplicate_check_threshold_m > std::numeric_limits<double>::epsilon()) {
+  if (params_.duplicate_check_threshold > std::numeric_limits<double>::epsilon()) {
     auto checked_distance = 0.0;
     for (size_t i = 1; i < traj_points.size(); ++i) {
       const auto & curr = traj_points.at(i);
@@ -145,17 +153,16 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
         return skip("Preceding stop point exists");
       }
       if (
-        abs(target_stop_point_arc_length - checked_distance) <
-        params_.duplicate_check_threshold_m) {
+        abs(target_stop_point_arc_length - checked_distance) < params_.duplicate_check_threshold) {
         return skip("Duplicate stop point detected near target stop point");
       }
-      if (checked_distance > target_stop_point_arc_length + params_.duplicate_check_threshold_m)
+      if (checked_distance > target_stop_point_arc_length + params_.duplicate_check_threshold)
         break;
     }
   }
 
   if (
-    target_stop_point_arc_length < params_.arrived_distance_threshold_m ||
+    target_stop_point_arc_length < params_.arrived_distance_threshold ||
     !apply_stopping(traj_points, target_stop_point_arc_length)) {
     traj_points = std::invoke([&]() {
       TrajectoryPoints stop_points;
@@ -239,7 +246,8 @@ bool ObstacleStop::apply_stopping(
   const auto required_decel = std::abs(v_ref * v_ref / (2.0 * target_stop_point_arc_length));
   const auto jerk = std::abs(params_.stopping_jerk);
   const auto decel = std::clamp(
-    required_decel, std::abs(params_.nom_stopping_decel), std::abs(params_.max_stopping_decel));
+    required_decel, std::abs(params_.nominal_stopping_decel),
+    std::abs(params_.maximum_stopping_decel));
 
   const auto vel_update_start_index = update_velocities(trajectory, jerk, decel);
   auto interpolate_start_index = vel_update_start_index > 0 ? vel_update_start_index - 1 : 0;

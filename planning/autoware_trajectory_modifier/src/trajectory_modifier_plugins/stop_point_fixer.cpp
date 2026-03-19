@@ -48,10 +48,10 @@ bool StopPointFixer::is_long_stop_trajectory(const TrajectoryPoints & traj_point
     const auto time_from_start = static_cast<double>(point.time_from_start.sec) +
                                  static_cast<double>(point.time_from_start.nanosec) * 1e-9;
 
-    if (time_from_start > params_.min_stop_duration_s) {
+    if (time_from_start > params_.min_stop_duration) {
       return true;
     }
-    if (point.longitudinal_velocity_mps > params_.velocity_threshold_mps) {
+    if (point.longitudinal_velocity_mps > params_.velocity_threshold) {
       return false;
     }
   }
@@ -64,7 +64,7 @@ bool StopPointFixer::is_stop_point_close_to_ego(const TrajectoryPoints & traj_po
     return false;
   }
   return utils::calculate_distance_to_last_point(traj_points, data_->current_odometry->pose.pose) <
-         params_.min_distance_threshold_m;
+         params_.min_distance_threshold;
 }
 
 bool StopPointFixer::is_trajectory_modification_required(const TrajectoryPoints & traj_points)
@@ -74,7 +74,7 @@ bool StopPointFixer::is_trajectory_modification_required(const TrajectoryPoints 
   }
 
   if (utils::is_ego_vehicle_moving(
-        data_->current_odometry->twist.twist, params_.velocity_threshold_mps)) {
+        data_->current_odometry->twist.twist, params_.velocity_threshold)) {
     return false;
   }
 

@@ -28,21 +28,21 @@ trajectory_modifier_params:
       default_value: true
       description: Force zero velocity trajectory for trajectories with stops close to ego
       read_only: false
-    velocity_threshold_mps:
+    velocity_threshold:
       type: double
       default_value: 0.1
       description: Velocity threshold below which ego vehicle is considered stationary [m/s]
       read_only: false
       validation:
         gt_eq<>: [0.0]
-    min_distance_threshold_m:
+    min_distance_threshold:
       type: double
       default_value: 1.0
       description: Minimum distance threshold to trigger trajectory replacement [m]
       read_only: false
       validation:
         gt_eq<>: [0.0]
-    min_stop_duration_s:
+    min_stop_duration:
       type: double
       default_value: 0.5
       description: Minimum duration of stop to trigger trajectory replacement [s]
@@ -61,26 +61,31 @@ trajectory_modifier_params:
       default_value: false
       description: Enable the use of pointcloud for obstacle stop
       read_only: false
-    enable_stop:
+    enable_stop_for_objects:
       type: bool
       default_value: true
-      description: Enable stopping behavior when obstacle is detected
+      description: Enable stopping behavior when object is detected as obstacle
       read_only: false
-    stop_margin_m:
+    enable_stop_for_pointcloud:
+      type: bool
+      default_value: true
+      description: Enable stopping behavior when pointcloud is detected as obstacle
+      read_only: false
+    stop_margin:
       type: double
       default_value: 6.0
       description: Distance to maintain from an obstacle when stopped [m]
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    nom_stopping_decel:
+    nominal_stopping_decel:
       type: double
       default_value: 1.0
       description: Nominal deceleration during stopping [m/s^2]
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    max_stopping_decel:
+    maximum_stopping_decel:
       type: double
       default_value: 4.0
       description: Maximum deceleration during stopping [m/s^2]
@@ -94,21 +99,21 @@ trajectory_modifier_params:
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    lateral_margin_m:
+    lateral_margin:
       type: double
       default_value: 0.5
       description: Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    duplicate_check_threshold_m:
+    duplicate_check_threshold:
       type: double
       default_value: 1.0
       description: Threshold to check if the stop point is already in the trajectory [m]
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    arrived_distance_threshold_m:
+    arrived_distance_threshold:
       type: double
       default_value: 0.5
       description: Threshold to check if the ego vehicle has arrived at the stop point [m]
@@ -119,7 +124,7 @@ trajectory_modifier_params:
     objects:
       object_types:
         type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, unknown]
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
         description: Types of objects to consider for obstacle stop
         read_only: false
       max_velocity_th:
@@ -147,7 +152,7 @@ trajectory_modifier_params:
         read_only: false
       detection_range:
         type: double
-        default_value: 100.0
+        default_value: 50.0
         description: Detection range [m]
         validation:
           gt_eq<>: [0.0]
