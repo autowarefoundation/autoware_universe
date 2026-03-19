@@ -1,8 +1,4 @@
 <launch>
-  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml">
-    <arg name="use_multithread" value="false"/>
-  </include>
-
   <arg name="converter_param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
   <arg name="param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/default.param.yaml"/>
   <arg name="graph_file"/>
@@ -14,7 +10,7 @@
   <arg name="~/reset" default="/diagnostics_graph/reset"/>
   <arg name="~/availability" default="/system/command_mode/availability"/>
 
-  <node_container pkg="$(var container_package)" exec="$(var container_executable)" name="diagnostic_graph_container" namespace="">
+  <node_container pkg="rclcpp_components" exec="component_container" name="diagnostic_graph_container" namespace="">
     <composable_node pkg="autoware_diagnostic_graph_aggregator" plugin="autoware::diagnostic_graph_aggregator::AggregatorNode" name="aggregator" namespace="">
       <param from="$(var param_file)"/>
       <param name="graph_file" value="$(var graph_file)"/>
