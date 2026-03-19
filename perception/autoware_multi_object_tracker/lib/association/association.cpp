@@ -158,9 +158,19 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
 
   // Step 2: Compute determinant and inverse components in one pass
   const double det = a * d - b * b;
-  const double inv_det = 1.0 / det;
-
   InverseCovariance2D result;
+
+  // Guard against invalid / non-PSD covariance (or extreme off-diagonal terms).
+  // In that case, fall back to a diagonal inverse (still bounded by minimum_cov).
+  constexpr double min_det = 1e-12;
+  if (!(std::isfinite(det)) || det <= min_det) {
+    result.inv00 = 1.0 / a;
+    result.inv01 = 0.0;
+    result.inv11 = 1.0 / d;
+    return result;
+  }
+
+  const double inv_det = 1.0 / det;
   result.inv00 = d * inv_det;   // d / det
   result.inv01 = -b * inv_det;  // -b / det
   result.inv11 = a * inv_det;   // a / det
