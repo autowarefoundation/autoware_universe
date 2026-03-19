@@ -20,7 +20,6 @@
 #include <autoware/behavior_path_start_planner_module/util.hpp>
 #include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
