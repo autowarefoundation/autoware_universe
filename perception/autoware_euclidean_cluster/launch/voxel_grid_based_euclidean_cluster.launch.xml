@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
-  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml">
+    <arg name="use_multithread" value="true"/>
+  </include>
   <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="input_map" default="/map/pointcloud_map"/>
   <arg name="output_clusters" default="clusters"/>
