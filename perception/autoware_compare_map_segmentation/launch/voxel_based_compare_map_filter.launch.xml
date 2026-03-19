@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="voxel_based_compare_map_filter_param_file" default="$(find-pkg-share autoware_compare_map_segmentation)/config/voxel_based_compare_map_filter.param.yaml"/>
   <arg name="input" default="/input" description="input topic name"/>
   <arg name="input_map" default="/map" description="input map topic name"/>
@@ -9,7 +8,6 @@
   <arg name="map_loader_service" default="/map/get_differential_pointcloud_map" description="map loader service name"/>
 
   <node pkg="autoware_compare_map_segmentation" exec="voxel_based_compare_map_filter_node" name="voxel_based_compare_map_filter_node" output="screen">
-    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="input" to="$(var input)"/>
     <remap from="map" to="$(var input_map)"/>
     <remap from="output" to="$(var output)"/>

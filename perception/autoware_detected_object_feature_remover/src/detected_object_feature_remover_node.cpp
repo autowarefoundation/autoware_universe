@@ -23,17 +23,21 @@ namespace autoware::detected_object_feature_remover
 DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOptions & node_options)
 : Node("detected_object_feature_remover", node_options)
 {
-  using std::placeholders::_1;
   pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
-  sub_ = this->create_subscription<DetectedObjectsWithFeature>(
-    "~/input", 1, std::bind(&DetectedObjectFeatureRemover::objectCallback, this, _1));
+  AUTOWARE_SUBSCRIPTION_OPTIONS options;
+  sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    DetectedObjectsWithFeature, "~/input", 1,
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input) {
+      this->objectCallback(input);
+    },
+    options);
   convert_params_.run_convex_hull_conversion =
     this->declare_parameter<bool>("run_convex_hull_conversion", false);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void DetectedObjectFeatureRemover::objectCallback(
-  const DetectedObjectsWithFeature::ConstSharedPtr input)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input)
 {
   DetectedObjects output;
   convert::convertToDetectedObjects(*input, output, convert_params_);
