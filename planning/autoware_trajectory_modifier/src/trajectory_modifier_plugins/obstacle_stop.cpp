@@ -247,7 +247,8 @@ bool ObstacleStop::apply_stopping(
   auto trajectory_interpolation_util =
     InterpolationTrajectory::Builder{}
       .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
-      .build(traj_points);
+      .set_longitudinal_velocity_interpolator<AkimaSpline>()
+      .build(trajectory);
   if (!trajectory_interpolation_util) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_clock(), 1000,
@@ -255,43 +256,14 @@ bool ObstacleStop::apply_stopping(
     return false;
   }
 
-  std::vector<double> s_seeds, v_seeds;
-  {
-    double s_curr{0.0};
-    s_seeds.push_back(s_curr);
-    v_seeds.push_back(trajectory.front().longitudinal_velocity_mps);
-    const size_t required_size = std::max(trajectory.size(), 5ul);
-    for (size_t i = 1; i < required_size; ++i) {
-      if (i >= trajectory.size()) {
-        s_curr += 0.01;
-        s_seeds.push_back(s_curr);
-        v_seeds.push_back(v_seeds.back());
-        continue;
-      }
-      s_curr += autoware_utils_geometry::calc_distance2d(
-        trajectory.at(i - 1).pose.position, trajectory.at(i).pose.position);
-      s_seeds.push_back(s_curr);
-      v_seeds.push_back(trajectory.at(i).longitudinal_velocity_mps);
-    }
-  }
-  auto velocity_spline = AkimaSpline::Builder().set_bases(s_seeds).set_values(v_seeds).build();
-  if (!velocity_spline) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] Failed to build velocity spline: %s",
-      velocity_spline.error().what.c_str());
-    return false;
-  }
-
   const auto dt = trajectory_time_step_;
-
-  const auto s_max = std::min(s_seeds.back(), trajectory_interpolation_util->length());
-
-  const auto interpolate_start_arc_length = s_seeds.at(interpolate_start_index);
+  const auto s_max = trajectory_interpolation_util->length();
+  const auto interpolate_start_arc_length =
+    trajectory_interpolation_util->get_underlying_bases().at(interpolate_start_index);
   trajectory_interpolation_util->align_orientation_with_trajectory_direction();
   traj_points.erase(traj_points.begin() + interpolate_start_index + 1, traj_points.end());
   double s_curr{interpolate_start_arc_length};
-  while (s_curr < s_max) {
+  while (s_curr <= s_max) {
     const auto v_curr = traj_points.back().longitudinal_velocity_mps;
     const auto a_curr = traj_points.back().acceleration_mps2;
     const auto t_curr = rclcpp::Duration(traj_points.back().time_from_start);
@@ -302,12 +274,9 @@ bool ObstacleStop::apply_stopping(
 
     s_curr += ds;
     const auto s_clamped = std::min(s_curr, s_max);
-    double v_next = velocity_spline->compute(s_clamped);
-    double dv_ds = velocity_spline->compute_first_derivative(s_clamped);
 
     auto p = trajectory_interpolation_util->compute(s_clamped);
-    p.longitudinal_velocity_mps = static_cast<float>(v_next);
-    p.acceleration_mps2 = static_cast<float>(v_next * dv_ds);
+    p.acceleration_mps2 = (p.longitudinal_velocity_mps - v_curr) / static_cast<float>(dt);
     p.time_from_start = t_curr + rclcpp::Duration::from_seconds(dt);
     traj_points.push_back(p);
   }
