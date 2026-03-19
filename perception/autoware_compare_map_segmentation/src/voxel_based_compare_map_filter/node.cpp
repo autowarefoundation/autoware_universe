@@ -77,9 +77,6 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   }
   tf_input_frame_ = *(voxel_grid_map_loader_->tf_map_input_frame_);
   RCLCPP_INFO(this->get_logger(), "tf_map_input_frame: %s", tf_input_frame_.c_str());
-
-  agnocast_pub_output_ = AUTOWARE_CREATE_PUBLISHER2(
-    PointCloud2, "output", rclcpp::SensorDataQoS().keep_last(max_queue_size_));
 }
 
 void VoxelBasedCompareMapFilterComponent::checkStatus(
@@ -209,20 +206,6 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
     }
   }
   return true;
-}
-
-// TODO(Koichi98): Remove this override once the filter base class supports agnocast_wrapper::Node.
-void VoxelBasedCompareMapFilterComponent::compute_publish(
-  const PointCloud2ConstPtr & input, const IndicesPtr & indices)
-{
-  auto output = std::make_unique<PointCloud2>();
-  filter(input, indices, *output);
-  if (!convert_output_costly(output)) return;
-  output->header.stamp = input->header.stamp;
-  auto agnocast_output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_output_);
-  *agnocast_output = *output;
-  agnocast_pub_output_->publish(std::move(agnocast_output));
-  published_time_publisher_->publish_if_subscribed(pub_output_, input->header.stamp);
 }
 
 void VoxelBasedCompareMapFilterComponent::filter(
