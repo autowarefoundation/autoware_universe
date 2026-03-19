@@ -271,7 +271,6 @@ BehaviorModuleOutput SideShiftModule::plan()
   if (
     lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
                                        (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
-    replaceShiftLine();
     should_regenerate_shifted_path = true;
   } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
     RCLCPP_DEBUG(getLogger(), "ego is shifting");
@@ -283,6 +282,9 @@ BehaviorModuleOutput SideShiftModule::plan()
   // is explicitly required.
   ShiftedPath shifted_path;
   if (should_regenerate_shifted_path || prev_output_.path.points.empty()) {
+    if (should_regenerate_shifted_path) {
+      replaceShiftLine();
+    }
     path_shifter_.generate(&shifted_path);
   } else {
     shifted_path = prev_output_;
