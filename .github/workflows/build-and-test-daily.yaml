@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
-      container: ${{ matrix.container-base }}${{ matrix.container-suffix }}
+      container: ${{ matrix.container-base }}
       container-suffix: ${{ matrix.container-suffix }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
