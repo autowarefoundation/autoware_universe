@@ -3,7 +3,6 @@ project(autoware_diagnostic_graph_aggregator)
 
 find_package(autoware_cmake REQUIRED)
 find_package(yaml-cpp REQUIRED)
-find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
