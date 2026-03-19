@@ -18,7 +18,6 @@
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
