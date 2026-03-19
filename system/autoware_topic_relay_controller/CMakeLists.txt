@@ -2,15 +2,10 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_topic_relay_controller)
 
 find_package(autoware_cmake REQUIRED)
-find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/topic_relay_controller_node.cpp
-)
-
-ament_target_dependencies(${PROJECT_NAME}
-  autoware_agnocast_wrapper
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
