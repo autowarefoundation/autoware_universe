@@ -128,8 +128,13 @@ void SideShiftModuleManager::updateModuleParams(
   using autoware_utils::update_param;
 
   [[maybe_unused]] auto p = parameters_;
+
   [[maybe_unused]] const std::string ns = "side_shift.";
   // update_param<bool>(parameters, ns + ..., ...);
+
+  std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
+    if (!observer.expired()) observer.lock()->updateModuleParams(p);
+  });
 }
 
 }  // namespace autoware::behavior_path_planner

@@ -270,9 +270,7 @@ void SideShiftModule::replaceShiftLine()
   lateral_offset_change_request_ = false;
   inserted_lateral_offset_ = requested_lateral_offset_;
   inserted_shift_line_ = new_sl;
-  if (inserted_lateral_offset_state_) {
-    inserted_lateral_offset_state_->value.store(inserted_lateral_offset_);
-  }
+  inserted_lateral_offset_state_->value.store(inserted_lateral_offset_);
 }
 
 BehaviorModuleOutput SideShiftModule::plan()

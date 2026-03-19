@@ -119,7 +119,7 @@ const char * getStatusMessage(uint16_t status_code)
     case SetLateralOffset::Response::SUCCESS:
       return "Updated successfully";
     case SetLateralOffset::Response::ERROR_UNKNOWN:
-      return "Unknown error occured";
+      return "Unknown error occurred";
     case SetLateralOffset::Response::ERROR_INVALID_MODE:
       return "Invalid mode have been requested";
     case SetLateralOffset::Response::ERROR_INVALID_DIRECTION:

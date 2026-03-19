@@ -22,7 +22,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
-#include <tier4_planning_msgs/srv/detail/set_lateral_offset__struct.hpp>
 #include <tier4_planning_msgs/srv/set_lateral_offset.hpp>
 
 #include <memory>

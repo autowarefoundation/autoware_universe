@@ -35,7 +35,7 @@ using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
  * @param request SetLateralOffset service request (uses Request::RAW_VALUE, Request::DIRECTION,
  *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
- * @param parameters Parameters used for the side shift mdule
+ * @param parameters Parameters used for the side shift module
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateAndComputeLateralOffset(
@@ -46,7 +46,7 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
  * @brief Validation of the lateral offset when its value (in meters) is directly sent
  * @param lateral_offset The lateral offset sent from the user
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
- * @param parameters Parameters used for the side shift mdule
+ * @param parameters Parameters used for the side shift module
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateRawValue(
@@ -56,7 +56,7 @@ std::pair<uint16_t, double> validateRawValue(
 /**
  * @brief Validation of the lateral offset when LEFT command is sent
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
- * @param parameters Parameters used for the side shift mdule
+ * @param parameters Parameters used for the side shift module
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateShiftLeft(
@@ -66,7 +66,7 @@ std::pair<uint16_t, double> validateShiftLeft(
 /**
  * @brief Validation of the lateral offset when RIGHT command is sent
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
- * @param parameters Parameters used for the side shift mdule
+ * @param parameters Parameters used for the side shift module
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateShiftRight(
