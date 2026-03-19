@@ -35,40 +35,6 @@ namespace autoware::motion::control::pid_longitudinal_controller
 namespace longitudinal_utils
 {
 
-namespace
-{
-bool has_usable_experimental_trajectory_structure(const TrajectoryExperimental & traj)
-{
-  const auto bases = traj.get_underlying_bases();
-  if (bases.size() < 2) {
-    return false;
-  }
-
-  const double trajectory_length = traj.length();
-  if (!isfinite(trajectory_length) || trajectory_length <= 0.0) {
-    return false;
-  }
-
-  constexpr double eps = 1e-6;
-  for (size_t i = 0; i < bases.size(); ++i) {
-    const double base = bases.at(i);
-    if (!isfinite(base)) {
-      return false;
-    }
-
-    if (i > 0 && base <= bases.at(i - 1)) {
-      return false;
-    }
-
-    if (base < -eps || base > trajectory_length + eps) {
-      return false;
-    }
-  }
-
-  return true;
-}
-}  // namespace
-
 bool isValidTrajectory(const Trajectory & traj)
 {
   for (const auto & p : traj.points) {
@@ -91,30 +57,30 @@ bool isValidTrajectory(const Trajectory & traj)
   return true;
 }
 
-bool isValidTrajectory(const TrajectoryExperimental & traj)
+bool isValidTrajectory(const TrajectoryExperimental & trajectory)
 {
-  if (!has_usable_experimental_trajectory_structure(traj)) {
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.size() < 2) {
     return false;
   }
 
-  const auto bases = traj.get_underlying_bases();
-  const double trajectory_length = traj.length();
+  const double trajectory_length = trajectory.length();
+  if (!std::isfinite(trajectory_length) || trajectory_length <= 0.0) {
+    return false;
+  }
+
+  constexpr double eps = 1e-6;
   for (size_t i = 0; i < bases.size(); ++i) {
-    const double clamped_base = std::clamp(bases.at(i), 0.0, trajectory_length);
-    TrajectoryPoint p{};
-    try {
-      p = traj.compute(clamped_base);
-    } catch (const std::exception &) {
+    const double base = bases.at(i);
+    if (!std::isfinite(base)) {
       return false;
     }
 
-    if (
-      !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
-      !isfinite(p.pose.position.z) || !isfinite(p.pose.orientation.w) ||
-      !isfinite(p.pose.orientation.x) || !isfinite(p.pose.orientation.y) ||
-      !isfinite(p.pose.orientation.z) || !isfinite(p.longitudinal_velocity_mps) ||
-      !isfinite(p.lateral_velocity_mps) || !isfinite(p.acceleration_mps2) ||
-      !isfinite(p.heading_rate_rps)) {
+    if (i > 0 && base <= bases.at(i - 1)) {
+      return false;
+    }
+
+    if (base < -eps || base > trajectory_length + eps) {
       return false;
     }
   }

@@ -35,40 +35,6 @@
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
-namespace
-{
-bool check_trajectory(const TrajectoryExperimental & trajectory)
-{
-  const auto bases = trajectory.get_underlying_bases();
-  if (bases.size() < 2) {
-    return false;
-  }
-
-  const double trajectory_length = trajectory.length();
-  if (!std::isfinite(trajectory_length) || trajectory_length <= 0.0) {
-    return false;
-  }
-
-  constexpr double eps = 1e-6;
-  for (size_t i = 0; i < bases.size(); ++i) {
-    const double base = bases.at(i);
-    if (!std::isfinite(base)) {
-      return false;
-    }
-
-    if (i > 0 && base <= bases.at(i - 1)) {
-      return false;
-    }
-
-    if (base < -eps || base > trajectory_length + eps) {
-      return false;
-    }
-  }
-
-  return true;
-}
-}  // namespace
-
 PidLongitudinalController::PidLongitudinalController(
   rclcpp::Node & node, std::shared_ptr<diagnostic_updater::Updater> diag_updater)
 : node_parameters_(node.get_node_parameters_interface()),
@@ -469,42 +435,25 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
 
   // calculate current pose and control data
   geometry_msgs::msg::Pose current_pose = m_current_kinematic_state.pose.pose;
-  const auto run_discrete_controller = [&]() {
-    setTrajectory(input_data.current_trajectory);
-
-    const auto control_data = getControlData(current_pose);
-
-    updateControlState(control_data);
-
-    const Motion ctrl_cmd = calcCtrlCmd(control_data);
-    const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, control_data.current_motion.vel);
+  const auto make_stopped_output = [&]() {
+    const Motion ctrl_cmd{m_stopped_state_params.vel, m_stopped_state_params.acc};
+    const auto cmd_msg = createCtrlCmdMsg(ctrl_cmd, m_current_kinematic_state.twist.twist.linear.x);
 
     trajectory_follower::LongitudinalOutput output;
     output.control_cmd = cmd_msg;
     output.control_cmd_horizon.controls.push_back(cmd_msg);
     output.control_cmd_horizon.time_step_ms = 0.0;
-
-    publishDebugData(ctrl_cmd, control_data);
-
     return output;
   };
 
   const auto experimental_trajectory =
     autoware::experimental::trajectory::pretty_build(input_data.current_trajectory.points);
-  if (!experimental_trajectory) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 3000,
-      "failed to build experimental trajectory from input trajectory. Falling back to discrete "
-      "controller path.");
-    return run_discrete_controller();
-  }
 
-  if (!check_trajectory(*experimental_trajectory)) {
+  if (!longitudinal_utils::isValidTrajectory(*experimental_trajectory)) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 3000,
-      "built experimental trajectory is structurally invalid. Falling back to discrete "
-      "controller path.");
-    return run_discrete_controller();
+      "built experimental trajectory is structurally invalid. Publishing stopped command.");
+    return make_stopped_output();
   }
 
   setTrajectory(*experimental_trajectory);
@@ -513,8 +462,8 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   if (!control_data) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 3000,
-      "failed to generate experimental control data. Falling back to discrete controller path.");
-    return run_discrete_controller();
+      "failed to generate experimental control data. Publishing stopped command.");
+    return make_stopped_output();
   }
 
   // update control state
@@ -678,19 +627,9 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory_experimental;
 
-  if (!check_trajectory(control_data.interpolated_traj)) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 3000, "experimental trajectory is structurally invalid");
-    return std::nullopt;
-  }
-
   const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
     control_data.interpolated_traj, current_pose, m_ego_nearest_dist_threshold,
     m_ego_nearest_yaw_threshold);
-  if (!current_s) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 3000, "failed to find nearest point on experimental trajectory");
-    return std::nullopt;
-  }
 
   double target_s = *current_s;
 
