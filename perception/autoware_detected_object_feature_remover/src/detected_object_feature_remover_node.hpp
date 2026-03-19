@@ -17,6 +17,7 @@
 
 #include "autoware/detected_object_feature_remover/convert.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -36,11 +37,11 @@ public:
   explicit DetectedObjectFeatureRemover(const rclcpp::NodeOptions & node_options);
 
 private:
-  rclcpp::Subscription<DetectedObjectsWithFeature>::SharedPtr sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(DetectedObjectsWithFeature) sub_;
   rclcpp::Publisher<DetectedObjects>::SharedPtr pub_;
   convert::ConvertParams convert_params_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
-  void objectCallback(const DetectedObjectsWithFeature::ConstSharedPtr input);
+  void objectCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input);
 };
 
 }  // namespace autoware::detected_object_feature_remover
