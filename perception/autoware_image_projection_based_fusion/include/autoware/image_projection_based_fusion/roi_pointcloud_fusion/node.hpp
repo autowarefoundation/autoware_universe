@@ -17,6 +17,7 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 
 #include <cstdint>
@@ -33,6 +34,7 @@ public:
   explicit RoiPointCloudFusionNode(const rclcpp::NodeOptions & options);
 
 private:
+  AUTOWARE_PUBLISHER_PTR(ClusterMsgType) agnocast_pub_ptr_;
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr point_pub_ptr_;
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr cluster_debug_pub_;
 
