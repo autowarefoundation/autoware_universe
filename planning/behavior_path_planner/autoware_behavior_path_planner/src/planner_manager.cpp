@@ -19,7 +19,6 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <magic_enum.hpp>
 
 #include <boost/scope_exit.hpp>
