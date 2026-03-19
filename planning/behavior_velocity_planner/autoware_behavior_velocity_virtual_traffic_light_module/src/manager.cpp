@@ -17,7 +17,6 @@
 #include "autoware_utils/geometry/boost_geometry.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 

@@ -14,8 +14,6 @@
 
 #include "scene.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-
 #include <memory>
 
 namespace autoware::behavior_path_planner
