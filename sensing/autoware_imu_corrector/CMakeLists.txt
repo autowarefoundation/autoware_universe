@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_imu_corrector)
 
 find_package(autoware_cmake REQUIRED)
-find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(imu_corrector SHARED
@@ -14,9 +13,6 @@ ament_auto_add_library(gyro_bias_estimator SHARED
   src/gyro_bias_estimation_module.cpp
 )
 
-target_include_directories(imu_corrector
-  PUBLIC include
-)
 target_include_directories(gyro_bias_estimator
   PUBLIC include
 )
