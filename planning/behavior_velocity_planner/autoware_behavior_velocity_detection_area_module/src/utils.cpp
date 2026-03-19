@@ -18,7 +18,6 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 
