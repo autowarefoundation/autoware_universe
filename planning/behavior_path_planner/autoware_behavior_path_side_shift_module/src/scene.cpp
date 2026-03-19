@@ -190,16 +190,14 @@ bool SideShiftModule::canTransitSuccessState()
 
 void SideShiftModule::updateData()
 {
-  if (requested_lateral_offset_state_) {
-    const double requested = requested_lateral_offset_state_->value.load();
-    // Only react when the requested value actually changes meaningfully.
-    constexpr double REQUEST_THRESHOLD = 1.0e-4;
-    if (std::fabs(requested - requested_lateral_offset_) > REQUEST_THRESHOLD) {
-      if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
-        lateral_offset_change_request_ = true;
-        requested_lateral_offset_ = requested;
-        latest_lateral_offset_stamp_ = clock_->now();
-      }
+  const double requested = requested_lateral_offset_state_->value.load();
+  // Only react when the requested value actually changes meaningfully.
+  constexpr double REQUEST_THRESHOLD = 1.0e-4;
+  if (std::fabs(requested - requested_lateral_offset_) > REQUEST_THRESHOLD) {
+    if (isReadyForNextRequest(parameters_->shift_request_time_limit)) {
+      lateral_offset_change_request_ = true;
+      requested_lateral_offset_ = requested;
+      latest_lateral_offset_stamp_ = clock_->now();
     }
   }
 
