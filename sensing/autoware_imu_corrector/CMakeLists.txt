@@ -21,13 +21,6 @@ target_include_directories(gyro_bias_estimator
   PUBLIC include
 )
 
-ament_target_dependencies(imu_corrector
-  autoware_agnocast_wrapper
-)
-ament_target_dependencies(gyro_bias_estimator
-  autoware_agnocast_wrapper
-)
-
 autoware_agnocast_wrapper_register_node(imu_corrector
   PLUGIN "autoware::imu_corrector::ImuCorrector"
   EXECUTABLE imu_corrector_node
