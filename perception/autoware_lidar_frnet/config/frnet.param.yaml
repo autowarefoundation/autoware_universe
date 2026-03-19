@@ -3,8 +3,9 @@
     onnx_path: "$(var model_path)/frnet_$(var sensor_model).onnx"
     trt_precision: fp16
     filter:
-      class_confidence_threshold: 0.05
+      class_probability_threshold: 0.05
       classes: ["drivable_surface"]
+      output_format: ""
       ego_crop_box:
         reference_frame: base_link
         min_x: -1.53

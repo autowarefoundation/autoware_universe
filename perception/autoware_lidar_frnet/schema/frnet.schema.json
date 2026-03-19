@@ -24,7 +24,7 @@
     "filter": {
       "type": "object",
       "properties": {
-        "class_confidence_threshold": {
+        "class_probability_threshold": {
           "type": "number",
           "description": "If any of the filter classes has probability >= this value, the point is excluded from the filtered output cloud.",
           "minimum": 0.0,
@@ -36,11 +36,16 @@
           "description": "Class names to filter out when their probability exceeds the threshold.",
           "uniqueItems": true
         },
+        "output_format": {
+          "type": "string",
+          "description": "Filtered output point format. Empty string preserves the input format.",
+          "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        },
         "ego_crop_box": {
           "$ref": "#/definitions/ego_crop_box"
         }
       },
-      "required": ["class_confidence_threshold", "classes", "ego_crop_box"],
+      "required": ["class_probability_threshold", "classes", "output_format", "ego_crop_box"],
       "additionalProperties": false
     },
     "frnet": {

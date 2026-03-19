@@ -49,9 +49,9 @@ using tensorrt_common::TrtCommonConfig;
 /**
  * @brief Lidar FRNet pipeline: preprocess (project + interpolate), TensorRT inference, postprocess.
  *
- * Supports multiple input point formats (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). Outputs
- * segmentation, visualization, and optionally filtered point clouds. Ego crop box is applied in
- * preprocess when a static transform is provided.
+ * Supports multiple cloud formats (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). Outputs segmentation,
+ * visualization, and optionally filtered point clouds. Ego crop box is applied in preprocess when
+ * a static transform is provided.
  */
 class LIDAR_FRNET_PUBLIC LidarFRNet
 {
@@ -72,9 +72,11 @@ public:
   /**
    * @brief Run full pipeline: copy input, preprocess, inference, postprocess; fill output clouds.
    * @param cloud_in Input point cloud (GPU)
-   * @param cloud_seg_out Segmentation output (x,y,z,class_id); size set by pipeline
+   * @param cloud_seg_out Segmentation output (x,y,z,class_id,probability); size set by pipeline
    * @param cloud_viz_out Visualization output (x,y,z,rgb); size set by pipeline
-   * @param cloud_filtered Filtered point cloud (input format); width/row_step set by pipeline
+   * @param cloud_filtered Filtered point cloud (filtered_output_format); width/row_step set by
+   * pipeline
+   * @param filtered_output_format Requested output format for the filtered point cloud
    * @param active_comm Which outputs have subscribers (skip work when false)
    * @param proc_timing Map filled with per-stage timings (e.g. preprocess_ms, inference_ms)
    * @param crop_sensor_to_ref Optional 12-float transform (sensor to ref) for ego crop box
@@ -84,21 +86,21 @@ public:
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
     cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
     cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
-    cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
-    std::unordered_map<std::string, double> & proc_timing,
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered, CloudFormat filtered_output_format,
+    const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing,
     const std::array<float, 12> * crop_sensor_to_ref = nullptr);
 
 private:
-  /** Detect input point format from PointCloud2 fields (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). */
-  InputFormat detectInputFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
+  /** Detect cloud format from PointCloud2 fields (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). */
+  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
   /** Project points, interpolate, generate unique coors; set num_points_, num_points_raw_. */
   bool preprocess(const uint32_t input_num_points);
   /** Run TensorRT enqueue. */
   bool inference();
   /** Fill seg/viz/filtered clouds from network output; set cloud width/row_step. */
   bool postprocess(
-    const uint32_t num_points, const uint32_t num_points_raw, const utils::ActiveComm & active_comm,
-    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    const uint32_t num_points, const uint32_t num_points_raw, CloudFormat filtered_output_format,
+    const utils::ActiveComm & active_comm, cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
     cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
     cuda_blackboard::CudaPointCloud2 & cloud_filtered);
   /** Allocate all GPU buffers to max profile sizes (called once in constructor). */
@@ -117,8 +119,8 @@ private:
 
   cudaStream_t stream_;
 
-  // Input format detection
-  InputFormat input_format_{InputFormat::UNKNOWN};
+  // Input cloud format detection
+  CloudFormat input_format_{CloudFormat::UNKNOWN};
   std::size_t input_point_step_{0};
 
   // Distinct number of points before and after interpolation
@@ -130,7 +132,7 @@ private:
   CudaUniquePtr<int64_t[]> coors_d_{nullptr};        // N x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> voxel_coors_d_{nullptr};  // M x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> inverse_map_d_{nullptr};  // N
-  CudaUniquePtr<float[]> seg_logit_d_{nullptr};      // NUM_CLASSES x 1
+  CudaUniquePtr<float[]> pred_probs_d_{nullptr};     // NUM_CLASSES x 1
   // Preprocess & Postprocess
   CudaUniquePtr<std::uint8_t[]> cloud_in_d_{nullptr};
   CudaUniquePtr<std::uint8_t[]> cloud_compact_d_{nullptr};  // compact input points for filtered

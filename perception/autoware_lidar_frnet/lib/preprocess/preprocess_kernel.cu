@@ -167,25 +167,25 @@ template <typename PointT>
 __device__ inline float get_intensity(const PointT & point);
 
 template <>
-__device__ inline float get_intensity(const InputPointTypeXYZI & point)
+__device__ inline float get_intensity(const CloudPointTypeXYZI & point)
 {
   return point.intensity;
 }
 
 template <>
-__device__ inline float get_intensity(const InputPointTypeXYZIRC & point)
+__device__ inline float get_intensity(const CloudPointTypeXYZIRC & point)
 {
   return static_cast<float>(point.intensity);
 }
 
 template <>
-__device__ inline float get_intensity(const InputPointTypeXYZIRADRT & point)
+__device__ inline float get_intensity(const CloudPointTypeXYZIRADRT & point)
 {
   return point.intensity;
 }
 
 template <>
-__device__ inline float get_intensity(const InputPointTypeXYZIRCAEDT & point)
+__device__ inline float get_intensity(const CloudPointTypeXYZIRCAEDT & point)
 {
   return static_cast<float>(point.intensity);
 }
@@ -193,7 +193,7 @@ __device__ inline float get_intensity(const InputPointTypeXYZIRCAEDT & point)
 /**
  * @brief Kernel: project points to 2D, filter by ego crop box, write xyzi/coors/keys and optional
  *        compact copy; update per-pixel projection (first point or max-by-depth).
- * @tparam PointT Input point type (e.g. InputPointTypeXYZIRCAEDT)
+ * @tparam PointT Input point type (e.g. CloudPointTypeXYZIRCAEDT)
  */
 template <typename PointT>
 __global__ void projectPoints_kernel(
@@ -278,46 +278,46 @@ cudaError_t PreprocessCuda::projectPoints_launch_impl(
 }
 
 // Explicit instantiations
-template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZI>(
-  const InputPointTypeXYZI *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *, uint32_t *,
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<CloudPointTypeXYZI>(
+  const CloudPointTypeXYZI *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *, uint32_t *,
   uint64_t *, void *);
-template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRC>(
-  const InputPointTypeXYZIRC *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<CloudPointTypeXYZIRC>(
+  const CloudPointTypeXYZIRC *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
   uint32_t *, uint64_t *, void *);
-template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRADRT>(
-  const InputPointTypeXYZIRADRT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<CloudPointTypeXYZIRADRT>(
+  const CloudPointTypeXYZIRADRT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
   uint32_t *, uint64_t *, void *);
-template cudaError_t PreprocessCuda::projectPoints_launch_impl<InputPointTypeXYZIRCAEDT>(
-  const InputPointTypeXYZIRCAEDT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
+template cudaError_t PreprocessCuda::projectPoints_launch_impl<CloudPointTypeXYZIRCAEDT>(
+  const CloudPointTypeXYZIRCAEDT *, const uint32_t, uint32_t *, float *, int64_t *, int64_t *,
   uint32_t *, uint64_t *, void *);
 
 /**
  * @brief Dispatch projectPoints by input format to templated implementation.
  */
 cudaError_t PreprocessCuda::projectPoints_launch(
-  const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
+  const void * cloud, const uint32_t num_points, CloudFormat format, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
   uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact)
 {
   switch (format) {
-    case InputFormat::XYZIRCAEDT:
+    case CloudFormat::XYZIRCAEDT:
       return projectPoints_launch_impl(
-        static_cast<const InputPointTypeXYZIRCAEDT *>(cloud), num_points, output_num_points,
+        static_cast<const CloudPointTypeXYZIRCAEDT *>(cloud), num_points, output_num_points,
         output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
         output_cloud_compact);
-    case InputFormat::XYZIRADRT:
+    case CloudFormat::XYZIRADRT:
       return projectPoints_launch_impl(
-        static_cast<const InputPointTypeXYZIRADRT *>(cloud), num_points, output_num_points,
+        static_cast<const CloudPointTypeXYZIRADRT *>(cloud), num_points, output_num_points,
         output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
         output_cloud_compact);
-    case InputFormat::XYZIRC:
+    case CloudFormat::XYZIRC:
       return projectPoints_launch_impl(
-        static_cast<const InputPointTypeXYZIRC *>(cloud), num_points, output_num_points,
+        static_cast<const CloudPointTypeXYZIRC *>(cloud), num_points, output_num_points,
         output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
         output_cloud_compact);
-    case InputFormat::XYZI:
+    case CloudFormat::XYZI:
       return projectPoints_launch_impl(
-        static_cast<const InputPointTypeXYZI *>(cloud), num_points, output_num_points,
+        static_cast<const CloudPointTypeXYZI *>(cloud), num_points, output_num_points,
         output_points, output_coors, output_coors_keys, output_proj_idxs, output_proj_2d,
         output_cloud_compact);
     default:

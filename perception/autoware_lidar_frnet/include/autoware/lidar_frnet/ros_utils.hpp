@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__LIDAR_FRNET__ROS_UTILS_HPP_
 #define AUTOWARE__LIDAR_FRNET__ROS_UTILS_HPP_
 
+#include "autoware/lidar_frnet/point_type.hpp"
+
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
 
@@ -26,6 +28,7 @@
 
 #include <array>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -84,17 +87,17 @@ inline std::unique_ptr<cuda_blackboard::CudaPointCloud2> generatePointCloudMessa
 }
 
 /**
- * @brief Build point cloud layout for segmentation output (x, y, z, class_id).
- * @return Layout with FLOAT32 x,y,z and UINT8 class_id
+ * @brief Build point cloud layout for segmentation output (x, y, z, class_id, probability).
+ * @return Layout with FLOAT32 x,y,z, FLOAT32 probability and UINT8 class_id
  */
 inline PointCloudLayout generateSegmentationPointCloudLayout()
 {
   sensor_msgs::msg::PointCloud2 msg;
   sensor_msgs::PointCloud2Modifier modifier(msg);
   modifier.setPointCloud2Fields(
-    4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    5, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
     "z", 1, sensor_msgs::msg::PointField::FLOAT32, "class_id", 1,
-    sensor_msgs::msg::PointField::UINT8);
+    sensor_msgs::msg::PointField::UINT8, "probability", 1, sensor_msgs::msg::PointField::FLOAT32);
   PointCloudLayout layout(msg.fields, msg.point_step);
   return layout;
 }
@@ -122,29 +125,68 @@ inline PointCloudLayout generateVisualizationPointCloudLayout()
  * @param msg_in Input point cloud message
  * @return Layout with same fields and point_step as msg_in
  */
-inline PointCloudLayout generateFilteredPointCloudLayoutFromInput(
-  const cuda_blackboard::CudaPointCloud2 & msg_in)
+inline CloudFormat detectCloudFormat(const std::vector<sensor_msgs::msg::PointField> & fields)
 {
-  return {msg_in.fields, msg_in.point_step};
+  const auto num_fields = fields.size();
+  if (num_fields == 10) {
+    return CloudFormat::XYZIRCAEDT;
+  }
+  if (num_fields == 9) {
+    return CloudFormat::XYZIRADRT;
+  }
+  if (num_fields == 6) {
+    return CloudFormat::XYZIRC;
+  }
+  if (num_fields == 4) {
+    return CloudFormat::XYZI;
+  }
+  return CloudFormat::UNKNOWN;
 }
 
 /**
- * @brief Generate filtered point cloud layout for default XYZIRC format (legacy fallback).
- *
- * The node uses generateFilteredPointCloudLayoutFromInput() to preserve input format;
- * use this only if a fixed XYZIRC layout is required.
- *
- * @return Layout for XYZIRC (x, y, z, intensity, return_type, channel)
+ * @brief Generate filtered point cloud layout for a supported cloud format.
  */
-inline PointCloudLayout generateFilteredPointCloudLayout()
+inline PointCloudLayout generateFilteredPointCloudLayout(CloudFormat format)
 {
   sensor_msgs::msg::PointCloud2 msg;
   sensor_msgs::PointCloud2Modifier modifier(msg);
-  modifier.setPointCloud2Fields(
-    6, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1, sensor_msgs::msg::PointField::FLOAT32,
-    "z", 1, sensor_msgs::msg::PointField::FLOAT32, "intensity", 1,
-    sensor_msgs::msg::PointField::UINT8, "return_type", 1, sensor_msgs::msg::PointField::UINT8,
-    "channel", 1, sensor_msgs::msg::PointField::UINT16);
+  switch (format) {
+    case CloudFormat::XYZIRCAEDT:
+      modifier.setPointCloud2Fields(
+        10, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+        sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::msg::PointField::UINT8, "return_type", 1,
+        sensor_msgs::msg::PointField::UINT8, "channel", 1, sensor_msgs::msg::PointField::UINT16,
+        "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32, "elevation", 1,
+        sensor_msgs::msg::PointField::FLOAT32, "distance", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "time_stamp", 1, sensor_msgs::msg::PointField::UINT32);
+      break;
+    case CloudFormat::XYZIRADRT:
+      modifier.setPointCloud2Fields(
+        9, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+        sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::msg::PointField::FLOAT32, "ring", 1,
+        sensor_msgs::msg::PointField::UINT16, "azimuth", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "distance", 1, sensor_msgs::msg::PointField::FLOAT32, "return_type", 1,
+        sensor_msgs::msg::PointField::UINT8, "time_stamp", 1,
+        sensor_msgs::msg::PointField::FLOAT64);
+      break;
+    case CloudFormat::XYZIRC:
+      modifier.setPointCloud2Fields(
+        6, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+        sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::msg::PointField::UINT8, "return_type", 1,
+        sensor_msgs::msg::PointField::UINT8, "channel", 1, sensor_msgs::msg::PointField::UINT16);
+      break;
+    case CloudFormat::XYZI:
+      modifier.setPointCloud2Fields(
+        4, "x", 1, sensor_msgs::msg::PointField::FLOAT32, "y", 1,
+        sensor_msgs::msg::PointField::FLOAT32, "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+        "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
+      break;
+    default:
+      throw std::runtime_error("Unsupported filtered point cloud format.");
+  }
   PointCloudLayout layout(msg.fields, msg.point_step);
   return layout;
 }

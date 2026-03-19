@@ -22,9 +22,9 @@ We trained the models using AWML [2].
 
 | Name                                   | Type                                                | Description                                                  |
 | -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
-| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID field.                               |
+| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.              |
 | `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                                    |
-| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Input format cloud after removing specified point's class.   |
+| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`.      |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                            |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                                  |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                             |
@@ -116,7 +116,8 @@ This library operates on raw cloud data (bytes). It supports multiple input poin
 ]
 ```
 
-The filtered output cloud preserves the same format as the input cloud.
+The filtered output cloud format is controlled by `filter.output_format`. When it is set to an
+empty string, the filtered output preserves the same format as the input cloud.
 
 For debug purposes, you can validate your pointcloud topic using simple command:
 

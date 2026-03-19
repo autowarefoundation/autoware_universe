@@ -94,7 +94,7 @@ public:
    * @return cudaError_t
    */
   cudaError_t projectPoints_launch(
-    const void * cloud, const uint32_t num_points, InputFormat format, uint32_t * output_num_points,
+    const void * cloud, const uint32_t num_points, CloudFormat format, uint32_t * output_num_points,
     float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
     uint32_t * output_proj_idxs, uint64_t * output_proj_2d, void * output_cloud_compact = nullptr);
 

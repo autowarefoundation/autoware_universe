@@ -104,19 +104,21 @@ struct PostprocessingParams
 {
   /**
    * @brief Construct from filter threshold, class names, palette and crop box.
-   * @param filter_class_confidence_threshold Confidence above which points are filtered out
+   * @param filter_class_probability_threshold Probability above which points are filtered out
    * @param filter_classes Class names to filter (remove from output)
    * @param crop_box_bounds [min_x, min_y, min_z, max_x, max_y, max_z] (may be unused)
    * @param class_names All class names (for palette and filter index resolution)
    * @param palette RGB palette as flat int64 vector (length class_names.size() * 3)
    */
   PostprocessingParams(
-    const double filter_class_confidence_threshold, const std::vector<std::string> & filter_classes,
+    const double filter_class_probability_threshold,
+    const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
     const std::array<float, 6> & crop_box_bounds, const std::vector<std::string> & class_names,
     const std::vector<int64_t> & palette)
-  : filter_class_confidence_threshold(static_cast<float>(filter_class_confidence_threshold)),
+  : filter_class_probability_threshold(static_cast<float>(filter_class_probability_threshold)),
     palette(make_palette(class_names, palette)),
     filter_class_indices(make_filter_class_indices(class_names, filter_classes)),
+    filter_output_format(filter_output_format),
     crop_box_bounds(crop_box_bounds)
   {
   }
@@ -172,9 +174,10 @@ struct PostprocessingParams
     }
     return indices;
   }
-  const float filter_class_confidence_threshold;
+  const float filter_class_probability_threshold;
   const std::vector<float> palette;
   const std::vector<uint32_t> filter_class_indices;
+  const std::string filter_output_format;
   const std::array<float, 6> crop_box_bounds;  // [min_x, min_y, min_z, max_x, max_y, max_z]
 };
 

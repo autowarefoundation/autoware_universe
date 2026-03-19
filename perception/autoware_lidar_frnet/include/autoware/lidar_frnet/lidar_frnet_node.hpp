@@ -103,6 +103,8 @@ private:
 
   // Filtered layout is initialized dynamically from first input message
   std::optional<ros_utils::PointCloudLayout> cloud_filtered_layout_;
+  std::optional<CloudFormat> filtered_output_format_;
+  std::string filtered_output_format_param_;
   std::once_flag init_filtered_layout_;
 
   /** Max point count (profile max) for seg/viz/filtered output allocation. num_points can exceed

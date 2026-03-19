@@ -28,7 +28,7 @@ namespace autoware::lidar_frnet
 __constant__ uint32_t const_num_classes;
 __constant__ uint32_t const_num_filter_classes;
 __constant__ uint32_t const_filter_class_indices[16];
-__constant__ float const_filter_class_confidence_threshold;
+__constant__ float const_filter_class_probability_threshold;
 __constant__ float const_palette[64];
 
 /**
@@ -48,7 +48,7 @@ PostprocessCuda::PostprocessCuda(const utils::PostprocessingParams & params, cud
     const_filter_class_indices, params.filter_class_indices.data(),
     sizeof(uint32_t) * num_filter_classes, 0, cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
-    const_filter_class_confidence_threshold, &params.filter_class_confidence_threshold,
+    const_filter_class_probability_threshold, &params.filter_class_probability_threshold,
     sizeof(float), 0, cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(cudaMemcpyToSymbol(
     const_palette, params.palette.data(), num_classes * sizeof(float), 0, cudaMemcpyHostToDevice));
@@ -62,8 +62,8 @@ template <typename PointT>
 __device__ void set_point_from_xyzi(PointT & point, const float * points_xyzi, uint32_t point_idx);
 
 template <>
-__device__ void set_point_from_xyzi<InputPointTypeXYZI>(
-  InputPointTypeXYZI & point, const float * points_xyzi, uint32_t point_idx)
+__device__ void set_point_from_xyzi<CloudPointTypeXYZI>(
+  CloudPointTypeXYZI & point, const float * points_xyzi, uint32_t point_idx)
 {
   const uint32_t base = point_idx * 4;
   point.x = points_xyzi[base + 0];
@@ -73,8 +73,8 @@ __device__ void set_point_from_xyzi<InputPointTypeXYZI>(
 }
 
 template <>
-__device__ void set_point_from_xyzi<InputPointTypeXYZIRC>(
-  InputPointTypeXYZIRC & point, const float * points_xyzi, uint32_t point_idx)
+__device__ void set_point_from_xyzi<CloudPointTypeXYZIRC>(
+  CloudPointTypeXYZIRC & point, const float * points_xyzi, uint32_t point_idx)
 {
   const uint32_t base = point_idx * 4;
   point.x = points_xyzi[base + 0];
@@ -86,8 +86,8 @@ __device__ void set_point_from_xyzi<InputPointTypeXYZIRC>(
 }
 
 template <>
-__device__ void set_point_from_xyzi<InputPointTypeXYZIRADRT>(
-  InputPointTypeXYZIRADRT & point, const float * points_xyzi, uint32_t point_idx)
+__device__ void set_point_from_xyzi<CloudPointTypeXYZIRADRT>(
+  CloudPointTypeXYZIRADRT & point, const float * points_xyzi, uint32_t point_idx)
 {
   const uint32_t base = point_idx * 4;
   point.x = points_xyzi[base + 0];
@@ -102,8 +102,8 @@ __device__ void set_point_from_xyzi<InputPointTypeXYZIRADRT>(
 }
 
 template <>
-__device__ void set_point_from_xyzi<InputPointTypeXYZIRCAEDT>(
-  InputPointTypeXYZIRCAEDT & point, const float * points_xyzi, uint32_t point_idx)
+__device__ void set_point_from_xyzi<CloudPointTypeXYZIRCAEDT>(
+  CloudPointTypeXYZIRCAEDT & point, const float * points_xyzi, uint32_t point_idx)
 {
   const uint32_t base = point_idx * 4;
   point.x = points_xyzi[base + 0];
@@ -118,18 +118,92 @@ __device__ void set_point_from_xyzi<InputPointTypeXYZIRCAEDT>(
   point.time_stamp = 0u;
 }
 
+template <typename OutputPointT, typename InputPointT>
+__device__ void set_point_from_input(OutputPointT & output_point, const InputPointT & input_point);
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZI, CloudPointTypeXYZI>(
+  CloudPointTypeXYZI & output_point, const CloudPointTypeXYZI & input_point)
+{
+  output_point = input_point;
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZI, CloudPointTypeXYZIRC>(
+  CloudPointTypeXYZI & output_point, const CloudPointTypeXYZIRC & input_point)
+{
+  output_point.x = input_point.x;
+  output_point.y = input_point.y;
+  output_point.z = input_point.z;
+  output_point.intensity = static_cast<float>(input_point.intensity);
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZI, CloudPointTypeXYZIRADRT>(
+  CloudPointTypeXYZI & output_point, const CloudPointTypeXYZIRADRT & input_point)
+{
+  output_point.x = input_point.x;
+  output_point.y = input_point.y;
+  output_point.z = input_point.z;
+  output_point.intensity = input_point.intensity;
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZI, CloudPointTypeXYZIRCAEDT>(
+  CloudPointTypeXYZI & output_point, const CloudPointTypeXYZIRCAEDT & input_point)
+{
+  output_point.x = input_point.x;
+  output_point.y = input_point.y;
+  output_point.z = input_point.z;
+  output_point.intensity = static_cast<float>(input_point.intensity);
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
+  CloudPointTypeXYZIRC & output_point, const CloudPointTypeXYZIRC & input_point)
+{
+  output_point = input_point;
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZIRC, CloudPointTypeXYZIRCAEDT>(
+  CloudPointTypeXYZIRC & output_point, const CloudPointTypeXYZIRCAEDT & input_point)
+{
+  output_point.x = input_point.x;
+  output_point.y = input_point.y;
+  output_point.z = input_point.z;
+  output_point.intensity = input_point.intensity;
+  output_point.return_type = input_point.return_type;
+  output_point.channel = input_point.channel;
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
+  CloudPointTypeXYZIRADRT & output_point, const CloudPointTypeXYZIRADRT & input_point)
+{
+  output_point = input_point;
+}
+
+template <>
+__device__ void set_point_from_input<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
+  CloudPointTypeXYZIRCAEDT & output_point, const CloudPointTypeXYZIRCAEDT & input_point)
+{
+  output_point = input_point;
+}
+
 /**
- * @brief Kernel: for each point compute class from seg_logit; write seg/viz; if not in filter
+ * @brief Kernel: for each point compute class from pred_probs; write seg/viz; if not in filter
  *        classes append to filtered cloud (from cloud_compact or set_point_from_xyzi).
- * @tparam PointT Input point type for filtered output
+ * @tparam InputPointT Input point type for raw compact points
+ * @tparam OutputPointT Output point type for filtered cloud
  */
-template <typename PointT>
+template <typename InputPointT, typename OutputPointT>
 __global__ void fill_cloud_kernel(
-  const float * points_xyzi, const PointT * cloud_compact, const uint32_t num_points_raw,
-  const float * seg_logit, const uint32_t num_points, const bool active_comm_seg,
+  const float * points_xyzi, const InputPointT * cloud_compact, const uint32_t num_points_raw,
+  const float * pred_probs, const uint32_t num_points, const bool active_comm_seg,
   const bool active_comm_viz, const bool active_comm_filtered,
   uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
-  OutputVisualizationPointType * output_cloud_viz, PointT * output_cloud_filtered)
+  OutputVisualizationPointType * output_cloud_viz, OutputPointT * output_cloud_filtered)
 {
   uint32_t point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_points) {
@@ -141,14 +215,14 @@ __global__ void fill_cloud_kernel(
   const float z = points_xyzi[point_idx * 4 + 2];
   const uint32_t pred_idx = point_idx * const_num_classes;
 
-  float best_score = -1e9;
+  float best_prob = -1e9;
   uint32_t class_id = const_num_classes - 1;
 
-  // Find the best score and class_id
+  // Find the best prob and class_id
   for (uint32_t i = 0; i < const_num_classes; i++) {
-    float score = seg_logit[pred_idx + i];
-    if (score > best_score) {
-      best_score = score;
+    float prob = pred_probs[pred_idx + i];
+    if (prob > best_prob) {
+      best_prob = prob;
       class_id = i;
     }
   }
@@ -158,6 +232,7 @@ __global__ void fill_cloud_kernel(
     output_cloud_seg[point_idx].y = y;
     output_cloud_seg[point_idx].z = z;
     output_cloud_seg[point_idx].class_id = static_cast<uint8_t>(class_id);
+    output_cloud_seg[point_idx].probability = best_prob;
   }
 
   if (active_comm_viz) {
@@ -171,8 +246,8 @@ __global__ void fill_cloud_kernel(
     bool is_filtered = false;
     for (uint32_t i = 0; i < const_num_filter_classes; ++i) {
       uint32_t class_idx = const_filter_class_indices[i];
-      float prob = seg_logit[pred_idx + class_idx];
-      if (prob >= const_filter_class_confidence_threshold) {
+      float prob = pred_probs[pred_idx + class_idx];
+      if (prob >= const_filter_class_probability_threshold) {
         is_filtered = true;  // mark point as filtered
         break;
       }
@@ -180,7 +255,7 @@ __global__ void fill_cloud_kernel(
     if (!is_filtered) {  // if point is not filtered, add it to the output cloud
       const uint32_t append_idx = atomicAdd(output_num_points_filtered, 1);
       if (cloud_compact != nullptr && point_idx < num_points_raw) {
-        output_cloud_filtered[append_idx] = cloud_compact[point_idx];
+        set_point_from_input(output_cloud_filtered[append_idx], cloud_compact[point_idx]);
       } else {
         set_point_from_xyzi(output_cloud_filtered[append_idx], points_xyzi, point_idx);
       }
@@ -191,18 +266,18 @@ __global__ void fill_cloud_kernel(
 /**
  * @brief Launch fill_cloud_kernel for the given point type.
  */
-template <typename PointT>
+template <typename InputPointT, typename OutputPointT>
 cudaError_t PostprocessCuda::fillCloud_launch_impl(
-  const float * points_xyzi, const PointT * cloud_compact, const uint32_t num_points_raw,
-  const float * seg_logit, const uint32_t num_points, const utils::ActiveComm & active_comm,
+  const float * points_xyzi, const InputPointT * cloud_compact, const uint32_t num_points_raw,
+  const float * pred_probs, const uint32_t num_points, const utils::ActiveComm & active_comm,
   uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
-  OutputVisualizationPointType * output_cloud_viz, PointT * output_cloud_filtered)
+  OutputVisualizationPointType * output_cloud_viz, OutputPointT * output_cloud_filtered)
 {
   dim3 block(utils::divup(num_points, utils::kernel_1d_size));
   dim3 threads(utils::kernel_1d_size);
 
   fill_cloud_kernel<<<block, threads, 0, stream_>>>(
-    points_xyzi, cloud_compact, num_points_raw, seg_logit, num_points, active_comm.seg,
+    points_xyzi, cloud_compact, num_points_raw, pred_probs, num_points, active_comm.seg,
     active_comm.viz, active_comm.filtered, output_num_points_filtered, output_cloud_seg,
     output_cloud_viz, output_cloud_filtered);
 
@@ -210,54 +285,120 @@ cudaError_t PostprocessCuda::fillCloud_launch_impl(
 }
 
 /* Explicit instantiations */
-template cudaError_t PostprocessCuda::fillCloud_launch_impl<InputPointTypeXYZI>(
-  const float *, const InputPointTypeXYZI *, const uint32_t, const float *, const uint32_t,
+template cudaError_t PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZI, CloudPointTypeXYZI>(
+  const float *, const CloudPointTypeXYZI *, const uint32_t, const float *, const uint32_t,
   const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
-  OutputVisualizationPointType *, InputPointTypeXYZI *);
-template cudaError_t PostprocessCuda::fillCloud_launch_impl<InputPointTypeXYZIRC>(
-  const float *, const InputPointTypeXYZIRC *, const uint32_t, const float *, const uint32_t,
+  OutputVisualizationPointType *, CloudPointTypeXYZI *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
+  const float *, const CloudPointTypeXYZIRC *, const uint32_t, const float *, const uint32_t,
   const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
-  OutputVisualizationPointType *, InputPointTypeXYZIRC *);
-template cudaError_t PostprocessCuda::fillCloud_launch_impl<InputPointTypeXYZIRADRT>(
-  const float *, const InputPointTypeXYZIRADRT *, const uint32_t, const float *, const uint32_t,
+  OutputVisualizationPointType *, CloudPointTypeXYZI *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
+  const float *, const CloudPointTypeXYZIRC *, const uint32_t, const float *, const uint32_t,
   const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
-  OutputVisualizationPointType *, InputPointTypeXYZIRADRT *);
-template cudaError_t PostprocessCuda::fillCloud_launch_impl<InputPointTypeXYZIRCAEDT>(
-  const float *, const InputPointTypeXYZIRCAEDT *, const uint32_t, const float *, const uint32_t,
+  OutputVisualizationPointType *, CloudPointTypeXYZIRC *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
+  const float *, const CloudPointTypeXYZIRADRT *, const uint32_t, const float *, const uint32_t,
   const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
-  OutputVisualizationPointType *, InputPointTypeXYZIRCAEDT *);
+  OutputVisualizationPointType *, CloudPointTypeXYZI *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
+  const float *, const CloudPointTypeXYZIRADRT *, const uint32_t, const float *, const uint32_t,
+  const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
+  OutputVisualizationPointType *, CloudPointTypeXYZIRADRT *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
+  const float *, const CloudPointTypeXYZIRCAEDT *, const uint32_t, const float *, const uint32_t,
+  const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
+  OutputVisualizationPointType *, CloudPointTypeXYZI *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
+  const float *, const CloudPointTypeXYZIRCAEDT *, const uint32_t, const float *, const uint32_t,
+  const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
+  OutputVisualizationPointType *, CloudPointTypeXYZIRC *);
+template cudaError_t
+PostprocessCuda::fillCloud_launch_impl<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
+  const float *, const CloudPointTypeXYZIRCAEDT *, const uint32_t, const float *, const uint32_t,
+  const utils::ActiveComm &, uint32_t *, OutputSegmentationPointType *,
+  OutputVisualizationPointType *, CloudPointTypeXYZIRCAEDT *);
 
 /**
  * @brief Dispatch fillCloud by input format to templated implementation.
  */
 cudaError_t PostprocessCuda::fillCloud_launch(
   const float * points_xyzi, const void * cloud_compact, const uint32_t num_points_raw,
-  const float * seg_logit, const uint32_t num_points, InputFormat format,
-  const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
-  OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
-  void * output_cloud_filtered)
+  const float * pred_probs, const uint32_t num_points, CloudFormat input_format,
+  CloudFormat output_format, const utils::ActiveComm & active_comm,
+  uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
+  OutputVisualizationPointType * output_cloud_viz, void * output_cloud_filtered)
 {
-  switch (format) {
-    case InputFormat::XYZIRCAEDT:
-      return fillCloud_launch_impl(
-        points_xyzi, static_cast<const InputPointTypeXYZIRCAEDT *>(cloud_compact), num_points_raw,
-        seg_logit, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
-        output_cloud_viz, static_cast<InputPointTypeXYZIRCAEDT *>(output_cloud_filtered));
-    case InputFormat::XYZIRADRT:
-      return fillCloud_launch_impl(
-        points_xyzi, static_cast<const InputPointTypeXYZIRADRT *>(cloud_compact), num_points_raw,
-        seg_logit, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
-        output_cloud_viz, static_cast<InputPointTypeXYZIRADRT *>(output_cloud_filtered));
-    case InputFormat::XYZIRC:
-      return fillCloud_launch_impl(
-        points_xyzi, static_cast<const InputPointTypeXYZIRC *>(cloud_compact), num_points_raw,
-        seg_logit, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
-        output_cloud_viz, static_cast<InputPointTypeXYZIRC *>(output_cloud_filtered));
-    case InputFormat::XYZI:
-      return fillCloud_launch_impl(
-        points_xyzi, static_cast<const InputPointTypeXYZI *>(cloud_compact), num_points_raw,
-        seg_logit, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
-        output_cloud_viz, static_cast<InputPointTypeXYZI *>(output_cloud_filtered));
+  switch (input_format) {
+    case CloudFormat::XYZIRCAEDT:
+      switch (output_format) {
+        case CloudFormat::XYZIRCAEDT:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRCAEDT *>(cloud_compact),
+            num_points_raw, pred_probs, num_points, active_comm, output_num_points_filtered,
+            output_cloud_seg, output_cloud_viz,
+            static_cast<CloudPointTypeXYZIRCAEDT *>(output_cloud_filtered));
+        case CloudFormat::XYZIRC:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRCAEDT *>(cloud_compact),
+            num_points_raw, pred_probs, num_points, active_comm, output_num_points_filtered,
+            output_cloud_seg, output_cloud_viz,
+            static_cast<CloudPointTypeXYZIRC *>(output_cloud_filtered));
+        case CloudFormat::XYZI:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRCAEDT *>(cloud_compact),
+            num_points_raw, pred_probs, num_points, active_comm, output_num_points_filtered,
+            output_cloud_seg, output_cloud_viz,
+            static_cast<CloudPointTypeXYZI *>(output_cloud_filtered));
+        default:
+          return cudaErrorInvalidValue;
+      }
+    case CloudFormat::XYZIRADRT:
+      switch (output_format) {
+        case CloudFormat::XYZIRADRT:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRADRT *>(cloud_compact),
+            num_points_raw, pred_probs, num_points, active_comm, output_num_points_filtered,
+            output_cloud_seg, output_cloud_viz,
+            static_cast<CloudPointTypeXYZIRADRT *>(output_cloud_filtered));
+        case CloudFormat::XYZI:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRADRT *>(cloud_compact),
+            num_points_raw, pred_probs, num_points, active_comm, output_num_points_filtered,
+            output_cloud_seg, output_cloud_viz,
+            static_cast<CloudPointTypeXYZI *>(output_cloud_filtered));
+        default:
+          return cudaErrorInvalidValue;
+      }
+    case CloudFormat::XYZIRC:
+      switch (output_format) {
+        case CloudFormat::XYZIRC:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRC *>(cloud_compact), num_points_raw,
+            pred_probs, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
+            output_cloud_viz, static_cast<CloudPointTypeXYZIRC *>(output_cloud_filtered));
+        case CloudFormat::XYZI:
+          return fillCloud_launch_impl(
+            points_xyzi, static_cast<const CloudPointTypeXYZIRC *>(cloud_compact), num_points_raw,
+            pred_probs, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
+            output_cloud_viz, static_cast<CloudPointTypeXYZI *>(output_cloud_filtered));
+        default:
+          return cudaErrorInvalidValue;
+      }
+    case CloudFormat::XYZI:
+      if (output_format == CloudFormat::XYZI) {
+        return fillCloud_launch_impl(
+          points_xyzi, static_cast<const CloudPointTypeXYZI *>(cloud_compact), num_points_raw,
+          pred_probs, num_points, active_comm, output_num_points_filtered, output_cloud_seg,
+          output_cloud_viz, static_cast<CloudPointTypeXYZI *>(output_cloud_filtered));
+      }
+      return cudaErrorInvalidValue;
     default:
       return cudaErrorInvalidValue;
   }

@@ -78,10 +78,11 @@ LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options) : Node("lida
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   }
 
+  filtered_output_format_param_ = declare_parameter<std::string>("filter.output_format", "");
   auto postprocessing_params = utils::PostprocessingParams(
-    declare_parameter<double>("filter.class_confidence_threshold"),
-    declare_parameter<std::vector<std::string>>("filter.classes"), crop_box_bounds_, class_names,
-    declare_parameter<std::vector<int64_t>>("palette"));
+    declare_parameter<double>("filter.class_probability_threshold"),
+    declare_parameter<std::vector<std::string>>("filter.classes"), filtered_output_format_param_,
+    crop_box_bounds_, class_names, declare_parameter<std::vector<int64_t>>("palette"));
 
   const auto num_points_profile = declare_parameter<std::vector<int64_t>>("num_points");
   max_output_points_ = static_cast<size_t>(num_points_profile.at(2));
@@ -203,10 +204,27 @@ void LidarFRNetNode::cloudCallback(
 
   // Initialize filtered layout from first message (preserves input format)
   std::call_once(init_filtered_layout_, [this, &msg]() {
-    cloud_filtered_layout_.emplace(ros_utils::generateFilteredPointCloudLayoutFromInput(*msg));
+    const auto input_format = ros_utils::detectCloudFormat(msg->fields);
+    if (input_format == CloudFormat::UNKNOWN) {
+      throw std::runtime_error("Unsupported input point cloud format.");
+    }
+
+    const auto requested_format = parse_cloud_format_string(filtered_output_format_param_);
+    const auto output_format =
+      filtered_output_format_param_.empty() ? input_format : requested_format;
+    if (output_format == CloudFormat::UNKNOWN || !can_convert_format(input_format, output_format)) {
+      throw std::runtime_error(
+        "filter.output_format='" + filtered_output_format_param_ +
+        "' is not compatible with input format '" + std::string(to_string(input_format)) + "'.");
+    }
+
+    filtered_output_format_.emplace(output_format);
+    cloud_filtered_layout_.emplace(ros_utils::generateFilteredPointCloudLayout(output_format));
     RCLCPP_INFO(
-      this->get_logger(), "Initialized filtered cloud layout with %zu fields, point_step=%zu",
-      cloud_filtered_layout_->fields.size(), cloud_filtered_layout_->point_step);
+      this->get_logger(),
+      "Initialized filtered cloud layout with format '%s', %zu fields, point_step=%zu",
+      to_string(output_format), cloud_filtered_layout_->fields.size(),
+      cloud_filtered_layout_->point_step);
   });
 
   const auto active_comm = utils::ActiveComm(
@@ -247,8 +265,8 @@ void LidarFRNetNode::cloudCallback(
 
   std::unordered_map<std::string, double> proc_timing;
   if (!frnet_->process(
-        msg, *cloud_seg_msg_ptr, *cloud_viz_msg_ptr, *cloud_filtered_msg_ptr, active_comm,
-        proc_timing, crop_sensor_to_ref_ptr))
+        msg, *cloud_seg_msg_ptr, *cloud_viz_msg_ptr, *cloud_filtered_msg_ptr,
+        *filtered_output_format_, active_comm, proc_timing, crop_sensor_to_ref_ptr))
     return;
 
   // Publish output messages

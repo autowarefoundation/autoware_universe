@@ -15,8 +15,10 @@
 #ifndef AUTOWARE__LIDAR_FRNET__POINT_TYPE_HPP_
 #define AUTOWARE__LIDAR_FRNET__POINT_TYPE_HPP_
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace autoware::lidar_frnet
 {
@@ -24,12 +26,66 @@ namespace autoware::lidar_frnet
 /**
  * @brief Supported input point cloud formats (by field count and layout).
  */
-enum class InputFormat { XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI, UNKNOWN };
+enum class CloudFormat { XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI, UNKNOWN };
+
+inline CloudFormat parse_cloud_format_string(std::string format)
+{
+  for (auto & ch : format) {
+    ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+  }
+
+  if (format == "xyzircaedt") {
+    return CloudFormat::XYZIRCAEDT;
+  }
+  if (format == "xyziradrt") {
+    return CloudFormat::XYZIRADRT;
+  }
+  if (format == "xyzirc") {
+    return CloudFormat::XYZIRC;
+  }
+  if (format == "xyzi") {
+    return CloudFormat::XYZI;
+  }
+  return CloudFormat::UNKNOWN;
+}
+
+inline const char * to_string(CloudFormat format)
+{
+  switch (format) {
+    case CloudFormat::XYZIRCAEDT:
+      return "xyzircaedt";
+    case CloudFormat::XYZIRADRT:
+      return "xyziradrt";
+    case CloudFormat::XYZIRC:
+      return "xyzirc";
+    case CloudFormat::XYZI:
+      return "xyzi";
+    default:
+      return "unknown";
+  }
+}
+
+inline bool can_convert_format(const CloudFormat input_format, const CloudFormat output_format)
+{
+  switch (input_format) {
+    case CloudFormat::XYZIRCAEDT:
+      return output_format == CloudFormat::XYZIRCAEDT || output_format == CloudFormat::XYZIRC ||
+             output_format == CloudFormat::XYZI;
+    case CloudFormat::XYZIRADRT:
+      return output_format == CloudFormat::XYZIRADRT || output_format == CloudFormat::XYZI;
+    case CloudFormat::XYZIRC:
+      return output_format == CloudFormat::XYZIRC || output_format == CloudFormat::XYZI;
+    case CloudFormat::XYZI:
+      return output_format == CloudFormat::XYZI;
+    default:
+      return false;
+  }
+}
 
 /**
  * @brief Input point type for XYZI format (x, y, z, intensity as float).
  */
-struct InputPointTypeXYZI
+struct CloudPointTypeXYZI
 {
   float x;
   float y;
@@ -40,7 +96,7 @@ struct InputPointTypeXYZI
 /**
  * @brief Input point type for XYZIRC format (x, y, z, intensity, return_type, channel).
  */
-struct InputPointTypeXYZIRC
+struct CloudPointTypeXYZIRC
 {
   float x;
   float y;
@@ -53,7 +109,7 @@ struct InputPointTypeXYZIRC
 /**
  * @brief Input point type for XYZIRADRT format (ring, azimuth, distance, return_type, time_stamp).
  */
-struct InputPointTypeXYZIRADRT
+struct CloudPointTypeXYZIRADRT
 {
   float x;
   float y;
@@ -70,7 +126,7 @@ struct InputPointTypeXYZIRADRT
  * @brief Input point type for XYZIRCAEDT format (largest supported; channel, azimuth, elevation,
  *        distance, time_stamp).
  */
-struct InputPointTypeXYZIRCAEDT
+struct CloudPointTypeXYZIRCAEDT
 {
   float x;
   float y;
@@ -89,17 +145,17 @@ struct InputPointTypeXYZIRCAEDT
  * @param format Input format enum
  * @return Size in bytes, or 0 for UNKNOWN
  */
-inline std::size_t get_point_step(InputFormat format)
+inline std::size_t get_point_step(CloudFormat format)
 {
   switch (format) {
-    case InputFormat::XYZIRCAEDT:
-      return sizeof(InputPointTypeXYZIRCAEDT);
-    case InputFormat::XYZIRADRT:
-      return sizeof(InputPointTypeXYZIRADRT);
-    case InputFormat::XYZIRC:
-      return sizeof(InputPointTypeXYZIRC);
-    case InputFormat::XYZI:
-      return sizeof(InputPointTypeXYZI);
+    case CloudFormat::XYZIRCAEDT:
+      return sizeof(CloudPointTypeXYZIRCAEDT);
+    case CloudFormat::XYZIRADRT:
+      return sizeof(CloudPointTypeXYZIRADRT);
+    case CloudFormat::XYZIRC:
+      return sizeof(CloudPointTypeXYZIRC);
+    case CloudFormat::XYZI:
+      return sizeof(CloudPointTypeXYZI);
     default:
       return 0;
   }
@@ -110,16 +166,16 @@ inline std::size_t get_point_step(InputFormat format)
  * @param format Input format enum
  * @return Field count (4, 6, 9, or 10), or 0 for UNKNOWN
  */
-inline std::size_t get_num_fields(InputFormat format)
+inline std::size_t get_num_fields(CloudFormat format)
 {
   switch (format) {
-    case InputFormat::XYZIRCAEDT:
+    case CloudFormat::XYZIRCAEDT:
       return 10;
-    case InputFormat::XYZIRADRT:
+    case CloudFormat::XYZIRADRT:
       return 9;
-    case InputFormat::XYZIRC:
+    case CloudFormat::XYZIRC:
       return 6;
-    case InputFormat::XYZI:
+    case CloudFormat::XYZI:
       return 4;
     default:
       return 0;
@@ -127,7 +183,7 @@ inline std::size_t get_num_fields(InputFormat format)
 }
 
 /**
- * @brief Output point type for segmentation cloud (x, y, z, class_id).
+ * @brief Output point type for segmentation cloud (x, y, z, class_id, probability).
  */
 struct OutputSegmentationPointType
 {
@@ -135,6 +191,7 @@ struct OutputSegmentationPointType
   float y;
   float z;
   std::uint8_t class_id;
+  float probability;
 } __attribute__((packed));
 
 /**
