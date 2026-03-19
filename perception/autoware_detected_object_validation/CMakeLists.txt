@@ -64,7 +64,7 @@ ament_auto_add_library(object_position_filter SHARED
   lib/utils/utils.cpp
 )
 
-rclcpp_components_register_node(obstacle_pointcloud_based_validator
+autoware_agnocast_wrapper_register_node(obstacle_pointcloud_based_validator
   PLUGIN "autoware::detected_object_validation::obstacle_pointcloud::ObstaclePointCloudBasedValidator"
   EXECUTABLE obstacle_pointcloud_based_validator_node
 )
