@@ -17,8 +17,6 @@
 
 #include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
