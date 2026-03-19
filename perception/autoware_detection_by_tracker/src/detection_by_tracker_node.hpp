@@ -24,6 +24,7 @@
 #include "tracker/tracker_handler.hpp"
 #include "utils/utils.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>
@@ -55,8 +56,8 @@ public:
 private:
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
   rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr trackers_sub_;
-  rclcpp::Subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
-    initial_objects_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
+  initial_objects_sub_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -75,7 +76,9 @@ private:
   void setMaxSearchRange();
 
   void onObjects(
-    const tier4_perception_msgs::msg::DetectedObjectsWithFeature::ConstSharedPtr input_msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+      tier4_perception_msgs::msg::DetectedObjectsWithFeature) &
+    input_msg);
 
   void divideUnderSegmentedObjects(
     const autoware_perception_msgs::msg::DetectedObjects & tracked_objects,

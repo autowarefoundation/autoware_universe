@@ -9,7 +9,6 @@ find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(autoware_agnocast_wrapper REQUIRED)
 find_package(OpenMP)
 
 include_directories(
@@ -34,10 +33,6 @@ add_library(${PROJECT_NAME} SHARED
   src/lanelet_elevation_filter/grid_processor.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-
 target_link_libraries(${PROJECT_NAME}
   autoware_pointcloud_preprocessor::pointcloud_preprocessor_filter_base
   ${Boost_LIBRARIES}
@@ -46,7 +41,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 ament_target_dependencies(${PROJECT_NAME}
-  autoware_agnocast_wrapper
   autoware_qos_utils
   grid_map_pcl
   grid_map_ros
@@ -77,8 +71,6 @@ if(OPENMP_FOUND)
   )
 endif()
 
-autoware_agnocast_wrapper_setup(${PROJECT_NAME})
-
 # ========== Compare Map Filter ==========
 # -- Distance Based Compare Map Filter --
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -91,11 +83,9 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE voxel_based_approximate_compare_map_filter_node)
 
 # -- Voxel Based Compare Map Filter --
-autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::compare_map_segmentation::VoxelBasedCompareMapFilterComponent"
-  EXECUTABLE voxel_based_compare_map_filter_node
-  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
-)
+  EXECUTABLE voxel_based_compare_map_filter_node)
 
 # -- Voxel Distance Based Compare Map Filter --
 rclcpp_components_register_node(${PROJECT_NAME}
