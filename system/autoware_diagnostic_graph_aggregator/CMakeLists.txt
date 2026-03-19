@@ -51,11 +51,18 @@ ament_auto_add_library(${PROJECT_NAME}_test SHARED
 )
 target_include_directories(${PROJECT_NAME}_test PRIVATE src/common)
 
-rclcpp_components_register_nodes(aggregator
-  "autoware::diagnostic_graph_aggregator::AggregatorNode"
+autoware_agnocast_wrapper_register_node(aggregator
+  PLUGIN "autoware::diagnostic_graph_aggregator::AggregatorNode"
+  EXECUTABLE "aggregator_node"
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
-rclcpp_components_register_nodes(converter
-  "autoware::diagnostic_graph_aggregator::ConverterNode"
+
+autoware_agnocast_wrapper_register_node(converter
+  PLUGIN "autoware::diagnostic_graph_aggregator::ConverterNode"
+  EXECUTABLE "converter_node"
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 if(BUILD_TESTING)
