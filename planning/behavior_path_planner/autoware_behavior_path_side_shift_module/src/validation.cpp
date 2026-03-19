@@ -32,7 +32,7 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
 {
   if (request.shift_mode == SetLateralOffset::Request::RAW_VALUE) {
     return validateRawValue(
-      current_inserted_lateral_offset, static_cast<double>(request.shift_value), parameters);
+      static_cast<double>(request.shift_value), current_inserted_lateral_offset, parameters);
   }
 
   if (request.shift_mode == SetLateralOffset::Request::DIRECTION) {
@@ -59,7 +59,7 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
 }
 
 std::pair<uint16_t, double> validateRawValue(
-  const double current_inserted_lateral_offset, const double lateral_offset,
+  const double lateral_offset, const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters)
 {
   if (std::fabs(lateral_offset) > parameters->max_shift_magnitude) {

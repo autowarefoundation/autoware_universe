@@ -117,7 +117,7 @@ void SideShiftModuleManager::onLateralOffset(
   const auto new_offset = static_cast<double>(msg->lateral_offset);
 
   const auto validation_result =
-    validateRawValue(inserted_lateral_offset_state_->value.load(), new_offset, parameters_);
+    validateRawValue(new_offset, inserted_lateral_offset_state_->value.load(), parameters_);
 
   requested_lateral_offset_state_->value.store(validation_result.second);
 }

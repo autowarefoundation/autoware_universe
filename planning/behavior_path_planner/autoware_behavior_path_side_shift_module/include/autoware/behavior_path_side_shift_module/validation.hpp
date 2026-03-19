@@ -31,26 +31,44 @@ namespace autoware::behavior_path_planner
 using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
 
 /**
- * @brief Example validation for SetLateralOffset service request.
+ * @brief Validation for SetLateralOffset service request.
  * @param request SetLateralOffset service request (uses Request::RAW_VALUE, Request::DIRECTION,
  *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
- * @param current_inserted_lateral_offset Current inserted lateral offset [m] (scene's state)
- * @param unit_shift_amount Shift increment in meters for DIRECTION mode (must be >= 0)
- * @param max_raw_shift_magnitude Optional max |shift_value| for RAW_VALUE; nullopt to skip
+ * @param current_inserted_lateral_offset Current inserted lateral offset [m]
+ * @param parameters Parameters used for the side shift mdule
  * @return Computed lateral offset in meters, and its status_code reflecting the validation results
  */
 std::pair<uint16_t, double> validateAndComputeLateralOffset(
   const SetLateralOffset::Request & request, const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters);
 
+/**
+ * @brief Validation of the lateral offset when its value (in meters) is directly sent
+ * @param lateral_offset The lateral offset sent from the user
+ * @param current_inserted_lateral_offset Current inserted lateral offset [m]
+ * @param parameters Parameters used for the side shift mdule
+ * @return Computed lateral offset in meters, and its status_code reflecting the validation results
+ */
 std::pair<uint16_t, double> validateRawValue(
-  const double current_inserted_lateral_offset, const double lateral_offset,
+  const double lateral_offset, const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters);
 
+/**
+ * @brief Validation of the lateral offset when LEFT command is sent
+ * @param current_inserted_lateral_offset Current inserted lateral offset [m]
+ * @param parameters Parameters used for the side shift mdule
+ * @return Computed lateral offset in meters, and its status_code reflecting the validation results
+ */
 std::pair<uint16_t, double> validateShiftLeft(
   const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters);
 
+/**
+ * @brief Validation of the lateral offset when RIGHT command is sent
+ * @param current_inserted_lateral_offset Current inserted lateral offset [m]
+ * @param parameters Parameters used for the side shift mdule
+ * @return Computed lateral offset in meters, and its status_code reflecting the validation results
+ */
 std::pair<uint16_t, double> validateShiftRight(
   const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters);

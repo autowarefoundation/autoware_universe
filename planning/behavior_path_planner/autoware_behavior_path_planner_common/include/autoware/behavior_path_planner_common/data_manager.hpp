@@ -163,7 +163,6 @@ struct PlannerData
   PredictedObjects::ConstSharedPtr dynamic_object{};
   OccupancyGrid::ConstSharedPtr occupancy_grid{};
   OccupancyGrid::ConstSharedPtr costmap{};
-
   OperationModeState::ConstSharedPtr operation_mode{};
   PathWithLaneId::SharedPtr prev_output_path{std::make_shared<PathWithLaneId>()};
   std::optional<PoseWithUuidStamped> prev_modified_goal{};
