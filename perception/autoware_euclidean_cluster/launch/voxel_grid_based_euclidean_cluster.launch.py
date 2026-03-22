@@ -122,6 +122,7 @@ def generate_launch_description():
             add_launch_arg("use_low_height_cropbox", "false"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
+            add_launch_arg("ld_preload_value", ""),
             add_launch_arg("container_package", "rclcpp_components"),
             add_launch_arg("container_executable", "component_container"),
             add_launch_arg(
