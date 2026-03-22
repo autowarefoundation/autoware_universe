@@ -16,14 +16,18 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/simple_tracked_object_merger_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simple_object_merger::SimpleDetectedObjectMergerNode"
   EXECUTABLE simple_object_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::simple_object_merger::SimpleTrackedObjectMergerNode"
   EXECUTABLE simple_tracked_object_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 # Tests

@@ -72,9 +72,11 @@ target_link_libraries(${PROJECT_NAME}
   tf2_geometry_msgs::tf2_geometry_msgs
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::multi_object_tracker::MultiObjectTracker"
   EXECUTABLE multi_object_tracker_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ## Tests
