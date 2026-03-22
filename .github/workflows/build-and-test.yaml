@@ -18,7 +18,7 @@ jobs:
             container: ghcr.io/autowarefoundation/autoware:universe-devel
 
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
 
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
