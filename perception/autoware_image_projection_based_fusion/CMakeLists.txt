@@ -45,9 +45,11 @@ ament_target_dependencies(${PROJECT_NAME}
 
 autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiDetectedObjectFusionNode"
   EXECUTABLE roi_detected_object_fusion_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}

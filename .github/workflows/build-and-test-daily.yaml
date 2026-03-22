@@ -25,7 +25,7 @@ jobs:
             container-base: ghcr.io/autowarefoundation/autoware:universe-devel
 
           - rosdistro: jazzy
-            container-base: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy-amd64
+            container-base: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
 
           # CUDA variant configurations
           - cuda: true
