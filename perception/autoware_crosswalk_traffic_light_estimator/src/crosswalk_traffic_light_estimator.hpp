@@ -42,8 +42,7 @@ public:
   explicit CrosswalkTrafficLightEstimator(const CrosswalkTrafficLightEstimatorConfig & config);
   CrosswalkTrafficLightEstimator() = default;
 
-  void update_map(
-    lanelet::LaneletMapPtr lanelet_map_ptr, lanelet::routing::RoutingGraphPtr routing_graph_ptr);
+  void update_map(lanelet::LaneletMapPtr lanelet_map_ptr);
 
   bool is_map_loaded() const;
 
