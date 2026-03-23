@@ -32,7 +32,8 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::detected_object_feature_remover::DetectedObjectFeatureRemover"
   EXECUTABLE detected_object_feature_remover_node
-  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
