@@ -89,8 +89,8 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 
   if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
     std::stringstream error_msg;
-    error_msg << "semseg_color_map_path must be specified "
-              << "when `is_publish_color_mask_` is true.";
+    error_msg << "semantic_segmentation_color_map_path must be specified "
+              << "when `is_publish_color_mask` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
