@@ -55,7 +55,8 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiClusterFusionNode"
   EXECUTABLE roi_cluster_fusion_node
-  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -66,7 +67,8 @@ rclcpp_components_register_node(${PROJECT_NAME}
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiPointCloudFusionNode"
   EXECUTABLE roi_pointcloud_fusion_node
-  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 set(CUDA_VERBOSE OFF)
