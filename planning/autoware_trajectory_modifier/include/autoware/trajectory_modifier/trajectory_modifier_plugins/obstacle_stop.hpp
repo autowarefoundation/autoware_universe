@@ -71,7 +71,6 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_target_pcd_pointcloud_;
 
   std::optional<CollisionPoint> check_predicted_objects(
     const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);

@@ -171,25 +171,26 @@ void cluster_pointcloud(
     return rel_height > min_height;
   };
 
+  PointCloud::Ptr cluster_buffer(new PointCloud);
+  PointCloud::Ptr hull_buffer(new PointCloud);
+  pcl::ConvexHull<pcl::PointXYZ> hull;
+  hull.setDimension(2);
+
   for (const auto & indices : cluster_indices) {
-    PointCloud::Ptr cluster(new PointCloud);
+    cluster_buffer->clear();
+    hull_buffer->clear();
     bool cluster_above_height_threshold{false};
     for (const auto & index : indices.indices) {
       const auto & point = (*input)[index];
 
       cluster_above_height_threshold |= above_height_threshold(point.z);
-      cluster->push_back(point);
+      cluster_buffer->push_back(point);
     }
     if (!cluster_above_height_threshold) continue;
 
-    pcl::ConvexHull<pcl::PointXYZ> hull;
-    hull.setDimension(2);
-    hull.setInputCloud(cluster);
-    PointCloud::Ptr surface_hull(new PointCloud);
-    hull.reconstruct(*surface_hull);
-    for (const auto & point : *surface_hull) {
-      output->push_back(point);
-    }
+    hull.setInputCloud(cluster_buffer);
+    hull.reconstruct(*hull_buffer);
+    output->insert(output->end(), hull_buffer->begin(), hull_buffer->end());
   }
 }
 
@@ -231,7 +232,7 @@ void filter_objects_by_velocity(PredictedObjects & objects, const double max_vel
 std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points,
   const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
-  const PointCloud::Ptr & pointcloud)
+  const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points)
 {
   if (pointcloud->empty()) return std::nullopt;
 
@@ -255,6 +256,7 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
       min_arc_length = arc_length;
       nearest_collision_point = p;
     }
+    target_pcd_points.emplace_back(p);
   }
 
   return CollisionPoint(nearest_collision_point, min_arc_length);
@@ -263,7 +265,7 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 std::optional<CollisionPoint> get_nearest_object_collision(
   const TrajectoryPoints & trajectory_points,
   const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
-  const PredictedObjects & objects)
+  const PredictedObjects & objects, MultiPolygon2d & target_polygons)
 {
   if (objects.objects.empty()) return std::nullopt;
 
@@ -273,7 +275,6 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   for (const auto & object : objects.objects) {
     const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
-    ;
     if (boost::geometry::disjoint(object_polygon, trajectory_polygon)) {
       continue;
     }
@@ -286,6 +287,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
         nearest_collision_point = p;
       }
     }
+    target_polygons.emplace_back(object_polygon);
   }
 
   if (!found_collision) return std::nullopt;

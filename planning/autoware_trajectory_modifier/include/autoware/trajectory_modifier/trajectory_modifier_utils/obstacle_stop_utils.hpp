@@ -39,6 +39,7 @@ using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using autoware_utils_geometry::MultiPolygon2d;
 
 enum class ObjectType : uint8_t {
   UNKNOWN = 0,
@@ -93,10 +94,9 @@ struct DebugData
 {
   PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr voxel_points;
-  PointCloud2::SharedPtr target_pcd_points;
-  std::vector<autoware_utils_geometry::Polygon2d> target_polygons;
+  MultiPolygon2d target_polygons;
   autoware_utils_geometry::MultiPolygon2d trajectory_polygon;
-  std::vector<geometry_msgs::msg::Point> target_collision_points;
+  std::vector<geometry_msgs::msg::Point> target_pcd_points;
   geometry_msgs::msg::Point active_collision_point;
 };
 
@@ -123,14 +123,12 @@ void filter_objects_by_type(
 void filter_objects_by_velocity(PredictedObjects & objects, const double max_velocity);
 
 std::optional<CollisionPoint> get_nearest_pcd_collision(
-  const TrajectoryPoints & trajectory_points,
-  const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
-  const PointCloud::Ptr & pointcloud);
+  const TrajectoryPoints & trajectory_points, const MultiPolygon2d & trajectory_polygon,
+  const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points,
-  const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
-  const PredictedObjects & objects);
+  const TrajectoryPoints & trajectory_points, const MultiPolygon2d & trajectory_polygon,
+  const PredictedObjects & objects, MultiPolygon2d & target_polygons);
 
 }  // namespace autoware::trajectory_modifier::utils::obstacle_stop
 

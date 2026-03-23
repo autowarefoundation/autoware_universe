@@ -42,7 +42,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail", 1);
 
-  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
+  time_keeper_ =
+    std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
   params_ = param_listener_->get_params();
 
