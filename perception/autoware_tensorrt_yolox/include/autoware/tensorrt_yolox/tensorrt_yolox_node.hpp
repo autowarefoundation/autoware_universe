@@ -102,7 +102,7 @@ private:
 
   // using -1 to represent labels that be ignored
   static constexpr int unmapped_class_id_ = -1;
-  std::vector<std::string> roi_id_to_name_map_;
+  std::vector<std::string> roi_class_name_list_;
   std::vector<int> roi_id_to_class_id_map_;
   std::vector<int> roi_id_to_semseg_id_map_;
 

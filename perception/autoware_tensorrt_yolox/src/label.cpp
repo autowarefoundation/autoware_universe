@@ -164,7 +164,7 @@ std::vector<std::string> load_image_list(const std::string & filename, const std
 
 // read label names of the model's outputs
 void read_label_file(
-  const std::string & label_path, std::vector<std::string> & roi_id_to_name_map,
+  const std::string & label_path, std::vector<std::string> & roi_class_name_list,
   std::unordered_map<std::string, int> & roi_name_to_id_map)
 {
   std::ifstream label_file(label_path);
@@ -179,7 +179,7 @@ void read_label_file(
   while (getline(label_file, label_name)) {
     std::string trimmed_label_name = label_name;
     trim(trimmed_label_name);
-    roi_id_to_name_map.push_back(trim(trimmed_label_name));
+    roi_class_name_list.push_back(trim(trimmed_label_name));
     roi_name_to_id_map.insert({trimmed_label_name, label_index});
 
     ++label_index;

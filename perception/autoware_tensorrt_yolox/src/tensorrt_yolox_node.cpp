@@ -114,7 +114,7 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   const std::string cache_dir = "";
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
-    trt_config, roi_id_to_name_map_.size(), score_threshold, nms_threshold, preprocess_on_gpu,
+    trt_config, roi_class_name_list_.size(), score_threshold, nms_threshold, preprocess_on_gpu,
     gpu_id, calibration_image_list_path, norm_factor, cache_dir, calib_config);
 
   if (!trt_yolox_->isGPUInitialized()) {
@@ -292,10 +292,10 @@ void TrtYoloXNode::setupLabel(
 {
   try {
     std::unordered_map<std::string, int> roi_name_to_id_map;
-    // read label file and store to roi_id_to_name_map_
-    read_label_file(roi_label_path, roi_id_to_name_map_, roi_name_to_id_map);
+    // read label file and store to roi_class_name_list_
+    read_label_file(roi_label_path, roi_class_name_list_, roi_name_to_id_map);
 
-    roi_id_to_class_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
+    roi_id_to_class_id_map_.assign(roi_class_name_list_.size(), unmapped_class_id_);
 
     if (!roi_label_remap_path.empty()) {
       std::unordered_map<std::string, int> roi_label_to_new_id_remap;
@@ -305,8 +305,8 @@ void TrtYoloXNode::setupLabel(
       load_label_id_remap_file(roi_label_remap_path, roi_label_to_new_id_remap, skip_header_lines);
 
       // map original YOLOX ID directly to class ID
-      for (size_t i = 0; i < roi_id_to_name_map_.size(); ++i) {
-        const std::string & original_name = roi_id_to_name_map_[i];
+      for (size_t i = 0; i < roi_class_name_list_.size(); ++i) {
+        const std::string & original_name = roi_class_name_list_[i];
 
         if (roi_label_to_new_id_remap.count(original_name) > 0) {
           roi_id_to_class_id_map_[i] = roi_label_to_new_id_remap.at(original_name);
@@ -328,7 +328,7 @@ void TrtYoloXNode::setupLabel(
         semseg_color_map_path, semseg_color_map_, semseg_name_to_id_map, skip_header_lines);
     }
 
-    roi_id_to_semseg_id_map_.assign(roi_id_to_name_map_.size(), unmapped_class_id_);
+    roi_id_to_semseg_id_map_.assign(roi_class_name_list_.size(), unmapped_class_id_);
     if (!roi_to_semseg_remap_path.empty()) {
       std::unordered_map<std::string, int> roi_name_to_semseg_id_remap;
       constexpr uint32_t skip_header_lines = 1;
@@ -338,8 +338,8 @@ void TrtYoloXNode::setupLabel(
         roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
 
       // map original YOLOX ID directly to semantic segmentation ID
-      for (size_t i = 0; i < roi_id_to_name_map_.size(); ++i) {
-        const std::string & original_name = roi_id_to_name_map_[i];
+      for (size_t i = 0; i < roi_class_name_list_.size(); ++i) {
+        const std::string & original_name = roi_class_name_list_[i];
 
         if (roi_name_to_semseg_id_remap.count(original_name) > 0) {
           roi_id_to_semseg_id_map_[i] = roi_name_to_semseg_id_remap.at(original_name);
