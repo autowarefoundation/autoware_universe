@@ -106,7 +106,8 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::shape_estimation::ShapeEstimationNode"
   EXECUTABLE shape_estimation_node
-  AGNOCAST_EXECUTOR AgnocastOnlySingleThreadedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE
