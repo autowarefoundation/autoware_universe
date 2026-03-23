@@ -83,7 +83,7 @@ public:
 
     colors_rgb_ = make_palette(class_names_, palette);
 
-    for (auto class_name : class_names_) {
+    for (auto & class_name : class_names_) {
       std::transform(class_name.begin(), class_name.end(), class_name.begin(), [](unsigned char c) {
         return std::tolower(c);
       });
