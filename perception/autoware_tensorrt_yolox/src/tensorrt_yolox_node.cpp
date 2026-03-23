@@ -195,9 +195,7 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     // drop the object if it is marked as ignore
     if (target_class_id == unmapped_class_id_) continue;
 
-    autoware_perception_msgs::msg::ObjectClassification classification;
-    classification.label = static_cast<uint8_t>(target_class_id);
-    classification.probability = 1.0f;
+    const auto classification = autoware_perception_msgs::build<autoware_perception_msgs::msg::ObjectClassification>().label(static_cast<uint8_t>(target_class_id)).probability(1.0f);
 
     object.object.classification.push_back(classification);
 
