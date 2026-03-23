@@ -71,6 +71,7 @@ private:
 
 public:
   // Function
+  // test: trigger cuda CI path
   bool isWithinThreshold(const RadarReturn & radar_return);
 };
 
