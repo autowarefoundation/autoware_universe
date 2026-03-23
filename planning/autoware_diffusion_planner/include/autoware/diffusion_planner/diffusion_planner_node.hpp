@@ -59,7 +59,7 @@ struct DiffusionPlannerDebugParams
 {
   bool publish_debug_route{true};
   bool publish_debug_map{false};
-  bool publish_debug_linestrings{false};
+  bool publish_debug_linestrings{true};
 };
 
 /**
