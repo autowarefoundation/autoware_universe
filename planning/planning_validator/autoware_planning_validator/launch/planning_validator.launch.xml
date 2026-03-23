@@ -1,4 +1,10 @@
 <launch>
+  <let name="use_agnocast" value="$(env ENABLE_AGNOCAST 0)"/>
+  <let name="container_package" value="rclcpp_components" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_package" value="agnocast_components" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_executable" value="$(var container_type)" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_executable" value="agnocast_component_container_cie" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+
   <arg name="launch_latency_checker" default="true"/>
   <arg name="launch_trajectory_checker" default="true"/>
   <arg name="launch_intersection_collision_checker" default="true"/>
@@ -41,7 +47,7 @@
   <arg name="output_trajectory" default="/planning/trajectory"/>
 
   <group>
-    <node_container pkg="rclcpp_components" exec="$(var container_type)" name="planning_validator_container" namespace="" args="" output="both">
+    <node_container pkg="$(var container_package)" exec="$(var container_executable)" name="planning_validator_container" namespace="" args="" output="both">
       <composable_node pkg="autoware_planning_validator" plugin="autoware::planning_validator::PlanningValidatorNode" name="planning_validator" namespace="">
         <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
         <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
