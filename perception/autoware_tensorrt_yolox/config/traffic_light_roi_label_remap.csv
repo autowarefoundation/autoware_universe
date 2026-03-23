@@ -1,4 +1,4 @@
-from, to
+from, to # The label remapped to -1 will not be published.
 BACKGROUND, 0
 traffic_light, 1
 pedestrian_traffic_light, 2
