@@ -395,7 +395,7 @@ void TrtYoloXNode::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
 {
   int width = mask.cols;
   int height = mask.rows;
-  if ((cmask.cols != mask.cols) || (cmask.rows != mask.rows)) {
+  if ((cmask.cols != width) || (cmask.rows != height)) {
     throw std::runtime_error("input and output image have difference size.");
   }
 
