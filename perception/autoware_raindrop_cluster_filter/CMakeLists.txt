@@ -28,7 +28,8 @@ autoware_agnocast_wrapper_setup(low_intensity_cluster_filter)
 autoware_agnocast_wrapper_register_node(low_intensity_cluster_filter
   PLUGIN "autoware::low_intensity_cluster_filter::LowIntensityClusterFilter"
   EXECUTABLE low_intensity_cluster_filter_node
-  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 
