@@ -4,19 +4,14 @@
       [
         "safety::OutOfLaneFilter",
         "safety::CollisionFilter",
-<<<<<<< HEAD
-        "safety::VehicleConstraintFilter",
-=======
-        "safety::CollisionCheckFilter",
-        "safety::UncrossableBoundaryDepartureFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
->>>>>>> a564e0a0eb (feat(trajectory_validator): move traffic_light_filter (#2762))
       ]
     # available filters:
     #  "safety::OutOfLaneFilter"
     #  "safety::CollisionFilter"
     #  "safety::VehicleConstraintFilter"
+    #  "traffic_rule::TrafficLightFilter"
 
     out_of_lane:
       time: 2.0
