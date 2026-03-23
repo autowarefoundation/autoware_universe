@@ -26,6 +26,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -100,6 +101,10 @@ void TrafficLightFilter::set_parameters(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, "traffic_light.crossing_time_limit");
   params_.treat_amber_light_as_red_light =
     get_or_declare_parameter<bool>(node, "traffic_light.treat_amber_light_as_red_light");
+  params_.checked_trajectory_length.deceleration_limit = get_or_declare_parameter<double>(
+    node, "traffic_light.checked_trajectory_length.deceleration_limit");
+  params_.checked_trajectory_length.jerk_limit =
+    get_or_declare_parameter<double>(node, "traffic_light.checked_trajectory_length.jerk_limit");
 }
 
 void TrafficLightFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
@@ -115,6 +120,12 @@ void TrafficLightFilter::update_parameters(const std::vector<rclcpp::Parameter> 
   update_param<bool>(
     parameters, "traffic_light.treat_amber_light_as_red_light",
     params_.treat_amber_light_as_red_light);
+  update_param<double>(
+    parameters, "traffic_light.checked_trajectory_length.deceleration_limit",
+    params_.checked_trajectory_length.deceleration_limit);
+  update_param<double>(
+    parameters, "traffic_light.checked_trajectory_length.jerk_limit",
+    params_.checked_trajectory_length.jerk_limit);
 }
 
 std::pair<std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
@@ -152,17 +163,28 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   }
   TrajectoryPoints trajectory;
   lanelet::BasicLineString2d trajectory_ls;
+  constexpr auto delay_response_time = 0.0;
+  const auto distance_for_ego_to_stop = motion_utils::calculate_stop_distance(
+    context.odometry->twist.twist.linear.x, context.acceleration->accel.accel.linear.x,
+    params_.checked_trajectory_length.deceleration_limit,
+    params_.checked_trajectory_length.jerk_limit, delay_response_time);
+  const auto max_trajectory_length = distance_for_ego_to_stop.value_or(0.0);
+  auto length = 0.0;
   for (const auto & p : traj_points) {
     // skip points behind ego
     if (rclcpp::Duration(p.time_from_start).seconds() < 0.0) {
       continue;
     }
-    // skip points beyond the first stop
-    if (p.longitudinal_velocity_mps <= 0.0) {
+    const lanelet::BasicPoint2d lanelet_p(p.pose.position.x, p.pose.position.y);
+    if (!trajectory_ls.empty()) {
+      length += lanelet::geometry::distance2d(trajectory_ls.back(), lanelet_p);
+    }
+    // skip points beyond the first stop, or skip once we reach the maximum length
+    if (p.longitudinal_velocity_mps <= 0.0 || length > max_trajectory_length) {
       break;
     }
     trajectory.push_back(p);
-    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+    trajectory_ls.emplace_back(lanelet_p);
   }
 
   if (trajectory_ls.size() < 2) {

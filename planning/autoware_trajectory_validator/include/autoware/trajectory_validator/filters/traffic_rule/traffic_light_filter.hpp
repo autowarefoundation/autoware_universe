@@ -37,6 +37,13 @@ struct Params
   double crossing_time_limit;  // trajectories crossing an amber light are rejected if they cannot
                                // cross before this time
   bool treat_amber_light_as_red_light;  // when true, amber lights are handled like red lights
+  struct CheckedTrajectoryLength
+  {
+    double deceleration_limit;  // deceleration limit to calculate the stop distance used as
+                                // trajectory length limit
+    double jerk_limit;          // jerk limit to calculate the stop distance used as trajectory
+                                // length limit
+  } checked_trajectory_length;
 };
 
 class TrafficLightFilter : public ValidatorInterface
