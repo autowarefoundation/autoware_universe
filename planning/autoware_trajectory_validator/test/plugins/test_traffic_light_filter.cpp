@@ -56,9 +56,19 @@ protected:
     node_->declare_parameter("traffic_light.delay_response_time", 0.5);
     node_->declare_parameter("traffic_light.crossing_time_limit", 2.75);
     node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
+    node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
+    node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
+    
     filter_->set_parameters(*node_);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
+    // Set high velocity/acceleration to always check the whole trajectory (checked_trajectory_length feature)
+    nav_msgs::msg::Odometry odometry;
+    geometry_msgs::msg::AccelWithCovarianceStamped accel;
+    odometry.twist.twist.linear.x = 999.9f;
+    accel.accel.accel.linear.x = 999.9f;
+    context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+    context_.acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(accel);
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
