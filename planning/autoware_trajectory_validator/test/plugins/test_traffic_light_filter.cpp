@@ -58,11 +58,12 @@ protected:
     node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
     node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
     node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
-    
+
     filter_->set_parameters(*node_);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
-    // Set high velocity/acceleration to always check the whole trajectory (checked_trajectory_length feature)
+    // Set high velocity/acceleration to always check the whole trajectory
+    // (checked_trajectory_length feature)
     nav_msgs::msg::Odometry odometry;
     geometry_msgs::msg::AccelWithCovarianceStamped accel;
     odometry.twist.twist.linear.x = 999.9f;
