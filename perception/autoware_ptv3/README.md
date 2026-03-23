@@ -78,7 +78,11 @@ empty string, the filtered output preserves the same format as the input cloud.
 
 The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.
 
-### Changelog
+## Troubleshooting
+
+### `Fail to create host memory`
+
+This error may occur when the system runs out of memory during TensorRT engine building. To mitigate this issue, consider reducing the `voxels_num` maximum limit in the model parameters, which controls the maximum number of voxels processed by the model. For the instance, using GPU with 8 GB of memory, setting maximum `voxels_num` to 192'000 may help to avoid this error.
 
 ## References/External links
 
