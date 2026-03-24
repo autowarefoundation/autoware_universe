@@ -128,6 +128,11 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
   visualization_msgs::msg::MarkerArray area_markers;
   int area_id = 0;
 
+  const std_msgs::msg::ColorRGBA cl_end =
+    autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
+  const std_msgs::msg::ColorRGBA cl_goal =
+    autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
+
   for (const auto & route_section : route.segments) {
     for (const auto & prim : route_section.primitives) {
       if (prim.primitive_type == "area") {
@@ -141,9 +146,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
         m.type = visualization_msgs::msg::Marker::LINE_STRIP;
         m.scale.x = 0.08;
         const bool is_preferred = route_section.preferred_primitive.id == prim.id;
-        m.color = is_preferred
-                    ? autoware_utils::create_marker_color(0.2, 0.5, 0.5, goal_lanelet_transparency)
-                    : autoware_utils::create_marker_color(0.4, 0.9, 0.5, 0.75);
+        m.color = is_preferred ? cl_goal : cl_end;
         for (const auto & ls : area.outerBound()) {
           for (const auto & pt : ls) {
             geometry_msgs::msg::Point p;
@@ -174,9 +177,6 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
     autoware_utils::create_marker_color(0.8, 0.99, 0.8, 0.15);
   const std_msgs::msg::ColorRGBA cl_ll_borders =
     autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.999);
-  const std_msgs::msg::ColorRGBA cl_end = autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
-  const std_msgs::msg::ColorRGBA cl_goal =
-    autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
   visualization_msgs::msg::MarkerArray route_marker_array;
   insert_marker_array(&route_marker_array, area_markers);
