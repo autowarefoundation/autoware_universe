@@ -17,8 +17,6 @@
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
-#include <boost/optional.hpp>
-
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
@@ -171,10 +169,10 @@ bool is_invalid_detection_status(const TrafficSignal & signal)
   return false;
 }
 
-boost::optional<uint8_t> get_highest_confidence_traffic_signal(
+std::optional<uint8_t> get_highest_confidence_traffic_signal(
   const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map)
 {
-  boost::optional<uint8_t> ret{boost::none};
+  std::optional<uint8_t> ret{std::nullopt};
 
   double highest_confidence = 0.0;
   if (traffic_light_id_map.count(id) == 0) {
