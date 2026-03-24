@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -32,6 +33,48 @@
 namespace
 {
 constexpr double INVALID_SCORE = 0.0;
+
+bool getCanAssign(
+  const autoware::multi_object_tracker::AssociatorConfig::LabelToTrackerBoolMap & can_assign_map,
+  const autoware::multi_object_tracker::object_model::Label measurement_label,
+  const autoware::multi_object_tracker::TrackerType tracker_type)
+{
+  const auto measurement_it = can_assign_map.find(measurement_label);
+  if (measurement_it == can_assign_map.end()) {
+    return false;
+  }
+  const auto tracker_it = measurement_it->second.find(tracker_type);
+  if (tracker_it == measurement_it->second.end()) {
+    return false;
+  }
+  return tracker_it->second;
+}
+
+double getAssociationValue(
+  const autoware::multi_object_tracker::AssociatorConfig::LabelToTrackerDoubleMap & values,
+  const autoware::multi_object_tracker::object_model::Label measurement_label,
+  const autoware::multi_object_tracker::TrackerType tracker_type,
+  const double fallback)
+{
+  const auto measurement_it = values.find(measurement_label);
+  if (measurement_it == values.end()) {
+    return fallback;
+  }
+  const auto tracker_it = measurement_it->second.find(tracker_type);
+  if (tracker_it == measurement_it->second.end()) {
+    return fallback;
+  }
+  return tracker_it->second;
+}
+
+bool isVehicleTrackerType(const autoware::multi_object_tracker::TrackerType tracker_type)
+{
+  using autoware::multi_object_tracker::TrackerType;
+  return tracker_type == TrackerType::MULTIPLE_VEHICLE ||
+         tracker_type == TrackerType::GENERAL_VEHICLE ||
+         tracker_type == TrackerType::NORMAL_VEHICLE ||
+         tracker_type == TrackerType::BIG_VEHICLE || tracker_type == TrackerType::VEHICLE;
+}
 }  // namespace
 
 namespace autoware::multi_object_tracker
@@ -63,17 +106,17 @@ void DataAssociation::setTimeKeeper(
 
 void DataAssociation::updateMaxSearchDistances()
 {
-  const int num_classes = config_.max_dist_matrix.cols();
-  max_squared_dist_per_class_.resize(num_classes);
-
-  // For each measurement class (column), find maximum squared distance with any tracker class
-  for (int measurement_class = 0; measurement_class < num_classes; ++measurement_class) {
+  for (const auto measurement_label : object_model::trackedLabels()) {
     double max_squared_dist = 0.0;
-    for (int tracker_class = 0; tracker_class < config_.max_dist_matrix.rows(); ++tracker_class) {
-      max_squared_dist =
-        std::max(max_squared_dist, config_.max_dist_matrix(tracker_class, measurement_class));
+    for (const auto tracker_type : allTrackerTypes()) {
+      if (!getCanAssign(config_.can_assign_map, measurement_label, tracker_type)) {
+        continue;
+      }
+      max_squared_dist = std::max(
+        max_squared_dist,
+        getAssociationValue(config_.max_dist_map, measurement_label, tracker_type, 0.0));
     }
-    max_squared_dist_per_class_[measurement_class] = max_squared_dist;
+    max_squared_dist_per_class_[static_cast<size_t>(measurement_label)] = max_squared_dist;
   }
 }
 
@@ -248,7 +291,7 @@ void DataAssociation::processMeasurement(
     const auto tracker_type = prep_data.tracker_types[tracker_idx];
 
     // Check if this tracker can be assigned to the measurement
-    bool can_assign = config_.can_assign_map.at(tracker_type)[static_cast<int>(measurement_label)];
+    const bool can_assign = getCanAssign(config_.can_assign_map, measurement_label, tracker_type);
     if (!can_assign) continue;
 
     // Calculate score for this tracker-measurement pair
@@ -257,7 +300,7 @@ void DataAssociation::processMeasurement(
 
     bool has_significant_shape_change = false;
     double score = calculateScore(
-      tracked_object, tracker_label, measurement_object, measurement_label,
+      tracked_object, tracker_label, tracker_type, measurement_object, measurement_label,
       prep_data.tracker_inverse_covariances[tracker_idx], has_significant_shape_change);
 
     if (score > INVALID_SCORE) {
@@ -324,6 +367,7 @@ std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
 
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
+  const TrackerType tracker_type,
   const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
   const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
 {
@@ -339,7 +383,7 @@ double DataAssociation::calculateScore(
   }
 
   const double max_dist_sq =
-    config_.max_dist_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
+    getAssociationValue(config_.max_dist_map, measurement_label, tracker_type, 0.0);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
   const double dist_sq = dx * dx + dy * dy;
@@ -349,14 +393,13 @@ double DataAssociation::calculateScore(
 
   // gates for non-vehicle objects
   const double area_meas = measurement_object.area;
-  const bool is_vehicle_tracker = tracker_label == Label::CAR || tracker_label == Label::BUS ||
-                                  tracker_label == Label::TRUCK || tracker_label == Label::TRAILER;
+  const bool is_vehicle_tracker = isVehicleTrackerType(tracker_type);
   if (!is_vehicle_tracker) {
     // area gate
     const double max_area =
-      config_.max_area_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
+      getAssociationValue(config_.max_area_map, measurement_label, tracker_type, 0.0);
     const double min_area =
-      config_.min_area_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
+      getAssociationValue(config_.min_area_map, measurement_label, tracker_type, 0.0);
     if (area_meas < min_area || area_meas > max_area) return INVALID_SCORE;
 
     // mahalanobis dist gate
@@ -370,7 +413,7 @@ double DataAssociation::calculateScore(
   }
 
   const double min_iou =
-    config_.min_iou_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
+    getAssociationValue(config_.min_iou_map, measurement_label, tracker_type, 1.0);
 
   // use 1d iou for pedestrian, 3d giou for other objects if both extensions are trustable
   // otherwise use 2d giou

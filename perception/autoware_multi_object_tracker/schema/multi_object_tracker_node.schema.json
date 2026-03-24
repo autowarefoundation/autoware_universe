@@ -9,36 +9,120 @@
         "car_tracker": {
           "type": "string",
           "description": "Tracker model for car class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "multi_vehicle_tracker"
         },
         "truck_tracker": {
           "type": "string",
           "description": "Tracker model for truck class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "multi_vehicle_tracker"
         },
         "bus_tracker": {
           "type": "string",
           "description": "Tracker model for bus class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "multi_vehicle_tracker"
         },
         "trailer_tracker": {
           "type": "string",
           "description": "Tracker model for trailer class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "multi_vehicle_tracker"
         },
         "pedestrian_tracker": {
           "type": "string",
           "description": "Tracker model for pedestrian class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "pedestrian_and_bicycle_tracker"
         },
         "bicycle_tracker": {
           "type": "string",
           "description": "Tracker model for bicycle class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "pedestrian_and_bicycle_tracker"
         },
         "motorcycle_tracker": {
           "type": "string",
           "description": "Tracker model for motorcycle class.",
+          "enum": [
+            "pass_through_tracker",
+            "pedestrian_and_bicycle_tracker",
+            "pedestrian_tracker",
+            "bicycle_tracker",
+            "multi_vehicle_tracker",
+            "general_vehicle_tracker",
+            "normal_vehicle_tracker",
+            "big_vehicle_tracker",
+            "vehicle_tracker",
+            "polygon_tracker"
+          ],
           "default": "pedestrian_and_bicycle_tracker"
         },
         "publish_rate": {

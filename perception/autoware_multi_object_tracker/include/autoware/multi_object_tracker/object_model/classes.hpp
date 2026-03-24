@@ -18,7 +18,10 @@
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
+#include <optional>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -49,6 +52,61 @@ struct Classification
 };
 
 constexpr int NUM_LABELS = 8;
+
+inline constexpr std::array<Label, NUM_LABELS> TRACKED_LABELS = {
+  Label::UNKNOWN, Label::CAR, Label::TRUCK, Label::BUS,
+  Label::TRAILER, Label::MOTORCYCLE, Label::BICYCLE, Label::PEDESTRIAN};
+
+inline const std::array<Label, NUM_LABELS> & trackedLabels() { return TRACKED_LABELS; }
+
+inline std::string toString(const Label label)
+{
+  switch (label) {
+    case Label::UNKNOWN:
+      return "unknown";
+    case Label::CAR:
+      return "car";
+    case Label::TRUCK:
+      return "truck";
+    case Label::BUS:
+      return "bus";
+    case Label::TRAILER:
+      return "trailer";
+    case Label::MOTORCYCLE:
+      return "motorcycle";
+    case Label::BICYCLE:
+      return "bicycle";
+    case Label::PEDESTRIAN:
+      return "pedestrian";
+    case Label::ANIMAL:
+      return "animal";
+    case Label::HAZARD:
+      return "hazard";
+    case Label::OVER_DRIVABLE:
+      return "over_drivable";
+    case Label::UNDER_DRIVABLE:
+      return "under_drivable";
+    default:
+      return "unknown";
+  }
+}
+
+inline std::optional<Label> toLabel(const std::string & label_name)
+{
+  if (label_name == "unknown") return Label::UNKNOWN;
+  if (label_name == "car") return Label::CAR;
+  if (label_name == "truck") return Label::TRUCK;
+  if (label_name == "bus") return Label::BUS;
+  if (label_name == "trailer") return Label::TRAILER;
+  if (label_name == "motorcycle") return Label::MOTORCYCLE;
+  if (label_name == "bicycle") return Label::BICYCLE;
+  if (label_name == "pedestrian") return Label::PEDESTRIAN;
+  if (label_name == "animal") return Label::ANIMAL;
+  if (label_name == "hazard") return Label::HAZARD;
+  if (label_name == "over_drivable") return Label::OVER_DRIVABLE;
+  if (label_name == "under_drivable") return Label::UNDER_DRIVABLE;
+  return std::nullopt;
+}
 
 constexpr std::uint8_t toMsgLabel(const Label label)
 {

@@ -31,6 +31,7 @@
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
+#include <array>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -50,11 +51,31 @@ typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
 
 struct AssociatorConfig
 {
-  std::unordered_map<TrackerType, std::array<bool, object_model::NUM_LABELS>> can_assign_map;
-  Eigen::MatrixXd max_dist_matrix;
-  Eigen::MatrixXd max_area_matrix;
-  Eigen::MatrixXd min_area_matrix;
-  Eigen::MatrixXd min_iou_matrix;
+  struct EnumClassHash
+  {
+    template <typename T>
+    std::size_t operator()(const T value) const
+    {
+      return static_cast<std::size_t>(value);
+    }
+  };
+
+  using TrackerBoolMap = std::unordered_map<TrackerType, bool, EnumClassHash>;
+  using TrackerDoubleMap = std::unordered_map<TrackerType, double, EnumClassHash>;
+  using LabelToTrackerBoolMap =
+    std::unordered_map<object_model::Label, TrackerBoolMap, EnumClassHash>;
+  using LabelToTrackerDoubleMap =
+    std::unordered_map<object_model::Label, TrackerDoubleMap, EnumClassHash>;
+
+  // Per measurement label -> tracker type assignment gate.
+  LabelToTrackerBoolMap can_assign_map;
+
+  // Association parameters (per measurement label -> tracker type).
+  LabelToTrackerDoubleMap max_dist_map;
+  LabelToTrackerDoubleMap max_area_map;
+  LabelToTrackerDoubleMap min_area_map;
+  LabelToTrackerDoubleMap min_iou_map;
+
   double unknown_association_giou_threshold;
 };
 
@@ -86,7 +107,7 @@ private:
   // Cache of maximum squared distances per measurement class
   // For each measurement class, stores the maximum squared distance it could match with any tracker
   // class
-  std::vector<double> max_squared_dist_per_class_;
+  std::array<double, object_model::NUM_LABELS> max_squared_dist_per_class_{};
 
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
@@ -109,6 +130,7 @@ public:
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
+    const TrackerType tracker_type,
     const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
     const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 

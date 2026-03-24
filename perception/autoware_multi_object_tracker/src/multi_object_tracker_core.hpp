@@ -54,11 +54,12 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  std::vector<int64_t> can_assign_matrix;
-  std::vector<double> max_dist_matrix;
-  std::vector<double> max_area_matrix;
-  std::vector<double> min_area_matrix;
-  std::vector<double> min_iou_matrix;
+  std::unordered_map<object_model::Label, std::vector<TrackerType>, AssociatorConfig::EnumClassHash>
+    can_assign_types_map;
+  AssociatorConfig::LabelToTrackerDoubleMap max_dist_map;
+  AssociatorConfig::LabelToTrackerDoubleMap max_area_map;
+  AssociatorConfig::LabelToTrackerDoubleMap min_area_map;
+  AssociatorConfig::LabelToTrackerDoubleMap min_iou_map;
   std::map<std::string, std::string> tracker_type_map;
   std::vector<double> pruning_giou_thresholds;
   std::vector<double> pruning_distance_thresholds;

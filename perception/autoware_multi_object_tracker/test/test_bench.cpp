@@ -70,14 +70,9 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
 autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
 {
   autoware::multi_object_tracker::AssociatorConfig config;
-  constexpr int label_num =
-    autoware::multi_object_tracker::object_model::NUM_LABELS;  // Number of object classes
   using autoware::multi_object_tracker::TrackerType;
   using Label = autoware::multi_object_tracker::object_model::Label;
 
-  // Initialize matrices with values from data_association_matrix.param.yaml
-  // For a 8x8 matrix (8 object classes: UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE,
-  // PEDESTRIAN)
   std::map<Label, TrackerType> tracker_map = {
     {Label::UNKNOWN, TrackerType::POLYGON},
     {Label::CAR, TrackerType::MULTIPLE_VEHICLE},
@@ -88,77 +83,55 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
     {Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
     {Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
 
-  // Initialize can_assign_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXi can_assign_matrix(label_num, label_num);
-  // 8x8 matrix for can_assign relationships
-  can_assign_matrix << 1, 0, 0, 0, 0, 0, 0, 0,  // UNKNOWN
-    0, 1, 1, 1, 1, 0, 0, 0,                     // CAR
-    0, 1, 1, 1, 1, 0, 0, 0,                     // TRUCK
-    0, 1, 1, 1, 1, 0, 0, 0,                     // BUS
-    0, 1, 1, 1, 1, 0, 0, 0,                     // TRAILER
-    0, 0, 0, 0, 0, 1, 1, 1,                     // MOTORBIKE
-    0, 0, 0, 0, 0, 1, 1, 1,                     // BICYCLE
-    0, 0, 0, 0, 0, 1, 1, 1;                     // PEDESTRIAN
-
-  config.can_assign_map.clear();
-  for (const auto & [label, tracker_type] : tracker_map) {
-    config.can_assign_map[tracker_type].fill(false);
-  }
-
-  // can_assign_map : tracker_type that can be assigned to each measurement label
-  // relationship is given by tracker_map and can_assign_matrix
-  for (int i = 0; i < can_assign_matrix.rows(); ++i) {
-    for (int j = 0; j < can_assign_matrix.cols(); ++j) {
-      if (can_assign_matrix(i, j) == 1) {
-        const auto tracker_type = tracker_map.at(
-          autoware::multi_object_tracker::object_model::toLabel(static_cast<std::uint8_t>(i)));
-        config.can_assign_map[tracker_type][j] = true;
+  for (const auto measurement_label : autoware::multi_object_tracker::object_model::trackedLabels()) {
+    const auto effective_tracker_type = tracker_map.at(measurement_label);
+    for (const auto tracker_type : autoware::multi_object_tracker::allTrackerTypes()) {
+      const bool can_assign = (tracker_type == effective_tracker_type);
+      config.can_assign_map[measurement_label][tracker_type] = can_assign;
+      if (!can_assign) {
+        config.max_dist_map[measurement_label][tracker_type] = 0.0;
+        config.max_area_map[measurement_label][tracker_type] = 0.0;
+        config.min_area_map[measurement_label][tracker_type] = 0.0;
+        config.min_iou_map[measurement_label][tracker_type] = 1.0;
       }
     }
   }
 
-  // Initialize max_dist_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd max_dist_matrix(label_num, label_num);
-  max_dist_matrix << 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,  // UNKNOWN
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // CAR
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // TRUCK
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // BUS
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // TRAILER
-    3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0,                   // MOTORCYCLE
-    3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0,                   // BICYCLE
-    2.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0;                   // PEDESTRIAN
-  config.max_dist_matrix = max_dist_matrix;
+  config.max_dist_map[Label::UNKNOWN][TrackerType::POLYGON] = 4.0 * 4.0;
+  config.max_dist_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
+  config.max_dist_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
+  config.max_dist_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
+  config.max_dist_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
+  config.max_dist_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 3.0 * 3.0;
+  config.max_dist_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 3.0 * 3.0;
+  config.max_dist_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.0 * 2.0;
 
-  // Initialize max_area_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd max_area_matrix(label_num, label_num);
-  max_area_matrix << 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 12.10, 12.10,
-    36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 36.00, 12.10, 36.00, 60.00, 60.00, 10000.00,
-    10000.00, 10000.00, 60.00, 12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 60.00,
-    12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 2.50, 10000.00, 10000.00, 10000.00,
-    10000.00, 2.50, 2.50, 2.50, 2.50, 10000.00, 10000.00, 10000.00, 10000.00, 2.50, 2.50, 2.50,
-    2.00, 10000.00, 10000.00, 10000.00, 10000.00, 2.00, 2.00, 2.00;
-  config.max_area_matrix = max_area_matrix;
+  config.max_area_map[Label::UNKNOWN][TrackerType::POLYGON] = 100.0;
+  config.max_area_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 12.10;
+  config.max_area_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 36.0;
+  config.max_area_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 60.0;
+  config.max_area_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 60.0;
+  config.max_area_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.5;
+  config.max_area_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.5;
+  config.max_area_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.0;
 
-  // Initialize min_area_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd min_area_matrix(label_num, label_num);
-  min_area_matrix << 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 3.600, 3.600, 4.200,
-    10.000, 10.000, 0.000, 0.000, 0.000, 4.200, 3.600, 4.200, 10.000, 10.000, 0.000, 0.000, 0.000,
-    10.000, 3.600, 4.200, 10.000, 10.000, 0.000, 0.000, 0.000, 10.000, 3.600, 4.200, 10.000, 10.000,
-    0.000, 0.000, 0.000, 0.001, 0.000, 0.000, 0.000, 0.000, 0.100, 0.100, 0.100, 0.001, 0.000,
-    0.000, 0.000, 0.000, 0.100, 0.100, 0.100, 0.001, 0.000, 0.000, 0.000, 0.000, 0.100, 0.100,
-    0.100;
-  config.min_area_matrix = min_area_matrix;
+  config.min_area_map[Label::UNKNOWN][TrackerType::POLYGON] = 0.0;
+  config.min_area_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 3.6;
+  config.min_area_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 6.0;
+  config.min_area_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 10.0;
+  config.min_area_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 10.0;
+  config.min_area_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
+  config.min_area_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
+  config.min_area_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
 
-  // Initialize min_iou_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd min_iou_matrix(label_num, label_num);
-  min_iou_matrix << 0.0001, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.1, 0.1,
-    0.1, 0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.2,
-    0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, -1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0001;
-  config.min_iou_matrix = min_iou_matrix;
-
-  // Pre-process matrices
-  config.max_dist_matrix = config.max_dist_matrix.array().square();
+  config.min_iou_map[Label::UNKNOWN][TrackerType::POLYGON] = 0.0001;
+  config.min_iou_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 0.0001;
+  config.min_iou_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 0.10;
+  config.min_iou_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 0.10;
+  config.min_iou_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 0.10;
+  config.min_iou_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = -0.30;
+  config.min_iou_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.0001;
+  config.min_iou_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.0001;
 
   config.unknown_association_giou_threshold =
     -0.8;  // Default GIoU threshold for unknown-unknown association
