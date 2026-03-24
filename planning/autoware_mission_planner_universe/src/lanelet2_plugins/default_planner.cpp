@@ -39,6 +39,9 @@
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 
+#include <geometry_msgs/msg/point.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+
 #include <limits>
 #include <vector>
 
@@ -122,11 +125,43 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
   lanelet::ConstLanelets end_lanelets;
   lanelet::ConstLanelets goal_lanelets;
 
+  visualization_msgs::msg::MarkerArray area_markers;
+  int area_id = 0;
+
   for (const auto & route_section : route.segments) {
-    for (const auto & lane_id : route_section.primitives) {
-      auto lanelet = route_handler_.getLaneletsFromId(lane_id.id);
+    for (const auto & prim : route_section.primitives) {
+      if (prim.primitive_type == "area") {
+        const auto area = route_handler_.getAreaFromId(prim.id);
+        visualization_msgs::msg::Marker m;
+        m.header.frame_id = "map";
+        m.header.stamp = node_->now();
+        m.ns = "route_areas";
+        m.id = area_id++;
+        m.action = visualization_msgs::msg::Marker::ADD;
+        m.type = visualization_msgs::msg::Marker::LINE_STRIP;
+        m.scale.x = 0.08;
+        const bool is_preferred = route_section.preferred_primitive.id == prim.id;
+        m.color = is_preferred ? autoware_utils::create_marker_color(0.2, 0.5, 0.5, goal_lanelet_transparency)
+                               : autoware_utils::create_marker_color(0.4, 0.9, 0.5, 0.75);
+        for (const auto & ls : area.outerBound()) {
+          for (const auto & pt : ls) {
+            geometry_msgs::msg::Point p;
+            p.x = pt.x();
+            p.y = pt.y();
+            p.z = pt.z();
+            m.points.push_back(p);
+          }
+        }
+        if (!m.points.empty()) {
+          m.points.push_back(m.points.front());
+        }
+        area_markers.markers.push_back(m);
+        continue;
+      }
+
+      auto lanelet = route_handler_.getLaneletsFromId(prim.id);
       route_lanelets.push_back(lanelet);
-      if (route_section.preferred_primitive.id == lane_id.id) {
+      if (route_section.preferred_primitive.id == prim.id) {
         goal_lanelets.push_back(lanelet);
       } else {
         end_lanelets.push_back(lanelet);
@@ -143,6 +178,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
     autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
   visualization_msgs::msg::MarkerArray route_marker_array;
+  insert_marker_array(&route_marker_array, area_markers);
   insert_marker_array(
     &route_marker_array,
     lanelet::visualization::laneletsBoundaryAsMarkerArray(route_lanelets, cl_ll_borders, false));
@@ -384,7 +420,32 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
     }
   }
   route_handler_.setRouteLanelets(all_route_lanelets);
-  route_sections = route_handler_.createMapSegments(all_route_lanelets);
+  route_sections =
+    route_handler_.createMapSegmentsFromLaneletOrAreaPath(all_route_lanelets_or_areas);
+
+  {
+    size_t n_lane_seg = 0;
+    size_t n_area_seg = 0;
+    for (const auto & seg : route_sections) {
+      if (seg.preferred_primitive.primitive_type == "area") {
+        ++n_area_seg;
+      } else {
+        ++n_lane_seg;
+      }
+    }
+    RCLCPP_INFO(
+      logger,
+      "[DefaultPlanner] Route segments for message: total=%zu (lane_segments=%zu, area_segments=%zu)",
+      route_sections.size(), n_lane_seg, n_area_seg);
+    for (size_t si = 0; si < route_sections.size(); ++si) {
+      const auto & seg = route_sections[si];
+      RCLCPP_DEBUG(
+        logger,
+        "[DefaultPlanner]   segment[%zu] preferred id=%ld type=%s primitives=%zu", si,
+        seg.preferred_primitive.id, seg.preferred_primitive.primitive_type.c_str(),
+        seg.primitives.size());
+    }
+  }
 
   auto goal_pose = points.back();
   if (param_.enable_correct_goal_pose) {
@@ -416,10 +477,23 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
 geometry_msgs::msg::Pose DefaultPlanner::refine_goal_height(
   const Pose & goal, const RouteSections & route_sections)
 {
-  const auto goal_lane_id = route_sections.back().preferred_primitive.id;
-  const auto goal_lanelet = route_handler_.getLaneletsFromId(goal_lane_id);
-  const auto goal_lanelet_pt = experimental::lanelet2_utils::from_ros(goal.position);
-  const auto goal_height = project_goal_to_map(goal_lanelet, goal_lanelet_pt);
+  const auto & pref = route_sections.back().preferred_primitive;
+  const auto goal_pt = experimental::lanelet2_utils::from_ros(goal.position);
+  double goal_height = goal.position.z;
+
+  if (pref.primitive_type == "area") {
+    const auto area = route_handler_.getAreaFromId(pref.id);
+    goal_height = project_goal_to_area(area, goal_pt);
+    RCLCPP_DEBUG(
+      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on area id=%ld z=%.3f",
+      pref.id, goal_height);
+  } else {
+    const auto goal_lanelet = route_handler_.getLaneletsFromId(pref.id);
+    goal_height = project_goal_to_map(goal_lanelet, goal_pt);
+    RCLCPP_DEBUG(
+      node_->get_logger(), "[DefaultPlanner] refine_goal_height: goal on lane id=%ld z=%.3f",
+      pref.id, goal_height);
+  }
 
   Pose refined_goal = goal;
   refined_goal.position.z = goal_height;
