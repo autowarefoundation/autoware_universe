@@ -98,7 +98,7 @@ void TrajectoryTrafficRuleFilter::process(const CandidateTrajectories::ConstShar
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   constexpr auto log_throttle_ms = 5000;
-  if (!lanelet_map_ptr_) {
+  if (!has_map()) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), log_throttle_ms, "waiting for lanelet_map");
     return;
   }

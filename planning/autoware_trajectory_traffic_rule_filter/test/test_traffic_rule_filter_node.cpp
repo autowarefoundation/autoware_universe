@@ -59,6 +59,10 @@ protected:
     autoware_map_msgs::msg::LaneletMapBin map_bin_msg;
     map_pub_->publish(experimental::lanelet2_utils::to_autoware_map_msgs(map));
 
+    // Ensure the map callback is processed before any test publishes trajectories.
+    // Without this, the trajectory callback may fire first and early-return due to missing map.
+    spin_until([this] { return node_under_test_->has_map(); });
+
     tl_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>(
       "/trajectory_traffic_rule_filter_node/input/traffic_signals", 1);
 
