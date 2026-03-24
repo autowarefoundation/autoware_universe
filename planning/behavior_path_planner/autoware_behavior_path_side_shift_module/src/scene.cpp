@@ -264,20 +264,30 @@ void SideShiftModule::replaceShiftLine()
 
 BehaviorModuleOutput SideShiftModule::plan()
 {
+  bool should_regenerate_shifted_path = false;
+
   // Replace shift line
   if (
     lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
                                        (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
-    replaceShiftLine();
+    should_regenerate_shifted_path = true;
   } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
     RCLCPP_DEBUG(getLogger(), "ego is shifting");
   } else {
     RCLCPP_DEBUG(getLogger(), "change is not requested");
   }
 
-  // Refine path
+  // Preserve the shape during shifting by reusing the last generated path unless re-generation
+  // is explicitly required.
   ShiftedPath shifted_path;
-  path_shifter_.generate(&shifted_path);
+  if (should_regenerate_shifted_path || prev_output_.path.points.empty()) {
+    if (should_regenerate_shifted_path) {
+      replaceShiftLine();
+    }
+    path_shifter_.generate(&shifted_path);
+  } else {
+    shifted_path = prev_output_;
+  }
 
   if (shifted_path.path.points.empty()) {
     RCLCPP_ERROR(getLogger(), "Generated shift_path has no points");
