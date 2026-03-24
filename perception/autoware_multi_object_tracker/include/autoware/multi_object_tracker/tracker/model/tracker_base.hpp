@@ -34,85 +34,13 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <array>
 #include <optional>
 #include <string>
-#include <array>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-
-enum class TrackerType {
-  PASS_THROUGH = 0,
-  PEDESTRIAN_AND_BICYCLE = 10,
-  PEDESTRIAN = 11,
-  BICYCLE = 12,
-  MULTIPLE_VEHICLE = 20,
-  GENERAL_VEHICLE = 21,
-  NORMAL_VEHICLE = 22,
-  BIG_VEHICLE = 23,
-  VEHICLE = 24,
-  POLYGON = 30,
-};
-
-inline constexpr std::array<TrackerType, 10> ALL_TRACKER_TYPES = {
-  TrackerType::PASS_THROUGH,
-  TrackerType::PEDESTRIAN_AND_BICYCLE,
-  TrackerType::PEDESTRIAN,
-  TrackerType::BICYCLE,
-  TrackerType::MULTIPLE_VEHICLE,
-  TrackerType::GENERAL_VEHICLE,
-  TrackerType::NORMAL_VEHICLE,
-  TrackerType::BIG_VEHICLE,
-  TrackerType::VEHICLE,
-  TrackerType::POLYGON};
-
-inline const std::array<TrackerType, 10> & allTrackerTypes() { return ALL_TRACKER_TYPES; }
-
-inline std::string toString(const TrackerType tracker_type)
-{
-  switch (tracker_type) {
-    case TrackerType::PASS_THROUGH:
-      return "pass_through_tracker";
-    case TrackerType::PEDESTRIAN_AND_BICYCLE:
-      return "pedestrian_and_bicycle_tracker";
-    case TrackerType::PEDESTRIAN:
-      return "pedestrian_tracker";
-    case TrackerType::BICYCLE:
-      return "bicycle_tracker";
-    case TrackerType::MULTIPLE_VEHICLE:
-      return "multi_vehicle_tracker";
-    case TrackerType::GENERAL_VEHICLE:
-      return "general_vehicle_tracker";
-    case TrackerType::NORMAL_VEHICLE:
-      return "normal_vehicle_tracker";
-    case TrackerType::BIG_VEHICLE:
-      return "big_vehicle_tracker";
-    case TrackerType::VEHICLE:
-      return "vehicle_tracker";
-    case TrackerType::POLYGON:
-      return "polygon_tracker";
-    default:
-      return "polygon_tracker";
-  }
-}
-
-inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name)
-{
-  if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
-  if (tracker_name == "pedestrian_and_bicycle_tracker") {
-    return TrackerType::PEDESTRIAN_AND_BICYCLE;
-  }
-  if (tracker_name == "pedestrian_tracker") return TrackerType::PEDESTRIAN;
-  if (tracker_name == "bicycle_tracker") return TrackerType::BICYCLE;
-  if (tracker_name == "multi_vehicle_tracker") return TrackerType::MULTIPLE_VEHICLE;
-  if (tracker_name == "general_vehicle_tracker") return TrackerType::GENERAL_VEHICLE;
-  if (tracker_name == "normal_vehicle_tracker") return TrackerType::NORMAL_VEHICLE;
-  if (tracker_name == "big_vehicle_tracker") return TrackerType::BIG_VEHICLE;
-  if (tracker_name == "vehicle_tracker") return TrackerType::VEHICLE;
-  if (tracker_name == "polygon_tracker") return TrackerType::POLYGON;
-  return std::nullopt;
-}
 
 class Tracker
 {
@@ -182,7 +110,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
-  virtual TrackerType getTrackerType() const { return tracker_type_; }
+  virtual types::TrackerType getTrackerType() const { return tracker_type_; }
   int getTrackerPriority() const { return static_cast<int>(getTrackerType()); }
 
   object_model::Label getHighestProbLabel() const
@@ -226,7 +154,7 @@ public:
 
 protected:
   types::DynamicObject object_;
-  TrackerType tracker_type_{TrackerType::POLYGON};
+  types::TrackerType tracker_type_{types::TrackerType::POLYGON};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {

@@ -59,8 +59,8 @@ struct AssociatorConfig
     }
   };
 
-  using TrackerBoolMap = std::unordered_map<TrackerType, bool, EnumClassHash>;
-  using TrackerDoubleMap = std::unordered_map<TrackerType, double, EnumClassHash>;
+  using TrackerBoolMap = std::unordered_map<types::TrackerType, bool, EnumClassHash>;
+  using TrackerDoubleMap = std::unordered_map<types::TrackerType, double, EnumClassHash>;
   using LabelDoubleMap = std::unordered_map<object_model::Label, double, EnumClassHash>;
   using LabelToTrackerBoolMap =
     std::unordered_map<object_model::Label, TrackerBoolMap, EnumClassHash>;
@@ -90,7 +90,7 @@ struct PreparationData
 {
   std::vector<types::DynamicObject> tracked_objects;
   std::vector<object_model::Label> tracker_labels;
-  std::vector<TrackerType> tracker_types;
+  std::vector<types::TrackerType> tracker_types;
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
 
@@ -130,9 +130,9 @@ public:
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
-    const TrackerType tracker_type,
-    const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
-    const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
+    const types::TrackerType tracker_type, const types::DynamicObject & measurement_object,
+    const object_model::Label measurement_label, const InverseCovariance2D & inv_cov,
+    bool & has_significant_shape_change) const;
 
   types::AssociationData calcAssociationData(
     const types::DynamicObjectList & measurements,

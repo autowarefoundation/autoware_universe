@@ -169,25 +169,25 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   if (config_.tracker_map.count(label) != 0) {
     const auto tracker_type = config_.tracker_map.at(label);
     switch (tracker_type) {
-      case TrackerType::MULTIPLE_VEHICLE:
+      case types::TrackerType::MULTIPLE_VEHICLE:
         return std::make_shared<MultipleVehicleTracker>(time, object);
-      case TrackerType::GENERAL_VEHICLE:
+      case types::TrackerType::GENERAL_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::general_vehicle, time, object);
-      case TrackerType::PEDESTRIAN_AND_BICYCLE:
+      case types::TrackerType::PEDESTRIAN_AND_BICYCLE:
         return std::make_shared<PedestrianAndBicycleTracker>(time, object);
-      case TrackerType::NORMAL_VEHICLE:
+      case types::TrackerType::NORMAL_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::normal_vehicle, time, object);
-      case TrackerType::PEDESTRIAN:
+      case types::TrackerType::PEDESTRIAN:
         return std::make_shared<PedestrianTracker>(time, object);
-      case TrackerType::BICYCLE:
+      case types::TrackerType::BICYCLE:
         return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
-      case TrackerType::BIG_VEHICLE:
+      case types::TrackerType::BIG_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
-      case TrackerType::POLYGON:
+      case types::TrackerType::POLYGON:
         return std::make_shared<PolygonTracker>(
           time, object, config_.enable_unknown_object_velocity_estimation,
           config_.enable_unknown_object_motion_output);
-      case TrackerType::PASS_THROUGH:
+      case types::TrackerType::PASS_THROUGH:
         return std::make_shared<PassThroughTracker>(time, object);
       default:
         return std::make_shared<PolygonTracker>(

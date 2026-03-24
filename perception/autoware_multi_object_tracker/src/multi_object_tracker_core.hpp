@@ -36,6 +36,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -54,7 +55,8 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  std::unordered_map<object_model::Label, std::vector<TrackerType>, AssociatorConfig::EnumClassHash>
+  std::unordered_map<
+    object_model::Label, std::vector<types::TrackerType>, AssociatorConfig::EnumClassHash>
     can_assign_types_map;
   AssociatorConfig::LabelToTrackerDoubleMap max_dist_map;
   AssociatorConfig::LabelToTrackerDoubleMap max_area_map;

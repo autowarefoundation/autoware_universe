@@ -36,7 +36,7 @@ constexpr double INVALID_SCORE = 0.0;
 bool getCanAssign(
   const autoware::multi_object_tracker::AssociatorConfig::LabelToTrackerBoolMap & can_assign_map,
   const autoware::multi_object_tracker::object_model::Label measurement_label,
-  const autoware::multi_object_tracker::TrackerType tracker_type)
+  const autoware::multi_object_tracker::types::TrackerType tracker_type)
 {
   const auto measurement_it = can_assign_map.find(measurement_label);
   if (measurement_it == can_assign_map.end()) {
@@ -52,8 +52,7 @@ bool getCanAssign(
 double getAssociationValue(
   const autoware::multi_object_tracker::AssociatorConfig::LabelToTrackerDoubleMap & values,
   const autoware::multi_object_tracker::object_model::Label measurement_label,
-  const autoware::multi_object_tracker::TrackerType tracker_type,
-  const double fallback)
+  const autoware::multi_object_tracker::types::TrackerType tracker_type, const double fallback)
 {
   const auto measurement_it = values.find(measurement_label);
   if (measurement_it == values.end()) {
@@ -78,14 +77,6 @@ double getLabelValue(
   return measurement_it->second;
 }
 
-bool isVehicleTrackerType(const autoware::multi_object_tracker::TrackerType tracker_type)
-{
-  using autoware::multi_object_tracker::TrackerType;
-  return tracker_type == TrackerType::MULTIPLE_VEHICLE ||
-         tracker_type == TrackerType::GENERAL_VEHICLE ||
-         tracker_type == TrackerType::NORMAL_VEHICLE ||
-         tracker_type == TrackerType::BIG_VEHICLE || tracker_type == TrackerType::VEHICLE;
-}
 }  // namespace
 
 namespace autoware::multi_object_tracker
@@ -379,9 +370,9 @@ std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
 
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
-  const TrackerType tracker_type,
-  const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
-  const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
+  const types::TrackerType tracker_type, const types::DynamicObject & measurement_object,
+  const object_model::Label measurement_label, const InverseCovariance2D & inv_cov,
+  bool & has_significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
