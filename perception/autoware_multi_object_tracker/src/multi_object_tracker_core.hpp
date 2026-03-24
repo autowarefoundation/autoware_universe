@@ -62,8 +62,8 @@ struct MultiObjectTrackerParameters
   AssociatorConfig::LabelToTrackerDoubleMap min_area_map;
   AssociatorConfig::LabelToTrackerDoubleMap min_iou_map;
   std::map<std::string, std::string> tracker_type_map;
-  std::vector<double> pruning_giou_thresholds;
-  std::vector<double> pruning_distance_thresholds;
+  TrackedLabelThresholds pruning_giou_thresholds;
+  TrackedLabelThresholds pruning_distance_thresholds;
 
   // Induced parameters
   TrackerProcessorConfig processor_config;

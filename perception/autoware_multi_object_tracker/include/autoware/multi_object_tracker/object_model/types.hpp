@@ -45,7 +45,6 @@
 
 namespace autoware::multi_object_tracker
 {
-
 namespace types
 {
 

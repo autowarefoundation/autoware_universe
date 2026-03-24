@@ -141,9 +141,31 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.processor_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
+  const auto declare_tracked_label_thresholds =
+    [this](const std::string & parameter_namespace) -> TrackedLabelThresholds {
+    TrackedLabelThresholds thresholds;
+    thresholds.unknown = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::UNKNOWN));
+    thresholds.car = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::CAR));
+    thresholds.truck = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::TRUCK));
+    thresholds.bus = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::BUS));
+    thresholds.trailer = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::TRAILER));
+    thresholds.motorcycle = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::MOTORCYCLE));
+    thresholds.bicycle = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::BICYCLE));
+    thresholds.pedestrian = declare_parameter<double>(
+      parameter_namespace + "." + object_model::toString(object_model::Label::PEDESTRIAN));
+    return thresholds;
+  };
+
   // pruning parameters
   params_.pruning_giou_thresholds =
-    declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
+    declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
   params_.processor_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
   params_.processor_config.pruning_moving_object_speed =
@@ -153,7 +175,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // overlap distance threshold
   params_.pruning_distance_thresholds =
-    declare_parameter<std::vector<double>>("pruning_distance_thresholds");
+    declare_tracked_label_thresholds("pruning_distance_thresholds");
   params_.processor_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
   params_.processor_config.enable_unknown_object_motion_output =

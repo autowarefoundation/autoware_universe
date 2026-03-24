@@ -378,12 +378,10 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     });
 
   // Create a map for search distance squared per label
-  const size_t label_size = config_.pruning_distance_thresholds.size();
-  std::vector<double> search_distance_sq_per_label(label_size, 0.0);
-  for (size_t i = 0; i < label_size; ++i) {
-    const auto label = object_model::toLabel(static_cast<std::uint8_t>(i));
-    search_distance_sq_per_label[i] =
-      config_.pruning_distance_thresholds.at(label) * config_.pruning_distance_thresholds.at(label);
+  std::unordered_map<Label, double> search_distance_sq_per_label;
+  search_distance_sq_per_label.reserve(config_.pruning_distance_thresholds.size());
+  for (const auto & [label, threshold] : config_.pruning_distance_thresholds) {
+    search_distance_sq_per_label[label] = threshold * threshold;
   }
 
   // Build spatial index for quick neighbor lookup
@@ -418,7 +416,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     nearby.reserve(16);  // Reasonable initial capacity
 
     Point p1(data1.object.pose.position.x, data1.object.pose.position.y);
-    double max_search_dist_sq = search_distance_sq_per_label[static_cast<size_t>(data1.label)];
+    const double max_search_dist_sq = search_distance_sq_per_label.at(data1.label);
 
     // Query R-tree with circle
     rtree.query(

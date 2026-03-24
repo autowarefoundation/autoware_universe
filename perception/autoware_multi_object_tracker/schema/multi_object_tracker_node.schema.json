@@ -59,6 +59,112 @@
       },
       "required": ["car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
     },
+    "pruning_generalized_iou_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "car": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "truck": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "bus": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "trailer": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "motorcycle": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "bicycle": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "pedestrian": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian"
+      ],
+      "description": "Generalized IoU threshold for each tracked class."
+    },
+    "pruning_distance_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "car": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "truck": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "bus": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "trailer": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "motorcycle": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "bicycle": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "pedestrian": {
+          "type": "number",
+          "minimum": 0.0
+        }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian"
+      ],
+      "description": "Overlap distance threshold for each tracked class."
+    },
     "multi_object_tracker_node": {
       "type": "object",
       "properties": {
@@ -116,14 +222,17 @@
           "default": 0.001
         },
         "pruning_generalized_iou_thresholds": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": -1.0,
-            "maximum": 1.0
-          },
-          "description": "Generalized IoU threshold for each class.",
-          "default": [-0.3, -0.4, -0.6, -0.6, -0.6, -0.1, -0.1, -0.1]
+          "$ref": "#/definitions/pruning_generalized_iou_thresholds",
+          "default": {
+            "unknown": -0.3,
+            "car": -0.4,
+            "truck": -0.6,
+            "bus": -0.6,
+            "trailer": -0.6,
+            "motorcycle": -0.1,
+            "bicycle": -0.1,
+            "pedestrian": -0.1
+          }
         },
         "pruning_static_object_speed": {
           "type": "number",
@@ -141,13 +250,17 @@
           "default": 0.0
         },
         "pruning_distance_thresholds": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0.0
-          },
-          "description": "Overlap distance threshold for each class.",
-          "default": [9.0, 5.0, 9.0, 9.0, 9.0, 4.0, 3.0, 2.0]
+          "$ref": "#/definitions/pruning_distance_thresholds",
+          "default": {
+            "unknown": 9.0,
+            "car": 5.0,
+            "truck": 9.0,
+            "bus": 9.0,
+            "trailer": 9.0,
+            "motorcycle": 4.0,
+            "bicycle": 3.0,
+            "pedestrian": 2.0
+          }
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -204,6 +317,7 @@
         "pruning_static_object_speed",
         "pruning_moving_object_speed",
         "pruning_static_iou_threshold",
+        "pruning_distance_thresholds",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

@@ -18,7 +18,6 @@
 
 #include <tf2_ros/create_timer_ros.h>
 
-#include <cstdint>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -100,15 +99,9 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
   // Set the pruning thresholds for processor config
-  for (size_t i = 0; i < params.pruning_giou_thresholds.size(); ++i) {
-    const auto label = object_model::toLabel(static_cast<std::uint8_t>(i));
-    params.processor_config.pruning_giou_thresholds[label] = params.pruning_giou_thresholds.at(i);
-  }
-  for (size_t i = 0; i < params.pruning_distance_thresholds.size(); ++i) {
-    const auto label = object_model::toLabel(static_cast<std::uint8_t>(i));
-    params.processor_config.pruning_distance_thresholds[label] =
-      params.pruning_distance_thresholds.at(i);
-  }
+  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.toLabelMap();
+  params.processor_config.pruning_distance_thresholds =
+    params.pruning_distance_thresholds.toLabelMap();
 
   params.associator_config.can_assign_map.clear();
   params.associator_config.max_dist_map.clear();
