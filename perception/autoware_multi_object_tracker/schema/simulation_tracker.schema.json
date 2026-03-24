@@ -3,48 +3,50 @@
   "title": "Parameters for Simulation Tracker Node",
   "type": "object",
   "definitions": {
+    "tracker_type": {
+      "type": "string",
+      "description": "Tracker model for object classes.",
+      "default": "pass_through_tracker"
+    },
     "simulation_tracker_node": {
       "type": "object",
       "properties": {
-        "car_tracker": {
-          "type": "string",
-          "description": "Tracker model for car class.",
-          "default": "pass_through_tracker"
-        },
-        "truck_tracker": {
-          "type": "string",
-          "description": "Tracker model for truck class.",
-          "default": "pass_through_tracker"
-        },
-        "bus_tracker": {
-          "type": "string",
-          "description": "Tracker model for bus class.",
-          "default": "pass_through_tracker"
-        },
-        "pedestrian_tracker": {
-          "type": "string",
-          "description": "Tracker model for pedestrian class.",
-          "default": "pass_through_tracker"
-        },
-        "bicycle_tracker": {
-          "type": "string",
-          "description": "Tracker model for bicycle class.",
-          "default": "pass_through_tracker"
-        },
-        "motorcycle_tracker": {
-          "type": "string",
-          "description": "Tracker model for motorcycle class.",
-          "default": "pass_through_tracker"
+        "initial_tracker": {
+          "type": "object",
+          "properties": {
+            "car": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for car class."
+            },
+            "truck": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for truck class."
+            },
+            "bus": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for bus class."
+            },
+            "trailer": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for trailer class."
+            },
+            "pedestrian": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for pedestrian class."
+            },
+            "bicycle": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for bicycle class."
+            },
+            "motorcycle": {
+              "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+              "description": "Tracker model for motorcycle class."
+            }
+          },
+          "required": ["car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
         }
       },
-      "required": [
-        "car_tracker",
-        "truck_tracker",
-        "bus_tracker",
-        "pedestrian_tracker",
-        "bicycle_tracker",
-        "motorcycle_tracker"
-      ]
+      "required": ["initial_tracker"]
     }
   },
   "properties": {

@@ -23,8 +23,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -73,16 +73,17 @@ void process_parameters(MultiObjectTrackerParameters & params)
 {
   using Label = object_model::Label;
 
-  auto getTrackerType = [&params](const std::string & tracker_key) -> TrackerType {
-    const auto tracker_name_it = params.tracker_type_map.find(tracker_key);
+  auto getTrackerType = [&params](const std::string & classification) -> TrackerType {
+    const auto tracker_name_it = params.tracker_type_map.find(classification);
+    const auto parameter_name = "initial_tracker." + classification;
     if (tracker_name_it == params.tracker_type_map.end()) {
-      throw std::runtime_error("Missing tracker parameter: " + tracker_key);
+      throw std::runtime_error("Missing tracker parameter: " + parameter_name);
     }
 
     const auto tracker_type = toTrackerType(tracker_name_it->second);
     if (!tracker_type.has_value()) {
       throw std::runtime_error(
-        "Invalid tracker type: '" + tracker_name_it->second + "' for parameter '" + tracker_key +
+        "Invalid tracker type: '" + tracker_name_it->second + "' for parameter '" + parameter_name +
         "'. Strict string match is required.");
     }
     return *tracker_type;
@@ -90,13 +91,13 @@ void process_parameters(MultiObjectTrackerParameters & params)
 
   // Set the tracker map for processor config
   params.processor_config.tracker_map = {
-    {Label::CAR, getTrackerType("car_tracker")},
-    {Label::TRUCK, getTrackerType("truck_tracker")},
-    {Label::BUS, getTrackerType("bus_tracker")},
-    {Label::TRAILER, getTrackerType("trailer_tracker")},
-    {Label::PEDESTRIAN, getTrackerType("pedestrian_tracker")},
-    {Label::BICYCLE, getTrackerType("bicycle_tracker")},
-    {Label::MOTORCYCLE, getTrackerType("motorcycle_tracker")},
+    {Label::CAR, getTrackerType("car")},
+    {Label::TRUCK, getTrackerType("truck")},
+    {Label::BUS, getTrackerType("bus")},
+    {Label::TRAILER, getTrackerType("trailer")},
+    {Label::PEDESTRIAN, getTrackerType("pedestrian")},
+    {Label::BICYCLE, getTrackerType("bicycle")},
+    {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
   // Set the pruning thresholds for processor config
   for (size_t i = 0; i < params.pruning_giou_thresholds.size(); ++i) {
@@ -131,8 +132,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
       throw std::runtime_error(
         "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
         "' for measurement label '" + object_model::toString(measurement_label) +
-        "' is not included in association.can_assign." +
-        object_model::toString(measurement_label));
+        "' is not included in association.can_assign." + object_model::toString(measurement_label));
     }
 
     for (const auto tracker_type : allTrackerTypes()) {

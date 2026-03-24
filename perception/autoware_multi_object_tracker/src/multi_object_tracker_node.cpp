@@ -90,15 +90,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       const std::string input_channel_config_name = "input_channels." + input_channel;
 
       // input type
-      const std::string input_type_str =
-        declare_parameter<std::string>(input_channel_config_name + ".input_type", "DetectedObjects");
+      const std::string input_type_str = declare_parameter<std::string>(
+        input_channel_config_name + ".input_type", "DetectedObjects");
       if (input_type_str == "DetectedObjects") {
         input_channel_config.type = types::InputMessageType::DETECTED_OBJECTS;
       } else if (input_type_str == "TrackedObjects") {
         input_channel_config.type = types::InputMessageType::TRACKED_OBJECTS;
       } else {
         throw std::invalid_argument(
-          "Invalid input_type: " + input_type_str + ". It must be either 'DetectedObjects' or 'TrackedObjects'");
+          "Invalid input_type: " + input_type_str +
+          ". It must be either 'DetectedObjects' or 'TrackedObjects'");
       }
 
       // required parameter, but can set a default value
@@ -137,15 +138,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   // tracker type map
-  params_.tracker_type_map["car_tracker"] = declare_parameter<std::string>("car_tracker");
-  params_.tracker_type_map["truck_tracker"] = declare_parameter<std::string>("truck_tracker");
-  params_.tracker_type_map["bus_tracker"] = declare_parameter<std::string>("bus_tracker");
-  params_.tracker_type_map["trailer_tracker"] = declare_parameter<std::string>("trailer_tracker");
-  params_.tracker_type_map["pedestrian_tracker"] =
-    declare_parameter<std::string>("pedestrian_tracker");
-  params_.tracker_type_map["bicycle_tracker"] = declare_parameter<std::string>("bicycle_tracker");
-  params_.tracker_type_map["motorcycle_tracker"] =
-    declare_parameter<std::string>("motorcycle_tracker");
+  const auto declare_initial_tracker_parameter = [this](const std::string & classification) {
+    return declare_parameter<std::string>("initial_tracker." + classification);
+  };
+  params_.tracker_type_map["car"] = declare_initial_tracker_parameter("car");
+  params_.tracker_type_map["truck"] = declare_initial_tracker_parameter("truck");
+  params_.tracker_type_map["bus"] = declare_initial_tracker_parameter("bus");
+  params_.tracker_type_map["trailer"] = declare_initial_tracker_parameter("trailer");
+  params_.tracker_type_map["pedestrian"] = declare_initial_tracker_parameter("pedestrian");
+  params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
+  params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
 
   params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
   params_.processor_config.min_known_object_removal_iou =
@@ -199,12 +201,12 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   auto declare_association_parameter = [this](
-                                       const std::string & config_type,
-                                       const object_model::Label measurement_label,
-                                       const TrackerType tracker_type) {
-    const auto parameter_name =
-      "association." + config_type + "." + object_model::toString(measurement_label) + "." +
-      toString(tracker_type);
+                                         const std::string & config_type,
+                                         const object_model::Label measurement_label,
+                                         const TrackerType tracker_type) {
+    const auto parameter_name = "association." + config_type + "." +
+                                object_model::toString(measurement_label) + "." +
+                                toString(tracker_type);
     return this->declare_parameter<double>(parameter_name);
   };
 

@@ -3,127 +3,67 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
+    "tracker_type": {
+      "type": "string",
+      "enum": [
+        "pass_through_tracker",
+        "pedestrian_and_bicycle_tracker",
+        "pedestrian_tracker",
+        "bicycle_tracker",
+        "multi_vehicle_tracker",
+        "general_vehicle_tracker",
+        "normal_vehicle_tracker",
+        "big_vehicle_tracker",
+        "vehicle_tracker",
+        "polygon_tracker"
+      ]
+    },
+    "initial_tracker": {
+      "type": "object",
+      "properties": {
+        "car": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for car class.",
+          "default": "multi_vehicle_tracker"
+        },
+        "truck": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for truck class.",
+          "default": "multi_vehicle_tracker"
+        },
+        "bus": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for bus class.",
+          "default": "multi_vehicle_tracker"
+        },
+        "trailer": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for trailer class.",
+          "default": "multi_vehicle_tracker"
+        },
+        "pedestrian": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for pedestrian class.",
+          "default": "pedestrian_and_bicycle_tracker"
+        },
+        "bicycle": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for bicycle class.",
+          "default": "pedestrian_and_bicycle_tracker"
+        },
+        "motorcycle": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
+          "description": "Tracker model for motorcycle class.",
+          "default": "pedestrian_and_bicycle_tracker"
+        }
+      },
+      "required": ["car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
+    },
     "multi_object_tracker_node": {
       "type": "object",
       "properties": {
-        "car_tracker": {
-          "type": "string",
-          "description": "Tracker model for car class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "multi_vehicle_tracker"
-        },
-        "truck_tracker": {
-          "type": "string",
-          "description": "Tracker model for truck class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "multi_vehicle_tracker"
-        },
-        "bus_tracker": {
-          "type": "string",
-          "description": "Tracker model for bus class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "multi_vehicle_tracker"
-        },
-        "trailer_tracker": {
-          "type": "string",
-          "description": "Tracker model for trailer class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "multi_vehicle_tracker"
-        },
-        "pedestrian_tracker": {
-          "type": "string",
-          "description": "Tracker model for pedestrian class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "pedestrian_and_bicycle_tracker"
-        },
-        "bicycle_tracker": {
-          "type": "string",
-          "description": "Tracker model for bicycle class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "pedestrian_and_bicycle_tracker"
-        },
-        "motorcycle_tracker": {
-          "type": "string",
-          "description": "Tracker model for motorcycle class.",
-          "enum": [
-            "pass_through_tracker",
-            "pedestrian_and_bicycle_tracker",
-            "pedestrian_tracker",
-            "bicycle_tracker",
-            "multi_vehicle_tracker",
-            "general_vehicle_tracker",
-            "normal_vehicle_tracker",
-            "big_vehicle_tracker",
-            "vehicle_tracker",
-            "polygon_tracker"
-          ],
-          "default": "pedestrian_and_bicycle_tracker"
+        "initial_tracker": {
+          "$ref": "#/definitions/initial_tracker"
         },
         "publish_rate": {
           "type": "number",
@@ -251,13 +191,7 @@
         }
       },
       "required": [
-        "car_tracker",
-        "truck_tracker",
-        "bus_tracker",
-        "trailer_tracker",
-        "pedestrian_tracker",
-        "bicycle_tracker",
-        "motorcycle_tracker",
+        "initial_tracker",
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
