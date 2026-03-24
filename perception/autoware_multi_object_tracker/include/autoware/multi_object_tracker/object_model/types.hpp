@@ -48,7 +48,6 @@ namespace types
 {
 // constants
 constexpr float default_existence_probability = 0.75;
-constexpr int NUM_LABELS = 8;
 
 enum class InputMessageType : uint8_t {
   DETECTED_OBJECTS = 0,

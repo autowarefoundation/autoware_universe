@@ -48,6 +48,8 @@ struct Classification
   float probability{0.0F};
 };
 
+constexpr int NUM_LABELS = 8;
+
 constexpr std::uint8_t toMsgLabel(const Label label)
 {
   return static_cast<std::underlying_type_t<Label>>(label);

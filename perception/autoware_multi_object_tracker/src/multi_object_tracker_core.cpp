@@ -116,7 +116,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
 
   // Initialize association matrices
   auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
-    const int label_num = types::NUM_LABELS;
+    const int label_num = object_model::NUM_LABELS;
     if (vector.size() != label_num * label_num) {
       throw std::runtime_error("Invalid can_assign_matrix size");
     }
@@ -129,7 +129,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return Eigen::MatrixXi(matrix_tmp);
   };
   auto initializeMatrixDouble = [](const std::vector<double> & vector) {
-    const int label_num = types::NUM_LABELS;
+    const int label_num = object_model::NUM_LABELS;
     if (vector.size() != label_num * label_num) {
       throw std::runtime_error("Invalid association matrix configuration size");
     }

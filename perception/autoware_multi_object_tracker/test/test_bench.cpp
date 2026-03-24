@@ -71,7 +71,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
 {
   autoware::multi_object_tracker::AssociatorConfig config;
   constexpr int label_num =
-    autoware::multi_object_tracker::types::NUM_LABELS;  // Number of object classes
+    autoware::multi_object_tracker::object_model::NUM_LABELS;  // Number of object classes
   using autoware::multi_object_tracker::TrackerType;
   using Label = autoware::multi_object_tracker::object_model::Label;
 
