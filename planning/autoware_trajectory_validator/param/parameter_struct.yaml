@@ -90,6 +90,6 @@ validator:
         read_only: false
       jerk_limit:
         type: double
-        default_value: 4.0
+        default_value: 2.0
         description: jerk limit to calculate the stop distance used as trajectory length limit
         read_only: false
