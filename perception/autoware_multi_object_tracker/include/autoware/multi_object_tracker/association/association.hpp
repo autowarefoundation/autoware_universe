@@ -68,7 +68,7 @@ struct InverseCovariance2D
 struct PreparationData
 {
   std::vector<types::DynamicObject> tracked_objects;
-  std::vector<std::uint8_t> tracker_labels;
+  std::vector<object_model::Label> tracker_labels;
   std::vector<TrackerType> tracker_types;
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
@@ -97,7 +97,7 @@ private:
     const std::list<std::shared_ptr<Tracker>> & trackers);
   void processMeasurement(
     const types::DynamicObject & measurement_object, size_t measurement_idx,
-    const std::uint8_t measurement_label, const PreparationData & prep_data,
+    const object_model::Label measurement_label, const PreparationData & prep_data,
     types::AssociationData & association_data);
 
 public:
@@ -108,8 +108,8 @@ public:
   void assign(const types::AssociationData & data, types::AssociationResult & association_result);
 
   double calculateScore(
-    const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
-    const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
+    const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
+    const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
     const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 
   types::AssociationData calcAssociationData(

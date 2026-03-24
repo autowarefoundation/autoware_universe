@@ -35,7 +35,7 @@
 
 namespace autoware::multi_object_tracker
 {
-using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
+using LabelType = object_model::Label;
 
 struct TrackerProcessorConfig
 {

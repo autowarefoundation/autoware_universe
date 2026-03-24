@@ -49,12 +49,11 @@ bool PedestrianAndBicycleTracker::measure(
 bool PedestrianAndBicycleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  using Label = autoware_perception_msgs::msg::ObjectClassification;
-  const uint8_t label = getHighestProbLabel();
+  const auto label = getHighestProbLabel();
 
-  if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
+  if (label == object_model::Label::BICYCLE || label == object_model::Label::MOTORCYCLE) {
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == Label::PEDESTRIAN) {
+  } else if (label == object_model::Label::PEDESTRIAN) {
     pedestrian_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the bicycle tracker as a fallback

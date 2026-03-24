@@ -19,24 +19,118 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <type_traits>
 #include <vector>
 
 namespace autoware::multi_object_tracker::object_model
 {
 
-inline autoware_perception_msgs::msg::ObjectClassification getHighestProbClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications)
+using ClassificationMsg = autoware_perception_msgs::msg::ObjectClassification;
+
+enum class Label : std::uint8_t {
+  UNKNOWN = ClassificationMsg::UNKNOWN,
+  CAR = ClassificationMsg::CAR,
+  TRUCK = ClassificationMsg::TRUCK,
+  BUS = ClassificationMsg::BUS,
+  TRAILER = ClassificationMsg::TRAILER,
+  MOTORCYCLE = ClassificationMsg::MOTORCYCLE,
+  BICYCLE = ClassificationMsg::BICYCLE,
+  PEDESTRIAN = ClassificationMsg::PEDESTRIAN,
+  ANIMAL = ClassificationMsg::ANIMAL,
+  HAZARD = ClassificationMsg::HAZARD,
+  OVER_DRIVABLE = ClassificationMsg::OVER_DRIVABLE,
+  UNDER_DRIVABLE = ClassificationMsg::UNDER_DRIVABLE,
+};
+
+struct Classification
+{
+  Label label{Label::UNKNOWN};
+  float probability{0.0F};
+};
+
+constexpr std::uint8_t toMsgLabel(const Label label)
+{
+  return static_cast<std::underlying_type_t<Label>>(label);
+}
+
+constexpr Label toLabel(const std::uint8_t label)
+{
+  switch (label) {
+    case ClassificationMsg::CAR:
+      return Label::CAR;
+    case ClassificationMsg::TRUCK:
+      return Label::TRUCK;
+    case ClassificationMsg::BUS:
+      return Label::BUS;
+    case ClassificationMsg::TRAILER:
+      return Label::TRAILER;
+    case ClassificationMsg::MOTORCYCLE:
+      return Label::MOTORCYCLE;
+    case ClassificationMsg::BICYCLE:
+      return Label::BICYCLE;
+    case ClassificationMsg::PEDESTRIAN:
+      return Label::PEDESTRIAN;
+    case ClassificationMsg::ANIMAL:
+      return Label::ANIMAL;
+    case ClassificationMsg::HAZARD:
+      return Label::HAZARD;
+    case ClassificationMsg::OVER_DRIVABLE:
+      return Label::OVER_DRIVABLE;
+    case ClassificationMsg::UNDER_DRIVABLE:
+      return Label::UNDER_DRIVABLE;
+    case ClassificationMsg::UNKNOWN:
+    default:
+      return Label::UNKNOWN;
+  }
+}
+
+inline Classification toClassification(const ClassificationMsg & classification)
+{
+  return Classification{toLabel(classification.label), classification.probability};
+}
+
+inline std::vector<Classification> toClassifications(
+  const std::vector<ClassificationMsg> & classifications)
+{
+  std::vector<Classification> converted;
+  converted.reserve(classifications.size());
+  for (const auto & classification : classifications) {
+    converted.push_back(toClassification(classification));
+  }
+  return converted;
+}
+
+inline ClassificationMsg toClassificationMsg(const Classification & classification)
+{
+  ClassificationMsg msg;
+  msg.label = toMsgLabel(classification.label);
+  msg.probability = classification.probability;
+  return msg;
+}
+
+inline std::vector<ClassificationMsg> toClassificationMsgs(
+  const std::vector<Classification> & classifications)
+{
+  std::vector<ClassificationMsg> converted;
+  converted.reserve(classifications.size());
+  for (const auto & classification : classifications) {
+    converted.push_back(toClassificationMsg(classification));
+  }
+  return converted;
+}
+
+inline Classification getHighestProbClassification(
+  const std::vector<Classification> & classifications)
 {
   if (classifications.empty()) {
-    return autoware_perception_msgs::msg::ObjectClassification{};
+    return Classification{};
   }
   return *std::max_element(
     classifications.begin(), classifications.end(),
     [](const auto & a, const auto & b) { return a.probability < b.probability; });
 }
 
-inline std::uint8_t getHighestProbLabel(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classifications)
+inline Label getHighestProbLabel(const std::vector<Classification> & classifications)
 {
   return getHighestProbClassification(classifications).label;
 }

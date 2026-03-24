@@ -27,6 +27,7 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <map>
@@ -41,8 +42,8 @@
 namespace autoware::multi_object_tracker
 {
 using autoware_utils_debug::ScopedTimeTrack;
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
+using Label = object_model::Label;
+using LabelType = object_model::Label;
 
 TrackerProcessor::TrackerProcessor(
   const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
@@ -266,7 +267,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   {
     std::shared_ptr<Tracker> tracker;
     types::DynamicObject object;
-    uint8_t label;
+    Label label;
     bool is_unknown;
     int tracker_priority;
     int measurement_count;
@@ -276,7 +277,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     explicit TrackerData(const std::shared_ptr<Tracker> & t)
     : tracker(t),
       object(),
-      label(0),
+      label(Label::UNKNOWN),
       is_unknown(false),
       tracker_priority(0),
       measurement_count(0),
@@ -380,9 +381,9 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   const size_t label_size = config_.pruning_distance_thresholds.size();
   std::vector<double> search_distance_sq_per_label(label_size, 0.0);
   for (size_t i = 0; i < label_size; ++i) {
+    const auto label = object_model::toLabel(static_cast<std::uint8_t>(i));
     search_distance_sq_per_label[i] =
-      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i)) *
-      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i));
+      config_.pruning_distance_thresholds.at(label) * config_.pruning_distance_thresholds.at(label);
   }
 
   // Build spatial index for quick neighbor lookup
@@ -417,7 +418,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     nearby.reserve(16);  // Reasonable initial capacity
 
     Point p1(data1.object.pose.position.x, data1.object.pose.position.y);
-    double max_search_dist_sq = search_distance_sq_per_label[data1.label];
+    double max_search_dist_sq = search_distance_sq_per_label[static_cast<size_t>(data1.label)];
 
     // Query R-tree with circle
     rtree.query(

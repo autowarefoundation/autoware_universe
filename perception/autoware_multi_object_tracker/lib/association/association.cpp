@@ -45,7 +45,7 @@ struct MeasurementWithIndex
   MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
 };
 using autoware_utils_debug::ScopedTimeTrack;
-using Label = autoware_perception_msgs::msg::ObjectClassification;
+using Label = object_model::Label;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
@@ -220,11 +220,12 @@ PreparationData DataAssociation::prepareAssociationData(
 
 void DataAssociation::processMeasurement(
   const types::DynamicObject & measurement_object, size_t measurement_idx,
-  const std::uint8_t measurement_label, const PreparationData & prep_data,
+  const object_model::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
   // Get pre-computed maximum squared distance for this measurement class
-  const double max_squared_dist = max_squared_dist_per_class_[measurement_label];
+  const double max_squared_dist =
+    max_squared_dist_per_class_[static_cast<size_t>(measurement_label)];
 
   // Use circle query instead of box for more precise filtering
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
@@ -301,13 +302,6 @@ types::AssociationData DataAssociation::calcAssociationData(
 
     const auto measurement_label =
       object_model::getHighestProbLabel(measurement_with_idx.object.classification);
-    if (measurement_label >= types::NUM_LABELS) {
-      RCLCPP_WARN(
-        rclcpp::get_logger("DataAssociation"),
-        "Measurement label %d is out of range. Skipping association.",
-        static_cast<int>(measurement_label));
-      continue;
-    }
 
     processMeasurement(
       measurement_with_idx.object, measurement_with_idx.index, measurement_label, prep_data,
@@ -329,8 +323,8 @@ std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
 }
 
 double DataAssociation::calculateScore(
-  const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
-  const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
+  const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
+  const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
   const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
@@ -344,7 +338,8 @@ double DataAssociation::calculateScore(
     return (generalized_iou - generalized_iou_threshold) / (1.0 - generalized_iou_threshold);
   }
 
-  const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
+  const double max_dist_sq =
+    config_.max_dist_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
   const double dist_sq = dx * dx + dy * dy;
@@ -358,8 +353,10 @@ double DataAssociation::calculateScore(
                                   tracker_label == Label::TRUCK || tracker_label == Label::TRAILER;
   if (!is_vehicle_tracker) {
     // area gate
-    const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
-    const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
+    const double max_area =
+      config_.max_area_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
+    const double min_area =
+      config_.min_area_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
     if (area_meas < min_area || area_meas > max_area) return INVALID_SCORE;
 
     // mahalanobis dist gate
@@ -372,7 +369,8 @@ double DataAssociation::calculateScore(
     if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
   }
 
-  const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
+  const double min_iou =
+    config_.min_iou_matrix(static_cast<int>(tracker_label), static_cast<int>(measurement_label));
 
   // use 1d iou for pedestrian, 3d giou for other objects if both extensions are trustable
   // otherwise use 2d giou

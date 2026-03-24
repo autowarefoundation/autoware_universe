@@ -32,27 +32,28 @@ namespace uncertainty
 {
 using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
-object_model::StateCovariance covarianceFromObjectClass(const ObjectClassification & object_class)
+object_model::StateCovariance covarianceFromObjectClass(
+  const object_model::Classification & object_class)
 {
   const auto & label = object_class.label;
   ObjectModel obj_class_model(object_model::ObjectModelType::Unknown);
   switch (label) {
-    case ObjectClassification::CAR:
+    case object_model::Label::CAR:
       obj_class_model = object_model::normal_vehicle;
       break;
-    case ObjectClassification::BUS:
-    case ObjectClassification::TRUCK:
-    case ObjectClassification::TRAILER:
+    case object_model::Label::BUS:
+    case object_model::Label::TRUCK:
+    case object_model::Label::TRAILER:
       obj_class_model = object_model::big_vehicle;
       break;
-    case ObjectClassification::BICYCLE:
-    case ObjectClassification::MOTORCYCLE:
+    case object_model::Label::BICYCLE:
+    case object_model::Label::MOTORCYCLE:
       obj_class_model = object_model::bicycle;
       break;
-    case ObjectClassification::PEDESTRIAN:
+    case object_model::Label::PEDESTRIAN:
       obj_class_model = object_model::pedestrian;
       break;
-    case ObjectClassification::UNKNOWN:
+    case object_model::Label::UNKNOWN:
       obj_class_model = object_model::unknown;
       break;
     default:
@@ -63,7 +64,7 @@ object_model::StateCovariance covarianceFromObjectClass(const ObjectClassificati
 }
 
 types::DynamicObject modelUncertaintyByClass(
-  const types::DynamicObject & object, const ObjectClassification & object_class)
+  const types::DynamicObject & object, const object_model::Classification & object_class)
 {
   types::DynamicObject updating_object = object;
 
@@ -119,7 +120,7 @@ types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detec
       updating_objects.objects.push_back(object);
       continue;
     }
-    const ObjectClassification & object_class =
+    const object_model::Classification & object_class =
       object_model::getHighestProbClassification(object.classification);
     updating_objects.objects.push_back(modelUncertaintyByClass(object, object_class));
   }

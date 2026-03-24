@@ -183,8 +183,7 @@ bool Tracker::updateWithMeasurement(
   // Update classification
   if (
     channel_info.trust_classification &&
-    object_model::getHighestProbLabel(object.classification) !=
-      autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    object_model::getHighestProbLabel(object.classification) != object_model::Label::UNKNOWN) {
     updateClassification(object.classification);
   }
 
@@ -334,8 +333,7 @@ bool Tracker::createPseudoMeasurement(
   return true;
 }
 
-void Tracker::updateClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
+void Tracker::updateClassification(const std::vector<object_model::Classification> & input)
 {
   // classification algorithm:
   // 1. Update the matched classification probability
@@ -626,7 +624,7 @@ float Tracker::getKnownObjectProbability() const
   // find unknown probability
   float unknown_probability = 0.0;
   for (const auto & a_class : object_.classification) {
-    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    if (a_class.label == object_model::Label::UNKNOWN) {
       unknown_probability = a_class.probability;
       break;
     }

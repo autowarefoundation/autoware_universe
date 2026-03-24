@@ -70,12 +70,13 @@ void MultipleVehicleTracker::setObjectShape(const autoware_perception_msgs::msg:
 bool MultipleVehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  using Label = autoware_perception_msgs::msg::ObjectClassification;
-  const uint8_t label = getHighestProbLabel();
+  const auto label = getHighestProbLabel();
 
-  if (label == Label::CAR) {
+  if (label == object_model::Label::CAR) {
     normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == Label::BUS || label == Label::TRUCK || label == Label::TRAILER) {
+  } else if (
+    label == object_model::Label::BUS || label == object_model::Label::TRUCK ||
+    label == object_model::Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the normal vehicle tracker as a fallback

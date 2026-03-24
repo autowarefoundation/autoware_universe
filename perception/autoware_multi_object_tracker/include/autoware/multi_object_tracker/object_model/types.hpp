@@ -15,12 +15,13 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-#include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
@@ -57,16 +58,16 @@ enum class InputMessageType : uint8_t {
 // channel configuration
 struct InputChannel
 {
-  uint index;                                 // index of the channel
-  InputMessageType type = InputMessageType::DETECTED_OBJECTS; // type of the input message
-  bool is_enabled = true;                     // enable the channel
-  std::string long_name = "Detected Object";  // full name of the detection
-  std::string short_name = "DET";             // abbreviation of the name
-  bool is_spawn_enabled = true;               // enable spawn of the object
-  bool trust_existence_probability = false;   // trust object existence probability
-  bool trust_extension = true;                // trust object extension
-  bool trust_classification = true;           // trust object classification
-  bool trust_orientation = true;              // trust object orientation(yaw)
+  uint index;                                                  // index of the channel
+  InputMessageType type = InputMessageType::DETECTED_OBJECTS;  // type of the input message
+  bool is_enabled = true;                                      // enable the channel
+  std::string long_name = "Detected Object";                   // full name of the detection
+  std::string short_name = "DET";                              // abbreviation of the name
+  bool is_spawn_enabled = true;                                // enable spawn of the object
+  bool trust_existence_probability = false;                    // trust object existence probability
+  bool trust_extension = true;                                 // trust object extension
+  bool trust_classification = true;                            // trust object classification
+  bool trust_orientation = true;                               // trust object orientation(yaw)
 };
 
 struct ExistenceProbability
@@ -104,7 +105,7 @@ struct DynamicObject
   std::vector<ExistenceProbability> existence_probabilities;
 
   // object classification
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;
+  std::vector<object_model::Classification> classification;
 
   // object kinematics (pose and twist)
   ObjectKinematics kinematics;

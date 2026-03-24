@@ -64,7 +64,7 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
+  std::vector<object_model::Classification> classification_;
 
   // conditioned update configs
   // EMA/ema below are abbreviation for exponential moving average
@@ -92,10 +92,7 @@ public:
   {
     return existence_probabilities_;
   }
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
-  {
-    return classification_;
-  }
+  std::vector<object_model::Classification> getClassification() const { return classification_; }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
   void mergeExistenceProbabilities(
@@ -106,8 +103,7 @@ public:
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info, bool has_significant_shape_change = false);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
-  void updateClassification(
-    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
+  void updateClassification(const std::vector<object_model::Classification> & classification);
   virtual void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
   {
     object_.shape = shape;
@@ -129,7 +125,7 @@ public:
   virtual TrackerType getTrackerType() const { return tracker_type_; }
   int getTrackerPriority() const { return static_cast<int>(getTrackerType()); }
 
-  std::uint8_t getHighestProbLabel() const
+  object_model::Label getHighestProbLabel() const
   {
     return object_model::getHighestProbLabel(object_.classification);
   }
