@@ -172,9 +172,8 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutMapAndSignals)
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutMap)
 {
   auto points = create_trajectory(0.0, 1.0);
-  set_traffic_light_signal(0, TrafficLightElement::RED);
-  context_.lanelet_map = nullptr;
   // dummy map and light signal
+  context_.lanelet_map = nullptr;
   set_traffic_light_signal(0, TrafficLightElement::RED);
   EXPECT_FALSE(filter_->is_feasible(points, context_))
     << "Should not be feasible without a map (cannot verify whether a trajectory crosses a traffic "
