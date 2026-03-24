@@ -128,8 +128,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
   visualization_msgs::msg::MarkerArray area_markers;
   int area_id = 0;
 
-  const std_msgs::msg::ColorRGBA cl_end =
-    autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
+  const std_msgs::msg::ColorRGBA cl_end = autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
   const std_msgs::msg::ColorRGBA cl_goal =
     autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
