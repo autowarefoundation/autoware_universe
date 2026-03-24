@@ -88,20 +88,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       input_channel_config.is_enabled = true;
 
       const std::string input_channel_config_name = "input_channels." + input_channel;
-
-      // input type
-      const std::string input_type_str = declare_parameter<std::string>(
-        input_channel_config_name + ".input_type", "DetectedObjects");
-      if (input_type_str == "DetectedObjects") {
-        input_channel_config.type = types::InputMessageType::DETECTED_OBJECTS;
-      } else if (input_type_str == "TrackedObjects") {
-        input_channel_config.type = types::InputMessageType::TRACKED_OBJECTS;
-      } else {
-        throw std::invalid_argument(
-          "Invalid input_type: " + input_type_str +
-          ". It must be either 'DetectedObjects' or 'TrackedObjects'");
-      }
-
       // required parameter, but can set a default value
       input_channel_config.is_spawn_enabled =
         declare_parameter<bool>(input_channel_config_name + ".flags.can_spawn_new_tracker", true);
