@@ -26,6 +26,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -46,15 +47,14 @@ public:
   // cSpell:ignore probs
   bool segment(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-    bool should_publish_segmented_pointcloud, bool should_publish_ground_segmented_pointcloud,
-    bool should_publish_probs_pointcloud, std::unordered_map<std::string, double> & proc_timing);
+    bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
+    bool should_publish_filtered_pointcloud, std::unordered_map<std::string, double> & proc_timing);
 
   void setPublishSegmentedPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
-  void setPublishGroundSegmentedPointcloud(
+  void setPublishVisualizationPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
-  // cSpell:ignore Probs
-  void setPublishProbsPointcloud(
+  void setPublishFilteredPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
 protected:
@@ -62,6 +62,7 @@ protected:
   void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
   void allocateMessages();
+  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
   bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
 
@@ -69,7 +70,7 @@ protected:
 
   bool postProcess(
     const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
-    bool should_publish_ground_segmented_pointcloud, bool should_publish_probs_pointcloud);
+    bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
@@ -80,23 +81,27 @@ protected:
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
     publish_segmented_pointcloud_{nullptr};
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_ground_segmented_pointcloud_{nullptr};
+    publish_visualization_pointcloud_{nullptr};
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_probs_pointcloud_{nullptr};
+    publish_filtered_pointcloud_{nullptr};
 
   std::vector<sensor_msgs::msg::PointField> segmented_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> ground_segmented_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> probs_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> visualization_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> filtered_pointcloud_fields_;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> segmented_points_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> ground_segmented_points_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> probs_points_msg_ptr_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> visualization_points_msg_ptr_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> filtered_points_msg_ptr_{nullptr};
 
   PTv3Config config_;
+  std::once_flag init_cloud_;
+  CloudFormat input_format_{CloudFormat::UNKNOWN};
+  CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
 
-  // pre-process inputs
+  // Preprocess outputs
   std::int64_t num_voxels_{0};
 
+  CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};

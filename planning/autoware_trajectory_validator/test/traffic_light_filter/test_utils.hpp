@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef TEST_UTILS_HPP_
-#define TEST_UTILS_HPP_
+#ifndef TRAFFIC_LIGHT_FILTER__TEST_UTILS_HPP_
+#define TRAFFIC_LIGHT_FILTER__TEST_UTILS_HPP_
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
@@ -53,4 +53,4 @@ inline std::shared_ptr<lanelet::LaneletMap> create_map(lanelet::Id light_id, dou
 }
 }  // namespace utils
 
-#endif  // TEST_UTILS_HPP_
+#endif  // TRAFFIC_LIGHT_FILTER__TEST_UTILS_HPP_

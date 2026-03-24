@@ -7,6 +7,7 @@
   <arg name="input_odometry" default="~/input/odometry"/>
   <arg name="input_objects" default="~/input/objects"/>
   <arg name="input_acceleration" default="~/input/acceleration"/>
+  <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
 
   <node pkg="autoware_trajectory_validator" exec="autoware_trajectory_validator_node" name="trajectory_validator_node" output="screen">
     <param from="$(var trajectory_validator_param_path)" allow_substs="true"/>
@@ -16,5 +17,6 @@
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
+    <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
   </node>
 </launch>
