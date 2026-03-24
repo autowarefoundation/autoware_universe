@@ -4,100 +4,68 @@
   "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware_universe/pull/8205#issuecomment-2255074224.",
   "type": "object",
   "definitions": {
+    "ego_crop_box": {
+      "type": "object",
+      "properties": {
+        "reference_frame": {
+          "type": "string",
+          "description": "TF frame for ego crop box bounds (e.g. base_link)."
+        },
+        "min_x": { "type": "number", "description": "Min X bound of crop box in reference frame." },
+        "min_y": { "type": "number", "description": "Min Y bound of crop box in reference frame." },
+        "min_z": { "type": "number", "description": "Min Z bound of crop box in reference frame." },
+        "max_x": { "type": "number", "description": "Max X bound of crop box in reference frame." },
+        "max_y": { "type": "number", "description": "Max Y bound of crop box in reference frame." },
+        "max_z": { "type": "number", "description": "Max Z bound of crop box in reference frame." }
+      },
+      "required": ["reference_frame", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z"],
+      "additionalProperties": false
+    },
+    "filter": {
+      "type": "object",
+      "properties": {
+        "class_probability_threshold": {
+          "type": "number",
+          "description": "If any of the filter classes has probability >= this value, the point is excluded from the filtered output cloud.",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "classes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Class names to filter out when their probability exceeds the threshold.",
+          "uniqueItems": true
+        },
+        "output_format": {
+          "type": "string",
+          "description": "Filtered output point format. Empty string preserves the input format.",
+          "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        },
+        "ego_crop_box": {
+          "$ref": "#/definitions/ego_crop_box"
+        }
+      },
+      "required": ["class_probability_threshold", "classes", "output_format", "ego_crop_box"],
+      "additionalProperties": false
+    },
     "frnet": {
       "type": "object",
       "properties": {
         "onnx_path": {
           "type": "string",
-          "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/frnet.onnx",
+          "description": "Path to ONNX model file.",
           "pattern": "\\.onnx$"
         },
         "trt_precision": {
           "type": "string",
-          "description": "A precision of TensorRT engine.",
-          "default": "fp16",
+          "description": "TensorRT engine precision.",
           "enum": ["fp16", "fp32"]
         },
-        "fov_up_deg": {
-          "type": "number",
-          "description": "LiDAR's upper elevation angle in degrees.",
-          "default": "10.0",
-          "minimum": -90.0,
-          "maximum": 90.0
-        },
-        "fov_down_deg": {
-          "type": "number",
-          "description": "LiDAR's lower elevation angle in degrees.",
-          "default": "-30.0",
-          "minimum": -90.0,
-          "maximum": 90.0
-        },
-        "frustum_width": {
-          "type": "integer",
-          "description": "Width of the FRNet frustum in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "frustum_height": {
-          "type": "integer",
-          "description": "Height of the FRNet frustum in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "interpolation_width": {
-          "type": "integer",
-          "description": "Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "interpolation_height": {
-          "type": "integer",
-          "description": "Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
-          "default": "480",
-          "minimum": 1
-        },
-        "score_threshold": {
-          "type": "number",
-          "description": "A threshold value for the score model segmentation result. If the score is lower than this value, the point will obtain the 'unknown' class ID.",
-          "default": "0.0"
-        },
-        "excluded_class_names": {
-          "type": "array",
-          "description": "A list of class names to be excluded in filtered output cloud.",
-          "items": {
-            "type": "string"
-          },
-          "default": ["driveable_surface"]
-        },
-        "palette": {
-          "type": "array",
-          "description": "A sequence of RGB values for each class name. The length of the array must be 3 times the number of class names.",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "default": [
-            255, 120, 50, 255, 192, 203, 255, 255, 0, 0, 150, 245, 0, 255, 255, 255, 127, 0, 255, 0,
-            0, 255, 240, 150, 135, 60, 0, 160, 32, 240, 255, 0, 255, 139, 137, 137, 75, 0, 75, 150,
-            240, 80, 230, 230, 250, 0, 175, 0, 0, 0, 0
-          ]
+        "filter": {
+          "$ref": "#/definitions/filter"
         }
       },
-      "required": [
-        "onnx_path",
-        "trt_precision",
-        "fov_up_deg",
-        "fov_down_deg",
-        "frustum_width",
-        "frustum_height",
-        "interpolation_width",
-        "interpolation_height",
-        "score_threshold",
-        "excluded_class_names",
-        "palette"
-      ],
+      "required": ["onnx_path", "trt_precision", "filter"],
       "additionalProperties": false
     }
   },
