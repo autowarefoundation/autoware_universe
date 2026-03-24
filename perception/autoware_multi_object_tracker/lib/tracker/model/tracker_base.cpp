@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -183,7 +183,7 @@ bool Tracker::updateWithMeasurement(
   // Update classification
   if (
     channel_info.trust_classification &&
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
+    object_model::getHighestProbLabel(object.classification) !=
       autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
     updateClassification(object.classification);
   }

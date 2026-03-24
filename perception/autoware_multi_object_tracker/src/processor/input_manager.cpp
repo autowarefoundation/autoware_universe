@@ -14,11 +14,10 @@
 
 #include "input_manager.hpp"
 
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
-
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -98,8 +97,7 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
 
   // object shape processing
   for (auto & object : dynamic_objects.objects) {
-    const auto label =
-      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    const auto label = object_model::getHighestProbLabel(object.classification);
     if (label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
       continue;
     }

@@ -21,8 +21,6 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -33,9 +31,9 @@ namespace autoware::multi_object_tracker
 namespace uncertainty
 {
 
-using autoware::multi_object_tracker::object_model::ObjectModel;
 using autoware_perception_msgs::msg::ObjectClassification;
 using nav_msgs::msg::Odometry;
+using object_model::ObjectModel;
 
 ObjectModel decodeObjectModel(const ObjectClassification & object_class);
 

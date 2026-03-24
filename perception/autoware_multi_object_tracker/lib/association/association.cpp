@@ -18,7 +18,6 @@
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
@@ -300,8 +299,8 @@ types::AssociationData DataAssociation::calcAssociationData(
     const size_t measurement_idx = std::distance(measurements.objects.begin(), it);
     const MeasurementWithIndex measurement_with_idx(*it, measurement_idx);
 
-    const auto measurement_label = autoware::object_recognition_utils::getHighestProbLabel(
-      measurement_with_idx.object.classification);
+    const auto measurement_label =
+      object_model::getHighestProbLabel(measurement_with_idx.object.classification);
     if (measurement_label >= types::NUM_LABELS) {
       RCLCPP_WARN(
         rclcpp::get_logger("DataAssociation"),

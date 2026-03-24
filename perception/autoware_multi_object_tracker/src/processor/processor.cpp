@@ -19,8 +19,6 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <boost/geometry.hpp>
@@ -166,8 +164,7 @@ void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects
 std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
-  const LabelType label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  const LabelType label = object_model::getHighestProbLabel(object.classification);
   if (config_.tracker_map.count(label) != 0) {
     const auto tracker_type = config_.tracker_map.at(label);
     switch (tracker_type) {

@@ -17,12 +17,14 @@
 
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 
 #include <Eigen/Core>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils_geometry/msg/covariance.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
@@ -129,7 +131,7 @@ public:
 
   std::uint8_t getHighestProbLabel() const
   {
-    return autoware::object_recognition_utils::getHighestProbLabel(object_.classification);
+    return object_model::getHighestProbLabel(object_.classification);
   }
 
   // existence states

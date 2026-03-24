@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,17 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
 
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
+
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 
@@ -119,7 +120,7 @@ types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detec
       continue;
     }
     const ObjectClassification & object_class =
-      autoware::object_recognition_utils::getHighestProbClassification(object.classification);
+      object_model::getHighestProbClassification(object.classification);
     updating_objects.objects.push_back(modelUncertaintyByClass(object, object_class));
   }
   updating_objects.buildUuidIndex();

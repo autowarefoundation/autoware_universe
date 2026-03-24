@@ -20,7 +20,6 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 #include <tf2/utils.hpp>
 
