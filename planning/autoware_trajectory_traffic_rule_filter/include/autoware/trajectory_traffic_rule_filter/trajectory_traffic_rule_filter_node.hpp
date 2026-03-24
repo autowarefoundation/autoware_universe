@@ -49,6 +49,8 @@ class TrajectoryTrafficRuleFilter : public rclcpp::Node
 public:
   explicit TrajectoryTrafficRuleFilter(const rclcpp::NodeOptions & node_options);
 
+  bool has_map() const { return lanelet_map_ptr_ != nullptr; }
+
 private:
   void process(const CandidateTrajectories::ConstSharedPtr msg);
 

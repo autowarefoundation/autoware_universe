@@ -75,5 +75,23 @@ MarkerArray create_lane_marker(
   const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
   const std::array<float, 4> colors = {0.0f, 1.0f, 0.0f, 0.8f},
   const std::string & frame_id = "base_link", const bool set_traffic_light_color = false);
+
+/**
+ * @brief Creates a visualization marker array representing linestrings (e.g., road borders and
+ * stop lines).
+ *
+ * @param transform_ego_to_map The transformation matrix to convert points from ego frame to map
+ * frame.
+ * @param linestring_vector A vector of floats representing the linestring geometry or points.
+ * @param shape A vector of longs specifying the shape or dimensions of the linestring data.
+ * @param stamp The timestamp to assign to the marker messages.
+ * @param lifetime The duration for which the markers should remain visible.
+ * @param frame_id The coordinate frame in which to publish the markers (default: "base_link").
+ * @return MarkerArray containing the generated linestring markers.
+ */
+MarkerArray create_linestring_marker(
+  const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & linestring_vector,
+  const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
+  const std::string & frame_id = "base_link");
 }  // namespace autoware::diffusion_planner::utils
 #endif  // AUTOWARE__DIFFUSION_PLANNER__UTILS__MARKER_UTILS_HPP_
