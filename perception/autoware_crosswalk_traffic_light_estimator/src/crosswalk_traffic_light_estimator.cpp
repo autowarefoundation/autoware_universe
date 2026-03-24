@@ -519,20 +519,21 @@ bool is_lanelet_non_red(
   }
   const auto traffic_light_id = traffic_light_reg_elems.front()->id();
 
-  // current detection is green or amber → non-red
+  // detection with current color
   const auto current_color = get_highest_confidence_traffic_signal(traffic_light_id, traffic_light_id_map);
-  if (is_green_or_amber(current_color)) {
+  const auto current_color_is_not_red = is_green_or_amber(current_color);
+  if (current_color_is_not_red) {
     return true;
   }
 
-  // remaining cases require last detected color
+  // detection with last detected color
   if (!use_last_detect_color) {
     return false;
   }
-
-  // current is absent or unknown, and last detection was green or amber → non-red
   const auto last_color = get_highest_confidence_traffic_signal(traffic_light_id, last_detect_color);
-  return is_unknown_or_absent(current_color) && is_green_or_amber(last_color);
+  const auto current_color_is_not_available = is_unknown_or_absent(current_color);
+  const auto last_color_is_not_red = is_green_or_amber(last_color);
+  return current_color_is_not_available && last_color_is_not_red;
 }
 
 lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
