@@ -21,7 +21,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <iterator>
 #include <list>
@@ -67,6 +66,18 @@ double getAssociationValue(
   return tracker_it->second;
 }
 
+double getLabelValue(
+  const autoware::multi_object_tracker::AssociatorConfig::LabelDoubleMap & values,
+  const autoware::multi_object_tracker::object_model::Label measurement_label,
+  const double fallback)
+{
+  const auto measurement_it = values.find(measurement_label);
+  if (measurement_it == values.end()) {
+    return fallback;
+  }
+  return measurement_it->second;
+}
+
 bool isVehicleTrackerType(const autoware::multi_object_tracker::TrackerType tracker_type)
 {
   using autoware::multi_object_tracker::TrackerType;
@@ -106,6 +117,7 @@ void DataAssociation::setTimeKeeper(
 
 void DataAssociation::updateMaxSearchDistances()
 {
+  max_squared_dist_per_class_.clear();
   for (const auto measurement_label : object_model::trackedLabels()) {
     double max_squared_dist = 0.0;
     for (const auto tracker_type : allTrackerTypes()) {
@@ -116,7 +128,7 @@ void DataAssociation::updateMaxSearchDistances()
         max_squared_dist,
         getAssociationValue(config_.max_dist_map, measurement_label, tracker_type, 0.0));
     }
-    max_squared_dist_per_class_[static_cast<size_t>(measurement_label)] = max_squared_dist;
+    max_squared_dist_per_class_[measurement_label] = max_squared_dist;
   }
 }
 
@@ -268,7 +280,7 @@ void DataAssociation::processMeasurement(
 {
   // Get pre-computed maximum squared distance for this measurement class
   const double max_squared_dist =
-    max_squared_dist_per_class_[static_cast<size_t>(measurement_label)];
+    getLabelValue(max_squared_dist_per_class_, measurement_label, 0.0);
 
   // Use circle query instead of box for more precise filtering
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);

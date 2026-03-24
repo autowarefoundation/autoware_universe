@@ -31,7 +31,6 @@
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
-#include <array>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -62,6 +61,7 @@ struct AssociatorConfig
 
   using TrackerBoolMap = std::unordered_map<TrackerType, bool, EnumClassHash>;
   using TrackerDoubleMap = std::unordered_map<TrackerType, double, EnumClassHash>;
+  using LabelDoubleMap = std::unordered_map<object_model::Label, double, EnumClassHash>;
   using LabelToTrackerBoolMap =
     std::unordered_map<object_model::Label, TrackerBoolMap, EnumClassHash>;
   using LabelToTrackerDoubleMap =
@@ -107,7 +107,7 @@ private:
   // Cache of maximum squared distances per measurement class
   // For each measurement class, stores the maximum squared distance it could match with any tracker
   // class
-  std::array<double, object_model::NUM_LABELS> max_squared_dist_per_class_{};
+  AssociatorConfig::LabelDoubleMap max_squared_dist_per_class_;
 
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
