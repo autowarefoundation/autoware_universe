@@ -83,7 +83,8 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
     {Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
     {Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
 
-  for (const auto measurement_label : autoware::multi_object_tracker::object_model::trackedLabels()) {
+  for (const auto measurement_label :
+       autoware::multi_object_tracker::object_model::trackedLabels()) {
     const auto effective_tracker_type = tracker_map.at(measurement_label);
     for (const auto tracker_type : autoware::multi_object_tracker::allTrackerTypes()) {
       const bool can_assign = (tracker_type == effective_tracker_type);

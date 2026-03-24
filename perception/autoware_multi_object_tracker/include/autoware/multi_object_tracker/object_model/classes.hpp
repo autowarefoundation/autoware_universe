@@ -54,10 +54,13 @@ struct Classification
 constexpr int NUM_LABELS = 8;
 
 inline constexpr std::array<Label, NUM_LABELS> TRACKED_LABELS = {
-  Label::UNKNOWN, Label::CAR, Label::TRUCK, Label::BUS,
+  Label::UNKNOWN, Label::CAR,        Label::TRUCK,   Label::BUS,
   Label::TRAILER, Label::MOTORCYCLE, Label::BICYCLE, Label::PEDESTRIAN};
 
-inline const std::array<Label, NUM_LABELS> & trackedLabels() { return TRACKED_LABELS; }
+inline const std::array<Label, NUM_LABELS> & trackedLabels()
+{
+  return TRACKED_LABELS;
+}
 
 inline std::string toString(const Label label)
 {
