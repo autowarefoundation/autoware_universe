@@ -16,9 +16,6 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-
 #include <memory>
 
 namespace autoware::behavior_path_planner

@@ -21,7 +21,6 @@
 #include "autoware/behavior_path_side_shift_module/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <algorithm>
 #include <memory>

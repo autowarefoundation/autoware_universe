@@ -1,7 +1,3 @@
-# This file is automatically synced from:
-# https://github.com/autowarefoundation/sync-file-templates
-# To make changes, update the source repository and follow the guidelines in its README.
-
 name: clang-tidy-pr-comments
 
 on:
@@ -19,29 +15,42 @@ jobs:
   clang-tidy-pr-comments:
     if: ${{ github.event.workflow_run.event == 'pull_request' && contains(fromJson('["success", "failure"]'), github.event.workflow_run.conclusion) }}
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Download analysis results
         run: |
-          gh run download ${{ github.event.workflow_run.id }} -D /tmp || true
+          gh run download ${{ github.event.workflow_run.id }} -D /tmp -p 'clang-tidy-result-${{ matrix.rosdistro }}*' || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Find clang-tidy result directory
+        id: find-result-dir
+        run: |
+          result_dir=$(find /tmp -maxdepth 1 -type d -name 'clang-tidy-result-${{ matrix.rosdistro }}*' | head -1)
+          echo "result-dir=$result_dir" >> $GITHUB_OUTPUT
+        shell: bash
+
       - name: Check if the fixes.yaml file exists
         id: check-fixes-yaml-existence
+        if: ${{ steps.find-result-dir.outputs.result-dir != '' }}
         uses: autowarefoundation/autoware-github-actions/check-file-existence@v1
         with:
-          files: /tmp/clang-tidy-result/fixes.yaml
+          files: ${{ steps.find-result-dir.outputs.result-dir }}/fixes.yaml
 
       - name: Set variables
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
         id: set-variables
         run: |
-          echo "pr-id=$(cat /tmp/clang-tidy-result/pr-id.txt)" >> $GITHUB_OUTPUT
-          echo "pr-head-repo=$(cat /tmp/clang-tidy-result/pr-head-repo.txt)" >> $GITHUB_OUTPUT
-          echo "pr-head-ref=$(cat /tmp/clang-tidy-result/pr-head-ref.txt)" >> $GITHUB_OUTPUT
+          result_dir="${{ steps.find-result-dir.outputs.result-dir }}"
+          echo "pr-id=$(cat "$result_dir/pr-id.txt")" >> $GITHUB_OUTPUT
+          echo "pr-head-repo=$(cat "$result_dir/pr-head-repo.txt")" >> $GITHUB_OUTPUT
+          echo "pr-head-ref=$(cat "$result_dir/pr-head-ref.txt")" >> $GITHUB_OUTPUT
 
       - name: Check out PR head
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
@@ -54,13 +63,14 @@ jobs:
       - name: Replace paths in fixes.yaml
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
         run: |
-          sed -i -e "s|/__w/|/home/runner/work/|g" /tmp/clang-tidy-result/fixes.yaml
-          cat /tmp/clang-tidy-result/fixes.yaml
+          result_dir="${{ steps.find-result-dir.outputs.result-dir }}"
+          sed -i -e "s|/__w/|/home/runner/work/|g" "$result_dir/fixes.yaml"
+          cat "$result_dir/fixes.yaml"
 
       - name: Copy fixes.yaml to access from Docker Container Action
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
         run: |
-          cp /tmp/clang-tidy-result/fixes.yaml fixes.yaml
+          cp "${{ steps.find-result-dir.outputs.result-dir }}/fixes.yaml" fixes.yaml
 
       - name: Run clang-tidy-pr-comments action
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}

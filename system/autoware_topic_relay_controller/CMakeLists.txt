@@ -8,10 +8,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/topic_relay_controller_node.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::topic_relay_controller::TopicRelayController"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE
