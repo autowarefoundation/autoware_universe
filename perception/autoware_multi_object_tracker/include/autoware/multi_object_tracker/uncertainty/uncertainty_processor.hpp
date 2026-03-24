@@ -11,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__UNCERTAINTY__UNCERTAINTY_PROCESSOR_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__UNCERTAINTY__UNCERTAINTY_PROCESSOR_HPP_
