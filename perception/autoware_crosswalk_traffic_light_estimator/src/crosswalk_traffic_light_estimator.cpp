@@ -520,7 +520,8 @@ bool is_lanelet_non_red(
   const auto traffic_light_id = traffic_light_reg_elems.front()->id();
 
   // detection with current color
-  const auto current_color = get_highest_confidence_traffic_signal(traffic_light_id, traffic_light_id_map);
+  const auto current_color =
+    get_highest_confidence_traffic_signal(traffic_light_id, traffic_light_id_map);
   const auto current_color_is_not_red = is_green_or_amber(current_color);
   if (current_color_is_not_red) {
     return true;
@@ -530,7 +531,8 @@ bool is_lanelet_non_red(
   if (!use_last_detect_color) {
     return false;
   }
-  const auto last_color = get_highest_confidence_traffic_signal(traffic_light_id, last_detect_color);
+  const auto last_color =
+    get_highest_confidence_traffic_signal(traffic_light_id, last_detect_color);
   const auto current_color_is_not_available = is_unknown_or_absent(current_color);
   const auto last_color_is_not_red = is_green_or_amber(last_color);
   return current_color_is_not_available && last_color_is_not_red;
