@@ -38,7 +38,7 @@
 
 namespace
 {
-const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // the same as max_point_in_voxel_size_ in config
+const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // CAUTION: must match max_point_in_voxel_size_ in config
 const std::size_t WARPS_PER_BLOCK = 4;
 
 const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
@@ -95,7 +95,9 @@ __global__ void shufflePoints_kernel(
   const std::size_t points_size, const std::size_t max_size, const std::size_t offset)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (point_idx >= max_size) return;
+  if (point_idx >= max_size) {
+    return;
+  }
 
   int src_idx = indices[(point_idx + offset) % max_size];
   int dst_idx = point_idx;
@@ -126,7 +128,9 @@ __global__ void generateVoxels_random_kernel(
   float pillar_y_size, int grid_y_size, int grid_x_size, unsigned int * mask, float * voxels)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (point_idx >= points_size) return;
+  if (point_idx >= points_size) {
+    return;
+  }
 
   const float x = points[point_idx * POINT_NUM_FEATURES];
   const float y = points[point_idx * POINT_NUM_FEATURES + 1];
@@ -134,8 +138,9 @@ __global__ void generateVoxels_random_kernel(
 
   if (
     x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
-    z >= max_z_range)
+    z >= max_z_range) {
     return;
+  }
 
   int voxel_idx = floorf((x - min_x_range) / pillar_x_size);
   int voxel_idy = floorf((y - min_y_range) / pillar_y_size);
@@ -143,23 +148,25 @@ __global__ void generateVoxels_random_kernel(
   voxel_idy = voxel_idy < 0 ? 0 : voxel_idy >= grid_y_size ? grid_y_size - 1 : voxel_idy;
   unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
 
-  unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);
-
-  if (point_id >= MAX_POINT_IN_VOXEL_SIZE) return;
+  // point_id must be in the range of [0, MAX_POINT_IN_VOXEL_SIZE)
+  unsigned int point_id = atomicInc(&(mask[voxel_index]), MAX_POINT_IN_VOXEL_SIZE);
+  if (point_id >= MAX_POINT_IN_VOXEL_SIZE) {
+    return;
+  }
 
   float * address =
     voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * POINT_NUM_FEATURES;
-  atomicExch(address, x);
-  atomicExch(address + 1, y);
-  atomicExch(address + 2, z);
+  address[0] = x;
+  address[1] = y;
+  address[2] = z;
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
     const float t = points[point_idx * POINT_NUM_FEATURES + 3];
-    atomicExch(address + 3, t);  // Time_lag
+    address[3] = t;  // Time_lag
   } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
     const float i = points[point_idx * POINT_NUM_FEATURES + 3];
     const float t = points[point_idx * POINT_NUM_FEATURES + 4];
-    atomicExch(address + 3, i);  // Intensity
-    atomicExch(address + 4, t);  // Time_lag
+    address[3] = i;  // Intensity
+    address[4] = t;  // Time_lag
   }
 }
 
@@ -172,17 +179,24 @@ __global__ void generateBaseFeatures_kernel(
   // flip x axis direction to process front to back
   unsigned int voxel_idx_inverted = blockIdx.y * blockDim.y + threadIdx.y;
   unsigned int voxel_idy = blockIdx.x * blockDim.x + threadIdx.x;
-  if (voxel_idx_inverted >= grid_x_size || voxel_idy >= grid_y_size) return;
+  if (voxel_idx_inverted >= grid_x_size || voxel_idy >= grid_y_size) {
+    return;
+  }
   unsigned int voxel_idx = grid_x_size - 1 - voxel_idx_inverted;
 
   unsigned int voxel_index = voxel_idx_inverted * grid_y_size + voxel_idy;
   unsigned int count = mask[voxel_index];
-  if (!(count > 0)) return;
+  if (!(count > 0)) {
+    return;
+  }
   count = count < MAX_POINT_IN_VOXEL_SIZE ? count : MAX_POINT_IN_VOXEL_SIZE;
 
   unsigned int current_pillarId = 0;
-  current_pillarId = atomicAdd(pillar_num, 1);
-  if (current_pillarId > max_voxel_size - 1) return;
+  // current_pillarId must be in the range of [0, max_voxel_size)
+  current_pillarId = atomicInc(pillar_num, max_voxel_size);
+  if (current_pillarId >= max_voxel_size) {
+    return;
+  }
 
   voxel_num[current_pillarId] = count;
 
@@ -206,9 +220,6 @@ __global__ void generateBaseFeatures_kernel(
       voxel_features[outIndex * 5 + 4] = voxels[inIndex * 5 + 4];
     }
   }
-
-  // clear buffer for next infer
-  atomicExch(mask + voxel_index, 0);
 }
 
 template <std::size_t ENCODER_IN_FEATURE_SIZE>
@@ -225,7 +236,9 @@ __global__ void generateFeatures_kernel(
   int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
 
   unsigned int num_pillars = num_voxels[0];
-  if (pillar_idx >= num_pillars) return;
+  if (pillar_idx >= num_pillars) {
+    return;
+  }
 
   // point dimemension is 5 if feature size in encoder is 11, otherwise 4
   constexpr int point_dim =
