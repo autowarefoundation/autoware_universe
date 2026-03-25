@@ -100,6 +100,7 @@ private:
   autoware::cuda_utils::CudaUniquePtr<float[]> goal_pose_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> ego_shape_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> turn_indicators_d_;
+  autoware::cuda_utils::CudaUniquePtr<float[]> delay_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> output_d_;
   autoware::cuda_utils::CudaUniquePtr<float[]> turn_indicator_logit_d_;
 

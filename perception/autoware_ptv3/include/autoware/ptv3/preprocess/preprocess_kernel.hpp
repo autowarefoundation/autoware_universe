@@ -33,8 +33,9 @@ public:
   PreprocessCuda(const PTv3Config & config, cudaStream_t stream);
 
   std::size_t generateFeatures(
-    const InputPointType * input_data, unsigned int num_points, float * voxel_features,
-    std::int64_t * voxel_coords, std::int64_t * voxel_hashes);
+    const void * input_data, CloudFormat input_format, unsigned int num_points,
+    float * voxel_features, std::int64_t * voxel_coords, std::int64_t * voxel_hashes,
+    void * compact_points);
 
 private:
   PTv3Config config_;
@@ -42,6 +43,7 @@ private:
 
   autoware::cuda_utils::CudaUniquePtr<float[]> points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<float[]> cropped_points_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> cropped_input_points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_mask_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> crop_indices_d_{nullptr};
 

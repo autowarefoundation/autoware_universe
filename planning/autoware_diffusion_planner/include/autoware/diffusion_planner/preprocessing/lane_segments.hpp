@@ -66,7 +66,9 @@ public:
    *
    * @param lanelet_map_ptr Shared pointer to the lanelet map.
    */
-  explicit LaneSegmentContext(const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr);
+  explicit LaneSegmentContext(
+    const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr,
+    double line_string_max_step_m = 5.0);
 
   /**
    * @brief Select route segment indices based on route and constraints.
@@ -138,33 +140,36 @@ public:
     const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y) const
   {
     return create_line_tensor(
-      lanelet_map_.polygons, transform_matrix, center_x, center_y, NUM_POLYGONS,
-      POINTS_PER_POLYGON);
+      lanelet_map_.polygons, transform_matrix, center_x, center_y, NUM_POLYGONS, POINTS_PER_POLYGON,
+      POLYGON_TYPE_NUM);
   }
   std::vector<float> create_line_string_tensor(
     const Eigen::Matrix4d & transform_matrix, const double center_x, const double center_y) const
   {
     return create_line_tensor(
       lanelet_map_.line_strings, transform_matrix, center_x, center_y, NUM_LINE_STRINGS,
-      POINTS_PER_LINE_STRING);
+      POINTS_PER_LINE_STRING, LINE_STRING_TYPE_NUM);
   }
 
 private:
   /**
-   * @brief Create line tensor data from polygon data.
+   * @brief Create line tensor data from elements with points and type.
    *
-   * @param polylines Vector of polylines to process.
+   * @tparam T Element type with `.points` (std::vector<LanePoint>) and `.type` (enum).
+   * @param elements Vector of elements to process.
    * @param transform_matrix Transformation matrix to apply to the points.
    * @param center_x X-coordinate of the center point.
    * @param center_y Y-coordinate of the center point.
    * @param num_elements Maximum number of elements to include.
    * @param num_points Number of points per element.
-   * @return Vector of float tensor data.
+   * @param num_types Number of type categories for one-hot encoding.
+   * @return Vector of float tensor data with shape [num_elements, num_points, 2 + num_types].
    */
+  template <typename T>
   std::vector<float> create_line_tensor(
-    const std::vector<std::vector<LanePoint>> & polylines, const Eigen::Matrix4d & transform_matrix,
+    const std::vector<T> & elements, const Eigen::Matrix4d & transform_matrix,
     const double center_x, const double center_y, const int64_t num_elements,
-    const int64_t num_points) const;
+    const int64_t num_points, const int64_t num_types) const;
 
   const autoware::diffusion_planner::LaneletMap lanelet_map_;
   const std::map<lanelet::Id, size_t> lanelet_id_to_array_index_;

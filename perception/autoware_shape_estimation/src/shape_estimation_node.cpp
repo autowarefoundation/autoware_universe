@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace autoware::shape_estimation
 {
@@ -35,9 +36,11 @@ using Label = autoware_perception_msgs::msg::ObjectClassification;
 ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_options)
 : Node("shape_estimation", node_options)
 {
-  using std::placeholders::_1;
   sub_ = create_subscription<DetectedObjectsWithFeature>(
-    "input", rclcpp::QoS{1}, std::bind(&ShapeEstimationNode::callback, this, _1));
+    "input", rclcpp::QoS{1},
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg) {
+      this->callback(input_msg);
+    });
 
   pub_ = create_publisher<DetectedObjectsWithFeature>("objects", rclcpp::QoS{1});
   bool use_corrector = declare_parameter<bool>("use_corrector");
@@ -68,11 +71,14 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
 #endif
 
   processing_time_publisher_ =
-    std::make_unique<autoware_utils::DebugPublisher>(this, "shape_estimation");
+    std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "shape_estimation");
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ =
+    std::make_unique<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(
+      this);
 }
 
 static autoware_perception_msgs::msg::ObjectClassification::_label_type get_label(
@@ -91,7 +97,8 @@ static bool label_is_vehicle(
          Label::TRAILER == label;
 }
 
-void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstSharedPtr input_msg)
+void ShapeEstimationNode::callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input_msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
   // Guard
@@ -100,8 +107,8 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
   }
 
   // Create output msg
-  DetectedObjectsWithFeature output_msg;
-  output_msg.header = input_msg->header;
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
+  output_msg->header = input_msg->header;
 
   // Create ml model input batch
   DetectedObjectsWithFeature input_trt_batch;
@@ -150,13 +157,13 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
     if (!fix_filtered_objects_label_to_unknown_ && !estimated_success) {
       continue;
     }
-    output_msg.feature_objects.push_back(feature_object);
+    output_msg->feature_objects.push_back(feature_object);
     if (!estimated_success) {
-      output_msg.feature_objects.back().object.classification.front().label = Label::UNKNOWN;
+      output_msg->feature_objects.back().object.classification.front().label = Label::UNKNOWN;
     }
 
-    output_msg.feature_objects.back().object.shape = shape;
-    output_msg.feature_objects.back().object.kinematics.pose_with_covariance.pose = pose;
+    output_msg->feature_objects.back().object.shape = shape;
+    output_msg->feature_objects.back().object.kinematics.pose_with_covariance.pose = pose;
   }
 
 #ifdef USE_CUDA
@@ -165,13 +172,14 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
     tensorrt_shape_estimator_->inference(input_trt_batch, output_model);
   }
   for (auto & feature_object : output_model.feature_objects) {
-    output_msg.feature_objects.push_back(feature_object);
+    output_msg->feature_objects.push_back(feature_object);
   }
 #endif
 
   // Publish
-  pub_->publish(output_msg);
-  published_time_publisher_->publish_if_subscribed(pub_, output_msg.header.stamp);
+  const auto header_stamp = output_msg->header.stamp;
+  pub_->publish(std::move(output_msg));
+  published_time_publisher_->publish_if_subscribed(pub_, header_stamp);
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(

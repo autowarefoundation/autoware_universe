@@ -3,6 +3,30 @@
   "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
+    "filter": {
+      "type": "object",
+      "properties": {
+        "class_probability_threshold": {
+          "type": "number",
+          "description": "If any filter class probability reaches this threshold, the point is excluded from the filtered output cloud.",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "classes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Class names to filter out from the filtered output cloud when their probability exceeds the threshold.",
+          "uniqueItems": true
+        },
+        "output_format": {
+          "type": "string",
+          "description": "Filtered output point format. Empty string preserves the input format.",
+          "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
+        }
+      },
+      "required": ["class_probability_threshold", "classes", "output_format"],
+      "additionalProperties": false
+    },
     "ptv3": {
       "type": "object",
       "properties": {
@@ -36,42 +60,8 @@
           "default": "$(var model_path)/ptv3.engine",
           "pattern": "\\.engine$"
         },
-        "colors_red": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "description": "Red component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
-          "default": [255, 0, 255, 64, 0, 255]
-        },
-        "colors_green": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "description": "Green component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
-          "default": [0, 0, 0, 64, 255, 255]
-        },
-        "colors_blue": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "description": "Blue component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
-          "default": [0, 255, 255, 64, 0, 255]
-        },
-        "ground_prob_threshold": {
-          "type": "number",
-          "description": "Probability threshold to classify a point as ground.",
-          "default": 0.3,
-          "minimum": 0.0,
-          "maximum": 1.0
+        "filter": {
+          "$ref": "#/definitions/filter"
         }
       },
       "required": [
@@ -80,10 +70,7 @@
         "cloud_capacity",
         "onnx_path",
         "engine_path",
-        "colors_red",
-        "colors_green",
-        "colors_blue",
-        "ground_prob_threshold"
+        "filter"
       ],
       "additionalProperties": false
     }

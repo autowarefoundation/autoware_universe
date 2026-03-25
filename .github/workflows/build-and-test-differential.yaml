@@ -99,15 +99,15 @@ jobs:
         shell: bash
 
       - name: Prepare build_depends.repos file (main branch)
-        if: ${{ github.event.pull_request.base.ref != 'humble' }}
+        if: ${{ github.event.pull_request.base.ref != 'humble' && github.event.pull_request.base.ref != 'jazzy' }}
         uses: ./.github/actions/combine-repos-action
         with:
           base_file: build_depends_humble.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
-      - name: Prepare build_depends.repos file (humble branch)
-        if: ${{ github.event.pull_request.base.ref == 'humble' }}
+      - name: Prepare build_depends.repos file (humble/jazzy branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' || github.event.pull_request.base.ref == 'jazzy' }}
         run: cp build_depends_humble.repos build_depends.repos
         shell: bash
 

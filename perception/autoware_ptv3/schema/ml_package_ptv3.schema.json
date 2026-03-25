@@ -15,6 +15,15 @@
           "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
           "uniqueItems": true
         },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "Flat RGB palette for visualization output. Must contain 3 values per class in class_names."
+        },
         "voxels_num": {
           "type": "array",
           "items": {
@@ -44,7 +53,7 @@
           "maxItems": 3
         }
       },
-      "required": ["class_names", "voxels_num", "point_cloud_range", "voxel_size"],
+      "required": ["class_names", "palette", "voxels_num", "point_cloud_range", "voxel_size"],
       "additionalProperties": false
     }
   },

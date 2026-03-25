@@ -54,6 +54,8 @@ protected:
       "/trajectory_validator_node/input/acceleration", 1);
     obj_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::PredictedObjects>(
       "/trajectory_validator_node/input/objects", 1);
+    tl_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>(
+      "/trajectory_validator_node/input/traffic_signals", 1);
 
     traj_pub_ =
       test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
@@ -105,6 +107,9 @@ protected:
     objects.header.stamp = now;
     objects.header.frame_id = "map";
     obj_pub_->publish(objects);
+
+    autoware_perception_msgs::msg::TrafficLightGroupArray tl_signals;
+    tl_pub_->publish(tl_signals);
   }
 
   static void add_trajectory(CandidateTrajectories & msg, std::string name, double start_vel)
@@ -132,6 +137,7 @@ protected:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr accel_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::PredictedObjects>::SharedPtr obj_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr tl_pub_;
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
     traj_pub_;
 
