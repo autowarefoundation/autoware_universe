@@ -23,10 +23,19 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <pcl/filters/crop_box.h>
+#include <pcl/filters/crop_hull.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -36,6 +45,7 @@ namespace autoware::trajectory_modifier::utils::obstacle_stop
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -90,32 +100,27 @@ struct CollisionPoint
   }
 };
 
+struct TrajectoryShape
+{
+  MultiPolygon2d polygon;
+  autoware_utils_geometry::Box2d bounding_box;
+};
+
 struct DebugData
 {
   PointCloud2::SharedPtr cluster_points;
   PointCloud2::SharedPtr voxel_points;
   MultiPolygon2d target_polygons;
-  autoware_utils_geometry::MultiPolygon2d trajectory_polygon;
+  TrajectoryShape trajectory_shape;
   std::vector<geometry_msgs::msg::Point> target_pcd_points;
   geometry_msgs::msg::Point active_collision_point;
+  std::optional<PredictedObject> colliding_object;
 };
 
-autoware_utils_geometry::MultiPolygon2d get_trajectory_polygon(
+TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double lateral_margin = 0.0,
   const double longitudinal_margin = 0.0);
-
-void filter_pointcloud_by_range(
-  PointCloud::Ptr & pointcloud, const double detection_range, const double min_height,
-  const double max_height);
-
-void filter_pointcloud_by_voxel_grid(
-  PointCloud::Ptr & pointcloud, const double voxel_size_x, const double voxel_size_y,
-  const double voxel_size_z, const int min_size);
-
-void cluster_pointcloud(
-  PointCloud::Ptr & input, PointCloud::Ptr & output, const size_t min_size, const size_t max_size,
-  const double tolerance, const double min_height, const double height_offset);
 
 void filter_objects_by_type(
   PredictedObjects & objects, const std::vector<std::string> & object_type_strings);
@@ -128,7 +133,38 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 
 std::optional<CollisionPoint> get_nearest_object_collision(
   const TrajectoryPoints & trajectory_points, const MultiPolygon2d & trajectory_polygon,
-  const PredictedObjects & objects, MultiPolygon2d & target_polygons);
+  const PredictedObjects & objects, MultiPolygon2d & target_polygons,
+  PredictedObject & colliding_object);
+
+struct PointCloudFilter
+{
+  PointCloudFilter(
+    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
+    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
+  {
+    tree_ = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>();
+    ec_.setClusterTolerance(cluster_tolerance);
+    ec_.setMinClusterSize(cluster_min_size);
+    ec_.setMaxClusterSize(cluster_max_size);
+    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
+    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
+    convex_hull_.setDimension(2);
+  };
+
+  void filter_pointcloud(
+    PointCloud::Ptr & pointcloud, const double min_x, const double max_x, const double min_y,
+    const double max_y, const double min_z, const double max_z);
+  void cluster_pointcloud(
+    const PointCloud::Ptr & input, PointCloud::Ptr & output, const double min_height);
+  void filter_pointcloud_by_object(PointCloud::Ptr & pointcloud, const PredictedObjects & objects);
+
+private:
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec_;
+  pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
+  pcl::CropBox<pcl::PointXYZ> crop_box_;
+  pcl::ConvexHull<pcl::PointXYZ> convex_hull_;
+};
 
 }  // namespace autoware::trajectory_modifier::utils::obstacle_stop
 

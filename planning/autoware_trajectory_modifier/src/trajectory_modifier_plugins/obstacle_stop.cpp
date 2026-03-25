@@ -40,14 +40,11 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
-using utils::obstacle_stop::cluster_pointcloud;
 using utils::obstacle_stop::filter_objects_by_type;
 using utils::obstacle_stop::filter_objects_by_velocity;
-using utils::obstacle_stop::filter_pointcloud_by_range;
-using utils::obstacle_stop::filter_pointcloud_by_voxel_grid;
 using utils::obstacle_stop::get_nearest_object_collision;
 using utils::obstacle_stop::get_nearest_pcd_collision;
-using utils::obstacle_stop::get_trajectory_polygon;
+using utils::obstacle_stop::get_trajectory_shape;
 using utils::obstacle_stop::PointCloud;
 using utils::obstacle_stop::PointCloud2;
 
@@ -60,38 +57,51 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   const auto node_ptr = get_node_ptr();
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      node_ptr, "obstacle_stop");
+      node_ptr, "modifier_obstacle_stop");
 
-  pub_cluster_pointcloud_ =
+  pub_clustered_pointcloud_ =
     node_ptr->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);
-  pub_voxel_pointcloud_ =
-    node_ptr->create_publisher<PointCloud2>("~/obstacle_stop/debug/voxel_points", 1);
   debug_viz_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>(
     "~/obstacle_stop/debug/marker", 1);
 
   params_ = params.obstacle_stop;
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
+
+  pointcloud_filter_ = std::make_unique<utils::obstacle_stop::PointCloudFilter>(
+    params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
+    params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
+    params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
+    params_.pointcloud.clustering.max_size);
 }
 
 bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & traj_points)
 {
   debug_data_ = DebugData();
+  safety_factors_ = SafetyFactorArray{};
   {
     autoware_utils_debug::ScopedTimeTrack st(
-      "ObstacleStop::get_trajectory_polygon", *get_time_keeper());
-    debug_data_.trajectory_polygon = get_trajectory_polygon(
+      "ObstacleStop::get_trajectory_shape", *get_time_keeper());
+    debug_data_.trajectory_shape = get_trajectory_shape(
       traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, params_.lateral_margin);
   }
-  const auto collision_point_objects =
-    check_predicted_objects(traj_points, debug_data_.trajectory_polygon);
-  const auto collision_point_pcd = check_pointcloud(traj_points, debug_data_.trajectory_polygon);
+  const auto collision_point_objects = check_predicted_objects(traj_points);
+  const auto collision_point_pcd = check_pointcloud(traj_points);
 
   if (collision_point_objects) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_clock(), 1000,
       "[TM ObstacleStop] Detected collision with object at arc length %f m",
       collision_point_objects->arc_length);
+    if (debug_data_.colliding_object) {
+      SafetyFactor safety_factor;
+      safety_factor.object_id = debug_data_.colliding_object->object_id;
+      safety_factor.type = SafetyFactor::OBJECT;
+      safety_factor.points.emplace_back(
+        debug_data_.colliding_object->kinematics.initial_pose_with_covariance.pose.position);
+      safety_factor.is_safe = false;
+      safety_factors_.factors.push_back(safety_factor);
+    }
   }
 
   if (collision_point_pcd) {
@@ -99,6 +109,11 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
       get_node_ptr()->get_logger(), *get_clock(), 1000,
       "[TM ObstacleStop] Detected collision with pointcloud at arc length %f m",
       collision_point_pcd->arc_length);
+    SafetyFactor safety_factor;
+    safety_factor.type = SafetyFactor::POINTCLOUD;
+    safety_factor.points.emplace_back(collision_point_pcd->point);
+    safety_factor.is_safe = false;
+    safety_factors_.factors.emplace_back(safety_factor);
   }
 
   nearest_collision_point_ = std::invoke([&]() -> std::optional<CollisionPoint> {
@@ -185,8 +200,7 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
   const auto & stop_pose = traj_points.back().pose;
   const auto & ego_pose = data_->current_odometry->pose.pose;
   planning_factor_interface_->add(
-    traj_points, ego_pose, stop_pose, PlanningFactor::STOP,
-    autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+    traj_points, ego_pose, stop_pose, PlanningFactor::STOP, safety_factors_);
 
   RCLCPP_WARN_THROTTLE(
     get_node_ptr()->get_logger(), *get_clock(), 1000,
@@ -298,107 +312,107 @@ bool ObstacleStop::apply_stopping(
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
-  const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
+  const TrajectoryPoints & traj_points)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
-  if (!params_.use_objects) return std::nullopt;
-
-  if (!data_->predicted_objects || data_->predicted_objects->objects.empty()) return std::nullopt;
+  if (
+    !params_.use_objects || !data_->predicted_objects || data_->predicted_objects->objects.empty())
+    return std::nullopt;
   auto predicted_objects = *data_->predicted_objects;
 
   filter_objects_by_type(predicted_objects, params_.objects.object_types);
   filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
 
-  return get_nearest_object_collision(
-    traj_points, trajectory_polygon, predicted_objects, debug_data_.target_polygons);
+  autoware_perception_msgs::msg::PredictedObject colliding_object;
+  auto collision_point = get_nearest_object_collision(
+    traj_points, debug_data_.trajectory_shape.polygon, predicted_objects,
+    debug_data_.target_polygons, colliding_object);
+  if (collision_point) debug_data_.colliding_object = colliding_object;
+
+  return collision_point;
 }
 
-std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
-  const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
+std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoints & traj_points)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_pointcloud", *get_time_keeper());
-  if (!params_.use_pointcloud) return std::nullopt;
-
-  if (!data_->obstacle_pointcloud || data_->obstacle_pointcloud->data.empty()) {
+  if (
+    !params_.use_pointcloud || !data_->obstacle_pointcloud ||
+    data_->obstacle_pointcloud->data.empty()) {
     return std::nullopt;
   }
 
-  const auto & pointcloud = data_->obstacle_pointcloud;
-
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
-  pcl::fromROSMsg(*pointcloud, *filtered_pointcloud);
+  pcl::fromROSMsg(*data_->obstacle_pointcloud, *filtered_pointcloud);
 
-  const auto & p = params_.pointcloud;
+  {
+    autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::filter_pointcloud", *get_time_keeper());
+    const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
+    const auto rel_min_point = autoware_utils::inverse_transform_point(
+      bounding_box.min_corner().to_3d(), data_->current_odometry->pose.pose);
+    const auto rel_max_point = autoware_utils::inverse_transform_point(
+      bounding_box.max_corner().to_3d(), data_->current_odometry->pose.pose);
+    const auto min_z = params_.pointcloud.min_height;
+    const auto max_z = data_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
+    pointcloud_filter_->filter_pointcloud(
+      filtered_pointcloud, rel_min_point.x(), rel_max_point.x(), rel_min_point.y(),
+      rel_max_point.y(), min_z, max_z);
+  }
 
-  const auto max_height = data_->vehicle_info.vehicle_height_m + p.height_buffer;
+  PointCloud::Ptr clustered_points(new PointCloud);
   {
     autoware_utils_debug::ScopedTimeTrack st(
-      "ObstacleStop::filter_pointcloud_by_range", *get_time_keeper());
-    filter_pointcloud_by_range(filtered_pointcloud, p.detection_range, p.min_height, max_height);
+      "ObstacleStop::cluster_pointcloud", *get_time_keeper());
+    pointcloud_filter_->cluster_pointcloud(
+      filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
   }
 
   {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
       transform_stamped = data_->tf_buffer.lookupTransform(
-        "map", pointcloud->header.frame_id, pointcloud->header.stamp,
-        rclcpp::Duration::from_seconds(0.1));
+        "map", data_->obstacle_pointcloud->header.frame_id, tf2::TimePointZero);
     } catch (tf2::TransformException & e) {
       RCLCPP_WARN(get_node_ptr()->get_logger(), "no transform found for pointcloud: %s", e.what());
+      return std::nullopt;
     }
 
     Eigen::Affine3f isometry = tf2::transformToEigen(transform_stamped.transform).cast<float>();
-    autoware_utils::transform_pointcloud(*filtered_pointcloud, *filtered_pointcloud, isometry);
-  }
-
-  const auto & p_voxel = p.voxel_grid_filter;
-  {
-    autoware_utils_debug::ScopedTimeTrack st(
-      "ObstacleStop::filter_pointcloud_by_voxel_grid", *get_time_keeper());
-    filter_pointcloud_by_voxel_grid(
-      filtered_pointcloud, p_voxel.x, p_voxel.y, p_voxel.z, p_voxel.min_size);
-  }
-
-  {
-    const auto voxel_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    pcl::toROSMsg(*filtered_pointcloud, *voxel_pointcloud);
-    voxel_pointcloud->header.stamp = pointcloud->header.stamp;
-    voxel_pointcloud->header.frame_id = "map";
-    debug_data_.voxel_points = voxel_pointcloud;
-  }
-
-  const auto & p_cluster = p.clustering;
-  const auto height_offset = data_->current_odometry->pose.pose.position.z;
-  PointCloud::Ptr clustered_points(new PointCloud);
-  {
-    autoware_utils_debug::ScopedTimeTrack st(
-      "ObstacleStop::cluster_pointcloud", *get_time_keeper());
-    cluster_pointcloud(
-      filtered_pointcloud, clustered_points, p_cluster.min_size, p_cluster.max_size,
-      p_cluster.tolerance, p_cluster.min_height, height_offset);
+    autoware_utils::transform_pointcloud(*clustered_points, *clustered_points, isometry);
   }
 
   {
     const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
     pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
-    cluster_pointcloud->header.stamp = pointcloud->header.stamp;
+    cluster_pointcloud->header.stamp = data_->obstacle_pointcloud->header.stamp;
     cluster_pointcloud->header.frame_id = "map";
     debug_data_.cluster_points = cluster_pointcloud;
   }
 
-  return get_nearest_pcd_collision(
-    traj_points, trajectory_polygon, clustered_points, debug_data_.target_pcd_points);
+  if (data_->predicted_objects && !data_->predicted_objects->objects.empty()) {
+    autoware_utils_debug::ScopedTimeTrack st(
+      "ObstacleStop::filter_pointcloud_by_object", *get_time_keeper());
+    pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data_->predicted_objects);
+  }
+
+  std::optional<CollisionPoint> collision_point;
+  {
+    autoware_utils_debug::ScopedTimeTrack st(
+      "ObstacleStop::get_nearest_pcd_collision", *get_time_keeper());
+    collision_point = get_nearest_pcd_collision(
+      traj_points, debug_data_.trajectory_shape.polygon, clustered_points,
+      debug_data_.target_pcd_points);
+  }
+
+  return collision_point;
 }
 
 void ObstacleStop::publish_debug_data(const std::string & ns) const
 {
-  if (debug_data_.cluster_points) pub_cluster_pointcloud_->publish(*debug_data_.cluster_points);
-  if (debug_data_.voxel_points) pub_voxel_pointcloud_->publish(*debug_data_.voxel_points);
+  if (debug_data_.cluster_points) pub_clustered_pointcloud_->publish(*debug_data_.cluster_points);
 
   MarkerArray marker_array;
   const auto ego_z = data_->current_odometry->pose.pose.position.z;
-  const auto red = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 1.0);
   const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 1.0);
   const auto yellow = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 1.0);
 
@@ -433,23 +447,29 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   };
 
   int id = 0;
-  for (const auto & traj_polygon : debug_data_.trajectory_polygon) {
-    add_polygon_marker(traj_polygon, ns, id, white);
+  for (const auto & traj_polygon : debug_data_.trajectory_shape.polygon) {
+    add_polygon_marker(traj_polygon, ns + "/traj_polygon", id, white);
+    id++;
+  }
+
+  {
+    const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
+    Polygon2d polygon;
+    polygon.outer().emplace_back(bounding_box.min_corner());
+    polygon.outer().emplace_back(bounding_box.min_corner().x(), bounding_box.max_corner().y());
+    polygon.outer().emplace_back(bounding_box.max_corner());
+    polygon.outer().emplace_back(bounding_box.max_corner().x(), bounding_box.min_corner().y());
+    add_polygon_marker(polygon, ns + "/traj_bounding_box", id, white);
     id++;
   }
 
   for (const auto & target_polygon : debug_data_.target_polygons) {
-    add_polygon_marker(target_polygon, ns, id, yellow);
+    add_polygon_marker(target_polygon, ns + "/target_objects", id, yellow);
     id++;
   }
 
   for (const auto & target_pcd_point : debug_data_.target_pcd_points) {
-    add_point_marker(target_pcd_point, ns, id, yellow, 0.25);
-    id++;
-  }
-
-  if (nearest_collision_point_) {
-    add_point_marker(debug_data_.active_collision_point, ns, id, red, 0.5);
+    add_point_marker(target_pcd_point, ns + "/target_pcd", id, yellow, 0.25);
     id++;
   }
 

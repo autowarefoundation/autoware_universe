@@ -22,15 +22,6 @@
 
 #include <boost/geometry.hpp>
 
-#include <pcl/filters/crop_hull.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/segmentation/extract_clusters.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl_conversions/pcl_conversions.h>
-
 #include <cmath>
 #include <limits>
 #include <string>
@@ -39,7 +30,7 @@
 namespace autoware::trajectory_modifier::utils::obstacle_stop
 {
 
-autoware_utils_geometry::MultiPolygon2d get_trajectory_polygon(
+TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double lateral_margin,
   const double longitudinal_margin)
@@ -105,93 +96,11 @@ autoware_utils_geometry::MultiPolygon2d get_trajectory_polygon(
 
   autoware_utils_geometry::MultiPolygon2d trajectory_polygon;
   boost::geometry::union_(polygon_front, polygon_rear, trajectory_polygon);
-  return trajectory_polygon;
-}
 
-void filter_pointcloud_by_range(
-  PointCloud::Ptr & pointcloud, const double detection_range, const double min_height,
-  const double max_height)
-{
-  if (pointcloud->empty()) return;
+  autoware_utils_geometry::Box2d envelope;
+  boost::geometry::envelope(trajectory_polygon, envelope);
 
-  {
-    pcl::PassThrough<pcl::PointXYZ> filter;
-    filter.setInputCloud(pointcloud);
-    filter.setFilterFieldName("x");
-    filter.setFilterLimits(-1.0 * detection_range, detection_range);
-    filter.filter(*pointcloud);
-  }
-
-  if (pointcloud->empty()) return;
-
-  {
-    pcl::PassThrough<pcl::PointXYZ> filter;
-    filter.setInputCloud(pointcloud);
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(min_height, max_height);
-    filter.filter(*pointcloud);
-  }
-}
-
-void filter_pointcloud_by_voxel_grid(
-  PointCloud::Ptr & pointcloud, const double voxel_size_x, const double voxel_size_y,
-  const double voxel_size_z, const int min_size)
-{
-  if (pointcloud->empty()) return;
-
-  pcl::VoxelGrid<pcl::PointXYZ> filter;
-  filter.setInputCloud(pointcloud);
-  filter.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
-  filter.setMinimumPointsNumberPerVoxel(min_size);
-  filter.filter(*pointcloud);
-}
-
-void cluster_pointcloud(
-  PointCloud::Ptr & input, PointCloud::Ptr & output, const size_t min_size, const size_t max_size,
-  const double tolerance, const double min_height, const double height_offset)
-{
-  if (input->empty()) return;
-
-  const std::vector<pcl::PointIndices> cluster_indices = std::invoke([&]() {
-    std::vector<pcl::PointIndices> cluster_idx;
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud(input);
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(tolerance);
-    ec.setMinClusterSize(min_size);
-    ec.setMaxClusterSize(max_size);
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(input);
-    ec.extract(cluster_idx);
-    return cluster_idx;
-  });
-
-  auto above_height_threshold = [&](const double z) {
-    const auto rel_height = z - height_offset;
-    return rel_height > min_height;
-  };
-
-  PointCloud::Ptr cluster_buffer(new PointCloud);
-  PointCloud::Ptr hull_buffer(new PointCloud);
-  pcl::ConvexHull<pcl::PointXYZ> hull;
-  hull.setDimension(2);
-
-  for (const auto & indices : cluster_indices) {
-    cluster_buffer->clear();
-    hull_buffer->clear();
-    bool cluster_above_height_threshold{false};
-    for (const auto & index : indices.indices) {
-      const auto & point = (*input)[index];
-
-      cluster_above_height_threshold |= above_height_threshold(point.z);
-      cluster_buffer->push_back(point);
-    }
-    if (!cluster_above_height_threshold) continue;
-
-    hull.setInputCloud(cluster_buffer);
-    hull.reconstruct(*hull_buffer);
-    output->insert(output->end(), hull_buffer->begin(), hull_buffer->end());
-  }
+  return TrajectoryShape{trajectory_polygon, envelope};
 }
 
 void filter_objects_by_type(
@@ -265,7 +174,8 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 std::optional<CollisionPoint> get_nearest_object_collision(
   const TrajectoryPoints & trajectory_points,
   const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
-  const PredictedObjects & objects, MultiPolygon2d & target_polygons)
+  const PredictedObjects & objects, MultiPolygon2d & target_polygons,
+  PredictedObject & colliding_object)
 {
   if (objects.objects.empty()) return std::nullopt;
 
@@ -285,6 +195,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
       if (arc_length < min_arc_length) {
         min_arc_length = arc_length;
         nearest_collision_point = p;
+        colliding_object = object;
       }
     }
     target_polygons.emplace_back(object_polygon);
@@ -292,6 +203,88 @@ std::optional<CollisionPoint> get_nearest_object_collision(
 
   if (!found_collision) return std::nullopt;
   return CollisionPoint(nearest_collision_point, min_arc_length);
+}
+
+void PointCloudFilter::filter_pointcloud(
+  PointCloud::Ptr & pointcloud, const double min_x, const double max_x, const double min_y,
+  const double max_y, const double min_z, const double max_z)
+{
+  if (pointcloud->empty()) return;
+
+  crop_box_.setMin(Eigen::Vector4f(min_x, min_y, min_z, 1.0));
+  crop_box_.setMax(Eigen::Vector4f(max_x, max_y, max_z, 1.0));
+  crop_box_.setInputCloud(pointcloud);
+  crop_box_.filter(*pointcloud);
+
+  if (pointcloud->empty()) return;
+
+  voxel_grid_.setInputCloud(pointcloud);
+  voxel_grid_.filter(*pointcloud);
+}
+
+void PointCloudFilter::cluster_pointcloud(
+  const PointCloud::Ptr & input, PointCloud::Ptr & output, const double min_height)
+{
+  std::vector<pcl::PointIndices> cluster_indices;
+  tree_->setInputCloud(input);
+  ec_.setSearchMethod(tree_);
+  ec_.setInputCloud(input);
+  ec_.extract(cluster_indices);
+
+  PointCloud::Ptr cluster_buffer(new PointCloud);
+  PointCloud::Ptr hull_buffer(new PointCloud);
+
+  for (const auto & indices : cluster_indices) {
+    cluster_buffer->clear();
+    hull_buffer->clear();
+    bool cluster_above_height_threshold{false};
+    for (const auto & index : indices.indices) {
+      const auto & point = (*input)[index];
+
+      cluster_above_height_threshold |= point.z >= min_height;
+      cluster_buffer->push_back(point);
+    }
+    if (!cluster_above_height_threshold || cluster_buffer->empty()) continue;
+
+    convex_hull_.setInputCloud(cluster_buffer);
+    convex_hull_.reconstruct(*hull_buffer);
+    for (const auto & point : *hull_buffer) {
+      output->push_back(point);
+    }
+  }
+}
+
+void PointCloudFilter::filter_pointcloud_by_object(
+  PointCloud::Ptr & pointcloud, const PredictedObjects & objects)
+{
+  if (pointcloud->empty() || objects.objects.empty()) return;
+
+  const auto margin = 0.1;
+  auto get_object_polygon = [&](const auto & object) {
+    auto polygon = autoware_utils::to_polygon2d(object);
+    auto expanded_polygon = autoware_utils::expand_polygon(polygon, margin);
+    return expanded_polygon;
+  };
+
+  for (const auto & obj : objects.objects) {
+    const auto obj_pose = obj.kinematics.initial_pose_with_covariance.pose;
+    std::optional<autoware_utils_geometry::Polygon2d> obj_polygon;
+    const auto x_th = obj.shape.dimensions.x / 2.0 + margin;
+    const auto y_th = obj.shape.dimensions.y / 2.0 + margin;
+    pointcloud->erase(
+      std::remove_if(
+        pointcloud->begin(), pointcloud->end(),
+        [&](const auto & point) {
+          const autoware_utils_geometry::Point2d p(point.x, point.y);
+          const auto rel_p = autoware_utils::inverse_transform_point(p.to_3d(), obj_pose);
+          if (abs(rel_p.x()) > x_th || abs(rel_p.y()) > y_th) {
+            return false;
+          }
+          if (!obj_polygon) obj_polygon = get_object_polygon(obj);
+          return !boost::geometry::disjoint(p, *obj_polygon);
+        }),
+      pointcloud->end());
+  }
 }
 
 }  // namespace autoware::trajectory_modifier::utils::obstacle_stop

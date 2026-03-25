@@ -30,6 +30,8 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils_geometry::MultiPolygon2d;
 using autoware_utils_geometry::Polygon2d;
 using utils::obstacle_stop::CollisionPoint;
@@ -67,15 +69,16 @@ private:
 
   DebugData debug_data_;
 
+  std::unique_ptr<utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
+
+  SafetyFactorArray safety_factors_;
+
   MarkerArray marker_array_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
 
-  std::optional<CollisionPoint> check_predicted_objects(
-    const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);
-  std::optional<CollisionPoint> check_pointcloud(
-    const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);
+  std::optional<CollisionPoint> check_predicted_objects(const TrajectoryPoints & traj_points);
+  std::optional<CollisionPoint> check_pointcloud(const TrajectoryPoints & traj_points);
 
   bool set_stop_point(TrajectoryPoints & traj_points);
 
