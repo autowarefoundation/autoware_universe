@@ -23,7 +23,6 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -103,81 +102,31 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.processor_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.toLabelMap();
 
-  params.associator_config.can_assign_map.clear();
-  params.associator_config.max_dist_map.clear();
-  params.associator_config.max_area_map.clear();
-  params.associator_config.min_area_map.clear();
-  params.associator_config.min_iou_map.clear();
+  params.associator_config.association_params_map.clear();
 
   for (const auto measurement_label : object_model::trackedLabels()) {
-    const auto can_assign_it = params.can_assign_types_map.find(measurement_label);
-    if (can_assign_it == params.can_assign_types_map.end()) {
+    const auto label_params_it = params.association_params_map.find(measurement_label);
+    if (label_params_it == params.association_params_map.end() || label_params_it->second.empty()) {
       throw std::runtime_error(
-        "Missing can_assign configuration for measurement label: " +
+        "Missing association configuration for measurement label: " +
         object_model::toString(measurement_label));
     }
 
-    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash> assignable_tracker_types(
-      can_assign_it->second.begin(), can_assign_it->second.end());
+    const auto & label_params = label_params_it->second;
 
     const auto default_tracker_type = params.processor_config.tracker_map.at(measurement_label);
-    if (assignable_tracker_types.count(default_tracker_type) == 0) {
+    if (label_params.find(default_tracker_type) == label_params.end()) {
       throw std::runtime_error(
         "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
         "' for measurement label '" + object_model::toString(measurement_label) +
         "' is not included in association.can_assign." + object_model::toString(measurement_label));
     }
 
-    for (const auto tracker_type : allTrackerTypes()) {
-      const bool can_assign = assignable_tracker_types.count(tracker_type) > 0;
-      params.associator_config.can_assign_map[measurement_label][tracker_type] = can_assign;
-
-      if (!can_assign) {
-        // Non-effective combinations are ignored by can_assign gate.
-        params.associator_config.max_dist_map[measurement_label][tracker_type] = 0.0;
-        params.associator_config.max_area_map[measurement_label][tracker_type] = 0.0;
-        params.associator_config.min_area_map[measurement_label][tracker_type] = 0.0;
-        params.associator_config.min_iou_map[measurement_label][tracker_type] = 1.0;
-        continue;
-      }
-
-      const auto max_dist_it = params.max_dist_map.find(measurement_label);
-      const auto max_area_it = params.max_area_map.find(measurement_label);
-      const auto min_area_it = params.min_area_map.find(measurement_label);
-      const auto min_iou_it = params.min_iou_map.find(measurement_label);
-
-      if (
-        max_dist_it == params.max_dist_map.end() || max_area_it == params.max_area_map.end() ||
-        min_area_it == params.min_area_map.end() || min_iou_it == params.min_iou_map.end()) {
-        throw std::runtime_error(
-          "Missing layered association parameters for measurement label: " +
-          object_model::toString(measurement_label));
-      }
-
-      const auto max_dist_tracker_it = max_dist_it->second.find(tracker_type);
-      const auto max_area_tracker_it = max_area_it->second.find(tracker_type);
-      const auto min_area_tracker_it = min_area_it->second.find(tracker_type);
-      const auto min_iou_tracker_it = min_iou_it->second.find(tracker_type);
-
-      if (
-        max_dist_tracker_it == max_dist_it->second.end() ||
-        max_area_tracker_it == max_area_it->second.end() ||
-        min_area_tracker_it == min_area_it->second.end() ||
-        min_iou_tracker_it == min_iou_it->second.end()) {
-        throw std::runtime_error(
-          "Missing layered association parameters for combination: measurement='" +
-          object_model::toString(measurement_label) + "', tracker='" + toString(tracker_type) +
-          "'");
-      }
-
-      params.associator_config.max_dist_map[measurement_label][tracker_type] =
-        max_dist_tracker_it->second * max_dist_tracker_it->second;
-      params.associator_config.max_area_map[measurement_label][tracker_type] =
-        max_area_tracker_it->second;
-      params.associator_config.min_area_map[measurement_label][tracker_type] =
-        min_area_tracker_it->second;
-      params.associator_config.min_iou_map[measurement_label][tracker_type] =
-        min_iou_tracker_it->second;
+    auto & runtime_label_params = params.associator_config.association_params_map[measurement_label];
+    for (const auto & [tracker_type, raw_params] : label_params) {
+      runtime_label_params[tracker_type] = AssociatorConfig::TrackerAssociationParameters{
+        raw_params.max_dist * raw_params.max_dist, raw_params.max_area, raw_params.min_area,
+        raw_params.min_iou};
     }
   }
 }

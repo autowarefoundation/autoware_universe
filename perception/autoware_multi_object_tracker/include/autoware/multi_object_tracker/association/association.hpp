@@ -59,22 +59,22 @@ struct AssociatorConfig
     }
   };
 
-  using TrackerBoolMap = std::unordered_map<types::TrackerType, bool, EnumClassHash>;
-  using TrackerDoubleMap = std::unordered_map<types::TrackerType, double, EnumClassHash>;
+  struct TrackerAssociationParameters
+  {
+    double max_dist_sq;
+    double max_area;
+    double min_area;
+    double min_iou;
+  };
+
+  using TrackerAssociationParametersMap =
+    std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
   using LabelDoubleMap = std::unordered_map<object_model::Label, double, EnumClassHash>;
-  using LabelToTrackerBoolMap =
-    std::unordered_map<object_model::Label, TrackerBoolMap, EnumClassHash>;
-  using LabelToTrackerDoubleMap =
-    std::unordered_map<object_model::Label, TrackerDoubleMap, EnumClassHash>;
+  using LabelToTrackerAssociationParametersMap =
+    std::unordered_map<object_model::Label, TrackerAssociationParametersMap, EnumClassHash>;
 
-  // Per measurement label -> tracker type assignment gate.
-  LabelToTrackerBoolMap can_assign_map;
-
-  // Association parameters (per measurement label -> tracker type).
-  LabelToTrackerDoubleMap max_dist_map;
-  LabelToTrackerDoubleMap max_area_map;
-  LabelToTrackerDoubleMap min_area_map;
-  LabelToTrackerDoubleMap min_iou_map;
+  // Effective association parameters (per measurement label -> tracker type).
+  LabelToTrackerAssociationParametersMap association_params_map;
 
   double unknown_association_giou_threshold;
 };
@@ -130,7 +130,9 @@ public:
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
-    const types::TrackerType tracker_type, const types::DynamicObject & measurement_object,
+    const types::TrackerType tracker_type,
+    const AssociatorConfig::TrackerAssociationParameters & association_params,
+    const types::DynamicObject & measurement_object,
     const object_model::Label measurement_label, const InverseCovariance2D & inv_cov,
     bool & has_significant_shape_change) const;
 

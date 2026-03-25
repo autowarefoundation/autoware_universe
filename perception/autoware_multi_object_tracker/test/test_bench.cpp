@@ -86,53 +86,35 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   for (const auto measurement_label :
        autoware::multi_object_tracker::object_model::trackedLabels()) {
     const auto effective_tracker_type = tracker_map.at(measurement_label);
-    for (const auto tracker_type : autoware::multi_object_tracker::allTrackerTypes()) {
-      const bool can_assign = (tracker_type == effective_tracker_type);
-      config.can_assign_map[measurement_label][tracker_type] = can_assign;
-      if (!can_assign) {
-        config.max_dist_map[measurement_label][tracker_type] = 0.0;
-        config.max_area_map[measurement_label][tracker_type] = 0.0;
-        config.min_area_map[measurement_label][tracker_type] = 0.0;
-        config.min_iou_map[measurement_label][tracker_type] = 1.0;
-      }
-    }
+    config.association_params_map[measurement_label][effective_tracker_type] =
+      autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+        0.0, 0.0, 0.0, 1.0};
   }
 
-  config.max_dist_map[Label::UNKNOWN][TrackerType::POLYGON] = 4.0 * 4.0;
-  config.max_dist_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
-  config.max_dist_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
-  config.max_dist_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
-  config.max_dist_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 5.0 * 5.0;
-  config.max_dist_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 3.0 * 3.0;
-  config.max_dist_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 3.0 * 3.0;
-  config.max_dist_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.0 * 2.0;
-
-  config.max_area_map[Label::UNKNOWN][TrackerType::POLYGON] = 100.0;
-  config.max_area_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 12.10;
-  config.max_area_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 36.0;
-  config.max_area_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 60.0;
-  config.max_area_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 60.0;
-  config.max_area_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.5;
-  config.max_area_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.5;
-  config.max_area_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 2.0;
-
-  config.min_area_map[Label::UNKNOWN][TrackerType::POLYGON] = 0.0;
-  config.min_area_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 3.6;
-  config.min_area_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 6.0;
-  config.min_area_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 10.0;
-  config.min_area_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 10.0;
-  config.min_area_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
-  config.min_area_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
-  config.min_area_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.1;
-
-  config.min_iou_map[Label::UNKNOWN][TrackerType::POLYGON] = 0.0001;
-  config.min_iou_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] = 0.0001;
-  config.min_iou_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] = 0.10;
-  config.min_iou_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] = 0.10;
-  config.min_iou_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] = 0.10;
-  config.min_iou_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = -0.30;
-  config.min_iou_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.0001;
-  config.min_iou_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] = 0.0001;
+  config.association_params_map[Label::UNKNOWN][TrackerType::POLYGON] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      4.0 * 4.0, 100.0, 0.0, 0.0001};
+  config.association_params_map[Label::CAR][TrackerType::MULTIPLE_VEHICLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      5.0 * 5.0, 12.10, 3.6, 0.0001};
+  config.association_params_map[Label::TRUCK][TrackerType::MULTIPLE_VEHICLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      5.0 * 5.0, 36.0, 6.0, 0.10};
+  config.association_params_map[Label::BUS][TrackerType::MULTIPLE_VEHICLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      5.0 * 5.0, 60.0, 10.0, 0.10};
+  config.association_params_map[Label::TRAILER][TrackerType::MULTIPLE_VEHICLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      5.0 * 5.0, 60.0, 10.0, 0.10};
+  config.association_params_map[Label::MOTORCYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      3.0 * 3.0, 2.5, 0.1, -0.30};
+  config.association_params_map[Label::BICYCLE][TrackerType::PEDESTRIAN_AND_BICYCLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      3.0 * 3.0, 2.5, 0.1, 0.0001};
+  config.association_params_map[Label::PEDESTRIAN][TrackerType::PEDESTRIAN_AND_BICYCLE] =
+    autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
+      2.0 * 2.0, 2.0, 0.1, 0.0001};
 
   config.unknown_association_giou_threshold =
     -0.8;  // Default GIoU threshold for unknown-unknown association

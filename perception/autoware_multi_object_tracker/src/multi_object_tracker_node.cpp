@@ -182,10 +182,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Parameters for associator (explicit layered configuration)
-  params_.can_assign_types_map.clear();
+  params_.association_params_map.clear();
   for (const auto measurement_label : object_model::trackedLabels()) {
+    const auto measurement_label_name = object_model::toString(measurement_label);
     const auto can_assign_parameter_name =
-      "association.can_assign." + object_model::toString(measurement_label);
+      "association.can_assign." + measurement_label_name;
     const auto tracker_type_names =
       declare_parameter<std::vector<std::string>>(can_assign_parameter_name);
     if (tracker_type_names.empty()) {
@@ -201,38 +202,21 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
           "Invalid tracker type: '" + tracker_type_name + "' in parameter '" +
           can_assign_parameter_name + "'. Strict string match is required.");
       }
-      if (dedup.count(*tracker_type) == 0) {
-        params_.can_assign_types_map[measurement_label].push_back(*tracker_type);
-        dedup.insert(*tracker_type);
-      }
+      dedup.insert(*tracker_type);
     }
-  }
 
-  auto declare_association_parameter = [this](
-                                         const std::string & config_type,
-                                         const object_model::Label measurement_label,
-                                         const TrackerType tracker_type) {
-    const auto parameter_name = "association." + config_type + "." +
-                                object_model::toString(measurement_label) + "." +
-                                toString(tracker_type);
-    return this->declare_parameter<double>(parameter_name);
-  };
-
-  params_.max_dist_map.clear();
-  params_.max_area_map.clear();
-  params_.min_area_map.clear();
-  params_.min_iou_map.clear();
-  for (const auto measurement_label : object_model::trackedLabels()) {
-    const auto & tracker_types = params_.can_assign_types_map.at(measurement_label);
-    for (const auto tracker_type : tracker_types) {
-      params_.max_dist_map[measurement_label][tracker_type] =
-        declare_association_parameter("max_dist", measurement_label, tracker_type);
-      params_.max_area_map[measurement_label][tracker_type] =
-        declare_association_parameter("max_area", measurement_label, tracker_type);
-      params_.min_area_map[measurement_label][tracker_type] =
-        declare_association_parameter("min_area", measurement_label, tracker_type);
-      params_.min_iou_map[measurement_label][tracker_type] =
-        declare_association_parameter("min_iou", measurement_label, tracker_type);
+    for (const auto tracker_type : dedup) {
+      const auto tracker_type_name = toString(tracker_type);
+      params_.association_params_map[measurement_label][tracker_type] =
+        MultiObjectTrackerParameters::RawAssociationParameters{
+          declare_parameter<double>(
+            "association.max_dist." + measurement_label_name + "." + tracker_type_name),
+          declare_parameter<double>(
+            "association.max_area." + measurement_label_name + "." + tracker_type_name),
+          declare_parameter<double>(
+            "association.min_area." + measurement_label_name + "." + tracker_type_name),
+          declare_parameter<double>(
+            "association.min_iou." + measurement_label_name + "." + tracker_type_name)};
     }
   }
 
