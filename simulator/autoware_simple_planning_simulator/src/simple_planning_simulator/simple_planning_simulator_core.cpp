@@ -185,10 +185,11 @@ SimplePlanningSimulator::SimplePlanningSimulator(const rclcpp::NodeOptions & opt
     this, get_clock(), std::chrono::milliseconds(timer_sampling_time_ms_),
     std::bind(&SimplePlanningSimulator::on_timer, this));
 
-  tier4_api_utils::ServiceProxyNodeInterface proxy(this);
   group_api_service_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  srv_set_pose_ = proxy.create_service<tier4_external_api_msgs::srv::InitializePose>(
-    "/api/simulator/set/pose", std::bind(&SimplePlanningSimulator::on_set_pose, this, _1, _2),
+
+  // Initialize::name = "/localization/initialize"
+  srv_initialize_ = create_service<Initialize::Service>(
+    Initialize::name, std::bind(&SimplePlanningSimulator::on_initialize, this, _1, _2),
     rmw_qos_profile_services_default, group_api_service_);
 
   // set vehicle model type
@@ -567,17 +568,33 @@ void SimplePlanningSimulator::on_initialtwist(const TwistStamped::ConstSharedPtr
   initial_twist_ = *msg;
 }
 
-void SimplePlanningSimulator::on_set_pose(
-  const InitializePose::Request::ConstSharedPtr request,
-  const InitializePose::Response::SharedPtr response)
+void SimplePlanningSimulator::on_initialize(
+  const Initialize::Service::Request::SharedPtr request,
+  const Initialize::Service::Response::SharedPtr response)
 {
+  if (request->pose_with_covariance.empty()) {
+    response->status.success = false;
+    response->status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+    response->status.message = "pose_with_covariance is empty";
+    return;
+  }
+
   // save initial pose
   Twist initial_twist;
   PoseStamped initial_pose;
-  initial_pose.header = request->pose.header;
-  initial_pose.pose = request->pose.pose.pose;
+  const auto & pose_with_covariance = request->pose_with_covariance.front();
+  initial_pose.header = pose_with_covariance.header;
+  initial_pose.pose = pose_with_covariance.pose.pose;
   set_initial_state_with_transform(initial_pose, initial_twist);
-  response->status = tier4_api_utils::response_success();
+
+  // Print initial pose for debugging
+  RCLCPP_DEBUG(
+    this->get_logger(), "Set initial pose: [x: %.2f, y: %.2f, z: %.2f, yaw: %.2f]",
+    initial_pose.pose.position.x, initial_pose.pose.position.y, initial_pose.pose.position.z,
+    tf2::getYaw(initial_pose.pose.orientation));
+
+  response->status.success = true;
+  response->status.message = "success";
 }
 
 void SimplePlanningSimulator::set_input(const InputCommand & cmd, const double acc_by_slope)
