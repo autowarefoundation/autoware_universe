@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 class PolygonManager : public rclcpp::Node {
 public:
     PolygonManager() : Node("polygon_manager_node") {
-        auto poly_qos = rclcpp::QoS(rclcpp::KeepAll()).transient_local();
+        auto poly_qos = rclcpp::QoS(10).transient_local();
         pub_all_polygons_ = this->create_publisher<geometry_msgs::msg::PolygonStamped>("/rsu/all_polygons", poly_qos);
         pub_marker_ = this->create_publisher<visualization_msgs::msg::Marker>("/rsu/polygon_markers", 10);
 
@@ -28,6 +28,10 @@ public:
         // 1秒ごとに新しいトピックを自動検知
         discovery_timer_ = this->create_wall_timer(
             std::chrono::seconds(1), std::bind(&PolygonManager::discoverRsuTopics, this));
+
+        // 5秒ごとにマーカーを再パブリッシュ（RVizが後から接続しても表示されるように）
+        marker_republish_timer_ = this->create_wall_timer(
+            std::chrono::seconds(5), std::bind(&PolygonManager::republishMarkers, this));
 
         RCLCPP_INFO(this->get_logger(), "Polygon Manager Started. IDs will be sanitized (no '/') for frame_id.");
     }
@@ -160,6 +164,7 @@ private:
 
                 // ★ 確実に配信を実行
                 publishPolygon(safe_id, map_frame, pts, r, g, b);
+                loaded_polygons_.push_back({safe_id, map_frame, pts, r, g, b});
                 
                 // 次回の自動検知（discovery）で重複しないように元トピック名で登録
                 std::string original_topic = safe_id;
@@ -175,13 +180,27 @@ private:
         }
     }
 
+    struct PolygonEntry {
+        std::string safe_id, frame_id;
+        std::vector<geometry_msgs::msg::Point> pts;
+        float r, g, b;
+    };
+
+    void republishMarkers() {
+        for (const auto& e : loaded_polygons_) {
+            publishPolygon(e.safe_id, e.frame_id, e.pts, e.r, e.g, e.b);
+        }
+    }
+
     std::string save_path_;
     std::set<std::string> registered_topics_;
     std::map<std::string, std::vector<geometry_msgs::msg::Point>> rsu_buffers_;
     std::vector<rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr> subs_;
+    std::vector<PolygonEntry> loaded_polygons_;
     rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr pub_all_polygons_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_marker_;
     rclcpp::TimerBase::SharedPtr discovery_timer_;
+    rclcpp::TimerBase::SharedPtr marker_republish_timer_;
 };
 
 int main(int argc, char** argv) {
