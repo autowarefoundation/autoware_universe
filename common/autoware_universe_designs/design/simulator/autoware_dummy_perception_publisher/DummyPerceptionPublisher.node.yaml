@@ -28,7 +28,7 @@ subscribers:
     remap_target: input/predicted_objects
 publishers:
   - name: dynamic_object
-    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
+    message_type: tier4_perception_msgs/msg/DetectedObjects
     remap_target: output/dynamic_object
   - name: points_raw
     message_type: sensor_msgs/msg/PointCloud2
