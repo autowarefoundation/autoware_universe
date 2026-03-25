@@ -231,9 +231,9 @@ __global__ void generateFeatures_kernel(
   // voxel_features (float): (max_voxel_size, max_point_in_voxel_size, point_feature_size)
   // voxel_num_points (int): (max_voxel_size)
   // coords (int): (max_voxel_size, point_dim_size)
-  int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;
   int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
   int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
+  int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
 
   unsigned int num_pillars = num_voxels[0];
   if (pillar_idx >= num_pillars) {
@@ -245,12 +245,13 @@ __global__ void generateFeatures_kernel(
     (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) ? POINT_DIM_XYZIT : POINT_DIM_XYZT;
 
   // load src
-  __shared__ float pillarSM[WARPS_PER_BLOCK][MAX_POINT_IN_VOXEL_SIZE][point_dim];
+  __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][MAX_POINT_IN_VOXEL_SIZE];
   __shared__ float3 pillarSumSM[WARPS_PER_BLOCK];
   __shared__ int3 cordsSM[WARPS_PER_BLOCK];
   __shared__ int pointsNumSM[WARPS_PER_BLOCK];
-  __shared__ float pillarOutSM[WARPS_PER_BLOCK][MAX_POINT_IN_VOXEL_SIZE][ENCODER_IN_FEATURE_SIZE];
+  __shared__ float pillarOutSM[WARPS_PER_BLOCK][ENCODER_IN_FEATURE_SIZE][MAX_POINT_IN_VOXEL_SIZE];
 
+  // Each thread-block has dedicated GPU shared memory areas which need to be initialized.
   if (threadIdx.x < WARPS_PER_BLOCK) {
     pointsNumSM[threadIdx.x] = voxel_num_points[blockIdx.x * WARPS_PER_BLOCK + threadIdx.x];
     cordsSM[threadIdx.x] = ((int3 *)coords)[blockIdx.x * WARPS_PER_BLOCK + threadIdx.x];
@@ -262,88 +263,91 @@ __global__ void generateFeatures_kernel(
     int pillarSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim +
                      i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
     int voxel_feature_id =
-      pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim + i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
+      (pillar_idx * MAX_POINT_IN_VOXEL_SIZE + point_idx) * point_dim + i;
     ((float *)pillarSM)[pillarSMId] = ((float *)voxel_features)[voxel_feature_id];
   }
+  // Make it sure that all data are initialized.
   __syncthreads();
 
   // calculate sm in a pillar
   if (point_idx < pointsNumSM[pillar_idx_inBlock]) {
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].x), pillarSM[pillar_idx_inBlock][point_idx][0]);
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].y), pillarSM[pillar_idx_inBlock][point_idx][1]);
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].z), pillarSM[pillar_idx_inBlock][point_idx][2]);
+    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].x), pillarSM[pillar_idx_inBlock][0][point_idx]);
+    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].y), pillarSM[pillar_idx_inBlock][1][point_idx]);
+    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].z), pillarSM[pillar_idx_inBlock][2][point_idx]);
   }
   __syncthreads();
 
   // feature-mean
   float3 mean;
   float validPoints = pointsNumSM[pillar_idx_inBlock];
+  // There should be at least one valid point since the thread processes only non-empty pillars.
   mean.x = pillarSumSM[pillar_idx_inBlock].x / validPoints;
   mean.y = pillarSumSM[pillar_idx_inBlock].y / validPoints;
   mean.z = pillarSumSM[pillar_idx_inBlock].z / validPoints;
 
-  mean.x = pillarSM[pillar_idx_inBlock][point_idx][0] - mean.x;
-  mean.y = pillarSM[pillar_idx_inBlock][point_idx][1] - mean.y;
-  mean.z = pillarSM[pillar_idx_inBlock][point_idx][2] - mean.z;
+  mean.x = pillarSM[pillar_idx_inBlock][0][point_idx] - mean.x;
+  mean.y = pillarSM[pillar_idx_inBlock][1][point_idx] - mean.y;
+  mean.z = pillarSM[pillar_idx_inBlock][2][point_idx] - mean.z;
 
   // calculate offset
+  // Is the order of z,y,x correct?
   float x_offset = voxel_x / 2 + cordsSM[pillar_idx_inBlock].z * voxel_x + range_min_x;
   float y_offset = voxel_y / 2 + cordsSM[pillar_idx_inBlock].y * voxel_y + range_min_y;
   float z_offset = voxel_z / 2 + cordsSM[pillar_idx_inBlock].x * voxel_z + range_min_z;
 
   // feature-offset
   float3 center;
-  center.x = pillarSM[pillar_idx_inBlock][point_idx][0] - x_offset;
-  center.y = pillarSM[pillar_idx_inBlock][point_idx][1] - y_offset;
-  center.z = pillarSM[pillar_idx_inBlock][point_idx][2] - z_offset;
+  center.x = pillarSM[pillar_idx_inBlock][0][point_idx] - x_offset;
+  center.y = pillarSM[pillar_idx_inBlock][1][point_idx] - y_offset;
+  center.z = pillarSM[pillar_idx_inBlock][2][point_idx] - z_offset;
 
   // store output
   if (point_idx < pointsNumSM[pillar_idx_inBlock]) {
-    pillarOutSM[pillar_idx_inBlock][point_idx][0] = pillarSM[pillar_idx_inBlock][point_idx][0];
-    pillarOutSM[pillar_idx_inBlock][point_idx][1] = pillarSM[pillar_idx_inBlock][point_idx][1];
-    pillarOutSM[pillar_idx_inBlock][point_idx][2] = pillarSM[pillar_idx_inBlock][point_idx][2];
-    pillarOutSM[pillar_idx_inBlock][point_idx][3] = pillarSM[pillar_idx_inBlock][point_idx][3];
+    pillarOutSM[pillar_idx_inBlock][0][point_idx] = pillarSM[pillar_idx_inBlock][0][point_idx];
+    pillarOutSM[pillar_idx_inBlock][1][point_idx] = pillarSM[pillar_idx_inBlock][1][point_idx];
+    pillarOutSM[pillar_idx_inBlock][2][point_idx] = pillarSM[pillar_idx_inBlock][2][point_idx];
+    pillarOutSM[pillar_idx_inBlock][3][point_idx] = pillarSM[pillar_idx_inBlock][3][point_idx];
 
     if (ENCODER_IN_FEATURE_SIZE == ENCODER_NUM_FEATURES_11) {
-      pillarOutSM[pillar_idx_inBlock][point_idx][4] = pillarSM[pillar_idx_inBlock][point_idx][4];
-      pillarOutSM[pillar_idx_inBlock][point_idx][5] = mean.x;
-      pillarOutSM[pillar_idx_inBlock][point_idx][6] = mean.y;
-      pillarOutSM[pillar_idx_inBlock][point_idx][7] = mean.z;
+      pillarOutSM[pillar_idx_inBlock][4][point_idx] = pillarSM[pillar_idx_inBlock][4][point_idx];
+      pillarOutSM[pillar_idx_inBlock][5][point_idx] = mean.x;
+      pillarOutSM[pillar_idx_inBlock][6][point_idx] = mean.y;
+      pillarOutSM[pillar_idx_inBlock][7][point_idx] = mean.z;
 
-      pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.x;
-      pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.y;
-      pillarOutSM[pillar_idx_inBlock][point_idx][10] = center.z;
+      pillarOutSM[pillar_idx_inBlock][8][point_idx] = center.x;
+      pillarOutSM[pillar_idx_inBlock][9][point_idx] = center.y;
+      pillarOutSM[pillar_idx_inBlock][10][point_idx] = center.z;
     } else {
-      pillarOutSM[pillar_idx_inBlock][point_idx][4] = mean.x;
-      pillarOutSM[pillar_idx_inBlock][point_idx][5] = mean.y;
-      pillarOutSM[pillar_idx_inBlock][point_idx][6] = mean.z;
+      pillarOutSM[pillar_idx_inBlock][4][point_idx] = mean.x;
+      pillarOutSM[pillar_idx_inBlock][5][point_idx] = mean.y;
+      pillarOutSM[pillar_idx_inBlock][6][point_idx] = mean.z;
 
-      pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
-      pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
+      pillarOutSM[pillar_idx_inBlock][7][point_idx] = center.x;
+      pillarOutSM[pillar_idx_inBlock][8][point_idx] = center.y;
 
       if (ENCODER_IN_FEATURE_SIZE == ENCODER_NUM_FEATURES_10) {
-        pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
+        pillarOutSM[pillar_idx_inBlock][9][point_idx] = center.z;
       }
     }
 
   } else {
-    pillarOutSM[pillar_idx_inBlock][point_idx][0] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][1] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][2] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][3] = 0;
+    pillarOutSM[pillar_idx_inBlock][0][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][1][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][2][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][3][point_idx] = 0;
 
-    pillarOutSM[pillar_idx_inBlock][point_idx][4] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][5] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][6] = 0;
+    pillarOutSM[pillar_idx_inBlock][4][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][5][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][6][point_idx] = 0;
 
-    pillarOutSM[pillar_idx_inBlock][point_idx][7] = 0;
-    pillarOutSM[pillar_idx_inBlock][point_idx][8] = 0;
+    pillarOutSM[pillar_idx_inBlock][7][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][8][point_idx] = 0;
 
     if (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_10) {
-      pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
+      pillarOutSM[pillar_idx_inBlock][9][point_idx] = 0;
     }
     if (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) {
-      pillarOutSM[pillar_idx_inBlock][point_idx][10] = 0;
+      pillarOutSM[pillar_idx_inBlock][10][point_idx] = 0;
     }
   }
 
@@ -352,8 +356,7 @@ __global__ void generateFeatures_kernel(
   for (int i = 0; i < ENCODER_IN_FEATURE_SIZE; i++) {
     int outputSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE +
                      i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
-    int outputId = pillar_idx * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE +
-                   i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
+    int outputId = (pillar_idx * MAX_POINT_IN_VOXEL_SIZE + point_idx) * ENCODER_IN_FEATURE_SIZE + i;
     features[outputId] = ((float *)pillarOutSM)[outputSMId];
   }
 }
