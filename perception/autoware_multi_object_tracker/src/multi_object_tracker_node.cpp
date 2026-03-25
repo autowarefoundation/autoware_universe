@@ -185,8 +185,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.association_params_map.clear();
   for (const auto measurement_label : object_model::trackedLabels()) {
     const auto measurement_label_name = object_model::toString(measurement_label);
-    const auto can_assign_parameter_name =
-      "association.can_assign." + measurement_label_name;
+    const auto can_assign_parameter_name = "association.can_assign." + measurement_label_name;
     const auto tracker_type_names =
       declare_parameter<std::vector<std::string>>(can_assign_parameter_name);
     if (tracker_type_names.empty()) {

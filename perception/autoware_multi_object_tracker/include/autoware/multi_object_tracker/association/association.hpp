@@ -132,9 +132,8 @@ public:
     const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
     const types::TrackerType tracker_type,
     const AssociatorConfig::TrackerAssociationParameters & association_params,
-    const types::DynamicObject & measurement_object,
-    const object_model::Label measurement_label, const InverseCovariance2D & inv_cov,
-    bool & has_significant_shape_change) const;
+    const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
+    const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 
   types::AssociationData calcAssociationData(
     const types::DynamicObjectList & measurements,

@@ -122,7 +122,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
         "' is not included in association.can_assign." + object_model::toString(measurement_label));
     }
 
-    auto & runtime_label_params = params.associator_config.association_params_map[measurement_label];
+    auto & runtime_label_params =
+      params.associator_config.association_params_map[measurement_label];
     for (const auto & [tracker_type, raw_params] : label_params) {
       runtime_label_params[tracker_type] = AssociatorConfig::TrackerAssociationParameters{
         raw_params.max_dist * raw_params.max_dist, raw_params.max_area, raw_params.min_area,

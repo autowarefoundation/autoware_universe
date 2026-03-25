@@ -347,8 +347,7 @@ double DataAssociation::calculateScore(
   const types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,
   const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
-  const InverseCovariance2D & inv_cov,
-  bool & has_significant_shape_change) const
+  const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
